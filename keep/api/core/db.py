@@ -138,10 +138,12 @@ def get_session_sync() -> Session:
     return Session(engine)
 
 
-def __convert_to_uuid(value: str) -> UUID | None:
+def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
     try:
         return UUID(value)
     except ValueError:
+        if should_raise:
+            raise ValueError(f"Invalid UUID: {value}")
         return None
 
 
@@ -887,7 +889,7 @@ def add_audit(
     tenant_id: str,
     fingerprint: str,
     user_id: str,
-    action: AlertActionType,
+    action: ActionType,
     description: str,
 ) -> AlertAudit:
     with Session(engine) as session:
@@ -904,12 +906,12 @@ def add_audit(
     return audit
 
 
-def _enrich_alert(
+def _enrich_entity(
     session,
     tenant_id,
     fingerprint,
     enrichments,
-    action_type: AlertActionType,
+    action_type: ActionType,
     action_callee: str,
     action_description: str,
     force=False,
@@ -975,11 +977,11 @@ def _enrich_alert(
         return alert_enrichment
 
 
-def enrich_alert(
+def enrich_entity(
     tenant_id,
     fingerprint,
     enrichments,
-    action_type: AlertActionType,
+    action_type: ActionType,
     action_callee: str,
     action_description: str,
     session=None,
@@ -989,7 +991,7 @@ def enrich_alert(
     # else, the enrichment doesn't exist, create it
     if not session:
         with Session(engine) as session:
-            return _enrich_alert(
+            return _enrich_entity(
                 session,
                 tenant_id,
                 fingerprint,
@@ -1000,7 +1002,7 @@ def enrich_alert(
                 force=force,
                 audit_enabled=audit_enabled,
             )
-    return _enrich_alert(
+    return _enrich_entity(
         session,
         tenant_id,
         fingerprint,
@@ -3370,6 +3372,7 @@ def get_last_incidents(
 
         if with_alerts:
             enrich_incidents_with_alerts(tenant_id, incidents, session)
+        enrich_incidents_with_enrichments(tenant_id, incidents, session)
 
     return incidents, total_count
 
@@ -3381,9 +3384,7 @@ def get_incident_by_id(
     session: Optional[Session] = None,
 ) -> Optional[Incident]:
     if isinstance(incident_id, str):
-        incident_id = __convert_to_uuid(incident_id)
-        if incident_id is None:
-            return None
+        incident_id = __convert_to_uuid(incident_id, should_raise=True)
     with existed_or_new_session(session) as session:
         query = session.query(
             Incident,
@@ -3392,12 +3393,14 @@ def get_incident_by_id(
             Incident.id == incident_id,
         )
         incident = query.first()
-        if with_alerts:
-            enrich_incidents_with_alerts(
-                tenant_id,
-                [incident],
-                session,
-            )
+        if incident:
+            if with_alerts:
+                enrich_incidents_with_alerts(
+                    tenant_id,
+                    [incident],
+                    session,
+                )
+            enrich_incidents_with_enrichments(tenant_id, [incident], session)
 
     return incident
 
@@ -5008,3 +5011,36 @@ def get_provider_logs(
             .all()
         )
     return logs
+
+
+def enrich_incidents_with_enrichments(
+    tenant_id: str,
+    incidents: List[Incident],
+    session: Optional[Session] = None,
+) -> List[Incident]:
+    """Enrich incidents with their enrichment data."""
+    if not incidents:
+        return incidents
+
+    with existed_or_new_session(session) as session:
+        # Get all enrichments for these incidents in one query
+        enrichments = session.exec(
+            select(AlertEnrichment).where(
+                AlertEnrichment.tenant_id == tenant_id,
+                AlertEnrichment.alert_fingerprint.in_(
+                    [str(incident.id) for incident in incidents]
+                ),
+            )
+        ).all()
+
+        # Create a mapping of incident_id to enrichment
+        enrichments_map = {
+            enrichment.alert_fingerprint: enrichment.enrichments
+            for enrichment in enrichments
+        }
+
+        # Add enrichments to each incident
+        for incident in incidents:
+            incident._enrichments = enrichments_map.get(str(incident.id), {})
+
+        return incidents

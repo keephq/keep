@@ -18,6 +18,7 @@ from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
 from keep.api.bl.ai_suggestion_bl import AISuggestionBl
+from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, REDIS
 from keep.api.core.db import (
@@ -39,6 +40,7 @@ from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.models.alert import (
     AlertDto,
     EnrichAlertRequestBody,
+    EnrichIncidentRequestBody,
     IncidentCommit,
     IncidentDto,
     IncidentDtoIn,
@@ -53,7 +55,7 @@ from keep.api.models.alert import (
     SplitIncidentRequestDto,
     SplitIncidentResponseDto,
 )
-from keep.api.models.db.alert import AlertActionType, AlertAudit
+from keep.api.models.db.alert import ActionType, AlertAudit
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
@@ -259,6 +261,7 @@ def delete_incident(
     incident_bl.delete_incident(incident_id)
     return Response(status_code=202)
 
+
 @router.post(
     "/{incident_id}/split",
     description="Split incident by incident id",
@@ -284,7 +287,8 @@ async def split_incident(
     )
     incident_bl = IncidentBl(tenant_id, session, pusher_client)
     await incident_bl.add_alerts_to_incident(
-        incident_id=command.destination_incident_id, alert_fingerprints=command.alert_fingerprints
+        incident_id=command.destination_incident_id,
+        alert_fingerprints=command.alert_fingerprints,
     )
     incident_bl.delete_alerts_from_incident(
         incident_id=incident_id, alert_fingerprints=command.alert_fingerprints
@@ -293,7 +297,6 @@ async def split_incident(
         destination_incident_id=command.destination_incident_id,
         moved_alert_fingerprints=command.alert_fingerprints,
     )
-
 
 
 @router.post(
@@ -342,6 +345,7 @@ def merge_incidents(
         )
     except DestinationIncidentNotFound as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @router.get(
     "/{incident_id}/alerts",
@@ -504,7 +508,9 @@ async def add_alerts_to_incident(
 ):
     tenant_id = authenticated_entity.tenant_id
     incident_bl = IncidentBl(tenant_id, session, pusher_client)
-    await incident_bl.add_alerts_to_incident(incident_id, alert_fingerprints, is_created_by_ai)
+    await incident_bl.add_alerts_to_incident(
+        incident_id, alert_fingerprints, is_created_by_ai
+    )
     return Response(status_code=202)
 
 
@@ -684,7 +690,7 @@ def add_comment(
         authenticated_entity.tenant_id,
         str(incident_id),
         authenticated_entity.email,
-        AlertActionType.INCIDENT_COMMENT,
+        ActionType.INCIDENT_COMMENT,
         change.comment,
     )
 
@@ -800,3 +806,52 @@ def confirm_incident(
     new_incident_dto = IncidentDto.from_db_incident(incident)
 
     return new_incident_dto
+
+
+@router.post(
+    "/{incident_id}/enrich",
+    description="Enrich incident with additional data",
+    status_code=202,
+)
+async def enrich_incident(
+    incident_id: UUID,
+    enrichment: EnrichIncidentRequestBody,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+) -> IncidentDto:
+    """Enrich incident with additional data."""
+    tenant_id = authenticated_entity.tenant_id
+
+    # Get incident to verify it exists
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    # Use the existing enrichment infrastructure
+    enrichment_bl = EnrichmentsBl(tenant_id)
+    enrichment_bl.enrich_entity(
+        fingerprint=str(incident_id),  # Use incident_id as fingerprint
+        enrichments=enrichment.enrichments,
+        action_type=ActionType.INCIDENT_ENRICH,
+        action_callee=authenticated_entity.email,
+        action_description=f"Incident enriched by {authenticated_entity.email}",
+        force=enrichment.force,
+    )
+
+    # Notify clients if pusher is available
+    if pusher_client:
+        try:
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "incident-change",
+                {},
+            )
+        except Exception as e:
+            logger.exception(
+                "Failed to notify clients about incident change",
+                extra={"error": str(e)},
+            )
+
+    return Response(status_code=202)

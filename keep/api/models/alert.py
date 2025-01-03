@@ -443,6 +443,7 @@ class IncidentDto(IncidentDtoIn):
     merged_by: str | None
     merged_at: datetime.datetime | None
 
+    enrichments: dict | None = {}
     incident_type: str | None
     incident_application: str | None
 
@@ -533,6 +534,7 @@ class IncidentDto(IncidentDtoIn):
             merged_into_incident_id=db_incident.merged_into_incident_id,
             merged_by=db_incident.merged_by,
             merged_at=db_incident.merged_at,
+            enrichments=db_incident.enrichments,
             incident_type=db_incident.incident_type,
             incident_application=str(db_incident.incident_application),
         )
@@ -696,3 +698,8 @@ class IncidentCommit(BaseModel):
 class IncidentsClusteringSuggestion(BaseModel):
     incident_suggestion: list[IncidentDto]
     suggestion_id: str
+
+
+class EnrichIncidentRequestBody(BaseModel):
+    enrichments: Dict[str, Any]
+    force: bool = False

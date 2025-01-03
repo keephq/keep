@@ -186,6 +186,13 @@ class DatadogProvider(BaseTopologyProvider):
             description="Get all events related to this monitor",
             type="view",
         ),
+        ProviderMethod(
+            name="Get a Trace",
+            func_name="get_trace",
+            scopes=["apm_read"],
+            description="Get trace by id",
+            type="view",
+        ),
     ]
     FINGERPRINT_FIELDS = ["groups", "monitor_id"]
     WEBHOOK_PAYLOAD = json.dumps(
@@ -416,6 +423,38 @@ class DatadogProvider(BaseTopologyProvider):
                 scope=groups,
             )
         self.logger.info("Monitor unmuted", extra={"monitor_id": monitor_id})
+
+    # @tb: we need to standardize the way we get traces
+    # e.g., create a trace model and use it across providers
+    def get_trace(self, trace_id: str):
+        self.logger.info("Getting trace", extra={"trace_id": trace_id})
+        headers = {}
+        if self.authentication_config.api_key and self.authentication_config.app_key:
+            headers["DD-API-KEY"] = self.authentication_config.api_key
+            headers["DD-APPLICATION-KEY"] = self.authentication_config.app_key
+        else:
+            headers["Authorization"] = (
+                f"Bearer {self.authentication_config.oauth_token.get('access_token')}"
+            )
+        endpoint = f"api/unstable/ui/trace/{trace_id}"
+        url = f"{self.configuration.host}/{endpoint}"
+        response = requests.get(url, headers=headers)
+        if response.ok:
+            self.logger.info("Trace retrieved", extra={"trace_id": trace_id})
+            trace_data = response.json()
+            return trace_data.get("data", {}).get("attributes", {}).get("trace", {})
+        else:
+            self.logger.error(
+                "Failed to get trace",
+                extra={
+                    "trace_id": trace_id,
+                    "status_code": response.status_code,
+                    "response": response.text,
+                },
+            )
+            raise Exception(
+                f"Failed to get traces: {response.status_code} {response.text}"
+            )
 
     def get_monitor_events(self, monitor_id: str):
         self.logger.info("Getting monitor events", extra={"monitor_id": monitor_id})
@@ -1038,11 +1077,11 @@ if __name__ == "__main__":
     provider_config = {
         "authentication": {"api_key": api_key, "app_key": app_key},
     }
-    provider: BaseTopologyProvider = ProvidersFactory.get_provider(
+    provider: DatadogProvider = ProvidersFactory.get_provider(
         context_manager=context_manager,
         provider_id="datadog-keephq",
         provider_type="datadog",
         provider_config=provider_config,
     )
-    result = provider.pull_topology()
+    result = provider.get_trace(trace_id="9ea9cb720034119017ba71f699b00903")
     print(result)

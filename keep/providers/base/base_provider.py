@@ -27,7 +27,7 @@ from keep.api.core.db import (
 )
 from keep.api.logging import ProviderLoggerAdapter
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentDto
-from keep.api.models.db.alert import AlertActionType
+from keep.api.models.db.alert import ActionType
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
@@ -258,10 +258,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
             # remove the last comma
             enrichment_string = enrichment_string[:-2]
             # enrich the alert with _enrichments
-            enrichments_bl.enrich_alert(
+            enrichments_bl.enrich_entity(
                 fingerprint,
                 _enrichments,
-                action_type=AlertActionType.WORKFLOW_ENRICH,  # shahar: todo: should be specific, good enough for now
+                action_type=ActionType.WORKFLOW_ENRICH,  # shahar: todo: should be specific, good enough for now
                 action_callee="system",
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
                 audit_enabled=audit_enabled,
@@ -272,10 +272,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 enrichment_string += f"{key}={value}, "
             # remove the last comma
             enrichment_string = enrichment_string[:-2]
-            enrichments_bl.enrich_alert(
+            enrichments_bl.enrich_entity(
                 fingerprint,
                 disposable_enrichments,
-                action_type=AlertActionType.WORKFLOW_ENRICH,
+                action_type=ActionType.WORKFLOW_ENRICH,
                 action_callee="system",
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
                 dispose_on_new_alert=True,

@@ -13,7 +13,7 @@ import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import Markdown from "react-markdown";
 import { Badge, Callout } from "@tremor/react";
-import { Button, Link } from "@/components/ui";
+import { Button, DynamicIcon, Link } from "@/components/ui";
 import { IncidentChangeStatusSelect } from "@/features/change-incident-status";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { DateTimeField, FieldHeader } from "@/shared/ui";
@@ -195,7 +195,13 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
         .map((alert) => alert.environment)
     )
   );
-
+  const repositories = Array.from(
+    new Set(
+      alerts?.items
+        .filter((alert) => (alert as any).repository)
+        .map((alert) => (alert as any).repository as string)
+    )
+  );
   if (!alerts || _alertsLoading) {
     return <IncidentOverviewSkeleton />;
   }
@@ -266,6 +272,61 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                     {env}
                   </Badge>
                 ))}
+              </div>
+            ) : (
+              "No environments involved"
+            )}
+            <FieldHeader>External incident</FieldHeader>
+            {incident.enrichments?.incident_id &&
+            incident.enrichments?.incident_url ? (
+              <div className="flex flex-wrap gap-1">
+                {
+                  // TODO: @tb: add alert tickets as well?
+                }
+                <Badge
+                  size="sm"
+                  icon={
+                    incident.enrichments?.incident_provider
+                      ? (props: any) => (
+                          <DynamicIcon
+                            providerType={
+                              incident.enrichments?.incident_provider
+                            }
+                            {...props}
+                          />
+                        )
+                      : undefined
+                  }
+                  className="cursor-pointer"
+                  onClick={() =>
+                    window.open(incident.enrichments.incident_url, "_blank")
+                  }
+                >
+                  {incident.enrichments.incident_id}
+                </Badge>
+              </div>
+            ) : (
+              "No external incidents"
+            )}
+            <FieldHeader>Repositories</FieldHeader>
+            {repositories?.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {repositories.map((repo) => {
+                  const repoName = repo.split("/").pop();
+                  return (
+                    <Badge
+                      key={repo}
+                      size="sm"
+                      icon={(props: any) => (
+                        <DynamicIcon providerType="github" {...props} />
+                      )}
+                      className="cursor-pointer"
+                      onClick={() => window.open(repo, "_blank")}
+                    >
+                      {repoName}
+                    </Badge>
+                  );
+                })}
               </div>
             ) : (
               "No environments involved"

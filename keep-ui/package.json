@@ -12,9 +12,10 @@
   "dependencies": {
     "@auth/core": "^0.37.4",
     "@boiseitguru/cookie-cutter": "^0.2.3",
-    "@copilotkit/react-core": "^1.3.15",
-    "@copilotkit/react-ui": "^1.3.15",
-    "@copilotkit/runtime": "^1.3.15",
+    "@copilotkit/react-core": "^1.4.7",
+    "@copilotkit/react-textarea": "^1.4.7",
+    "@copilotkit/react-ui": "^1.4.7",
+    "@copilotkit/runtime": "^1.4.7",
     "@dagrejs/dagre": "^1.1.3",
     "@dnd-kit/core": "^6.1.0",
     "@dnd-kit/sortable": "^8.0.0",
