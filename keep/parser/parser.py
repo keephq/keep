@@ -20,7 +20,7 @@ class Parser:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-    def _get_workflow_id(self, tenant_id, workflow: dict) -> str:
+    async def _get_workflow_id(self, tenant_id, workflow: dict) -> str:
         """Support both CLI and API workflows
 
         Args:
@@ -39,7 +39,7 @@ class Parser:
             raise ValueError("Workflow dict must have an id")
 
         # get the workflow id from the database
-        workflow_id = get_workflow_id(tenant_id, workflow_name)
+        workflow_id = await get_workflow_id(tenant_id, workflow_name)
         # if the workflow id is not found, it means that the workflow is not stored in the db
         # for example when running from CLI
         # so for backward compatibility, we will use the workflow name as the id
@@ -48,7 +48,7 @@ class Parser:
             workflow_id = workflow_name
         return workflow_id
 
-    def parse(
+    async def parse(
         self,
         tenant_id,
         parsed_workflow_yaml: dict,
@@ -72,7 +72,7 @@ class Parser:
                 "workflows"
             ) or parsed_workflow_yaml.get("alerts")
             workflows = [
-                self._parse_workflow(
+                await self._parse_workflow(
                     tenant_id,
                     workflow,
                     providers_file,
@@ -87,7 +87,7 @@ class Parser:
             raw_workflow = parsed_workflow_yaml.get(
                 "workflow"
             ) or parsed_workflow_yaml.get("alert")
-            workflow = self._parse_workflow(
+            workflow = await self._parse_workflow(
                 tenant_id,
                 raw_workflow,
                 providers_file,
@@ -98,7 +98,7 @@ class Parser:
             workflows = [workflow]
         # else, if it stored in the db, it stored without the "workflow" key
         else:
-            workflow = self._parse_workflow(
+            workflow = await self._parse_workflow(
                 tenant_id,
                 parsed_workflow_yaml,
                 providers_file,
@@ -126,7 +126,7 @@ class Parser:
                 )
         return provider_types
 
-    def _parse_workflow(
+    async def _parse_workflow(
         self,
         tenant_id,
         workflow: dict,
@@ -136,7 +136,7 @@ class Parser:
         workflow_actions: dict = None,
     ) -> Workflow:
         self.logger.debug("Parsing workflow")
-        workflow_id = self._get_workflow_id(tenant_id, workflow)
+        workflow_id = await self._get_workflow_id(tenant_id, workflow)
         context_manager = ContextManager(
             tenant_id=tenant_id, workflow_id=workflow_id, workflow=workflow
         )

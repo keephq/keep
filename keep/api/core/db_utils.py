@@ -15,6 +15,7 @@ from sqlalchemy import func
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.ddl import CreateColumn
 from sqlalchemy.sql.functions import GenericFunction
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import Session, create_engine
 
 # This import is required to create the tables
@@ -124,31 +125,62 @@ def dumps(_json) -> str:
     return json.dumps(_json, default=str)
 
 
-def create_db_engine():
+def asynchronize_connection_string(connection_string):
+    """
+    We want to make sure keep is able to work after an update to async.
+    We also may assume some customers hardcoded async drivers to the connection strings
+    so we substitute sync drivers to async on the fly.
+    """
+    if type(connection_string) is not str:
+        return connection_string
+    
+    if connection_string.startswith('sqlite:'):
+        connection_string = connection_string.replace('sqlite:', 'sqlite+aiosqlite:', 1)
+        logging.error(f"DB connection string updated to: {connection_string} to support async.")
+        
+    if connection_string.startswith('postgresql+psycopg2:'):
+        connection_string = connection_string.replace('postgresql+psycopg2:', 'postgresql+psycopg:', 1)
+        logging.error(f"DB connection string updated to: {connection_string} to support async.")
+        
+    if connection_string.startswith('mysql+pymysql:'):
+        connection_string = connection_string.replace('mysql+pymysql:', 'mysql+asyncmy:', 1)
+        logging.error(f"DB connection string updated to: {connection_string} to support async.")
+        
+    return connection_string
+
+
+def create_db_engine(_async=False):
     """
     Creates a database engine based on the environment variables.
     """
+    if _async:
+        creator_method = create_async_engine
+        db_connecton_string = asynchronize_connection_string(DB_CONNECTION_STRING)
+    else:
+        creator_method = create_engine
+        db_connecton_string = DB_CONNECTION_STRING
+
     if RUNNING_IN_CLOUD_RUN and not KEEP_FORCE_CONNECTION_STRING:
-        engine = create_engine(
-            "mysql+pymysql://",
+        engine = creator_method(
+            "mysql+asyncmy://",
             creator=__get_conn,
             echo=DB_ECHO,
             json_serializer=dumps,
             pool_size=DB_POOL_SIZE,
             max_overflow=DB_MAX_OVERFLOW,
         )
-    elif DB_CONNECTION_STRING == "impersonate":
-        engine = create_engine(
-            "mysql+pymysql://",
+    elif db_connecton_string == "impersonate":
+        engine = creator_method(
+            "mysql+asyncmy://",
             creator=__get_conn_impersonate,
             echo=DB_ECHO,
             json_serializer=dumps,
         )
-    elif DB_CONNECTION_STRING:
+    elif db_connecton_string:
         try:
             logger.info(f"Creating a connection pool with size {DB_POOL_SIZE}")
-            engine = create_engine(
-                DB_CONNECTION_STRING,
+            engine = creator_method(
+                db_connecton_string,
                 pool_size=DB_POOL_SIZE,
                 max_overflow=DB_MAX_OVERFLOW,
                 json_serializer=dumps,
@@ -157,12 +189,12 @@ def create_db_engine():
             )
         # SQLite does not support pool_size
         except TypeError:
-            engine = create_engine(
-                DB_CONNECTION_STRING, json_serializer=dumps, echo=DB_ECHO
+            engine = creator_method(
+                db_connecton_string, json_serializer=dumps, echo=DB_ECHO
             )
     else:
-        engine = create_engine(
-            "sqlite:///./keep.db",
+        engine = creator_method(
+            "sqlite+aiosqlite:///./keep.db",
             connect_args={"check_same_thread": False},
             echo=DB_ECHO,
             json_serializer=dumps,

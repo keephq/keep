@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import pathlib
@@ -155,7 +156,7 @@ class IncidentBl:
     def send_workflow_event(self, incident_dto: IncidentDto, action: str) -> None:
         try:
             workflow_manager = WorkflowManager.get_instance()
-            workflow_manager.insert_incident(self.tenant_id, incident_dto, action)
+            asyncio.run(workflow_manager.insert_incident(self.tenant_id, incident_dto, action))
         except Exception:
             self.logger.exception(
                 "Failed to run workflows based on incident",
@@ -233,6 +234,7 @@ class IncidentBl:
         self.update_client_on_incident_change()
         self.send_workflow_event(incident_dto, "deleted")
 
+        
     def update_incident(
         self,
         incident_id: UUID,

@@ -56,12 +56,12 @@ class Step:
     def continue_to_next_step(self):
         return self.__continue_to_next_step
 
-    def run(self):
+    async def run(self):
         try:
             if self.config.get("foreach"):
-                did_action_run = self._run_foreach()
+                did_action_run = await self._run_foreach()
             else:
-                did_action_run = self._run_single()
+                did_action_run = await self._run_single()
             return did_action_run
         except Exception as e:
             self.logger.error(
@@ -106,7 +106,7 @@ class Step:
             return []
         return len(foreach_items) == 1 and foreach_items[0] or zip(*foreach_items)
 
-    def _run_foreach(self):
+    async def _run_foreach(self):
         """Evaluate the action for each item, when using the `foreach` attribute (see foreach.md)"""
         # the item holds the value we are going to iterate over
         items = self._get_foreach_items()
@@ -115,7 +115,7 @@ class Step:
         for item in items:
             self.context_manager.set_for_each_context(item)
             try:
-                did_action_run = self._run_single()
+                did_action_run = await self._run_single()
             except Exception as e:
                 self.logger.error(f"Failed to run action with error {e}")
                 continue
@@ -125,7 +125,7 @@ class Step:
                 any_action_run = True
         return any_action_run
 
-    def _run_single(self):
+    async def _run_single(self):
         # Initialize all conditions
         conditions = []
         self.context_manager.set_step_vars(self.step_id, _vars=self.vars)
@@ -257,11 +257,11 @@ class Step:
                 )
                 try:
                     if self.step_type == StepType.STEP:
-                        step_output = self.provider.query(
+                        step_output = await self.provider.query(
                             **rendered_providers_parameters
                         )
                     else:
-                        step_output = self.provider.notify(
+                        step_output = await self.provider.notify(
                             **rendered_providers_parameters
                         )
                     # exiting the loop as step/action execution was successful

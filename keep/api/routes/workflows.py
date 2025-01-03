@@ -168,7 +168,7 @@ def export_workflows(
     "/{workflow_id}/run",
     description="Run a workflow",
 )
-def run_workflow(
+async def run_workflow(
     workflow_id: str,
     event_type: Optional[str] = Query(None),
     event_id: Optional[str] = Query(None),
@@ -231,7 +231,7 @@ def run_workflow(
                     detail="Invalid event format",
                 )
 
-        workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
+        workflow_execution_id = await workflowmanager.scheduler.handle_manual_event_workflow(
             workflow_id, tenant_id, created_by, event
         )
     except Exception as e:
@@ -274,7 +274,7 @@ async def run_workflow_from_definition(
     workflowstore = WorkflowStore()
     workflowmanager = WorkflowManager.get_instance()
     try:
-        workflow = workflowstore.get_workflow_from_dict(
+        workflow = await workflowstore.get_workflow_from_dict(
             tenant_id=tenant_id, workflow=workflow
         )
     except Exception as e:
@@ -288,7 +288,7 @@ async def run_workflow_from_definition(
         )
 
     try:
-        workflow_execution = workflowmanager.scheduler.handle_workflow_test(
+        workflow_execution = await workflowmanager.scheduler.handle_workflow_test(
             workflow, tenant_id, created_by
         )
     except Exception as e:
@@ -497,7 +497,7 @@ async def update_workflow_by_id(
     """
     tenant_id = authenticated_entity.tenant_id
     logger.info(f"Updating workflow {workflow_id}", extra={"tenant_id": tenant_id})
-    workflow_from_db = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow_from_db = await get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
     if not workflow_from_db:
         logger.warning(
             f"Tenant tried to update workflow {workflow_id} that does not exist",
@@ -528,7 +528,7 @@ async def update_workflow_by_id(
 
 
 @router.get("/{workflow_id}/raw", description="Get workflow executions by ID")
-def get_raw_workflow_by_id(
+async def get_raw_workflow_by_id(
     workflow_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
@@ -539,7 +539,7 @@ def get_raw_workflow_by_id(
     return JSONResponse(
         status_code=200,
         content={
-            "workflow_raw": workflowstore.get_raw_workflow(
+            "workflow_raw": await workflowstore.get_raw_workflow(
                 tenant_id=tenant_id, workflow_id=workflow_id
             )
         },
@@ -547,7 +547,7 @@ def get_raw_workflow_by_id(
 
 
 @router.get("/{workflow_id}", description="Get workflow by ID")
-def get_workflow_by_id(
+async def get_workflow_by_id(
     workflow_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
@@ -555,7 +555,7 @@ def get_workflow_by_id(
 ):
     tenant_id = authenticated_entity.tenant_id
     # get all workflow
-    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow = await get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
 
     if not workflow:
         logger.warning(
@@ -590,7 +590,7 @@ def get_workflow_by_id(
 
 
 @router.get("/{workflow_id}/runs", description="Get workflow executions by ID")
-def get_workflow_runs_by_id(
+async def get_workflow_runs_by_id(
     workflow_id: str,
     tab: int = 1,
     limit: int = 25,
@@ -603,7 +603,7 @@ def get_workflow_runs_by_id(
     ),
 ) -> WorkflowExecutionsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
-    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow = await get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
     installed_providers = get_installed_providers(tenant_id)
     installed_providers_by_type = {}
     for installed_provider in installed_providers:

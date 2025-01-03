@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import os
 import random
@@ -15,9 +16,11 @@ from sqlalchemy import event, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy.ext.asyncio import create_async_engine
 from starlette_context import context, request_cycle_context
 
 # This import is required to create the tables
+from keep.api.core.db_utils import asynchronize_connection_string
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.db.alert import *
@@ -223,7 +226,7 @@ def db_session(request, monkeypatch):
         mock_engine = create_engine(db_connection_string)
     # sqlite
     else:
-        db_connection_string = "sqlite:///:memory:"
+        db_connection_string = "sqlite:///file:shared_memory?mode=memory&cache=shared&uri=true"
         mock_engine = create_engine(
             db_connection_string,
             connect_args={"check_same_thread": False},
@@ -245,6 +248,8 @@ def db_session(request, monkeypatch):
                 conn.exec_driver_sql(text("BEGIN EXCLUSIVE"))
             except Exception:
                 pass
+
+    mock_engine_async = create_async_engine(asynchronize_connection_string(db_connection_string))
 
     SQLModel.metadata.create_all(mock_engine)
 
@@ -314,9 +319,15 @@ actions:
     session.add_all(workflow_data)
     session.commit()
 
+    def mock_create_engine(_async=False):
+        if _async:
+            return mock_engine_async
+        return mock_engine
+
     with patch("keep.api.core.db.engine", mock_engine):
-        with patch("keep.api.core.db_utils.create_db_engine", return_value=mock_engine):
-            yield session
+        with patch("keep.api.core.db.engine_async", mock_engine_async):
+            with patch("keep.api.core.db_utils.create_db_engine", side_effect=mock_create_engine):
+                yield session
 
     import logging
 
@@ -407,14 +418,14 @@ def is_elastic_responsive(host, port, user, password):
         info = elastic_client._client.info()
         print("Elastic still up now")
         return True if info else False
-    except Exception:
-        print("Elastic still not up")
-        pass
+    except Exception as e:
+        print(f"Elastic still not up: {e}")
 
     return False
 
 
 @pytest.fixture(scope="session")
+@pytest.mark.asyncio
 def elastic_container(docker_ip, docker_services):
     try:
         if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":

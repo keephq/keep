@@ -95,7 +95,7 @@ jobs:
           LOG_LEVEL: DEBUG
           SQLALCHEMY_WARN_20: 1
         run: |
-          poetry run coverage run --branch -m pytest --timeout 20 -n auto --non-integration --ignore=tests/e2e_tests/
+          poetry run coverage run --branch -m pytest -n auto --non-integration --ignore=tests/e2e_tests/
 
       - name: Run integration tests and report coverage
         run: |

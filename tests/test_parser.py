@@ -19,16 +19,16 @@ from keep.providers.models.provider_config import ProviderConfig
 from keep.step.step import Step
 from keep.workflowmanager.workflowstore import WorkflowStore
 
-
-def test_parse_with_nonexistent_file(db_session):
+@pytest.mark.asyncio
+async def test_parse_with_nonexistent_file(db_session):
     workflow_store = WorkflowStore()
     # Expected error when a given input does not describe an existing file
     with pytest.raises(HTTPException) as e:
-        workflow_store.get_workflow(SINGLE_TENANT_UUID, "test-not-found")
+        await workflow_store.get_workflow(SINGLE_TENANT_UUID, "test-not-found")
     assert e.value.status_code == 404
 
-
-def test_parse_with_nonexistent_url(monkeypatch):
+@pytest.mark.asyncio
+async def test_parse_with_nonexistent_url(monkeypatch):
     # Mocking requests.get to always raise a ConnectionError
     def mock_get(*args, **kwargs):
         raise requests.exceptions.ConnectionError
@@ -37,7 +37,7 @@ def test_parse_with_nonexistent_url(monkeypatch):
     workflow_store = WorkflowStore()
     # Expected error when a given input does not describe an existing URL
     with pytest.raises(requests.exceptions.ConnectionError):
-        workflow_store.get_workflows_from_path(
+        await workflow_store.get_workflows_from_path(
             SINGLE_TENANT_UUID, "https://ThisWebsiteDoNotExist.com"
         )
 
@@ -46,10 +46,10 @@ path_to_test_resources = Path(__file__).parent / "workflows"
 workflow_path = str(path_to_test_resources / "db_disk_space_for_testing.yml")
 providers_path = str(path_to_test_resources / "providers_for_testing.yaml")
 
-
-def test_parse_sanity_check(db_session):
+@pytest.mark.asyncio
+async def test_parse_sanity_check(db_session):
     workflow_store = WorkflowStore()
-    parsed_workflows = workflow_store.get_workflows_from_path(
+    parsed_workflows = await workflow_store.get_workflows_from_path(
         SINGLE_TENANT_UUID, workflow_path, providers_path
     )
     assert parsed_workflows is not None
@@ -302,9 +302,10 @@ reusable_actions_path = str(path_to_test_resources / "reusable_actions_for_testi
 
 class TestReusableActionWithWorkflow:
 
-    def test_if_action_is_expanded(self, db_session):
+    @pytest.mark.asyncio
+    async def test_if_action_is_expanded(self, db_session):
         workflow_store = WorkflowStore()
-        workflows = workflow_store.get_workflows_from_path(
+        workflows = await workflow_store.get_workflows_from_path(
             tenant_id=SINGLE_TENANT_UUID,
             workflow_path=reusable_workflow_path,
             providers_file=reusable_providers_path,
