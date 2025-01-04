@@ -534,7 +534,6 @@ class IncidentDto(IncidentDtoIn):
             merged_into_incident_id=db_incident.merged_into_incident_id,
             merged_by=db_incident.merged_by,
             merged_at=db_incident.merged_at,
-            enrichments=db_incident.enrichments,
             incident_type=db_incident.incident_type,
             incident_application=str(db_incident.incident_application),
         )

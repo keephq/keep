@@ -242,6 +242,7 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
       return result;
     },
   });
+
   useCopilotAction({
     name: "invokeGetTrace",
     description:
@@ -295,6 +296,37 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
       } else {
         return <Card>Trace not found: {result}</Card>;
       }
+    },
+  });
+
+  useCopilotAction({
+    name: "searchTraces",
+    description:
+      "Search traces using the provider's search_traces method. You should take the alert.alert_query queries and search for traces that match them.",
+    parameters: [
+      {
+        name: "providerId",
+        type: "string",
+        description: "The ID of the provider to invoke the method on",
+      },
+      {
+        name: "queries",
+        type: "string[]",
+        description:
+          "The alert queries from the alert.alert_query to search for",
+      },
+    ],
+    handler: async ({ providerId, queries }) => {
+      const methodParams: { [key: string]: string | boolean | object } = {
+        queries: queries,
+      };
+
+      const result = await invokeProviderMethod(
+        providerId,
+        "search_traces",
+        methodParams
+      );
+      return result;
     },
   });
 

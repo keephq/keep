@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import time
+from collections import defaultdict
 from typing import Literal
 
 import pydantic
@@ -572,8 +573,12 @@ class DatadogProvider(BaseTopologyProvider):
                 f"Failed to get traces: {response.status_code} {response.text}"
             )
 
-    def search_traces(self, query: str):
-        self.logger.info("Searching traces", extra={"query": query})
+    def search_traces(self, queries: list[str], **kwargs):
+        if not queries:
+            raise Exception("No services provided")
+
+        self.logger.info("Searching traces", extra={"queries": queries})
+
         headers = {}
         if self.authentication_config.api_key and self.authentication_config.app_key:
             headers["DD-API-KEY"] = self.authentication_config.api_key
@@ -583,16 +588,38 @@ class DatadogProvider(BaseTopologyProvider):
                 f"Bearer {self.authentication_config.oauth_token.get('access_token')}"
             )
 
+        alltraces = defaultdict(list)
+        for query in queries:
+            self.logger.info("Searching traces", extra={"query": query})
+            try:
+                traces = self._search_traces(query, headers)
+                traces_ids = [
+                    t.get("attributes").get("trace_id") for t in traces["data"]
+                ]
+                alltraces[query] = traces_ids
+            except Exception:
+                self.logger.exception(
+                    "Failed to get traces",
+                    extra={
+                        "query": query,
+                    },
+                )
+                continue
+
+        return alltraces
+
+    def _search_traces(self, query: str, headers: dict):
+        span_query = self._translate_metric_query_to_span_query(query)
         data = {
             "data": {
                 "attributes": {
                     "filter": {
                         "from": "now-1800s",
                         "to": "now",
-                        "query": "env:keeptest operation_name:Microsoft.AspNetCore.server service:cartservice",
+                        "query": span_query,
                     },
                     "options": {"timezone": "UTC"},
-                    "page": {"limit": 50},
+                    "page": {"limit": 5},
                     "sort": "-timestamp",
                 },
                 "type": "search_request",
@@ -1223,6 +1250,50 @@ class DatadogProvider(BaseTopologyProvider):
             }
             services[service_dep] = service
         return list(services.values()), {}
+
+    def _translate_metric_query_to_span_query(
+        self, metric_query: str
+    ) -> tuple[str, int]:
+        """
+        Translates a Datadog metric query into a span search query.
+        Returns tuple of (query_string, threshold_seconds)
+        """
+        import re
+
+        # Extract tags from the curly braces
+        tags_pattern = r"\{(.*?)\}"
+        tags_match = re.search(tags_pattern, metric_query)
+        if not tags_match:
+            raise ValueError("No tags found in metric query")
+
+        tags_str = tags_match.group(1)
+        tags_dict = dict(tag.split(":") for tag in tags_str.split(","))
+
+        # Extract threshold value (the number after '>')
+        threshold_pattern = r">\s*(\d+)"
+        threshold_match = re.search(threshold_pattern, metric_query)
+        if not threshold_match:
+            raise ValueError("No threshold found in metric query")
+
+        threshold_seconds = int(threshold_match.group(1))
+
+        # Extract operation name dynamically - look for the string between "trace." and ".duration"
+        operation_pattern = r"trace\.(.*?)\.duration"
+        operation_match = re.search(operation_pattern, metric_query)
+        if not operation_match:
+            raise ValueError("Could not find operation name in metric query")
+
+        operation_name = operation_match.group(1)
+
+        # Construct the span search query
+        query_parts = [
+            f'service:{tags_dict["service"]}',
+            f'env:{tags_dict["env"]}',
+            f"operation_name:{operation_name}",
+            f"@duration:>{threshold_seconds}s",  # @ is used to indicate a span attribute
+        ]
+
+        return " ".join(query_parts)
 
 
 if __name__ == "__main__":
