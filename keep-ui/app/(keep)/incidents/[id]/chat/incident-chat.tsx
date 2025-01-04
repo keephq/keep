@@ -20,9 +20,11 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { useEffect, useMemo } from "react";
 import "@copilotkit/react-ui/styles.css";
 import "./incident-chat.css";
+import { useSession } from "next-auth/react";
 
 export function IncidentChat({ incident }: { incident: IncidentDto }) {
   const router = useRouter();
+  const { data: session } = useSession();
   const { data: alerts, isLoading: alertsLoading } = useIncidentAlerts(
     incident.id
   );
@@ -97,6 +99,10 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
 
   // Chat context
   useCopilotReadable({
+    description: "The user who is chatting with the assistant",
+    value: session?.user,
+  });
+  useCopilotReadable({
     description: "incidentDetails",
     value: incident,
   });
@@ -147,6 +153,89 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
       if (typeof result !== "string") {
         await enrichIncident(incident.id, {
           [func_name]: result,
+        });
+      }
+
+      return result;
+    },
+  });
+  useCopilotAction({
+    name: "createIncident",
+    description:
+      "Create an incident in a provider that supports incident creation. You can get all the necessary parameters from the incident itself. If you are missing some inforamtion, ask the user to provide it. If the incident already got created and you have the incident id and the incident provider type in the incident enrichments, tell the user the incident is already created.",
+    parameters: [
+      {
+        name: "providerId",
+        type: "string",
+        description: "The ID of the provider to invoke the method on",
+      },
+      {
+        name: "providerType",
+        type: "string",
+        description:
+          "The type of the provider being used, for example 'datadog'",
+      },
+      {
+        name: "incident_name",
+        type: "string",
+        description:
+          "The title of this incident. If the title doesn't mean a lot, generate an informative title",
+      },
+      {
+        name: "incident_message",
+        type: "string",
+        description:
+          "A summarization of the incident that will be presented in the timeline of the incident",
+      },
+      {
+        name: "commander_user",
+        type: "string",
+        description:
+          "The user who will be the commander of the incident, use the requesting user email. If you can't understand who's the commander alone, ask the user to provide the name.",
+      },
+      {
+        name: "customer_impacted",
+        type: "boolean",
+        description:
+          "If you think this incident impacts some customer, set this to true. If you're not sure, set it to false.",
+      },
+      {
+        name: "severity",
+        type: "string",
+        description:
+          'The severity level of the incident, one of "SEV-1", "SEV-2", "SEV-3", "SEV-4", "UNKNOWN"',
+      },
+    ],
+    handler: async ({
+      providerId,
+      providerType,
+      incident_name,
+      incident_message,
+      commander_user,
+      customer_impacted,
+      severity,
+    }) => {
+      if (incident.enrichments && incident.enrichments["incident_id"]) {
+        return `The incident already exists: ${incident.enrichments["incident_url"]}`;
+      }
+
+      const result = await invokeProviderMethod(providerId, "create_incident", {
+        incident_name,
+        incident_message,
+        commander_user,
+        customer_impacted,
+        severity,
+      });
+
+      if (typeof result !== "string") {
+        const incidentId = result.id;
+        const incidentUrl = result.url;
+        const incidentTitle = result.title;
+        await enrichIncident(incident.id, {
+          incident_url: incidentUrl,
+          incident_id: incidentId,
+          incident_provider: providerType,
+          incident_title: incidentTitle,
         });
       }
 

@@ -302,7 +302,8 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                     window.open(incident.enrichments.incident_url, "_blank")
                   }
                 >
-                  {incident.enrichments.incident_id}
+                  {incident.enrichments?.incident_title ??
+                    incident.user_generated_name}
                 </Badge>
               </div>
             ) : (

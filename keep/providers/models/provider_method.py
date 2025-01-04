@@ -27,7 +27,6 @@ class ProviderMethod(BaseModel):
     scopes: list[str] = []  # required scope names, should match ProviderScope names
     description: str | None = None
     category: str | None = None
-    func_params: list[ProviderMethodParam] = []
     type: Literal["view", "action"] = "view"
 
 
