@@ -456,6 +456,52 @@ class DatadogProvider(BaseTopologyProvider):
                 f"Failed to get traces: {response.status_code} {response.text}"
             )
 
+    def search_traces(self, query: str):
+        self.logger.info("Searching traces", extra={"query": query})
+        headers = {}
+        if self.authentication_config.api_key and self.authentication_config.app_key:
+            headers["DD-API-KEY"] = self.authentication_config.api_key
+            headers["DD-APPLICATION-KEY"] = self.authentication_config.app_key
+        else:
+            headers["Authorization"] = (
+                f"Bearer {self.authentication_config.oauth_token.get('access_token')}"
+            )
+
+        data = {
+            "data": {
+                "attributes": {
+                    "filter": {
+                        "from": "now-1800s",
+                        "to": "now",
+                        "query": "env:keeptest operation_name:Microsoft.AspNetCore.server service:cartservice",
+                    },
+                    "options": {"timezone": "UTC"},
+                    "page": {"limit": 50},
+                    "sort": "-timestamp",
+                },
+                "type": "search_request",
+            }
+        }
+        endpoint = "/api/v2/spans/events/search"
+        url = f"{self.configuration.host}/{endpoint}"
+        response = requests.post(url, headers=headers, json=data)
+        if response.ok:
+            self.logger.info("Traces retrieved", extra={"query": query})
+            traces = response.json()
+            return traces
+        else:
+            self.logger.error(
+                "Failed to get traces",
+                extra={
+                    "query": query,
+                    "status_code": response.status_code,
+                    "response": response.text,
+                },
+            )
+            raise Exception(
+                f"Failed to get traces: {response.status_code} {response.text}"
+            )
+
     def get_monitor_events(self, monitor_id: str):
         self.logger.info("Getting monitor events", extra={"monitor_id": monitor_id})
         with ApiClient(self.configuration) as api_client:
@@ -878,6 +924,9 @@ class DatadogProvider(BaseTopologyProvider):
         else:
             groups = groups.split(",")
 
+        description = event.get("message") or event.get("body")
+        alert_query = event.get("alert_query")
+
         alert = AlertDto(
             id=event.get("id"),
             name=title,
@@ -885,13 +934,14 @@ class DatadogProvider(BaseTopologyProvider):
             lastReceived=str(event_time),
             source=["datadog"],
             message=event.get("body"),
-            description=event.get("message"),
+            description=description,
             groups=groups,
             severity=severity,
             service=service,
             url=url,
             tags=tags,
             monitor_id=event.get("monitor_id"),
+            alert_query=alert_query,
         )
         alert.fingerprint = DatadogProvider.get_alert_fingerprint(
             alert, DatadogProvider.FINGERPRINT_FIELDS
