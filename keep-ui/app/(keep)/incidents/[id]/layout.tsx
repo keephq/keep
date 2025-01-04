@@ -1,9 +1,7 @@
 import { ReactNode } from "react";
-import { IncidentTabsNavigation } from "./incident-tabs-navigation";
-import { IncidentHeader } from "./incident-header";
 import { getIncidentWithErrorHandling } from "./getIncidentWithErrorHandling";
 import { IncidentHeaderSkeleton } from "./incident-header-skeleton";
-import { IncidentChatClientPage } from "./chat/page.client";
+import { IncidentLayoutClient } from "./incident-layout-client";
 
 export default async function Layout({
   children,
@@ -17,18 +15,9 @@ export default async function Layout({
   try {
     const incident = await getIncidentWithErrorHandling(serverParams.id, false);
     return (
-      <div className="flex flex-col gap-4">
-        <IncidentHeader incident={incident} />
-        <IncidentTabsNavigation incident={incident} />
-        <div className="flex gap-4">
-          <div className="flex-1 min-w-0">{children}</div>
-          {AIEnabled && (
-            <div className="w-[40%] shrink-0">
-              <IncidentChatClientPage incident={incident} />
-            </div>
-          )}
-        </div>
-      </div>
+      <IncidentLayoutClient initialIncident={incident} AIEnabled={AIEnabled}>
+        {children}
+      </IncidentLayoutClient>
     );
   } catch (error) {
     return (

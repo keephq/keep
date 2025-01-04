@@ -371,7 +371,7 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     );
 
   return (
-    <Card className="max-h-[calc(100vh-28rem)]">
+    <Card className="h-full">
       <div className="chat-container">
         <div className="chat-messages">
           <CopilotChat
@@ -380,7 +380,7 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
             labels={{
               title: "Incident Assistant",
               initial:
-                "Hi! 👋 Lets work together to resolve this incident! Ask me anything",
+                "Hi! Lets work together to resolve this incident! Ask me anything",
               placeholder: "For example: Find the root cause of this incident",
             }}
           />
