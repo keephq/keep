@@ -142,6 +142,7 @@ class TopologyProcessor:
             self.logger.info(f"No applications found for tenant {tenant_id}")
             return
 
+        # TODO: get only alerts with service ( if lot of alerts it will be hidden)
         db_last_alerts = get_last_alerts(tenant_id, with_incidents=True)
         last_alerts = convert_db_alerts_to_dto_alerts(db_last_alerts)
 
@@ -276,6 +277,7 @@ class TopologyProcessor:
                 incident=incident,
                 fingerprints=[alert.fingerprint for alert in alerts],
                 session=session,
+                exclude_unlinked_alerts=True,
             )
 
             # Check if incident should be resolved
@@ -288,7 +290,7 @@ class TopologyProcessor:
                 all_resolved = all(
                     [
                         alert.status == AlertStatus.RESOLVED.value
-                        or AlertStatus.SUPPRESSED.value
+                        or alert.status == AlertStatus.SUPPRESSED.value
                         for alert in alert_dtos
                     ]
                 )
@@ -298,6 +300,17 @@ class TopologyProcessor:
                         "All alerts are resolved, updating incident status to resolved"
                     )
                     incident.status = IncidentStatus.RESOLVED.value
+                    session.add(incident)
+                    session.commit()
+                # elif the alert is resolved and the incident is not resolved, update the incident status to updated
+                elif (
+                    incident.status == IncidentStatus.RESOLVED.value
+                    and not all_resolved
+                ):
+                    self.logger.info(
+                        "Alerts are not resolved, updating incident status to updated"
+                    )
+                    incident.status = IncidentStatus.FIRING.value
                     session.add(incident)
                     session.commit()
 

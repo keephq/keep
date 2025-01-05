@@ -3739,6 +3739,7 @@ def add_alerts_to_incident(
     is_created_by_ai: bool = False,
     session: Optional[Session] = None,
     override_count: bool = False,
+    exclude_unlinked_alerts: bool = False,  # if True, do not add alerts to incident if they are manually unlinked
 ) -> Optional[Incident]:
     logger.info(
         f"Adding alerts to incident {incident.id} in database, total {len(fingerprints)} alerts",
@@ -3774,6 +3775,28 @@ def add_alerts_to_incident(
                 for fingerprint in fingerprints
                 if fingerprint not in existing_fingerprints
             }
+
+            # filter out unlinked alerts
+            if exclude_unlinked_alerts:
+                unlinked_alerts = set(
+                    session.exec(
+                        select(LastAlert.fingerprint)
+                        .join(
+                            LastAlertToIncident,
+                            and_(
+                                LastAlertToIncident.tenant_id == LastAlert.tenant_id,
+                                LastAlertToIncident.fingerprint
+                                == LastAlert.fingerprint,
+                            ),
+                        )
+                        .where(
+                            LastAlertToIncident.deleted_at != NULL_FOR_DELETED_AT,
+                            LastAlertToIncident.tenant_id == tenant_id,
+                            LastAlertToIncident.incident_id == incident.id,
+                        )
+                    ).all()
+                )
+                new_fingerprints = new_fingerprints - unlinked_alerts
 
             if not new_fingerprints:
                 return incident
@@ -3844,6 +3867,7 @@ def add_alerts_to_incident(
             session.add(incident)
             session.commit()
             session.refresh(incident)
+
             return incident
 
 
