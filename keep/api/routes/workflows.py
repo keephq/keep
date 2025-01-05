@@ -765,7 +765,7 @@ def benchmark_workflow(
     if os.environ.get("KEEP_WF_BENCHMARK_ENABLED", "").lower() != "true":
         return HTTPException(status_code=405, detail="Workflow benchmarking is not avaliable")
 
-    TOTAL_WORKFLOWS_TO_RUN = 5000
+    TOTAL_WORKFLOWS_TO_RUN = 1000
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
     workflowmanager = WorkflowManager.get_instance()
