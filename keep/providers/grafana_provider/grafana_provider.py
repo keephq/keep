@@ -214,6 +214,10 @@ class GrafanaProvider(BaseProvider):
             environment = labels.get(
                 "deployment_environment", labels.get("environment", "unknown")
             )
+
+            annotations = alert.get("annotations", {})
+            values = alert.get("values", {})
+
             alert_dto = AlertDto(
                 id=alert.get("fingerprint"),
                 fingerprint=fingerprint,
@@ -227,6 +231,8 @@ class GrafanaProvider(BaseProvider):
                 description=alert.get("annotations", {}).get("summary", ""),
                 source=["grafana"],
                 labels=labels,
+                annotations=annotations,
+                values=values,
             )
             # enrich extra payload with labels
             for label in labels:
