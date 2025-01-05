@@ -287,11 +287,17 @@ class TopologyProcessor:
                     0
                 ]
                 alert_dtos = convert_db_alerts_to_dto_alerts(incident.alerts)
+                statuses = []
+                for alert in alert_dtos:
+                    if isinstance(alert.status, str):
+                        statuses.append(alert.status)
+                    else:
+                        statuses.append(alert.status.value)
                 all_resolved = all(
                     [
-                        alert.status == AlertStatus.RESOLVED.value
-                        or alert.status == AlertStatus.SUPPRESSED.value
-                        for alert in alert_dtos
+                        s == AlertStatus.RESOLVED.value
+                        or s == AlertStatus.SUPPRESSED.value
+                        for s in statuses
                     ]
                 )
                 # If all alerts are resolved, update incident status to resolved
