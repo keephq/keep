@@ -31,6 +31,11 @@ def upgrade() -> None:
         batch_op.add_column(
             sa.Column("repository", sqlmodel.sql.sqltypes.AutoString(), nullable=False)
         )
+
+    with op.batch_alter_table("topologyservice", schema=None) as batch_op:
+        batch_op.add_column(
+            sa.Column("namespace", sqlmodel.sql.sqltypes.AutoString(), nullable=False)
+        )
     # ### end Alembic commands ###
 
 
@@ -42,4 +47,7 @@ def downgrade() -> None:
 
     with op.batch_alter_table("topologyapplication", schema=None) as batch_op:
         batch_op.drop_column("repository")
+
+    with op.batch_alter_table("topologyservice", schema=None) as batch_op:
+        batch_op.drop_column("namespace")
     # ### end Alembic commands ###
