@@ -14,10 +14,14 @@
 
 .copilotKitMessages {
   @apply h-full flex flex-col !important;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
 }
 
 .copilotKitMessages > div {
   @apply flex-1 overflow-y-auto !important;
+  overscroll-behavior: contain;
+  will-change: scroll-position;
 }
 
 .copilotKitUserMessage {
@@ -29,9 +33,13 @@
 }
 
 .chat-container {
-  @apply max-h-[calc(100vh-31rem)] flex flex-col;
+  @apply max-h-[calc(100vh-37rem)] flex flex-col;
+  scroll-behavior: smooth;
 }
 
 .chat-messages {
   @apply flex-1 overflow-y-scroll overflow-x-hidden;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  will-change: scroll-position;
 }
