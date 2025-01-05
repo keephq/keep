@@ -249,6 +249,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                   <Badge
                     key={service}
                     size="sm"
+                    color="orange"
                     className="cursor-pointer"
                     onClick={() => filterBy("service", service)}
                   >
@@ -265,6 +266,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                 {environments.map((env) => (
                   <Badge
                     key={env}
+                    color="orange"
                     size="sm"
                     className="cursor-pointer"
                     onClick={() => filterBy("environment", env)}
@@ -285,6 +287,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                 }
                 <Badge
                   size="sm"
+                  color="orange"
                   icon={
                     incident.enrichments?.incident_provider
                       ? (props: any) => (
@@ -318,6 +321,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                     <Badge
                       key={repo}
                       size="sm"
+                      color="orange"
                       icon={(props: any) => (
                         <DynamicIcon providerType="github" {...props} />
                       )}
@@ -337,7 +341,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                 <>
                   <FieldHeader>Grouped by</FieldHeader>
                   <div className="flex flex-wrap gap-1">
-                    <Badge size="sm" className="cursor-pointer">
+                    <Badge size="sm" className="cursor-pointer" color="orange">
                       {incident.rule_fingerprint}
                     </Badge>
                   </div>
@@ -379,6 +383,21 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
           ) : (
             <p>No assignee yet</p>
           )}
+        </div>
+        <div>
+          <FieldHeader>Resolve on</FieldHeader>
+          <Badge
+            size="sm"
+            color="orange"
+            className="cursor-help"
+            tooltip={
+              incident.resolve_on === "all"
+                ? "Incident will be resolved when all its alerts are resolved"
+                : "Incident will resolve only when manually set to resolved"
+            }
+          >
+            {incident.resolve_on}
+          </Badge>
         </div>
         {!!incident.rule_fingerprint && (
           <div>

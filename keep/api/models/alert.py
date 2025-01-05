@@ -20,6 +20,8 @@ from pydantic import (
 from sqlalchemy import desc
 from sqlmodel import col
 
+from keep.api.models.db.rule import ResolveOn
+
 if TYPE_CHECKING:
     from keep.api.models.db.alert import Incident
 
@@ -447,6 +449,8 @@ class IncidentDto(IncidentDtoIn):
     incident_type: str | None
     incident_application: str | None
 
+    resolve_on: str = ResolveOn.ALL.value
+
     _tenant_id: str = PrivateAttr()
     _alerts: Optional[List[AlertDto]] = PrivateAttr(default=None)
 
@@ -536,6 +540,7 @@ class IncidentDto(IncidentDtoIn):
             merged_at=db_incident.merged_at,
             incident_type=db_incident.incident_type,
             incident_application=str(db_incident.incident_application),
+            resolve_on=db_incident.resolve_on,
         )
 
         # This field is required for getting alerts when required

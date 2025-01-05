@@ -15,6 +15,7 @@ from sqlmodel import JSON, TEXT, Column, DateTime, Field, Index, Relationship, S
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.models.alert import IncidentSeverity, IncidentStatus
+from keep.api.models.db.rule import ResolveOn
 from keep.api.models.db.tenant import Tenant
 
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
@@ -190,6 +191,7 @@ class Incident(SQLModel, table=True):
     incident_type: str = Field(default=IncidentType.MANUAL.value)
     # for topology incidents
     incident_application: UUID | None = Field(default=None)
+    resolve_on: str = ResolveOn.ALL.value
 
     same_incident_in_the_past_id: UUID | None = Field(
         sa_column=Column(

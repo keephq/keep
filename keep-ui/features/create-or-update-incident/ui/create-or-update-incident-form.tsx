@@ -8,6 +8,7 @@ import {
   Button,
   Select,
   SelectItem,
+  Switch,
 } from "@tremor/react";
 import { FormEvent, useEffect, useState } from "react";
 import { useUsers } from "@/entities/users/model/useUsers";
@@ -34,6 +35,8 @@ export function CreateOrUpdateIncidentForm({
   const [incidentName, setIncidentName] = useState<string>("");
   const [incidentUserSummary, setIncidentUserSummary] = useState<string>("");
   const [incidentAssignee, setIncidentAssignee] = useState<string>("");
+  const [resolveOnAlertsResolved, setResolveOnAlertsResolved] =
+    useState<string>("all");
   const { data: users = [] } = useUsers();
   const { addIncident, updateIncident } = useIncidentActions();
 
@@ -49,6 +52,7 @@ export function CreateOrUpdateIncidentForm({
         incidentToEdit.user_summary ?? incidentToEdit.generated_summary ?? ""
       );
       setIncidentAssignee(incidentToEdit.assignee ?? "");
+      setResolveOnAlertsResolved(incidentToEdit.resolve_on ?? "all");
     }
   }, [incidentToEdit]);
 
@@ -56,6 +60,7 @@ export function CreateOrUpdateIncidentForm({
     setIncidentName("");
     setIncidentUserSummary("");
     setIncidentAssignee("");
+    setResolveOnAlertsResolved("all");
   };
 
   // If the Incident is successfully updated or the user cancels the update we exit the editMode and set the editRule in the incident.tsx to null.
@@ -73,6 +78,7 @@ export function CreateOrUpdateIncidentForm({
           user_generated_name: incidentName,
           user_summary: incidentUserSummary,
           assignee: incidentAssignee,
+          resolve_on: resolveOnAlertsResolved,
           same_incident_in_the_past_id:
             incidentToEdit!.same_incident_in_the_past_id,
         },
@@ -85,6 +91,7 @@ export function CreateOrUpdateIncidentForm({
           user_generated_name: incidentName,
           user_summary: incidentUserSummary,
           assignee: incidentAssignee,
+          resolve_on: resolveOnAlertsResolved,
         });
         createCallback?.(newIncident.id);
         exitEditMode();
@@ -174,6 +181,23 @@ export function CreateOrUpdateIncidentForm({
             onValueChange={setIncidentAssignee}
           />
         )}
+      </div>
+
+      <div className="mt-2.5">
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="resolve-on-alerts"
+            name="resolve-on-alerts"
+            color="orange"
+            checked={resolveOnAlertsResolved === "all"}
+            onChange={() =>
+              setResolveOnAlertsResolved(
+                resolveOnAlertsResolved === "all" ? "never" : "all"
+              )
+            }
+          />
+          <Text>Resolve when all alerts are resolved</Text>
+        </div>
       </div>
 
       <Divider />

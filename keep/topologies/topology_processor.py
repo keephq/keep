@@ -7,7 +7,9 @@ from typing import Dict, Optional, Set
 from sqlmodel import select
 
 from keep.api.core.db import (
+    add_alerts_to_incident,
     assign_alert_to_incident,
+    enrich_incidents_with_alerts,
     existed_or_new_session,
     get_last_alerts,
 )
@@ -269,24 +271,35 @@ class TopologyProcessor:
                 alerts.extend(service_alerts)
 
             # Assign all alerts to the incident if they're not already assigned
-            for alert in alerts:
-                # Let assign_alert_to_incident do the check if the alert is already assigned
-                incident = assign_alert_to_incident(
-                    fingerprint=alert.fingerprint,
-                    incident=incident,
-                    tenant_id=tenant_id,
-                    session=session,
-                )
+            add_alerts_to_incident(
+                tenant_id=tenant_id,
+                incident=incident,
+                fingerprints=[alert.fingerprint for alert in alerts],
+                session=session,
+            )
 
             # Check if incident should be resolved
-            all_resolved = all(
-                [alert.status == AlertStatus.RESOLVED.value for alert in alerts]
-            )
-            # If all alerts are resolved, update incident status to resolved
-            if all_resolved and incident.status != IncidentStatus.RESOLVED.value:
-                incident.status = IncidentStatus.RESOLVED.value
-                session.add(incident)
-                session.commit()
+            if incident.resolve_on == "all":
+                self.logger.info("Checking if incident should be resolved")
+                incident = enrich_incidents_with_alerts(tenant_id, [incident], session)[
+                    0
+                ]
+                alert_dtos = convert_db_alerts_to_dto_alerts(incident.alerts)
+                all_resolved = all(
+                    [
+                        alert.status == AlertStatus.RESOLVED.value
+                        or AlertStatus.SUPPRESSED.value
+                        for alert in alert_dtos
+                    ]
+                )
+                # If all alerts are resolved, update incident status to resolved
+                if all_resolved and incident.status != IncidentStatus.RESOLVED.value:
+                    self.logger.info(
+                        "All alerts are resolved, updating incident status to resolved"
+                    )
+                    incident.status = IncidentStatus.RESOLVED.value
+                    session.add(incident)
+                    session.commit()
 
             # Send notification about incident update
             incident_dto = IncidentDto.from_db_incident(incident)

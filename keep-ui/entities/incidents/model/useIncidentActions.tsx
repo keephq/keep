@@ -52,6 +52,7 @@ type IncidentCreateDto = {
   user_generated_name: string;
   user_summary: string;
   assignee: string;
+  resolve_on: string;
 };
 
 type IncidentUpdateDto = Partial<IncidentCreateDto> &
