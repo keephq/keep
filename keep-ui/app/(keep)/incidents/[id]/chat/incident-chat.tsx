@@ -1,4 +1,8 @@
-import { CopilotChat, useCopilotChatSuggestions } from "@copilotkit/react-ui";
+import {
+  CopilotChat,
+  ResponseButtonProps,
+  useCopilotChatSuggestions,
+} from "@copilotkit/react-ui";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
@@ -7,6 +11,7 @@ import {
   useCopilotAction,
   useCopilotReadable,
   useCopilotMessagesContext,
+  useCopilotChat,
 } from "@copilotkit/react-core";
 import {
   ActionExecutionMessage,
@@ -21,6 +26,13 @@ import { useEffect, useMemo } from "react";
 import "@copilotkit/react-ui/styles.css";
 import "./incident-chat.css";
 import { useSession } from "next-auth/react";
+import { TrashIcon } from "@radix-ui/react-icons";
+
+const INSTRUCTIONS = `You are an expert incident resolver who's capable of resolving incidents in a variety of ways. You can get traces from providers, search for traces, create incidents, update incident name and summary, and more. You can also ask the user for information if you need it.
+You should always answer short and concise answers, always trying to suggest the next best action to investigate or resolve the incident.
+Any time you're not sure about something, ask the user for clarification.
+If you used some provider's method to get data, present the icon of the provider you used.
+If you think your response is relevant for the root cause analysis, add a "root_cause" tag to the message and call the "enrichRCA" method to enrich the incident.`;
 
 export function IncidentChat({ incident }: { incident: IncidentDto }) {
   const router = useRouter();
@@ -29,6 +41,27 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     incident.id
   );
   const { messages, setMessages } = useCopilotMessagesContext();
+  const { runChatCompletion } = useCopilotChat();
+
+  function CustomResponseButton({ onClick, inProgress }: ResponseButtonProps) {
+    return (
+      <div className="flex mt-3 gap-2">
+        <Button color="orange" onClick={runChatCompletion} loading={inProgress}>
+          Regenerate response
+        </Button>
+        <Button
+          color="orange"
+          variant="secondary"
+          tooltip="Clear chat"
+          onClick={() => {
+            localStorage.removeItem(`copilotkit-messages-${incident.id}`);
+            setMessages([]);
+          }}
+          icon={TrashIcon}
+        />
+      </div>
+    );
+  }
 
   //https://docs.copilotkit.ai/guides/messages-localstorage
   // save to local storage when messages change
@@ -122,6 +155,34 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
   });
 
   // Actions
+  useCopilotAction({
+    name: "enrichRCA",
+    description:
+      "This action is used by the copilot chat to enrich the incident with root cause analysis. It takes the messages and the incident and enriches the incident with the root cause analysis.",
+    parameters: [
+      {
+        name: "rootCausePoint",
+        type: "string",
+        description:
+          "The bullet you think should be added to the list of root cause analysis points",
+      },
+      {
+        name: "rcaProvider",
+        type: "string",
+        description:
+          "The provider you used to get the root cause analysis point",
+      },
+    ],
+    handler: async ({ rootCausePoint, rcaProvider }) => {
+      const rcaPoints = incident.enrichments["rca_points"] || [];
+      await enrichIncident(incident.id, {
+        rca_points: [
+          ...rcaPoints,
+          { content: rootCausePoint, providerType: rcaProvider },
+        ],
+      });
+    },
+  });
   useCopilotAction({
     name: "invokeProviderMethod",
     description:
@@ -377,13 +438,14 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
         <div className="chat-messages">
           <CopilotChat
             className="-mx-2"
-            instructions="You now act as an expert incident responder..."
+            instructions={INSTRUCTIONS}
             labels={{
               title: "Incident Assistant",
               initial:
                 "Hi! Lets work together to resolve this incident! Ask me anything",
               placeholder: "For example: Find the root cause of this incident",
             }}
+            ResponseButton={CustomResponseButton}
           />
         </div>
       </div>

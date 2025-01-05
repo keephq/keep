@@ -540,6 +540,7 @@ class IncidentDto(IncidentDtoIn):
             merged_at=db_incident.merged_at,
             incident_type=db_incident.incident_type,
             incident_application=str(db_incident.incident_application),
+            enrichments=db_incident.enrichments,
             resolve_on=db_incident.resolve_on,
         )
 
