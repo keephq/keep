@@ -3,7 +3,6 @@
 import {
   useIncidentActions,
   type IncidentDto,
-  type PaginatedIncidentAlertsDto,
 } from "@/entities/incidents/model";
 import React, { useState } from "react";
 import { useIncident, useIncidentAlerts } from "@/utils/hooks/useIncidents";
@@ -33,6 +32,7 @@ import {
 import { IncidentOverviewSkeleton } from "../incident-overview-skeleton";
 import { AlertDto } from "@/entities/alerts/model";
 import { useRouter } from "next/navigation";
+import { RootCauseAnalysis } from "@/components/ui/RootCauseAnalysis";
 
 interface Props {
   incident: IncidentDto;
@@ -214,7 +214,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
 
   return (
     // Adding padding bottom to visually separate from the tabs
-    <div className="flex gap-6 items-start w-full pb-4 text-tremor-default">
+    <div className="flex max-h-48 gap-6 items-start w-full text-tremor-default">
       <div className="basis-2/3 grow">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <div className="max-w-2xl">
@@ -225,6 +225,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
               alerts={alerts.items}
               incident={incident}
             />
+            {/* @tb: not sure how we use this, but leaving it here for now
             {incident.user_summary && incident.generated_summary ? (
               <Summary
                 title="AI version"
@@ -233,119 +234,137 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                 alerts={alerts.items}
                 incident={incident}
               />
-            ) : null}
+            ) : null} */}
             {incident.merged_into_incident_id && (
               <MergedCallout
                 className="inline-block mt-2"
                 merged_into_incident_id={incident.merged_into_incident_id}
               />
             )}
+            <div className="mt-2">
+              <SameIncidentField incident={incident} />
+            </div>
           </div>
           <div className="flex flex-col gap-2">
-            <FieldHeader>Involved services</FieldHeader>
-            {notNullServices.length > 0 ? (
-              <div className="flex flex-wrap gap-1">
-                {notNullServices.map((service) => (
-                  <Badge
-                    key={service}
-                    size="sm"
-                    className="cursor-pointer"
-                    onClick={() => filterBy("service", service)}
-                  >
-                    {service}
-                  </Badge>
-                ))}
-              </div>
-            ) : (
-              "No services involved"
-            )}
-            <FieldHeader>Affected environments</FieldHeader>
-            {environments.length > 0 ? (
-              <div className="flex flex-wrap gap-1">
-                {environments.map((env) => (
-                  <Badge
-                    key={env}
-                    size="sm"
-                    className="cursor-pointer"
-                    onClick={() => filterBy("environment", env)}
-                  >
-                    {env}
-                  </Badge>
-                ))}
-              </div>
-            ) : (
-              "No environments involved"
-            )}
-            <FieldHeader>External incident</FieldHeader>
-            {incident.enrichments?.incident_id &&
-            incident.enrichments?.incident_url ? (
-              <div className="flex flex-wrap gap-1">
-                {
-                  // TODO: @tb: add alert tickets as well?
-                }
-                <Badge
-                  size="sm"
-                  icon={
-                    incident.enrichments?.incident_provider
-                      ? (props: any) => (
-                          <DynamicIcon
-                            providerType={
-                              incident.enrichments?.incident_provider
-                            }
-                            {...props}
-                          />
-                        )
-                      : undefined
-                  }
-                  className="cursor-pointer"
-                  onClick={() =>
-                    window.open(incident.enrichments.incident_url, "_blank")
-                  }
-                >
-                  {incident.enrichments?.incident_title ??
-                    incident.user_generated_name}
-                </Badge>
-              </div>
-            ) : (
-              "No external incidents"
-            )}
-            <FieldHeader>Repositories</FieldHeader>
-            {repositories?.length > 0 ? (
-              <div className="flex flex-wrap gap-1">
-                {repositories.map((repo) => {
-                  const repoName = repo.split("/").pop();
-                  return (
-                    <Badge
-                      key={repo}
-                      size="sm"
-                      icon={(props: any) => (
-                        <DynamicIcon providerType="github" {...props} />
-                      )}
-                      className="cursor-pointer"
-                      onClick={() => window.open(repo, "_blank")}
-                    >
-                      {repoName}
-                    </Badge>
-                  );
-                })}
-              </div>
-            ) : (
-              "No environments involved"
-            )}
-            {incident.rule_fingerprint !== "none" &&
-              !!incident.rule_fingerprint && (
-                <>
-                  <FieldHeader>Grouped by</FieldHeader>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <FieldHeader>Involved services</FieldHeader>
+                {notNullServices.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
-                    <Badge size="sm" className="cursor-pointer">
-                      {incident.rule_fingerprint}
+                    {notNullServices.map((service) => (
+                      <Badge
+                        key={service}
+                        size="sm"
+                        className="cursor-pointer"
+                        onClick={() => filterBy("service", service)}
+                      >
+                        {service}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  "No services involved"
+                )}
+              </div>
+
+              <div>
+                <FieldHeader>Affected environments</FieldHeader>
+                {environments.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {environments.map((env) => (
+                      <Badge
+                        key={env}
+                        size="sm"
+                        className="cursor-pointer"
+                        onClick={() => filterBy("environment", env)}
+                      >
+                        {env}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  "No environments involved"
+                )}
+              </div>
+
+              <div>
+                <FieldHeader>External incident</FieldHeader>
+                {incident.enrichments?.incident_id &&
+                incident.enrichments?.incident_url ? (
+                  <div className="flex flex-wrap gap-1">
+                    <Badge
+                      size="sm"
+                      icon={
+                        incident.enrichments?.incident_provider
+                          ? (props: any) => (
+                              <DynamicIcon
+                                providerType={
+                                  incident.enrichments?.incident_provider
+                                }
+                                {...props}
+                              />
+                            )
+                          : undefined
+                      }
+                      className="cursor-pointer"
+                      onClick={() =>
+                        window.open(incident.enrichments.incident_url, "_blank")
+                      }
+                    >
+                      {incident.enrichments?.incident_title ??
+                        incident.user_generated_name}
                     </Badge>
                   </div>
-                </>
-              )}
-          </div>
-          <div>
-            <SameIncidentField incident={incident} />
+                ) : (
+                  "No external incidents"
+                )}
+              </div>
+
+              <div>
+                <FieldHeader>Repositories</FieldHeader>
+                {repositories?.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {repositories.map((repo) => {
+                      const repoName = repo.split("/").pop();
+                      return (
+                        <Badge
+                          key={repo}
+                          size="sm"
+                          icon={(props: any) => (
+                            <DynamicIcon providerType="github" {...props} />
+                          )}
+                          className="cursor-pointer"
+                          onClick={() => window.open(repo, "_blank")}
+                        >
+                          {repoName}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  "No environments involved"
+                )}
+              </div>
+              <div>
+                <FieldHeader>Assignee</FieldHeader>
+                {incident.assignee ? (
+                  <p>{incident.assignee}</p>
+                ) : (
+                  <p>No assignee yet</p>
+                )}
+              </div>
+              {incident.rule_fingerprint !== "none" &&
+                !!incident.rule_fingerprint && (
+                  <div>
+                    <FieldHeader>Grouped by</FieldHeader>
+                    <div className="flex flex-wrap gap-1">
+                      <Badge size="sm" className="cursor-pointer">
+                        {incident.rule_fingerprint}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+            </div>
           </div>
           <div>
             <FollowingIncidents incident={incident} />
@@ -372,14 +391,9 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
             <DateTimeField date={incident.start_time} />
           </div>
         )}
-        <div>
-          <FieldHeader>Assignee</FieldHeader>
-          {incident.assignee ? (
-            <p>{incident.assignee}</p>
-          ) : (
-            <p>No assignee yet</p>
-          )}
-        </div>
+        {incident?.enrichments && "rca_points" in incident.enrichments && (
+          <RootCauseAnalysis points={incident.enrichments.rca_points} />
+        )}
         {!!incident.rule_fingerprint && (
           <div>
             <FieldHeader>Group by value</FieldHeader>

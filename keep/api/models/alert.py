@@ -536,6 +536,7 @@ class IncidentDto(IncidentDtoIn):
             merged_at=db_incident.merged_at,
             incident_type=db_incident.incident_type,
             incident_application=str(db_incident.incident_application),
+            enrichments=db_incident.enrichments,
         )
 
         # This field is required for getting alerts when required
