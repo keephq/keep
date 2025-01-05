@@ -254,6 +254,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                     {notNullServices.map((service) => (
                       <Badge
                         key={service}
+                        color="orange"
                         size="sm"
                         className="cursor-pointer"
                         onClick={() => filterBy("service", service)}
@@ -275,6 +276,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                       <Badge
                         key={env}
                         size="sm"
+                        color="orange"
                         className="cursor-pointer"
                         onClick={() => filterBy("environment", env)}
                       >
@@ -294,6 +296,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                   <div className="flex flex-wrap gap-1">
                     <Badge
                       size="sm"
+                      color="orange"
                       icon={
                         incident.enrichments?.incident_provider
                           ? (props: any) => (
@@ -329,6 +332,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                       return (
                         <Badge
                           key={repo}
+                          color="orange"
                           size="sm"
                           icon={(props: any) => (
                             <DynamicIcon providerType="github" {...props} />
@@ -358,7 +362,11 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                   <div>
                     <FieldHeader>Grouped by</FieldHeader>
                     <div className="flex flex-wrap gap-1">
-                      <Badge size="sm" className="cursor-pointer">
+                      <Badge
+                        color="orange"
+                        size="sm"
+                        className="cursor-pointer"
+                      >
                         {incident.rule_fingerprint}
                       </Badge>
                     </div>
