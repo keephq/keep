@@ -391,6 +391,9 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
             <DateTimeField date={incident.start_time} />
           </div>
         )}
+        {incident?.enrichments && "rca_points" in incident.enrichments && (
+          <RootCauseAnalysis points={incident.enrichments.rca_points} />
+        )}
         <div>
           <FieldHeader>Resolve on</FieldHeader>
           <Badge
@@ -406,9 +409,6 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
             {incident.resolve_on}
           </Badge>
         </div>
-        {incident?.enrichments && "rca_points" in incident.enrichments && (
-          <RootCauseAnalysis points={incident.enrichments.rca_points} />
-        )}
         {!!incident.rule_fingerprint && (
           <div>
             <FieldHeader>Group by value</FieldHeader>

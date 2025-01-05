@@ -9,8 +9,10 @@ import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 export function IncidentChatClientPage({
   incident,
+  mutateIncident,
 }: {
   incident: IncidentDto;
+  mutateIncident: () => void;
 }) {
   const { data: config } = useConfig();
 
@@ -21,7 +23,7 @@ export function IncidentChatClientPage({
 
   return (
     <CopilotKit showDevConsole={false} runtimeUrl="/api/copilotkit">
-      <IncidentChat incident={incident} />
+      <IncidentChat incident={incident} mutateIncident={mutateIncident} />
     </CopilotKit>
   );
 }

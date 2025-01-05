@@ -34,7 +34,13 @@ Any time you're not sure about something, ask the user for clarification.
 If you used some provider's method to get data, present the icon of the provider you used.
 If you think your response is relevant for the root cause analysis, add a "root_cause" tag to the message and call the "enrichRCA" method to enrich the incident.`;
 
-export function IncidentChat({ incident }: { incident: IncidentDto }) {
+export function IncidentChat({
+  incident,
+  mutateIncident,
+}: {
+  incident: IncidentDto;
+  mutateIncident: () => void;
+}) {
   const router = useRouter();
   const { data: session } = useSession();
   const { data: alerts, isLoading: alertsLoading } = useIncidentAlerts(
@@ -167,20 +173,21 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
           "The bullet you think should be added to the list of root cause analysis points",
       },
       {
-        name: "rcaProvider",
+        name: "providerType",
         type: "string",
         description:
-          "The provider you used to get the root cause analysis point",
+          "The provider you decided to use to get the root cause analysis point, in lower case. (This is only needed when you used a invokeProviderMethod action to get the root cause analysis point. For example: 'datadog' or 'github')",
       },
     ],
-    handler: async ({ rootCausePoint, rcaProvider }) => {
+    handler: async ({ rootCausePoint, providerType }) => {
       const rcaPoints = incident.enrichments["rca_points"] || [];
       await enrichIncident(incident.id, {
         rca_points: [
           ...rcaPoints,
-          { content: rootCausePoint, providerType: rcaProvider },
+          { content: rootCausePoint, providerType: providerType },
         ],
       });
+      mutateIncident();
     },
   });
   useCopilotAction({

@@ -25,7 +25,7 @@ export function IncidentLayoutClient({
   initialIncident: IncidentDto;
   AIEnabled: boolean;
 }) {
-  const { data: incident } = useIncident(initialIncident.id, {
+  const { data: incident, mutate } = useIncident(initialIncident.id, {
     fallbackData: initialIncident,
   });
 
@@ -48,7 +48,10 @@ export function IncidentLayoutClient({
             <ResizeHandle />
             <Panel defaultSize={40} minSize={25}>
               <div className="pl-2">
-                <IncidentChatClientPage incident={incident} />
+                <IncidentChatClientPage
+                  mutateIncident={mutate}
+                  incident={incident}
+                />
               </div>
             </Panel>
           </>
