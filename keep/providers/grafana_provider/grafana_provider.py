@@ -237,7 +237,7 @@ class GrafanaProvider(BaseProvider):
                 description=alert.get("annotations", {}).get("summary", ""),
                 source=["grafana"],
                 labels=labels,
-                **extra,
+                **extra,  # add annotations and values
             )
             # enrich extra payload with labels
             for label in labels:
