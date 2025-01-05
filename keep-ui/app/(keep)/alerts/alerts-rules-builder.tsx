@@ -12,6 +12,7 @@ import QueryBuilder, {
 } from "react-querybuilder";
 import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
+import { FiSave } from "react-icons/fi";
 import {
   AlertDto,
   severityMapping,
@@ -27,8 +28,6 @@ import { FiExternalLink } from "react-icons/fi";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { CornerDownLeft } from "lucide-react";
-import { Link } from "@/components/ui";
-import { DocumentTextIcon } from "@heroicons/react/24/outline";
 import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
@@ -89,7 +88,7 @@ const CustomMenuList = (props: MenuListProps<{}>) => {
           <kbd style={kbdStyle}>Enter</kbd> to update query
         </span>
         <a
-          href="https://docs.keephq.dev/overview/presets"
+          href="https://docs.keephq.dev/overview/cel"
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -573,25 +572,28 @@ export const AlertsRulesBuilder = ({
           <div className="flex flex-wrap gap-2 items-center relative flex-grow">
             {/* Textarea and error message container */}
             <div className="flex-grow relative" ref={wrapperRef}>
-              <Textarea
-                ref={textAreaRef}
-                rows={1}
-                className="resize-none overflow-hidden w-full pr-9 min-h-[38px]" // Padding for clear button and height to match the button height
-                value={celRules}
-                onValueChange={onValueChange}
-                onKeyDown={handleKeyDown}
-                placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
-                error={!isValidCEL}
-                onFocus={() => setShowSuggestions(true)}
-              />
-              {celRules && (
-                <button
-                  onClick={handleClearInput}
-                  className="absolute top-0 right-0 w-9 h-[38px] flex items-center justify-center text-gray-400 hover:text-gray-600" // Position to the left of the Enter to apply badge
-                >
-                  <XMarkIcon className="h-4 w-4" />
-                </button>
-              )}
+              <div className="relative">
+                <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Textarea
+                  ref={textAreaRef}
+                  rows={1}
+                  className="resize-none overflow-hidden w-full pr-9 pl-9 min-h-[38px]" // Added pl-9 for left padding to accommodate icon
+                  value={celRules}
+                  onValueChange={onValueChange}
+                  onKeyDown={handleKeyDown}
+                  placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
+                  error={!isValidCEL}
+                  onFocus={() => setShowSuggestions(true)}
+                />
+                {celRules && (
+                  <button
+                    onClick={handleClearInput}
+                    className="absolute top-0 right-0 w-9 h-[38px] flex items-center justify-center text-gray-400 hover:text-gray-600" // Position to the left of the Enter to apply badge
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
               {showSuggestions && (
                 <div className="absolute z-10 w-full">
                   <Select
@@ -608,16 +610,7 @@ export const AlertsRulesBuilder = ({
                   Invalid Common Expression Logic expression.
                 </div>
               )}
-              <div className="flex items-center justify-between pt-1 px-2">
-                <Link
-                  href="https://docs.keephq.dev/overview/presets"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="text-xs text-tremor-muted"
-                  icon={DocumentTextIcon}
-                >
-                  CEL Documentation
-                </Link>
+              <div className="flex items-center justify-end pt-1 px-2">
                 <span className="text-xs text-gray-400">
                   <CornerDownLeft className="h-3 w-3 mr-1 inline-block" />
                   Enter to apply
@@ -627,6 +620,21 @@ export const AlertsRulesBuilder = ({
           </div>
 
           {/* Buttons next to the Textarea */}
+          {showSave && (
+            <Button
+              icon={FiSave}
+              color="orange"
+              variant="secondary"
+              size="sm"
+              disabled={!celRules.length}
+              onClick={() => validateAndOpenSaveModal(celRules)}
+              tooltip={
+                action === "update"
+                  ? "Edit preset"
+                  : "Save current filter as a preset"
+              }
+            ></Button>
+          )}
           {showSqlImport && (
             <Button
               color="orange"
@@ -636,24 +644,7 @@ export const AlertsRulesBuilder = ({
               icon={TbDatabaseImport}
               size="sm"
               tooltip="Import from SQL"
-            >
-              Import from SQL
-            </Button>
-          )}
-          {showSave && (
-            <Button
-              color="orange"
-              size="sm"
-              disabled={!celRules.length}
-              onClick={() => validateAndOpenSaveModal(celRules)}
-              tooltip={
-                action === "update"
-                  ? "Edit preset"
-                  : "Save current filter as a preset"
-              }
-            >
-              {action === "update" ? "Edit" : "Save"}
-            </Button>
+            ></Button>
           )}
           {isDynamic && (
             <Button
