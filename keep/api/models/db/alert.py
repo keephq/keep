@@ -251,7 +251,7 @@ class Incident(SQLModel, table=True):
 
     @property
     def enrichments(self):
-        return self._enrichments
+        return getattr(self, "_enrichments", {})
 
 
 class Alert(SQLModel, table=True):
