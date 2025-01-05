@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import time
 from typing import Any, Dict, List, Optional
 
 import validators
@@ -26,6 +27,7 @@ from keep.api.core.db import (
     get_session,
     get_workflow,
     get_workflow_by_name,
+    get_workflow_executions_count,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
 from keep.api.models.alert import AlertDto, IncidentDto
@@ -748,3 +750,58 @@ def get_workflow_execution_status(
         event_type=event_type,
     )
     return workflow_execution_dto
+
+
+@router.post(
+    "/{workflow_id}/benchmark",
+    description="Benchmark a workflow",
+)
+def benchmark_workflow(
+    workflow_id: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:workflows"])
+    ),
+) -> str:
+    if os.environ.get("KEEP_WF_BENCHMARK_ENABLED", "").lower() != "true":
+        return HTTPException(status_code=405, detail="Workflow benchmarking is not avaliable")
+
+    TOTAL_WORKFLOWS_TO_RUN = 5000
+    tenant_id = authenticated_entity.tenant_id
+    created_by = authenticated_entity.email
+    workflowmanager = WorkflowManager.get_instance()
+
+    event_body = {"tenant_id": tenant_id, "id": "benchmark", "name": "benchmark"}
+    event_class = AlertDto
+    event = event_class(**event_body)
+
+    time_start = datetime.datetime.now()
+    
+    result_lines = []
+    result_lines.append(f"Started {TOTAL_WORKFLOWS_TO_RUN} workflows")
+
+    def get_total_workflow_executions_count(tenant_id):
+        wf_executions_before_benchmark = get_workflow_executions_count(tenant_id)
+        return wf_executions_before_benchmark.get("success", 0)
+    
+    total_wf_executions_before_benchmark = get_total_workflow_executions_count(tenant_id)
+        
+    for _ in range(1, TOTAL_WORKFLOWS_TO_RUN):
+        workflowmanager.scheduler.handle_manual_event_workflow(
+            workflow_id, tenant_id, created_by, event
+        )
+
+    result_lines.append(f"Scheduling took {datetime.datetime.now() - time_start}")
+    execution_time_start = datetime.datetime.now()
+
+    while get_total_workflow_executions_count(tenant_id) - \
+        total_wf_executions_before_benchmark < TOTAL_WORKFLOWS_TO_RUN - 1:
+
+        time.sleep(1)
+        result_lines.append(f"Time: {datetime.datetime.now() - time_start}, workflows: {get_total_workflow_executions_count(tenant_id) - total_wf_executions_before_benchmark}")
+        print("\n".join(result_lines))
+
+    result_lines.append(f"Finished {TOTAL_WORKFLOWS_TO_RUN} workflows in {datetime.datetime.now() - time_start}")
+    result_lines.append(f"After scheduling finished: {datetime.datetime.now() - execution_time_start}")
+    result_lines.append(f"WF/second: {TOTAL_WORKFLOWS_TO_RUN / (datetime.datetime.now() - execution_time_start).total_seconds()}")
+
+    return "\r\n".join(result_lines)
