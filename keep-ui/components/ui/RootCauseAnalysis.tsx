@@ -66,15 +66,14 @@ export function RootCauseAnalysis({
                   key={index}
                   className="flex items-start gap-2 text-tremor-content p-2 rounded-tremor-small bg-tremor-background-muted"
                 >
-                  {point.providerType && (
-                    <div className="mt-1 shrink-0">
-                      <DynamicIcon
-                        providerType={point.providerType}
-                        width="16px"
-                        height="16px"
-                      />
-                    </div>
-                  )}
+                  <div className="mt-1 shrink-0">
+                    <DynamicIcon
+                      providerType={point.providerType ?? "keep"}
+                      width="16px"
+                      height="16px"
+                    />
+                  </div>
+
                   <span className="flex-1 text-sm">{point.content}</span>
                 </li>
               ))}

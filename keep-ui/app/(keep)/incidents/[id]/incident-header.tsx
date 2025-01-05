@@ -56,44 +56,53 @@ export function IncidentHeader({
   return (
     <CopilotKit runtimeUrl="/api/copilotkit">
       <header className="flex flex-col gap-4">
-        <Subtitle className="text-sm">
-          <Link href="/incidents">All Incidents</Link>{" "}
-          <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
-          {incident.is_confirmed ? "⚔️ " : "Possible "}Incident Details
-        </Subtitle>
-        <div className="flex justify-between items-end text-sm gap-2">
-          <Title className="prose-2xl flex-grow flex flex-col gap-1">
-            <IncidentSeverityBadge severity={incident.severity} />
-            <span>{getIncidentName(incident)}</span>
-          </Title>
-          <Button
-            color="orange"
-            size="xs"
-            variant="secondary"
-            icon={MdPlayArrow}
-            onClick={(e: React.MouseEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleRunWorkflow();
-            }}
-          >
-            Run Workflow
-          </Button>
+        <div className="flex flex-row justify-between items-end">
+          <div>
+            <Subtitle className="text-sm">
+              <Link href="/incidents">All Incidents</Link>{" "}
+              <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
+              {incident.is_confirmed ? "" : "Possible "}
+              {getIncidentName(incident)}
+            </Subtitle>
+          </div>
+
           {incident.is_confirmed && (
-            <Button
-              color="orange"
-              size="xs"
-              variant="secondary"
-              icon={MdModeEdit}
-              onClick={(e: React.MouseEvent) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleStartEdit();
-              }}
-            >
-              Edit Incident
-            </Button>
+            <div>
+              <Button
+                color="orange"
+                size="xs"
+                variant="secondary"
+                className="mr-2"
+                icon={MdPlayArrow}
+                onClick={(e: React.MouseEvent) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleRunWorkflow();
+                }}
+              >
+                Run Workflow
+              </Button>
+              <Button
+                color="orange"
+                size="xs"
+                variant="secondary"
+                icon={MdModeEdit}
+                onClick={(e: React.MouseEvent) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleStartEdit();
+                }}
+              >
+                Edit Incident
+              </Button>
+            </div>
           )}
+        </div>
+        <div className="flex justify-between items-end text-sm gap-2">
+          <div className="prose-2xl flex-grow flex flex-col gap-1">
+            <IncidentSeverityBadge severity={incident.severity} />
+            {/* <span>{getIncidentName(incident)}</span> */}
+          </div>
           {!incident.is_confirmed && (
             <div className="space-x-1 flex flex-row items-center justify-center">
               <Button

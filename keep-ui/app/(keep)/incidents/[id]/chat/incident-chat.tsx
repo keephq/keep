@@ -26,7 +26,7 @@ import { useEffect, useMemo } from "react";
 import "@copilotkit/react-ui/styles.css";
 import "./incident-chat.css";
 import { useSession } from "next-auth/react";
-import { TrashIcon } from "@radix-ui/react-icons";
+import { StopIcon, TrashIcon } from "@radix-ui/react-icons";
 
 const INSTRUCTIONS = `You are an expert incident resolver who's capable of resolving incidents in a variety of ways. You can get traces from providers, search for traces, create incidents, update incident name and summary, and more. You can also ask the user for information if you need it.
 You should always answer short and concise answers, always trying to suggest the next best action to investigate or resolve the incident.
@@ -47,14 +47,24 @@ export function IncidentChat({
     incident.id
   );
   const { messages, setMessages } = useCopilotMessagesContext();
-  const { runChatCompletion } = useCopilotChat();
+  const { runChatCompletion, stopGeneration } = useCopilotChat();
 
   function CustomResponseButton({ onClick, inProgress }: ResponseButtonProps) {
     return (
       <div className="flex mt-3 gap-2">
-        <Button color="orange" onClick={runChatCompletion} loading={inProgress}>
-          Regenerate response
-        </Button>
+        {!inProgress ? (
+          <Button
+            color="orange"
+            onClick={runChatCompletion}
+            loading={inProgress}
+          >
+            Regenerate response
+          </Button>
+        ) : (
+          <Button color="orange" onClick={stopGeneration} icon={StopIcon}>
+            Stop generating
+          </Button>
+        )}
         <Button
           color="orange"
           variant="secondary"
