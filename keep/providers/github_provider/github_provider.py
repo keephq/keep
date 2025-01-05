@@ -56,15 +56,15 @@ class GithubProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
         self.client = self.__generate_client()
 
-    def get_last_commits(self, repository: str, n: int = 10):
+    def get_last_commits(self, repository: str, count: int = 10):
         repo = self.client.get_repo(repository)
         commits = repo.get_commits()
-        return [commit.raw_data for commit in commits[:n]]
+        return [commit.raw_data for commit in commits[:count]]
 
-    def get_last_releases(self, repository: str, n: int = 10):
+    def get_last_releases(self, repository: str, count: int = 10):
         repo = self.client.get_repo(repository)
         releases = repo.get_releases()
-        return [release.raw_data for release in releases[:n]]
+        return [release.raw_data for release in releases[:count]]
 
     def __generate_client(self):
         # Should get an access token once we have a real use case for GitHub provider

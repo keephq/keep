@@ -92,7 +92,8 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
   // Suggestions
   useCopilotChatSuggestions(
     {
-      instructions: "Suggest the most relevant next actions.",
+      instructions:
+        "Suggest the most relevant next actions to investigate or resolve this incident.",
     },
     [incident, alerts, providersWithGetTrace]
   );
