@@ -272,7 +272,7 @@ export default function IncidentAlerts({ incident }: Props) {
         selectedFingerprints={selectedFingerprints}
         resetAlertsSelection={() => table.resetRowSelection()}
       />
-      <Card className="p-0 overflow-x-auto">
+      <Card className="p-0 overflow-x-auto max-h-[calc(100vh-28rem)]">
         <Table className="[&>table]:table-fixed">
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (

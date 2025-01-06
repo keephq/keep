@@ -18,20 +18,20 @@ export function RootCauseAnalysis({
   if (!points || points.length === 0) return null;
 
   return (
-    <>
-      <FieldHeader>Started at</FieldHeader>
+    <div>
+      <FieldHeader>Root Cause Analysis</FieldHeader>
       <HoverCard.Root openDelay={100} closeDelay={200}>
         <HoverCard.Trigger asChild>
-          <div className={`relative ${className}`}>
-            <div className="absolute -top-1.5 -right-1.5">
+          <div className={`relative inline-flex items-center ${className}`}>
+            <div className="absolute top-1/2 -translate-y-1/2">
               <span className="relative flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
               </span>
             </div>
 
-            <Badge size="sm" color="orange">
-              Points
+            <Badge size="sm" color="orange" className="ml-4">
+              🕵🏻‍♂️ Investigation
             </Badge>
           </div>
         </HoverCard.Trigger>
@@ -69,6 +69,6 @@ export function RootCauseAnalysis({
           </HoverCard.Content>
         </HoverCard.Portal>
       </HoverCard.Root>
-    </>
+    </div>
   );
 }

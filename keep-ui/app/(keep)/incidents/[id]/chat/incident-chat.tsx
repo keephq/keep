@@ -439,6 +439,53 @@ export function IncidentChat({
     },
   });
 
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const messages = document.querySelectorAll(
+        '[data-message-role="assistant"]'
+      );
+
+      messages.forEach((message) => {
+        // Only add feedback if it doesn't exist yet
+        if (!message.querySelector(".message-feedback")) {
+          const feedbackDiv = document.createElement("div");
+          feedbackDiv.className =
+            "message-feedback absolute bottom-2 right-2 flex gap-2";
+          feedbackDiv.innerHTML = `
+            <button class="p-1 hover:bg-tremor-background-muted rounded-full transition-colors">
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7.5.8c-3.7 0-6.7 3-6.7 6.7s3 6.7 6.7 6.7 6.7-3 6.7-6.7-3-6.7-6.7-6.7zm0 12.4c-3.1 0-5.7-2.5-5.7-5.7s2.5-5.7 5.7-5.7 5.7 2.5 5.7 5.7-2.6 5.7-5.7 5.7z" fill="currentColor"/>
+                <path d="M4.8 7c.4 0 .8-.4.8-.8s-.4-.8-.8-.8-.8.4-.8.8.4.8.8.8zm5.4 0c.4 0 .8-.4.8-.8s-.4-.8-.8-.8-.8.4-.8.8.4.8.8.8zm-5.1 1.9h5.8c.2.8-.5 2.3-2.9 2.3s-3.1-1.5-2.9-2.3z" fill="currentColor"/>
+              </svg>
+            </button>
+          `;
+
+          (message as any).style.position = "relative";
+          message.appendChild(feedbackDiv);
+
+          // Add click handlers
+          const buttons = feedbackDiv.querySelectorAll("button");
+          buttons[0].onclick = () => handleFeedback("thumbsUp", message);
+        }
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const handleFeedback = (
+    type: "thumbsUp" | "thumbsDown",
+    message: Element
+  ) => {
+    // Handle the feedback here
+    console.log(`Feedback: ${type} for message:`, message.textContent);
+  };
+
   if (!alerts?.items || alerts.items.length === 0)
     return (
       <EmptyStateCard
@@ -451,6 +498,16 @@ export function IncidentChat({
 
   return (
     <Card className="h-full">
+      <style jsx global>{`
+        .message-feedback button {
+          color: var(--tremor-content);
+          opacity: 0.5;
+          transition: opacity 0.2s;
+        }
+        .message-feedback button:hover {
+          opacity: 1;
+        }
+      `}</style>
       <div className="chat-container">
         <div className="chat-messages">
           <CopilotChat

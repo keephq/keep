@@ -44,3 +44,16 @@
   overscroll-behavior: contain;
   will-change: scroll-position;
 }
+
+[data-message-role="assistant"] {
+  position: relative;
+}
+
+.message-feedback {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+[data-message-role="assistant"]:hover .message-feedback {
+  opacity: 1;
+}
