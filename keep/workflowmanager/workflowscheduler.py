@@ -400,7 +400,7 @@ class WorkflowScheduler:
 
         workflows_to_actual_run = []
         for workflow_to_run in workflows_to_run:
-            self.logger.info(
+            self.logger.warning(
                 "Running event workflow on background",
                 extra={
                     "workflow_id": workflow_to_run.get("workflow_id"),
