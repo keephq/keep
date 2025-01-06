@@ -26,7 +26,9 @@ def upgrade() -> None:
             )
         )
         batch_op.add_column(sa.Column("incident_application", sa.Uuid(), nullable=True))
-        batch_op.add_column(sa.Column("resolve_on", sa.String(), nullable=False))
+        batch_op.add_column(
+            sa.Column("resolve_on", sqlmodel.sql.sqltypes.AutoString(), nullable=False)
+        )
 
     with op.batch_alter_table("topologyapplication", schema=None) as batch_op:
         batch_op.add_column(
