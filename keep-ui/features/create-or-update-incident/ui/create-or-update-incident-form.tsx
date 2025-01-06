@@ -189,10 +189,12 @@ export function CreateOrUpdateIncidentForm({
             id="resolve-on-alerts"
             name="resolve-on-alerts"
             color="orange"
-            checked={resolveOnAlertsResolved === "all"}
+            checked={resolveOnAlertsResolved === "all_resolved"}
             onChange={() =>
               setResolveOnAlertsResolved(
-                resolveOnAlertsResolved === "all" ? "never" : "all"
+                resolveOnAlertsResolved === "all_resolved"
+                  ? "never"
+                  : "all_resolved"
               )
             }
           />
