@@ -3,8 +3,9 @@ import celpy.celparser
 import lark
 import celpy
 from typing import List, cast
+from dateutil.parser import parse
 
-from keep.api.core.cel_to_sql.ast_nodes import ComparisonNode, ConstantNode, LogicalNode, MethodAccessNode, Node, ParenthesisNode, PropertyAccessNode, UnaryNode
+from keep.api.core.cel_to_sql.ast_nodes import ComparisonNode, ConstantNode, IndexAccessNode, LogicalNode, MethodAccessNode, Node, ParenthesisNode, PropertyAccessNode, UnaryNode
 
 class CelToAstConverter(lark.visitors.Visitor_Recursive):
     """Dump a CEL AST creating a close approximation to the original source."""
@@ -64,69 +65,69 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         else:
             second_operand = self.stack.pop()
             comparison_node: ComparisonNode = self.stack.pop()
-            comparison_node.secondOperand = second_operand
+            comparison_node.second_operand = second_operand
             self.stack.append(comparison_node)
 
     def relation_lt(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                firstOperand = self.stack.pop(),
+                first_operand = self.stack.pop(),
                 operator = ComparisonNode.LT,
-                secondOperand=None
+                second_operand=None
             )
         )
 
     def relation_le(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                firstOperand = self.stack.pop(),
+                first_operand = self.stack.pop(),
                 operator = ComparisonNode.LE,
-                secondOperand=None
+                second_operand=None
             )
         )
 
     def relation_gt(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                firstOperand = self.stack.pop(),
+                first_operand = self.stack.pop(),
                 operator = ComparisonNode.GT,
-                secondOperand=None
+                second_operand=None
             )
         )
 
     def relation_ge(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                firstOperand = self.stack.pop(),
+                first_operand = self.stack.pop(),
                 operator = ComparisonNode.GE,
-                secondOperand=None
+                second_operand=None
             )
         )
 
     def relation_eq(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                firstOperand = self.stack.pop(),
+                first_operand = self.stack.pop(),
                 operator = ComparisonNode.EQ,
-                secondOperand=None
+                second_operand=None
             )
         )
 
     def relation_ne(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                firstOperand = self.stack.pop(),
+                first_operand = self.stack.pop(),
                 operator = ComparisonNode.NE,
-                secondOperand=None
+                second_operand=None
             )
         )
 
     def relation_in(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                firstOperand = self.stack.pop(),
+                first_operand = self.stack.pop(),
                 operator = ComparisonNode.IN,
-                secondOperand=None
+                second_operand=None
             )
         )
 
@@ -230,7 +231,11 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
     def member_index(self, tree: lark.Tree) -> None:
         right = self.stack.pop()
         left = self.stack.pop()
-        self.stack.append(f"{left}[{right}]")
+
+        if isinstance(right, ConstantNode):
+            right = right.value
+
+        self.stack.append(PropertyAccessNode(left, IndexAccessNode(str(right), None)))
 
     def member_object(self, tree: lark.Tree) -> None:
         if len(tree.children) == 2:
@@ -313,10 +318,43 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
 
     def literal(self, tree: lark.Tree) -> None:
         if tree.children:
-            value: str = cast(lark.Token, tree.children[0]).value
+            value = cast(lark.Token, tree.children[0]).value
             
-            if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            if value in ['null', 'NULL']:
+                value = None
+            elif (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
                 value = value[1:-1]
 
+                if not self.is_number(value) and self.is_date(value):
+                    value = parse(value)
+            elif value == 'true' or value == 'false':
+                value = value == 'true'
+            elif '.' in value and self.is_float(value):
+                value = float(value)
+            elif self.is_number(value):
+                value = int(value)
+            else:
+                raise ValueError(f"Unknown literal type: {value}")
+            
             self.stack.append(ConstantNode(value=value))
 
+    def is_number(self, value: str) -> bool:
+        try:
+            int(value)
+            return True
+        except ValueError:
+            return False
+        
+    def is_float(self, value: str) -> bool:
+        try:
+            float(value)
+            return True
+        except ValueError:
+            return False
+    
+    def is_date(self, value: str) -> bool:
+        try:
+            parse(value)
+            return True
+        except ValueError:
+            return False

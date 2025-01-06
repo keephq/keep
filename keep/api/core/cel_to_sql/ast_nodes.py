@@ -40,13 +40,13 @@ class ComparisonNode(Node):
     NE = '!=='
     IN = 'in'
 
-    def __init__(self, firstOperand: str, operator: str, secondOperand: str):
+    def __init__(self, first_operand: Node, operator: str, second_operand: Node):
         self.operator = operator
-        self.firstOperand = firstOperand
-        self.secondOperand = secondOperand
+        self.first_operand = first_operand
+        self.second_operand = second_operand
 
     def __str__(self):
-        return f"{self.firstOperand} {self.operator} {self.secondOperand}"
+        return f"{self.first_operand} {self.operator} {self.second_operand}"
 
 class UnaryNode(Node):
     NOT = '!'
@@ -74,8 +74,8 @@ class MethodAccessNode(MemberAccessNode):
     def __str__(self):
         args = []
 
-        for argNode in self.args:
-            args.append(str(argNode))
+        for arg_node in self.args:
+            args.append(str(arg_node))
 
         return f"{self.member_name}({', '.join(args)})"
 
@@ -90,6 +90,9 @@ class PropertyAccessNode(MemberAccessNode):
         return member_access_node is not None
     
     def get_property_path(self) -> str:
+        if isinstance(self.value, IndexAccessNode):
+            return f"{self.member_name}{self.value.get_property_path()}"
+
         if isinstance(self.value, PropertyAccessNode):
             return f"{self.member_name}.{self.value.get_property_path()}"
         
@@ -109,3 +112,16 @@ class PropertyAccessNode(MemberAccessNode):
             return f"{self.member_name}.{self.value}"
         
         return self.member_name
+    
+class IndexAccessNode(PropertyAccessNode):
+    def __init__(self, member_name: str, value: Any):
+        super().__init__(member_name, value)
+
+    def get_property_path(self) -> str:
+        if isinstance(self.value, MethodAccessNode):
+            return f"[{str(self.member_name)}].{self.value.get_property_path()}"
+        
+        return f"[{str(self.member_name)}]"
+
+    def __str__(self):
+        return f"[{self.member_name}]"

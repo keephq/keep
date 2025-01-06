@@ -5004,13 +5004,9 @@ def query_alerts_by_cel(tenant_id: str, cel: str) -> List[dict]:
     if cel:
         aggregated_cel += f" && ({cel})"
 
+    aggregated_cel = cel
+
     known_fields = {
-        
-        "tenant_id": { # redirects tenant_id from cel to alert.tenant_id in SQL
-            "type": "string",
-            "field": "alert.tenant_id",
-            "mapping_type": "one_to_one"
-        },
         "provider_type": { # redirects provider_type from cel to alert.provider_type in SQL
             "type": "string",
             "field": "provider_type",
@@ -5019,6 +5015,7 @@ def query_alerts_by_cel(tenant_id: str, cel: str) -> List[dict]:
         "*": { # redirects all other fields from cel to merged_json(event + enrichments) in SQL
             "type": "json",
             "field": "merged_json",
+            "take_from": ["event", "enrichments"],
         }
     }
 
@@ -5026,17 +5023,42 @@ def query_alerts_by_cel(tenant_id: str, cel: str) -> List[dict]:
 
 
     
-
-    sql = instance.convert_to_sql_str(
-        aggregated_cel, 
-        'SELECT alert.*, json_patch(alert.event, alertenrichment.enrichments) AS merged_json FROM alert JOIN alertenrichment ON alert.fingerprint = alertenrichment.alert_fingerprint')
-
-    # postgresql = CelToPostgreSqlProvider().convert_to_sql_str(aggregated_cel, 'SELECT provider_type, event, enrichments FROM alert JOIN alertenrichment ON alert.fingerprint = alertenrichment.alert_fingerprint')
-
     try:
+        try:
+            query_metadata = instance.convert_to_sql_str(aggregated_cel)
+        except Exception as e:
+            print(e)
+            print('Error')
+            raise e
+
+        sql_query = f"""
+            WITH main AS (
+                SELECT 
+                    alert.*
+                    {f',{query_metadata.select_json}' if query_metadata.select_json else ''}
+                FROM alert 
+                JOIN alertenrichment 
+                    ON alert.fingerprint = alertenrichment.alert_fingerprint
+                WHERE alert.tenant_id = '{tenant_id}'
+            ),
+
+            merged_alerts AS (
+                SELECT 
+                    main.*
+                    {f',{query_metadata.select}' if query_metadata.select else ''}
+                FROM main
+            )
+
+            SELECT * FROM merged_alerts
+            {f'WHERE {query_metadata.where}' if query_metadata.where else ''}
+            LIMIT 10
+        """
+
+        # postgresql = CelToPostgreSqlProvider().convert_to_sql_str(aggregated_cel, 'SELECT provider_type, event, enrichments FROM alert JOIN alertenrichment ON alert.fingerprint = alertenrichment.alert_fingerprint')
         with Session(engine) as session:
+            query_result = session.exec(text(sql_query)).all()
             result = []
-            for item in session.exec(text(sql)).all():
+            for item in query_result:
                 item_dict = item._asdict()
                 result.append({
                     'tenant_id': item_dict['tenant_id'],
@@ -5047,7 +5069,6 @@ def query_alerts_by_cel(tenant_id: str, cel: str) -> List[dict]:
                     'provider_type': item_dict['provider_type'],
                     'provider_id': item_dict['provider_id'],
                     'enrichments': json.loads(item_dict.get('enrichments', '{}')),
-                    'merged_json': json.loads(item_dict['merged_json'])
                 })
 
             return result
