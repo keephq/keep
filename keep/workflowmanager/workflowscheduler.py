@@ -259,7 +259,7 @@ class WorkflowScheduler:
         return True
 
 
-    async def handle_workflow_test(self, workflow, tenant_id, triggered_by_user):
+    def handle_workflow_test(self, workflow, tenant_id, triggered_by_user):
 
         workflow_execution_id = self._get_unique_execution_number()
 
