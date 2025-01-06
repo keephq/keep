@@ -314,7 +314,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                             )
                           : undefined
                       }
-                      className="cursor-pointer"
+                      className="cursor-pointer text-ellipsis"
                       onClick={() =>
                         window.open(incident.enrichments.incident_url, "_blank")
                       }
