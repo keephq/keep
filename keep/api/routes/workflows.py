@@ -763,6 +763,10 @@ def benchmark_workflow(
         IdentityManagerFactory.get_auth_verifier(["write:workflows"])
     ),
 ):
+    """
+    Should be removed once the WF optimization work is done, or exposed to customers to allow them
+    to benchmark workflows on their environments.
+    """
     if os.environ.get("KEEP_WF_BENCHMARK_ENABLED", "").lower() != "true":
         return HTTPException(status_code=405, detail="Workflow benchmarking is not avaliable")
 
