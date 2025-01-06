@@ -153,7 +153,9 @@ export default function AlertMenu({
         label: "Workflow",
         onClick: () =>
           router.push(
-            `/workflows/builder?alertName=${encodeURIComponent(alert.name)}&alertSource=${alert.source![0]}`
+            `/workflows/builder?alertName=${encodeURIComponent(
+              alert.name
+            )}&alertSource=${alert.source![0]}`
           ),
         show: !isInSidebar,
       },
@@ -186,7 +188,9 @@ export default function AlertMenu({
         onClick: openAlertPayloadModal,
       },
       ...(provider?.methods?.map((method) => ({
-        icon: DynamicIcon,
+        icon: (props: any) => (
+          <DynamicIcon providerType={provider.type} {...props} />
+        ),
         label: method.name,
         onClick: () => openMethodModal(method),
         disabled: !isMethodEnabled(method),

@@ -11,11 +11,14 @@ from threading import Timer
 import urllib3
 from sqlmodel import Session
 
-from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.db import get_session, push_logs_to_db
 from keep.api.models.db.provider import ProviderExecutionLog
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+KEEP_STORE_WORKFLOW_LOGS = (
+    os.environ.get("KEEP_STORE_WORKFLOW_LOGS", "true").lower() == "true"
+)
 
 
 class WorkflowDBHandler(logging.Handler):
@@ -25,6 +28,8 @@ class WorkflowDBHandler(logging.Handler):
 
     def emit(self, record):
         # we want to push only workflow logs to the DB
+        if not KEEP_STORE_WORKFLOW_LOGS:
+            return
         if hasattr(record, "workflow_execution_id") and record.workflow_execution_id:
             self.records.append(record)
 
@@ -134,27 +139,18 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
 
     def dump(self):
         self.logger.info("Dumping workflow logs")
-        # TODO - this is a POC level code.
-        # TODO - we should:
-        # TODO - 1. find the right handler to push the logs to the DB
-        # TODO - 2. find a better way to push the logs async (maybe another service)
-        workflow_db_handler = next(
-            iter(
-                [
-                    handler
-                    for handler in (
-                        # tb: for some reason, when running in cloud run, the handler is nested in another handler
-                        #   this needs to be handled in a better way
-                        self.logger.parent.parent.handlers
-                        if RUNNING_IN_CLOUD_RUN
-                        else self.logger.parent.handlers
-                    )
-                    if isinstance(handler, WorkflowDBHandler)
-                ]
-            ),
-            None,
-        )
+        root_logger = logging.getLogger()
+        handlers = root_logger.handlers
+        workflow_db_handler = None
+
+        for handler in handlers:
+            # should be always the second
+            if isinstance(handler, WorkflowDBHandler):
+                workflow_db_handler = handler
+                break
+
         if workflow_db_handler:
+            self.logger.info("Pushing logs to DB")
             workflow_db_handler.push_logs_to_db()
         else:
             self.logger.warning("No WorkflowDBHandler found")

@@ -955,7 +955,7 @@ async def test_workflow_execution_logs(
     with patch(
         "keep.contextmanager.contextmanager.WorkflowLoggerAdapter",
         side_effect=fake_workflow_adapter,
-    ), patch("keep.api.logging.RUNNING_IN_CLOUD_RUN", value=True):
+    ):
         base_time = datetime.now(tz=pytz.utc)
 
         # Create alerts with specified statuses and timestamps
@@ -1037,7 +1037,7 @@ async def test_workflow_execution_logs_log_level_debug_console_provider(
         with patch(
             "keep.contextmanager.contextmanager.WorkflowLoggerAdapter",
             side_effect=fake_workflow_adapter,
-        ), patch("keep.api.logging.RUNNING_IN_CLOUD_RUN", value=True):
+        ):
             base_time = datetime.now(tz=pytz.utc)
 
             # Create alerts with specified statuses and timestamps

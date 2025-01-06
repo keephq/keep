@@ -67,6 +67,8 @@ def get_default_conf_file_path():
 
 
 def make_keep_request(method, url, **kwargs):
+    if os.environ.get("KEEP_CLI_IGNORE_SSL", "false").lower() == "true":
+        kwargs['verify'] = False
     try:
         response = requests.request(method, url, **kwargs)
         if response.status_code == 401:
@@ -185,14 +187,15 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
     # https://posthog.com/tutorials/identifying-users-guide#identifying-and-setting-user-ids-for-every-other-library
     # random user id
     info.set_config(keep_config)
-    posthog_client.capture(
-        info.random_user_id,
-        "keep-cli-started",
-        properties={
-            "args": sys.argv,
-            "keep_version": KEEP_VERSION,
-        },
-    )
+    if posthog_client is not None:
+        posthog_client.capture(
+            info.random_user_id,
+            "keep-cli-started",
+            properties={
+                "args": sys.argv,
+                "keep_version": KEEP_VERSION,
+            },
+        )
     # Use the verbosity count to determine the logging level...
     if verbose > 0:
         # set the verbosity level to debug
@@ -206,7 +209,7 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
 
     @ctx.call_on_close
     def cleanup():
-        if posthog_client:
+        if posthog_client is not None:
             posthog_client.flush()
 
 
