@@ -606,7 +606,7 @@ class WorkflowScheduler:
                 }
             )
 
-        self.logger.info(
+        self.logger.warning(
             "Submitting workflows",
             extra={"number_of_workflows": len(workflows_to_actual_run)},
         )
@@ -652,7 +652,7 @@ class WorkflowScheduler:
                 self.logger.exception("Error getting workflows that should run")
                 pass
             self.logger.debug("Sleeping until next iteration")
-            time.sleep(1)
+            time.sleep(5)
         self.logger.info("Workflows scheduler stopped")
 
     def stop(self):

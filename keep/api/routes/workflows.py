@@ -757,6 +757,7 @@ def get_workflow_execution_status(
 )
 def benchmark_workflow(
     workflow_id: str,
+    total_workflows: int = Query(1000, description="Total number of workflows to run"),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:workflows"])
     ),
@@ -766,7 +767,7 @@ def benchmark_workflow(
             status_code=405, detail="Workflow benchmarking is not avaliable"
         )
 
-    TOTAL_WORKFLOWS_TO_RUN = 1000
+    TOTAL_WORKFLOWS_TO_RUN = total_workflows
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
     workflowmanager = WorkflowManager.get_instance()
