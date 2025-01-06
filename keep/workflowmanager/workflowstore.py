@@ -33,6 +33,7 @@ class WorkflowStore:
     def __init__(self):
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
+        self.workflows_cache = {}
 
     def get_workflow_execution(self, tenant_id: str, workflow_execution_id: str):
         workflow_execution = get_workflow_execution(tenant_id, workflow_execution_id)
@@ -104,7 +105,16 @@ class WorkflowStore:
         valid_workflow_yaml = {"workflow": workflow_yaml}
         return yaml.dump(valid_workflow_yaml, width=99999)
 
-    def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
+    def get_workflow(
+        self, tenant_id: str, workflow_id: str, from_cache=True
+    ) -> Workflow:
+        # if from_cache, try to get the workflow from the cache
+        if from_cache:
+            workflow = self.workflows_cache.get(workflow_id)
+            if workflow:
+                return workflow
+            # else, get the workflow from the database
+
         workflow = get_raw_workflow(tenant_id, workflow_id)
         if not workflow:
             raise HTTPException(
@@ -119,6 +129,7 @@ class WorkflowStore:
                 detail=f"More than one workflow with id {workflow_id} found",
             )
         elif workflow:
+            self.workflows_cache[workflow_id] = workflow[0]
             return workflow[0]
         else:
             raise HTTPException(
