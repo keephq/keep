@@ -761,7 +761,7 @@ def benchmark_workflow(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:workflows"])
     ),
-) -> str:
+):
     if os.environ.get("KEEP_WF_BENCHMARK_ENABLED", "").lower() != "true":
         return HTTPException(status_code=405, detail="Workflow benchmarking is not avaliable")
 
