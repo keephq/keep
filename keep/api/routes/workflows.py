@@ -770,9 +770,7 @@ def benchmark_workflow(
     created_by = authenticated_entity.email
     workflowmanager = WorkflowManager.get_instance()
 
-    event_body = {"tenant_id": tenant_id, "id": "benchmark", "name": "benchmark"}
-    event_class = AlertDto
-    event = event_class(**event_body)
+    event = AlertDto({"tenant_id": tenant_id, "id": "benchmark", "name": "benchmark"})
 
     time_start = datetime.datetime.now()
     
