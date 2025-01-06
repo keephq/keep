@@ -340,7 +340,7 @@ export default function IncidentAlerts({ incident }: Props) {
           {isLoading && (
             <IncidentAlertsTableBodySkeleton
               table={table}
-              pageSize={pagination.pageSize}
+              pageSize={pagination.pageSize - 10}
             />
           )}
         </Table>
