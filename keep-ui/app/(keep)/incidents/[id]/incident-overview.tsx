@@ -191,7 +191,12 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
   const environments = Array.from(
     new Set(
       alerts?.items
-        .filter((alert) => alert.environment)
+        .filter(
+          (alert) =>
+            alert.environment &&
+            alert.environment !== "undefined" &&
+            alert.environment !== "default"
+        )
         .map((alert) => alert.environment)
     )
   );
@@ -293,7 +298,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                 <FieldHeader>External incident</FieldHeader>
                 {incident.enrichments?.incident_id &&
                 incident.enrichments?.incident_url ? (
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1 truncate">
                     <Badge
                       size="sm"
                       color="orange"

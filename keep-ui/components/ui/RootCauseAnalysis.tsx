@@ -1,3 +1,4 @@
+import { Badge } from "@tremor/react";
 import { DynamicIcon } from "./DynamicIcon";
 import * as HoverCard from "@radix-ui/react-hover-card";
 
@@ -28,26 +29,9 @@ export function RootCauseAnalysis({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-tremor-content-emphasis"
-            >
-              <path d="M21 11V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6" />
-              <path d="m12 12 4 10 1.7-4.3L22 16Z" />
-            </svg>
-            <h3 className="font-medium text-tremor-content-emphasis">
-              Root Cause Analysis
-            </h3>
-          </div>
+          <Badge size="sm" color="orange">
+            Points
+          </Badge>
         </div>
       </HoverCard.Trigger>
 
