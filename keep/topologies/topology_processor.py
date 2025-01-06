@@ -281,7 +281,7 @@ class TopologyProcessor:
             )
 
             # Check if incident should be resolved
-            if incident.resolve_on == "all":
+            if incident.resolve_on == "all_resolved":
                 self.logger.info("Checking if incident should be resolved")
                 incident = enrich_incidents_with_alerts(tenant_id, [incident], session)[
                     0

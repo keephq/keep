@@ -45,7 +45,7 @@ export interface IncidentDto {
   enrichments: { [key: string]: any };
   incident_type?: string;
   incident_application?: string;
-  resolve_on: "all" | "first" | "last" | "never";
+  resolve_on: "all_resolved" | "first" | "last" | "never";
 }
 
 export interface IncidentCandidateDto {

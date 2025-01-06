@@ -226,7 +226,7 @@ export function IncidentChat({
       const result = await invokeProviderMethod(
         providerId,
         func_name,
-        JSON.parse(func_params)
+        typeof func_params === "string" ? JSON.parse(func_params) : func_params
       );
 
       if (typeof result !== "string") {

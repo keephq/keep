@@ -424,7 +424,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
             color="orange"
             className="cursor-help"
             tooltip={
-              incident.resolve_on === "all"
+              incident.resolve_on === "all_resolved"
                 ? "Incident will be resolved when all its alerts are resolved"
                 : "Incident will resolve only when manually set to resolved"
             }
