@@ -88,7 +88,7 @@ class WorkflowScheduler:
             max_workers=self.MAX_WORKERS,
             thread_name_prefix="WorkflowScheduler",
         )
-        self.scheduler_future = None
+        self.run_future = None
         self.futures = set()
         # Initialize metrics for queue size
         self._update_queue_metrics()
@@ -106,7 +106,7 @@ class WorkflowScheduler:
         self.logger.info("Starting workflows scheduler")
         # Shahar: fix for a bug in unit tests
         self._stop = False
-        self.scheduler_future = self.executor.submit(self._start)
+        self.run_future = asyncio.create_task(self._run())
         self.logger.info("Workflows scheduler started")
 
     async def _handle_interval_workflows(self):
@@ -158,12 +158,13 @@ class WorkflowScheduler:
                 )
                 continue
 
-            future = self.executor.submit(
-                self._run_workflow,
-                tenant_id,
-                workflow_id,
-                workflow_obj,
-                workflow_execution_id,
+            future = asyncio.create_task(
+                self._run_workflow(
+                    tenant_id,
+                    workflow_id,
+                    workflow_obj,
+                    workflow_execution_id,
+                )
             )
             self.futures.add(future)
             future.add_done_callback(lambda f: self.futures.remove(f))
@@ -599,15 +600,14 @@ class WorkflowScheduler:
                         error=f"Error getting alert by id: {e}",
                     )
                     continue
-            # Last, run the workflow
-            future = self.executor.submit(
-                self._run_workflow,
+            # Last, run the workflow in the current event loop.
+            future = asyncio.create_task(self._run_workflow(
                 tenant_id,
                 workflow_id,
                 workflow,
                 workflow_execution_id,
                 event,
-            )
+            ))
             self.futures.add(future)
             future.add_done_callback(lambda f: self.futures.remove(f))
 
@@ -617,7 +617,8 @@ class WorkflowScheduler:
         )
 
 
-    async def _start_async(self):
+    async def _run(self):
+        self.logger.info("Starting workflows scheduler")
         while not self._stop:
             # get all workflows that should run now
             self.logger.debug(
@@ -636,26 +637,14 @@ class WorkflowScheduler:
             await asyncio.sleep(1)
         self.logger.info("Workflows scheduler stopped")
 
-    def _start(self):
-        """
-        Generating new event loop and running the scheduler.
-        This method should be executed in a separate thread.
-        """
-        self.logger.info("Starting workflows scheduler")
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(self._start_async())
-        loop.close()
-        return result
-
     def stop(self):
         self.logger.info("Stopping scheduled workflows")
         self._stop = True
 
         # Wait for scheduler to stop first
-        if self.scheduler_future:
+        if self.run_future:
             try:
-                self.scheduler_future.result(
+                self.run_future.result(
                     timeout=5
                 )  # Add timeout to prevent hanging
             except Exception:
@@ -676,7 +665,6 @@ class WorkflowScheduler:
             try:
                 self.logger.info("Shutting down executor")
                 self.executor.shutdown(wait=True, cancel_futures=True)
-                self.executor = None
                 self.logger.info("Executor shut down")
             except Exception:
                 self.logger.exception("Error shutting down executor")

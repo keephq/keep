@@ -62,8 +62,6 @@ class WorkflowManager:
    
         self.scheduler.stop()
         self.started = False
-        # Clear the scheduler reference
-        self.scheduler = None
 
     def _apply_filter(self, filter_val, value):
         # if it's a regex, apply it
