@@ -165,3 +165,10 @@ export type StoreSet = (
     | Partial<FlowState>
     | ((state: FlowState) => FlowState | Partial<FlowState>)
 ) => void;
+
+export type ToolboxConfiguration = {
+  groups: {
+    name: string;
+    steps: Partial<V2Step>[];
+  }[];
+};

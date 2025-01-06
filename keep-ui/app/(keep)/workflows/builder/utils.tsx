@@ -7,8 +7,11 @@ import {
   V2Properties,
   V2Step,
 } from "@/app/(keep)/workflows/builder/types";
+import { ToolboxConfiguration } from "./types";
 
-export function getToolboxConfiguration(providers: Provider[]) {
+export function getToolboxConfiguration(
+  providers: Provider[]
+): ToolboxConfiguration {
   /**
    * Generates the toolbox items
    */

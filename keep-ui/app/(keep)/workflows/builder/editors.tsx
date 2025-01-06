@@ -1,7 +1,6 @@
 import {
   Title,
   Text,
-  TextInput,
   Select,
   SelectItem,
   Subtitle,
@@ -21,6 +20,7 @@ import React from "react";
 import useStore from "./builder-store";
 import { useEffect, useRef, useState } from "react";
 import { V2Properties } from "@/app/(keep)/workflows/builder/types";
+import { Textarea, TextInput } from "@/components/ui";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col m-2.5">{children}</div>;
@@ -251,6 +251,20 @@ function KeepStepEditor({
           let currentPropertyValue = ((properties.with as any) ?? {})[key];
           if (typeof currentPropertyValue === "object") {
             currentPropertyValue = JSON.stringify(currentPropertyValue);
+          }
+          if (key === "code") {
+            return (
+              <div key={index}>
+                <Text>{key}</Text>
+                <Textarea
+                  id={`${key}`}
+                  placeholder={key}
+                  onChange={propertyChanged}
+                  className="mb-2.5 min-h-[100px] text-xs font-mono"
+                  value={currentPropertyValue || ""}
+                />
+              </div>
+            );
           }
           return (
             <div key={index}>

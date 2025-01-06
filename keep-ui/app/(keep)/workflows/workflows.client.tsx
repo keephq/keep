@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import useSWR from "swr";
-import { Subtitle } from "@tremor/react";
+import { Subtitle, Textarea } from "@tremor/react";
 import {
   ArrowUpOnSquareStackIcon,
   PlusCircleIcon,
@@ -61,6 +61,8 @@ export default function WorkflowsPage() {
     (url: string) => api.get(url)
   );
 
+  const [workflowDefinition, setWorkflowDefinition] = useState("");
+
   if (isLoading || (!data && !error)) {
     return <Loading />;
   }
@@ -113,6 +115,23 @@ export default function WorkflowsPage() {
     }
   };
 
+  function handleWorkflowDefinitionString(
+    workflowDefinition: string,
+    name: string = "New workflow"
+  ) {
+    const blob = new Blob([workflowDefinition], { type: "application/x-yaml" });
+    const file = new File([blob], `${name}.yml`, {
+      type: "application/x-yaml",
+    });
+
+    const event = {
+      target: {
+        files: [file],
+      },
+    };
+    onDrop(event as any);
+  }
+
   function handleStaticExampleSelect(example: string) {
     // todo: something less static
     let hardCodedYaml = "";
@@ -155,17 +174,7 @@ export default function WorkflowsPage() {
                 message: "Results from the DB: ({{ steps.get-sql-data.results }})"
               `;
     }
-    const blob = new Blob([hardCodedYaml], { type: "application/x-yaml" });
-    const file = new File([blob], `${example}.yml`, {
-      type: "application/x-yaml",
-    });
-
-    const event = {
-      target: {
-        files: [file],
-      },
-    };
-    onDrop(event as any);
+    handleWorkflowDefinitionString(hardCodedYaml);
     setIsModalOpen(false);
   }
 
@@ -222,6 +231,28 @@ export default function WorkflowsPage() {
               <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
                 Only .yml and .yaml files are supported.
               </p>
+            </div>
+            <div className="mt-4">
+              <h3>Or paste the YAML definition:</h3>
+              <Textarea
+                id="workflowDefinition"
+                onChange={(e) => {
+                  setWorkflowDefinition(e.target.value);
+                }}
+                name="workflowDefinition"
+                className="mt-2"
+              />
+              <Button
+                className="mt-2"
+                color="orange"
+                size="md"
+                variant="primary"
+                onClick={() =>
+                  handleWorkflowDefinitionString(workflowDefinition)
+                }
+              >
+                Load
+              </Button>
             </div>
             <div className="mt-4 text-sm">
               <h3>Or just try some from Keep examples:</h3>

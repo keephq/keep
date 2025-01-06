@@ -25,6 +25,7 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
   style,
 }: CustomEdgeProps) => {
   const { setSelectedEdge, selectedEdge } = useStore();
+  const debug = false;
 
   // Calculate the path and midpoint
   const [edgePath, labelX, labelY] = getSmoothStepPath({
@@ -93,6 +94,18 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
         }} // Add arrowhead
       />
       <EdgeLabelRenderer>
+        {debug && (
+          <div
+            className={`absolute bg-black text-green-500 font-mono text-[10px] px-1 py-1`}
+            style={{
+              transform: `translate(0, -50%) translate(${labelX + 30}px, ${labelY}px)`,
+              pointerEvents: "none",
+              opacity: isLayouted ? 1 : 0,
+            }}
+          >
+            {id}
+          </div>
+        )}
         {!!dynamicLabel && (
           <div
             className={`absolute ${color} text-white rounded px-3 py-1 border border-gray-700`}

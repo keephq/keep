@@ -37,6 +37,8 @@ import { KeepApiError } from "@/shared/api";
 import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 import WorkflowDefinitionYAML from "../workflow-definition-yaml";
+import { CopilotKit } from "@copilotkit/react-core";
+import { BuilderChat } from "./builder-chat";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -97,7 +99,8 @@ function Builder({
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   const searchParams = useSearchParams();
-  const { errorNode, setErrorNode, canDeploy, synced } = useStore();
+  const { errorNode, setErrorNode, canDeploy, synced, toolboxConfiguration } =
+    useStore();
 
   const setStepValidationErrorV2 = (step: V2Step, error: string | null) => {
     setStepValidationError(error);
@@ -333,59 +336,64 @@ function Builder({
   };
 
   return (
-    <div className="h-full">
-      <Modal
-        onRequestClose={closeGenerateModal}
-        isOpen={generateModalIsOpen}
-        className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
-      >
-        <BuilderModalContent
-          closeModal={closeGenerateModal}
-          compiledAlert={compiledAlert}
-        />
-      </Modal>
-      <Modal
-        isOpen={testRunModalOpen}
-        onRequestClose={closeWorkflowExecutionResultsModal}
-        className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
-      >
-        <BuilderWorkflowTestRunModalContent
-          closeModal={closeWorkflowExecutionResultsModal}
-          workflowExecution={runningWorkflowExecution}
-          apiClient={api}
-        />
-      </Modal>
-      {generateModalIsOpen || testRunModalOpen ? null : (
-        <>
-          {getworkflowStatus()}
-          <Card className="mt-2 p-0 h-[93%]">
-            <div className="flex h-full">
-              <div className="flex-1 h-full">
-                <ReactFlowProvider>
-                  <ReactFlowBuilder
-                    providers={providers}
-                    installedProviders={installedProviders}
-                    definition={definition}
-                    validatorConfiguration={ValidatorConfigurationV2}
-                    onDefinitionChange={(def: any) => {
-                      setDefinition({
-                        value: {
-                          sequence: def?.sequence || [],
-                          properties: def?.properties || {},
-                        },
-                        isValid: def?.isValid || false,
-                      });
-                    }}
-                    toolboxConfiguration={getToolboxConfiguration(providers)}
-                  />
-                </ReactFlowProvider>
+    <CopilotKit runtimeUrl="/api/copilotkit">
+      <div className="h-full">
+        <Modal
+          onRequestClose={closeGenerateModal}
+          isOpen={generateModalIsOpen}
+          className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
+        >
+          <BuilderModalContent
+            closeModal={closeGenerateModal}
+            compiledAlert={compiledAlert}
+          />
+        </Modal>
+        <Modal
+          isOpen={testRunModalOpen}
+          onRequestClose={closeWorkflowExecutionResultsModal}
+          className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
+        >
+          <BuilderWorkflowTestRunModalContent
+            closeModal={closeWorkflowExecutionResultsModal}
+            workflowExecution={runningWorkflowExecution}
+            apiClient={api}
+          />
+        </Modal>
+        {generateModalIsOpen || testRunModalOpen ? null : (
+          <>
+            {getworkflowStatus()}
+            <Card className="mt-2 p-0 h-[90%] overflow-hidden">
+              <div className="flex h-full">
+                <div className="flex-1 h-full relative">
+                  <ReactFlowProvider>
+                    <ReactFlowBuilder
+                      providers={providers}
+                      installedProviders={installedProviders}
+                      definition={definition}
+                      validatorConfiguration={ValidatorConfigurationV2}
+                      onDefinitionChange={(def: any) => {
+                        setDefinition({
+                          value: {
+                            sequence: def?.sequence || [],
+                            properties: def?.properties || {},
+                          },
+                          isValid: def?.isValid || false,
+                        });
+                      }}
+                      toolboxConfiguration={getToolboxConfiguration(providers)}
+                    />
+                  </ReactFlowProvider>
+                </div>
+                <BuilderChat
+                  definition={definition}
+                  installedProviders={installedProviders}
+                />
               </div>
-              {/* TODO: Add AI chat sidebar */}
-            </div>
-          </Card>
-        </>
-      )}
-    </div>
+            </Card>
+          </>
+        )}
+      </div>
+    </CopilotKit>
   );
 }
 

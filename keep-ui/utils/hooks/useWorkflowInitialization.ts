@@ -36,8 +36,14 @@ const getLayoutedElements = (
       ?.replace("condition-", "")
       ?.replace("__end", "");
 
-    const width = ["start", "end"].includes(type) ? 80 : 280;
-    const height = 80;
+    let width = ["start", "end"].includes(type) ? 80 : 280;
+    let height = 80;
+
+    // Special case for trigger start and end nodes, which act as section headers
+    if (node.id === "trigger_start" || node.id === "trigger_end") {
+      width = 150;
+      height = 40;
+    }
 
     dagreGraph.setNode(node.id, { width, height });
   });

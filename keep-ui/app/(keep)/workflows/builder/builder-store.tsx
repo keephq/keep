@@ -13,6 +13,7 @@ import {
 
 import { createCustomEdgeMeta, processWorkflowV2 } from "utils/reactFlow";
 import { createDefaultNodeV2 } from "../../../../utils/reactFlow";
+import { ToolboxConfiguration } from "./types";
 
 export type V2Properties = Record<string, any>;
 
@@ -73,7 +74,7 @@ export type FlowState = {
   v2Properties: V2Properties;
   openGlobalEditor: boolean;
   stepEditorOpenForNode: string | null;
-  toolboxConfiguration: Record<string, any>;
+  toolboxConfiguration: ToolboxConfiguration;
   onNodesChange: OnNodesChange<FlowNode>;
   onEdgesChange: OnEdgesChange<Edge>;
   onConnect: OnConnect;
@@ -131,6 +132,7 @@ export type FlowState = {
   setSynced: (synced: boolean) => void;
   canDeploy: boolean;
   setCanDeploy: (deploy: boolean) => void;
+  getNextEdge: (nodeId: string) => Edge | null;
 };
 
 export type StoreGet = () => FlowState;
@@ -141,6 +143,13 @@ export type StoreSet = (
     | ((state: FlowState) => FlowState | Partial<FlowState>)
 ) => void;
 
+class WorkflowBuilderError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "WorkflowBuilderError";
+  }
+}
+
 function addNodeBetween(
   nodeOrEdge: string | null,
   step: V2Step,
@@ -148,6 +157,7 @@ function addNodeBetween(
   set: StoreSet,
   get: StoreGet
 ) {
+  console.log("addNodeBetween", { nodeOrEdge, step, type });
   if (!nodeOrEdge || !step) return;
   let edge = {} as Edge;
   if (type === "node") {
@@ -247,6 +257,8 @@ function addNodeBetween(
 
   if (type === "node") {
     set({ selectedNode: nodeOrEdge });
+  } else if (newNodeId) {
+    set({ selectedNode: newNodeId });
   }
 
   switch (newNodeId) {
@@ -273,7 +285,9 @@ const useStore = create<FlowState>((set, get) => ({
   v2Properties: {},
   openGlobalEditor: true,
   stepEditorOpenForNode: null,
-  toolboxConfiguration: {} as Record<string, any>,
+  toolboxConfiguration: {
+    groups: [],
+  } as ToolboxConfiguration,
   isLayouted: false,
   selectedEdge: null,
   changes: 0,
@@ -552,6 +566,17 @@ const useStore = create<FlowState>((set, get) => ({
       dragHandle: ".custom-drag-handle",
     };
     set({ nodes: [...get().nodes, newNode] });
+  },
+  getNextEdge: (nodeId: string) => {
+    const node = get().getNodeById(nodeId);
+    if (!node) {
+      throw new WorkflowBuilderError("getNextEdge::Node not found");
+    }
+    const edge = get().edges.find((e) => e.source === nodeId);
+    if (!edge) {
+      throw new WorkflowBuilderError("getNextEdge::Edge not found");
+    }
+    return edge;
   },
 }));
 
