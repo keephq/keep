@@ -1625,7 +1625,6 @@ def update_user_role(tenant_id, username, role):
 
 
 async def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
-    logging.info(f"Saving workflow results for {workflow_execution_id}, {workflow_results}")
     async with AsyncSession(engine_async) as session:
         await session.exec(
             update(WorkflowExecution)
