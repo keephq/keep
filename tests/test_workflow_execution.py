@@ -1306,23 +1306,23 @@ async def test_alert_routing_policy(
     # Wait for workflow execution
     workflow_execution = None
     count = 0
+    found = False
     while (
-        workflow_execution is None
-        or workflow_execution.status == "in_progress"
-        and count < 30
+        not found and count < 30
     ):
         workflow_execution = await get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, "alert-routing-policy"
         )
         if workflow_execution is not None and workflow_execution.status == "success":
-            break
+            found = True
         await asyncio.sleep(1)
         count += 1
 
-    await workflow_manager.stop()
     # Verify workflow execution
     assert workflow_execution is not None
     assert workflow_execution.status == "success"
+
+    await workflow_manager.stop()
 
     # Check if the actions were triggered as expected
     for action_name, expected_messages in expected_results.items():
