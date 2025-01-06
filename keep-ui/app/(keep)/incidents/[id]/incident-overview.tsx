@@ -372,6 +372,16 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                     </div>
                   </div>
                 )}
+              {incident.incident_type == "topology" && (
+                <div>
+                  <FieldHeader>Created by</FieldHeader>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge color="orange" size="sm" className="cursor-pointer">
+                      Topology Correlation
+                    </Badge>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div>
