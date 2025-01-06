@@ -63,7 +63,6 @@ def get_all_alerts(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
-    cel: str = None,
     limit: int = 1000,
 ) -> list[dict]:
     tenant_id = authenticated_entity.tenant_id
@@ -73,10 +72,7 @@ def get_all_alerts(
             "tenant_id": tenant_id,
         },
     )
-    # db_alerts = get_last_alerts(tenant_id=tenant_id, limit=limit)
-    db_alerts = query_alerts_by_cel(tenant_id=tenant_id, cel=cel)
-
-    return [alert for alert in db_alerts]
+    db_alerts = get_last_alerts(tenant_id=tenant_id, limit=limit)
 
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
