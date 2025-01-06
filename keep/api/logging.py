@@ -247,7 +247,7 @@ CONFIG = {
     },
     "handlers": {
         "default": {
-            "level": "DEBUG",
+            "level": LOG_LEVEL,
             "formatter": (
                 "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else "dev_terminal"
             ),
@@ -255,7 +255,7 @@ CONFIG = {
             "stream": "ext://sys.stdout",
         },
         "context": {
-            "level": "DEBUG",
+            "level": LOG_LEVEL,
             "formatter": (
                 "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else "dev_terminal"
             ),

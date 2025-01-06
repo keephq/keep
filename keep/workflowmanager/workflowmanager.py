@@ -430,9 +430,9 @@ class WorkflowManager:
                 workflow.context_manager.dump()
 
         if any(errors):
-            self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
+            self.logger.warning(msg=f"Workflow {workflow.workflow_id} ran with errors")
         else:
-            self.logger.info(f"Workflow {workflow.workflow_id} ran successfully")
+            self.logger.warning(f"Workflow {workflow.workflow_id} ran successfully")
 
         if test_run:
             results = self._get_workflow_results(workflow)

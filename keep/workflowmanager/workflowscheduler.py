@@ -606,8 +606,13 @@ class WorkflowScheduler:
                 }
             )
 
+        self.logger.info(
+            "Submitting workflows",
+            extra={"number_of_workflows": len(workflows_to_actual_run)},
+        )
+
         for workflow in workflows_to_actual_run:
-            self.logger.info("Submitting workflow to run")
+            self.logger.warning("Submitting workflow to run")
             workflow_id = workflow.get("workflow_id")
             tenant_id = workflow.get("tenant_id")
             workflow_execution_id = workflow.get("workflow_execution_id")
