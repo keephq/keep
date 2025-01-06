@@ -39,7 +39,6 @@ class WorkflowManager:
         self.scheduler = WorkflowScheduler(self)
         self.workflow_store = WorkflowStore()
         self.started = False
-        self._running_task = None
 
     async def start(self):
         """Runs the workflow manager in server mode"""
@@ -54,12 +53,6 @@ class WorkflowManager:
         if not self.started:
             return
           
-        if self._running_task is not None:
-            try:
-                await self._running_task
-            except RuntimeError:
-                logging.error("Can't await self._running_task. Probably already awaited.")
-   
         self.scheduler.stop()
         self.started = False
 
