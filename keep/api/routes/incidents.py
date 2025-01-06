@@ -35,6 +35,7 @@ from keep.api.core.db import (
     get_workflow_executions_for_incident_or_alert,
     merge_incidents_to_id,
 )
+from keep.api.core.get_last_incidents_by_cel import get_last_incidents_by_cel
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.models.alert import (
     AlertDto,
@@ -160,16 +161,26 @@ def get_all_incidents(
         authenticated_entity=authenticated_entity,
     )
 
-    incidents, total_count = get_last_incidents(
-        tenant_id=tenant_id,
-        is_confirmed=confirmed,
-        limit=limit,
-        offset=offset,
-        sorting=sorting,
-        filters=filters,
-        allowed_incident_ids=allowed_incident_ids,
-        cel=cel
-    )
+    if cel:
+        incidents, total_count = get_last_incidents_by_cel(
+            tenant_id=tenant_id,
+            is_confirmed=confirmed,
+            limit=limit,
+            offset=offset,
+            sorting=sorting,
+            cel=cel,
+            allowed_incident_ids=allowed_incident_ids,
+        )
+    else:
+        incidents, total_count = get_last_incidents(
+            tenant_id=tenant_id,
+            is_confirmed=confirmed,
+            limit=limit,
+            offset=offset,
+            sorting=sorting,
+            filters=filters,
+            allowed_incident_ids=allowed_incident_ids,
+        )
 
     incidents_dto = []
     for incident in incidents:

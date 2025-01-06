@@ -220,6 +220,8 @@ class BaseCelToSqlProvider:
             return exp
         if to_type == float:
             return exp
+        if to_type == bool:
+            return "TRUE" if exp == "true" else "FALSE"
         
         raise NotImplementedError(f"{to_type.__name__} type casting is not supported yet")
         
