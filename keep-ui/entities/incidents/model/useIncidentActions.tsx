@@ -83,7 +83,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
     async (
       providerId: string,
       methodName: string,
-      methodParams: { [key: string]: string }
+      methodParams: { [key: string]: string | boolean | object }
     ) => {
       const result = await api.post(
         `/providers/${providerId}/invoke/${methodName}`,
