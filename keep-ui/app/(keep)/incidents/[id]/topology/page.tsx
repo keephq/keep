@@ -2,7 +2,6 @@ import { TopologySearchProvider } from "@/app/(keep)/topology/TopologySearchCont
 import { TopologyMap } from "@/app/(keep)/topology/ui/map";
 import { getIncidentWithErrorHandling } from "../getIncidentWithErrorHandling";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
-import { TopologyApplication } from "@/app/(keep)/topology/model";
 import { getApplications } from "@/app/(keep)/topology/api";
 import { createServerApiClient } from "@/shared/api/server";
 
@@ -13,8 +12,6 @@ type PageProps = {
 export default async function IncidentTopologyPage({
   params: { id },
 }: PageProps) {
-  let initialApplications: TopologyApplication[] = [];
-
   const api = await createServerApiClient();
   const incident = await getIncidentWithErrorHandling(id);
   const applications = await getApplications(api);
@@ -27,7 +24,7 @@ export default async function IncidentTopologyPage({
     );
 
     return (
-      <main className="h-[calc(100vh-12rem)]">
+      <main className="h-[calc(100vh-28rem)]">
         <TopologySearchProvider>
           <TopologyMap
             selectedApplicationIds={[relevantApplication?.id || ""]}
@@ -38,7 +35,7 @@ export default async function IncidentTopologyPage({
     );
   } else {
     return (
-      <main className="h-[calc(100vh-12rem)]">
+      <main className="h-[calc(100vh-28rem)]">
         <TopologySearchProvider>
           <TopologyMap services={incident.services} />
         </TopologySearchProvider>

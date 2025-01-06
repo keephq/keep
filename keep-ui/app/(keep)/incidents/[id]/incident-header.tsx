@@ -9,7 +9,7 @@ import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { MdBlock, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ManualRunWorkflowModal from "@/app/(keep)/workflows/manual-run-workflow-modal";
 import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident";
 import Modal from "@/components/ui/Modal";
@@ -32,6 +32,7 @@ export function IncidentHeader({
   const incident = fetchedIncident || initialIncidentData;
 
   const router = useRouter();
+  const pathname = usePathname();
 
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 
@@ -53,6 +54,11 @@ export function IncidentHeader({
     setIsFormOpen(true);
   };
 
+  const pathNameCapitalized = pathname
+    .split("/")
+    .pop()
+    ?.replace(/^[a-z]/, (match) => match.toUpperCase());
+
   return (
     <CopilotKit runtimeUrl="/api/copilotkit">
       <header className="flex flex-col gap-4">
@@ -63,6 +69,12 @@ export function IncidentHeader({
               <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
               {incident.is_confirmed ? "" : "Possible "}
               {getIncidentName(incident)}
+              {pathNameCapitalized && (
+                <>
+                  <Icon icon={ArrowRightIcon} color="gray" size="xs" />
+                  {pathNameCapitalized}
+                </>
+              )}
             </Subtitle>
           </div>
 
