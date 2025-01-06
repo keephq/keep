@@ -755,6 +755,7 @@ def get_workflow_execution_status(
 @router.post(
     "/{workflow_id}/benchmark",
     description="Benchmark a workflow",
+    include_in_schema=False,
 )
 def benchmark_workflow(
     workflow_id: str,
