@@ -397,6 +397,8 @@ class WorkflowScheduler:
         # take out all items from the workflows to run and run them, also, clean the self.workflows_to_run list
         with self.lock:
             workflows_to_run, self.workflows_to_run = self.workflows_to_run, []
+
+        workflows_to_actual_run = []
         for workflow_to_run in workflows_to_run:
             self.logger.info(
                 "Running event workflow on background",
@@ -594,6 +596,23 @@ class WorkflowScheduler:
                     )
                     continue
             # Last, run the workflow
+            workflows_to_actual_run.append(
+                {
+                    "workflow_id": workflow_id,
+                    "workflow": workflow,
+                    "tenant_id": tenant_id,
+                    "workflow_execution_id": workflow_execution_id,
+                    "event": event,
+                }
+            )
+
+        for workflow in workflows_to_actual_run:
+            self.logger.info("Submitting workflow to run")
+            workflow_id = workflow.get("workflow_id")
+            tenant_id = workflow.get("tenant_id")
+            workflow_execution_id = workflow.get("workflow_execution_id")
+            event = workflow.get("event")
+            workflow = workflow.get("workflow")
             future = self.executor.submit(
                 self._run_workflow,
                 tenant_id,
@@ -604,6 +623,7 @@ class WorkflowScheduler:
             )
             self.futures.add(future)
             future.add_done_callback(lambda f: self.futures.remove(f))
+            self.logger.info("Workflow submitted to run")
 
         self.logger.debug(
             "Event workflows handled",
