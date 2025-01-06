@@ -670,6 +670,12 @@ async def finish_workflow_execution(tenant_id, workflow_id, execution_id, status
             select(WorkflowExecution).where(WorkflowExecution.id == execution_id)
         )).first()
 
+        try:
+            execution_time = (datetime.utcnow() - workflow_execution_old.started).total_seconds()
+        except AttributeError:
+            execution_time = 0
+            logging.warning(f"Failed to calculate execution time for {execution_id}")
+
         # Perform the update query
         result = await session.exec(
             update(WorkflowExecution)
@@ -678,7 +684,7 @@ async def finish_workflow_execution(tenant_id, workflow_id, execution_id, status
                 is_running=random_number,
                 status=status,
                 error=error[:255] if error else None,
-                execution_time=(datetime.utcnow() - workflow_execution_old.started).total_seconds()
+                execution_time=execution_time
             )
         )
 
@@ -1619,6 +1625,7 @@ def update_user_role(tenant_id, username, role):
 
 
 async def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
+    logging.info(f"Saving workflow results for {workflow_execution_id}, {workflow_results}")
     async with AsyncSession(engine_async) as session:
         await session.exec(
             update(WorkflowExecution)
