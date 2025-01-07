@@ -117,10 +117,9 @@ export function IncidentHeader({
             {incident.incident_type == "topology" && (
               <Badge
                 color="blue"
-                size="sm"
-                className="cursor-pointer"
+                size="xs"
                 icon={TbTopologyStar3}
-                tooltip="Based on Topology correlation"
+                tooltip="Created by topology correlation"
               >
                 Topology
               </Badge>
