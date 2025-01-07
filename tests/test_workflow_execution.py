@@ -1482,6 +1482,7 @@ async def test_nested_conditional_flow(
 
     # Insert the alert into workflow manager
     await workflow_manager.start()
+    await asyncio.sleep(1)
     await workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
     # Wait for workflow execution
@@ -1501,7 +1502,7 @@ async def test_nested_conditional_flow(
         elif workflow_execution is not None and workflow_execution.status == "error":
             raise Exception("Workflow execution failed")
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
         count += 1
 
     await workflow_manager.stop()
