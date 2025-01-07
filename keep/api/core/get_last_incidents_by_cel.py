@@ -185,12 +185,13 @@ def __build_last_incidents_query(
         where_filter += f' AND ({query_metadata.where})'
 
     sql_cte = f"""
-            WITH main AS (
+            WITH merged_alerts AS (
                 SELECT 
                     lastalerttoincident.incident_id as incident_id,
                     alertenrichment.enrichments AS enrichments,
                     alert.event AS event,
                     alert.provider_type AS incident_alert_provider_type
+                    {f',{query_metadata.select_json}' if query_metadata.select_json else ''}
                 FROM lastalerttoincident
                 INNER JOIN lastalert 
                     ON lastalert.tenant_id = lastalerttoincident.tenant_id 
@@ -200,14 +201,6 @@ def __build_last_incidents_query(
                 INNER JOIN alertenrichment 
                     ON alert.fingerprint = alertenrichment.alert_fingerprint
                 WHERE alert.tenant_id = '{tenant_id}'
-            ),
-
-            merged_alerts AS (
-                SELECT 
-                    main.incident_alert_provider_type AS incident_alert_provider_type,
-                    main.incident_id AS incident_id
-                    {f',{query_metadata.select_json}' if query_metadata.select_json else ''}
-                FROM main
             ),
 
             all_incidents AS (
