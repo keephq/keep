@@ -188,6 +188,11 @@ class TopologiesService:
             name=application.name,
             description=application.description,
         )
+
+        # This will be true if we are pulling applications from a Provider
+        if application.id:
+            new_application.id = application.id
+
         session.add(new_application)
         session.flush()  # This assigns an ID to new_application
 
@@ -213,12 +218,16 @@ class TopologiesService:
         application_id: UUID,
         application: TopologyApplicationDtoIn,
         session: Session,
+        existing_application: Optional[TopologyApplication] = None,
     ) -> TopologyApplicationDtoOut:
-        application_db = session.exec(
-            select(TopologyApplication)
-            .where(TopologyApplication.tenant_id == tenant_id)
-            .where(TopologyApplication.id == application_id)
-        ).first()
+        if existing_application:
+            application_db = existing_application
+        else:
+            application_db = session.exec(
+                select(TopologyApplication)
+                .where(TopologyApplication.tenant_id == tenant_id)
+                .where(TopologyApplication.id == application_id)
+            ).first()
         if not application_db:
             raise ApplicationNotFoundException(
                 f"Application with id {application_id} not found"
@@ -266,6 +275,36 @@ class TopologiesService:
         session.commit()
         session.refresh(application_db)
         return TopologyApplicationDtoOut.from_orm(application_db)
+
+    @staticmethod
+    def create_or_update_application(
+            tenant_id: str,
+            application: TopologyApplicationDtoIn,
+            session: Session,
+    ) -> TopologyApplicationDtoOut:
+        # Check if an application with the same name already exists for the tenant
+        existing_application = session.exec(
+            select(TopologyApplication)
+            .where(TopologyApplication.tenant_id == tenant_id)
+            .where(TopologyApplication.id == application.id)
+        ).first()
+
+        if existing_application:
+            # If the application exists, update it
+            return TopologiesService.update_application_by_id(
+                tenant_id=tenant_id,
+                application_id=existing_application.id,
+                application=application,
+                session=session,
+                existing_application=existing_application,
+            )
+        else:
+            # If the application doesn't exist, create it
+            return TopologiesService.create_application_by_tenant_id(
+                tenant_id=tenant_id,
+                application=application,
+                session=session,
+            )
 
     @staticmethod
     def delete_application_by_id(

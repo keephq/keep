@@ -37,13 +37,13 @@ class SmtpProviderAuthConfig:
         default=587,
     )
 
-    encryption: typing.Literal["SSL", "TLS"] = dataclasses.field(
+    encryption: typing.Literal["SSL", "TLS", "None"] = dataclasses.field(
         default="TLS",
         metadata={
             "required": True,
             "description": "SMTP encryption",
             "type": "select",
-            "options": ["SSL", "TLS"],
+            "options": ["SSL", "TLS", "None"],
             "config_main_group": "authentication",
         },
     )
@@ -120,6 +120,10 @@ class SmtpProvider(BaseProvider):
         elif encryption == "TLS":
             smtp = SMTP(smtp_server, smtp_port)
             smtp.starttls()
+        elif encryption == "None":
+            smtp = SMTP(smtp_server, smtp_port)
+        else:
+            raise Exception(f"Invalid encryption: {encryption}")
 
         if smtp_username and smtp_password:
             smtp.login(smtp_username, smtp_password)

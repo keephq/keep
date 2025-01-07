@@ -38,7 +38,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, selectinload, subqueryload
+from sqlalchemy.orm import joinedload, subqueryload
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
@@ -1274,6 +1274,8 @@ def get_last_alerts(
             select(Alert, LastAlert.first_timestamp.label("startedAt"))
             .select_from(LastAlert)
             .join(Alert, LastAlert.alert_id == Alert.id)
+            .where(LastAlert.tenant_id == tenant_id)
+            .where(Alert.tenant_id == tenant_id)
         )
 
         if timeframe:
@@ -1300,9 +1302,7 @@ def get_last_alerts(
             stmt = stmt.where(*filter_conditions)
 
         # Main query for alerts
-        stmt = stmt.where(Alert.tenant_id == tenant_id).options(
-            subqueryload(Alert.alert_enrichment)
-        )
+        stmt = stmt.options(subqueryload(Alert.alert_enrichment))
 
         if with_incidents:
             if dialect_name == "sqlite":
@@ -1790,6 +1790,7 @@ def get_incident_for_grouping_rule(
             .where(Incident.rule_id == rule.id)
             .where(Incident.rule_fingerprint == rule_fingerprint)
             .where(Incident.status != IncidentStatus.RESOLVED.value)
+            .where(Incident.status != IncidentStatus.DELETED.value)
             .order_by(Incident.creation_time.desc())
         ).first()
 
@@ -1820,12 +1821,14 @@ def create_incident_for_grouping_rule(
             rule_id=rule.id,
             rule_fingerprint=rule_fingerprint,
             is_predicted=False,
-            is_confirmed=rule.create_on == CreateIncidentOn.ANY.value and not rule.require_approve,
+            is_confirmed=rule.create_on == CreateIncidentOn.ANY.value
+            and not rule.require_approve,
         )
         session.add(incident)
         session.commit()
         session.refresh(incident)
     return incident
+
 
 def get_rule(tenant_id, rule_id):
     with Session(engine) as session:
@@ -1919,6 +1922,7 @@ def get_all_deduplication_rules(tenant_id):
         ).all()
     return rules
 
+
 def get_deduplication_rule_by_id(tenant_id, rule_id: str):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -1956,7 +1960,7 @@ def create_deduplication_rule(
     full_deduplication: bool = False,
     ignore_fields: list[str] = [],
     priority: int = 0,
-    is_provisioned: bool = False
+    is_provisioned: bool = False,
 ):
     with Session(engine) as session:
         new_rule = AlertDeduplicationRule(
@@ -2740,6 +2744,12 @@ def get_dashboards(tenant_id: str, email=None) -> List[Dict[str, Any]]:
             )
         )
         dashboards = session.exec(statement).all()
+
+    # for postgres, the jsonb column is returned as a string
+    # so we need to parse it
+    for dashboard in dashboards:
+        if isinstance(dashboard.dashboard_config, str):
+            dashboard.dashboard_config = json.loads(dashboard.dashboard_config)
     return dashboards
 
 
@@ -2925,23 +2935,14 @@ def is_alert_assigned_to_incident(
     with Session(engine) as session:
         assigned = session.exec(
             select(LastAlertToIncident)
+            .join(Incident, LastAlertToIncident.incident_id == Incident.id)
             .where(LastAlertToIncident.fingerprint == fingerprint)
             .where(LastAlertToIncident.incident_id == incident_id)
             .where(LastAlertToIncident.tenant_id == tenant_id)
             .where(LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
+            .where(Incident.status != IncidentStatus.DELETED.value)
         ).first()
     return assigned is not None
-
-
-def get_incidents(tenant_id) -> List[Incident]:
-    with Session(engine) as session:
-        incidents = session.exec(
-            select(Incident)
-            .options(selectinload(Incident.alerts))
-            .where(Incident.tenant_id == tenant_id)
-            .order_by(desc(Incident.creation_time))
-        ).all()
-    return incidents
 
 
 def get_alert_audit(
@@ -3664,27 +3665,22 @@ def delete_incident_by_id(
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
-        incident = (
-            session.query(Incident)
-            .filter(
+        incident = session.exec(
+            select(Incident).filter(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
             )
-            .first()
-        )
+        ).first()
 
-        # Delete all associations with alerts:
-
-        (
-            session.query(LastAlertToIncident)
+        session.execute(
+            update(Incident)
             .where(
-                LastAlertToIncident.tenant_id == tenant_id,
-                LastAlertToIncident.incident_id == incident.id,
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident.id,
             )
-            .delete()
+            .values({"status": IncidentStatus.DELETED.value})
         )
 
-        session.delete(incident)
         session.commit()
         return True
 
@@ -3986,7 +3982,9 @@ def add_alerts_to_incident(
             return incident
 
 
-def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str | UUID) -> int:
+def get_incident_unique_fingerprint_count(
+    tenant_id: str, incident_id: str | UUID
+) -> int:
     with Session(engine) as session:
         return session.execute(
             select(func.count(1))
@@ -4659,19 +4657,22 @@ def get_workflow_executions_for_incident_or_alert(
         results = session.execute(final_query).all()
         return results, total_count
 
+
 def is_all_alerts_resolved(
     fingerprints: Optional[List[str]] = None,
     incident: Optional[Incident] = None,
-    session: Optional[Session] = None
+    session: Optional[Session] = None,
 ):
-    return is_all_alerts_in_status(fingerprints, incident, AlertStatus.RESOLVED, session)
+    return is_all_alerts_in_status(
+        fingerprints, incident, AlertStatus.RESOLVED, session
+    )
 
 
 def is_all_alerts_in_status(
     fingerprints: Optional[List[str]] = None,
     incident: Optional[Incident] = None,
     status: AlertStatus = AlertStatus.RESOLVED,
-    session: Optional[Session] = None
+    session: Optional[Session] = None,
 ):
 
     if incident and incident.alerts_count == 0:
@@ -4704,19 +4705,15 @@ def is_all_alerts_in_status(
             subquery = subquery.where(LastAlert.fingerprint.in_(fingerprints))
 
         if incident:
-            subquery = (
-                subquery
-                .join(
+            subquery = subquery.join(
                 LastAlertToIncident,
                 and_(
                     LastAlertToIncident.tenant_id == LastAlert.tenant_id,
                     LastAlertToIncident.fingerprint == LastAlert.fingerprint,
                 ),
-            )
-                .where(
-                    LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
-                    LastAlertToIncident.incident_id == incident.id,
-                )
+            ).where(
+                LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                LastAlertToIncident.incident_id == incident.id,
             )
 
         subquery = subquery.subquery()
@@ -5091,8 +5088,8 @@ def set_last_alert(
                         timestamp=alert.timestamp,
                         first_timestamp=alert.timestamp,
                         alert_id=alert.id,
-                    alert_hash=alert.alert_hash,
-                )
+                        alert_hash=alert.alert_hash,
+                    )
 
                 session.add(last_alert)
                 session.commit()

@@ -112,6 +112,7 @@
           "pages": [
             "providers/documentation/aks-provider",
             "providers/documentation/appdynamics-provider",
+            "providers/documentation/argocd-provider",
             "providers/documentation/auth0-provider",
             "providers/documentation/axiom-provider",
             "providers/documentation/azuremonitoring-provider",
@@ -210,7 +211,6 @@
     {
       "group": "Deployment",
       "pages": [
-        "deployment/getting-started",
         "deployment/configuration",
         "deployment/monitoring",
         {

@@ -24,19 +24,32 @@ from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 router = APIRouter()
 
 CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
+NO_AUTH_METRICS = config("KEEP_NO_AUTH_METRICS", default=False, cast=bool)
 
+if NO_AUTH_METRICS:
 
-@router.get("/processing", include_in_schema=False)
-async def get_processing_metrics(
-    request: Request,
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:metrics"])
-    ),
-):
-    registry = CollectorRegistry()
-    multiprocess.MultiProcessCollector(registry)
-    metrics = generate_latest(registry)
-    return Response(content=metrics, media_type=CONTENT_TYPE_LATEST)
+    @router.get("/processing", include_in_schema=False)
+    async def get_processing_metrics(
+        request: Request,
+    ):
+        registry = CollectorRegistry()
+        multiprocess.MultiProcessCollector(registry)
+        metrics = generate_latest(registry)
+        return Response(content=metrics, media_type=CONTENT_TYPE_LATEST)
+
+else:
+
+    @router.get("/processing", include_in_schema=False)
+    async def get_processing_metrics(
+        request: Request,
+        authenticated_entity: AuthenticatedEntity = Depends(
+            IdentityManagerFactory.get_auth_verifier(["read:metrics"])
+        ),
+    ):
+        registry = CollectorRegistry()
+        multiprocess.MultiProcessCollector(registry)
+        metrics = generate_latest(registry)
+        return Response(content=metrics, media_type=CONTENT_TYPE_LATEST)
 
 
 @router.get("")

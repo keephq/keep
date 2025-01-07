@@ -10,6 +10,7 @@ import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
 import { useAlerts } from "./useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import {DefaultIncidentFilters} from "@/entities/incidents/model/models";
 
 interface IncidentUpdatePayload {
   incident_id: string | null;

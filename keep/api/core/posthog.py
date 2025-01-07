@@ -16,17 +16,19 @@ except metadata.PackageNotFoundError:
 
 POSTHOG_DISABLED = os.getenv("POSTHOG_DISABLED", "false").lower() == "true"
 
-if POSTHOG_DISABLED:
-    posthog.disabled = True
-
 POSTHOG_API_KEY = (
     os.getenv("POSTHOG_API_KEY")
     or "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ"  # It's a public PH API key, not a leaked secret ;)
 )
-posthog_client = Posthog(
-    api_key=POSTHOG_API_KEY, 
-    host="https://app.posthog.com", 
-)
+
+if POSTHOG_DISABLED:
+    posthog.disabled = True
+    posthog_client = None
+else:
+    posthog_client = Posthog(
+        api_key=POSTHOG_API_KEY, 
+        host="https://app.posthog.com", 
+    )
 
 
 def is_posthog_reachable():

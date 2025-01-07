@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import PageClient from "../../builder/page.client";
 import Loading from "@/app/(keep)/loading";
 import Link from "next/link";
+import { WorkflowBuilderPageClient } from "../../builder/page.client";
 
 export default function PageWithId({
   params,
@@ -27,8 +27,8 @@ export default function PageWithId({
     <>
       {!workflowPreviewData && <Loading />}
       {workflowPreviewData && workflowPreviewData.name === key && (
-        <PageClient
-          workflow={workflowPreviewData.workflow_raw || ""}
+        <WorkflowBuilderPageClient
+          workflowRaw={workflowPreviewData.workflow_raw || ""}
           isPreview={true}
         />
       )}

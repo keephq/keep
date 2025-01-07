@@ -14,7 +14,7 @@ from fastapi import (
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from keep.api.consts import PROVIDER_PULL_INTERVAL_DAYS, STATIC_PRESETS
+from keep.api.consts import PROVIDER_PULL_INTERVAL_MINUTE, STATIC_PRESETS
 from keep.api.core.db import get_db_preset_by_name
 from keep.api.core.db import get_presets as get_presets_db
 from keep.api.core.db import (
@@ -87,13 +87,13 @@ def pull_data_from_providers(
 
         if provider.last_pull_time is not None:
             now = datetime.now()
-            days_passed = (now - provider.last_pull_time).days
-            if days_passed <= PROVIDER_PULL_INTERVAL_DAYS:
+            minutes_passed = (now - provider.last_pull_time).total_seconds() / 60
+            if minutes_passed <= PROVIDER_PULL_INTERVAL_MINUTE:
                 logger.info(
                     "Skipping provider data pulling since not enough time has passed",
                     extra={
                         **extra,
-                        "days_passed": days_passed,
+                        "minutes_passed": minutes_passed,
                         "provider_last_pull_time": str(provider.last_pull_time),
                     },
                 )
@@ -165,10 +165,10 @@ def pull_data_from_providers(
                     f"Provider {provider.type} ({provider.id}) does not implement pulling topology data",
                     extra=extra,
                 )
-            except Exception:
+            except Exception as e:
                 logger.exception(
                     f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
-                    extra={**extra},
+                    extra={**extra, "exception": str(e)},
                 )
 
             for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():

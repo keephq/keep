@@ -1,9 +1,9 @@
-import os
-import jwt
-import time
 import logging
+import os
+import time
 from importlib import metadata
 
+import jwt
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -56,5 +56,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         end_time = time.time()
         logger.info(
             f"Request finished: {request.method} {request.url.path} {response.status_code} in {end_time - start_time:.2f}s",
+            extra={
+                "tenant_id": identity,
+                "status_code": response.status_code,
+            },
         )
         return response

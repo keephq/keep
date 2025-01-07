@@ -130,20 +130,12 @@ export function IncidentList({
 
   function renderIncidents() {
     if (incidentsError) {
-      return (
-        <Card className="flex-grow">
-          <IncidentListError incidentError={incidentsError} />
-        </Card>
-      );
+      return <IncidentListError incidentError={incidentsError} />;
     }
 
     if (isLoading) {
       // TODO: only show this on the initial load
-      return (
-        <Card className="flex-grow">
-          <Loading />
-        </Card>
-      );
+      return <Loading />;
     }
 
     if (incidents && (incidents.items.length > 0 || areFiltersApplied)) {

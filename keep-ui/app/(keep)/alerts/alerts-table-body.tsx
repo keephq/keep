@@ -103,10 +103,7 @@ export function AlertsTableBody({
           <TableRow
             id={`alert-row-${row.original.fingerprint}`}
             key={row.id}
-            className={clsx(
-              "hover:bg-orange-100 cursor-pointer relative",
-              rowBgColor
-            )}
+            className="cursor-pointer relative group"
             onClick={(e) => handleRowClick(e, row.original)}
           >
             {row.getVisibleCells().map((cell) => {
@@ -120,7 +117,9 @@ export function AlertsTableBody({
                   key={cell.id}
                   className={clsx(
                     cell.column.columnDef.meta?.tdClassName,
-                    className
+                    className,
+                    rowBgColor,
+                    "group-hover:bg-orange-100"
                   )}
                   style={style}
                 >

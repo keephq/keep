@@ -15,14 +15,9 @@ import yaml
 from dotenv import find_dotenv, load_dotenv
 from prettytable import PrettyTable
 
-from keep.api.core.db_on_start import try_create_single_tenant
-from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.posthog import posthog_client
-from keep.cli.click_extensions import NotRequiredIf
 from keep.providers.models.provider_config import ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
-from keep.workflowmanager.workflowmanager import WorkflowManager
-from keep.workflowmanager.workflowstore import WorkflowStore
 
 load_dotenv(find_dotenv())
 
@@ -72,6 +67,8 @@ def get_default_conf_file_path():
 
 
 def make_keep_request(method, url, **kwargs):
+    if os.environ.get("KEEP_CLI_IGNORE_SSL", "false").lower() == "true":
+        kwargs['verify'] = False
     try:
         response = requests.request(method, url, **kwargs)
         if response.status_code == 401:
@@ -190,14 +187,15 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
     # https://posthog.com/tutorials/identifying-users-guide#identifying-and-setting-user-ids-for-every-other-library
     # random user id
     info.set_config(keep_config)
-    posthog_client.capture(
-        info.random_user_id,
-        "keep-cli-started",
-        properties={
-            "args": sys.argv,
-            "keep_version": KEEP_VERSION,
-        },
-    )
+    if posthog_client is not None:
+        posthog_client.capture(
+            info.random_user_id,
+            "keep-cli-started",
+            properties={
+                "args": sys.argv,
+                "keep_version": KEEP_VERSION,
+            },
+        )
     # Use the verbosity count to determine the logging level...
     if verbose > 0:
         # set the verbosity level to debug
@@ -211,7 +209,7 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
 
     @ctx.call_on_close
     def cleanup():
-        if posthog_client:
+        if posthog_client is not None:
             posthog_client.flush()
 
 
@@ -347,120 +345,6 @@ def api(multi_tenant: bool, port: int, host: str):
     )
     app.dependency_overrides[click.get_current_context] = lambda: ctx
     api.run(app)
-
-
-@cli.command()
-@click.option(
-    "--alerts-directory",
-    "--alerts-file",
-    "-af",
-    type=click.Path(exists=True, dir_okay=True, file_okay=True),
-    help="The path to the alert yaml/alerts directory",
-)
-@click.option(
-    "--alert-url",
-    "-au",
-    help="A url that can be used to download an alert yaml",
-    cls=NotRequiredIf,
-    multiple=True,
-    not_required_if="alerts_directory",
-)
-@click.option(
-    "--interval",
-    "-i",
-    type=int,
-    help="When interval is set, Keep will run the alert every INTERVAL seconds",
-    required=False,
-    default=0,
-)
-@click.option(
-    "--providers-file",
-    "-p",
-    type=click.Path(exists=False),
-    help="The path to the providers yaml",
-    required=False,
-    default="providers.yaml",
-)
-@click.option(
-    "--tenant-id",
-    "-t",
-    help="The tenant id",
-    required=False,
-    default=SINGLE_TENANT_UUID,
-)
-@click.option("--api-key", help="The API key for keep's API", required=False)
-@click.option(
-    "--api-url",
-    help="The URL for keep's API",
-    required=False,
-    default="https://s.keephq.dev",
-)
-@pass_info
-def run(
-    info: Info,
-    alerts_directory: str,
-    alert_url: list[str],
-    interval: int,
-    providers_file,
-    tenant_id,
-    api_key,
-    api_url,
-):
-    """Run a workflow."""
-    logger.debug(f"Running alert in {alerts_directory or alert_url}")
-    posthog_client.capture(
-        info.random_user_id,
-        "keep-run-alert-started",
-        properties={
-            "args": sys.argv,
-            "keep_version": KEEP_VERSION,
-        },
-    )
-    # this should be fixed
-    workflow_manager = WorkflowManager.get_instance()
-    workflow_store = WorkflowStore()
-    if tenant_id == SINGLE_TENANT_UUID:
-        try_create_single_tenant(SINGLE_TENANT_UUID)
-    workflows = workflow_store.get_workflows_from_path(
-        tenant_id, alerts_directory or alert_url, providers_file
-    )
-    try:
-        workflow_manager.run(workflows)
-    except KeyboardInterrupt:
-        logger.info("Keep stopped by user, stopping the scheduler")
-        posthog_client.capture(
-            info.random_user_id,
-            "keep-run-stopped-by-user",
-            properties={
-                "args": sys.argv,
-                "keep_version": KEEP_VERSION,
-            },
-        )
-        workflow_manager.stop()
-        logger.info("Scheduler stopped")
-    except Exception as e:
-        posthog_client.capture(
-            info.random_user_id,
-            "keep-run-unexpected-error",
-            properties={
-                "args": sys.argv,
-                "error": str(e),
-                "keep_version": KEEP_VERSION,
-            },
-        )
-        logger.error(f"Error running alert {alerts_directory or alert_url}: {e}")
-        if info.verbose:
-            raise e
-        sys.exit(1)
-    posthog_client.capture(
-        info.random_user_id,
-        "keep-run-alert-finished",
-        properties={
-            "args": sys.argv,
-            "keep_version": KEEP_VERSION,
-        },
-    )
-    logger.debug(f"Alert in {alerts_directory or alert_url} ran successfully")
 
 
 @cli.group()

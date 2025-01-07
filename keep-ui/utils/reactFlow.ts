@@ -607,7 +607,7 @@ export function getTriggerStep(properties: V2Properties) {
   return [
     {
       id: "trigger_start",
-      name: "Trigger Start",
+      name: "Triggers",
       type: "trigger",
       componentType: "trigger",
       edgeTarget: triggerStartTargets,
@@ -617,7 +617,7 @@ export function getTriggerStep(properties: V2Properties) {
     ...steps,
     {
       id: "trigger_end",
-      name: "Workflow start",
+      name: "Workflow steps",
       type: "",
       componentType: "trigger",
       cantDelete: true,
