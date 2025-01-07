@@ -28,7 +28,7 @@ export const useIncidents = (
   limit: number = 25,
   offset: number = 0,
   sorting: { id: string; desc: boolean } = { id: "creation_time", desc: false },
-  filters: Filters | {} = {},
+  cel: string = "",
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
@@ -37,15 +37,9 @@ export const useIncidents = (
 
   const filtersParams = new URLSearchParams();
 
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value.length == 0) {
-      filtersParams.delete(key as string);
-    } else {
-      value.forEach((s: string) => {
-        filtersParams.append(key, s);
-      });
-    }
-  });
+  if (cel) {
+    filtersParams.set("cel", cel);
+  }
 
   const swrValue = useSWR<PaginatedIncidentsDto>(
     () =>

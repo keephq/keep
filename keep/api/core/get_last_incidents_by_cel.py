@@ -240,7 +240,7 @@ def __build_last_incidents_query(
                     {f',{query_metadata.select}' if query_metadata.select else ''}
                 FROM 
                     incident
-                INNER JOIN merged_alerts 
+                LEFT JOIN merged_alerts 
                     ON incident.id = merged_alerts.incident_id
                 {f'WHERE {where_filter}' if where_filter else ''}
                 GROUP BY 

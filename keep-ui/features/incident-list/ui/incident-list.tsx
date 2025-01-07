@@ -1,7 +1,7 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -17,6 +17,8 @@ import { SortingState } from "@tanstack/react-table";
 import { IncidentTableFilters } from "./incident-table-filters";
 import { useIncidentFilterContext } from "./incident-table-filters-context";
 import { IncidentListError } from "@/features/incident-list/ui/incident-list-error";
+import { FacetsPanel } from "@/features/filter/facets-panel";
+import { FacetDto } from "@/features/filter/models";
 
 interface Pagination {
   limit: number;
@@ -45,6 +47,8 @@ export function IncidentList({
     { id: "creation_time", desc: true },
   ]);
 
+  const [filterCel, setFilterCel] = useState<string>('');
+
   const {
     statuses,
     severities,
@@ -72,7 +76,7 @@ export function IncidentList({
     incidentsPagination.limit,
     incidentsPagination.offset,
     incidentsSorting[0],
-    filters,
+    filterCel,
     {
       revalidateOnFocus: false,
       revalidateOnMount: !initialData,
@@ -103,6 +107,26 @@ export function IncidentList({
     setIncidentToEdit(null);
     setIsFormOpen(false);
   };
+
+  const facets: FacetDto[] = [
+    {
+      id: "user_generated_name",
+      name: "Incident name",
+      options: [
+        {
+          displayName: "Incident name",
+          value: "Grafana incident",
+          count: 5,
+        },
+        {
+          displayName: "2 Alerts incident DATADOG",
+          value: "2 Alerts incident DATADOG",
+          count: 15,
+        },
+      ],
+      isStatic: false,
+    },
+  ];
 
   function renderIncidents() {
     if (incidentsError) {
@@ -179,9 +203,17 @@ export function IncidentList({
               </Button>
             </div>
           </div>
-          {/* Filters are placed here so the table could be in loading/not-found state without affecting the controls */}
-          <IncidentTableFilters />
-          {renderIncidents()}
+          <div className="flex flex-row gap-5 testovit">
+            {/* Filters are placed here so the table could be in loading/not-found state without affecting the controls */}
+            <FacetsPanel 
+              facets={facets}
+              className="mt-14"
+              onCelChange={(cel) => setFilterCel(cel)}
+            />
+            <div className="flex flex-col gap-5 flex-1">
+              {renderIncidents()}
+            </div>
+          </div>
         </div>
       </div>
       <Modal
