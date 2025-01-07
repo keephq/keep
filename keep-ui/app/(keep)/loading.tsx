@@ -17,7 +17,7 @@ export default function Loading({
       }`}
     >
       <Image
-        className="animate-bounce"
+        className="animate-bounce -my-10"
         src="/keep.svg"
         alt="loading"
         width={200}
