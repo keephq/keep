@@ -4,7 +4,7 @@ import {
   useIncidentActions,
   type IncidentDto,
 } from "@/entities/incidents/model";
-import { Button, Icon, Subtitle, Title } from "@tremor/react";
+import { Badge, Button, Icon, Subtitle, Title } from "@tremor/react";
 import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { MdBlock, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
@@ -18,6 +18,7 @@ import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { useIncident } from "@/utils/hooks/useIncidents";
 import { IncidentOverview } from "./incident-overview";
 import { CopilotKit } from "@copilotkit/react-core";
+import { TbTopologyStar } from "react-icons/tb";
 
 export function IncidentHeader({
   incident: initialIncidentData,
@@ -111,9 +112,19 @@ export function IncidentHeader({
           )}
         </div>
         <div className="flex justify-between items-end text-sm gap-2">
-          <div className="prose-2xl flex-grow flex flex-col gap-1">
+          <div className="prose-2xl flex-grow flex gap-1">
             <IncidentSeverityBadge severity={incident.severity} />
-            {/* <span>{getIncidentName(incident)}</span> */}
+            {incident.incident_type == "topology" && (
+              <Badge
+                color="orange"
+                size="sm"
+                className="cursor-pointer"
+                icon={TbTopologyStar}
+                tooltip="Based on Topology correlation"
+              >
+                Topology
+              </Badge>
+            )}
           </div>
           {!incident.is_confirmed && (
             <div className="space-x-1 flex flex-row items-center justify-center">

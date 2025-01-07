@@ -57,3 +57,12 @@
 [data-message-role="assistant"]:hover .message-feedback {
   opacity: 1;
 }
+
+.message-feedback button {
+  color: var(--tremor-content);
+  opacity: 0.5;
+  transition: opacity 0.2xs;
+}
+.message-feedback button:hover {
+  opacity: 1;
+}

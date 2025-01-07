@@ -205,6 +205,13 @@ class DatadogProvider(BaseTopologyProvider):
             type="action",
         ),
         ProviderMethod(
+            name="Resolve Incident",
+            func_name="resolve_incident",
+            scopes=["incidents_write"],
+            description="resolve an active incident",
+            type="action",
+        ),
+        ProviderMethod(
             name="Add Incident Timeline Note",
             func_name="add_incident_timeline_note",
             scopes=["incidents_write"],
@@ -379,6 +386,22 @@ class DatadogProvider(BaseTopologyProvider):
                 f"Failed to add incident timeline note: {response.status_code} {response.text}"
             )
 
+    def resolve_incident(self, incident_id: str):
+        self.configuration.unstable_operations["update_incident"] = True
+        with ApiClient(self.configuration) as api_client:
+            api = IncidentsApi(api_client)
+            response = api.update_incident(
+                incident_id,
+                {
+                    "data": {
+                        "id": incident_id,
+                        "type": "incidents",
+                        "attributes": {"fields": {"state": {"value": "resolved"}}},
+                    }
+                },
+            )
+            return response.data.to_dict()
+
     def create_incident(
         self,
         incident_name: str,
@@ -397,10 +420,8 @@ class DatadogProvider(BaseTopologyProvider):
                 if user.attributes.name == commander_user
                 or user.attributes.handle == commander_user
             ),
-            None,
+            users.data[0],  # select the first user as the commander if not found
         )
-        if not commander_user_obj:
-            raise Exception(f"User {commander_user} not found")
 
         fields["severity"] = {"value": severity}
         body = {
