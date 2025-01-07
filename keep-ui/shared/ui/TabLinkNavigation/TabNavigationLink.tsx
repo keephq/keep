@@ -2,8 +2,9 @@ import { type ElementType, type ReactNode } from "react";
 import Link from "next/link";
 import { twMerge } from "tailwind-merge";
 import { Badge } from "@tremor/react";
+import type { LinkProps as NextLinkProps } from "next/link";
 
-interface TabNavigationLinkProps {
+type TabNavigationLinkProps = {
   href: string;
   children: ReactNode;
   className?: string;
@@ -11,7 +12,8 @@ interface TabNavigationLinkProps {
   icon?: ElementType;
   prefetch?: boolean;
   count?: number;
-}
+} & NextLinkProps &
+  React.AnchorHTMLAttributes<HTMLAnchorElement>;
 
 export function TabNavigationLink({
   href,
@@ -21,6 +23,7 @@ export function TabNavigationLink({
   icon: Icon,
   prefetch,
   count,
+  ...linkProps
 }: TabNavigationLinkProps) {
   return (
     <Link
@@ -52,6 +55,7 @@ export function TabNavigationLink({
       role="tab"
       aria-selected={isActive}
       tabIndex={isActive ? 0 : -1}
+      {...linkProps}
     >
       {Icon && <Icon className="!size-5 flex-shrink-0" />}
       <span className="truncate">{children}</span>

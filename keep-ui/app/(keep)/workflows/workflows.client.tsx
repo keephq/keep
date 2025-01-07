@@ -2,17 +2,16 @@
 
 import { useRef, useState } from "react";
 import useSWR from "swr";
-import { Callout, Subtitle } from "@tremor/react";
+import { Subtitle } from "@tremor/react";
 import {
   ArrowUpOnSquareStackIcon,
-  ExclamationCircleIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Workflow, MockWorkflow } from "./models";
 import Loading from "@/app/(keep)/loading";
 import React from "react";
 import WorkflowsEmptyState from "./noworkflows";
-import WorkflowTile, { WorkflowTileOld } from "./workflow-tile";
+import WorkflowTile from "./workflow-tile";
 import { Button, Card, Title } from "@tremor/react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
@@ -20,7 +19,7 @@ import Modal from "@/components/ui/Modal";
 import MockWorkflowCardSection from "./mockworkflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
-import { showErrorToast, Input } from "@/shared/ui";
+import { showErrorToast, Input, ErrorComponent } from "@/shared/ui";
 
 export default function WorkflowsPage() {
   const api = useApi();
@@ -62,19 +61,12 @@ export default function WorkflowsPage() {
     (url: string) => api.get(url)
   );
 
-  if (isLoading || !data) return <Loading />;
-
   if (error) {
-    return (
-      <Callout
-        className="mt-4"
-        title="Error"
-        icon={ExclamationCircleIcon}
-        color="rose"
-      >
-        Failed to load workflows
-      </Callout>
-    );
+    return <ErrorComponent error={error} reset={() => {}} />;
+  }
+
+  if (isLoading || !data) {
+    return <Loading />;
   }
 
   const onDrop = async (files: any) => {

@@ -558,13 +558,35 @@ def get_workflow_by_id(
     tenant_id = authenticated_entity.tenant_id
     # get all workflow
     workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
-
     if not workflow:
         logger.warning(
             f"Tenant tried to get workflow {workflow_id} that does not exist",
             extra={"tenant_id": tenant_id},
         )
         raise HTTPException(404, "Workflow not found")
+
+    installed_providers = get_installed_providers(tenant_id)
+    installed_providers_by_type = {}
+    for installed_provider in installed_providers:
+        if installed_provider.type not in installed_providers_by_type:
+            installed_providers_by_type[installed_provider.type] = {
+                installed_provider.name: installed_provider
+            }
+        else:
+            installed_providers_by_type[installed_provider.type][
+                installed_provider.name
+            ] = installed_provider
+
+    workflowstore = WorkflowStore()
+    try:
+        providers_dto, triggers = workflowstore.get_workflow_meta_data(
+            tenant_id=tenant_id,
+            workflow=workflow,
+            installed_providers_by_type=installed_providers_by_type,
+        )
+    except Exception as e:
+        logger.error(f"Error fetching workflow meta data: {e}")
+        providers_dto, triggers = [], []  # Default in case of failure
 
     try:
         workflow_yaml = yaml.safe_load(workflow.workflow_raw)
@@ -577,13 +599,11 @@ def get_workflow_by_id(
             created_by=workflow.created_by,
             creation_time=workflow.creation_time,
             interval=workflow.interval,
-            providers=[],
-            triggers=[],
+            providers=providers_dto,
+            triggers=triggers,
             workflow_raw=final_workflow_raw,
-            revision=workflow.revision,
             last_updated=workflow.last_updated,
             disabled=workflow.is_disabled,
-            provisioned=workflow.provisioned,
         )
         return workflow_dto
     except yaml.YAMLError:

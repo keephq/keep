@@ -1,14 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Accordion,
-  AccordionBody,
-  AccordionHeader,
-  Card,
-  Title,
-  Button,
-} from "@tremor/react";
+import { Card, Title, Button } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import {
@@ -27,7 +20,6 @@ import {
 } from "./types";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import WorkflowDefinitionYAML from "../workflow-definition-yaml";
-import { ApiClient } from "@/shared/api/ApiClient";
 
 interface WorkflowResultsProps {
   workflow_id: string;
@@ -60,7 +52,7 @@ export default function WorkflowExecutionResults({
   );
 
   // Get workflow definition
-  const { data: workflowData } = useSWR(
+  const { data: workflowData, error: workflowError } = useSWR(
     api.isReady() ? `/workflows/${workflow_id}` : null,
     (url) => api.get(url)
   );
@@ -101,27 +93,37 @@ export default function WorkflowExecutionResults({
     );
   }
 
+  if (workflowError) {
+    return (
+      <Callout title="Error" icon={ExclamationCircleIcon} color="rose">
+        Failed to load workflow definition
+      </Callout>
+    );
+  }
+
   return (
     <ExecutionResults
+      workflowId={workflow_id}
       executionData={executionData}
-      workflowData={workflowData}
+      workflowRaw={workflowData.workflow_raw}
       checks={checks}
-      api={api}
     />
   );
 }
 
 export function ExecutionResults({
+  workflowId,
   executionData,
-  workflowData,
+  workflowRaw,
   checks,
-  api,
 }: {
   executionData: WorkflowExecution | WorkflowExecutionFailure;
-  workflowData?: any;
+  workflowId: string | undefined;
+  workflowRaw: string | undefined;
   checks?: number;
-  api: ApiClient;
 }) {
+  const api = useApi();
+
   let status: WorkflowExecution["status"] | undefined;
   let logs: WorkflowExecution["logs"] | undefined;
   let results: WorkflowExecution["results"] | undefined;
@@ -142,7 +144,7 @@ export function ExecutionResults({
     let token = api.getToken();
     let url = api.getApiBaseUrl();
     // Only include workflow ID if workflowData is available
-    const workflowIdParam = workflowData ? `/${workflowData.id}` : "";
+    const workflowIdParam = workflowId ? `/${workflowId}` : "";
     return `curl -X POST "${url}/workflows${workflowIdParam}/run?event_type=${eventType}&event_id=${eventId}" \\
   -H "Authorization: Bearer ${token}" \\
   -H "Content-Type: application/json"`;
@@ -156,26 +158,24 @@ export function ExecutionResults({
     <div className="flex flex-col gap-4 h-[calc(100vh-8rem)]">
       {/* Error Card */}
       {error && (
-        <Card className="flex-none">
-          <Callout
-            title="Error during workflow execution"
-            icon={ExclamationCircleIcon}
-            color="rose"
-          >
-            <div className="flex justify-between items-center">
-              <div>
-                {error.split("\n").map((line, index) => (
-                  <p key={index}>{line}</p>
-                ))}
-              </div>
-              {eventId && eventType && (
-                <Button color="rose" onClick={copyToClipboard}>
-                  Copy CURL replay
-                </Button>
-              )}
+        <Callout
+          title="Error during workflow execution"
+          icon={ExclamationCircleIcon}
+          color="rose"
+        >
+          <div className="flex justify-between items-center">
+            <div>
+              {error.split("\n").map((line, index) => (
+                <p key={index}>{line}</p>
+              ))}
             </div>
-          </Callout>
-        </Card>
+            {eventId && eventType && (
+              <Button color="rose" onClick={copyToClipboard}>
+                Copy CURL replay
+              </Button>
+            )}
+          </div>
+        </Callout>
       )}
 
       {/* Workflow Results Card */}
@@ -258,8 +258,8 @@ export function ExecutionResults({
                           log.message?.includes("NOT to run")
                             ? "bg-red-100"
                             : log.message?.includes("evaluated to run")
-                            ? "bg-green-100"
-                            : ""
+                              ? "bg-green-100"
+                              : ""
                         }`}
                         key={index}
                       >
@@ -283,7 +283,7 @@ export function ExecutionResults({
           <Title>Workflow Definition</Title>
           <div className="flex-1 mt-4 overflow-auto">
             <WorkflowDefinitionYAML
-              workflowRaw={workflowData.workflow_raw}
+              workflowRaw={workflowRaw ?? ""}
               executionLogs={logs}
               executionStatus={status}
             />
