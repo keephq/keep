@@ -399,22 +399,6 @@ function getActionsFromCondition(
   return compiledActions;
 }
 
-export function downloadFileFromString(data: string, filename: string) {
-  /**
-   * Generated with ChatGPT
-   */
-  var blob = new Blob([data], { type: "text/plain" });
-  var url = URL.createObjectURL(blob);
-
-  var link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-
-  link.click();
-
-  URL.revokeObjectURL(url);
-}
-
 export function buildAlert(definition: Definition): Alert {
   const alert = definition;
   const alertId = alert.properties.id as string;

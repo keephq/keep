@@ -12,13 +12,7 @@ import {
 } from "@tremor/react";
 import { load, JSON_SCHEMA } from "js-yaml";
 import { useSearchParams } from "next/navigation";
-import {
-  useState,
-  useEffect,
-  Dispatch,
-  SetStateAction,
-  useLayoutEffect,
-} from "react";
+import { useState, useEffect, Dispatch, SetStateAction } from "react";
 import Loading from "@/app/(keep)/loading";
 import { WorkflowSteps } from "../mockworkflows";
 import { Workflow } from "../models";
@@ -26,7 +20,6 @@ import WorkflowGraph from "../workflow-graph";
 import AlertTriggerModal from "../workflow-run-with-alert-modal";
 import { TableFilters } from "./table-filters";
 import { ExecutionTable } from "./workflow-execution-table";
-import { PaginatedWorkflowExecutionDto } from "../builder/types";
 
 interface Pagination {
   limit: number;
@@ -69,14 +62,14 @@ export const FilterTabs = ({
   tab: number;
 }) => {
   return (
-    <div className="max-w-lg space-y-12 pt-6">
+    <div className="max-w-lg">
       <TabGroup
         index={tab}
         onIndexChange={(index: number) => {
           setTab(index);
         }}
       >
-        <TabList variant="solid" color="black" className="bg-gray-300">
+        <TabList variant="solid" color="black" className="bg-gray-200">
           {tabs.map((tabItem, index) => (
             <Tab key={tabItem.value}>{tabItem.name}</Tab>
           ))}
@@ -149,7 +142,7 @@ export default function WorkflowOverview({
   const workflow = { last_executions: data?.items } as Partial<Workflow>;
 
   return (
-    <>
+    <div className="flex flex-col gap-4">
       <div className="sticky top-0 flex justify-between items-end">
         <div className="flex-1">
           {/*TO DO update searchParams for these filters*/}
@@ -172,7 +165,7 @@ export default function WorkflowOverview({
       </div>
       {!data || isLoading || (isValidating && <Loading />)}
       {data?.items && (
-        <div className="mt-2 flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-0.5">
             <StatsCard data={`${data.count ?? 0}`}>
               <Title>Total Executions</Title>
@@ -235,6 +228,6 @@ export default function WorkflowOverview({
       {!!data?.workflow && !!getTriggerModalProps && (
         <AlertTriggerModal {...getTriggerModalProps()} />
       )}
-    </>
+    </div>
   );
 }

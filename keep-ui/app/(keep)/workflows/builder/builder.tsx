@@ -13,7 +13,6 @@ import {
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
 import { globalValidatorV2, stepValidatorV2 } from "./builder-validators";
-import Modal from "react-modal";
 import { Alert } from "./legacy-workflow.types";
 import BuilderModalContent from "./builder-modal";
 import Loader from "./loader";
@@ -34,11 +33,13 @@ import useStore from "./builder-store";
 import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
-import { showErrorToast } from "@/shared/ui";
+import { showErrorToast, showSuccessToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 import WorkflowDefinitionYAML from "../workflow-definition-yaml";
 import { CopilotKit } from "@copilotkit/react-core";
 import { BuilderChat } from "./builder-chat";
+import { revalidatePath } from "next/cache";
+import Modal from "@/components/ui/Modal";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -99,8 +100,7 @@ function Builder({
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   const searchParams = useSearchParams();
-  const { errorNode, setErrorNode, canDeploy, synced, toolboxConfiguration } =
-    useStore();
+  const { errorNode, setErrorNode, canDeploy, synced } = useStore();
 
   const setStepValidationErrorV2 = (step: V2Step, error: string | null) => {
     setStepValidationError(error);
@@ -130,7 +130,7 @@ function Builder({
         headers: { "Content-Type": "text/html" },
       })
       .then(() => {
-        window.location.assign("/workflows");
+        showSuccessToast("Workflow deployed successfully");
       })
       .catch((error: any) => {
         showErrorToast(error, "Failed to add workflow");
@@ -156,7 +156,6 @@ function Builder({
           error:
             error instanceof KeepApiError ? error.message : "Unknown error",
         });
-        setTestRunModalOpen(false);
       });
   };
 
@@ -171,7 +170,8 @@ function Builder({
       .then(() => {
         // This is important because it makes sure we will re-fetch the workflow if we get to this page again.
         // router.push for instance, optimizes re-render of same pages and we don't want that here because of "cache".
-        window.location.assign("/workflows");
+        showSuccessToast("Workflow added successfully");
+        revalidatePath("/workflows/builder");
       })
       .catch((error) => {
         alert(`Error: ${error}`);
@@ -339,7 +339,7 @@ function Builder({
     <CopilotKit runtimeUrl="/api/copilotkit">
       <div className="h-full">
         <Modal
-          onRequestClose={closeGenerateModal}
+          onClose={closeGenerateModal}
           isOpen={generateModalIsOpen}
           className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
         >
@@ -350,13 +350,14 @@ function Builder({
         </Modal>
         <Modal
           isOpen={testRunModalOpen}
-          onRequestClose={closeWorkflowExecutionResultsModal}
+          onClose={closeWorkflowExecutionResultsModal}
           className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
         >
           <BuilderWorkflowTestRunModalContent
             closeModal={closeWorkflowExecutionResultsModal}
             workflowExecution={runningWorkflowExecution}
-            apiClient={api}
+            workflowRaw={workflow ?? ""}
+            workflowId={workflowId ?? ""}
           />
         </Modal>
         {generateModalIsOpen || testRunModalOpen ? null : (

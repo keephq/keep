@@ -13,12 +13,12 @@ import { loadWorkflowYAML } from "./utils";
 import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 
-export default function PageClient({
-  workflow,
+export function WorkflowBuilderPageClient({
+  workflowRaw: workflow,
   workflowId,
   isPreview,
 }: {
-  workflow?: string;
+  workflowRaw?: string;
   workflowId?: string;
   isPreview?: boolean;
 }) {
