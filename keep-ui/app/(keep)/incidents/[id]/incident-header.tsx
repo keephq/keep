@@ -18,7 +18,7 @@ import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { useIncident } from "@/utils/hooks/useIncidents";
 import { IncidentOverview } from "./incident-overview";
 import { CopilotKit } from "@copilotkit/react-core";
-import { TbTopologyStar } from "react-icons/tb";
+import { TbTopologyStar3 } from "react-icons/tb";
 
 export function IncidentHeader({
   incident: initialIncidentData,
@@ -116,10 +116,10 @@ export function IncidentHeader({
             <IncidentSeverityBadge severity={incident.severity} />
             {incident.incident_type == "topology" && (
               <Badge
-                color="orange"
+                color="blue"
                 size="sm"
                 className="cursor-pointer"
-                icon={TbTopologyStar}
+                icon={TbTopologyStar3}
                 tooltip="Based on Topology correlation"
               >
                 Topology

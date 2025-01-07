@@ -52,7 +52,7 @@ class TopologyProcessor:
         # for the single tenant, use the global configuration
         self.enabled_tenants[SINGLE_TENANT_UUID] = self.enabled
         # Configuration
-        self.process_interval = 60  # seconds
+        self.process_interval = 10  # seconds
         self.look_back_window = 15  # minutes
 
     async def start(self):
