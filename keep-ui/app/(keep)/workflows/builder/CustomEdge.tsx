@@ -25,7 +25,7 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
   style,
 }: CustomEdgeProps) => {
   const { setSelectedEdge, selectedEdge } = useStore();
-  const debug = false;
+  const debug = true;
 
   // Calculate the path and midpoint
   const [edgePath, labelX, labelY] = getSmoothStepPath({

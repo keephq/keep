@@ -26,7 +26,7 @@ function IconUrlProvider(data: FlowNode["data"]) {
 }
 
 function CustomNode({ id, data }: FlowNode) {
-  const debug = false;
+  const debug = true;
   const {
     selectedNode,
     setSelectedNode,
@@ -78,6 +78,13 @@ function CustomNode({ id, data }: FlowNode) {
   if (data.id === "trigger_start" || data.id === "trigger_end") {
     return (
       <div className="w-full h-full rounded-full bg-orange-50 border-1 border-orange-500 p-2 flex items-center justify-center">
+        {debug && (
+          <div
+            className={`h-fit bg-black text-pink-500 font-mono text-[10px] px-1 py-1 absolute top-0 bottom-0 my-auto right-0 translate-x-[calc(100%+20px)] pointer-events-none`}
+          >
+            {id}
+          </div>
+        )}
         {data.name}
         <Handle type="target" position={Position.Top} className="w-32" />
         <Handle type="source" position={Position.Bottom} className="w-32" />
