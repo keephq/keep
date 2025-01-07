@@ -283,7 +283,7 @@ export function ExecutionResults({
           <Title>Workflow Definition</Title>
           <div className="flex-1 mt-4 overflow-auto">
             <WorkflowDefinitionYAML
-              workflowRaw={workflowRaw}
+              workflowRaw={workflowRaw ?? ""}
               executionLogs={logs}
               executionStatus={status}
             />
