@@ -23,7 +23,6 @@ export const useWorkflowExecutions = (
 
 export const useWorkflowExecutionsV2 = (
   workflowId: string,
-  tab: number = 0,
   limit: number = 25,
   offset: number = 0
 ) => {
@@ -35,12 +34,9 @@ export const useWorkflowExecutionsV2 = (
   offset = searchParams?.get("offset")
     ? Number(searchParams?.get("offset"))
     : offset;
-  tab = searchParams?.get("tab") ? Number(searchParams?.get("tab")) : tab;
   limit = limit > 100 ? 50 : limit;
   limit = limit <= 0 ? 25 : limit;
   offset = offset < 0 ? 0 : offset;
-  tab = tab < 0 ? 0 : tab;
-  tab = tab > 3 ? 3 : tab;
 
   return useSWR<PaginatedWorkflowExecutionDto>(
     api.isReady()

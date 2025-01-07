@@ -14,7 +14,7 @@ export { TableSeverityCell } from "./TableSeverityCell";
 export { Select } from "./Select";
 export { VerticalRoundedList } from "./VerticalRoundedList";
 export { ErrorComponent } from "./ErrorComponent";
-
+export { YAMLCodeblock } from "./YAMLCodeblock";
 export { getCommonPinningStylesAndClassNames } from "./utils/table-utils";
 export { ThemeScript, WatchUpdateTheme, ThemeControl } from "./theme";
 

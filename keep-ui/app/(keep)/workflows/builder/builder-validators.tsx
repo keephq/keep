@@ -28,7 +28,7 @@ export function globalValidatorV2(
   ) {
     setGlobalValidationError(
       "trigger_start",
-      "Workflow Should at least have one trigger."
+      "Workflow should have at least one trigger."
     );
     return false;
   }

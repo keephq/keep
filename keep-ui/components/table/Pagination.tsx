@@ -35,9 +35,11 @@ export default function Pagination<T>({ table, isRefreshAllowed }: Props<T>) {
   const pageCount = table.getPageCount();
 
   return (
-    <div className="flex justify-end gap-4 items-center">
-      <div className="flex gap-2 items-center">
-        <Text className="font-bold">Rows per page</Text>
+    <div className="flex justify-between items-center">
+      <Text>
+        Showing {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
+      </Text>
+      <div className="flex gap-1">
         <Select
           components={{ SingleValue }}
           value={{
@@ -49,50 +51,50 @@ export default function Pagination<T>({ table, isRefreshAllowed }: Props<T>) {
           }
           options={[
             { value: "10", label: "10" },
-            { value: "25", label: "25" },
+            { value: "20", label: "20" },
             { value: "50", label: "50" },
             { value: "100", label: "100" },
           ]}
           menuPlacement="top"
-          className="rounded-md"
         />
-      </div>
-      <Text className="font-bold">
-        Page {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
-      </Text>
-      <div className="flex gap-2">
-        <Button
-          icon={ChevronDoubleLeftIcon}
-          onClick={() => table.setPageIndex(0)}
-          disabled={!table.getCanPreviousPage()}
-          size="md"
-          className="text-black border-gray-400 px-2"
-          variant="secondary"
-        />
-        <Button
-          icon={ChevronLeftIcon}
-          onClick={table.previousPage}
-          disabled={!table.getCanPreviousPage()}
-          size="md"
-          className="text-black border-gray-400 px-2"
-          variant="secondary"
-        />
-        <Button
-          icon={ChevronRightIcon}
-          onClick={table.nextPage}
-          disabled={!table.getCanNextPage()}
-          size="md"
-          className="text-black border-gray-400 px-2"
-          variant="secondary"
-        />
-        <Button
-          icon={ChevronDoubleRightIcon}
-          onClick={() => table.setPageIndex(pageCount - 1)}
-          disabled={!table.getCanNextPage()}
-          size="md"
-          className="text-black border-gray-400 px-2"
-          variant="secondary"
-        />
+        <div className="flex">
+          <Button
+            className="pagination-button"
+            icon={ChevronDoubleLeftIcon}
+            onClick={() => table.setPageIndex(0)}
+            disabled={!table.getCanPreviousPage()}
+            size="xs"
+            color="gray"
+            variant="secondary"
+          />
+          <Button
+            className="pagination-button"
+            icon={ChevronLeftIcon}
+            onClick={table.previousPage}
+            disabled={!table.getCanPreviousPage()}
+            size="xs"
+            color="gray"
+            variant="secondary"
+          />
+          <Button
+            className="pagination-button"
+            icon={ChevronRightIcon}
+            onClick={table.nextPage}
+            disabled={!table.getCanNextPage()}
+            size="xs"
+            color="gray"
+            variant="secondary"
+          />
+          <Button
+            className="pagination-button"
+            icon={ChevronDoubleRightIcon}
+            onClick={() => table.setPageIndex(pageCount - 1)}
+            disabled={!table.getCanNextPage()}
+            size="xs"
+            color="gray"
+            variant="secondary"
+          />
+        </div>
       </div>
     </div>
   );

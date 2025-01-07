@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import WorkflowDetailPage from "./executions";
+import WorkflowDetailPage from "./workflow-detail-page";
 
 export default function Page({ params }: { params: { workflow_id: string } }) {
   return <WorkflowDetailPage params={params} />;
