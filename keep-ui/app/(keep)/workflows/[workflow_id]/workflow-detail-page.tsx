@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Callout,
   Card,
   Tab,
   TabGroup,
@@ -13,8 +12,6 @@ import React, { useState } from "react";
 import {
   ArrowUpRightIcon,
   CodeBracketIcon,
-  DocumentTextIcon,
-  ExclamationCircleIcon,
   WrenchIcon,
 } from "@heroicons/react/24/outline";
 import Loading from "@/app/(keep)/loading";
@@ -24,7 +21,6 @@ import { WorkflowBuilderPageClient } from "../builder/page.client";
 import WorkflowOverview from "./workflow-overview";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { AiOutlineSwap } from "react-icons/ai";
-import { AcademicCapIcon } from "@heroicons/react/24/solid";
 import { ErrorComponent, TabNavigationLink, YAMLCodeblock } from "@/shared/ui";
 
 export default function WorkflowDetailPage({
@@ -81,9 +77,7 @@ export default function WorkflowDetailPage({
         </TabList>
         <TabPanels>
           <TabPanel>
-            <Card>
-              <WorkflowOverview workflow_id={params.workflow_id} />
-            </Card>
+            <WorkflowOverview workflow_id={params.workflow_id} />
           </TabPanel>
           <TabPanel>
             <Card className="h-[calc(100vh-150px)]">

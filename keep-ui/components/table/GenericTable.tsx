@@ -5,6 +5,7 @@ import {
   TableHead,
   TableHeaderCell,
   TableRow,
+  Card,
 } from "@tremor/react";
 import {
   DisplayColumnDef,
@@ -82,9 +83,9 @@ export function GenericTable<T>({
   });
 
   return (
-    <div className="flex flex-col w-full h-full max-h-full">
-      <div className="overflow-auto h-[85%]">
-        <TremorTable className="w-full rounded border border-tremor-border dark:border-dark-tremor-border">
+    <div className="flex flex-col gap-4 w-full h-full max-h-full">
+      <Card className="p-0">
+        <TremorTable className="w-full">
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
@@ -121,10 +122,8 @@ export function GenericTable<T>({
             ))}
           </TableBody>
         </TremorTable>
-      </div>
-      <div className="mt-4 h-[15%]">
-        {pagination && <Pagination table={table} isRefreshAllowed={false} />}
-      </div>
+      </Card>
+      {pagination && <Pagination table={table} isRefreshAllowed={false} />}
     </div>
   );
 }
