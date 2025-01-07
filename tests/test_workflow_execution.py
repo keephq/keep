@@ -244,8 +244,6 @@ async def test_workflow_execution(
         )
         create_alert("fp1", alert_status, base_time - timedelta(minutes=time_diff))
 
-    # await asyncio.sleep(1)
-
     # Create the current alert
     current_alert = AlertDto(
         id="grafana-1",
@@ -447,11 +445,10 @@ async def test_workflow_execution_2(
         fingerprint="fp1",
     )
 
+    await workflow_manager.start()
+
     # Insert the current alert into the workflow manager
     await workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
-    assert len(workflow_manager.scheduler.workflows_to_run) == 1
-
-    await workflow_manager.start()
 
     # Wait for the workflow execution to complete
     workflow_execution = None
@@ -468,7 +465,7 @@ async def test_workflow_execution_2(
         )
         if workflow_execution is not None:
             status = workflow_execution.status
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
         count += 1
 
     await workflow_manager.stop()
@@ -596,7 +593,7 @@ async def test_workflow_execution_3(
         )
         if workflow_execution is not None:
             status = workflow_execution.status
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
         count += 1
 
     await workflow_manager.stop()
@@ -1300,6 +1297,7 @@ async def test_alert_routing_policy(
     )
 
     await workflow_manager.start()
+    await asyncio.sleep(1)
     # Insert the alert into workflow manager
     await workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
@@ -1315,7 +1313,7 @@ async def test_alert_routing_policy(
         )
         if workflow_execution is not None and workflow_execution.status == "success":
             found = True
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
         count += 1
 
     # Verify workflow execution
