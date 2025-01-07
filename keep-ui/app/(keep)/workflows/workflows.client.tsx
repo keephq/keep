@@ -61,12 +61,12 @@ export default function WorkflowsPage() {
     (url: string) => api.get(url)
   );
 
-  if (isLoading || (!data && !error)) {
-    return <Loading />;
-  }
-
   if (error) {
     return <ErrorComponent error={error} reset={() => {}} />;
+  }
+
+  if (isLoading || !data) {
+    return <Loading />;
   }
 
   const onDrop = async (files: any) => {
