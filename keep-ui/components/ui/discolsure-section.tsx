@@ -68,7 +68,7 @@ export function DisclosureSection({
                       onClick={link.handleClick}
                     >
                       <div className="flex gap-2">
-                        <CustomIcon size={20} />
+                        <CustomIcon className="size-4" />
                         <Subtitle>{link.label}</Subtitle>
                       </div>
                     </div>

@@ -1,5 +1,5 @@
 import GenericPopover from "@/components/popover/GenericPopover";
-import { Textarea, Badge, Button } from "@tremor/react";
+import { Textarea, Button } from "@tremor/react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useRef, useState, useEffect, ChangeEvent } from "react";
 import { GoPlusCircle } from "react-icons/go";

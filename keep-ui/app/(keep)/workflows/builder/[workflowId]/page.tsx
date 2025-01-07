@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import PageClient from "../page.client";
+import { WorkflowBuilderPageClient } from "../page.client";
 import { createServerApiClient } from "@/shared/api/server";
 
 type WorkflowRawResponse = {
@@ -19,7 +19,10 @@ export default async function PageWithId({
     }
   );
   return (
-    <PageClient workflow={text.workflow_raw} workflowId={params.workflowId} />
+    <WorkflowBuilderPageClient
+      workflowRaw={text.workflow_raw}
+      workflowId={params.workflowId}
+    />
   );
 }
 
