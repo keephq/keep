@@ -427,7 +427,7 @@ def __handle_formatted_events(
             # insert the events to the workflow manager process queue
             logger.info("Adding events to the workflow manager queue")
             loop = asyncio.get_event_loop()
-            loop.run(workflow_manager.insert_events(tenant_id, enriched_formatted_events))
+            asyncio.ensure_future(workflow_manager.insert_events(tenant_id, enriched_formatted_events), loop=loop)
             logger.info("Added events to the workflow manager queue")
         except Exception:
             logger.exception(

@@ -167,7 +167,7 @@ class WorkflowScheduler:
                 )
             )
             self.futures.add(future)
-            future.add_done_callback(lambda f: self.futures.remove(f))
+            future.add_done_callback(self._async_task_callback)
 
     async def _run_workflow(
         self,
@@ -609,13 +609,12 @@ class WorkflowScheduler:
                 event,
             ))
             self.futures.add(future)
-            future.add_done_callback(lambda f: self.futures.remove(f))
+            future.add_done_callback(self._async_task_callback)
 
         self.logger.debug(
             "Event workflows handled",
             extra={"current_number_of_workflows": len(self.futures)},
         )
-
 
     async def _run(self):
         self.logger.info("Starting workflows scheduler")
@@ -644,9 +643,7 @@ class WorkflowScheduler:
         # Wait for scheduler to stop first
         if self.run_future:
             try:
-                self.run_future.result(
-                    timeout=5
-                )  # Add timeout to prevent hanging
+                self.run_future.cancel()  # Add timeout to prevent hanging
             except Exception:
                 self.logger.exception("Error waiting for scheduler to stop")
 
@@ -655,7 +652,7 @@ class WorkflowScheduler:
             try:
                 self.logger.info("Cancelling future")
                 future.cancel()
-                future.result(timeout=1)  # Add timeout
+                future.result()  # Add timeout
                 self.logger.info("Future cancelled")
             except Exception:
                 self.logger.exception("Error cancelling future")
@@ -727,3 +724,9 @@ class WorkflowScheduler:
                     self.logger.error(
                         f"Failed to send email to {workflow.created_by} for failed workflow {workflow_id}: {e}"
                     )
+
+    def _async_task_callback(self, future):
+        if isinstance(future.exception(), Exception):
+            self.logger.exception(future.exception())
+            raise future.exception()
+        self.futures.remove(future)

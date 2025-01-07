@@ -244,7 +244,7 @@ async def test_workflow_execution(
         )
         create_alert("fp1", alert_status, base_time - timedelta(minutes=time_diff))
 
-    await asyncio.sleep(1)
+    # await asyncio.sleep(1)
 
     # Create the current alert
     current_alert = AlertDto(
@@ -275,7 +275,7 @@ async def test_workflow_execution(
                 "send-slack-message-tier-2" in workflow_execution.results and
                 workflow_execution.status == "success"):
                 found = True
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
         count += 1
 
     await workflow_manager.stop()
