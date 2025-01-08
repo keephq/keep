@@ -114,17 +114,17 @@ export function IncidentList({
       name: "Incident name",
       options: [
         {
-          displayName: "Incident name",
+          display_name: "Incident name",
           value: "Grafana incident",
           count: 5,
         },
         {
-          displayName: "2 Alerts incident DATADOG",
+          display_name: "2 Alerts incident DATADOG",
           value: "2 Alerts incident DATADOG",
           count: 15,
         },
       ],
-      isStatic: false,
+      is_static: false,
     },
   ];
 

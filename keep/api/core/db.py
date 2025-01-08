@@ -43,7 +43,6 @@ from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
 from keep.api.consts import STATIC_PRESETS
-from keep.api.core.cel_to_sql.sql_providers.base import SqlField
 from keep.api.core.cel_to_sql.sql_providers.postgresql import CelToPostgreSqlProvider
 from keep.api.core.cel_to_sql.sql_providers.sqlite import CelToSqliteProvider
 from keep.api.core.config import config
@@ -5152,11 +5151,6 @@ def get_provider_logs(
 
 
 
-sqlFields = [
-    SqlField("provider_type", "string"),
-]
-
-
 def query_alerts_by_cel(tenant_id: str, cel: str) -> List[dict]:
     aggregated_cel = f"tenant_id == \"{tenant_id}\""
 
@@ -5194,7 +5188,6 @@ def query_alerts_by_cel(tenant_id: str, cel: str) -> List[dict]:
             WITH main AS (
                 SELECT 
                     alert.*
-                    {f',{query_metadata.select_json}' if query_metadata.select_json else ''}
                 FROM alert 
                 JOIN alertenrichment 
                     ON alert.fingerprint = alertenrichment.alert_fingerprint

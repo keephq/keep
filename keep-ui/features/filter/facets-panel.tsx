@@ -18,7 +18,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       result[facet.id] = {};
       
       facet.options.forEach((option) => {
-        result[facet.id][option.displayName] = option.value
+        result[facet.id][option.display_name] = option.value
       });
 
       return result;
@@ -27,7 +27,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   );
   const initialFacetsState = facets.reduce((acc, facet) => {
     acc[facet.id] = facet.options.reduce((acc, option) => {
-      acc[option.displayName] = true;
+      acc[option.display_name] = true;
       return acc;
     }, {} as any);
     return acc;

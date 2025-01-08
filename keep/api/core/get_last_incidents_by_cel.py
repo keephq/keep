@@ -7,9 +7,10 @@ This module contains the CRUD database functions for Keep.
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
+from pydantic import BaseModel
 from sqlmodel import Session, text
 
-from keep.api.core.cel_to_sql.sql_providers.sqlite import CelToSqliteProvider
+from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import get_cel_to_sql_provider_for_dialect
 
 # This import is required to create the tables
 from keep.api.models.alert import (
@@ -20,134 +21,131 @@ from keep.api.core.db import engine, enrich_incidents_with_alerts
 from keep.api.models.db.alert import Incident
 
 known_fields = {
-        "provider_type": { # redirects provider_type from cel to alert.provider_type in SQL
-            "type": "string",
-            "field": "incident_alert_provider_type",
-            "mapping_type": "one_to_one"
-        },
-        "user_generated_name": {
-            "type": "string",
-            "field": "user_generated_name",
-            "mapping_type": "one_to_one"
-        },
-        "ai_generated_name": {
-            "type": "string",
-            "field": "ai_generated_name",
-            "mapping_type": "one_to_one"
-        },
-        "user_summary": {
-            "type": "string",
-            "field": "user_summary",
-            "mapping_type": "one_to_one"
-        },
-        "generated_summary": {
-            "type": "string",
-            "field": "generated_summary",
-            "mapping_type": "one_to_one"
-        },
-        "assignee": {
-            "type": "string",
-            "field": "assignee",
-            "mapping_type": "one_to_one"
-        },
-        "severity": {
-            "type": "string",
-            "field": "severity",
-            "mapping_type": "one_to_one"
-        },
-        "status": {
-            "type": "string",
-            "field": "status",
-            "mapping_type": "one_to_one"
-        },
-        "creation_time": {
-            "type": "datetime",
-            "field": "creation_time",
-            "mapping_type": "one_to_one"
-        },
-        "start_time": {
-            "type": "datetime",
-            "field": "start_time",
-            "mapping_type": "one_to_one"
-        },
-        "end_time": {
-            "type": "datetime",
-            "field": "end_time",
-            "mapping_type": "one_to_one"
-        },
-        "last_seen_time": {
-            "type": "datetime",
-            "field": "last_seen_time",
-            "mapping_type": "one_to_one"
-        },
-        "is_predicted": {
-            "type": "boolean",
-            "field": "is_predicted",
-            "mapping_type": "one_to_one"
-        },
-        "is_confirmed": {
-            "type": "boolean",
-            "field": "is_confirmed",
-            "mapping_type": "one_to_one"
-        },
-        "alerts_count": {
-            "type": "integer",
-            "field": "alerts_count",
-            "mapping_type": "one_to_one"
-        },
-        "affected_services": {
-            "type": "json",
-            "field": "services",
-            "mapping_type": "one_to_one"
-        },
-        "sources": {
-            "type": "json",
-            "field": "alert_sources",
-            "mapping_type": "one_to_one"
-        },
-        "rule_id": {
-            "type": "string",
-            "field": "rule_id",
-            "mapping_type": "one_to_one"
-        },
-        "rule_fingerprint": {
-            "type": "string",
-            "field": "rule_fingerprint",
-            "mapping_type": "one_to_one"
-        },
-        "fingerprint": {
-            "type": "string",
-            "field": "fingerprint",
-            "mapping_type": "one_to_one"
-        },
-        "same_incident_in_the_past_id": {
-            "type": "string",
-            "field": "incident_same_incident_in_the_past_id",
-            "mapping_type": "one_to_one"
-        },
-        "merged_into_incident_id": {
-            "type": "string",
-            "field": "merged_into_incident_id",
-            "mapping_type": "one_to_one"
-        },
-        "merged_at": {
-            "type": "datetime",
-            "field": "merged_at",
-            "mapping_type": "one_to_one"
-        },
-        "merged_by": {
-            "type": "string",
-            "field": "merged_by",
-            "mapping_type": "one_to_one"
-        },
-        "*": { # redirects all other fields from cel to merged_json(event + enrichments) in SQL
-            "type": "json",
-            "field": "merged_json",
-            "take_from": ["event", "enrichments"],
-        }
-    }
+    "provider_type": {  # redirects provider_type from cel to alert.provider_type in SQL
+        "type": "string",
+        "field": "incident_alert_provider_type",
+        "mapping_type": "one_to_one",
+    },
+    "user_generated_name": {
+        "type": "string",
+        "field": "user_generated_name",
+        "mapping_type": "one_to_one",
+    },
+    "ai_generated_name": {
+        "type": "string",
+        "field": "ai_generated_name",
+        "mapping_type": "one_to_one",
+    },
+    "user_summary": {
+        "type": "string",
+        "field": "user_summary",
+        "mapping_type": "one_to_one",
+    },
+    "generated_summary": {
+        "type": "string",
+        "field": "generated_summary",
+        "mapping_type": "one_to_one",
+    },
+    "assignee": {"type": "string", "field": "assignee", "mapping_type": "one_to_one"},
+    "severity": {"type": "string", "field": "severity", "mapping_type": "one_to_one"},
+    "status": {"type": "string", "field": "status", "mapping_type": "one_to_one"},
+    "creation_time": {
+        "type": "datetime",
+        "field": "creation_time",
+        "mapping_type": "one_to_one",
+    },
+    "start_time": {
+        "type": "datetime",
+        "field": "start_time",
+        "mapping_type": "one_to_one",
+    },
+    "end_time": {"type": "datetime", "field": "end_time", "mapping_type": "one_to_one"},
+    "last_seen_time": {
+        "type": "datetime",
+        "field": "last_seen_time",
+        "mapping_type": "one_to_one",
+    },
+    "is_predicted": {
+        "type": "boolean",
+        "field": "is_predicted",
+        "mapping_type": "one_to_one",
+    },
+    "is_confirmed": {
+        "type": "boolean",
+        "field": "is_confirmed",
+        "mapping_type": "one_to_one",
+    },
+    "alerts_count": {
+        "type": "integer",
+        "field": "alerts_count",
+        "mapping_type": "one_to_one",
+    },
+    "affected_services": {
+        "type": "json",
+        "field": "services",
+        "mapping_type": "one_to_one",
+    },
+    "sources": {"type": "json", "field": "alert_sources", "mapping_type": "one_to_one"},
+    "rule_id": {"type": "string", "field": "rule_id", "mapping_type": "one_to_one"},
+    "rule_fingerprint": {
+        "type": "string",
+        "field": "rule_fingerprint",
+        "mapping_type": "one_to_one",
+    },
+    "fingerprint": {
+        "type": "string",
+        "field": "fingerprint",
+        "mapping_type": "one_to_one",
+    },
+    "same_incident_in_the_past_id": {
+        "type": "string",
+        "field": "incident_same_incident_in_the_past_id",
+        "mapping_type": "one_to_one",
+    },
+    "merged_into_incident_id": {
+        "type": "string",
+        "field": "merged_into_incident_id",
+        "mapping_type": "one_to_one",
+    },
+    "merged_at": {
+        "type": "datetime",
+        "field": "merged_at",
+        "mapping_type": "one_to_one",
+    },
+    "merged_by": {"type": "string", "field": "merged_by", "mapping_type": "one_to_one"},
+    "*": {  # redirects all other fields from cel to merged_json(event + enrichments) in SQL
+        "type": "json",
+        "take_from": ["incident_alerts.event", "incident_alerts.enrichments"],
+    },
+}
+
+incidents_alerts_cte = """
+                    WITH incident_alerts AS (
+                        SELECT 
+                            lastalerttoincident.incident_id as incident_id,
+                            alertenrichment.enrichments AS enrichments,
+                            alert.event AS event,
+                            alert.provider_type AS incident_alert_provider_type
+                        FROM 
+                            lastalerttoincident
+                        INNER JOIN 
+                            lastalert 
+                            ON lastalert.tenant_id = lastalerttoincident.tenant_id 
+                            AND lastalert.fingerprint = lastalerttoincident.fingerprint
+                        INNER JOIN 
+                            alert 
+                            ON lastalert.alert_id = alert.id
+                        LEFT OUTER JOIN alertenrichment 
+                            ON alert.fingerprint = alertenrichment.alert_fingerprint
+                        LEFT OUTER JOIN 
+                            alertenrichment AS alertenrichment_1 
+                            ON alert.fingerprint = alertenrichment_1.alert_fingerprint 
+                            AND alert.tenant_id = lastalerttoincident.tenant_id
+                    ),
+                """
 
 def __build_last_incidents_query(
+    dialect: str,
     tenant_id: str,
     limit: int = 25,
     offset: int = 0,
@@ -158,50 +156,38 @@ def __build_last_incidents_query(
     sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
     is_predicted: bool = None,
     cel: str = None,
-    allowed_incident_ids: Optional[List[str]] = None
+    allowed_incident_ids: Optional[List[str]] = None,
 ) -> str:
-    instance = CelToSqliteProvider(known_fields_mapping=known_fields)
+    instance = get_cel_to_sql_provider_for_dialect(
+        dialect, known_fields_mapping=known_fields
+    )
     query_metadata = instance.convert_to_sql_str(cel)
 
-    where_filter = f"incident.tenant_id = '{tenant_id}' AND incident.is_confirmed = {is_confirmed}"
+    where_filter = (
+        f"incident.tenant_id = '{tenant_id}' AND incident.is_confirmed = {is_confirmed}"
+    )
 
     if allowed_incident_ids:
         where_filter += f' AND incident.id IN {", ".join(allowed_incident_ids)}'
 
     if is_predicted is not None:
-        where_filter += f' AND incident.is_predicted = {is_predicted}'
+        where_filter += f" AND incident.is_predicted = {is_predicted}"
 
     if timeframe:
-        where_filter += f' AND incident.start_time >= {datetime.now(tz=timezone.utc) - timedelta(days=timeframe)}'
-    
+        where_filter += f" AND incident.start_time >= {datetime.now(tz=timezone.utc) - timedelta(days=timeframe)}"
+
     if upper_timestamp and lower_timestamp:
-        where_filter += f' AND (incident.last_seen_time BETWEEN {lower_timestamp} AND {upper_timestamp})'
+        where_filter += f" AND (incident.last_seen_time BETWEEN {lower_timestamp} AND {upper_timestamp})"
     elif upper_timestamp:
-        where_filter += f' AND incident.last_seen_time <= {upper_timestamp}'
+        where_filter += f" AND incident.last_seen_time <= {upper_timestamp}"
     elif lower_timestamp:
-        where_filter += f' AND incident.last_seen_time >= {lower_timestamp}'
-    
+        where_filter += f" AND incident.last_seen_time >= {lower_timestamp}"
+
     if query_metadata.where:
-        where_filter += f' AND ({query_metadata.where})'
+        where_filter += f" AND ({query_metadata.where})"
 
     sql_cte = f"""
-            WITH merged_alerts AS (
-                SELECT 
-                    lastalerttoincident.incident_id as incident_id,
-                    alertenrichment.enrichments AS enrichments,
-                    alert.event AS event,
-                    alert.provider_type AS incident_alert_provider_type
-                    {f',{query_metadata.select_json}' if query_metadata.select_json else ''}
-                FROM lastalerttoincident
-                INNER JOIN lastalert 
-                    ON lastalert.tenant_id = lastalerttoincident.tenant_id 
-                    AND lastalert.fingerprint = lastalerttoincident.fingerprint 
-                INNER JOIN alert 
-                    ON lastalert.alert_id = alert.id
-                INNER JOIN alertenrichment 
-                    ON alert.fingerprint = alertenrichment.alert_fingerprint
-                WHERE alert.tenant_id = '{tenant_id}'
-            ),
+            {incidents_alerts_cte},
 
             all_incidents AS (
                 SELECT
@@ -230,11 +216,10 @@ def __build_last_incidents_query(
                     incident.merged_into_incident_id AS merged_into_incident_id, 
                     incident.merged_at AS merged_at, 
                     incident.merged_by AS merged_by
-                    {f',{query_metadata.select}' if query_metadata.select else ''}
                 FROM 
                     incident
-                LEFT JOIN merged_alerts 
-                    ON incident.id = merged_alerts.incident_id
+                LEFT JOIN incident_alerts 
+                    ON incident.id = incident_alerts.incident_id
                 {f'WHERE {where_filter}' if where_filter else ''}
                 GROUP BY 
                     incident.id
@@ -242,7 +227,7 @@ def __build_last_incidents_query(
         """
 
     select_query = sql_cte + " SELECT * FROM all_incidents"
-    count_query = sql_cte + " SELECT COUNT(*) FROM all_incidents"
+    count_query = sql_cte + " SELECT COUNT(1) FROM all_incidents"
 
     if sorting:
         field = sorting.value
@@ -256,14 +241,12 @@ def __build_last_incidents_query(
 
     if limit is not None:
         select_query += f" LIMIT {limit}"
-    
+
     if offset is not None:
         select_query += f" OFFSET {offset}"
 
-    return {
-        "select": select_query,
-        "total_count": count_query
-    }
+    return {"select": select_query, "total_count": count_query}
+
 
 def get_last_incidents_by_cel(
     tenant_id: str,
@@ -300,17 +283,18 @@ def get_last_incidents_by_cel(
     """
     with Session(engine) as session:
         sql_queries = __build_last_incidents_query(
-            tenant_id,
-            limit,
-            offset,
-            timeframe,
-            upper_timestamp,
-            lower_timestamp,
-            is_confirmed,
-            sorting,
-            is_predicted,
-            cel,
-            allowed_incident_ids
+            dialect=session.bind.dialect.name,
+            tenant_id=tenant_id,
+            limit=limit,
+            offset=offset,
+            timeframe=timeframe,
+            upper_timestamp=upper_timestamp,
+            lower_timestamp=lower_timestamp,
+            is_confirmed=is_confirmed,
+            sorting=sorting,
+            is_predicted=is_predicted,
+            cel=cel,
+            allowed_incident_ids=allowed_incident_ids,
         )
 
         total_count = session.exec(text(sql_queries.get("total_count"))).scalar()
@@ -321,3 +305,21 @@ def get_last_incidents_by_cel(
             enrich_incidents_with_alerts(tenant_id, incidents, session)
 
     return incidents, total_count
+
+class FacetOptionDto(BaseModel):
+    display_name: str
+    value: any
+    count: int
+
+class FacetDto(BaseModel):
+    id: str
+    name: str
+    is_static: bool
+    is_lazy: bool = True
+    options: List[FacetOptionDto]
+
+# def build_facets_data_query(
+#         tenant_id: str,
+#         facets: List[str],
+# ) -> str:
+    

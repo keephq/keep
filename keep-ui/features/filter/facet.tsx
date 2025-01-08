@@ -102,12 +102,12 @@ export const Facet: React.FC<FacetProps> = ({
             ) : values.length > 0 ? (
               filteredValues.map((facetOption) => (
                 <FacetValue
-                  key={facetOption.displayName}
-                  label={facetOption.displayName}
+                  key={facetOption.display_name}
+                  label={facetOption.display_name}
                   count={facetOption.count}
-                  isExclusivelySelected={checkIfOptionExclusievlySelected(facetOption.displayName)}
-                  isSelected={facetState?.[facetOption.displayName]}
-                  onToggleOption={() => select(facetOption.displayName)}
+                  isExclusivelySelected={checkIfOptionExclusievlySelected(facetOption.display_name)}
+                  isSelected={facetState?.[facetOption.display_name]}
+                  onToggleOption={() => select(facetOption.display_name)}
                   onSelectOneOption={(value: string) => selectOneOption(value)}
                   onSelectAllOptions={() => selectAllOptions()}
                   facetKey={facetKey}

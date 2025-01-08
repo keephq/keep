@@ -12,16 +12,7 @@ from keep.api.core.cel_to_sql.ast_nodes import (
 )
 from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 from datetime import datetime
-
-
-class SqlField:
-    def __init__(self, field_name: str, field_type: str, take_from_json_in=None):
-        self.field_name = field_name
-        self.field_type = field_type
-        self.take_from_json_in = take_from_json_in
-
-    def __str__(self):
-        return f"{self.field_name} {self.field_type}"
+import re
 
 class BuiltQueryMetadata:
     def __init__(self, where: str, select_fields: str = None, select_json: str = None):
@@ -34,7 +25,6 @@ class BaseCelToSqlProvider:
         super().__init__()
         self.known_fields_mapping = known_fields_mapping
         self.json_sources = {}
-
 
     def convert_to_sql_str(self, cel: str) -> BuiltQueryMetadata:
         """
@@ -50,46 +40,13 @@ class BaseCelToSqlProvider:
         if not cel:
             return BuiltQueryMetadata(where="", select_fields="", select_json="")
 
-        cell_ast = CelToAstConverter.convert_to_ast(cel)
-
-        property_nodes = self._recursive_get_property_nodes(cell_ast)
+        original_query = CelToAstConverter.convert_to_ast(cel)
 
         return BuiltQueryMetadata(
-                where=self.__build_where_clause(cell_ast),
-                select_fields=self.__create_select_fields_clause(property_nodes),
-                select_json= self.__create_json_sources_clause(property_nodes)
+                where=self.__build_where_clause(original_query),
+                select_fields='',
+                select_json=''
             )
-    
-    def __create_json_sources_clause(self, property_nodes: List[PropertyAccessNode]):
-        select_json: dict[str, List[str]] = {}
-
-        for property_node in property_nodes:
-            if property_node.get_property_path() not in self.known_fields_mapping:
-                if "*" in self.known_fields_mapping:
-                    generic_field = self.known_fields_mapping["*"]
-                    take_from = generic_field.get("take_from")
-                    take_from_key = "_".join(take_from)
-                    select_json[take_from_key] = take_from
-                    
-        select_json_entries = []
-        for key, value in select_json.items():
-            select_json_entries.append(f"{self._json_merge(value)} AS {key}")
-        
-        return ", ".join(select_json_entries)
-    
-    def __create_select_fields_clause(self, property_nodes: List[PropertyAccessNode]):
-        select_fields = []
-
-        for property_node in property_nodes:
-            if property_node.get_property_path() not in self.known_fields_mapping:
-                if "*" in self.known_fields_mapping:
-                    generic_field = self.known_fields_mapping["*"]
-                    take_from = generic_field.get("take_from")
-                    take_from_key = "_".join(take_from)
-                    new_prop_name = "_".join(take_from + property_node.get_property_path().replace('[', '_').replace(']', '_').split("."))
-                    select_fields.append(f"{self._json_extract(take_from_key, property_node.get_property_path())} AS {new_prop_name}")
-        
-        return ", ".join(select_fields)
 
     def __build_where_clause(self, abstract_node: Node) -> str:
         if isinstance(abstract_node, ParenthesisNode):
@@ -101,13 +58,13 @@ class BaseCelToSqlProvider:
             return self._visit_logical_node(abstract_node)
 
         if isinstance(abstract_node, ComparisonNode):
-            return self._visit_comparison_node(abstract_node)
+            return self.__modify_and_visit_comparison_node(abstract_node)
 
         if isinstance(abstract_node, MemberAccessNode):
-            return self._visit_member_access_node(abstract_node)
+            return self.__modify_and_visit_member_access_node(abstract_node)
 
         if isinstance(abstract_node, UnaryNode):
-            return self._visit_unary_node(abstract_node)
+            return self.__modify_and_visit_unary_node(abstract_node)
 
         if isinstance(abstract_node, ConstantNode):
             return self._visit_constant_node(abstract_node.value)
@@ -116,37 +73,34 @@ class BaseCelToSqlProvider:
             f"{type(abstract_node).__name__} node type is not supported yet"
         )
 
-    def _json_merge(self, columns: List[str]) -> str:
-        raise NotImplementedError("Merging JSON is not implemented. Must be implemented in the child class.")
-    
+    def __get_prop_mapping(self, prop_path: str) -> list[str]:
+        if prop_path in self.known_fields_mapping:
+            return [self.known_fields_mapping[prop_path].get("field")]
+        
+        field_mapping = None
+
+        if prop_path in self.known_fields_mapping:
+            field_mapping = self.known_fields_mapping.get(prop_path)
+
+        if "*" in self.known_fields_mapping:
+            field_mapping = self.known_fields_mapping.get("*")
+
+        if field_mapping:
+
+            if "take_from" in field_mapping:
+                result = []
+                for take_from in field_mapping.get("take_from"):
+                    if field_mapping.get("type") == "json":
+                        result.append(f'JSON({take_from}).{prop_path}')
+                return result
+            
+            if "field" in field_mapping:
+                return [field_mapping.get("field")]
+
+        return [prop_path]
+
     def _json_extract(self, column: str, path: str) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
-
-    def _recursive_get_property_nodes(self, abstract_node: Node) -> List[PropertyAccessNode]:
-        if isinstance(abstract_node, PropertyAccessNode):
-            return [abstract_node]
-
-        if isinstance(abstract_node, ParenthesisNode):
-            return self._recursive_get_property_nodes(abstract_node.expression)
-
-        if isinstance(abstract_node, LogicalNode):
-            return self._recursive_get_property_nodes(abstract_node.left) + self._recursive_get_property_nodes(abstract_node.right)
-
-        if isinstance(abstract_node, ComparisonNode):
-            return self._recursive_get_property_nodes(abstract_node.first_operand) + self._recursive_get_property_nodes(abstract_node.second_operand)
-
-        if isinstance(abstract_node, MemberAccessNode):
-            return self._recursive_get_property_nodes(abstract_node.get_property_path())
-
-        if isinstance(abstract_node, UnaryNode):
-            return self._recursive_get_property_nodes(abstract_node.operand)
-
-        if isinstance(abstract_node, ConstantNode):
-            return []
-
-        raise NotImplementedError(
-            f"{type(abstract_node).__name__} node type is not supported yet"
-        )
 
     def _visit_parentheses(self, node: str) -> str:
         return f"({node})"
@@ -174,16 +128,42 @@ class BaseCelToSqlProvider:
     # endregion
 
     # region Comparison Visitors
-    def _visit_comparison_node(self, comparison_node: ComparisonNode) -> str:
-        
+    def __modify_and_visit_comparison_node(self, comparison_node: ComparisonNode) -> str:
+        if not isinstance(comparison_node.first_operand, PropertyAccessNode):
+            return self._visit_comparison_node(comparison_node)
 
+        result: str = None
+        for mapping in self.__get_prop_mapping(
+            comparison_node.first_operand.get_property_path()
+        ):
+            property_access_node = PropertyAccessNode(mapping, None)
+            
+            current_node_result = self._visit_comparison_node(ComparisonNode(
+                property_access_node,
+                comparison_node.operator,
+                comparison_node.second_operand,
+            ))
+            current_node_result = self._visit_logical_and(
+                left=self._visit_comparison_node(
+                    ComparisonNode(
+                        property_access_node,
+                        ComparisonNode.NE,
+                        ConstantNode(None),
+                    )
+                ),
+                right=current_node_result
+            )
+            if result is None:
+                result = current_node_result
+                continue
+
+            result = self._visit_logical_or(result, current_node_result)
+
+        return result
+
+    def _visit_comparison_node(self, comparison_node: ComparisonNode) -> str:
         first_operand = self.__build_where_clause(comparison_node.first_operand)
         second_operand = self.__build_where_clause(comparison_node.second_operand)
-
-        if isinstance(comparison_node.first_operand, PropertyAccessNode) and isinstance(comparison_node.second_operand, ConstantNode):
-            if not isinstance(comparison_node.second_operand.value, str):
-                first_operand = self._cast_property(first_operand, type(comparison_node.second_operand.value))
-        result: str = ""
 
         if comparison_node.operator == ComparisonNode.EQ:
             result = self._visit_equal(first_operand, second_operand)
@@ -202,16 +182,14 @@ class BaseCelToSqlProvider:
                 f"{comparison_node.operator} comparison operator is not supported yet"
             )
 
-        if isinstance(comparison_node.second_operand, ConstantNode) and comparison_node.second_operand.value is not None:
-            left = self._visit_not_equal(self.__build_where_clause(comparison_node.first_operand), self.__build_where_clause(ConstantNode(value=None)))
-            right = result
+        # if isinstance(comparison_node.second_operand, ConstantNode) and comparison_node.second_operand.value is not None:
+        #     left = self._visit_not_equal(self.__build_where_clause(comparison_node.first_operand), self.__build_where_clause(ConstantNode(value=None)))
+        #     right = result
 
-            aa = f"({self._visit_logical_and(left, right)})"
-
-            return aa
+        #     result = f"({self._visit_logical_and(left, right)})"
 
         return result
-    
+
     def _cast_property(self, exp: str, to_type: type) -> str:
         if to_type == datetime:
             res = f"datetime(REPLACE(REPLACE({exp}, 'T', ' '), 'Z', ''))"
@@ -221,10 +199,10 @@ class BaseCelToSqlProvider:
         if to_type == float:
             return exp
         if to_type == bool:
-            return "TRUE" if exp == "true" else "FALSE"
-        
+            return exp
+            # return "TRUE" if exp == "true" else "FALSE"
+
         raise NotImplementedError(f"{to_type.__name__} type casting is not supported yet")
-        
 
     def _visit_equal(self, first_operand: str, second_operand: str) -> str:
         return f"{first_operand} = {second_operand}"
@@ -234,16 +212,16 @@ class BaseCelToSqlProvider:
             return f"{first_operand} IS NOT NULL"
 
         return f"{first_operand} != {second_operand}"
-    
+
     def _visit_greater_than(self, first_operand: str, second_operand: str) -> str:
         return f"{first_operand} > {second_operand}"
-    
+
     def _visit_greater_than_or_equal(self, first_operand: str, second_operand: str) -> str:
         return f"{first_operand} >= {second_operand}"
-    
+
     def _visit_less_than(self, first_operand: str, second_operand: str) -> str:
         return f"{first_operand} < {second_operand}"
-    
+
     def _visit_less_than_or_equal(self, first_operand: str, second_operand: str) -> str:
         return f"{first_operand} <= {second_operand}"
 
@@ -265,6 +243,34 @@ class BaseCelToSqlProvider:
         raise NotImplementedError(f"{type(value).__name__} constant type is not supported yet")
 
     # region Member Access Visitors
+    def __modify_and_visit_member_access_node(self, member_access_node: MemberAccessNode) -> str:
+        if (
+            isinstance(member_access_node, PropertyAccessNode)
+            and member_access_node.is_function_call()
+        ):
+            result = None
+            for mapping in self.__get_prop_mapping(
+                member_access_node.get_property_path()
+            ):
+                method_access_node = member_access_node.get_method_access_node().copy()
+                property_access_node_str = self._visit_member_access_node(PropertyAccessNode(
+                    mapping,
+                    MethodAccessNode(
+                        method_access_node.member_name,
+                        method_access_node.args,
+                    ),
+                ))
+
+                if result is None:
+                    result = property_access_node_str
+                    continue
+
+                result = self._visit_logical_or(result, property_access_node_str)
+
+            return result
+
+        return self._visit_member_access_node(member_access_node)
+
     def _visit_member_access_node(self, member_access_node: MemberAccessNode) -> str:
         if isinstance(member_access_node, PropertyAccessNode):
             if member_access_node.is_function_call():
@@ -281,27 +287,24 @@ class BaseCelToSqlProvider:
             return self._visit_method_calling(
                 None, member_access_node.member_name, member_access_node.args
             )
-        
+
         raise NotImplementedError(
             f"{type(member_access_node).__name__} member access node is not supported yet"
         )
-        
+
     def _visit_property(self, property_path: str) -> str:
+        # ["JSON(even_enrichment).fuck.you", "JSON(even).some.prop"]
+        pattern = re.compile(r"JSON\((?P<json>[^)]+)\)\.(?P<property_path>.+)")
+        match = pattern.match(property_path)
+
+        if match:
+            json_group = match.group("json")
+            property_path_group = match.group("property_path")
+            return self._json_extract(json_group, property_path_group)
+
         new_property_path = property_path
-
-        if property_path in self.known_fields_mapping:
-            new_property_path = self.known_fields_mapping[property_path].get("field")
-        elif self.known_fields_mapping.get("*"):
-            generic_field = self.known_fields_mapping["*"]
-            take_from = generic_field.get("take_from")
-            new_property_path = "_".join(take_from + property_path.replace('[', '_').replace(']', '_').split("."))
-
-        # if ('lastReceived' == property_path):
-        #     new_property_path = f"datetime(REPLACE(REPLACE({new_property_path}, 'T', ' '), 'Z', ''))"
-        #     # new_property_path = f"datetime({new_property_path})"
-
         return new_property_path
-    
+
     def _visit_index_property(self, property_path: str) -> str:
         raise NotImplementedError("Index property is not supported yet")
     # endregion
@@ -339,6 +342,22 @@ class BaseCelToSqlProvider:
     # endregion
 
     # region Unary Visitors
+    def __modify_and_visit_unary_node(self, unary_node: UnaryNode) -> str:
+        result = None
+        for mapping in self.__get_prop_mapping(
+            unary_node.first_operand.get_property_path()
+        ):
+            unary_node_result = self._visit_unary_node(UnaryNode(
+                unary_node.operator, PropertyAccessNode(mapping, None)
+            ))
+            if result is None:
+                result = unary_node_result
+                continue
+
+            result = self._visit_logical_or(result, unary_node_result)
+
+        return result
+
     def _visit_unary_node(self, unary_node: UnaryNode) -> str:
         if unary_node.operator == UnaryNode.NOT:
             return self._visit_unary_not(self.__build_where_clause(unary_node.operand))

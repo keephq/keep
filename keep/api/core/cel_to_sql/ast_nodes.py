@@ -71,6 +71,9 @@ class MethodAccessNode(MemberAccessNode):
         self.args = args
         super().__init__(member_name)
 
+    def copy(self):
+        return MethodAccessNode(self.member_name, self.args.copy() if self.args else None)
+
     def __str__(self):
         args = []
 

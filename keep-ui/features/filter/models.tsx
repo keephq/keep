@@ -1,5 +1,5 @@
 export interface FacetOptionDto {
-    displayName: string;
+    display_name: string;
     value: any;
     count: number;
 }
@@ -7,6 +7,7 @@ export interface FacetOptionDto {
 export interface FacetDto {
     id: string;
     name: string;
-    isStatic: boolean;
+    is_static: boolean;
+    is_lazy: boolean;
     options: FacetOptionDto[];
 }
