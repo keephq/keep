@@ -210,13 +210,14 @@ export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
         />
       </div>
       <Button
-        className="shadow-lg p-2"
+        color="orange"
+        variant="secondary"
         onClick={() => {
           filterRef.current = { trigger: [], status: [], execution_id: "" };
           setApply(true);
         }}
       >
-        Clear Filters
+        Clear filters
       </Button>
     </div>
   );

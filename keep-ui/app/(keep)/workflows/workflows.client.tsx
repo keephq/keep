@@ -63,12 +63,12 @@ export default function WorkflowsPage() {
 
   const [workflowDefinition, setWorkflowDefinition] = useState("");
 
-  if (isLoading || (!data && !error)) {
-    return <Loading />;
-  }
-
   if (error) {
     return <ErrorComponent error={error} reset={() => {}} />;
+  }
+
+  if (isLoading || !data) {
+    return <Loading />;
   }
 
   const onDrop = async (files: any) => {

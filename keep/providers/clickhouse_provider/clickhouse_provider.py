@@ -45,6 +45,12 @@ class ClickhouseProviderAuthConfig:
         metadata={"required": False, "description": "Clickhouse database name"},
         default=None,
     )
+    protocol: str = dataclasses.field(
+        metadata={"required": True, 
+                  "description": "Protocol (Use clickhouses for SSL wrapped TCP socket connection, \
+                  and clickhouse for plain TCP socket connection.)"},
+        default="clickhouse",
+    )
 
 
 class ClickhouseProvider(BaseProvider):
@@ -107,8 +113,10 @@ class ClickhouseProvider(BaseProvider):
         host = self.authentication_config.host
         database = self.authentication_config.database
         port = self.authentication_config.port
-
-        dsn = f"clickhouse://{user}:{password}@{host}:{port}/{database}"
+        protocol = self.authentication_config.protocol
+        if protocol is None:
+            protocol = "clickhouse"
+        dsn = f"{protocol}://{user}:{password}@{host}:{port}/{database}"
 
         return connect(dsn)
 
