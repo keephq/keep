@@ -34,7 +34,7 @@
 }
 
 .chat-container {
-  @apply max-h-[calc(100vh-28rem)] flex flex-col;
+  @apply h-[calc(100vh-28rem)] flex flex-col;
   scroll-behavior: smooth;
 }
 
