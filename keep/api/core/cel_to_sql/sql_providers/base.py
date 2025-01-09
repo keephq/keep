@@ -99,7 +99,7 @@ class BaseCelToSqlProvider:
 
         return [prop_path]
 
-    def _json_extract(self, column: str, path: str) -> str:
+    def json_extract(self, column: str, path: str) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
 
     def _visit_parentheses(self, node: str) -> str:
@@ -300,7 +300,7 @@ class BaseCelToSqlProvider:
         if match:
             json_group = match.group("json")
             property_path_group = match.group("property_path")
-            return self._json_extract(json_group, property_path_group)
+            return self.json_extract(json_group, property_path_group)
 
         new_property_path = property_path
         return new_property_path

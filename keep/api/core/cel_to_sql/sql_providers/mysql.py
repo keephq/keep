@@ -8,7 +8,7 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
     def _json_merge(self, columns: List[str]) -> str:
         return f"json_patch({', '.join(columns)})"
 
-    def _json_extract(self, column: str, path: str) -> str:
+    def json_extract(self, column: str, path: str) -> str:
         return f"JSON_UNQUOTE(JSON_EXTRACT({column}, \"$.{path}\"))"
     
     def _visit_contains_method_calling(self, property_path: str, method_args: List[str]) -> str:

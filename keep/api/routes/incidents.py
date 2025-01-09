@@ -35,7 +35,7 @@ from keep.api.core.db import (
     get_workflow_executions_for_incident_or_alert,
     merge_incidents_to_id,
 )
-from keep.api.core.get_last_incidents_by_cel import get_last_incidents_by_cel
+from keep.api.core.get_last_incidents_by_cel import get_incident_facets, get_incident_facets_data, get_last_incidents_by_cel
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.models.alert import (
     AlertDto,
@@ -200,6 +200,85 @@ def get_all_incidents(
     return IncidentsPaginatedResultsDto(
         limit=limit, offset=offset, count=total_count, items=incidents_dto
     )
+
+@router.get(
+    "/facets/options",
+    description="Get incident facet options",
+)
+def fetch_inicident_facet_options(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+    facets_to_load: List[str] = Query(None)
+) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching incident facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    # get all preset ids that the user has access to
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        authenticated_entity.tenant_id
+    )
+    # Note: if no limitations (allowed_preset_ids is []), then all presets are allowed
+    allowed_incident_ids = identity_manager.get_user_permission_on_resource_type(
+        resource_type="incident",
+        authenticated_entity=authenticated_entity,
+    )
+
+    # allowed_incident_ids = [(UUID("0c471712-b236-4787-86d6-68653104ab57"))]
+
+    facet_options = get_incident_facets_data(
+            tenant_id = tenant_id,
+            facets_to_load = facets_to_load,
+            allowed_incident_ids=allowed_incident_ids
+        )
+
+    logger.info(
+        "Fetched incident facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facet_options
+
+
+@router.get(
+    "/facets",
+    description="Get incident facets",
+)
+def fetch_inicident_facets(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    )
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching incident facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    facets = get_incident_facets(
+            tenant_id = tenant_id
+        )
+
+    logger.info(
+        "Fetched incident facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facets
+
 
 
 @router.get(
