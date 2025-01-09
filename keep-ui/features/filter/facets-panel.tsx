@@ -1,95 +1,95 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Facet } from "./facet";
-import { FacetDto } from "./models";
+import { FacetDto, FacetOptionDto } from "./models";
 
 export interface FacetsPanelProps {
   className: string;
   facets: FacetDto[];
+  facetOptions: { [key: string]: FacetOptionDto[] };
   onCelChange: (cel: string) => void;
 }
 
 export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   className,
   facets,
+  facetOptions,
   onCelChange = undefined,
 }) => {
-  const facetsDict: { [key: string]: { [optionDisplayName: string]: any } } = facets.reduce(
-    (result, facet) => {
-      result[facet.id] = {};
-      
-      facet.options.forEach((option) => {
-        result[facet.id][option.display_name] = option.value
-      });
+  const [celState, setCelState] = useState<string | undefined>(undefined);
 
-      return result;
-    },
-    {} as any
-  );
-  const initialFacetsState = facets.reduce((acc, facet) => {
-    acc[facet.id] = facet.options.reduce((acc, option) => {
-      acc[option.display_name] = true;
-      return acc;
-    }, {} as any);
-    return acc;
-  }, {} as any);
-
-  const [fasetsState, setFacetsState] = useState<{
+  const [facetsState, setFacetsState] = useState<{
     [facetId: string]: { [optionId: string]: boolean };
-  }>(initialFacetsState);
+  }>({});
 
-  function updateFacetsState(facetId: string, value: string) {
-    const currentFacetState: any = fasetsState[facetId];
-    currentFacetState[value] = !currentFacetState[value];
+  const isOptionSelected = (facet_id: string, option_id: string) => {
+    return facetsState[facet_id]?.[option_id] !== false;
+  }
+
+  function toggleFacetOption(facetId: string, value: string) {
+    const currentFacetState: any = facetsState[facetId] || {};
+    currentFacetState[value] = !isOptionSelected(facetId, value);
 
     setFacetsState({
-      ...fasetsState,
+      ...facetsState,
       [facetId]: currentFacetState,
     });
   }
 
   function selectOneFacetOption(facetId: string, optionValue: string): void {
-    const newFacetState = {
-      [optionValue]: true,
-    };
+    const newFacetState: any = {};
 
-    Object.keys(fasetsState[facetId])
-      .filter((key) => key !== optionValue)
-      .forEach((key) => (newFacetState[key] = false));
+    facetOptions[facetId].forEach(facetOption => {
+      if (facetOption.display_name === optionValue) {
+        newFacetState[facetOption.display_name] = true;
+        return;
+      }
+
+      newFacetState[facetOption.display_name] = false;
+    })
 
     setFacetsState({
-      ...fasetsState,
+      ...facetsState,
       [facetId]: newFacetState,
     });
   }
 
   function selectAllFacetOptions(facetId: string) {
-    const facet = fasetsState[facetId];
-    const newFacetState: any = { ...facet };
-    Object.keys(facet).forEach(([key]) => newFacetState[key] = true);
+    const newFacetState: any = { ...facetsState[facetId] };
+    Object.keys(facetOptions[facetId]).forEach(([key]) => (newFacetState[key] = true));
 
     setFacetsState({
-      ...fasetsState,
+      ...facetsState,
       [facetId]: newFacetState,
     });
   }
 
   useEffect(() => {
-    if (onCelChange) {
-      const cel = Object.entries(fasetsState)
-        .map(([facetId, facetState]) => {
-          return Object.entries(facetState)
-            .filter(([, value]) => value)
-            .map(([optionId]) => optionId)
-            .map((optionDisplayName) => `${facetId} == '${facetsDict[facetId][optionDisplayName]}'`)
+    if (onCelChange && facets && facetOptions && facetsState) {
+      const cel = Object.values(facets)
+        .filter((facet) => facet.id in facetsState)
+        .map((facet) => {
+          return Object.values(facetOptions[facet.id])
+            .filter((facetOption) => facetsState[facet.id][facetOption.display_name] === false)
+            .map(
+              (option) =>
+                `${facet.id} != ${ typeof option.value === "string" ? `"${option.value}"` : option.value}`
+            )
             .join(" || ");
         })
         .filter((query) => query)
         .map((facetCel) => `(${facetCel})`)
-        .map(query => query)
+        .map((query) => query)
         .join(" && ");
-      onCelChange(cel);
+
+
+      console.log(cel);
+
+      if (cel !== celState) {
+        onCelChange(cel);
+        setCelState(cel);
+      }
     }
-  }, [fasetsState, onCelChange, facetsDict]);
+  }, [facetOptions, facets, facetsState, onCelChange]);
 
   return (
     <div className={"w-48 " + className}>
@@ -108,11 +108,11 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
           <Facet
             key={facet.id}
             name={facet.name}
-            options={facet.options}
-            onSelect={(value) => updateFacetsState(facet.id, value)}
+            options={facetOptions?.[facet.id]}
+            onSelect={(value) => toggleFacetOption(facet.id, value)}
             onSelectOneOption={(value) => selectOneFacetOption(facet.id, value)}
             onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
-            facetState={fasetsState[facet.id]}
+            facetState={facetsState[facet.id]}
             facetKey={facet.id}
             showSkeleton={false}
           />

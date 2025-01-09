@@ -66,6 +66,7 @@ export function IncidentList({
     sources: sources,
   };
 
+
   const {
     data: incidents,
     isLoading,
@@ -112,21 +113,25 @@ export function IncidentList({
     {
       id: "user_generated_name",
       name: "Incident name",
-      options: [
-        {
-          display_name: "Incident name",
-          value: "Grafana incident",
-          count: 5,
-        },
-        {
-          display_name: "2 Alerts incident DATADOG",
-          value: "2 Alerts incident DATADOG",
-          count: 15,
-        },
-      ],
+      is_lazy: true,
       is_static: false,
     },
   ];
+
+  const facetOptions = {
+    "user_generated_name": [
+      {
+        display_name: "Grafana incident",
+        value: "Grafana incident",
+        count: 5,
+      },
+      {
+        display_name: "2 Alerts incident DATADOG",
+        value: "2 Alerts incident DATADOG",
+        count: 15,
+      },
+    ]
+  }
 
   function renderIncidents() {
     if (incidentsError) {
@@ -199,6 +204,7 @@ export function IncidentList({
             {/* Filters are placed here so the table could be in loading/not-found state without affecting the controls */}
             <FacetsPanel 
               facets={facets}
+              facetOptions={facetOptions}
               className="mt-14"
               onCelChange={(cel) => setFilterCel(cel)}
             />

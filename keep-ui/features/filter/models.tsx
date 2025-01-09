@@ -9,5 +9,4 @@ export interface FacetDto {
     name: string;
     is_static: boolean;
     is_lazy: boolean;
-    options: FacetOptionDto[];
 }

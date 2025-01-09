@@ -40,30 +40,30 @@ export const FacetValue: React.FC<FacetValueProps> = ({
     onToggleOption: onSelect
 }) => {
   const facetFilters: { [key: string]: any } = {};
-  const { data: incidents } = useIncidents(
-    true,
-    100,
-    undefined,
-    undefined,
-    undefined,
-    {
-      revalidateOnFocus: false,
-    }
-  );
+  // const { data: incidents } = useIncidents(
+  //   true,
+  //   100,
+  //   undefined,
+  //   undefined,
+  //   undefined,
+  //   {
+  //     revalidateOnFocus: false,
+  //   }
+  // );
 
-  const incidentMap = useMemo(() => {
-    return new Map(
-      incidents?.items.map((incident) => [
-        incident.id.replaceAll("-", ""),
-        incident,
-      ]) || []
-    );
-  }, [incidents]);
+  // const incidentMap = useMemo(() => {
+  //   return new Map(
+  //     incidents?.items.map((incident) => [
+  //       incident.id.replaceAll("-", ""),
+  //       incident,
+  //     ]) || []
+  //   );
+  // }, [incidents]);
 
-  const incident = useMemo(
-    () => (facetKey === "incident" ? incidentMap.get(label) : null),
-    [incidentMap, facetKey, label]
-  );
+  // const incident = useMemo(
+  //   () => (facetKey === "incident" ? incidentMap.get(label) : null),
+  //   [incidentMap, facetKey, label]
+  // );
 
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -124,24 +124,24 @@ export const FacetValue: React.FC<FacetValueProps> = ({
           />
         );
       }
-      if (facetKey === "incident") {
-        if (incident) {
-          return (
-            <Icon
-              icon={getStatusIcon(incident.status)}
-              size="sm"
-              color={getStatusColor(incident.status)}
-              className="!p-0"
-            />
-          );
-        }
-        return (
-          <Icon icon={FireIcon} size="sm" className="text-gray-600 !p-0" />
-        );
-      }
+      // if (facetKey === "incident") {
+      //   if (incident) {
+      //     return (
+      //       <Icon
+      //         icon={getStatusIcon(incident.status)}
+      //         size="sm"
+      //         color={getStatusColor(incident.status)}
+      //         className="!p-0"
+      //       />
+      //     );
+      //   }
+      //   return (
+      //     <Icon icon={FireIcon} size="sm" className="text-gray-600 !p-0" />
+      //   );
+      // }
       return null;
     },
-    [incident]
+    []
   );
 
   const humanizeLabel = useCallback(
@@ -156,18 +156,18 @@ export const FacetValue: React.FC<FacetValueProps> = ({
         if (label === "n/a") {
           return "No incident";
         }
-        if (incident) {
-          return getIncidentName(incident);
-        } else {
+        // if (incident) {
+        //   return getIncidentName(incident);
+        // } else {
           return label;
-        }
+        // }
       }
       if (facetKey === "dismissed") {
         return label === "true" ? "Dismissed" : "Not dismissed";
       }
       return <span className="capitalize">{label}</span>;
     },
-    [incident]
+    []
   );
 
   return (

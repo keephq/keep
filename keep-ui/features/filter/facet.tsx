@@ -106,7 +106,7 @@ export const Facet: React.FC<FacetProps> = ({
                   label={facetOption.display_name}
                   count={facetOption.count}
                   isExclusivelySelected={checkIfOptionExclusievlySelected(facetOption.display_name)}
-                  isSelected={facetState?.[facetOption.display_name]}
+                  isSelected={facetState?.[facetOption.display_name] !== false}
                   onToggleOption={() => select(facetOption.display_name)}
                   onSelectOneOption={(value: string) => selectOneOption(value)}
                   onSelectAllOptions={() => selectAllOptions()}
