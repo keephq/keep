@@ -111,6 +111,7 @@
           "group": "Supported Providers",
           "pages": [
             "providers/documentation/aks-provider",
+            "providers/documentation/amazonsqs-provider",
             "providers/documentation/appdynamics-provider",
             "providers/documentation/argocd-provider",
             "providers/documentation/auth0-provider",
