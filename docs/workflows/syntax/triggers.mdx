@@ -51,7 +51,7 @@ triggers:
 
 ### Filtering Alert
 
-You can filter alerts by specific properties like `severity`, `source`, or `service`.
+You can filter alerts by specific properties like `severity`, `source`, or use regex to match specific `service`.
 
 ```yaml
 triggers:
@@ -61,6 +61,8 @@ triggers:
         value: critical
       - key: source
         value: datadog
+      - key: service
+        value: r"(payments|ftp)"
 ```
 
 ### Incident Trigger
