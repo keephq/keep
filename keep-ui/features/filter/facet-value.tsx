@@ -192,7 +192,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
             {getValueIcon(label, facetKey)}
           </div>
         )}
-        <Text className="truncate">{humanizeLabel(label, facetKey)}</Text>
+        <Text className="truncate" title={label}>{humanizeLabel(label, facetKey)}</Text>
       </div>
 
       <div className="flex-shrink-0 w-8 text-right flex justify-end">

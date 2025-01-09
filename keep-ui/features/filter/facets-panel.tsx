@@ -55,7 +55,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
 
   function selectAllFacetOptions(facetId: string) {
     const newFacetState: any = { ...facetsState[facetId] };
-    Object.keys(facetOptions[facetId]).forEach(([key]) => (newFacetState[key] = true));
+    Object.values(facetOptions[facetId]).forEach((option) => (newFacetState[option.display_name] = true));
 
     setFacetsState({
       ...facetsState,
@@ -92,7 +92,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   }, [facetOptions, facets, facetsState, onCelChange]);
 
   return (
-    <div className={"w-48 " + className}>
+    <div className={"w-56 " + className}>
       <div className="space-y-2">
         {/* Facet button */}
         {/* <button
@@ -104,11 +104,11 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
         </button> */}
 
         {/* Dynamic facets */}
-        {facets.map((facet) => (
+        {facets?.map((facet) => (
           <Facet
             key={facet.id}
             name={facet.name}
-            options={facetOptions?.[facet.id]}
+            options={facetOptions?.[facet.id] || []}
             onSelect={(value) => toggleFacetOption(facet.id, value)}
             onSelectOneOption={(value) => selectOneFacetOption(facet.id, value)}
             onSelectAllOptions={() => selectAllFacetOptions(facet.id)}

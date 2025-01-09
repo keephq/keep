@@ -425,6 +425,11 @@ static_facets = [
                     id="description",
                     name="Description",
                     is_static=True,
+                ),
+                FacetDto(
+                    id="annotations.summary",
+                    name="Annotations summary",
+                    is_static=True,
                 )
             ]
 
@@ -443,7 +448,7 @@ def get_incident_facets_data(tenant_id: str, facets_to_load: list[str], allowed_
             for facet_name, facet_value, matches_count in data:
                 if facet_name not in result_dict:
                     result_dict[facet_name] = []
-                result_dict[facet_name].append(FacetOptionDto(display_name=facet_name, value=facet_value, matches_count=matches_count))
+                result_dict[facet_name].append(FacetOptionDto(display_name=str(facet_value), value=facet_value, matches_count=matches_count))
 
             return result_dict
     except Exception as e:

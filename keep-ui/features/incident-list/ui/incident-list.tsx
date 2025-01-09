@@ -19,6 +19,7 @@ import { useIncidentFilterContext } from "./incident-table-filters-context";
 import { IncidentListError } from "@/features/incident-list/ui/incident-list-error";
 import { FacetsPanel } from "@/features/filter/facets-panel";
 import { FacetDto } from "@/features/filter/models";
+import { useFacetOptions, useFacets } from "@/features/filter/hooks";
 
 interface Pagination {
   limit: number;
@@ -109,29 +110,14 @@ export function IncidentList({
     setIsFormOpen(false);
   };
 
-  const facets: FacetDto[] = [
-    {
-      id: "user_generated_name",
-      name: "Incident name",
-      is_lazy: true,
-      is_static: false,
-    },
-  ];
+  const facets = useFacets(
+    "/incidents/facets"
+  )
 
-  const facetOptions = {
-    "user_generated_name": [
-      {
-        display_name: "Grafana incident",
-        value: "Grafana incident",
-        count: 5,
-      },
-      {
-        display_name: "2 Alerts incident DATADOG",
-        value: "2 Alerts incident DATADOG",
-        count: 15,
-      },
-    ]
-  }
+  const facetOptions = useFacetOptions(
+    "/incidents/facets/options",
+    facets.data?.map(x => x.id) as string[]
+  )
 
   function renderIncidents() {
     if (incidentsError) {
@@ -200,11 +186,11 @@ export function IncidentList({
               </Button>
             </div>
           </div>
-          <div className="flex flex-row gap-5 testovit">
+          <div className="flex flex-row gap-5">
             {/* Filters are placed here so the table could be in loading/not-found state without affecting the controls */}
             <FacetsPanel 
-              facets={facets}
-              facetOptions={facetOptions}
+              facets={facets.data as any}
+              facetOptions={facetOptions.data as any}
               className="mt-14"
               onCelChange={(cel) => setFilterCel(cel)}
             />

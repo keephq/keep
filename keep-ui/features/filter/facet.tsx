@@ -21,12 +21,12 @@ export interface FacetProps {
 
 export const Facet: React.FC<FacetProps> = ({
   name,
-  options: values,
+  options,
   facetKey,
   showIcon = true,
   showSkeleton,
   facetState,
-  onSelect: select,
+  onSelect,
   onSelectOneOption: selectOneOption,
   onSelectAllOptions: selectAllOptions,
 }) => {
@@ -44,10 +44,6 @@ export const Facet: React.FC<FacetProps> = ({
   const [filter, setFilter] = useLocalStorage<string>(
     `facet-${presetName}-${facetKey}-filter`,
     ""
-  );
-
-  const filteredValues = values.filter((v) =>
-    v.value.toLowerCase().includes(filter.toLowerCase())
   );
 
   function checkIfOptionExclusievlySelected(optionValue: string): boolean {
@@ -77,7 +73,7 @@ export const Facet: React.FC<FacetProps> = ({
 
       {isOpen && (
         <div>
-          {values.length >= 10 && (
+          {options.length >= 10 && (
             <div className="px-2 mb-1">
               <input
                 type="text"
@@ -99,15 +95,15 @@ export const Facet: React.FC<FacetProps> = ({
                   <Skeleton containerClassName="h-4 flex-1" />
                 </div>
               ))
-            ) : values.length > 0 ? (
-              filteredValues.map((facetOption) => (
+            ) : options.length > 0 ? (
+              options.map((facetOption) => (
                 <FacetValue
                   key={facetOption.display_name}
                   label={facetOption.display_name}
                   count={facetOption.count}
                   isExclusivelySelected={checkIfOptionExclusievlySelected(facetOption.display_name)}
                   isSelected={facetState?.[facetOption.display_name] !== false}
-                  onToggleOption={() => select(facetOption.display_name)}
+                  onToggleOption={() => onSelect(facetOption.display_name)}
                   onSelectOneOption={(value: string) => selectOneOption(value)}
                   onSelectAllOptions={() => selectAllOptions()}
                   facetKey={facetKey}
