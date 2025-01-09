@@ -427,7 +427,7 @@ def build_facets_data_query(
                 ),
             )
             .select_from(all_incidents_cte)
-            .group_by(group_by_exp, literal_column("entity_id"))
+            .group_by(group_by_exp)
         )
 
     query = None
