@@ -9,6 +9,9 @@ from sqlmodel import TEXT, Column, Field, Index, SQLModel
 class FacetEntityType(enum.Enum):
     INCIDENT = "incident"
 
+class FacetType(enum.Enum):
+    str = "string"
+
 class Facet(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     entity_type: str = Field(nullable=False, max_length=50)

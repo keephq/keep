@@ -6,13 +6,16 @@ This module contains the CRUD database functions for Keep.
 
 from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional, Tuple
+from uuid import UUID, uuid4
 
 # from pydantic import BaseModel
 from pydantic import BaseModel
 from sqlalchemy import Select, and_, func, literal, literal_column, select
 from sqlmodel import Session, text
 
-from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import get_cel_to_sql_provider_for_dialect
+from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
+    get_cel_to_sql_provider_for_dialect,
+)
 
 # This import is required to create the tables
 from keep.api.models.alert import (
@@ -20,7 +23,15 @@ from keep.api.models.alert import (
 )
 
 from keep.api.core.db import engine, enrich_incidents_with_alerts
-from keep.api.models.db.alert import Alert, AlertEnrichment, Incident, LastAlert, LastAlertToIncident
+from keep.api.models.db.alert import (
+    Alert,
+    AlertEnrichment,
+    Incident,
+    LastAlert,
+    LastAlertToIncident,
+)
+from keep.api.models.db.facet import Facet, FacetType
+
 # from keep.api.models.db.facet import Facet, FacetEntityType
 
 
@@ -146,6 +157,7 @@ incidents_alerts_cte = """
                             ON alert.fingerprint = alertenrichment_1.alert_fingerprint 
                             AND alert.tenant_id = lastalerttoincident.tenant_id
                     )"""
+
 
 def __build_last_incidents_query(
     dialect: str,
@@ -309,48 +321,62 @@ def get_last_incidents_by_cel(
 
     return incidents, total_count
 
+
 class FacetOptionDto(BaseModel):
     display_name: str
     value: Any
     matches_count: int
 
+
 class FacetDto(BaseModel):
     id: str
     name: str
+    description: Optional[str]
     is_static: bool
     is_lazy: bool = True
+    type: FacetType
+
+class CreateFacetDto(BaseModel):
+    id: str
+    name: str
+    description: Optional[str]
 
 def build_facets_data_query(
-        tenant_id: str,
-        facets_to_load: List[str],
-        allowed_incident_ids: list[str]
+    tenant_id: str, facets_to_load: List[str], allowed_incident_ids: list[str]
 ) -> str:
-    facet_fields = [ {
-        "facet_name": facet_name,
-        "metadata": known_fields.get(facet_name) or known_fields.get('*')
-    } for facet_name in facets_to_load]
+    facet_fields = [
+        {
+            "facet_name": facet_name,
+            "metadata": known_fields.get(facet_name) or known_fields.get("*"),
+        }
+        for facet_name in facets_to_load
+    ]
 
-    
     # Defining the CTE: incident_alerts
     incident_alerts_cte = (
         select(
-            LastAlertToIncident.incident_id.label('incident_id'),
-            AlertEnrichment.enrichments.label('enrichments'),
-            Alert.event.label('event'),
-            Alert.provider_type.label('incident_alert_provider_type')
+            LastAlertToIncident.incident_id.label("incident_id"),
+            AlertEnrichment.enrichments.label("enrichments"),
+            Alert.event.label("event"),
+            Alert.provider_type.label("incident_alert_provider_type"),
         )
-        .join(LastAlert,
+        .join(
+            LastAlert,
             and_(
                 LastAlert.tenant_id == LastAlertToIncident.tenant_id,
-                LastAlert.fingerprint == LastAlertToIncident.fingerprint
-            )
+                LastAlert.fingerprint == LastAlertToIncident.fingerprint,
+            ),
         )
         .join(Alert, LastAlert.alert_id == Alert.id)
-        .outerjoin(AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint)
+        .outerjoin(
+            AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint
+        )
     )
 
-    if (allowed_incident_ids):
-        incident_alerts_cte = incident_alerts_cte.filter(LastAlertToIncident.incident_id.in_(allowed_incident_ids))
+    if allowed_incident_ids:
+        incident_alerts_cte = incident_alerts_cte.filter(
+            LastAlertToIncident.incident_id.in_(allowed_incident_ids)
+        )
 
     incident_alerts_cte = incident_alerts_cte.cte("incident_alerts")
 
@@ -358,16 +384,20 @@ def build_facets_data_query(
     all_incidents_cte = (
         select(
             Incident,
-            Incident.id.label('entity_id'),
+            Incident.id.label("entity_id"),
             incident_alerts_cte.c.event,
             incident_alerts_cte.c.enrichments,
         )
-        .outerjoin(incident_alerts_cte, Incident.id == incident_alerts_cte.c.incident_id)
+        .outerjoin(
+            incident_alerts_cte, Incident.id == incident_alerts_cte.c.incident_id
+        )
         .filter(Incident.tenant_id == tenant_id)
     )
 
-    if (allowed_incident_ids):
-        all_incidents_cte = all_incidents_cte.filter(Incident.id.in_(allowed_incident_ids))
+    if allowed_incident_ids:
+        all_incidents_cte = all_incidents_cte.filter(
+            Incident.id.in_(allowed_incident_ids)
+        )
 
     all_incidents_cte = all_incidents_cte.cte("all_incidents")
 
@@ -375,26 +405,30 @@ def build_facets_data_query(
     union_queries = []
 
     for facet_field in facet_fields:
-        facet_name = facet_field['facet_name']
-        metadata = facet_field['metadata']
+        facet_name = facet_field["facet_name"]
+        metadata = facet_field["metadata"]
         group_by_exp = None
 
-        if metadata.get('type') == 'json':
-            group_by_exp = func.json_unquote(func.json_extract(literal_column('all_incidents.event'), f"$.{facet_name}"))
+        if metadata.get("type") == "json":
+            group_by_exp = func.json_unquote(
+                func.json_extract(
+                    literal_column("all_incidents.event"), f"$.{facet_name}"
+                )
+            )
         else:
             group_by_exp = literal_column(facet_name)
-        
 
         union_queries.append(
             select(
-                literal(facet_name).label('facet_name'),
-                group_by_exp.label('facet_value'),
-                func.count(func.distinct(literal_column('entity_id'))).label("matches_count")
+                literal(facet_name).label("facet_name"),
+                group_by_exp.label("facet_value"),
+                func.count(func.distinct(literal_column("entity_id"))).label(
+                    "matches_count"
+                ),
             )
             .select_from(all_incidents_cte)
-            .group_by(group_by_exp, literal_column('entity_id'))
+            .group_by(group_by_exp, literal_column("entity_id"))
         )
-
 
     query = None
 
@@ -405,42 +439,39 @@ def build_facets_data_query(
 
     return query
 
-static_facets = [
-                FacetDto(
-                    id="user_generated_name",
-                    name="Incident name",
-                    is_static=True,
-                ),
-                FacetDto(
-                    id="status",
-                    name="Status",
-                    is_static=True,
-                ),
-                FacetDto(
-                    id="serverity",
-                    name="Severity",
-                    is_static=True,
-                ),
-                FacetDto(
-                    id="description",
-                    name="Description",
-                    is_static=True,
-                ),
-                FacetDto(
-                    id="annotations.summary",
-                    name="Annotations summary",
-                    is_static=True,
-                )
-            ]
 
-def get_incident_facets_data(tenant_id: str, facets_to_load: list[str], allowed_incident_ids: list[str]) -> dict[str, list[FacetOptionDto]]:
+static_facets = [
+    FacetDto(
+        id="user_generated_name",
+        name="Incident name",
+        is_static=True,
+        type=FacetType.str
+    ),
+    FacetDto(
+        id="status",
+        name="Status",
+        is_static=True,
+        type=FacetType.str
+    ),
+    FacetDto(
+        id="serverity",
+        name="Severity",
+        is_static=True,
+        type=FacetType.str
+    )
+]
+
+
+def get_incident_facets_data(
+    tenant_id: str, facets_to_load: list[str], allowed_incident_ids: list[str]
+) -> dict[str, list[FacetOptionDto]]:
     try:
         facets_to_load = facets_to_load or [facet.id for facet in static_facets]
-        
+
         db_query = build_facets_data_query(
             tenant_id=tenant_id,
             facets_to_load=facets_to_load,
-            allowed_incident_ids=allowed_incident_ids
+            allowed_incident_ids=allowed_incident_ids,
         )
         with Session(engine) as session:
             data = session.exec(db_query).all()
@@ -448,13 +479,64 @@ def get_incident_facets_data(tenant_id: str, facets_to_load: list[str], allowed_
             for facet_name, facet_value, matches_count in data:
                 if facet_name not in result_dict:
                     result_dict[facet_name] = []
-                result_dict[facet_name].append(FacetOptionDto(display_name=str(facet_value), value=facet_value, matches_count=matches_count))
+                result_dict[facet_name].append(
+                    FacetOptionDto(
+                        display_name=str(facet_value),
+                        value=facet_value,
+                        matches_count=matches_count,
+                    )
+                )
 
             return result_dict
     except Exception as e:
         print(e)
-        print('f')
+        print("f")
         raise e
 
+
 def get_incident_facets(tenant_id: str) -> list[FacetDto]:
+    with Session(engine) as session:
+        facets_from_db: list[Facet] = session.query(
+            Facet
+        ).filter(Facet.tenant_id == tenant_id).filter(Facet.entity_type == "incident").all()
+
+        facet_dtos = []
+
+        for facet in facets_from_db:
+            facet_dtos.append(
+                FacetDto(
+                    id=facet.property_path,
+                    name=facet.name,
+                    is_static=False,
+                    is_lazy=True,
+                    type=FacetType.str
+                )
+            )
+
+        return static_facets + facet_dtos
     return static_facets
+
+def create_facet(tenant_id: str, facet: CreateFacetDto) -> FacetDto:
+    with Session(engine) as session:
+        facet_db = Facet(
+            id=str(uuid4()),
+            tenant_id=tenant_id,
+            name=facet.name,
+            description=facet.description,
+            entity_type="incident",
+            property_path=facet.id,
+            type=FacetType.str.value,
+            user_id="system"
+
+        )
+        session.add(facet_db)
+        session.commit()
+        return FacetDto(
+            id=str(facet_db.id),
+            name=facet_db.name,
+            description=facet_db.description,
+            is_static=False,
+            is_lazy=True,
+            type=facet_db.type
+        )
+    return None

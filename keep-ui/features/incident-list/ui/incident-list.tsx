@@ -18,8 +18,8 @@ import { IncidentTableFilters } from "./incident-table-filters";
 import { useIncidentFilterContext } from "./incident-table-filters-context";
 import { IncidentListError } from "@/features/incident-list/ui/incident-list-error";
 import { FacetsPanel } from "@/features/filter/facets-panel";
-import { FacetDto } from "@/features/filter/models";
-import { useFacetOptions, useFacets } from "@/features/filter/hooks";
+import { CreateFacetDto, FacetDto } from "@/features/filter/models";
+import { useFacetActions, useFacetOptions, useFacets } from "@/features/filter/hooks";
 
 interface Pagination {
   limit: number;
@@ -94,6 +94,7 @@ export function IncidentList({
   );
 
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+  const facetActions = useFacetActions("/incidents/facets");
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
@@ -110,14 +111,24 @@ export function IncidentList({
     setIsFormOpen(false);
   };
 
+  const [facetIdsLoaded, setFacetIdsLoaded] = useState<string[]>([])
+
+  const loadOptionsForFacet = (facetId: string) => {
+    setFacetIdsLoaded([facetId])
+  }
+
   const facets = useFacets(
     "/incidents/facets"
   )
 
   const facetOptions = useFacetOptions(
     "/incidents/facets/options",
-    facets.data?.map(x => x.id) as string[]
+    facetIdsLoaded
   )
+
+  const handleFacetCreation = async (incident: CreateFacetDto) => {
+    await facetActions.addFacet(incident)
+  }
 
   function renderIncidents() {
     if (incidentsError) {
@@ -188,11 +199,14 @@ export function IncidentList({
           </div>
           <div className="flex flex-row gap-5">
             {/* Filters are placed here so the table could be in loading/not-found state without affecting the controls */}
-            <FacetsPanel 
+            <FacetsPanel
+              panelId={"incidents"}
               facets={facets.data as any}
               facetOptions={facetOptions.data as any}
               className="mt-14"
               onCelChange={(cel) => setFilterCel(cel)}
+              onAddFacet={(createFacet) => handleFacetCreation(createFacet)}
+              onLoadFacetOptions={loadOptionsForFacet}
             />
             <div className="flex flex-col gap-5 flex-1">
               {renderIncidents()}

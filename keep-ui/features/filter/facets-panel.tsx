@@ -1,25 +1,40 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Facet } from "./facet";
-import { FacetDto, FacetOptionDto } from "./models";
+import { CreateFacetDto, FacetDto, FacetOptionDto } from "./models";
+import { PlusIcon } from "@heroicons/react/24/outline";
+import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
+import { AddFacetModal } from "./add-facet-modal";
 
 export interface FacetsPanelProps {
+  panelId: string;
   className: string;
   facets: FacetDto[];
   facetOptions: { [key: string]: FacetOptionDto[] };
   onCelChange: (cel: string) => void;
+  onAddFacet: (createFacet: CreateFacetDto) => void;
+  onLoadFacetOptions: (facetId: string) => void;
 }
 
 export const FacetsPanel: React.FC<FacetsPanelProps> = ({
+  panelId,
   className,
   facets,
   facetOptions,
   onCelChange = undefined,
+  onAddFacet = undefined,
+  onLoadFacetOptions = undefined,
 }) => {
+  console.log(facetOptions)
   const [celState, setCelState] = useState<string | undefined>(undefined);
 
   const [facetsState, setFacetsState] = useState<{
     [facetId: string]: { [optionId: string]: boolean };
   }>({});
+
+  const [isModalOpen, setIsModalOpen] = useLocalStorage<boolean>(
+    `addFacetModalOpen-${panelId}`,
+    false
+  );
 
   const isOptionSelected = (facet_id: string, option_id: string) => {
     return facetsState[facet_id]?.[option_id] !== false;
@@ -81,9 +96,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
         .map((query) => query)
         .join(" && ");
 
-
-      console.log(cel);
-
       if (cel !== celState) {
         onCelChange(cel);
         setCelState(cel);
@@ -92,21 +104,21 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   }, [facetOptions, facets, facetsState, onCelChange]);
 
   return (
-    <div className={"w-56 " + className}>
+    <section id={`${panelId}-facets`} className={"w-56 " + className}>
       <div className="space-y-2">
         {/* Facet button */}
-        {/* <button
+        <button
           onClick={() => setIsModalOpen(true)}
           className="w-full mt-2 px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-2"
         >
           <PlusIcon className="h-4 w-4" />
           Add Facet
-        </button> */}
+        </button>
 
         {/* Dynamic facets */}
-        {facets?.map((facet) => (
+        {facets?.map((facet, index) => (
           <Facet
-            key={facet.id}
+            key={facet.id + index}
             name={facet.name}
             options={facetOptions?.[facet.id] || []}
             onSelect={(value) => toggleFacetOption(facet.id, value)}
@@ -115,21 +127,17 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             facetState={facetsState[facet.id]}
             facetKey={facet.id}
             showSkeleton={false}
+            onLoadOptions={() => onLoadFacetOptions && onLoadFacetOptions(facet.id)}
           />
         ))}
 
         {/* Facet Modal */}
-        {/* <AddFacetModal
+        <AddFacetModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          table={table}
-          onAddFacet={handleAddFacet}
-          existingFacets={[
-            ...staticFacets,
-            ...dynamicFacets.map((df) => df.key),
-          ]}
-        /> */}
+          onAddFacet={(createFacet) => onAddFacet ? onAddFacet(createFacet) : null}
+        />
       </div>
-    </div>
+    </section>
   );
 };

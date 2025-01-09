@@ -1,7 +1,7 @@
 export interface FacetOptionDto {
     display_name: string;
     value: any;
-    count: number;
+    matches_count: number;
 }
 
 export interface FacetDto {
@@ -9,4 +9,9 @@ export interface FacetDto {
     name: string;
     is_static: boolean;
     is_lazy: boolean;
+}
+
+export interface CreateFacetDto {
+    id: string;
+    name: string;
 }

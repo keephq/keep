@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Title } from "@tremor/react";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
@@ -17,6 +17,7 @@ export interface FacetProps {
   onSelectOneOption: (value: string) => void;
   onSelectAllOptions: () => void;
   onSelect: (value: string) => void;
+  onLoadOptions: () => void;
 }
 
 export const Facet: React.FC<FacetProps> = ({
@@ -29,22 +30,40 @@ export const Facet: React.FC<FacetProps> = ({
   onSelect,
   onSelectOneOption: selectOneOption,
   onSelectAllOptions: selectAllOptions,
+  onLoadOptions
 }) => {
   const pathname = usePathname();
   // Get preset name from URL
   const presetName = pathname?.split("/").pop() || "default";
 
   // Store open/close state in localStorage with a unique key per preset and facet
-  const [isOpen, setIsOpen] = useLocalStorage<boolean>(
-    `facet-${presetName}-${facetKey}-open`,
-    true
-  );
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsOpen(!!options?.length); // Sync prop change with state
+    setIsLoaded(!!options?.length); // Sync prop change with state
+
+    if (isLoading && options?.length) {
+      setIsLoading(false)
+    }
+  }, [options]);
 
   // Store filter value in localStorage per preset and facet
   const [filter, setFilter] = useLocalStorage<string>(
     `facet-${presetName}-${facetKey}-filter`,
     ""
   );
+
+  const handleExpandCollapse = (isOpen: boolean) => {
+    setIsOpen(!isOpen)
+
+    if (!isLoaded && !isLoading) {
+      onLoadOptions();
+      setIsLoading(true)
+    }
+  }
 
   function checkIfOptionExclusievlySelected(optionValue: string): boolean {
     if (!facetState) {
@@ -63,7 +82,7 @@ export const Facet: React.FC<FacetProps> = ({
     <div className="pb-2 border-b border-gray-200">
       <div
         className="flex items-center justify-between px-2 py-2 cursor-pointer hover:bg-gray-50"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => handleExpandCollapse(isOpen)}
       >
         <div className="flex items-center space-x-2">
           <Icon className="size-5 -m-0.5 text-gray-600" />
@@ -96,11 +115,11 @@ export const Facet: React.FC<FacetProps> = ({
                 </div>
               ))
             ) : options.length > 0 ? (
-              options.map((facetOption) => (
+              options.map((facetOption, index) => (
                 <FacetValue
-                  key={facetOption.display_name}
+                  key={facetOption.display_name + index}
                   label={facetOption.display_name}
-                  count={facetOption.count}
+                  count={facetOption.matches_count}
                   isExclusivelySelected={checkIfOptionExclusievlySelected(facetOption.display_name)}
                   isSelected={facetState?.[facetOption.display_name] !== false}
                   onToggleOption={() => onSelect(facetOption.display_name)}

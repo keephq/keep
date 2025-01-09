@@ -35,7 +35,7 @@ from keep.api.core.db import (
     get_workflow_executions_for_incident_or_alert,
     merge_incidents_to_id,
 )
-from keep.api.core.get_last_incidents_by_cel import get_incident_facets, get_incident_facets_data, get_last_incidents_by_cel
+from keep.api.core.get_last_incidents_by_cel import CreateFacetDto, FacetDto, create_facet, get_incident_facets, get_incident_facets_data, get_last_incidents_by_cel
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.models.alert import (
     AlertDto,
@@ -280,6 +280,28 @@ def fetch_inicident_facets(
     return facets
 
 
+@router.post(
+    "/facets",
+    description="Add facet for incidents",
+)
+async def add_incidents_facet(
+    createFacet: CreateFacetDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    )
+) -> FacetDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Creating facet for incident",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    created_facet = create_facet(
+        tenant_id=tenant_id,
+        facet=createFacet
+    )
+    return created_facet
 
 @router.get(
     "/{incident_id}",
@@ -290,6 +312,7 @@ def get_incident(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:incident"])
     ),
+
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
