@@ -67,7 +67,7 @@ class AmazonsqsProvider(BaseProvider):
         "low": AlertSeverity.LOW,
     }
 
-    PROVIDER_DISPLAY_NAME = "Amazon SQS"
+    PROVIDER_DISPLAY_NAME = "AmazonSQS"
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",
