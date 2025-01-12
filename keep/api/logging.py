@@ -123,10 +123,14 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
 
     def process(self, msg, kwargs):
         extra = copy.deepcopy(kwargs.get("extra", {}))
-        extra["context"] = copy.deepcopy(extra) # save the extra as context
         extra["tenant_id"] = self.tenant_id
         extra["workflow_id"] = self.workflow_id
         extra["workflow_execution_id"] = self.workflow_execution_id
+
+        step_id = extra.pop("step_id", None)
+        if step_id:
+            # everything added to 'context', will be saved in the db column 'context' and is used by frontend. Feel free to add more context here
+            extra["context"] = {"step_id": step_id}
 
         kwargs["extra"] = extra
         return msg, kwargs
