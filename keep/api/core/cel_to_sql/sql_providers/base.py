@@ -14,7 +14,7 @@ from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 from datetime import datetime
 import re
 
-from keep.api.core.cel_to_sql.properties_mapper import PropertiesMapper
+from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, PropertiesMapper
 
 class BuiltQueryMetadata:
     def __init__(self, where: str, select_fields: str = None, select_json: str = None):
@@ -45,9 +45,10 @@ class BaseCelToSqlProvider:
 
         original_query = CelToAstConverter.convert_to_ast(cel)
         with_mapped_props = self.properties_mapper.map_props_in_ast(original_query)
+        where_clause = self.__build_where_clause(with_mapped_props)
 
         return BuiltQueryMetadata(
-                where=self.__build_where_clause(with_mapped_props),
+                where=where_clause,
                 select_fields='',
                 select_json=''
             )
@@ -193,12 +194,12 @@ class BaseCelToSqlProvider:
             if member_access_node.is_function_call():
                 method_access_node = member_access_node.get_method_access_node()
                 return self._visit_method_calling(
-                   self._visit_property(member_access_node.get_property_path()),
+                   self._visit_property_access_node(member_access_node),
                     method_access_node.member_name,
                     method_access_node.args,
                 )
 
-            return self._visit_property(member_access_node.get_property_path())
+            return self._visit_property_access_node(member_access_node)
 
         if isinstance(member_access_node, MethodAccessNode):
             return self._visit_method_calling(
@@ -208,19 +209,12 @@ class BaseCelToSqlProvider:
         raise NotImplementedError(
             f"{type(member_access_node).__name__} member access node is not supported yet"
         )
-
-    def _visit_property(self, property_path: str) -> str:
-        # ["JSON(even_enrichment).fuck.you", "JSON(even).some.prop"]
-        pattern = re.compile(r"JSON\((?P<json>[^)]+)\)\.(?P<property_path>.+)")
-        match = pattern.match(property_path)
-
-        if match:
-            json_group = match.group("json")
-            property_path_group = match.group("property_path")
-            return self.json_extract(json_group, property_path_group)
-
-        new_property_path = property_path
-        return new_property_path
+    
+    def _visit_property_access_node(self, property_access_node: PropertyAccessNode) -> str:
+        if (isinstance(property_access_node, JsonPropertyAccessNode)):
+            return self.json_extract(property_access_node.json_property_name, property_access_node.property_to_extract)
+        
+        return property_access_node.get_property_path()
 
     def _visit_index_property(self, property_path: str) -> str:
         raise NotImplementedError("Index property is not supported yet")

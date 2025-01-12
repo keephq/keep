@@ -330,6 +330,7 @@ class FacetOptionDto(BaseModel):
 
 class FacetDto(BaseModel):
     id: str
+    property_path: str
     name: str
     description: Optional[str]
     is_static: bool
@@ -337,19 +338,20 @@ class FacetDto(BaseModel):
     type: FacetType
 
 class CreateFacetDto(BaseModel):
-    id: str
+    property_path: str
     name: str
     description: Optional[str]
 
 def build_facets_data_query(
-    tenant_id: str, facets_to_load: List[str], allowed_incident_ids: list[str]
+    tenant_id: str, facets_to_load: list[FacetDto], allowed_incident_ids: list[str]
 ) -> str:
     facet_fields = [
         {
-            "facet_name": facet_name,
-            "metadata": known_fields.get(facet_name) or known_fields.get("*"),
+            "facet_name": facet.property_path,
+            "facet_id": facet.id,
+            "metadata": known_fields.get(facet.property_path) or known_fields.get("*"),
         }
-        for facet_name in facets_to_load
+        for facet in facets_to_load
     ]
 
     # Defining the CTE: incident_alerts
@@ -442,44 +444,97 @@ def build_facets_data_query(
 
 static_facets = [
     FacetDto(
-        id="user_generated_name",
-        name="Incident name",
-        is_static=True,
-        type=FacetType.str
-    ),
-    FacetDto(
         id="status",
+        property_path="status",
         name="Status",
         is_static=True,
         type=FacetType.str
     ),
     FacetDto(
         id="serverity",
+        property_path="serverity",
         name="Severity",
+        is_static=True,
+        type=FacetType.str
+    ),
+    FacetDto(
+        id="assignee",
+        property_path="assignee",
+        name="Assignee",
+        is_static=True,
+        type=FacetType.str
+    ),
+    FacetDto(
+        id="service",
+        property_path="service",
+        name="Service",
+        is_static=True,
+        type=FacetType.str
+    ),
+    FacetDto(
+        id="sources",
+        property_path="sources",
+        name="Source",
         is_static=True,
         type=FacetType.str
     )
 ]
+static_facets_dict = {facet.id: facet for facet in static_facets}
 
+def get_facets(tenant_id: str, entity_type: str, facet_ids_to_load: list[str] = None) -> list[FacetDto]:
+    with Session(engine) as session:
+        query = session.query(
+            Facet
+        ).filter(Facet.tenant_id == tenant_id).filter(Facet.entity_type == entity_type)
+
+        if facet_ids_to_load:
+            query = query.filter(Facet.id.in_([UUID(id) for id in facet_ids_to_load]))
+
+        facets_from_db: list[Facet] = query.all()
+
+        facet_dtos = []
+
+        for facet in facets_from_db:
+            facet_dtos.append(
+                FacetDto(
+                    id=str(facet.id),
+                    property_path=facet.property_path,
+                    name=facet.name,
+                    is_static=False,
+                    is_lazy=True,
+                    type=FacetType.str
+                )
+            )
+
+        return facet_dtos
 
 def get_incident_facets_data(
     tenant_id: str, facets_to_load: list[str], allowed_incident_ids: list[str]
 ) -> dict[str, list[FacetOptionDto]]:
-    try:
-        facets_to_load = facets_to_load or [facet.id for facet in static_facets]
+    try:        
+        if facets_to_load:
+            facets = get_incident_facets(tenant_id, facets_to_load)
+        else:
+            facets = static_facets
+
+        facet_name_to_id_dict = {facet.property_path: facet.id for facet in facets}
 
         db_query = build_facets_data_query(
             tenant_id=tenant_id,
-            facets_to_load=facets_to_load,
+            facets_to_load=facets,
             allowed_incident_ids=allowed_incident_ids,
         )
         with Session(engine) as session:
             data = session.exec(db_query).all()
             result_dict = {}
+
             for facet_name, facet_value, matches_count in data:
-                if facet_name not in result_dict:
-                    result_dict[facet_name] = []
-                result_dict[facet_name].append(
+                facet_id = facet_name_to_id_dict.get(facet_name, facet_name)
+    
+                if facet_id not in result_dict:
+                    result_dict[facet_id] = []
+
+                result_dict[facet_id].append(
                     FacetOptionDto(
                         display_name=str(facet_value),
                         value=facet_value,
@@ -493,28 +548,25 @@ def get_incident_facets_data(
         print("f")
         raise e
 
+def get_incident_facets(tenant_id: str, facet_ids_to_load: list[str] = None) -> list[FacetDto]:
+    not_static_facet_ids = []
+    facets = []
 
-def get_incident_facets(tenant_id: str) -> list[FacetDto]:
-    with Session(engine) as session:
-        facets_from_db: list[Facet] = session.query(
-            Facet
-        ).filter(Facet.tenant_id == tenant_id).filter(Facet.entity_type == "incident").all()
+    if not facet_ids_to_load:
+        return static_facets + get_facets(tenant_id, "incident")
 
-        facet_dtos = []
+    if facet_ids_to_load:
+        for facet_id in facet_ids_to_load:
+            if facet_id not in static_facets_dict:
+                not_static_facet_ids.append(facet_id)
+                continue
 
-        for facet in facets_from_db:
-            facet_dtos.append(
-                FacetDto(
-                    id=facet.property_path,
-                    name=facet.name,
-                    is_static=False,
-                    is_lazy=True,
-                    type=FacetType.str
-                )
-            )
+            facets.append(static_facets_dict[facet_id])
 
-        return static_facets + facet_dtos
-    return static_facets
+    if not_static_facet_ids:
+        facets += get_facets(tenant_id, "incident", not_static_facet_ids)
+
+    return facets
 
 def create_facet(tenant_id: str, facet: CreateFacetDto) -> FacetDto:
     with Session(engine) as session:
@@ -524,7 +576,7 @@ def create_facet(tenant_id: str, facet: CreateFacetDto) -> FacetDto:
             name=facet.name,
             description=facet.description,
             entity_type="incident",
-            property_path=facet.id,
+            property_path=facet.property_path,
             type=FacetType.str.value,
             user_id="system"
 
@@ -533,6 +585,7 @@ def create_facet(tenant_id: str, facet: CreateFacetDto) -> FacetDto:
         session.commit()
         return FacetDto(
             id=str(facet_db.id),
+            property_path=facet_db.property_path,
             name=facet_db.name,
             description=facet_db.description,
             is_static=False,
@@ -540,3 +593,18 @@ def create_facet(tenant_id: str, facet: CreateFacetDto) -> FacetDto:
             type=facet_db.type
         )
     return None
+
+
+def delete_facet(tenant_id: str, facet_id: str) -> bool:
+    with Session(engine) as session:
+        facet = (
+            session.query(Facet)
+            .filter(Facet.tenant_id == tenant_id)
+            .filter(Facet.id == UUID(facet_id))
+            .first()
+        )
+        if facet:
+            session.delete(facet)
+            session.commit()
+            return True
+        return False

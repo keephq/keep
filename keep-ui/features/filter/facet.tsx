@@ -6,9 +6,11 @@ import { usePathname } from "next/navigation";
 import Skeleton from "react-loading-skeleton";
 import { FacetValue } from "./facet-value";
 import { FacetOptionDto } from "./models";
+import { TrashIcon } from "@heroicons/react/24/outline";
 
 export interface FacetProps {
   name: string;
+  isStatic: boolean;
   options: FacetOptionDto[];
   showSkeleton: boolean;
   showIcon?: boolean;
@@ -18,10 +20,12 @@ export interface FacetProps {
   onSelectAllOptions: () => void;
   onSelect: (value: string) => void;
   onLoadOptions: () => void;
+  onDelete: () => void;
 }
 
 export const Facet: React.FC<FacetProps> = ({
   name,
+  isStatic,
   options,
   facetKey,
   showIcon = true,
@@ -30,7 +34,8 @@ export const Facet: React.FC<FacetProps> = ({
   onSelect,
   onSelectOneOption: selectOneOption,
   onSelectAllOptions: selectAllOptions,
-  onLoadOptions
+  onLoadOptions,
+  onDelete
 }) => {
   const pathname = usePathname();
   // Get preset name from URL
@@ -81,13 +86,27 @@ export const Facet: React.FC<FacetProps> = ({
   return (
     <div className="pb-2 border-b border-gray-200">
       <div
-        className="flex items-center justify-between px-2 py-2 cursor-pointer hover:bg-gray-50"
+        className="relative lex items-center justify-between px-2 py-2 cursor-pointer hover:bg-gray-50"
         onClick={() => handleExpandCollapse(isOpen)}
       >
         <div className="flex items-center space-x-2">
           <Icon className="size-5 -m-0.5 text-gray-600" />
           <Title className="text-sm">{name}</Title>
         </div>
+        {
+            !isStatic && (
+              <button
+                onClick={(mouseEvent) => {
+                  mouseEvent.preventDefault();
+                  mouseEvent.stopPropagation();
+                  onDelete();
+                }}
+                className="absolute right-2 top-2 p-1 text-gray-400 hover:text-gray-600"
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            )
+          }
       </div>
 
       {isOpen && (

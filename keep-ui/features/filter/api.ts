@@ -12,10 +12,7 @@ export async function getInitialFacets(
 ): Promise<InitialFacetsData> {
   const facets = await api.get<FacetDto[]>(`/${entityType}/facets`);
   const facetOptions = await api.get<{ [key: string]: FacetOptionDto[] }>(
-    `/${entityType}/facets/options?facets_to_load=${facets
-      .filter((facet) => !facet.is_lazy)
-      .map((facet) => facet.id)
-      .join(",")}`
+    `/${entityType}/facets/options`
   );
 
   return { facets, facetOptions };

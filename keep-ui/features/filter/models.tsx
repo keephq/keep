@@ -6,12 +6,13 @@ export interface FacetOptionDto {
 
 export interface FacetDto {
     id: string;
+    property_path: string;
     name: string;
     is_static: boolean;
     is_lazy: boolean;
 }
 
 export interface CreateFacetDto {
-    id: string;
+    property_path: string;
     name: string;
 }

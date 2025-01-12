@@ -1,3 +1,4 @@
+import re
 from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
     ConstantNode,
@@ -9,6 +10,12 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     PropertyAccessNode,
     UnaryNode,
 )
+
+class JsonPropertyAccessNode(PropertyAccessNode):
+    def __init__(self, json_property_name: str, property_to_extract: str, method_access_node: MethodAccessNode):
+        super().__init__(f"JSON({json_property_name}).{property_to_extract}", method_access_node)
+        self.json_property_name = json_property_name
+        self.property_to_extract = property_to_extract
 
 
 class PropertiesMapper:
@@ -41,11 +48,11 @@ class PropertiesMapper:
         raise NotImplementedError(
             f"{type(abstract_node).__name__} node type is not supported yet"
         )
-    
+
     def __get_prop_mapping(self, prop_path: str) -> list[str]:
         if prop_path in self.known_fields_mapping:
             return [self.known_fields_mapping[prop_path].get("field")]
-        
+
         field_mapping = None
 
         if prop_path in self.known_fields_mapping:
@@ -62,12 +69,11 @@ class PropertiesMapper:
                     if field_mapping.get("type") == "json":
                         result.append(f'JSON({take_from}).{prop_path}')
                 return result
-            
+
             if "field" in field_mapping:
                 return [field_mapping.get("field")]
 
         return [prop_path]
-
 
     def __visit_comparison_node(self, comparison_node: ComparisonNode) -> Node:
         if not isinstance(comparison_node.first_operand, PropertyAccessNode):
@@ -77,8 +83,8 @@ class PropertiesMapper:
         for mapping in self.__get_prop_mapping(
             comparison_node.first_operand.get_property_path()
         ):
-            property_access_node = PropertyAccessNode(mapping, None)
-            
+            property_access_node = self._visit_property_access_node(PropertyAccessNode(mapping, None))
+
             current_node_result = ComparisonNode(
                 property_access_node,
                 comparison_node.operator,
@@ -115,33 +121,45 @@ class PropertiesMapper:
                 member_access_node.get_property_path()
             ):
                 method_access_node = member_access_node.get_method_access_node().copy()
-                property_access_node = PropertyAccessNode(
+                current_node_result = self._visit_property_access_node(PropertyAccessNode(
                     mapping,
                     MethodAccessNode(
                         method_access_node.member_name,
                         method_access_node.args,
                     ),
-                )
-                property_access_node = LogicalNode(
+                ))
+                current_node_result = LogicalNode(
                     left=ComparisonNode(
                         first_operand = PropertyAccessNode(mapping, None),
                         operator = ComparisonNode.NE,
                         second_operand = ConstantNode(None),
                     ),
                     operator=LogicalNode.AND,
-                    right=property_access_node,
+                    right=current_node_result,
                 )
 
                 if result is None:
-                    result = property_access_node
+                    result = current_node_result
                     continue
 
                 result = LogicalNode(
                     left=result,
                     operator=LogicalNode.OR,
-                    right=property_access_node,
+                    right=current_node_result,
                 )
 
             return result
 
         return member_access_node
+
+    def _visit_property_access_node(self, property_access_node: PropertyAccessNode) -> Node:
+        match = re.compile(r"JSON\((?P<json>[^)]+)\)\.(?P<property_path>.+)").match(
+            property_access_node.get_property_path()
+        )
+
+        if match:
+            json_group = match.group("json")
+            property_path_group = match.group("property_path")
+            return JsonPropertyAccessNode(json_group, property_path_group, property_access_node.get_method_access_node())
+
+        return property_access_node

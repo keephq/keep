@@ -1,5 +1,4 @@
 import useSWR, { SWRConfiguration, useSWRConfig } from "swr";
-import useSWRInfinite from "swr/infinite";
 import { CreateFacetDto, FacetDto, FacetOptionDto } from "./models";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useCallback, useEffect, useState } from "react";
@@ -12,15 +11,16 @@ export type UseFacetActionsValue = {
 };
 
 export const useFacets = (
-  facetsApiPath: string,
+  entityName: string,
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
 ) => {
   const api = useApi();
+  const requestUrl = `/${entityName}/facets`;
 
   const swrValue = useSWR<FacetDto[]>(
-    () => (api.isReady() ? facetsApiPath : null),
+    () => (api.isReady() ? requestUrl : null),
     (url) => api.get(url),
     options
   );
@@ -32,14 +32,16 @@ export const useFacets = (
 };
 
 export const useFacetOptions = (
-  facetOptionsApiPath: string,
+  entityName: string,
   facetOptionIdsToLoad: string[],
   cel: string = "",
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
 ) => {
-  const [facetOptions, setFacetOptions] = useState<{ [facetId: string]: FacetOptionDto }>({});
+  const [facetOptions, setFacetOptions] = useState<{
+    [facetId: string]: FacetOptionDto;
+  }>({});
 
   const api = useApi();
 
@@ -59,20 +61,20 @@ export const useFacetOptions = (
     queryString = `?${filtersParams.toString()}`;
   }
 
-  
+  const requestUrl = `/${entityName}/facets/options${queryString}`;
 
   const swrValue = useSWR<{ [facetId: string]: FacetOptionDto }>(
-    () => (api.isReady() ? facetOptionsApiPath + queryString : null),
+    () => (api.isReady() ? requestUrl : null),
     (url) => api.get(url),
     options
   );
 
   useEffect(() => {
     if (swrValue.data) {
-        setFacetOptions({
-            ...facetOptions,
-            ...(swrValue.data as any)
-        })
+      setFacetOptions({
+        ...facetOptions,
+        ...(swrValue.data as any),
+      });
     }
   }, [swrValue.data]);
 
@@ -83,8 +85,11 @@ export const useFacetOptions = (
   };
 };
 
-export const useFacetActions = (facetsApiPath: string): UseFacetActionsValue => {
+export const useFacetActions = (
+  entityName: string
+): UseFacetActionsValue => {
   const api = useApi();
+  const requestUrl = `/${entityName}/facets`;
 
   const { mutate } = useSWRConfig();
 
@@ -98,7 +103,7 @@ export const useFacetActions = (facetsApiPath: string): UseFacetActionsValue => 
   const addFacet = useCallback(
     async (createFacet: CreateFacetDto) => {
       try {
-        const result = await api.post(facetsApiPath, createFacet);
+        const result = await api.post(requestUrl, createFacet);
         mutateFacetsList();
         toast.success("Facet created successfully");
         return result as FacetDto;
@@ -110,7 +115,7 @@ export const useFacetActions = (facetsApiPath: string): UseFacetActionsValue => 
         throw error;
       }
     },
-    [api, mutateFacetsList]
+    [api, mutateFacetsList, requestUrl]
   );
 
   const deleteFacet = useCallback(
@@ -122,7 +127,7 @@ export const useFacetActions = (facetsApiPath: string): UseFacetActionsValue => 
         return false;
       }
       try {
-        const result = await api.delete(`${facetsApiPath}/${facetId}`);
+        const result = await api.delete(`${requestUrl}/${facetId}`);
         mutateFacetsList();
         toast.success("Facet deleted successfully");
         return true;

@@ -97,7 +97,7 @@ export function IncidentList({
   );
 
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
-  const facetActions = useFacetActions("/incidents/facets");
+  const facetActions = useFacetActions("incidents");
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
@@ -121,7 +121,7 @@ export function IncidentList({
   }
 
   const facets = useFacets(
-    "/incidents/facets",
+    "incidents",
     {
       revalidateOnFocus: false,
       revalidateOnMount: !initialFacetsData?.facets,
@@ -130,7 +130,7 @@ export function IncidentList({
   )
 
   const facetOptions = useFacetOptions(
-    "/incidents/facets/options",
+    "incidents",
     facetIdsLoaded,
     "",
     {
@@ -139,10 +139,6 @@ export function IncidentList({
       fallbackData: initialFacetsData?.facetOptions,
     }
   )
-
-  const handleFacetCreation = async (incident: CreateFacetDto) => {
-    await facetActions.addFacet(incident)
-  }
 
   function renderIncidents() {
     if (incidentsError) {
@@ -219,8 +215,9 @@ export function IncidentList({
               facetOptions={facetOptions.data as any}
               className="mt-14"
               onCelChange={(cel) => setFilterCel(cel)}
-              onAddFacet={(createFacet) => handleFacetCreation(createFacet)}
+              onAddFacet={(createFacet) => facetActions.addFacet(createFacet)}
               onLoadFacetOptions={loadOptionsForFacet}
+              onDeleteFacet={(facetId) => facetActions.deleteFacet(facetId)}
             />
             <div className="flex flex-col gap-5 flex-1">
               {renderIncidents()}

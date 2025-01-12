@@ -12,6 +12,7 @@ export interface FacetsPanelProps {
   facetOptions: { [key: string]: FacetOptionDto[] };
   onCelChange: (cel: string) => void;
   onAddFacet: (createFacet: CreateFacetDto) => void;
+  onDeleteFacet: (facetId: string) => void;
   onLoadFacetOptions: (facetId: string) => void;
 }
 
@@ -22,6 +23,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   facetOptions,
   onCelChange = undefined,
   onAddFacet = undefined,
+  onDeleteFacet = undefined,
   onLoadFacetOptions = undefined,
 }) => {
   console.log(facetOptions)
@@ -81,17 +83,17 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   useEffect(() => {
     if (onCelChange && facets && facetOptions && facetsState) {
       const cel = Object.values(facets)
-        .filter((facet) => facet.id in facetsState)
+        .filter((facet) => facet.property_path in facetsState)
         .map((facet) => {
-          const notSelectedOptions = Object.values(facetOptions[facet.id])
-            .filter((facetOption) => facetsState[facet.id][facetOption.display_name] === false)
+          const notSelectedOptions = Object.values(facetOptions[facet.property_path])
+            .filter((facetOption) => facetsState[facet.property_path][facetOption.display_name] === false)
             .map((option) => typeof option.value === 'string' ? `'${option.value}'` : option.value);
 
           if (!notSelectedOptions.length) {
             return;
           }
 
-          return `!(${facet.id} in [${notSelectedOptions.join(", ")}])`;
+          return `!(${facet.property_path} in [${notSelectedOptions.join(", ")}])`;
         })
         .filter((query) => query)
         .map((facetCel) => `${facetCel}`)
@@ -120,16 +122,18 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
         {/* Dynamic facets */}
         {facets?.map((facet, index) => (
           <Facet
-            key={facet.id + index}
+            key={facet.id}
             name={facet.name}
+            isStatic={facet.is_static}
             options={facetOptions?.[facet.id] || []}
-            onSelect={(value) => toggleFacetOption(facet.id, value)}
-            onSelectOneOption={(value) => selectOneFacetOption(facet.id, value)}
-            onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
-            facetState={facetsState[facet.id]}
+            onSelect={(value) => toggleFacetOption(facet.property_path, value)}
+            onSelectOneOption={(value) => selectOneFacetOption(facet.property_path, value)}
+            onSelectAllOptions={() => selectAllFacetOptions(facet.property_path)}
+            facetState={facetsState[facet.property_path]}
             facetKey={facet.id}
             showSkeleton={false}
             onLoadOptions={() => onLoadFacetOptions && onLoadFacetOptions(facet.id)}
+            onDelete={() => onDeleteFacet && onDeleteFacet(facet.id)}
           />
         ))}
 

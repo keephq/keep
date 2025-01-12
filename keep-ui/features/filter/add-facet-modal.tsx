@@ -21,7 +21,7 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
 
   const handleNewFacetCreation = () => {
     onAddFacet({
-      id: propertyPath,
+      property_path: propertyPath,
       name: name
     })
     onClose();

@@ -35,7 +35,7 @@ from keep.api.core.db import (
     get_workflow_executions_for_incident_or_alert,
     merge_incidents_to_id,
 )
-from keep.api.core.get_last_incidents_by_cel import CreateFacetDto, FacetDto, create_facet, get_incident_facets, get_incident_facets_data, get_last_incidents_by_cel
+from keep.api.core.get_last_incidents_by_cel import CreateFacetDto, FacetDto, create_facet, delete_facet, get_incident_facets, get_incident_facets_data, get_last_incidents_by_cel
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.models.alert import (
     AlertDto,
@@ -302,6 +302,33 @@ async def add_incidents_facet(
         facet=createFacet
     )
     return created_facet
+
+@router.delete(
+    "/facets/{facet_id}",
+    description="Delete facet for incidents",
+)
+async def delete_incidents_facet(
+    facet_id: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    )
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Deleting facet for incident",
+        extra={
+            "tenant_id": tenant_id,
+            "facet_id": facet_id,
+        },
+    )
+    is_deleted = delete_facet(
+        tenant_id=tenant_id,
+        facet_id=facet_id
+    )
+    
+    if not is_deleted:
+        raise HTTPException(status_code=404, detail="Facet not found")
+
 
 @router.get(
     "/{incident_id}",
