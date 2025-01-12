@@ -160,7 +160,7 @@ class MongodbProvider(BaseProvider):
         Returns:
             list | tuple: list of results or single result if single_row is True
         """
-        if type(query) == str:
+        if type(query) is str:
             query = json.loads(query)
             
         client = self.__generate_client()
