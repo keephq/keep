@@ -19,11 +19,54 @@ import MockWorkflowCardSection from "./mockworkflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { showErrorToast, Input, ErrorComponent } from "@/shared/ui";
+import { Textarea } from "@/components/ui";
+
+const EXAMPLE_WORKFLOW_DEFINITIONS = {
+  slack: `
+    workflow:
+      id: slack-demo
+      description: Send a slack message when any alert is triggered or manually
+      triggers:
+        - type: alert
+        - type: manual
+      actions:
+        - name: trigger-slack
+          provider:
+            type: slack
+            config: " {{ providers.slack }} "
+            with:
+              message: "Workflow ran | reason: {{ event.trigger }}"
+    `,
+  sql: `
+    workflow:
+      id: bq-sql-query
+      description: Run SQL on Bigquery and send the results to slack
+      triggers:
+        - type: manual
+      steps:
+        - name: get-sql-data
+          provider:
+            type: bigquery
+            config: "{{ providers.bigquery-prod }}"
+            with:
+              query: "SELECT * FROM some_database LIMIT 1"
+      actions:
+        - name: trigger-slack
+          provider:
+            type: slack
+            config: " {{ providers.slack-prod }} "
+            with:
+              message: "Results from the DB: ({{ steps.get-sql-data.results }})"
+  `,
+};
+
+type ExampleWorkflowKey = keyof typeof EXAMPLE_WORKFLOW_DEFINITIONS;
 
 export default function WorkflowsPage() {
   const api = useApi();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [workflowDefinition, setWorkflowDefinition] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Only fetch data when the user is authenticated
@@ -112,59 +155,35 @@ export default function WorkflowsPage() {
     }
   };
 
-  function handleStaticExampleSelect(example: string) {
-    // todo: something less static
-    let hardCodedYaml = "";
-    if (example === "slack") {
-      hardCodedYaml = `
-      workflow:
-        id: slack-demo
-        description: Send a slack message when any alert is triggered or manually
-        triggers:
-          - type: alert
-          - type: manual
-        actions:
-          - name: trigger-slack
-            provider:
-              type: slack
-              config: " {{ providers.slack }} "
-              with:
-                message: "Workflow ran | reason: {{ event.trigger }}"
-        `;
-    } else {
-      hardCodedYaml = `
-      workflow:
-        id: bq-sql-query
-        description: Run SQL on Bigquery and send the results to slack
-        triggers:
-          - type: manual
-        steps:
-          - name: get-sql-data
-            provider:
-              type: bigquery
-              config: "{{ providers.bigquery-prod }}"
-              with:
-                query: "SELECT * FROM some_database LIMIT 1"
-        actions:
-          - name: trigger-slack
-            provider:
-              type: slack
-              config: " {{ providers.slack-prod }} "
-              with:
-                message: "Results from the DB: ({{ steps.get-sql-data.results }})"
-              `;
-    }
-    const blob = new Blob([hardCodedYaml], { type: "application/x-yaml" });
-    const file = new File([blob], `${example}.yml`, {
+  function handleWorkflowDefinitionString(
+    workflowDefinition: string,
+    name: string = "New workflow"
+  ) {
+    const blob = new Blob([workflowDefinition], {
       type: "application/x-yaml",
     });
-
+    const file = new File([blob], `${name}.yml`, {
+      type: "application/x-yaml",
+    });
     const event = {
       target: {
         files: [file],
       },
     };
     onDrop(event as any);
+  }
+
+  function handleStaticExampleSelect(exampleKey: ExampleWorkflowKey) {
+    switch (exampleKey) {
+      case "slack":
+        handleWorkflowDefinitionString(EXAMPLE_WORKFLOW_DEFINITIONS.slack);
+        break;
+      case "sql":
+        handleWorkflowDefinitionString(EXAMPLE_WORKFLOW_DEFINITIONS.sql);
+        break;
+      default:
+        throw new Error(`Invalid example workflow key: ${exampleKey}`);
+    }
     setIsModalOpen(false);
   }
 
