@@ -24,20 +24,13 @@ triggers:
 
 ### Interval Trigger
 
-Runs workflows at a regular time interval or using a CRON expression.
+Runs workflows at a regular time.
 
 ```yaml
 triggers:
   - type: interval
-    # Run every 5 minutes
-    value: 5m
-```
-
-```yaml
-triggers:
-  - type: interval
-    # Run daily at 11:00 AM and 2:00 PM
-    cron: "0 11,14 * * *"
+    # Run every 5 seconds
+    value: 5
 ```
 
 ### Alert Trigger

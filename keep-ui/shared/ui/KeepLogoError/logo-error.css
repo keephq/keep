@@ -1,0 +1,57 @@
+.wrapper {
+  position: relative;
+  width: 16rem;
+  height: 16rem;
+}
+
+.logo-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: url(#tvNoise);
+  animation:
+    tvShift 0.1s infinite,
+    majorShift 4s infinite;
+}
+
+@keyframes tvShift {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(1px, -1px);
+  }
+  50% {
+    transform: translate(-1px, 1px);
+  }
+  75% {
+    transform: translate(1px, 1px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes majorShift {
+  0%,
+  95% {
+    transform: translate(0, 0);
+  }
+  95.2% {
+    transform: translate(15px, -8px) skew(-12deg) scale(1.1);
+  }
+  95.7% {
+    transform: translate(-10px, -10px) skew(15deg) scale(0.95);
+  }
+  96.2% {
+    transform: translate(8px, 12px) skew(-5deg) scale(1.05);
+  }
+  96.7% {
+    transform: translate(-12px, 5px) skew(8deg) scale(0.9);
+  }
+  97.2% {
+    transform: translate(0, 0);
+  }
+}

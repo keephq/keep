@@ -56,6 +56,7 @@ from keep.api.models.alert import (
     SplitIncidentResponseDto,
 )
 from keep.api.models.db.alert import ActionType, AlertAudit
+from keep.api.models.workflow import WorkflowExecutionDTO
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
@@ -475,7 +476,7 @@ def get_incident_workflows(
         "Fetching incident's workflows",
         extra={"incident_id": incident_id, "tenant_id": tenant_id},
     )
-    workflow_execution_dtos, total_count = (
+    workflow_executions, total_count = (
         get_workflow_executions_for_incident_or_alert(
             tenant_id=tenant_id,
             incident_id=str(incident_id),
@@ -483,6 +484,8 @@ def get_incident_workflows(
             offset=offset,
         )
     )
+
+    workflow_execution_dtos = [WorkflowExecutionDTO(**we._mapping) for we in workflow_executions]
 
     paginated_workflow_execution_dtos = WorkflowExecutionsPaginatedResultsDto(
         limit=limit, offset=offset, count=total_count, items=workflow_execution_dtos

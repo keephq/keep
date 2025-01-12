@@ -1,5 +1,5 @@
 import GenericPopover from "@/components/popover/GenericPopover";
-import { Textarea, Badge, Button } from "@tremor/react";
+import { Textarea, Button } from "@tremor/react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useRef, useState, useEffect, ChangeEvent } from "react";
 import { GoPlusCircle } from "react-icons/go";
@@ -210,13 +210,14 @@ export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
         />
       </div>
       <Button
-        className="shadow-lg p-2"
+        color="orange"
+        variant="secondary"
         onClick={() => {
           filterRef.current = { trigger: [], status: [], execution_id: "" };
           setApply(true);
         }}
       >
-        Clear Filters
+        Clear filters
       </Button>
     </div>
   );

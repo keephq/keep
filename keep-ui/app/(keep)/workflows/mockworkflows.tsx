@@ -1,9 +1,7 @@
 import React, { useState } from "react";
-import { MockAction, MockStep, MockWorkflow, Workflow } from "./models";
+import { MockStep, MockWorkflow } from "./models";
 import Loading from "@/app/(keep)/loading";
 import { Button, Card, Tab, TabGroup, TabList } from "@tremor/react";
-import Modal from "@/components/ui/Modal";
-import PageClient from "./builder/page.client";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { TiArrowRight } from "react-icons/ti";
@@ -14,7 +12,7 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
     workflow?.steps?.find((step: MockStep) => step?.provider?.type);
 
   return (
-    <div className="container flex gap-2 mb-4 mt-6 items-center overflow-x-auto max-w-full whitespace-nowrap">
+    <div className="container flex gap-2 items-center overflow-x-auto max-w-full whitespace-nowrap">
       {workflow?.steps?.map((step: any, index: number) => {
         const provider = step?.provider;
         if (["threshold", "assert", "foreach"].includes(provider?.type)) {
