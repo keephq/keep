@@ -89,7 +89,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
               (option) =>
                 `${facet.id} != ${ typeof option.value === "string" ? `"${option.value}"` : option.value}`
             )
-            .join(" || ");
+            .join(" && ");
         })
         .filter((query) => query)
         .map((facetCel) => `(${facetCel})`)
