@@ -372,181 +372,14 @@ export function BuilderChat({
     [steps, selectedNode, selectedEdge, addNodeBetween]
   );
 
-  // useCopilotAction(
-  //   {
-  //     name: "addStep",
-  //     description: "Add a step to the workflow",
-  //     parameters: [
-  //       {
-  //         name: "stepType",
-  //         description: "The type of step to add",
-  //         type: "string",
-  //         required: true,
-  //       },
-  //       {
-  //         name: "nodeOrEdgeId",
-  //         description:
-  //           "The 'id' property of the node to add the step after (NOT the WORKFLOW ID and NOT the node's name). If you don't know the id, wait for the user.",
-  //         type: "string",
-  //         required: true,
-  //       },
-  //       {
-  //         name: "after",
-  //         description: "The position to add the step after",
-  //         type: "boolean",
-  //         required: true,
-  //       },
-  //       {
-  //         name: "isStart",
-  //         description: "Whether the step is the start of the workflow",
-  //         type: "boolean",
-  //         required: false,
-  //       },
-  //       {
-  //         name: "name",
-  //         description: "The short name of the step",
-  //         type: "string",
-  //         required: false,
-  //       },
-  //       {
-  //         name: "aim",
-  //         description:
-  //           "The detailed description of the step's purpose and proposed solution",
-  //         type: "string",
-  //         required: false,
-  //       },
-  //     ],
-  //     renderAndWaitForResponse: ({ status, args, respond }) => {
-  //       if (status === "inProgress") {
-  //         return <div>Loading...</div>;
-  //       }
-  //       console.log("args=", args);
-  //       const { stepType, nodeOrEdgeId, after, isStart, name, aim } = args;
-  //       const _step = steps.find(
-  //         (step: any) => step.type === stepType
-  //       ) as V2Step;
-  //       if (!_step) {
-  //         respond?.("step not found");
-  //         return <>Step not found</>;
-  //       }
-  //       let step = { ..._step, name: name ?? _step.name };
-  //       let node = getNodeById(nodeOrEdgeId);
-  //       if (!node && !isStart) {
-  //         const nodeByName = definition.value.sequence.find(
-  //           (s) => s.name === nodeOrEdgeId
-  //         );
-  //         if (nodeByName) {
-  //           node = getNodeById(nodeByName.id);
-  //         }
-  //         if (!node) {
-  //           respond?.("node not found");
-  //           return (
-  //             <>
-  //               <code className="text-xs leading-none text-gray-500">
-  //                 {JSON.stringify(args, null, 2)}
-  //               </code>
-  //               <code className="text-xs leading-none text-gray-500">
-  //                 {JSON.stringify(definition.value, null, 2)}
-  //               </code>
-  //               <p className="text-sm text-red-500">Node not found</p>
-  //             </>
-  //           );
-  //         }
-  //       }
-  //       if (status === "complete") {
-  //         return (
-  //           <div className="flex flex-col gap-1">
-  //             <StepPreview step={step} />
-  //             <p className="text-sm text-gray-500">
-  //               <CheckCircleIcon className="w-4 h-4" /> Step added
-  //             </p>
-  //           </div>
-  //         );
-  //       }
-  //       return (
-  //         <div className="flex flex-col gap-2">
-  //           <div>
-  //             <div>
-  //               Do you want to add this step after{" "}
-  //               <b>{isStart ? "start trigger" : node.data.name}</b>
-  //               <pre>{name}</pre>
-  //               {/* <pre>{stepDefinitionJSON}</pre> */}
-  //             </div>
-  //             <StepPreview step={step} />
-  //           </div>
-  //           <div className="flex gap-2">
-  //             <Button
-  //               color="orange"
-  //               variant="primary"
-  //               onClick={async () => {
-  //                 console.log("step=", step, "aim=", aim, "name=", name);
-
-  //                 try {
-  //                   const stepDefinition = await generateStepDefinition({
-  //                     name,
-  //                     stepType,
-  //                     stepProperties: { ...step.properties },
-  //                     aim,
-  //                   });
-  //                   step = {
-  //                     ...step,
-  //                     properties: {
-  //                       ...step.properties,
-  //                       with: stepDefinition,
-  //                     },
-  //                   };
-  //                   console.log("stepDefinition", stepDefinition);
-  //                 } catch (e) {
-  //                   console.error(e);
-  //                   respond?.(
-  //                     `error generating step definition, using the empty one`
-  //                   );
-  //                 }
-  //                 try {
-  //                   if (isStart) {
-  //                     addNodeBetween(AFTER_TRIGGER_ID, step, "edge");
-  //                     respond?.("step added");
-  //                   } else if (!after) {
-  //                     addNodeBetween(nodeOrEdgeId, step, "node");
-  //                     respond?.("step added");
-  //                   } else {
-  //                     // const targetStep = definition.value.sequence.findIndex(
-  //                     //   (s) => s.id === nodeOrEdgeId
-  //                     // );
-  //                     // const nextStep =
-  //                     //   definition.value.sequence[targetStep + 1];
-  //                     const nextEdge = getNextEdge(nodeOrEdgeId);
-  //                     if (!nextEdge) {
-  //                       respond?.("next edge not found");
-  //                       return <></>;
-  //                     }
-  //                     addNodeBetween(nextEdge.id, step, "edge");
-  //                   }
-  //                   respond?.("step added");
-  //                 } catch (e) {
-  //                   console.error(e);
-  //                   respond?.(`error adding step: ${e}`);
-  //                 }
-  //               }}
-  //             >
-  //               Add
-  //             </Button>
-  //             <Button
-  //               color="orange"
-  //               variant="secondary"
-  //               onClick={() => respond?.("step not added")}
-  //             >
-  //               No
-  //             </Button>
-  //           </div>
-  //         </div>
-  //       );
-  //     },
-  //   },
-  //   [steps, selectedNode, selectedEdge, addNodeBetween]
-  // );
-
   const [debugInfoVisible, setDebugInfoVisible] = useState(false);
+  const chatInstructions = useMemo(() => {
+    return (
+      GENERAL_INSTRUCTIONS +
+      `Here is the list of providers that are installed: ${installedProviders.map((p) => `type: ${p.type}, id: ${p.id}`).join(", ")}. If you you need to use a provider that is not installed, add step, but mention to user that you need to add the provider first.` +
+      "Then asked to create a whole workflow, you break down the workflow into steps, outline the steps and show it to user, and then iterate over the steps, generate step definitions, show them to user for them to decide if they want to add them to the workflow."
+    );
+  }, [installedProviders]);
 
   return (
     <div
@@ -606,13 +439,7 @@ export function BuilderChat({
           </>
         )}
       </div>
-      <CopilotChat
-        instructions={
-          GENERAL_INSTRUCTIONS +
-          "Then asked to create a whole workflow, you break down the workflow into steps, outline the steps and show it to user, and then iterate over the steps, generate step definitions, show them to user for them to decide if they want to add them to the workflow."
-        }
-        className="h-full flex-1"
-      />
+      <CopilotChat instructions={chatInstructions} className="h-full flex-1" />
     </div>
   );
 }
