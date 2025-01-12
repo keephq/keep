@@ -15,6 +15,8 @@ interface Props {
   executionStatus?: string;
   hoveredStep: string | null;
   setHoveredStep: (step: string | null) => void;
+  selectedStep: string | null;
+  setSelectedStep: (step: string | null) => void;
 }
 
 export function WorkflowDefinitionYAML({
@@ -23,6 +25,8 @@ export function WorkflowDefinitionYAML({
   executionStatus,
   hoveredStep,
   setHoveredStep,
+  selectedStep,
+  setSelectedStep,
 }: Props) {
   const reorderWorkflowSections = (yamlString: string) => {
     const content = yamlString.startsWith('"')
@@ -152,11 +156,17 @@ export function WorkflowDefinitionYAML({
         <div
           key={index}
           className={clsx(
-            "font-mono whitespace-pre flex items-center gap-2 px-4",
+            "font-mono whitespace-pre flex items-center gap-2 px-4 transition-colors",
             getStepClassName(status, hoveredStep === stepName)
           )}
           onMouseEnter={() => setHoveredStep(stepName)}
           onMouseLeave={() => setHoveredStep(null)}
+          onClick={() => {
+            setSelectedStep(stepName);
+            setTimeout(() => {
+              setSelectedStep(null);
+            }, 100);
+          }}
         >
           <div className="w-4 flex items-center">
             {firstLineOfStep === index ? icon : null}

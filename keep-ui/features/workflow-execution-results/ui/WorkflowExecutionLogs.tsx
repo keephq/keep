@@ -3,90 +3,185 @@ import {
   LogEntry,
   WorkflowExecutionDetail,
 } from "@/shared/api/workflow-executions";
-import {
-  Card,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-} from "@tremor/react";
+import { Card } from "@tremor/react";
 import clsx from "clsx";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getLogLineStatus } from "../lib/logs-utils";
+import {
+  CheckCircleIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  XCircleIcon,
+} from "@heroicons/react/20/solid";
+import parseISO from "date-fns/parseISO";
+import formatDistance from "date-fns/formatDistance";
+import { differenceInSeconds } from "date-fns";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
-type LogMessageRowProps = {
-  log: LogEntry;
-  result?: Record<string, any>;
-  stepName: string;
-  isSuccess: boolean;
-  isFailure: boolean;
-};
-
-type LogHeaderRowProps = {
-  stepName: string;
-};
-
-type LogHeaderRowType = LogHeaderRowProps & { isHeader: true };
-type LogMessageRowType = LogMessageRowProps & { isHeader: false };
-type LogRowType = LogHeaderRowType | LogMessageRowType;
-
-function LogGroupHeader({
-  hoveredStep,
-  stepName,
-}: LogHeaderRowProps & { hoveredStep: string | null }) {
-  return (
-    <TableRow
-      className={clsx(
-        "transition-opacity bg-gray-100 ",
-        hoveredStep !== null
-          ? hoveredStep === stepName
-            ? "opacity-100"
-            : "opacity-50"
-          : "opacity-100"
-      )}
-    >
-      <TableCell className="whitespace-normal p-1" />
-      <TableCell className="whitespace-normal p-1 font-bold">
-        {stepName}
-      </TableCell>
-    </TableRow>
-  );
+function getStepIcon(status: string) {
+  switch (status) {
+    case "success":
+      return <CheckCircleIcon className="text-green-500 size-5" />;
+    case "failed":
+      return <XCircleIcon className="text-red-500 size-5" />;
+    case "pending":
+      return <ClockIcon className="text-yellow-500 size-5" />;
+  }
 }
 
-function LogMessageRow({
-  log,
-  result,
-  isSuccess,
-  isFailure,
-  stepName,
-  hoveredStep,
-}: LogMessageRowProps & { hoveredStep: string | null }) {
+type LogGroup = {
+  id: string | null;
+  name?: string;
+  status: string | null;
+  startTime: Date | null;
+  endTime: Date | null;
+  logs: {
+    log: LogEntry;
+    result: any;
+  }[];
+};
+
+function formatStepDuration(startTime: Date | null, endTime: Date | null) {
+  if (!startTime || !endTime) {
+    return "0s";
+  }
+  if (differenceInSeconds(endTime, startTime) < 60) {
+    return `${differenceInSeconds(endTime, startTime)}s`;
+  }
+  return formatDistance(endTime, startTime, {
+    includeSeconds: false,
+    addSuffix: false,
+  });
+}
+
+function getAccordionHeaderClassName(
+  status: string | null,
+  isHovered: boolean,
+  isOpen: boolean
+) {
+  switch (status) {
+    case "success":
+      return clsx(
+        "bg-green-100 hover:bg-green-200",
+        isHovered && "bg-green-200",
+        isOpen && "border-green-200"
+      );
+    case "failed":
+      return clsx(
+        "bg-red-100 hover:bg-red-200",
+        isHovered && "bg-red-200",
+        isOpen && "border-red-200"
+      );
+    case "pending":
+      return clsx(
+        "bg-yellow-100 hover:bg-yellow-200",
+        isHovered && "bg-yellow-200",
+        isOpen && "border-yellow-200"
+      );
+    default:
+      return clsx(
+        "hover:bg-gray-200",
+        isHovered && "bg-gray-200",
+        isOpen && "border-gray-200"
+      );
+  }
+}
+
+function getChevronIconClassName(status: string | null) {
+  switch (status) {
+    case "success":
+      return "text-green-600";
+    case "failed":
+      return "text-red-600";
+    case "pending":
+      return "text-yellow-600";
+    default:
+      return "text-gray-600";
+  }
+}
+
+function getLogLineClassName(log: LogEntry) {
+  switch (getLogLineStatus(log)) {
+    case "success":
+      return "text-green-600";
+    case "failed":
+      return "text-red-600";
+  }
+}
+
+function LogGroupAccordion({
+  defaultOpen = false,
+  group,
+  isHovered,
+  isSelected,
+}: {
+  defaultOpen?: boolean;
+  group: LogGroup;
+  isHovered: boolean;
+  isSelected: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  useEffect(() => {
+    if (isSelected) {
+      setIsOpen(true);
+    }
+  }, [isSelected]);
+
   return (
-    <TableRow
-      className={clsx(
-        "transition-opacity",
-        isSuccess && "bg-green-100",
-        isFailure && "bg-red-100",
-        hoveredStep !== null
-          ? hoveredStep === stepName
-            ? "opacity-100"
-            : "opacity-50"
-          : "opacity-100"
-      )}
-    >
-      <TableCell className="align-top whitespace-nowrap text-gray-500 p-1">
-        {log.timestamp}
-      </TableCell>
-      <TableCell className="break-words whitespace-normal p-1">
-        {log.message}
-        {result && Object.keys(result).length > 0 && (
-          <pre className="overflow-auto max-h-48 bg-white rounded-md text-xs mt-2">
-            <div className="text-gray-500 bg-gray-50 p-2">result</div>
-            <div className="p-2">{JSON.stringify(result, null, 2)}</div>
-          </pre>
+    <div>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={clsx(
+          "w-full flex justify-between px-2 py-2 rounded-lg border border-transparent transition-colors",
+          getAccordionHeaderClassName(group.status, isHovered, isOpen)
         )}
-      </TableCell>
-    </TableRow>
+      >
+        <div className="w-full flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1">
+            {isOpen ? (
+              <ChevronDownIcon
+                className={clsx(
+                  "size-5",
+                  getChevronIconClassName(group.status)
+                )}
+              />
+            ) : (
+              <ChevronRightIcon
+                className={clsx(
+                  "size-5",
+                  getChevronIconClassName(group.status)
+                )}
+              />
+            )}
+            {group.status ? getStepIcon(group.status) : null}
+            {group.name ?? "Workflow"}
+          </span>
+          <span className="font-mono text-sm">
+            {formatStepDuration(group.startTime, group.endTime)}
+          </span>
+        </div>
+      </button>
+      {isOpen && (
+        <div className="p-2">
+          {group.logs.map(({ log, result }, i) => (
+            <div key={log.timestamp + i}>
+              <p className={clsx("font-mono", getLogLineClassName(log))}>
+                {log.timestamp}: {log.message}
+              </p>
+              {result && (
+                <pre className="overflow-auto max-h-48 bg-gray-100 rounded-md text-xs my-2">
+                  <div className="text-gray-500 bg-gray-50 p-2">result</div>
+                  <div className="p-2">{JSON.stringify(result, null, 2)}</div>
+                </pre>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -96,96 +191,130 @@ export function WorkflowExecutionLogs({
   status,
   checks,
   hoveredStep,
+  selectedStep,
 }: {
   logs: LogEntry[] | null;
   results: Record<string, any> | null;
   status: WorkflowExecutionDetail["status"];
   checks: number;
   hoveredStep: string | null;
+  selectedStep: string | null;
 }) {
-  const enrichedLogs = useMemo(() => {
+  const groupedLogs = useMemo(() => {
     if (!logs) {
       return [];
     }
-    const resultedLogs = [];
-    let stepName = "";
+
+    const groupedLogs: LogGroup[] = [];
+    let currentGroup: LogGroup | null = null;
+    let currentStepName: string | null = null;
+
+    function createNewGroup(
+      id: string | null,
+      name: string | undefined,
+      timestamp: string
+    ): LogGroup {
+      const newGroup: LogGroup = {
+        id,
+        name,
+        status: null,
+        logs: [],
+        startTime: parseISO(timestamp),
+        endTime: null,
+      };
+
+      if (currentGroup) {
+        currentGroup.endTime = parseISO(timestamp);
+      }
+
+      groupedLogs.push(newGroup);
+      return newGroup;
+    }
+
     for (const log of logs) {
-      const stepNameMatch = log.message?.match(
+      // Check for step start in log message
+      const stepStartMatch = log.message?.match(
         /Running (step|action) ([a-zA-Z0-9-_]+)/
       );
-      const isOpeningStep = stepNameMatch !== null;
-      const isSuccess =
-        log.message?.includes("evaluated to run") ||
-        log.message?.includes("ran successfully");
-      const isFailure =
-        log.message?.includes("NOT to run") || log.message?.includes("Failed");
-      const isFinalStepLog = log.message?.includes("ran successfully");
-      const result = isFinalStepLog ? results?.[log.context?.step_id] : null;
-      if (stepNameMatch) {
-        stepName = stepNameMatch[2];
+      if (stepStartMatch) {
+        currentStepName = stepStartMatch[2];
       }
-      if (isOpeningStep) {
-        resultedLogs.push({ isHeader: true, stepName } as LogHeaderRowType);
+
+      // Get status and result for the log entry
+      const status = getLogLineStatus(log);
+      const result =
+        status === "success" || status === "failed"
+          ? results?.[log.context?.step_id]
+          : null;
+
+      // Initialize first group if needed
+      if (!currentGroup) {
+        currentGroup = createNewGroup(null, log.message, log.timestamp);
       }
-      resultedLogs.push({
-        log,
-        isHeader: false,
-        result,
-        stepName,
-        isSuccess,
-        isFailure,
-      } as LogMessageRowType);
+
+      // Create new group if we're switching context
+      if (currentStepName) {
+        const messageBelongsToCurrentStep =
+          log.message?.includes(currentStepName);
+        const needsNewGroup = messageBelongsToCurrentStep
+          ? currentGroup.id !== currentStepName
+          : currentGroup.id !== null;
+
+        if (needsNewGroup) {
+          currentGroup = createNewGroup(
+            messageBelongsToCurrentStep ? currentStepName : null,
+            log.message,
+            log.timestamp
+          );
+        }
+      } else if (currentGroup.id !== null) {
+        currentGroup = createNewGroup(null, log.message, log.timestamp);
+      }
+
+      // Update group status and add log
+      if (status) {
+        currentGroup.status = status;
+      }
+
+      currentGroup.logs.push({ log, result });
     }
-    return resultedLogs;
+
+    return groupedLogs;
   }, [logs, results]);
 
   return (
-    <Card className="flex flex-col overflow-hidden p-0">
+    <Card className="flex flex-col overflow-hidden p-2">
       <div className="flex-1 overflow-auto">
         {status === "in_progress" ? (
           <div>
-            <div className="flex items-center justify-center">
-              <p>
-                The workflow is in progress, will check again in one second
-                (times checked: {checks})
-              </p>
-            </div>
-            <Loading />
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="flex gap-2 h-10">
+                <div className="w-6 h-6">
+                  <Skeleton className="w-full h-6" />
+                </div>
+                <div className="flex-1">
+                  <Skeleton className="w-full h-6" />
+                </div>
+              </div>
+            ))}
+            <p>
+              The workflow is in progress, will check again in one second (times
+              checked: {checks})
+            </p>
           </div>
         ) : (
-          <div>
-            <Table className="w-full">
-              <TableHead>
-                <TableRow className="border-b border-gray-200 font-bold">
-                  <TableCell className="whitespace-normal p-1">
-                    Timestamp
-                  </TableCell>
-                  <TableCell className="break-words whitespace-normal p-1">
-                    Message
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {enrichedLogs.map((row: LogRowType, index) => {
-                  if (row.isHeader) {
-                    return (
-                      <LogGroupHeader
-                        key={index}
-                        hoveredStep={hoveredStep}
-                        {...row}
-                      />
-                    );
-                  }
-                  return (
-                    <LogMessageRow
-                      key={index}
-                      hoveredStep={hoveredStep}
-                      {...row}
-                    />
-                  );
-                })}
-              </TableBody>
-            </Table>
+          <div className="flex flex-col gap-1">
+            {groupedLogs.map((group, index) => (
+              <LogGroupAccordion
+                key={group.id ?? "" + index}
+                defaultOpen={
+                  group.status === "pending" || group.status === "failed"
+                }
+                group={group}
+                isSelected={selectedStep !== null && selectedStep === group.id}
+                isHovered={hoveredStep !== null && hoveredStep === group.id}
+              />
+            ))}
           </div>
         )}
       </div>

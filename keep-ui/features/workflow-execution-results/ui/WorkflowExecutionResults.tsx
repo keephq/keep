@@ -123,6 +123,7 @@ export function WorkflowExecutionResultsInternal({
   checks: number;
 }) {
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
+  const [selectedStep, setSelectedStep] = useState<string | null>(null);
 
   let status: WorkflowExecutionDetail["status"] | undefined;
   let logs: WorkflowExecutionDetail["logs"] | undefined;
@@ -157,6 +158,7 @@ export function WorkflowExecutionResultsInternal({
             status={status ?? ""}
             checks={checks}
             hoveredStep={hoveredStep}
+            selectedStep={selectedStep}
           />
         </div>
         <div className="flex flex-col gap-4">
@@ -168,6 +170,8 @@ export function WorkflowExecutionResultsInternal({
               executionStatus={status}
               hoveredStep={hoveredStep}
               setHoveredStep={setHoveredStep}
+              selectedStep={selectedStep}
+              setSelectedStep={setSelectedStep}
             />
           </Card>
         </div>

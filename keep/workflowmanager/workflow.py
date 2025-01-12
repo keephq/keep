@@ -57,7 +57,11 @@ class Workflow:
         self.logger.debug(f"Running steps for workflow {self.workflow_id}")
         for step in self.workflow_steps:
             try:
-                self.logger.info("Running step %s", step.step_id)
+                self.logger.info(
+                    "Running step %s",
+                    step.step_id,
+                    extra={"step_id": step.step_id},
+                )
                 step_ran = step.run()
                 if step_ran:
                     self.logger.info(
@@ -79,7 +83,11 @@ class Workflow:
         self.logger.debug(f"Steps for workflow {self.workflow_id} ran successfully")
 
     def run_action(self, action: Step):
-        self.logger.info("Running action %s", action.name)
+        self.logger.info(
+            "Running action %s",
+            action.name,
+            extra={"step_id": action.step_id},
+        )
         try:
             action_stop = False
             action_ran = action.run()

@@ -1,5 +1,12 @@
 import { LogEntry } from "@/shared/api/workflow-executions";
 
+export function getLogLineStatus(log: LogEntry) {
+  const isFailure =
+    log.message?.includes("Failed to") || log.message?.includes("Error");
+  const isSuccess = log.message?.includes("ran successfully");
+  return isFailure ? "failed" : isSuccess ? "success" : null;
+}
+
 export function getStepStatus(
   stepName: string,
   isAction: boolean,
