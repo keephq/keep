@@ -140,7 +140,7 @@ function LogGroupAccordion({
         )}
       >
         <div className="w-full flex items-center justify-between gap-2">
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 min-w-0">
             {isOpen ? (
               <ChevronDownIcon
                 className={clsx(
@@ -157,7 +157,9 @@ function LogGroupAccordion({
               />
             )}
             {group.status ? getStepIcon(group.status) : null}
-            {group.name ?? "Workflow"}
+            <span className="whitespace-nowrap overflow-hidden text-ellipsis">
+              {group.name}
+            </span>
           </span>
           <span className="font-mono text-sm">
             {formatStepDuration(group.startTime, group.endTime)}
@@ -211,12 +213,12 @@ export function WorkflowExecutionLogs({
 
     function createNewGroup(
       id: string | null,
-      name: string | undefined,
+      logMessage: string | undefined,
       timestamp: string
     ): LogGroup {
       const newGroup: LogGroup = {
         id,
-        name,
+        name: logMessage,
         status: null,
         logs: [],
         startTime: parseISO(timestamp),
@@ -256,9 +258,10 @@ export function WorkflowExecutionLogs({
       if (currentStepName) {
         const messageBelongsToCurrentStep =
           log.message?.includes(currentStepName);
-        const needsNewGroup = messageBelongsToCurrentStep
-          ? currentGroup.id !== currentStepName
-          : currentGroup.id !== null;
+        const needsNewGroup =
+          stepStartMatch || messageBelongsToCurrentStep
+            ? currentGroup.id !== currentStepName
+            : currentGroup.id !== null;
 
         if (needsNewGroup) {
           currentGroup = createNewGroup(
