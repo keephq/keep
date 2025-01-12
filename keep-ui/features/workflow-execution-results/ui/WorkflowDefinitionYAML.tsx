@@ -130,6 +130,9 @@ export function WorkflowDefinitionYAML({
 
       if (trimmedLine.startsWith("- name:")) {
         currentName = trimmedLine.split("name:")[1].trim();
+        if (previousName !== currentName) {
+          firstLineOfStep = null;
+        }
         previousName = currentName;
       }
 
@@ -137,7 +140,7 @@ export function WorkflowDefinitionYAML({
       const status = currentName ? getStatus(currentName, isInActions) : null;
       const icon = status ? getStepIcon(status) : null;
 
-      if (status && (!firstLineOfStep || previousName !== currentName)) {
+      if (status && !firstLineOfStep) {
         firstLineOfStep = index;
       }
 
