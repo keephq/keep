@@ -156,7 +156,7 @@ export function WorkflowDefinitionYAML({
         <div
           key={index}
           className={clsx(
-            "font-mono whitespace-pre flex items-center gap-2 px-4 transition-colors",
+            "font-mono flex items-center gap-2 px-4 transition-colors",
             getStepClassName(status, hoveredStep === stepName)
           )}
           onMouseEnter={() => setHoveredStep(stepName)}
@@ -171,7 +171,9 @@ export function WorkflowDefinitionYAML({
           <div className="w-4 flex items-center">
             {firstLineOfStep === index ? icon : null}
           </div>
-          <div>{line || "\u00A0"}</div>
+          <div className="whitespace-pre-wrap break-all">
+            {line || "\u00A0"}
+          </div>
         </div>
       );
     });

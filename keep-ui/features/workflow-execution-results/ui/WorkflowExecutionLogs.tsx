@@ -170,13 +170,17 @@ function LogGroupAccordion({
         <div className="p-2">
           {group.logs.map(({ log, result }, i) => (
             <div key={log.timestamp + i}>
-              <p className={clsx("font-mono", getLogLineClassName(log))}>
+              <p
+                className={clsx("text-sm font-mono", getLogLineClassName(log))}
+              >
                 {log.timestamp}: {log.message}
               </p>
               {result && (
-                <pre className="overflow-auto max-h-48 bg-gray-100 rounded-md text-xs my-2">
+                <pre className="bg-gray-100 rounded-md overflow-hidden text-xs my-2">
                   <div className="text-gray-500 bg-gray-50 p-2">result</div>
-                  <div className="p-2">{JSON.stringify(result, null, 2)}</div>
+                  <div className="overflow-auto max-h-48 break-words whitespace-pre-wrap p-2">
+                    {JSON.stringify(result, null, 2)}
+                  </div>
                 </pre>
               )}
             </div>
