@@ -9,6 +9,7 @@ export default function WorkflowExecutionPage({
 }) {
   return (
     <WorkflowExecutionResults
+      standalone
       workflowId={params.workflow_id}
       workflowExecutionId={params.workflow_execution_id}
     />
@@ -16,5 +17,5 @@ export default function WorkflowExecutionPage({
 }
 
 export const metadata: Metadata = {
-  title: "Workflow Execution Results",
+  title: "Keep - Workflow Execution Results",
 };

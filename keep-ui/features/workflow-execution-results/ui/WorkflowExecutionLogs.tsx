@@ -244,9 +244,10 @@ export function WorkflowExecutionLogs({
 
       // Get status and result for the log entry
       const status = getLogLineStatus(log);
+      const stepId = log.context?.step_id ?? currentStepName;
       const result =
-        status === "success" || status === "failed"
-          ? results?.[log.context?.step_id]
+        status === "success" || (status === "failed" && stepId)
+          ? results?.[stepId]
           : null;
 
       // Initialize first group if needed

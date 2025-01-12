@@ -15,6 +15,23 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { WorkflowDefinitionYAML } from "./WorkflowDefinitionYAML";
 import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
+import { setFavicon } from "@/shared/ui/utils/favicon";
+
+const getStatusEmoji = (status: WorkflowExecutionDetail["status"]) => {
+  if (status === "success") return "✔";
+  if (status === "failed") return "✗";
+  if (status === "in_progress") return "○";
+  return "";
+};
+
+const convertWorkflowStatusToFaviconStatus = (
+  status: WorkflowExecutionDetail["status"]
+) => {
+  if (status === "success") return "success";
+  if (status === "failed") return "failure";
+  if (status === "in_progress") return "pending";
+  return "";
+};
 
 interface WorkflowResultsProps {
   workflowId: string;
@@ -23,12 +40,14 @@ interface WorkflowResultsProps {
     | WorkflowExecutionDetail
     | WorkflowExecutionFailure
     | null;
+  standalone?: boolean;
 }
 
 export function WorkflowExecutionResults({
   workflowId,
   workflowExecutionId,
   initialWorkflowExecution,
+  standalone = false,
 }: WorkflowResultsProps) {
   const api = useApi();
   const [refreshInterval, setRefreshInterval] = useState(1000);
@@ -58,6 +77,17 @@ export function WorkflowExecutionResults({
     api.isReady() ? `/workflows/${workflowId}` : null,
     (url) => api.get(url)
   );
+
+  useEffect(() => {
+    if (!standalone || !workflowData) {
+      return;
+    }
+    const status = executionData?.error ? "failed" : executionData?.status;
+    document.title = `${workflowData.name} - Workflow Results - Keep`;
+    if (status) {
+      setFavicon(convertWorkflowStatusToFaviconStatus(status));
+    }
+  }, [standalone, executionData, workflowData]);
 
   useEffect(() => {
     if (!executionData) return;
