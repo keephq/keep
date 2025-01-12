@@ -77,32 +77,6 @@ class BaseCelToSqlProvider:
             f"{type(abstract_node).__name__} node type is not supported yet"
         )
 
-    def __get_prop_mapping(self, prop_path: str) -> list[str]:
-        if prop_path in self.known_fields_mapping:
-            return [self.known_fields_mapping[prop_path].get("field")]
-        
-        field_mapping = None
-
-        if prop_path in self.known_fields_mapping:
-            field_mapping = self.known_fields_mapping.get(prop_path)
-
-        if "*" in self.known_fields_mapping:
-            field_mapping = self.known_fields_mapping.get("*")
-
-        if field_mapping:
-
-            if "take_from" in field_mapping:
-                result = []
-                for take_from in field_mapping.get("take_from"):
-                    if field_mapping.get("type") == "json":
-                        result.append(f'JSON({take_from}).{prop_path}')
-                return result
-            
-            if "field" in field_mapping:
-                return [field_mapping.get("field")]
-
-        return [prop_path]
-
     def json_extract(self, column: str, path: str) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
 
@@ -155,12 +129,6 @@ class BaseCelToSqlProvider:
             raise NotImplementedError(
                 f"{comparison_node.operator} comparison operator is not supported yet"
             )
-
-        # if isinstance(comparison_node.second_operand, ConstantNode) and comparison_node.second_operand.value is not None:
-        #     left = self._visit_not_equal(self.__build_where_clause(comparison_node.first_operand), self.__build_where_clause(ConstantNode(value=None)))
-        #     right = result
-
-        #     result = f"({self._visit_logical_and(left, right)})"
 
         return result
 
