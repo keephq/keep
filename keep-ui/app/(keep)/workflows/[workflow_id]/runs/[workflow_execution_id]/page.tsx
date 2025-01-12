@@ -1,6 +1,6 @@
-"use client";
 import React from "react";
-import WorkflowExecutionResults from "@/app/(keep)/workflows/builder/workflow-execution-results";
+import { Metadata } from "next";
+import { WorkflowExecutionResults } from "@/features/workflow-execution-results";
 
 export default function WorkflowExecutionPage({
   params,
@@ -14,3 +14,7 @@ export default function WorkflowExecutionPage({
     />
   );
 }
+
+export const metadata: Metadata = {
+  title: "Workflow Execution Results",
+};

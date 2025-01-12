@@ -17,16 +17,18 @@ import { Alert } from "./legacy-workflow.types";
 import BuilderModalContent from "./builder-modal";
 import Loader from "./loader";
 import { stringify } from "yaml";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
 import {
   Definition as FlowDefinition,
   ReactFlowDefinition,
   V2Step,
-  WorkflowExecution,
-  WorkflowExecutionFailure,
 } from "./types";
+import {
+  WorkflowExecutionDetail as WorkflowExecution,
+  WorkflowExecutionFailure,
+} from "@/shared/api/workflow-executions";
 import ReactFlowBuilder from "./ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
 import useStore from "./builder-store";
@@ -35,7 +37,6 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { showErrorToast, showSuccessToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
-import WorkflowDefinitionYAML from "../workflow-definition-yaml";
 import { revalidatePath } from "next/cache";
 import Modal from "@/components/ui/Modal";
 
@@ -58,15 +59,6 @@ const INITIAL_DEFINITION = wrapDefinitionV2({
   properties: {},
   isValid: false,
 });
-
-const YAMLSidebar = ({ yaml }: { yaml?: string }) => {
-  return (
-    <div className="bg-gray-700 h-full w-[600px] text-white">
-      <h2 className="text-2xl font-bold">YAML</h2>
-      {yaml && <WorkflowDefinitionYAML workflowRaw={yaml} />}
-    </div>
-  );
-};
 
 function Builder({
   loadedAlertFile,
@@ -96,6 +88,7 @@ function Builder({
     WorkflowExecution | WorkflowExecutionFailure | null
   >(null);
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
+  const router = useRouter();
 
   const searchParams = useSearchParams();
   const { errorNode, setErrorNode, canDeploy, synced } = useStore();
@@ -165,11 +158,12 @@ function Builder({
         body,
         headers: { "Content-Type": "text/html" },
       })
-      .then(() => {
+      .then(({ workflow_id }) => {
         // This is important because it makes sure we will re-fetch the workflow if we get to this page again.
         // router.push for instance, optimizes re-render of same pages and we don't want that here because of "cache".
         showSuccessToast("Workflow added successfully");
         revalidatePath("/workflows/builder");
+        router.push(`/workflows/${workflow_id}`);
       })
       .catch((error) => {
         alert(`Error: ${error}`);
