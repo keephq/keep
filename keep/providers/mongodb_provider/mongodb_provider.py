@@ -160,6 +160,9 @@ class MongodbProvider(BaseProvider):
         Returns:
             list | tuple: list of results or single result if single_row is True
         """
+        if type(query) == str:
+            query = json.loads(query)
+            
         client = self.__generate_client()
         database = client[self.authentication_config.database]
         results = list(database.cursor_command(query))
