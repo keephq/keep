@@ -60,12 +60,17 @@ class Workflow:
                 self.logger.info("Running step %s", step.step_id)
                 step_ran = step.run()
                 if step_ran:
-                    self.logger.info("Step %s ran successfully", step.step_id)
+                    self.logger.info(
+                        "Step %s ran successfully",
+                        step.step_id,
+                        extra={"step_id": step.step_id},
+                    )
                 # if the step ran + the step configured to stop the workflow:
                 if step_ran and not step.continue_to_next_step:
                     self.logger.info(
                         "Step %s ran successfully, stopping because continue_to_next is False",
                         step.step_id,
+                        extra={"step_id": step.step_id},
                     )
                     break
             except StepError as e:
@@ -80,15 +85,26 @@ class Workflow:
             action_ran = action.run()
             action_error = None
             if action_ran:
-                self.logger.info("Action %s ran successfully", action.name)
+                self.logger.info(
+                    "Action %s ran successfully",
+                    action.name,
+                    extra={
+                        "step_id": action.step_id,
+                    },
+                )
             if action_ran and not action.continue_to_next_step:
                 self.logger.info(
                     "Action %s ran successfully, stopping because continue_to_next is False",
                     action.name,
+                    extra={
+                        "step_id": action.step_id,
+                    },
                 )
                 action_stop = True
         except Exception as e:
-            self.logger.error(f"Action {action.name} failed: {e}")
+            self.logger.error(f"Action {action.name} failed: {e}", extra={
+                "step_id": action.step_id,
+            })
             action_ran = False
             action_error = f"Failed to run action {action.name}: {str(e)}"
         return action_ran, action_error, action_stop
