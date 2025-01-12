@@ -12,7 +12,7 @@ import {
   isWorkflowExecution,
 } from "@/shared/api/workflow-executions";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { WorkflowDefinitionYAML } from "./WorkflowDefinitionYaml";
+import { WorkflowDefinitionYAML } from "./WorkflowDefinitionYAML";
 import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
 
