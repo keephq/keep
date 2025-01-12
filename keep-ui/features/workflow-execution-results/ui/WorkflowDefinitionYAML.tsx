@@ -111,8 +111,9 @@ export function WorkflowDefinitionYAML({
 
   const renderYamlWithIcons = () => {
     const lines = reorderedWorkflowSections.split("\n");
-    let firstStepLine: number | null = null;
+    let firstLineOfStep: number | null = null;
     let currentName: string | null = null;
+    let previousName: string | null = null;
     let isInActions = false;
 
     return lines.map((line, index) => {
@@ -129,18 +130,19 @@ export function WorkflowDefinitionYAML({
 
       if (trimmedLine.startsWith("- name:")) {
         currentName = trimmedLine.split("name:")[1].trim();
+        previousName = currentName;
       }
 
       const stepName = currentName; // stable reference for hover listener
       const status = currentName ? getStatus(currentName, isInActions) : null;
       const icon = status ? getStepIcon(status) : null;
 
-      if (status && !firstStepLine) {
-        firstStepLine = index;
+      if (status && (!firstLineOfStep || previousName !== currentName)) {
+        firstLineOfStep = index;
       }
 
       if (!status || specialLine) {
-        firstStepLine = null;
+        firstLineOfStep = null;
       }
 
       return (
@@ -154,7 +156,7 @@ export function WorkflowDefinitionYAML({
           onMouseLeave={() => setHoveredStep(null)}
         >
           <div className="w-4 flex items-center">
-            {firstStepLine === index ? icon : null}
+            {firstLineOfStep === index ? icon : null}
           </div>
           <div>{line || "\u00A0"}</div>
         </div>
