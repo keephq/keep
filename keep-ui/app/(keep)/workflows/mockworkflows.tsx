@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MockStep, MockWorkflow } from "../../../shared/api/workflows";
+import { MockStep, MockWorkflow } from "@/shared/api/workflows";
 import Loading from "@/app/(keep)/loading";
 import { Button, Card, Tab, TabGroup, TabList } from "@tremor/react";
 import { useRouter } from "next/navigation";
