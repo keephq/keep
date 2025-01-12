@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { showErrorToast } from "@/shared/ui";
 
-type UseFacetActionsValue = {
+export type UseFacetActionsValue = {
   addFacet: (incident: CreateFacetDto) => Promise<FacetDto>;
   deleteFacet: (id: string, skipConfirmation?: boolean) => Promise<boolean>;
 };

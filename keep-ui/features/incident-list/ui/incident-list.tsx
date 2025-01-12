@@ -20,6 +20,7 @@ import { IncidentListError } from "@/features/incident-list/ui/incident-list-err
 import { FacetsPanel } from "@/features/filter/facets-panel";
 import { CreateFacetDto, FacetDto } from "@/features/filter/models";
 import { useFacetActions, useFacetOptions, useFacets } from "@/features/filter/hooks";
+import { InitialFacetsData } from "@/features/filter";
 
 interface Pagination {
   limit: number;
@@ -36,8 +37,10 @@ interface Filters {
 
 export function IncidentList({
   initialData,
+  initialFacetsData,
 }: {
   initialData?: PaginatedIncidentsDto;
+  initialFacetsData?: InitialFacetsData;
 }) {
   const [incidentsPagination, setIncidentsPagination] = useState<Pagination>({
     limit: 20,
@@ -118,12 +121,23 @@ export function IncidentList({
   }
 
   const facets = useFacets(
-    "/incidents/facets"
+    "/incidents/facets",
+    {
+      revalidateOnFocus: false,
+      revalidateOnMount: !initialFacetsData?.facets,
+      fallbackData: initialFacetsData?.facets,
+    }
   )
 
   const facetOptions = useFacetOptions(
     "/incidents/facets/options",
-    facetIdsLoaded
+    facetIdsLoaded,
+    "",
+    {
+      revalidateOnFocus: false,
+      revalidateOnMount: !initialFacetsData?.facetOptions,
+      fallbackData: initialFacetsData?.facetOptions,
+    }
   )
 
   const handleFacetCreation = async (incident: CreateFacetDto) => {
