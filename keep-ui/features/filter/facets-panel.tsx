@@ -83,16 +83,18 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       const cel = Object.values(facets)
         .filter((facet) => facet.id in facetsState)
         .map((facet) => {
-          return Object.values(facetOptions[facet.id])
+          const notSelectedOptions = Object.values(facetOptions[facet.id])
             .filter((facetOption) => facetsState[facet.id][facetOption.display_name] === false)
-            .map(
-              (option) =>
-                `${facet.id} != ${ typeof option.value === "string" ? `"${option.value}"` : option.value}`
-            )
-            .join(" && ");
+            .map((option) => typeof option.value === 'string' ? `'${option.value}'` : option.value);
+
+          if (!notSelectedOptions.length) {
+            return;
+          }
+
+          return `!(${facet.id} in [${notSelectedOptions.join(", ")}])`;
         })
         .filter((query) => query)
-        .map((facetCel) => `(${facetCel})`)
+        .map((facetCel) => `${facetCel}`)
         .map((query) => query)
         .join(" && ");
 

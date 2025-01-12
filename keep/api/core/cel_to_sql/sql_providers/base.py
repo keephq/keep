@@ -14,6 +14,8 @@ from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 from datetime import datetime
 import re
 
+from keep.api.core.cel_to_sql.properties_mapper import PropertiesMapper
+
 class BuiltQueryMetadata:
     def __init__(self, where: str, select_fields: str = None, select_json: str = None):
         self.where = where
@@ -25,6 +27,7 @@ class BaseCelToSqlProvider:
         super().__init__()
         self.known_fields_mapping = known_fields_mapping
         self.json_sources = {}
+        self.properties_mapper = PropertiesMapper(known_fields_mapping)
 
     def convert_to_sql_str(self, cel: str) -> BuiltQueryMetadata:
         """
@@ -41,9 +44,10 @@ class BaseCelToSqlProvider:
             return BuiltQueryMetadata(where="", select_fields="", select_json="")
 
         original_query = CelToAstConverter.convert_to_ast(cel)
+        with_mapped_props = self.properties_mapper.map_props_in_ast(original_query)
 
         return BuiltQueryMetadata(
-                where=self.__build_where_clause(original_query),
+                where=self.__build_where_clause(with_mapped_props),
                 select_fields='',
                 select_json=''
             )
@@ -58,13 +62,13 @@ class BaseCelToSqlProvider:
             return self._visit_logical_node(abstract_node)
 
         if isinstance(abstract_node, ComparisonNode):
-            return self.__modify_and_visit_comparison_node(abstract_node)
+            return self._visit_comparison_node(abstract_node)
 
         if isinstance(abstract_node, MemberAccessNode):
-            return self.__modify_and_visit_member_access_node(abstract_node)
+            return self._visit_member_access_node(abstract_node)
 
         if isinstance(abstract_node, UnaryNode):
-            return self.__modify_and_visit_unary_node(abstract_node)
+            return self._visit_unary_node(abstract_node)
 
         if isinstance(abstract_node, ConstantNode):
             return self._visit_constant_node(abstract_node.value)
@@ -128,40 +132,10 @@ class BaseCelToSqlProvider:
     # endregion
 
     # region Comparison Visitors
-    def __modify_and_visit_comparison_node(self, comparison_node: ComparisonNode) -> str:
-        if not isinstance(comparison_node.first_operand, PropertyAccessNode):
-            return self._visit_comparison_node(comparison_node)
-
-        result: str = None
-        for mapping in self.__get_prop_mapping(
-            comparison_node.first_operand.get_property_path()
-        ):
-            property_access_node = PropertyAccessNode(mapping, None)
-            
-            current_node_result = self._visit_comparison_node(ComparisonNode(
-                property_access_node,
-                comparison_node.operator,
-                comparison_node.second_operand,
-            ))
-            current_node_result = self._visit_logical_and(
-                left=self._visit_comparison_node(
-                    ComparisonNode(
-                        property_access_node,
-                        ComparisonNode.NE,
-                        ConstantNode(None),
-                    )
-                ),
-                right=current_node_result
-            )
-            if result is None:
-                result = current_node_result
-                continue
-
-            result = self._visit_logical_or(result, current_node_result)
-
-        return result
-
     def _visit_comparison_node(self, comparison_node: ComparisonNode) -> str:
+        if comparison_node.operator == ComparisonNode.IN:
+            return self._visit_in(comparison_node.first_operand, comparison_node.second_operand)
+
         first_operand = self.__build_where_clause(comparison_node.first_operand)
         second_operand = self.__build_where_clause(comparison_node.second_operand)
 
@@ -224,6 +198,9 @@ class BaseCelToSqlProvider:
 
     def _visit_less_than_or_equal(self, first_operand: str, second_operand: str) -> str:
         return f"{first_operand} <= {second_operand}"
+    
+    def _visit_in(self, first_operand: Node, array: list[ConstantNode]) -> str:
+        return f"{self._visit_member_access_node(first_operand)} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
 
     # endregion
 
@@ -243,34 +220,6 @@ class BaseCelToSqlProvider:
         raise NotImplementedError(f"{type(value).__name__} constant type is not supported yet")
 
     # region Member Access Visitors
-    def __modify_and_visit_member_access_node(self, member_access_node: MemberAccessNode) -> str:
-        if (
-            isinstance(member_access_node, PropertyAccessNode)
-            and member_access_node.is_function_call()
-        ):
-            result = None
-            for mapping in self.__get_prop_mapping(
-                member_access_node.get_property_path()
-            ):
-                method_access_node = member_access_node.get_method_access_node().copy()
-                property_access_node_str = self._visit_member_access_node(PropertyAccessNode(
-                    mapping,
-                    MethodAccessNode(
-                        method_access_node.member_name,
-                        method_access_node.args,
-                    ),
-                ))
-
-                if result is None:
-                    result = property_access_node_str
-                    continue
-
-                result = self._visit_logical_or(result, property_access_node_str)
-
-            return result
-
-        return self._visit_member_access_node(member_access_node)
-
     def _visit_member_access_node(self, member_access_node: MemberAccessNode) -> str:
         if isinstance(member_access_node, PropertyAccessNode):
             if member_access_node.is_function_call():
@@ -342,22 +291,6 @@ class BaseCelToSqlProvider:
     # endregion
 
     # region Unary Visitors
-    def __modify_and_visit_unary_node(self, unary_node: UnaryNode) -> str:
-        result = None
-        for mapping in self.__get_prop_mapping(
-            unary_node.first_operand.get_property_path()
-        ):
-            unary_node_result = self._visit_unary_node(UnaryNode(
-                unary_node.operator, PropertyAccessNode(mapping, None)
-            ))
-            if result is None:
-                result = unary_node_result
-                continue
-
-            result = self._visit_logical_or(result, unary_node_result)
-
-        return result
-
     def _visit_unary_node(self, unary_node: UnaryNode) -> str:
         if unary_node.operator == UnaryNode.NOT:
             return self._visit_unary_not(self.__build_where_clause(unary_node.operand))

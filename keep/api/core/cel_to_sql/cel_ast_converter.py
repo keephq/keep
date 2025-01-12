@@ -279,64 +279,45 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
     def list_lit(self, tree: lark.Tree) -> None:
         if self.stack:
             left = self.stack.pop()
-            self.stack.append(f"[{left}]")
+            self.stack.append(left)
 
     def map_lit(self, tree: lark.Tree) -> None:
-        if self.stack:
-            left = self.stack.pop()
-            self.stack.append(f"{{{left}}}")
-        else:
-            self.stack.append("{}")
+        raise NotImplementedError("Map literal not implemented")
 
     def exprlist(self, tree: lark.Tree) -> None:
-        items = []
-
-        for _ in tree.children:
-            items.append(self.stack.pop())
-
-        self.stack.append([item for item in reversed(items)])
+        list_items = list(self.stack.pop() for _ in tree.children)
+        self.stack.append(list_items)
 
     def fieldinits(self, tree: lark.Tree) -> None:
-        names = cast(List[lark.Token], tree.children[::2])
-        values = cast(List[lark.Token], tree.children[1::2])
-        assert len(names) == len(values)
-        pairs = reversed(list((n.value, self.stack.pop()) for n, v in zip(names, values)))
-        items = ", ".join(f"{n}: {v}" for n, v in pairs)
-        self.stack.append(items)
+        raise NotImplementedError("Fieldinits not implemented")
 
     def mapinits(self, tree: lark.Tree) -> None:
-        """Note reversed pop order for values and keys."""
-        keys = tree.children[::2]
-        values = tree.children[1::2]
-        assert len(keys) == len(values)
-        pairs = reversed(list(
-            {'value': self.stack.pop(), 'key': self.stack.pop()}
-            for k, v in zip(keys, values)
-        ))
-        items = ", ".join(f"{k_v['key']}: {k_v['value']}" for k_v in pairs)
-        self.stack.append(items)
+        raise NotImplementedError("Mapinits not implemented")
 
     def literal(self, tree: lark.Tree) -> None:
         if tree.children:
             value = cast(lark.Token, tree.children[0]).value
-            
-            if value in ['null', 'NULL']:
-                value = None
-            elif (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
-                value = value[1:-1]
+            constant_node = self.to_constant_node(value)
+            self.stack.append(constant_node)
 
-                if not self.is_number(value) and self.is_date(value):
-                    value = parse(value)
-            elif value == 'true' or value == 'false':
-                value = value == 'true'
-            elif '.' in value and self.is_float(value):
-                value = float(value)
-            elif self.is_number(value):
-                value = int(value)
-            else:
-                raise ValueError(f"Unknown literal type: {value}")
-            
-            self.stack.append(ConstantNode(value=value))
+    def to_constant_node(self, value: str) -> ConstantNode:
+        if value in ['null', 'NULL']:
+            value = None
+        elif (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            value = value[1:-1]
+
+            if not self.is_number(value) and self.is_date(value):
+                value = parse(value)
+        elif value == 'true' or value == 'false':
+            value = value == 'true'
+        elif '.' in value and self.is_float(value):
+            value = float(value)
+        elif self.is_number(value):
+            value = int(value)
+        else:
+            raise ValueError(f"Unknown literal type: {value}")
+        
+        return ConstantNode(value=value)
 
     def is_number(self, value: str) -> bool:
         try:
