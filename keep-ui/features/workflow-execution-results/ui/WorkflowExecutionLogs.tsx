@@ -1,5 +1,8 @@
 import Loading from "@/app/(keep)/loading";
-import { WorkflowExecution } from "@/app/(keep)/workflows/builder/types";
+import {
+  LogEntry,
+  WorkflowExecutionDetail,
+} from "@/shared/api/workflow-executions";
 import {
   Card,
   Table,
@@ -10,55 +13,62 @@ import {
 } from "@tremor/react";
 import clsx from "clsx";
 import { useMemo } from "react";
-import { LogEntry } from "../model/types";
-type LogRowProps = (LogMessageRowProps | LogHeaderRowProps) & {
-  hoveredStep: string | null;
-  setHoveredStep: (step: string | null) => void;
-};
 
 type LogMessageRowProps = {
   log: LogEntry;
   result?: Record<string, any>;
-  isHeader: false;
   stepName: string;
   isSuccess: boolean;
   isFailure: boolean;
 };
 
 type LogHeaderRowProps = {
-  isHeader: true;
   stepName: string;
 };
 
-function LogRow(props: LogRowProps) {
-  if (props.isHeader) {
-    return (
-      <TableRow
-        className={clsx(
-          "transition-opacity",
-          props.hoveredStep !== null
-            ? props.hoveredStep === props.stepName
-              ? "opacity-100"
-              : "opacity-50"
-            : "opacity-100"
-        )}
-      >
-        <TableCell className="whitespace-normal p-1" />
-        <TableCell className="whitespace-normal p-1 font-bold">
-          {props.stepName}
-        </TableCell>
-      </TableRow>
-    );
-  }
-  const { log, result, isSuccess, isFailure } = props;
+type LogHeaderRowType = LogHeaderRowProps & { isHeader: true };
+type LogMessageRowType = LogMessageRowProps & { isHeader: false };
+type LogRowType = LogHeaderRowType | LogMessageRowType;
+
+function LogGroupHeader({
+  hoveredStep,
+  stepName,
+}: LogHeaderRowProps & { hoveredStep: string | null }) {
+  return (
+    <TableRow
+      className={clsx(
+        "transition-opacity bg-gray-100 ",
+        hoveredStep !== null
+          ? hoveredStep === stepName
+            ? "opacity-100"
+            : "opacity-50"
+          : "opacity-100"
+      )}
+    >
+      <TableCell className="whitespace-normal p-1" />
+      <TableCell className="whitespace-normal p-1 font-bold">
+        {stepName}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function LogMessageRow({
+  log,
+  result,
+  isSuccess,
+  isFailure,
+  stepName,
+  hoveredStep,
+}: LogMessageRowProps & { hoveredStep: string | null }) {
   return (
     <TableRow
       className={clsx(
         "transition-opacity",
         isSuccess && "bg-green-100",
         isFailure && "bg-red-100",
-        props.hoveredStep !== null
-          ? props.hoveredStep === props.stepName
+        hoveredStep !== null
+          ? hoveredStep === stepName
             ? "opacity-100"
             : "opacity-50"
           : "opacity-100"
@@ -89,7 +99,7 @@ export function WorkflowExecutionLogs({
 }: {
   logs: LogEntry[] | null;
   results: Record<string, any> | null;
-  status: WorkflowExecution["status"];
+  status: WorkflowExecutionDetail["status"];
   checks: number;
   hoveredStep: string | null;
 }) {
@@ -115,7 +125,7 @@ export function WorkflowExecutionLogs({
         stepName = stepNameMatch[2];
       }
       if (isOpeningStep) {
-        resultedLogs.push({ isHeader: true, stepName });
+        resultedLogs.push({ isHeader: true, stepName } as LogHeaderRowType);
       }
       resultedLogs.push({
         log,
@@ -124,7 +134,7 @@ export function WorkflowExecutionLogs({
         stepName,
         isSuccess,
         isFailure,
-      });
+      } as LogMessageRowType);
     }
     return resultedLogs;
   }, [logs, results]);
@@ -156,9 +166,24 @@ export function WorkflowExecutionLogs({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {enrichedLogs.map((row, index) => (
-                  <LogRow key={index} hoveredStep={hoveredStep} {...row} />
-                ))}
+                {enrichedLogs.map((row: LogRowType, index) => {
+                  if (row.isHeader) {
+                    return (
+                      <LogGroupHeader
+                        key={index}
+                        hoveredStep={hoveredStep}
+                        {...row}
+                      />
+                    );
+                  }
+                  return (
+                    <LogMessageRow
+                      key={index}
+                      hoveredStep={hoveredStep}
+                      {...row}
+                    />
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

@@ -1,4 +1,4 @@
-import { LogEntry } from "../model/types";
+import { LogEntry } from "@/shared/api/workflow-executions";
 
 export function getStepStatus(
   stepName: string,

@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useProviders } from "./useProviders";
-import { Filter, Workflow } from "@/app/(keep)/workflows/models";
+import { Filter, Workflow } from "@/shared/api/workflows";
 import { Provider } from "@/app/(keep)/providers/providers";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
-
 interface ProvidersData {
   providers: { [key: string]: { providers: Provider[] } };
 }

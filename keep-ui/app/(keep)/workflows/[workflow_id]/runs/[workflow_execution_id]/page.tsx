@@ -9,8 +9,8 @@ export default function WorkflowExecutionPage({
 }) {
   return (
     <WorkflowExecutionResults
-      workflow_id={params.workflow_id}
-      workflow_execution_id={params.workflow_execution_id}
+      workflowId={params.workflow_id}
+      workflowExecutionId={params.workflow_execution_id}
     />
   );
 }

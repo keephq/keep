@@ -1,4 +1,4 @@
-import { WorkflowExecution } from "@/app/(keep)/workflows/builder/types";
+import { WorkflowExecutionDetail } from "@/shared/api/workflow-executions";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Button, Callout } from "@tremor/react";
@@ -9,7 +9,7 @@ export function WorkflowExecutionError({
   eventId,
   eventType,
 }: {
-  error: WorkflowExecution["error"];
+  error: WorkflowExecutionDetail["error"];
   workflowId: string | undefined;
   eventId: string | undefined;
   eventType: string | undefined;

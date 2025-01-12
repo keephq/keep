@@ -7,7 +7,7 @@ import {
   XCircleIcon,
 } from "@heroicons/react/20/solid";
 import { getStepStatus } from "../lib/logs-utils";
-import { LogEntry } from "../model/types";
+import { LogEntry } from "@/shared/api/workflow-executions";
 
 interface Props {
   workflowRaw: string;

@@ -7,7 +7,7 @@ import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { Callout } from "@tremor/react";
 import useSWR from "swr";
 import {
-  WorkflowExecution,
+  WorkflowExecutionDetail,
   WorkflowExecutionFailure,
   isWorkflowExecution,
 } from "@/shared/api/workflow-executions";
@@ -17,22 +17,28 @@ import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
 
 interface WorkflowResultsProps {
-  workflow_id: string;
-  workflow_execution_id: string;
+  workflowId: string;
+  workflowExecutionId: string | null;
+  initialWorkflowExecution?:
+    | WorkflowExecutionDetail
+    | WorkflowExecutionFailure
+    | null;
 }
 
 export function WorkflowExecutionResults({
-  workflow_id,
-  workflow_execution_id,
+  workflowId,
+  workflowExecutionId,
+  initialWorkflowExecution,
 }: WorkflowResultsProps) {
   const api = useApi();
   const [refreshInterval, setRefreshInterval] = useState(1000);
   const [checks, setChecks] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
+  // TODO: enhance useWorkflowExecution hook with retry logic and use it here
   const { data: executionData, error: executionError } = useSWR(
-    api.isReady()
-      ? `/workflows/${workflow_id}/runs/${workflow_execution_id}`
+    api.isReady() && workflowExecutionId
+      ? `/workflows/${workflowId}/runs/${workflowExecutionId}`
       : null,
     async (url) => {
       const fetchedData = await api.get(url);
@@ -43,16 +49,15 @@ export function WorkflowExecutionResults({
     },
     {
       refreshInterval: refreshInterval,
+      fallbackData: initialWorkflowExecution,
     }
   );
 
   // Get workflow definition
   const { data: workflowData, error: workflowError } = useSWR(
-    api.isReady() ? `/workflows/${workflow_id}` : null,
+    api.isReady() ? `/workflows/${workflowId}` : null,
     (url) => api.get(url)
   );
-
-  console.log("workflowData", workflowData);
 
   useEffect(() => {
     if (!executionData) return;
@@ -71,11 +76,9 @@ export function WorkflowExecutionResults({
     }
   }, [executionData]);
 
-  if (executionError) {
-    console.error("Error fetching execution status", executionError);
+  if (!executionData || !workflowData) {
+    return <Loading />;
   }
-
-  if (!executionData || !workflowData) return <Loading />;
 
   if (executionError) {
     return (
@@ -100,7 +103,7 @@ export function WorkflowExecutionResults({
 
   return (
     <WorkflowExecutionResultsInternal
-      workflowId={workflow_id}
+      workflowId={workflowId}
       executionData={executionData}
       workflowRaw={workflowData.workflow_raw}
       checks={checks}
@@ -114,16 +117,16 @@ export function WorkflowExecutionResultsInternal({
   workflowRaw,
   checks,
 }: {
-  executionData: WorkflowExecution | WorkflowExecutionFailure;
+  executionData: WorkflowExecutionDetail | WorkflowExecutionFailure;
   workflowId: string | undefined;
   workflowRaw: string | undefined;
   checks: number;
 }) {
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
 
-  let status: WorkflowExecution["status"] | undefined;
-  let logs: WorkflowExecution["logs"] | undefined;
-  let results: WorkflowExecution["results"] | undefined;
+  let status: WorkflowExecutionDetail["status"] | undefined;
+  let logs: WorkflowExecutionDetail["logs"] | undefined;
+  let results: WorkflowExecutionDetail["results"] | undefined;
   let eventId: string | undefined;
   let eventType: string | undefined;
 

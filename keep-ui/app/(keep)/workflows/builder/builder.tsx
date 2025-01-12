@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Callout, Card } from "@tremor/react";
 import { Provider } from "../../providers/providers";
 import {
@@ -26,7 +26,7 @@ import {
   V2Step,
 } from "./types";
 import {
-  WorkflowExecutionDetail as WorkflowExecution,
+  WorkflowExecutionDetail,
   WorkflowExecutionFailure,
 } from "@/shared/api/workflow-executions";
 import ReactFlowBuilder from "./ReactFlowBuilder";
@@ -85,7 +85,7 @@ function Builder({
   const [generateModalIsOpen, setGenerateModalIsOpen] = useState(false);
   const [testRunModalOpen, setTestRunModalOpen] = useState(false);
   const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<
-    WorkflowExecution | WorkflowExecutionFailure | null
+    WorkflowExecutionDetail | WorkflowExecutionFailure | null
   >(null);
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
   const router = useRouter();
@@ -112,7 +112,7 @@ function Builder({
     setErrorNode(null);
   };
 
-  const updateWorkflow = () => {
+  const updateWorkflow = useCallback(() => {
     const body = stringify(buildAlert(definition.value));
     api
       .request(`/workflows/${workflowId}`, {
@@ -126,7 +126,7 @@ function Builder({
       .catch((error: any) => {
         showErrorToast(error, "Failed to add workflow");
       });
-  };
+  }, [api, definition.value, workflowId]);
 
   const testRunWorkflow = () => {
     setTestRunModalOpen(true);
@@ -150,7 +150,7 @@ function Builder({
       });
   };
 
-  const addWorkflow = () => {
+  const addWorkflow = useCallback(() => {
     const body = stringify(buildAlert(definition.value));
     api
       .request(`/workflows/json`, {
@@ -168,7 +168,7 @@ function Builder({
       .catch((error) => {
         alert(`Error: ${error}`);
       });
-  };
+  }, [api, definition.value, router]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -259,7 +259,15 @@ function Builder({
         addWorkflow();
       }
     }
-  }, [canDeploy, errorNode, definition.isValid, synced, workflowId]);
+  }, [
+    canDeploy,
+    errorNode,
+    definition.isValid,
+    synced,
+    workflowId,
+    updateWorkflow,
+    addWorkflow,
+  ]);
 
   useEffect(() => {
     enableGenerate(
