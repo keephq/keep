@@ -3,14 +3,14 @@ Amazonsqs Provider is a class that allows to receive alerts and notify the Amazo
 """
 
 import dataclasses
+import inspect
+import logging
+import time
 import uuid
 from datetime import datetime
+
 import boto3
 import botocore
-import logging
-import inspect
-
-
 import pydantic
 
 from keep.api.models.alert import AlertSeverity, AlertStatus
@@ -351,6 +351,8 @@ class AmazonsqsProvider(BaseProvider):
                     self.__delete_from_queue(receipt=message["ReceiptHandle"])
                 except Exception as e:
                     self.logger.error(f"Error processing message: {e}")
+
+            time.sleep(0.1)
         self.logger.info("Consuming stopped")
 
     def stop_consume(self):
