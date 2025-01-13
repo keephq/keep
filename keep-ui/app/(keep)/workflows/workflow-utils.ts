@@ -1,5 +1,5 @@
 import { differenceInSeconds } from "date-fns";
-import { WorkflowExecution } from "./models";
+import { LastWorkflowExecution } from "@/shared/api/workflows";
 
 const demoLabels = [
   "Jan",
@@ -59,10 +59,7 @@ const demoColors = [
   "rgba(255, 99, 132, 1)", // Red
 ];
 export const getLabels = (
-  lastExecutions: Pick<
-    WorkflowExecution,
-    "execution_time" | "status" | "started"
-  >[],
+  lastExecutions: LastWorkflowExecution[],
   show_real_data?: boolean
 ) => {
   if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
@@ -77,10 +74,7 @@ export const getLabels = (
 };
 
 export const getDataValues = (
-  lastExecutions: Pick<
-    WorkflowExecution,
-    "execution_time" | "status" | "started"
-  >[],
+  lastExecutions: LastWorkflowExecution[],
   show_real_data?: boolean
 ) => {
   if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
@@ -109,10 +103,7 @@ const _getColor = (status: string, opacity: number) => {
 };
 
 export const getColors = (
-  lastExecutions: Pick<
-    WorkflowExecution,
-    "execution_time" | "status" | "started"
-  >[],
+  lastExecutions: LastWorkflowExecution[],
   status: string,
   isBgColor?: boolean,
   show_real_data?: boolean
