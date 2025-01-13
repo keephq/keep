@@ -321,7 +321,8 @@ def get_app(
 
     if config("KEEP_METRICS", default="true", cast=bool):
         Instrumentator(
-            excluded_handlers=["/metrics", "/metrics/processing"]
+            excluded_handlers=["/metrics", "/metrics/processing"],
+            should_group_status_codes=False,
         ).instrument(app=app, metric_namespace="keep")
     keep.api.observability.setup(app)
 

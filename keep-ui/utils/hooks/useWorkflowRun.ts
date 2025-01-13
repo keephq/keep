@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useProviders } from "./useProviders";
-import { Filter, Workflow } from "@/app/(keep)/workflows/models";
+import { Filter, Workflow } from "@/shared/api/workflows";
 import { Provider } from "@/app/(keep)/providers/providers";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
-
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 interface ProvidersData {
   providers: { [key: string]: { providers: Provider[] } };
 }
@@ -18,6 +18,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
   let message = "";
   const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
   const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
+  const revalidateMultiple = useRevalidateMultiple();
 
   const { data: providersData = { providers: {} } as ProvidersData } =
     useProviders();
@@ -102,6 +103,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
       }
       setIsRunning(true);
       const result = await api.post(`/workflows/${workflow?.id}/run`, payload);
+      revalidateMultiple([`/workflows/${workflow?.id}/runs`]);
 
       const { workflow_execution_id } = result;
       router.push(`/workflows/${workflow?.id}/runs/${workflow_execution_id}`);
@@ -110,7 +112,6 @@ export const useWorkflowRun = (workflow: Workflow) => {
     } finally {
       setIsRunning(false);
     }
-    setIsRunning(false);
   };
 
   const handleRunClick = async () => {

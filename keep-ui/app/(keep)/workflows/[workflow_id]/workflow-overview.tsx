@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import Loading from "@/app/(keep)/loading";
 import { WorkflowSteps } from "../mockworkflows";
-import { Workflow } from "../models";
+import { Workflow } from "@/shared/api/workflows";
 import WorkflowGraph from "../workflow-graph";
 import { TableFilters } from "./table-filters";
 import { ExecutionTable } from "./workflow-execution-table";
