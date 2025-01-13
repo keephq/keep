@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MockStep, MockWorkflow } from "./models";
+import { MockStep, MockWorkflow } from "@/shared/api/workflows";
 import Loading from "@/app/(keep)/loading";
 import { Button, Card, Tab, TabGroup, TabList } from "@tremor/react";
 import { useRouter } from "next/navigation";
@@ -117,8 +117,8 @@ export default function MockWorkflowCardSection({
   }
 
   return (
-    <div className="pt-10 mt-10 w-full">
-      <h2 className="pl-4 text-xl sm:text-2xl font-semibold mb-6">
+    <div className="w-full">
+      <h2 className="text-xl sm:text-2xl font-semibold mb-6">
         Discover workflow templates
       </h2>
       {/* TODO: Implement the commented out code block */}
@@ -149,7 +149,7 @@ export default function MockWorkflowCardSection({
         <p className="text-center m-auto">No workflows found</p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full gap-4 p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
         {mockError && (
           <p className="text-center text-red-100">
             Error: {mockError.message || "Something went wrong!"}

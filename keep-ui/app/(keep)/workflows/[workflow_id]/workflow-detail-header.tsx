@@ -1,8 +1,7 @@
 "use client";
 
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { Workflow } from "../models";
-
+import { Workflow } from "@/shared/api/workflows";
 import useSWR from "swr";
 import Skeleton from "react-loading-skeleton";
 import { Button, Text } from "@tremor/react";
@@ -52,9 +51,7 @@ export default function WorkflowDetailHeader({
     <div>
       <div className="flex justify-between items-end text-sm gap-2">
         <div>
-          <h1 className="text-2xl line-clamp-2 font-extrabold">
-            {workflow.name}
-          </h1>
+          <h1 className="text-2xl line-clamp-2 font-bold">{workflow.name}</h1>
           {workflow.description && (
             <Text className="line-clamp-5">
               <span>{workflow.description}</span>
