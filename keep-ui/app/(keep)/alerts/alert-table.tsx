@@ -291,6 +291,7 @@ export function AlertTable({
           <AlertActions
             selectedRowIds={selectedRowIds}
             alerts={alerts}
+            table={table}
             clearRowSelection={table.resetRowSelection}
             setDismissModalAlert={setDismissedModalAlert}
             mutateAlerts={mutateAlerts}

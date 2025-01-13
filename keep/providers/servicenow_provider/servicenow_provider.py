@@ -27,7 +27,7 @@ class ServicenowProviderAuthConfig:
             "description": "The base URL of the ServiceNow instance",
             "sensitive": False,
             "hint": "https://dev12345.service-now.com",
-            "validation": "https_url"
+            "validation": "https_url",
         }
     )
 
@@ -232,7 +232,7 @@ class ServicenowProvider(BaseTopologyProvider):
 
         return response.json().get("result", [])
 
-    def pull_topology(self) -> list[TopologyServiceInDto]:
+    def pull_topology(self) -> tuple[list[TopologyServiceInDto], dict]:
         # TODO: in scale, we'll need to use pagination around here
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         auth = (
@@ -282,7 +282,7 @@ class ServicenowProvider(BaseTopologyProvider):
                     "status_code": cmdb_response.status_code,
                 },
             )
-            return topology
+            return topology, {}
 
         cmdb_data = cmdb_response.json().get("result", [])
         self.logger.info(
@@ -349,7 +349,7 @@ class ServicenowProvider(BaseTopologyProvider):
                 "len_of_topology": len(topology),
             },
         )
-        return topology
+        return topology, {}
 
     def dispose(self):
         """

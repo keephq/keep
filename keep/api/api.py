@@ -64,6 +64,7 @@ from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerFactory,
     IdentityManagerTypes,
 )
+from keep.topologies.topology_processor import TopologyProcessor
 
 # load all providers into cache
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -76,6 +77,7 @@ HOST = config("KEEP_HOST", default="0.0.0.0")
 PORT = config("PORT", default=8080, cast=int)
 SCHEDULER = config("SCHEDULER", default="true", cast=bool)
 CONSUMER = config("CONSUMER", default="true", cast=bool)
+TOPOLOGY = config("KEEP_TOPOLOGY_PROCESSOR", default="false", cast=bool)
 KEEP_DEBUG_TASKS = config("KEEP_DEBUG_TASKS", default="false", cast=bool)
 
 AUTH_TYPE = config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH.value).lower()
@@ -142,6 +144,15 @@ async def startup():
             logger.info("Consumer started successfully")
         except Exception:
             logger.exception("Failed to start the consumer")
+    # Start the topology processor
+    if TOPOLOGY:
+        try:
+            logger.info("Starting the topology processor")
+            topology_processor = TopologyProcessor.get_instance()
+            await topology_processor.start()
+            logger.info("Topology processor started successfully")
+        except Exception:
+            logger.exception("Failed to start the topology processor")
 
     if KEEP_ARQ_TASK_POOL != KEEP_ARQ_TASK_POOL_NONE:
         event_loop = asyncio.get_event_loop()
@@ -324,7 +335,9 @@ def get_app(
             excluded_handlers=["/metrics", "/metrics/processing"],
             should_group_status_codes=False,
         ).instrument(app=app, metric_namespace="keep")
-    keep.api.observability.setup(app)
+
+    if config("KEEP_OTEL_ENABLED", default="true", cast=bool):
+        keep.api.observability.setup(app)
 
     return app
 
