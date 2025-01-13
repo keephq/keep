@@ -6,10 +6,9 @@ import { Session } from "next-auth";
 import { useConfig } from "utils/hooks/useConfig";
 import { AuthType } from "@/utils/authenticationType";
 import Link from "next/link";
-import { AiOutlineRight } from "react-icons/ai";
 import { VscDebugDisconnect } from "react-icons/vsc";
 import { useFloating } from "@floating-ui/react";
-import { Icon, Subtitle } from "@tremor/react";
+import { Subtitle } from "@tremor/react";
 import UserAvatar from "./UserAvatar";
 import * as Frigade from "@frigade/react";
 import { useState } from "react";
@@ -27,15 +26,19 @@ type UserDropdownProps = {
 };
 
 const UserDropdown = ({ session }: UserDropdownProps) => {
-  const { userRole, user } = session;
-  const { name, image, email } = user;
-
   const { data: configData } = useConfig();
   const signOut = useSignOut();
   const { refs, floatingStyles } = useFloating({
     placement: "right-end",
     strategy: "fixed",
   });
+
+  if (!session || !session.user) {
+    return null;
+  }
+
+  const { userRole, user } = session;
+  const { name, image, email } = user;
 
   const isNoAuth = configData?.AUTH_TYPE === AuthType.NOAUTH;
   return (
@@ -96,21 +99,23 @@ export const UserInfo = ({ session }: UserInfoProps) => {
   return (
     <>
       <ul className="space-y-2 p-2">
-        {isMounted && !config?.FRIGADE_DISABLED && flow?.isCompleted === false && (
-          <li>
-            <Frigade.ProgressBadge
-              flowId={ONBOARDING_FLOW_ID}
-              onClick={() => setIsOnboardingOpen(true)}
-            />
-            <Onboarding
-              isOpen={isOnboardingOpen}
-              toggle={() => setIsOnboardingOpen(false)}
-              variables={{
-                name: session?.user.name ?? session?.user.email,
-              }}
-            />
-          </li>
-        )}
+        {isMounted &&
+          !config?.FRIGADE_DISABLED &&
+          flow?.isCompleted === false && (
+            <li>
+              <Frigade.ProgressBadge
+                flowId={ONBOARDING_FLOW_ID}
+                onClick={() => setIsOnboardingOpen(true)}
+              />
+              <Onboarding
+                isOpen={isOnboardingOpen}
+                toggle={() => setIsOnboardingOpen(false)}
+                variables={{
+                  name: session?.user?.name ?? session?.user?.email,
+                }}
+              />
+            </li>
+          )}
         <li>
           <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
             Providers

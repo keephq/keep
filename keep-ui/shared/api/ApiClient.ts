@@ -83,7 +83,7 @@ export class ApiClient {
           );
         }
       }
-      throw new Error("An error occurred while fetching the data.");
+      throw new Error("An error occurred while fetching the data");
     }
 
     if (response.headers.get("content-length") === "0") {
