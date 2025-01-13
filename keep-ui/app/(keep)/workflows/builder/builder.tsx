@@ -5,7 +5,7 @@ import {
   parseWorkflow,
   generateWorkflow,
   getToolboxConfiguration,
-  buildAlert,
+  getWorkflowFromDefinition,
   wrapDefinitionV2,
 } from "./utils";
 import {
@@ -13,7 +13,7 @@ import {
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
 import { globalValidatorV2, stepValidatorV2 } from "./builder-validators";
-import { Alert } from "./legacy-workflow.types";
+import { LegacyWorkflow } from "./legacy-workflow.types";
 import BuilderModalContent from "./builder-modal";
 import Loader from "./loader";
 import { stringify } from "yaml";
@@ -37,8 +37,8 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { showErrorToast, showSuccessToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
-import { revalidatePath } from "next/cache";
 import Modal from "@/components/ui/Modal";
+import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -87,11 +87,13 @@ function Builder({
   const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<
     WorkflowExecutionDetail | WorkflowExecutionFailure | null
   >(null);
-  const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
+  const [legacyWorkflow, setLegacyWorkflow] = useState<LegacyWorkflow | null>(
+    null
+  );
   const router = useRouter();
 
   const searchParams = useSearchParams();
-  const { errorNode, setErrorNode, canDeploy, synced } = useStore();
+  const { errorNode, setErrorNode, canDeploy, synced, reset } = useStore();
 
   const setStepValidationErrorV2 = (step: V2Step, error: string | null) => {
     setStepValidationError(error);
@@ -113,7 +115,7 @@ function Builder({
   };
 
   const updateWorkflow = useCallback(() => {
-    const body = stringify(buildAlert(definition.value));
+    const body = stringify(getWorkflowFromDefinition(definition.value));
     api
       .request(`/workflows/${workflowId}`, {
         method: "PUT",
@@ -130,7 +132,7 @@ function Builder({
 
   const testRunWorkflow = () => {
     setTestRunModalOpen(true);
-    const body = stringify(buildAlert(definition.value));
+    const body = stringify(getWorkflowFromDefinition(definition.value));
     api
       .request(`/workflows/test`, {
         method: "POST",
@@ -150,25 +152,21 @@ function Builder({
       });
   };
 
-  const addWorkflow = useCallback(() => {
-    const body = stringify(buildAlert(definition.value));
-    api
-      .request(`/workflows/json`, {
-        method: "POST",
-        body,
-        headers: { "Content-Type": "text/html" },
-      })
-      .then(({ workflow_id }) => {
-        // This is important because it makes sure we will re-fetch the workflow if we get to this page again.
-        // router.push for instance, optimizes re-render of same pages and we don't want that here because of "cache".
-        showSuccessToast("Workflow added successfully");
-        revalidatePath("/workflows/builder");
-        router.push(`/workflows/${workflow_id}`);
-      })
-      .catch((error) => {
-        alert(`Error: ${error}`);
-      });
-  }, [api, definition.value, router]);
+  const { createWorkflow } = useWorkflowActions();
+
+  const addWorkflow = useCallback(async () => {
+    try {
+      const response = await createWorkflow(definition.value);
+      // reset the store to clear the nodes and edges
+      if (response?.workflow_id) {
+        reset();
+        router.push(`/workflows/${response.workflow_id}`);
+      }
+    } catch (error) {
+      // error is handled in the useWorkflowActions hook4
+      console.error(error);
+    }
+  }, [createWorkflow, definition.value, reset, router]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -215,7 +213,7 @@ function Builder({
 
   useEffect(() => {
     if (triggerGenerate) {
-      setCompiledAlert(buildAlert(definition.value));
+      setLegacyWorkflow(getWorkflowFromDefinition(definition.value));
       if (!generateModalIsOpen) setGenerateModalIsOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -344,7 +342,7 @@ function Builder({
       >
         <BuilderModalContent
           closeModal={closeGenerateModal}
-          compiledAlert={compiledAlert}
+          compiledAlert={legacyWorkflow}
         />
       </Modal>
       <Modal

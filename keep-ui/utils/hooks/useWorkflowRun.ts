@@ -6,6 +6,7 @@ import { Provider } from "@/app/(keep)/providers/providers";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
+import { isProviderInstalled } from "@/shared/lib/provider-utils";
 interface ProvidersData {
   providers: { [key: string]: { providers: Provider[] } };
 }
@@ -30,14 +31,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
 
   const notInstalledProviders = workflow?.providers
     ?.filter(
-      (workflowProvider) =>
-        !workflowProvider.installed &&
-        Object.values(providers || {}).some(
-          (provider) =>
-            provider.type === workflowProvider.type &&
-            provider.config &&
-            Object.keys(provider.config).length > 0
-        )
+      (workflowProvider) => !isProviderInstalled(workflowProvider, providers)
     )
     .map((provider) => provider.type);
 

@@ -25,8 +25,10 @@ import { ErrorComponent, TabNavigationLink, YAMLCodeblock } from "@/shared/ui";
 
 export default function WorkflowDetailPage({
   params,
+  initialData,
 }: {
   params: { workflow_id: string };
+  initialData?: Workflow;
 }) {
   const api = useApi();
   const [tabIndex, setTabIndex] = useState(0);
@@ -35,9 +37,12 @@ export default function WorkflowDetailPage({
     data: workflow,
     isLoading,
     error,
-  } = useSWR<Partial<Workflow>>(
+  } = useSWR<Workflow>(
     api.isReady() ? `/workflows/${params.workflow_id}` : null,
-    (url: string) => api.get(url)
+    (url: string) => api.get(url),
+    {
+      fallbackData: initialData,
+    }
   );
 
   if (error) {

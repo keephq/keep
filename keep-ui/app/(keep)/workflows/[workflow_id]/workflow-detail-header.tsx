@@ -9,9 +9,11 @@ import { useWorkflowRun } from "@/utils/hooks/useWorkflowRun";
 import AlertTriggerModal from "../workflow-run-with-alert-modal";
 
 export default function WorkflowDetailHeader({
-  workflow_id,
+  workflowId: workflow_id,
+  initialData,
 }: {
-  workflow_id: string;
+  workflowId: string;
+  initialData?: Workflow;
 }) {
   const api = useApi();
   const {
@@ -20,9 +22,9 @@ export default function WorkflowDetailHeader({
     error,
   } = useSWR<Partial<Workflow>>(
     api.isReady() ? `/workflows/${workflow_id}` : null,
-    (url: string) => api.get(url)
+    (url: string) => api.get(url),
+    { fallbackData: initialData }
   );
-
 
   const {
     isRunning,

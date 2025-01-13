@@ -266,7 +266,7 @@ function addNodeBetween(
   }
 }
 
-const useStore = create<FlowState>((set, get) => ({
+const defaultState: FlowState = {
   nodes: [],
   edges: [],
   selectedNode: null,
@@ -282,6 +282,10 @@ const useStore = create<FlowState>((set, get) => ({
   errorNode: null,
   synced: true,
   canDeploy: false,
+};
+
+const useStore = create<FlowState>((set, get) => ({
+  ...defaultState,
   setCanDeploy: (deploy) => set({ canDeploy: deploy }),
   setSynced: (sync) => set({ synced: sync }),
   setErrorNode: (id) => set({ errorNode: id }),
@@ -553,6 +557,7 @@ const useStore = create<FlowState>((set, get) => ({
     };
     set({ nodes: [...get().nodes, newNode] });
   },
+  reset: () => set(defaultState),
 }));
 
 export default useStore;

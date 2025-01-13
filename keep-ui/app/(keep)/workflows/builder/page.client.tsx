@@ -82,7 +82,7 @@ export function WorkflowBuilderPageClient({
     <main className="mx-auto max-w-full h-[98%]">
       <div className="flex justify-between">
         <div className="flex flex-col">
-          <Title>{workflow ? "Edit" : "New"} Workflow</Title>
+          <Title>{workflowId ? "Edit" : "New"} Workflow</Title>
         </div>
         <div className="flex gap-2">
           {!workflow && (

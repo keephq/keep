@@ -1,3 +1,8 @@
+import { notFound } from "next/navigation";
+import { ApiClient } from "./ApiClient";
+import { KeepApiError } from "./KeepApiError";
+import { createServerApiClient } from "./server";
+
 export type Provider = {
   id: string;
   type: string; // This corresponds to the name of the icon, e.g., "slack", "github", etc.
@@ -85,3 +90,40 @@ export type MockWorkflow = {
   steps: MockStep[];
   actions: MockAction[];
 };
+
+export type WorkflowTemplate = {
+  name: string;
+  workflow: MockWorkflow;
+  workflow_raw: string;
+  workflow_raw_id: string;
+};
+
+export async function getWorkflow(api: ApiClient, id: string) {
+  return await api.get<Workflow>(`/workflows/${id}`);
+}
+
+export async function getWorkflowWithErrorHandling(
+  id: string,
+  { redirect = true }: { redirect?: boolean } = {}
+  // @ts-ignore ignoring since not found will be handled by nextjs
+): Promise<Workflow> {
+  try {
+    const api = await createServerApiClient();
+    return await getWorkflow(api, id);
+  } catch (error) {
+    if (error instanceof KeepApiError && error.statusCode === 404 && redirect) {
+      notFound();
+    } else {
+      throw error;
+    }
+  }
+}
+
+export async function getWorkflowWithRedirectSafe(id: string) {
+  try {
+    return await getWorkflowWithErrorHandling(id, { redirect: false });
+  } catch (error) {
+    console.error(error);
+    return undefined;
+  }
+}
