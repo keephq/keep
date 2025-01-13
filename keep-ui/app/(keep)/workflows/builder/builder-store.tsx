@@ -131,7 +131,27 @@ export type FlowState = {
   setSynced: (synced: boolean) => void;
   canDeploy: boolean;
   setCanDeploy: (deploy: boolean) => void;
+  reset: () => void;
 };
+
+export type FlowStateValues = Pick<
+  FlowState,
+  | "nodes"
+  | "edges"
+  | "selectedNode"
+  | "v2Properties"
+  | "openGlobalEditor"
+  | "stepEditorOpenForNode"
+  | "toolboxConfiguration"
+  | "isLayouted"
+  | "selectedEdge"
+  | "changes"
+  | "firstInitilisationDone"
+  | "lastSavedChanges"
+  | "errorNode"
+  | "synced"
+  | "canDeploy"
+>;
 
 export type StoreGet = () => FlowState;
 export type StoreSet = (
@@ -266,7 +286,7 @@ function addNodeBetween(
   }
 }
 
-const defaultState: FlowState = {
+const defaultState: FlowStateValues = {
   nodes: [],
   edges: [],
   selectedNode: null,

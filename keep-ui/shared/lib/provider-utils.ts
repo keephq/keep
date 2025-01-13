@@ -1,12 +1,8 @@
 import { Provider } from "@/app/(keep)/providers/providers";
 
-interface ProvidersData {
-  providers: { [key: string]: { providers: Provider[] } };
-}
-
 export function isProviderInstalled(
-  provider: Provider,
-  providers: ProvidersData | Provider[]
+  provider: Pick<Provider, "type" | "installed">,
+  providers: Provider[]
 ) {
   return (
     provider.installed ||

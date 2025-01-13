@@ -2,14 +2,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useProviders } from "./useProviders";
 import { Filter, Workflow } from "@/shared/api/workflows";
-import { Provider } from "@/app/(keep)/providers/providers";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { isProviderInstalled } from "@/shared/lib/provider-utils";
-interface ProvidersData {
-  providers: { [key: string]: { providers: Provider[] } };
-}
 
 export const useWorkflowRun = (workflow: Workflow) => {
   const api = useApi();
@@ -21,9 +17,8 @@ export const useWorkflowRun = (workflow: Workflow) => {
   const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
   const revalidateMultiple = useRevalidateMultiple();
 
-  const { data: providersData = { providers: {} } as ProvidersData } =
-    useProviders();
-  const providers = providersData.providers;
+  const { data: providersData } = useProviders();
+  const providers = providersData?.providers ?? [];
 
   if (!workflow) {
     return {};
