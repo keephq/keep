@@ -28,6 +28,25 @@ If you only want to give read scope to your key-secret pair the permission polic
 If you only want to give read & write scope to your key-secret pair the permission policy: AmazonSQSFullAccess
 Both are the policies are prebuilt in AWS.
 
+## Inputs for AmazonSQS Action
+
+- `message`: str: Body/Message for the notification
+- `group_id`: str | None: Mandatory only if Queue is of type FIFO, ignored incase of a normal Queue.
+- `dedup_id`: str | None: Mandatory only if Queue is of type FIFO, ignored incase of a normal Queue.
+- **kwargs: dict | None: You can pass additional key-value pairs, that will be sent as MessageAttributes in the notification.
+
+## Output for AmazonSQS Action
+For more detail, visit [sqs-documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/send_message.html#).
+   ```json
+   {
+        'MD5OfMessageBody': 'string',
+        'MD5OfMessageAttributes': 'string',
+        'MD5OfMessageSystemAttributes': 'string',
+        'MessageId': 'string',
+        'SequenceNumber': 'string'
+   }
+   ```
+
 <Note>
   - When using the AmazonSQS action, if your queue is fifo, then it is **mandatory** to pass a dedup_id & group_id.
   - All the extra fields present in the MessageAttribute is stored in alert.label as a key-value pair dictionary.
