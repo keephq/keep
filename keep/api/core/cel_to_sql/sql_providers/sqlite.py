@@ -2,9 +2,6 @@ from typing import List
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 class CelToSqliteProvider(BaseCelToSqlProvider):
-    def __init__(self, known_fields_mapping: dict):
-        super().__init__(known_fields_mapping)
-
     def _json_merge(self, columns: List[str]) -> str:
         return f"json_patch({', '.join(columns)})"
 

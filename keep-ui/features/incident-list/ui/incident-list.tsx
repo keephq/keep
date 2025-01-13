@@ -14,13 +14,10 @@ import Modal from "@/components/ui/Modal";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
 import PredictedIncidentsTable from "@/app/(keep)/incidents/predicted-incidents-table";
 import { SortingState } from "@tanstack/react-table";
-import { IncidentTableFilters } from "./incident-table-filters";
-import { useIncidentFilterContext } from "./incident-table-filters-context";
 import { IncidentListError } from "@/features/incident-list/ui/incident-list-error";
 import { FacetsPanel } from "@/features/filter/facets-panel";
-import { CreateFacetDto, FacetDto } from "@/features/filter/models";
 import { useFacetActions, useFacetOptions, useFacets } from "@/features/filter/hooks";
-import { InitialFacetsData } from "@/features/filter";
+import { InitialFacetsData } from "@/features/filter/api";
 
 interface Pagination {
   limit: number;
@@ -54,24 +51,6 @@ export function IncidentList({
   const [filterCel, setFilterCel] = useState<string>('');
 
   const {
-    statuses,
-    severities,
-    assignees,
-    services,
-    sources,
-    areFiltersApplied,
-  } = useIncidentFilterContext();
-
-  const filters: Filters = {
-    status: statuses,
-    severity: severities,
-    assignees: assignees,
-    affected_services: services,
-    sources: sources,
-  };
-
-
-  const {
     data: incidents,
     isLoading,
     mutate: mutateIncidents,
@@ -88,6 +67,7 @@ export function IncidentList({
       fallbackData: initialData,
     }
   );
+
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
     useIncidents(false);
   usePollIncidents(mutateIncidents);
@@ -120,7 +100,7 @@ export function IncidentList({
     setFacetIdsLoaded([facetId])
   }
 
-  const facets = useFacets(
+  const { data: facetsData, isLoading: facetsDataLoading } = useFacets(
     "incidents",
     {
       revalidateOnFocus: false,
@@ -129,9 +109,9 @@ export function IncidentList({
     }
   )
 
-  const facetOptions = useFacetOptions(
+  const { data: facetOptionsData, isLoading: facetsOptionsDataLoading } = useFacetOptions(
     "incidents",
-    facetIdsLoaded,
+    facetIdsLoaded || Object.keys(initialFacetsData?.facetOptions || {}),
     "",
     {
       revalidateOnFocus: false,
@@ -145,12 +125,7 @@ export function IncidentList({
       return <IncidentListError incidentError={incidentsError} />;
     }
 
-    if (isLoading) {
-      // TODO: only show this on the initial load
-      return <Loading />;
-    }
-
-    if (incidents && (incidents.items.length > 0 || areFiltersApplied)) {
+    if (incidents && (incidents.items.length > 0)) {
       return (
         <IncidentsTable
           incidents={incidents}
@@ -207,21 +182,28 @@ export function IncidentList({
               </Button>
             </div>
           </div>
-          <div className="flex flex-row gap-5">
-            {/* Filters are placed here so the table could be in loading/not-found state without affecting the controls */}
-            <FacetsPanel
-              panelId={"incidents"}
-              facets={facets.data as any}
-              facetOptions={facetOptions.data as any}
-              className="mt-14"
-              onCelChange={(cel) => setFilterCel(cel)}
-              onAddFacet={(createFacet) => facetActions.addFacet(createFacet)}
-              onLoadFacetOptions={loadOptionsForFacet}
-              onDeleteFacet={(facetId) => facetActions.deleteFacet(facetId)}
-            />
-            <div className="flex flex-col gap-5 flex-1">
-              {renderIncidents()}
-            </div>
+          <div>
+            {isLoading && facetsDataLoading && facetsOptionsDataLoading && (
+              <Loading />
+            )}
+            {!(isLoading && facetsDataLoading && facetsOptionsDataLoading) && (
+              <div className="flex flex-row gap-5">
+                <FacetsPanel
+                  panelId={"incidents"}
+                  facets={facetsData as any}
+                  facetOptions={facetOptionsData as any}
+                  className="mt-14"
+                  onCelChange={(cel) => setFilterCel(cel)}
+                  onAddFacet={(createFacet) => facetActions.addFacet(createFacet)}
+                  onLoadFacetOptions={loadOptionsForFacet}
+                  onDeleteFacet={(facetId) => facetActions.deleteFacet(facetId)}
+                />
+                <div className="flex flex-col gap-5 flex-1">
+                  {renderIncidents()}
+                </div>
+              </div>
+            )}
+            
           </div>
         </div>
       </div>

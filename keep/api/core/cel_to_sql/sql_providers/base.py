@@ -15,6 +15,7 @@ from datetime import datetime
 import re
 
 from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, PropertiesMapper
+from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
 
 class BuiltQueryMetadata:
     def __init__(self, where: str, select_fields: str = None, select_json: str = None):
@@ -23,11 +24,9 @@ class BuiltQueryMetadata:
         self.select_json = select_json
 
 class BaseCelToSqlProvider:
-    def __init__(self, known_fields_mapping: dict):
+    def __init__(self, properties_metadata: PropertiesMetadata):
         super().__init__()
-        self.known_fields_mapping = known_fields_mapping
-        self.json_sources = {}
-        self.properties_mapper = PropertiesMapper(known_fields_mapping)
+        self.properties_mapper = PropertiesMapper(properties_metadata)
 
     def convert_to_sql_str(self, cel: str) -> BuiltQueryMetadata:
         """

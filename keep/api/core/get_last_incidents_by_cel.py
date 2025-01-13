@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import Select, and_, func, literal, literal_column, select
 from sqlmodel import Session, text
 
+from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider_for_dialect,
 )
@@ -35,12 +36,7 @@ from keep.api.models.db.facet import Facet, FacetType
 # from keep.api.models.db.facet import Facet, FacetEntityType
 
 
-known_fields = {
-    "provider_type": {  # redirects provider_type from cel to alert.provider_type in SQL
-        "type": "string",
-        "field": "incident_alert_provider_type",
-        "mapping_type": "one_to_one",
-    },
+incident_fields = {
     "user_generated_name": {
         "type": "string",
         "field": "user_generated_name",
@@ -128,18 +124,24 @@ known_fields = {
         "mapping_type": "one_to_one",
     },
     "merged_by": {"type": "string", "field": "merged_by", "mapping_type": "one_to_one"},
-    "*": {  # redirects all other fields from cel to merged_json(event + enrichments) in SQL
+    "alert.provider_type": {  # redirects provider_type from cel to alert.provider_type in SQL
+        "type": "string",
+        "field": "incident_alert_provider_type",
+        "mapping_type": "one_to_one",
+    },
+    "alert.*": {  # redirects all other fields from cel to merged_json(event + enrichments) in SQL
         "type": "json",
-        "take_from": ["incident_alerts.event", "incident_alerts.enrichments"],
+        "take_from": ["alert_event", "alert_enrichments"],
     },
 }
+properties_metadata = PropertiesMetadata(incident_fields)
 
 incidents_alerts_cte = """
                     WITH incident_alerts AS (
                         SELECT 
                             lastalerttoincident.incident_id as incident_id,
-                            alertenrichment.enrichments AS enrichments,
-                            alert.event AS event,
+                            alertenrichment.enrichments AS alert_enrichments,
+                            alert.event AS alert_event,
                             alert.provider_type AS incident_alert_provider_type
                         FROM 
                             lastalerttoincident
@@ -173,9 +175,8 @@ def __build_last_incidents_query(
     cel: str = None,
     allowed_incident_ids: Optional[List[str]] = None,
 ) -> str:
-    instance = get_cel_to_sql_provider_for_dialect(
-        dialect, known_fields_mapping=known_fields
-    )
+    provider_type = get_cel_to_sql_provider_for_dialect(dialect)
+    instance = provider_type(properties_metadata)
     query_metadata = instance.convert_to_sql_str(cel)
 
     where_filter = (
@@ -349,7 +350,7 @@ def build_facets_data_query(
         {
             "facet_name": facet.property_path,
             "facet_id": facet.id,
-            "metadata": known_fields.get(facet.property_path) or known_fields.get("*"),
+            "metadata": properties_metadata.get_property_metadata(facet.property_path),
         }
         for facet in facets_to_load
     ]
@@ -387,8 +388,8 @@ def build_facets_data_query(
         select(
             Incident,
             Incident.id.label("entity_id"),
-            incident_alerts_cte.c.event,
-            incident_alerts_cte.c.enrichments,
+            incident_alerts_cte.c.event.label("alert_event"),
+            incident_alerts_cte.c.enrichments.label("alert_enrichments"),
         )
         .outerjoin(
             incident_alerts_cte, Incident.id == incident_alerts_cte.c.incident_id
@@ -412,9 +413,10 @@ def build_facets_data_query(
         group_by_exp = None
 
         if metadata.get("type") == "json":
+            take_from = metadata.get("take_from")
             group_by_exp = func.json_unquote(
                 func.json_extract(
-                    literal_column("all_incidents.event"), f"$.{facet_name}"
+                    literal_column(take_from[1]), f"$.{facet_name}" # TODO: take_from[1] is not correct, it must be dynamic
                 )
             )
         else:

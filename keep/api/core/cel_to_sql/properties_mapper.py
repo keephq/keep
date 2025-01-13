@@ -11,6 +11,8 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     UnaryNode,
 )
 
+from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
+
 class JsonPropertyAccessNode(PropertyAccessNode):
     def __init__(self, json_property_name: str, property_to_extract: str, method_access_node: MethodAccessNode):
         super().__init__(f"JSON({json_property_name}).{property_to_extract}", method_access_node)
@@ -19,8 +21,8 @@ class JsonPropertyAccessNode(PropertyAccessNode):
 
 
 class PropertiesMapper:
-    def __init__(self, known_fields_mapping: dict):
-        self.known_fields_mapping = known_fields_mapping
+    def __init__(self, properties_metadata: PropertiesMetadata):
+        self.properties_metadata = properties_metadata
 
     def map_props_in_ast(self, abstract_node: Node) -> Node:
         if isinstance(abstract_node, ParenthesisNode):
@@ -49,38 +51,12 @@ class PropertiesMapper:
             f"{type(abstract_node).__name__} node type is not supported yet"
         )
 
-    def __get_prop_mapping(self, prop_path: str) -> list[str]:
-        if prop_path in self.known_fields_mapping:
-            return [self.known_fields_mapping[prop_path].get("field")]
-
-        field_mapping = None
-
-        if prop_path in self.known_fields_mapping:
-            field_mapping = self.known_fields_mapping.get(prop_path)
-
-        if "*" in self.known_fields_mapping:
-            field_mapping = self.known_fields_mapping.get("*")
-
-        if field_mapping:
-
-            if "take_from" in field_mapping:
-                result = []
-                for take_from in field_mapping.get("take_from"):
-                    if field_mapping.get("type") == "json":
-                        result.append(f'JSON({take_from}).{prop_path}')
-                return result
-
-            if "field" in field_mapping:
-                return [field_mapping.get("field")]
-
-        return [prop_path]
-
     def __visit_comparison_node(self, comparison_node: ComparisonNode) -> Node:
         if not isinstance(comparison_node.first_operand, PropertyAccessNode):
             return comparison_node
 
         result: str = None
-        for mapping in self.__get_prop_mapping(
+        for mapping in self.properties_metadata.get_property_mapping(
             comparison_node.first_operand.get_property_path()
         ):
             property_access_node = self._visit_property_access_node(PropertyAccessNode(mapping, None))
@@ -117,7 +93,7 @@ class PropertiesMapper:
             and member_access_node.is_function_call()
         ):
             result = None
-            for mapping in self.__get_prop_mapping(
+            for mapping in self.properties_metadata.get_property_mapping(
                 member_access_node.get_property_path()
             ):
                 method_access_node = member_access_node.get_method_access_node().copy()
