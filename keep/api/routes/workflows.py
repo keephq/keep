@@ -307,6 +307,24 @@ async def run_workflow_from_definition(
 
 
 async def __get_workflow_raw_data(request: Request, file: UploadFile | None) -> dict:
+    """
+    Parses workflow data from either an uploaded file or request body, supporting YAML input.
+    
+    Parameters:
+        request (Request): The HTTP request object containing potential raw YAML data
+        file (UploadFile | None): Optional uploaded file containing workflow definition
+    
+    Returns:
+        dict: Parsed workflow data after extracting from YAML and handling backward compatibility
+    
+    Raises:
+        HTTPException: 400 error if YAML parsing fails or input is invalid
+    
+    Notes:
+        - Supports workflow definitions from file uploads or direct request body
+        - Handles legacy workflow formats by extracting data from 'alert' or 'workflow' keys
+        - Uses safe YAML loading to prevent potential security risks
+    """
     try:
         # we support both File upload (from frontend) or raw yaml (e.g. curl)
         if file:

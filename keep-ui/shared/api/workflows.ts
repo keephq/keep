@@ -98,10 +98,41 @@ export type WorkflowTemplate = {
   workflow_raw_id: string;
 };
 
+/**
+ * Retrieves a workflow by its unique identifier.
+ *
+ * @param api - The API client used to make the request
+ * @param id - The unique identifier of the workflow to retrieve
+ * @returns A promise resolving to the Workflow object
+ *
+ * @remarks
+ * This function makes a GET request to fetch a specific workflow from the server.
+ */
 export async function getWorkflow(api: ApiClient, id: string) {
   return await api.get<Workflow>(`/workflows/${id}`);
 }
 
+/**
+ * Retrieves a workflow by ID with optional error handling and redirection.
+ *
+ * @remarks
+ * This function attempts to fetch a workflow using the server-side API client. If the workflow is not found and redirection is enabled, it triggers a 404 not found response.
+ *
+ * @param id - The unique identifier of the workflow to retrieve
+ * @param options - Optional configuration for error handling
+ * @param options.redirect - Whether to redirect to a not found page on 404 errors (default: true)
+ * @returns A Promise resolving to the Workflow object
+ * @throws {KeepApiError} If an API error occurs and redirection is disabled
+ *
+ * @example
+ * ```typescript
+ * // Retrieve workflow with default redirection
+ * const workflow = await getWorkflowWithErrorHandling('workflow-123');
+ *
+ * // Retrieve workflow without automatic redirection
+ * const workflow = await getWorkflowWithErrorHandling('workflow-123', { redirect: false });
+ * ```
+ */
 export async function getWorkflowWithErrorHandling(
   id: string,
   { redirect = true }: { redirect?: boolean } = {}
@@ -119,6 +150,17 @@ export async function getWorkflowWithErrorHandling(
   }
 }
 
+/**
+ * Safely retrieves a workflow by ID with error suppression.
+ * 
+ * @remarks
+ * This method attempts to fetch a workflow without triggering redirects and silently handles any errors.
+ * 
+ * @param id - The unique identifier of the workflow to retrieve
+ * @returns The workflow if successfully retrieved, otherwise undefined
+ * 
+ * @throws {Error} Logs any encountered errors to the console
+ */
 export async function getWorkflowWithRedirectSafe(id: string) {
   try {
     return await getWorkflowWithErrorHandling(id, { redirect: false });

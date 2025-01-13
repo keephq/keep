@@ -20,6 +20,22 @@ type CreateOrUpdateWorkflowResponse = {
   revision: number;
 };
 
+/**
+ * Provides actions for creating and deleting workflows.
+ * 
+ * @returns An object containing methods to create and delete workflows
+ * 
+ * @remarks
+ * This hook encapsulates API interactions for workflow management, including:
+ * - Creating a new workflow from a definition
+ * - Deleting an existing workflow
+ * - Automatically refreshing the workflows list after successful operations
+ * 
+ * @example
+ * const { createWorkflow, deleteWorkflow } = useWorkflowActions();
+ * await createWorkflow(myWorkflowDefinition);
+ * await deleteWorkflow('workflow-123');
+ */
 export function useWorkflowActions(): UseWorkflowActionsReturn {
   const api = useApi();
   const revalidateMultiple = useRevalidateMultiple();
