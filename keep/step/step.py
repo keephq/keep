@@ -65,7 +65,13 @@ class Step:
             return did_action_run
         except Exception as e:
             self.logger.error(
-                "Failed to run step %s with error %s", self.step_id, e, exc_info=True
+                "Failed to run step %s with error %s",
+                self.step_id,
+                e,
+                extra={
+                    "step_id": self.step_id,
+                },
+                exc_info=True,
             )
             raise ActionError(e)
 
@@ -117,7 +123,12 @@ class Step:
             try:
                 did_action_run = self._run_single()
             except Exception as e:
-                self.logger.error(f"Failed to run action with error {e}")
+                self.logger.error(
+                    f"Failed to run action with error {e}",
+                    extra={
+                        "step_id": self.step_id,
+                    },
+                )
                 continue
             # If at least one item triggered an action, return True
             # TODO - do it per item
@@ -157,6 +168,9 @@ class Step:
                     "Failed to apply condition %s with error %s",
                     condition.condition_name,
                     e,
+                    extra={
+                        "step_id": self.step_id,
+                    },
                 )
                 raise
             self.context_manager.set_condition_results(
@@ -202,6 +216,7 @@ class Step:
                     extra={
                         "condition": if_conf,
                         "rendered": if_met,
+                        "step_id": self.step_id,
                     },
                 )
                 raise Exception(
@@ -218,6 +233,7 @@ class Step:
                 extra={
                     "condition": if_conf,
                     "rendered": if_met,
+                    "step_id": self.step_id,
                 },
             )
             return
@@ -228,22 +244,44 @@ class Step:
                 extra={
                     "condition": if_conf,
                     "rendered": if_met,
+                    "step_id": self.step_id,
                 },
             )
         else:
             self.logger.info(
                 "Action %s evaluated to run! Reason: no condition, hence true.",
                 self.config.get("name"),
+                extra={
+                    "step_id": self.step_id,
+                },
             )
 
         # Third, check throttling
         # Now check if throttling is enabled
-        self.logger.info("Checking throttling for action %s", self.config.get("name"))
+        self.logger.info(
+            "Checking throttling for action %s",
+            self.config.get("name"),
+            extra={
+                "step_id": self.step_id,
+            },
+        )
         throttled = self._check_throttling(self.config.get("name"))
         if throttled:
-            self.logger.info("Action %s is throttled", self.config.get("name"))
+            self.logger.info(
+                "Action %s is throttled",
+                self.config.get("name"),
+                extra={
+                    "step_id": self.step_id,
+                },
+            )
             return
-        self.logger.info("Action %s is not throttled", self.config.get("name"))
+        self.logger.info(
+            "Action %s is not throttled",
+            self.config.get("name"),
+            extra={
+                "step_id": self.step_id,
+            },
+        )
 
         # Last, run the action
         try:
@@ -253,7 +291,10 @@ class Step:
 
             for curr_retry_count in range(self.__retry_count + 1):
                 self.logger.info(
-                    f"Running {self.step_id} {self.step_type}, current retry: {curr_retry_count}"
+                    f"Running {self.step_id} {self.step_type}, current retry: {curr_retry_count}",
+                    extra={
+                        "step_id": self.step_id,
+                    },
                 )
                 try:
                     if self.step_type == StepType.STEP:
@@ -277,6 +318,9 @@ class Step:
                             "Retrying running %s step after %s second(s)...",
                             self.step_id,
                             self.__retry_interval,
+                            extra={
+                                "step_id": self.step_id,
+                            },
                         )
 
                         time.sleep(self.__retry_interval)

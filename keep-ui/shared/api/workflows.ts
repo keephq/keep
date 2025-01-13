@@ -16,12 +16,10 @@ export type Trigger = {
   value?: string;
 };
 
-export type WorkflowExecution = {
-  id: string;
+export type LastWorkflowExecution = {
+  execution_time: number;
   status: string;
   started: string;
-  execution_time: number;
-  workflow: Workflow;
 };
 
 export type Workflow = {
@@ -40,10 +38,7 @@ export type Workflow = {
   workflow_raw: string;
   workflow_raw_id: string;
   last_execution_started?: string;
-  last_executions?: Pick<
-    WorkflowExecution,
-    "execution_time" | "status" | "started"
-  >[];
+  last_executions?: LastWorkflowExecution[];
   provisioned?: boolean;
 };
 
