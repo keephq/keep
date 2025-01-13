@@ -1,4 +1,4 @@
-import { Workflow } from "@/app/(keep)/workflows/models";
+import { Workflow } from "@/shared/api/workflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";

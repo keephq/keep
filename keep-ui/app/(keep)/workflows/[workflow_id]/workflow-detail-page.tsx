@@ -15,7 +15,7 @@ import {
   WrenchIcon,
 } from "@heroicons/react/24/outline";
 import Loading from "@/app/(keep)/loading";
-import { Workflow } from "../models";
+import { Workflow } from "@/shared/api/workflows";
 import useSWR from "swr";
 import { WorkflowBuilderPageClient } from "../builder/page.client";
 import WorkflowOverview from "./workflow-overview";

@@ -1,12 +1,11 @@
 "use client";
 
-import { Workflow } from "./models";
 import Image from "next/image";
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
 import Loading from "@/app/(keep)/loading";
-import { Trigger, Provider } from "./models";
+import { Trigger, Provider, Workflow } from "@/shared/api/workflows";
 import {
   Button,
   Text,
@@ -24,7 +23,6 @@ import ProviderForm from "@/app/(keep)/providers/provider-form";
 import SlidingPanel from "react-sliding-side-panel";
 import { useFetchProviders } from "@/app/(keep)/providers/page.client";
 import { Provider as FullProvider } from "@/app/(keep)/providers/providers";
-import "./workflow-tile.css";
 import {
   CheckCircleIcon,
   CursorArrowRaysIcon,
@@ -36,7 +34,6 @@ import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
 import WorkflowGraph from "./workflow-graph";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import Modal from "@/components/ui/Modal";
-import { FaHandPointer } from "react-icons/fa";
 import {
   MdOutlineKeyboardArrowRight,
   MdOutlineKeyboardArrowLeft,
@@ -44,6 +41,7 @@ import {
 import { HiBellAlert } from "react-icons/hi2";
 import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import "./workflow-tile.css";
 
 function WorkflowMenuSection({
   onDelete,
@@ -523,7 +521,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   };
 
   return (
-    <div className="mt-2.5">
+    <div>
       {isRunning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <Loading />
