@@ -152,10 +152,3 @@ workflow:
 If there is no alert/incident present in the trigger (for example interval trigger or manual call in workflow page), the enrichment rule would not have an alert/incident to apply to. The enrichment process typically requires an alert/incident to be present to apply the specified enrichments. Without an alert/incident, the enrichment rule would not execute as intended.
 
 
-### Calling subprocesses
-Regarding calling subprocesses within a trigger interval and passing variables, workflow not provide this capability. However, workflow allows for manual triggers and interval-based triggers, which can be configured to perform actions like polling and enriching alerts. You might need to explore custom implementations or consult further documentation for subprocess handling and variable passing.
-
-Some possible workarounds for calling subprocesses within a trigger interval include:
-
-* Using a separate workflow for the subprocess and triggering it manually or through an API call.
-* Consulting with Keep's support team or community forums for more information on custom implementations and best practices.
