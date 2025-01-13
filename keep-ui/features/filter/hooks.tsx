@@ -31,17 +31,20 @@ export const useFacets = (
   };
 };
 
+type FacetOptionsDict ={
+  [facetId: string]: FacetOptionDto;
+};
+
 export const useFacetOptions = (
   entityName: string,
   facetOptionIdsToLoad: string[],
   cel: string = "",
   options: SWRConfiguration = {
     revalidateOnFocus: false,
+    fallbackData: {}
   }
 ) => {
-  const [facetOptions, setFacetOptions] = useState<{
-    [facetId: string]: FacetOptionDto;
-  }>({});
+  const [facetOptions, setFacetOptions] = useState<FacetOptionsDict>(options.fallbackData ?? {});
 
   const api = useApi();
 
@@ -76,6 +79,7 @@ export const useFacetOptions = (
         ...(swrValue.data as any),
       });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [swrValue.data]);
 
   return {

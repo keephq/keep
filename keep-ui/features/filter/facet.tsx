@@ -42,8 +42,8 @@ export const Facet: React.FC<FacetProps> = ({
   const presetName = pathname?.split("/").pop() || "default";
 
   // Store open/close state in localStorage with a unique key per preset and facet
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [isOpen, setIsOpen] = useState<boolean>(!!options?.length);
+  const [isLoaded, setIsLoaded] = useState<boolean>(!!options?.length);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
@@ -53,6 +53,8 @@ export const Facet: React.FC<FacetProps> = ({
     if (isLoading && options?.length) {
       setIsLoading(false)
     }
+  // disabling as the effect has to only run on options change"
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options]);
 
   // Store filter value in localStorage per preset and facet
