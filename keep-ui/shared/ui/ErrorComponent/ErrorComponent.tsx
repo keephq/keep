@@ -13,6 +13,7 @@ import { useSignOut } from "@/shared/lib/hooks/useSignOut";
 import { KeepApiHealthError } from "@/shared/api/KeepApiError";
 import { useHealth } from "@/shared/lib/hooks/useHealth";
 import { KeepLogoError } from "@/shared/ui/KeepLogoError";
+import { useConfig } from "utils/hooks/useConfig";
 
 export function ErrorComponent({
   error: originalError,
@@ -23,6 +24,10 @@ export function ErrorComponent({
 }) {
   const signOut = useSignOut();
   const { isHealthy } = useHealth();
+  const { data: config } = useConfig();
+
+  const contactUsUrl =
+    config?.KEEP_CONTACT_US_URL || "https://slack.keephq.dev/";
 
   useEffect(() => {
     Sentry.captureException(originalError);
@@ -71,9 +76,9 @@ export function ErrorComponent({
         <Button
           color="orange"
           variant="secondary"
-          onClick={() => window.open("https://slack.keephq.dev/", "_blank")}
+          onClick={() => window.open(contactUsUrl, "_blank")}
         >
-          Slack Us
+          {contactUsUrl.includes("slack") ? "Slack Us" : "Mail Us"}
         </Button>
       </div>
     </div>

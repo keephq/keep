@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { AlertsFoundBadge } from "./AlertsFoundBadge";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { useConfig } from "@/utils/hooks/useConfig";
 import { showErrorToast } from "@/shared/ui";
 import { CorrelationFormType } from "./types";
 import { TIMEFRAME_UNITS_TO_SECONDS } from "./timeframe-constants";
@@ -27,6 +28,7 @@ export const CorrelationSidebarBody = ({
   defaultValue,
 }: CorrelationSidebarBodyProps) => {
   const api = useApi();
+  const { data: config } = useConfig();
 
   const methods = useForm<CorrelationFormType>({
     defaultValues: defaultValue,
@@ -109,7 +111,9 @@ export const CorrelationSidebarBody = ({
             iconPosition="right"
             className="!text-orange-500 hover:!text-orange-700 ml-0.5"
             target="_blank"
-            href="https://docs.keephq.dev/overview/ruleengine"
+            href={`${
+              config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+            }/overview/correlation`}
           >
             docs
           </Link>
