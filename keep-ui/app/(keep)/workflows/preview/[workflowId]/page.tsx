@@ -22,9 +22,9 @@ export default function PageWithId({
         setWorkflowPreviewData(JSON.parse(data));
       }
     } else {
-      workflowPreviewData({});
+      setWorkflowPreviewData({});
     }
-  }, [params.workflowId]);
+  }, [key]);
 
   return (
     <div className="flex flex-col mb-4 h-full gap-6">
