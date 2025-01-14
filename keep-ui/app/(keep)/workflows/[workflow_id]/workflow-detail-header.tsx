@@ -58,10 +58,12 @@ export default function WorkflowDetailHeader({
     <div>
       <div className="flex justify-between items-end text-sm gap-2">
         <div>
-          <h1 className="text-2xl line-clamp-2 font-bold">{workflow.name}</h1>
+          <h1 className="text-2xl line-clamp-2 font-bold" data-testid="wf-name">
+            {workflow.name}
+          </h1>
           {workflow.description && (
             <Text className="line-clamp-5">
-              <span>{workflow.description}</span>
+              <span data-testid="wf-description">{workflow.description}</span>
             </Text>
           )}
         </div>
