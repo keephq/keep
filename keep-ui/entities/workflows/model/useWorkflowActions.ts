@@ -11,6 +11,10 @@ type UseWorkflowActionsReturn = {
   createWorkflow: (
     definition: Definition
   ) => Promise<CreateOrUpdateWorkflowResponse | null>;
+  updateWorkflow: (
+    workflowId: string,
+    definition: Definition
+  ) => Promise<CreateOrUpdateWorkflowResponse | null>;
   deleteWorkflow: (workflowId: string) => void;
 };
 
@@ -44,7 +48,31 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
         refreshWorkflows();
         return response;
       } catch (error) {
-        showErrorToast(error, "An error occurred while creating workflow");
+        showErrorToast(error, "Failed to create workflow");
+        return null;
+      }
+    },
+    [api, refreshWorkflows]
+  );
+
+  const updateWorkflow = useCallback(
+    async (workflowId: string, definition: Definition) => {
+      try {
+        const workflow = getWorkflowFromDefinition(definition);
+        const body = stringify(workflow);
+        const response = await api.request<CreateOrUpdateWorkflowResponse>(
+          `/workflows/${workflowId}`,
+          {
+            method: "PUT",
+            body,
+            headers: { "Content-Type": "text/html" },
+          }
+        );
+        showSuccessToast("Workflow updated successfully");
+        refreshWorkflows();
+        return response;
+      } catch (error) {
+        showErrorToast(error, "Failed to update workflow");
         return null;
       }
     },
@@ -75,6 +103,7 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
 
   return {
     createWorkflow,
+    updateWorkflow,
     deleteWorkflow,
   };
 }
