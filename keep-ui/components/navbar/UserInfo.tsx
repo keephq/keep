@@ -18,7 +18,6 @@ import { FaSlack } from "react-icons/fa";
 import { ThemeControl } from "@/shared/ui";
 import { HiOutlineDocumentText } from "react-icons/hi2";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
-import { c } from "@copilotkit/runtime/dist/index-10b1c870";
 
 const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 

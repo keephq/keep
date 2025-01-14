@@ -61,5 +61,6 @@ export function getConfig(): InternalConfig {
     NOISY_ALERTS_ENABLED: process.env.NOISY_ALERTS_ENABLED === "true",
     // The URL of the documentation site
     KEEP_DOCS_URL: process.env.KEEP_DOCS_URL || "https://docs.keephq.dev",
+    KEEP_CONTACT_US_URL: process.env.KEEP_CONTACT_US_URL || "https://slack.keephq.dev/",
   };
 }

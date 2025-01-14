@@ -28,4 +28,7 @@ export interface InternalConfig {
 
   // Keep Docs
   KEEP_DOCS_URL: string;
+
+  // Keep Contact Us
+  KEEP_CONTACT_US_URL: string;
 }
