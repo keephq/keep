@@ -6,24 +6,28 @@ import { useRouter } from "next/navigation";
 import { MdArrowForwardIos } from "react-icons/md";
 import { IoMdCard } from "react-icons/io";
 import Image from "next/image";
-
-const links = [
-  {
-    href: "https://docs.keephq.dev/platform/workflows",
-    label: "Learn more about Workflows",
-  },
-  {
-    href: "https://docs.keephq.dev/workflows/overview",
-    label: "How to create a basic notification flow",
-  },
-  {
-    href: "https://slack.keephq.dev",
-    label: "Get support on your Workflow",
-  },
-];
+import { useConfig } from "utils/hooks/useConfig";
 
 const DetailsSection = () => {
   const router = useRouter();
+  const { data: configData } = useConfig();
+  const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
+
+  const links = [
+    {
+      href: `${docsUrl}/platform/workflows`,
+      label: "Learn more about Workflows",
+    },
+    {
+      href: `${docsUrl}/workflows/overview`,
+      label: "How to create a basic notification flow",
+    },
+    {
+      href: "https://slack.keephq.dev",
+      label: "Get support on your Workflow",
+    },
+  ];
+
   return (
     <section className="flex flex-col items-center justify-center mb-10">
       <Image

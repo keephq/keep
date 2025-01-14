@@ -59,5 +59,7 @@ export function getConfig(): InternalConfig {
     OPEN_AI_API_KEY_SET: !!process.env.OPEN_AI_API_KEY || !!process.env.OPENAI_API_KEY,
     // NOISY ALERTS DISABLED BY DEFAULT TO SPARE SPACE ON THE TABLE
     NOISY_ALERTS_ENABLED: process.env.NOISY_ALERTS_ENABLED === "true",
+    // The URL of the documentation site
+    KEEP_DOCS_URL: process.env.KEEP_DOCS_URL || "https://docs.keephq.dev",
   };
 }
