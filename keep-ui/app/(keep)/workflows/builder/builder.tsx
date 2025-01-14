@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Callout, Card } from "@tremor/react";
 import { Provider } from "../../providers/providers";
 import {
@@ -7,6 +7,7 @@ import {
   getToolboxConfiguration,
   getWorkflowFromDefinition,
   wrapDefinitionV2,
+  DefinitionV2,
 } from "./utils";
 import {
   CheckCircleIcon,
@@ -15,7 +16,7 @@ import {
 import { globalValidatorV2, stepValidatorV2 } from "./builder-validators";
 import { LegacyWorkflow } from "./legacy-workflow.types";
 import BuilderModalContent from "./builder-modal";
-import Loader from "./loader";
+import { EmptyBuilderState } from "./empty-builder-state";
 import { stringify } from "yaml";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
@@ -39,16 +40,12 @@ import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 import Modal from "@/components/ui/Modal";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import debounce from "lodash.debounce";
+import { useWorkflowBuilderContext } from "./workflow-builder-context";
 
 interface Props {
   loadedAlertFile: string | null;
   fileName: string;
   providers: Provider[];
-  enableGenerate: (status: boolean) => void;
-  triggerGenerate: number;
-  triggerSave: number;
-  triggerRun: number;
   workflow?: string;
   workflowId?: string;
   installedProviders?: Provider[] | undefined | null;
@@ -65,10 +62,6 @@ function Builder({
   loadedAlertFile,
   fileName,
   providers,
-  enableGenerate,
-  triggerGenerate,
-  triggerSave,
-  triggerRun,
   workflow,
   workflowId,
   installedProviders,
@@ -91,29 +84,40 @@ function Builder({
   const [legacyWorkflow, setLegacyWorkflow] = useState<LegacyWorkflow | null>(
     null
   );
+  const { createWorkflow, updateWorkflow } = useWorkflowActions();
+  const {
+    enableGenerate,
+    triggerGenerate,
+    triggerSave,
+    triggerRun,
+    setIsSaving,
+  } = useWorkflowBuilderContext();
   const router = useRouter();
 
   const searchParams = useSearchParams();
-  const { errorNode, setErrorNode, canDeploy, synced, reset } = useStore();
+  const { errorNode, setErrorNode, synced, reset } = useStore();
 
-  const setStepValidationErrorV2 = (step: V2Step, error: string | null) => {
-    setStepValidationError(error);
-    if (error && step) {
-      return setErrorNode(step.id);
-    }
-    setErrorNode(null);
-  };
+  const setStepValidationErrorV2 = useCallback(
+    (step: V2Step, error: string | null) => {
+      setStepValidationError(error);
+      if (error && step) {
+        return setErrorNode(step.id);
+      }
+      setErrorNode(null);
+    },
+    [setStepValidationError, setErrorNode]
+  );
 
-  const setGlobalValidationErrorV2 = (
-    id: string | null,
-    error: string | null
-  ) => {
-    setGlobalValidationError(error);
-    if (error && id) {
-      return setErrorNode(id);
-    }
-    setErrorNode(null);
-  };
+  const setGlobalValidationErrorV2 = useCallback(
+    (id: string | null, error: string | null) => {
+      setGlobalValidationError(error);
+      if (error && id) {
+        return setErrorNode(id);
+      }
+      setErrorNode(null);
+    },
+    [setGlobalValidationError, setErrorNode]
+  );
 
   const testRunWorkflow = () => {
     setTestRunModalOpen(true);
@@ -136,35 +140,6 @@ function Builder({
         });
       });
   };
-
-  const { createWorkflow, updateWorkflow } = useWorkflowActions();
-
-  const addWorkflowDebounced = useMemo(
-    () =>
-      debounce(async () => {
-        try {
-          const response = await createWorkflow(definition.value);
-          // reset the store to clear the nodes and edges
-          if (response?.workflow_id) {
-            router.push(`/workflows/${response.workflow_id}`);
-          }
-        } catch (error) {
-          // error is handled in the useWorkflowActions hook
-          console.error(error);
-        }
-      }, 1000),
-    [createWorkflow, definition.value, router]
-  );
-
-  const updateWorkflowDebounced = useMemo(
-    () =>
-      debounce(() => {
-        if (workflowId) {
-          updateWorkflow(workflowId, definition.value);
-        }
-      }, 1000),
-    [updateWorkflow, workflowId, definition.value]
-  );
 
   useEffect(
     function updateDefinitionFromInput() {
@@ -239,33 +214,40 @@ function Builder({
   const hasErrors = errorNode || !definition.isValid;
 
   useEffect(() => {
-    if (!triggerSave && !canDeploy) {
-      return;
+    const saveWorkflow = async () => {
+      if (!synced) {
+        toast(
+          "Please save the previous step or wait while properties sync with the workflow."
+        );
+        return;
+      }
+      if (hasErrors) {
+        showErrorToast("Please fix the errors in the workflow before saving.");
+        return;
+      }
+      try {
+        setIsSaving(true);
+        if (workflowId) {
+          await updateWorkflow(workflowId, definition.value);
+        } else {
+          const response = await createWorkflow(definition.value);
+          if (response?.workflow_id) {
+            router.push(`/workflows/${response.workflow_id}`);
+          }
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    if (triggerSave) {
+      saveWorkflow();
     }
-    if (!synced) {
-      toast(
-        "Please save the previous step or wait while properties sync with the workflow."
-      );
-      return;
-    }
-    if (hasErrors) {
-      showErrorToast("Please fix the errors in the workflow before saving.");
-      return;
-    }
-    if (workflowId) {
-      updateWorkflowDebounced();
-    } else {
-      addWorkflowDebounced();
-    }
-  }, [
-    addWorkflowDebounced,
-    updateWorkflowDebounced,
-    synced,
-    triggerSave,
-    workflowId,
-    hasErrors,
-    canDeploy,
-  ]);
+    // ignore since we want the latest values, but to run effect only when triggerSave changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerSave]);
 
   useEffect(
     function resetZustandStateOnUnMount() {
@@ -290,14 +272,6 @@ function Builder({
     definition.isValid,
   ]);
 
-  if (isLoading) {
-    return (
-      <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
-        <Loader />
-      </Card>
-    );
-  }
-
   const ValidatorConfigurationV2: {
     step: (
       step: V2Step,
@@ -305,11 +279,21 @@ function Builder({
       definition?: ReactFlowDefinition
     ) => boolean;
     root: (def: FlowDefinition) => boolean;
-  } = {
-    step: (step, parent, definition) =>
-      stepValidatorV2(step, setStepValidationErrorV2, parent, definition),
-    root: (def) => globalValidatorV2(def, setGlobalValidationErrorV2),
-  };
+  } = useMemo(() => {
+    return {
+      step: (step, parent, definition) =>
+        stepValidatorV2(step, setStepValidationErrorV2, parent, definition),
+      root: (def) => globalValidatorV2(def, setGlobalValidationErrorV2),
+    };
+  }, [setStepValidationErrorV2, setGlobalValidationErrorV2]);
+
+  if (isLoading) {
+    return (
+      <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
+        <EmptyBuilderState />
+      </Card>
+    );
+  }
 
   function closeGenerateModal() {
     setGenerateModalIsOpen(false);

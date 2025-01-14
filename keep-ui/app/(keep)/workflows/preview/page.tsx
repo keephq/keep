@@ -31,7 +31,6 @@ export default function Page({ params, searchParams }: PageProps) {
         <WorkflowBuilderPageClient
           workflowRaw={workflowPreviewData?.Workflow_raw}
           workflowId={params?.workflowId}
-          isPreview={true}
         />
       )}
       {workflowPreviewData && workflowPreviewData.name !== key && (

@@ -38,7 +38,6 @@ export default function PageWithId({
         {workflowPreviewData && workflowPreviewData.name === key && (
           <WorkflowBuilderPageClient
             workflowRaw={workflowPreviewData.workflow_raw || ""}
-            isPreview={true}
           />
         )}
         {workflowPreviewData && workflowPreviewData.name !== key && (
