@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Callout, Card } from "@tremor/react";
 import { Provider } from "../../providers/providers";
 import {
@@ -35,10 +35,11 @@ import useStore from "./builder-store";
 import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
-import { showErrorToast, showSuccessToast } from "@/shared/ui";
+import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 import Modal from "@/components/ui/Modal";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
+import debounce from "lodash.debounce";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -114,22 +115,6 @@ function Builder({
     setErrorNode(null);
   };
 
-  const updateWorkflow = useCallback(() => {
-    const body = stringify(getWorkflowFromDefinition(definition.value));
-    api
-      .request(`/workflows/${workflowId}`, {
-        method: "PUT",
-        body,
-        headers: { "Content-Type": "text/html" },
-      })
-      .then(() => {
-        showSuccessToast("Workflow deployed successfully");
-      })
-      .catch((error: any) => {
-        showErrorToast(error, "Failed to add workflow");
-      });
-  }, [api, definition.value, workflowId]);
-
   const testRunWorkflow = () => {
     setTestRunModalOpen(true);
     const body = stringify(getWorkflowFromDefinition(definition.value));
@@ -152,64 +137,89 @@ function Builder({
       });
   };
 
-  const { createWorkflow } = useWorkflowActions();
+  const { createWorkflow, updateWorkflow } = useWorkflowActions();
 
-  const addWorkflow = useCallback(async () => {
-    try {
-      const response = await createWorkflow(definition.value);
-      // reset the store to clear the nodes and edges
-      if (response?.workflow_id) {
-        reset();
-        router.push(`/workflows/${response.workflow_id}`);
-      }
-    } catch (error) {
-      // error is handled in the useWorkflowActions hook4
-      console.error(error);
-    }
-  }, [createWorkflow, definition.value, reset, router]);
-
-  useEffect(() => {
-    setIsLoading(true);
-    try {
-      if (workflow) {
-        setDefinition(
-          wrapDefinitionV2({
-            ...parseWorkflow(workflow, providers),
-            isValid: true,
-          })
-        );
-      } else if (loadedAlertFile == null) {
-        const alertUuid = uuidv4();
-        const alertName = searchParams?.get("alertName");
-        const alertSource = searchParams?.get("alertSource");
-        let triggers = {};
-        if (alertName && alertSource) {
-          triggers = { alert: { source: alertSource, name: alertName } };
+  const addWorkflowDebounced = useMemo(
+    () =>
+      debounce(async () => {
+        try {
+          const response = await createWorkflow(definition.value);
+          // reset the store to clear the nodes and edges
+          if (response?.workflow_id) {
+            router.push(`/workflows/${response.workflow_id}`);
+          }
+        } catch (error) {
+          // error is handled in the useWorkflowActions hook
+          console.error(error);
         }
-        setDefinition(
-          wrapDefinitionV2({
-            ...generateWorkflow(alertUuid, "", "", false, {}, [], [], triggers),
-            isValid: true,
-          })
-        );
-      } else {
-        const parsedDefinition = parseWorkflow(loadedAlertFile!, providers);
-        setDefinition(
-          wrapDefinitionV2({
-            ...parsedDefinition,
-            isValid: true,
-          })
-        );
+      }, 1000),
+    [createWorkflow, definition.value, router]
+  );
+
+  const updateWorkflowDebounced = useMemo(
+    () =>
+      debounce(() => {
+        if (workflowId) {
+          updateWorkflow(workflowId, definition.value);
+        }
+      }, 1000),
+    [updateWorkflow, workflowId, definition.value]
+  );
+
+  useEffect(
+    function updateDefinitionFromInput() {
+      setIsLoading(true);
+      try {
+        if (workflow) {
+          setDefinition(
+            wrapDefinitionV2({
+              ...parseWorkflow(workflow, providers),
+              isValid: true,
+            })
+          );
+        } else if (loadedAlertFile == null) {
+          const alertUuid = uuidv4();
+          const alertName = searchParams?.get("alertName");
+          const alertSource = searchParams?.get("alertSource");
+          let triggers = {};
+          if (alertName && alertSource) {
+            triggers = { alert: { source: alertSource, name: alertName } };
+          }
+          setDefinition(
+            wrapDefinitionV2({
+              ...generateWorkflow(
+                alertUuid,
+                "",
+                "",
+                false,
+                {},
+                [],
+                [],
+                triggers
+              ),
+              isValid: true,
+            })
+          );
+        } else {
+          const parsedDefinition = parseWorkflow(loadedAlertFile!, providers);
+          setDefinition(
+            wrapDefinitionV2({
+              ...parsedDefinition,
+              isValid: true,
+            })
+          );
+        }
+      } catch (error) {
+        if (error instanceof YAMLException) {
+          showErrorToast(error, "Invalid YAML: " + error.message);
+        } else {
+          showErrorToast(error, "Failed to load workflow");
+        }
       }
-    } catch (error) {
-      if (error instanceof YAMLException) {
-        showErrorToast(error, "Invalid YAML: " + error.message);
-      } else {
-        showErrorToast(error, "Failed to load workflow");
-      }
-    }
-    setIsLoading(false);
-  }, [loadedAlertFile, workflow, searchParams, providers]);
+      setIsLoading(false);
+    },
+    [loadedAlertFile, workflow, searchParams, providers]
+  );
 
   useEffect(() => {
     if (triggerGenerate) {
@@ -226,46 +236,45 @@ function Builder({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerRun]);
 
-  useEffect(() => {
-    if (triggerSave) {
-      if (!synced) {
-        toast(
-          "Please save the previous step or wait while properties sync with the workflow."
-        );
-        return;
-      }
-      if (workflowId) {
-        updateWorkflow();
-      } else {
-        addWorkflow();
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [triggerSave]);
+  const hasErrors = errorNode || !definition.isValid;
 
   useEffect(() => {
-    if (canDeploy && !errorNode && definition.isValid) {
-      if (!synced) {
-        toast(
-          "Please save the previous step or wait while properties sync with the workflow."
-        );
-        return;
-      }
-      if (workflowId) {
-        updateWorkflow();
-      } else {
-        addWorkflow();
-      }
+    if (!triggerSave && !canDeploy) {
+      return;
+    }
+    if (!synced) {
+      toast(
+        "Please save the previous step or wait while properties sync with the workflow."
+      );
+      return;
+    }
+    if (hasErrors) {
+      showErrorToast("Please fix the errors in the workflow before saving.");
+      return;
+    }
+    if (workflowId) {
+      updateWorkflowDebounced();
+    } else {
+      addWorkflowDebounced();
     }
   }, [
-    canDeploy,
-    errorNode,
-    definition.isValid,
+    addWorkflowDebounced,
+    updateWorkflowDebounced,
     synced,
+    triggerSave,
     workflowId,
-    updateWorkflow,
-    addWorkflow,
+    hasErrors,
+    canDeploy,
   ]);
+
+  useEffect(
+    function resetZustandStateOnUnMount() {
+      return () => {
+        reset();
+      };
+    },
+    [reset]
+  );
 
   useEffect(() => {
     enableGenerate(
