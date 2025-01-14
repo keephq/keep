@@ -12,6 +12,7 @@ import { TopologySearchAutocomplete } from "../TopologySearchAutocomplete";
 type FormErrors = {
   name?: string;
   services?: string;
+  repository?: string;
 };
 
 type BaseProps = {
@@ -49,6 +50,9 @@ export function CreateOrUpdateApplicationForm({
   const [applicationDescription, setApplicationDescription] = useState(
     action === "edit" ? application.description : ""
   );
+  const [applicationRepo, setApplicationRepo] = useState(
+    action === "edit" ? application.repository : ""
+  );
   const applicationId = action === "edit" ? application.id : undefined;
 
   const [selectedServices, setSelectedServices] = useState<
@@ -66,7 +70,19 @@ export function CreateOrUpdateApplicationForm({
     if (formValues.services.length === 0) {
       newErrors.services = "Select at least one service";
     }
+    if (formValues.repository && !isValidUrl(formValues.repository)) {
+      newErrors.repository = "Please enter a valid URL";
+    }
     return newErrors;
+  };
+
+  const isValidUrl = (url: string) => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const handleSubmit = useCallback(
@@ -75,6 +91,7 @@ export function CreateOrUpdateApplicationForm({
       const formValues = {
         name: applicationName,
         description: applicationDescription,
+        repository: applicationRepo,
         services: selectedServices,
       };
       const validationErrors = validateForm(formValues);
@@ -106,6 +123,7 @@ export function CreateOrUpdateApplicationForm({
       action,
       applicationName,
       applicationDescription,
+      applicationRepo,
       selectedServices,
       applicationId,
       onSubmit,
@@ -140,6 +158,19 @@ export function CreateOrUpdateApplicationForm({
           placeholder="Description (optional)"
           value={applicationDescription}
           onChange={(e) => setApplicationDescription(e.target.value)}
+        />
+      </div>
+      <div>
+        <div className="mb-1">
+          <span className="font-bold">Repository URL (optional)</span>
+          {errors.repository && (
+            <p className="text-red-500 text-sm mt-1">{errors.repository}</p>
+          )}
+        </div>
+        <TextInput
+          placeholder="Repository URL"
+          value={applicationRepo}
+          onChange={(e) => setApplicationRepo(e.target.value)}
         />
       </div>
       <div className="flex flex-col gap-2">
