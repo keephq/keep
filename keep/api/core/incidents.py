@@ -24,6 +24,7 @@ from keep.api.models.db.alert import (
 )
 from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto
+from sqlalchemy.dialects import mysql
 
 # from keep.api.models.db.facet import Facet, FacetEntityType
 
@@ -280,7 +281,7 @@ def __build_facets_data_query(
                 ),
             )
             .select_from(base_query_cte)
-            .group_by(group_by_exp)
+            .group_by(literal_column('facet_value'))
         )
 
     query = None
@@ -289,8 +290,6 @@ def __build_facets_data_query(
         query = union_queries[0].union_all(*union_queries[1:])
     else:
         query = union_queries[0]
-
-    query_str = str(query)
 
     return query
 
