@@ -24,14 +24,6 @@ interface Pagination {
   offset: number;
 }
 
-interface Filters {
-  status: string[];
-  severity: string[];
-  assignees: string[];
-  sources: string[];
-  affected_services: string[];
-}
-
 export function IncidentList({
   initialData,
   initialFacetsData,
@@ -111,8 +103,8 @@ export function IncidentList({
 
   const { data: facetOptionsData, isLoading: facetsOptionsDataLoading } = useFacetOptions(
     "incidents",
-    facetIdsLoaded || Object.keys(initialFacetsData?.facetOptions || {}),
-    "",
+    facetsData?.map(facet => facet.id) ?? [],
+    '',
     {
       revalidateOnFocus: false,
       revalidateOnMount: !initialFacetsData?.facetOptions,

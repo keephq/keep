@@ -19,6 +19,9 @@ class JsonPropertyAccessNode(PropertyAccessNode):
         self.json_property_name = json_property_name
         self.property_to_extract = property_to_extract
 
+class MultipleFieldsNode(Node):
+    def __init__(self, fields: list[PropertyAccessNode]):
+        self.fields = fields
 
 class PropertiesMapper:
     def __init__(self, properties_metadata: PropertiesMetadata):
@@ -55,37 +58,18 @@ class PropertiesMapper:
         if not isinstance(comparison_node.first_operand, PropertyAccessNode):
             return comparison_node
 
-        result: str = None
+        result = []
         for mapping in self.properties_metadata.get_property_metadata(
             comparison_node.first_operand.get_property_path()
         ):
             property_access_node = self._create_property_access_node(mapping, None)
+            result.append(property_access_node)
 
-            current_node_result = ComparisonNode(
-                property_access_node,
+        return ComparisonNode(
+                MultipleFieldsNode(result),
                 comparison_node.operator,
                 comparison_node.second_operand,
             )
-            current_node_result = LogicalNode(
-                left=ComparisonNode(
-                        property_access_node,
-                        ComparisonNode.NE,
-                        ConstantNode(None),
-                    ),
-                operator=LogicalNode.AND,
-                right=current_node_result
-            )
-            if result is None:
-                result = current_node_result
-                continue
-
-            result = LogicalNode(
-                left=result,
-                operator=LogicalNode.OR,
-                right=current_node_result,
-            )
-
-        return result
 
     def _visit_member_access_node(self, member_access_node: MemberAccessNode) -> Node:
         if (

@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 from keep.api.core.cel_to_sql.ast_nodes import (
     ConstantNode,
     MemberAccessNode,
@@ -12,9 +12,8 @@ from keep.api.core.cel_to_sql.ast_nodes import (
 )
 from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 from datetime import datetime
-import re
 
-from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, PropertiesMapper
+from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, MultipleFieldsNode, PropertiesMapper
 from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
 
 class BuiltQueryMetadata:
@@ -24,6 +23,8 @@ class BuiltQueryMetadata:
         self.select_json = select_json
 
 class BaseCelToSqlProvider:
+    __null_replacement = "'__@NULL@__'"
+
     def __init__(self, properties_metadata: PropertiesMetadata):
         super().__init__()
         self.properties_mapper = PropertiesMapper(properties_metadata)
@@ -72,6 +73,9 @@ class BaseCelToSqlProvider:
 
         if isinstance(abstract_node, ConstantNode):
             return self._visit_constant_node(abstract_node.value)
+        
+        if isinstance(abstract_node, MultipleFieldsNode):
+            return self._visit_multiple_fields_node(abstract_node)
 
         raise NotImplementedError(
             f"{type(abstract_node).__name__} node type is not supported yet"
@@ -79,6 +83,9 @@ class BaseCelToSqlProvider:
 
     def json_extract(self, column: str, path: str) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
+    
+    def coalesce(self, args: List[str]) -> str:
+        raise NotImplementedError("COALESCE is not implemented. Must be implemented in the child class.")
 
     def _visit_parentheses(self, node: str) -> str:
         return f"({node})"
@@ -168,13 +175,13 @@ class BaseCelToSqlProvider:
         return f"{first_operand} <= {second_operand}"
     
     def _visit_in(self, first_operand: Node, array: list[ConstantNode]) -> str:
-        return f"{self._visit_member_access_node(first_operand)} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
+        return f"{self.__build_where_clause(first_operand)} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
 
     # endregion
 
     def _visit_constant_node(self, value: str) -> str:
         if value is None:
-            return "NULL"
+            return self.__null_replacement
         if isinstance(value, str):
             return f"'{value}'"
         if isinstance(value, bool):
@@ -188,6 +195,9 @@ class BaseCelToSqlProvider:
         raise NotImplementedError(f"{type(value).__name__} constant type is not supported yet")
 
     # region Member Access Visitors
+    def _visit_multiple_fields_node(self, multiple_fields_node: MultipleFieldsNode) -> str:
+        return self.coalesce([self.__build_where_clause(item) for item in multiple_fields_node.fields] + [self.__null_replacement])
+
     def _visit_member_access_node(self, member_access_node: MemberAccessNode) -> str:
         if isinstance(member_access_node, PropertyAccessNode):
             if member_access_node.is_function_call():

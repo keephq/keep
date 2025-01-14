@@ -8,6 +8,9 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
     def json_extract(self, column: str, path: str) -> str:
         return f"JSON_UNQUOTE(JSON_EXTRACT({column}, \"$.{path}\"))"
     
+    def coalesce(self, args):
+        return f"COALESCE({', '.join(args)})"
+    
     def _visit_contains_method_calling(self, property_path: str, method_args: List[str]) -> str:
         return f"{property_path} LIKE \"%{method_args[0]}%\""
     
