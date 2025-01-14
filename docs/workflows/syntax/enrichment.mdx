@@ -149,6 +149,4 @@ workflow:
 
 
 ### Enrichment without an Alert/Incident
-If there is no alert/incident present in the trigger (for example interval trigger or manual call in workflow page), the enrichment rule would not have an alert/incident to apply to. The enrichment process typically requires an alert/incident to be present to apply the specified enrichments. Without an alert/incident, the enrichment rule would not execute as intended.
-
-
+If there is no alert/incident present in the trigger (for example interval trigger or manual call in workflow page), the enrichment rule would not have an alert/incident to apply to. The enrichment process typically requires an alert/incident to be present to apply the specified enrichments. Without an alert/incident, the enrichment rule would not execute as intended. A workaround is to use a foreach directive and pass it an object containing the "fingerprint" variable.
