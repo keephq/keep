@@ -119,6 +119,28 @@ steps:
 
 ```
 
+### `render_without_execution`
+
+**Description:** Renders the string without execution of keep instructions inside this string.
+**Example:**
+
+```yaml
+consts:
+  yaml: |
+    keep.is_business_hours(2024-03-25T14:00:00Z)
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: "keep.render_without_execution(My yaml is: {{ yaml }}!)"
+```
+
+Will output:
+```
+My yaml is: keep.is_business_hours(2024-03-25T14:00:00Z)!
+```
+
 ## List and Dictionary Functions
 
 ### `first`
