@@ -19,6 +19,7 @@ import useSWR from "swr";
 import { WorkflowBuilderPageClient } from "../builder/page.client";
 import WorkflowOverview from "./workflow-overview";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { useConfig } from "utils/hooks/useConfig";
 import { AiOutlineSwap } from "react-icons/ai";
 import { ErrorComponent, TabNavigationLink, YAMLCodeblock } from "@/shared/ui";
 import Skeleton from "react-loading-skeleton";
@@ -31,6 +32,7 @@ export default function WorkflowDetailPage({
   initialData?: Workflow;
 }) {
   const api = useApi();
+  const { data: configData } = useConfig();
   const [tabIndex, setTabIndex] = useState(0);
 
   const {
@@ -44,6 +46,8 @@ export default function WorkflowDetailPage({
       fallbackData: initialData,
     }
   );
+
+  const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
 
   if (error) {
     return <ErrorComponent error={error} />;
@@ -69,7 +73,7 @@ export default function WorkflowDetailPage({
             Tutorials
           </TabNavigationLink>
           <TabNavigationLink
-            href="https://docs.keephq.dev/workflows"
+            href={`${docsUrl}/workflows`}
             icon={ArrowUpRightIcon}
             target="_blank"
           >

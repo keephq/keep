@@ -25,4 +25,10 @@ export interface InternalConfig {
   NOISY_ALERTS_ENABLED: boolean;
 
   FRIGADE_DISABLED: string | undefined;
+
+  // Keep Docs
+  KEEP_DOCS_URL: string;
+
+  // Keep Contact Us
+  KEEP_CONTACT_US_URL: string;
 }

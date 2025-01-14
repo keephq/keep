@@ -27,6 +27,7 @@ import { HiMiniXMark } from "react-icons/hi2";
 import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 const columnHelper = createColumnHelper<ExtractionRule>();
 
@@ -52,6 +53,7 @@ export default function RulesTable({
   editCallback,
 }: Props) {
   const api = useApi();
+  const { data: config } = useConfig();
   const { mutate } = useMappings();
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
@@ -144,13 +146,18 @@ export default function RulesTable({
       header: () => (
         <div className="flex items-center">
           Condition{" "}
-          <a href="https://docs.keephq.dev/overview/presets" target="_blank">
+          <a
+            href={`${
+              config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+            }/overview/enrichment/extraction`}
+            target="_blank"
+          >
             <Icon
               icon={QuestionMarkCircleIcon}
               variant="simple"
               color="gray"
               size="sm"
-              tooltip="CEL based condition"
+              tooltip="See extractions documentation for more information"
             />
           </a>
         </div>
