@@ -95,7 +95,7 @@ function Builder({
   const router = useRouter();
 
   const searchParams = useSearchParams();
-  const { errorNode, setErrorNode, synced, reset } = useStore();
+  const { errorNode, setErrorNode, synced, reset, canDeploy } = useStore();
 
   const setStepValidationErrorV2 = useCallback(
     (step: V2Step, error: string | null) => {
@@ -211,43 +211,61 @@ function Builder({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerRun]);
 
-  const hasErrors = errorNode || !definition.isValid;
-
-  useEffect(() => {
-    const saveWorkflow = async () => {
-      if (!synced) {
-        toast(
-          "Please save the previous step or wait while properties sync with the workflow."
-        );
-        return;
-      }
-      if (hasErrors) {
-        showErrorToast("Please fix the errors in the workflow before saving.");
-        return;
-      }
-      try {
-        setIsSaving(true);
-        if (workflowId) {
-          await updateWorkflow(workflowId, definition.value);
-        } else {
-          const response = await createWorkflow(definition.value);
-          if (response?.workflow_id) {
-            router.push(`/workflows/${response.workflow_id}`);
-          }
+  const saveWorkflow = useCallback(async () => {
+    if (!synced) {
+      toast(
+        "Please save the previous step or wait while properties sync with the workflow."
+      );
+      return;
+    }
+    if (errorNode || !definition.isValid) {
+      showErrorToast("Please fix the errors in the workflow before saving.");
+      return;
+    }
+    try {
+      setIsSaving(true);
+      if (workflowId) {
+        await updateWorkflow(workflowId, definition.value);
+      } else {
+        const response = await createWorkflow(definition.value);
+        if (response?.workflow_id) {
+          router.push(`/workflows/${response.workflow_id}`);
         }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsSaving(false);
       }
-    };
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    synced,
+    errorNode,
+    definition.isValid,
+    definition.value,
+    setIsSaving,
+    workflowId,
+    updateWorkflow,
+    createWorkflow,
+    router,
+  ]);
 
+  // save workflow on "Deploy" button click
+  useEffect(() => {
     if (triggerSave) {
       saveWorkflow();
     }
     // ignore since we want the latest values, but to run effect only when triggerSave changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerSave]);
+
+  // save workflow on "Save & Deploy" button click from FlowEditor
+  useEffect(() => {
+    if (canDeploy) {
+      saveWorkflow();
+    }
+    // ignore since we want the latest values, but to run effect only when triggerSave changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canDeploy]);
 
   useEffect(
     function resetZustandStateOnUnMount() {
