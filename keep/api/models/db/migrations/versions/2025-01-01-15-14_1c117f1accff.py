@@ -22,22 +22,22 @@ def upgrade() -> None:
     with op.batch_alter_table("incident", schema=None) as batch_op:
         batch_op.add_column(
             sa.Column(
-                "incident_type", sqlmodel.sql.sqltypes.AutoString(), nullable=False
+                "incident_type", sqlmodel.sql.sqltypes.AutoString(), nullable=True
             )
         )
         batch_op.add_column(sa.Column("incident_application", sa.Uuid(), nullable=True))
         batch_op.add_column(
-            sa.Column("resolve_on", sqlmodel.sql.sqltypes.AutoString(), nullable=False)
+            sa.Column("resolve_on", sqlmodel.sql.sqltypes.AutoString(), nullable=True)
         )
 
     with op.batch_alter_table("topologyapplication", schema=None) as batch_op:
         batch_op.add_column(
-            sa.Column("repository", sqlmodel.sql.sqltypes.AutoString(), nullable=False)
+            sa.Column("repository", sqlmodel.sql.sqltypes.AutoString(), nullable=True)
         )
 
     with op.batch_alter_table("topologyservice", schema=None) as batch_op:
         batch_op.add_column(
-            sa.Column("namespace", sqlmodel.sql.sqltypes.AutoString(), nullable=False)
+            sa.Column("namespace", sqlmodel.sql.sqltypes.AutoString(), nullable=True)
         )
     # ### end Alembic commands ###
 
