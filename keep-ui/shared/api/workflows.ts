@@ -103,10 +103,15 @@ export async function getWorkflow(api: ApiClient, id: string) {
   return await api.get<Workflow>(`/workflows/${id}`);
 }
 
-export async function getWorkflowWithErrorHandling(
+/**
+ * Fetches a workflow by ID with error handling for 404 cases
+ * @param id - The unique identifier of the workflow to retrieve
+ * @returns Promise containing the workflow data or undefined if not found
+ * @returns {never} If 404 error occurs (handled by Next.js notFound) or if the API request fails for reasons other than 404
+ */
+export async function _getWorkflowWithRedirectSafe(
   id: string
-  // @ts-ignore ignoring since not found will be handled by nextjs
-): Promise<Workflow> {
+): Promise<Workflow | undefined> {
   try {
     const api = await createServerApiClient();
     return await getWorkflow(api, id);
@@ -114,17 +119,9 @@ export async function getWorkflowWithErrorHandling(
     if (error instanceof KeepApiError && error.statusCode === 404) {
       notFound();
     } else {
-      throw error;
+      console.error(error);
+      return undefined;
     }
-  }
-}
-
-async function _getWorkflowWithRedirectSafe(id: string) {
-  try {
-    return await getWorkflowWithErrorHandling(id);
-  } catch (error) {
-    console.error(error);
-    return undefined;
   }
 }
 
