@@ -211,9 +211,10 @@ def fetch_inicident_facet_options(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
-    facets_to_load: List[str] = Query(None),
+    facets_to_load: str = Query(None),
     cel: str = Query(None),
 ) -> dict:
+    facets_to_load = facets_to_load.split(",") if facets_to_load else []
     tenant_id = authenticated_entity.tenant_id
 
     logger.info(

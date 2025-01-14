@@ -25,6 +25,7 @@ from keep.api.models.db.alert import (
 from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto
 from sqlalchemy.dialects import mysql
+import uuid
 
 # from keep.api.models.db.facet import Facet, FacetEntityType
 
@@ -296,35 +297,35 @@ def __build_facets_data_query(
 
 static_facets = [
     FacetDto(
-        id="status",
+        id="1e7b1d6e-1c2b-4f8e-9f8e-1c2b4f8e9f8e",
         property_path="status",
         name="Status",
         is_static=False,
         type=FacetType.str
     ),
     FacetDto(
-        id="severity",
+        id="2e7b1d6e-2c2b-4f8e-9f8e-2c2b4f8e9f8e",
         property_path="severity",
         name="Severity",
         is_static=False,
         type=FacetType.str
     ),
     FacetDto(
-        id="assignee",
+        id="3e7b1d6e-3c2b-4f8e-9f8e-3c2b4f8e9f8e",
         property_path="assignee",
         name="Assignee",
         is_static=False,
         type=FacetType.str
     ),
     FacetDto(
-        id="service",
+        id="4e7b1d6e-4c2b-4f8e-9f8e-4c2b4f8e9f8e",
         property_path="alert.service",
         name="Service",
         is_static=False,
         type=FacetType.str
     ),
     FacetDto(
-        id="sources",
+        id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
         property_path="alert.provider_type",
         name="Source",
         is_static=False,
