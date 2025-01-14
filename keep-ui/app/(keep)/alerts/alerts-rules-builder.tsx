@@ -538,18 +538,27 @@ export const AlertsRulesBuilder = ({
   };
 
   const validateAndOpenSaveModal = (celExpression: string) => {
-    // Use existing validation logic
     const celQuery = formatQuery(parseCEL(celExpression), "cel");
+
+    // Normalize both strings by:
+    // 1. Removing all whitespace
+    // 2. Creating versions with both single and double quotes
+    const normalizedCelQuery = celQuery.replace(/\s+/g, "");
+    const normalizedExpression = celExpression.replace(/\s+/g, "");
+
+    // Create variants with different quote styles
+    const celQuerySingleQuotes = normalizedCelQuery.replace(/"/g, "'");
+    const celQueryDoubleQuotes = normalizedCelQuery.replace(/'/g, '"');
+
     const isValidCEL =
-      celQuery.replace(/\s+/g, "") === celExpression.replace(/\s+/g, "") ||
+      normalizedExpression === celQuerySingleQuotes ||
+      normalizedExpression === celQueryDoubleQuotes ||
       celExpression === "";
 
     if (isValidCEL && celExpression.length) {
-      // If CEL is valid and not empty, set the CEL rules for the preset and open the modal
       setPresetCEL?.(celExpression);
       setIsModalOpen?.(true);
     } else {
-      // If CEL is invalid or empty, inform the user
       alert("You can only save a valid CEL expression.");
       setIsValidCEL(isValidCEL);
     }
