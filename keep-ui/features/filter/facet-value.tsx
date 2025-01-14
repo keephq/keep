@@ -3,10 +3,8 @@ import { Icon } from "@tremor/react";
 import Image from "next/image";
 import { Text } from "@tremor/react";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
-import { BellIcon, BellSlashIcon, FireIcon } from "@heroicons/react/24/outline";
+import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
-import { useIncidents } from "@/utils/hooks/useIncidents";
-import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { useUser } from "@/entities/users/model/useUser";
 import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
@@ -39,32 +37,6 @@ export const FacetValue: React.FC<FacetValueProps> = ({
     onSelectAllOptions,
     onToggleOption: onSelect
 }) => {
-  const facetFilters: { [key: string]: any } = {};
-  // const { data: incidents } = useIncidents(
-  //   true,
-  //   100,
-  //   undefined,
-  //   undefined,
-  //   undefined,
-  //   {
-  //     revalidateOnFocus: false,
-  //   }
-  // );
-
-  // const incidentMap = useMemo(() => {
-  //   return new Map(
-  //     incidents?.items.map((incident) => [
-  //       incident.id.replaceAll("-", ""),
-  //       incident,
-  //     ]) || []
-  //   );
-  // }, [incidents]);
-
-  // const incident = useMemo(
-  //   () => (facetKey === "incident" ? incidentMap.get(label) : null),
-  //   [incidentMap, facetKey, label]
-  // );
-
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelect(label);

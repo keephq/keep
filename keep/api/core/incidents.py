@@ -300,35 +300,35 @@ static_facets = [
         id="1e7b1d6e-1c2b-4f8e-9f8e-1c2b4f8e9f8e",
         property_path="status",
         name="Status",
-        is_static=False,
+        is_static=True,
         type=FacetType.str
     ),
     FacetDto(
         id="2e7b1d6e-2c2b-4f8e-9f8e-2c2b4f8e9f8e",
         property_path="severity",
         name="Severity",
-        is_static=False,
+        is_static=True,
         type=FacetType.str
     ),
     FacetDto(
         id="3e7b1d6e-3c2b-4f8e-9f8e-3c2b4f8e9f8e",
         property_path="assignee",
         name="Assignee",
-        is_static=False,
+        is_static=True,
         type=FacetType.str
     ),
     FacetDto(
         id="4e7b1d6e-4c2b-4f8e-9f8e-4c2b4f8e9f8e",
         property_path="alert.service",
         name="Service",
-        is_static=False,
+        is_static=True,
         type=FacetType.str
     ),
     FacetDto(
         id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
         property_path="alert.provider_type",
         name="Source",
-        is_static=False,
+        is_static=True,
         type=FacetType.str
     )
 ]
