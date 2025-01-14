@@ -35,8 +35,9 @@ from keep.api.core.db import (
     get_workflow_executions_for_incident_or_alert,
     merge_incidents_to_id,
 )
-from keep.api.core.get_last_incidents_by_cel import CreateFacetDto, FacetDto, create_facet, delete_facet, get_incident_facets, get_incident_facets_data, get_last_incidents_by_cel
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
+from keep.api.core.facets import create_facet, delete_facet
+from keep.api.core.incidents import get_incident_facets, get_incident_facets_data, get_last_incidents_by_cel
 from keep.api.models.alert import (
     AlertDto,
     EnrichAlertRequestBody,
@@ -55,6 +56,7 @@ from keep.api.models.alert import (
     SplitIncidentResponseDto,
 )
 from keep.api.models.db.alert import AlertActionType, AlertAudit
+from keep.api.models.facet import CreateFacetDto, FacetDto
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
@@ -209,7 +211,8 @@ def fetch_inicident_facet_options(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
-    facets_to_load: List[str] = Query(None)
+    facets_to_load: List[str] = Query(None),
+    cel: str = Query(None),
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
 
@@ -235,7 +238,8 @@ def fetch_inicident_facet_options(
     facet_options = get_incident_facets_data(
             tenant_id = tenant_id,
             facets_to_load = facets_to_load,
-            allowed_incident_ids=allowed_incident_ids
+            allowed_incident_ids=allowed_incident_ids,
+            cel=cel
         )
 
     logger.info(

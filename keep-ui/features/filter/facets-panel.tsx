@@ -83,11 +83,19 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   useEffect(() => {
     if (onCelChange && facets && facetOptions && facetsState) {
       const cel = Object.values(facets)
-        .filter((facet) => facet.property_path in facetsState)
+        .filter((facet) => facet.id in facetsState)
         .map((facet) => {
-          const notSelectedOptions = Object.values(facetOptions[facet.property_path])
-            .filter((facetOption) => facetsState[facet.property_path][facetOption.display_name] === false)
-            .map((option) => typeof option.value === 'string' ? `'${option.value}'` : option.value);
+          const notSelectedOptions = Object.values(facetOptions[facet.id])
+            .filter((facetOption) => facetsState[facet.id][facetOption.display_name] === false)
+            .map((option) => {
+              if (typeof option.value === 'string') {
+                return `'${option.value}'`;
+              } else if (option.value == null) {
+                return 'null';
+              }
+
+              return option.value;
+            });
 
           if (!notSelectedOptions.length) {
             return;
@@ -126,10 +134,10 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             name={facet.name}
             isStatic={facet.is_static}
             options={facetOptions?.[facet.id] || []}
-            onSelect={(value) => toggleFacetOption(facet.property_path, value)}
-            onSelectOneOption={(value) => selectOneFacetOption(facet.property_path, value)}
-            onSelectAllOptions={() => selectAllFacetOptions(facet.property_path)}
-            facetState={facetsState[facet.property_path]}
+            onSelect={(value) => toggleFacetOption(facet.id, value)}
+            onSelectOneOption={(value) => selectOneFacetOption(facet.id, value)}
+            onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
+            facetState={facetsState[facet.id]}
             facetKey={facet.id}
             showSkeleton={false}
             onLoadOptions={() => onLoadFacetOptions && onLoadFacetOptions(facet.id)}

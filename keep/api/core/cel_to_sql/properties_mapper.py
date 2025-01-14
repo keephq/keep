@@ -11,7 +11,7 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     UnaryNode,
 )
 
-from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
+from keep.api.core.cel_to_sql.properties_metadata import JsonMapping, PropertiesMetadata, SimpleMapping
 
 class JsonPropertyAccessNode(PropertyAccessNode):
     def __init__(self, json_property_name: str, property_to_extract: str, method_access_node: MethodAccessNode):
@@ -56,10 +56,10 @@ class PropertiesMapper:
             return comparison_node
 
         result: str = None
-        for mapping in self.properties_metadata.get_property_mapping(
+        for mapping in self.properties_metadata.get_property_metadata(
             comparison_node.first_operand.get_property_path()
         ):
-            property_access_node = self._visit_property_access_node(PropertyAccessNode(mapping, None))
+            property_access_node = self._create_property_access_node(mapping, None)
 
             current_node_result = ComparisonNode(
                 property_access_node,
@@ -93,20 +93,16 @@ class PropertiesMapper:
             and member_access_node.is_function_call()
         ):
             result = None
-            for mapping in self.properties_metadata.get_property_mapping(
+            for mapping in self.properties_metadata.get_property_metadata(
                 member_access_node.get_property_path()
             ):
                 method_access_node = member_access_node.get_method_access_node().copy()
-                current_node_result = self._visit_property_access_node(PropertyAccessNode(
-                    mapping,
-                    MethodAccessNode(
-                        method_access_node.member_name,
-                        method_access_node.args,
-                    ),
-                ))
+                current_node_result = self._create_property_access_node(
+                    mapping, method_access_node
+                )
                 current_node_result = LogicalNode(
                     left=ComparisonNode(
-                        first_operand = PropertyAccessNode(mapping, None),
+                        first_operand = self._create_property_access_node(mapping, None),
                         operator = ComparisonNode.NE,
                         second_operand = ConstantNode(None),
                     ),
@@ -127,15 +123,12 @@ class PropertiesMapper:
             return result
 
         return member_access_node
-
-    def _visit_property_access_node(self, property_access_node: PropertyAccessNode) -> Node:
-        match = re.compile(r"JSON\((?P<json>[^)]+)\)\.(?P<property_path>.+)").match(
-            property_access_node.get_property_path()
-        )
-
-        if match:
-            json_group = match.group("json")
-            property_path_group = match.group("property_path")
-            return JsonPropertyAccessNode(json_group, property_path_group, property_access_node.get_method_access_node())
-
-        return property_access_node
+    
+    def _create_property_access_node(self, mapping, method_access_node: MethodAccessNode) -> Node:
+        if (isinstance(mapping, JsonMapping)):
+            return JsonPropertyAccessNode(mapping.json_prop, mapping.prop_in_json, method_access_node)
+        
+        if (isinstance(mapping, SimpleMapping)):
+            return PropertyAccessNode(mapping.map_to, method_access_node)
+        
+        raise NotImplementedError(f"Mapping type {type(mapping).__name__} is not supported yet")
