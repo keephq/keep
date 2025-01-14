@@ -7,7 +7,7 @@ import {
   ArrowUpOnSquareStackIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
-import { Workflow, MockWorkflow } from "@/shared/api/workflows";
+import { Workflow } from "@/shared/api/workflows";
 import Loading from "@/app/(keep)/loading";
 import WorkflowsEmptyState from "./noworkflows";
 import WorkflowTile from "./workflow-tile";
@@ -15,7 +15,7 @@ import { Button, Title } from "@tremor/react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
-import MockWorkflowCardSection from "./mockworkflows";
+import { WorkflowTemplates } from "./mockworkflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { showErrorToast, Input, ErrorComponent } from "@/shared/ui";
@@ -84,22 +84,6 @@ export default function WorkflowsPage() {
   **/
   const { data, error, isLoading } = useSWR<Workflow[]>(
     api.isReady() ? `/workflows?is_v2=true` : null,
-    (url: string) => api.get(url)
-  );
-
-  /**
-    Add Mock Workflows (6 Random Workflows on Every Request)
-      To add mock workflows, a new backend API endpoint has been created: /workflows/random-templates.
-        1. Fetching Random Templates: When a request is made to this endpoint, all workflow YAML/YML files are read and
-           shuffled randomly.
-        2. Response: Only the first 6 files are parsed and sent in the response.
-   **/
-  const {
-    data: mockWorkflows,
-    error: mockError,
-    isLoading: mockLoading,
-  } = useSWR<MockWorkflow[]>(
-    api.isReady() ? `/workflows/random-templates` : null,
     (url: string) => api.get(url)
   );
 
@@ -235,11 +219,7 @@ export default function WorkflowsPage() {
           )}
         </div>
         <div className="flex flex-col gap-4">
-          <MockWorkflowCardSection
-            mockWorkflows={mockWorkflows || []}
-            mockError={mockError}
-            mockLoading={mockLoading}
-          />
+          <WorkflowTemplates />
         </div>
       </main>
       <Modal

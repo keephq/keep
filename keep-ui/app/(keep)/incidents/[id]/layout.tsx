@@ -13,7 +13,7 @@ export default async function Layout({
   const AIEnabled =
     !!process.env.OPEN_AI_API_KEY || !!process.env.OPENAI_API_KEY;
   try {
-    const incident = await getIncidentWithErrorHandling(serverParams.id, false);
+    const incident = await getIncidentWithErrorHandling(serverParams.id);
     return (
       <IncidentLayoutClient initialIncident={incident} AIEnabled={AIEnabled}>
         {children}

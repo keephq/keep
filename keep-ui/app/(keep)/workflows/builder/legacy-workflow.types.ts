@@ -30,7 +30,7 @@ export interface Action extends Step {
   foreach?: string;
 }
 
-export interface Alert {
+export interface LegacyWorkflow {
   id: string;
   description?: string;
   owners?: string[];

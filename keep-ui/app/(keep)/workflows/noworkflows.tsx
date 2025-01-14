@@ -43,8 +43,7 @@ const DetailsSection = () => {
         You do not have any workflow added yet.
       </p>
       <div className="text-sm mt-4 text-gray-500 max-w-md text-center">
-        you can start by creating your very first Workflow from scratch, or
-        browse thorugh some available Workflow templates below
+        Start from scratch, or browse through workflow templates
       </div>
       <Button
         className="mt-4 px-6 py-2"
