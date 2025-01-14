@@ -27,54 +27,44 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
         if (["threshold", "assert", "foreach"].includes(provider?.type)) {
           return null;
         }
-        return (
-          <>
-            {provider && (
-              <div
-                key={`step-${step.id}`}
-                className="flex items-center gap-2 flex-shrink-0"
-              >
-                {index > 0 && (
-                  <TiArrowRight size={24} className="text-gray-500" />
-                )}
-                <Image
-                  src={`/icons/${provider?.type}-icon.png`}
-                  width={30}
-                  height={30}
-                  alt={provider?.type}
-                  className="flex-shrink-0"
-                />
-              </div>
-            )}
-          </>
-        );
+        return provider ? (
+          <div
+            key={`step-${step.id}-${index}`}
+            className="flex items-center gap-2 flex-shrink-0"
+          >
+            {index > 0 && <TiArrowRight size={24} className="text-gray-500" />}
+            <Image
+              src={`/icons/${provider?.type}-icon.png`}
+              width={30}
+              height={30}
+              alt={provider?.type}
+              className="flex-shrink-0"
+            />
+          </div>
+        ) : null;
       })}
       {workflow?.actions?.map((action: any, index: number) => {
         const provider = action?.provider;
         if (["threshold", "assert", "foreach"].includes(provider?.type)) {
           return null;
         }
-        return (
-          <>
-            {provider && (
-              <div
-                key={`action-${action.id}`}
-                className="flex items-center gap-2 flex-shrink-0"
-              >
-                {(index > 0 || isStepPresent) && (
-                  <TiArrowRight size={24} className="text-gray-500" />
-                )}
-                <Image
-                  src={`/icons/${provider?.type}-icon.png`}
-                  width={30}
-                  height={30}
-                  alt={provider?.type}
-                  className="flex-shrink-0"
-                />
-              </div>
+        return provider ? (
+          <div
+            key={`action-${action.id}-${index}`}
+            className="flex items-center gap-2 flex-shrink-0"
+          >
+            {(index > 0 || isStepPresent) && (
+              <TiArrowRight size={24} className="text-gray-500" />
             )}
-          </>
-        );
+            <Image
+              src={`/icons/${provider?.type}-icon.png`}
+              width={30}
+              height={30}
+              alt={provider?.type}
+              className="flex-shrink-0"
+            />
+          </div>
+        ) : null;
       })}
     </div>
   );

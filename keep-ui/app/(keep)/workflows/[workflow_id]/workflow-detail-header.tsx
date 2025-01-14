@@ -23,7 +23,7 @@ export default function WorkflowDetailHeader({
   } = useSWR<Partial<Workflow>>(
     api.isReady() ? `/workflows/${workflow_id}` : null,
     (url: string) => api.get(url),
-    { fallbackData: initialData }
+    { fallbackData: initialData, revalidateOnMount: false }
   );
 
   const {
@@ -38,14 +38,18 @@ export default function WorkflowDetailHeader({
     return <div>Error loading workflow</div>;
   }
 
-  if (isLoading || !workflow) {
+  if (!workflow) {
     return (
-      <div>
-        <h1 className="text-2xl line-clamp-2 font-extrabold">
-          <Skeleton className="w-1/2 h-4" />
-        </h1>
-        <Skeleton className="w-3/4 h-4" />
-        <Skeleton className="w-1/2 h-4" />
+      <div className="flex flex-col gap-2">
+        <div className="!w-1/2 h-8">
+          <Skeleton className="w-full h-full" />
+        </div>
+        <div className="!w-3/4 h-4">
+          <Skeleton className="w-full h-full" />
+        </div>
+        <div className="!w-2/5 h-4">
+          <Skeleton className="w-full h-full" />
+        </div>
       </div>
     );
   }
