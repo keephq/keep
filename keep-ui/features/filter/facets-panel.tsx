@@ -26,7 +26,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   onDeleteFacet = undefined,
   onLoadFacetOptions = undefined,
 }) => {
-  console.log(facetOptions)
   const [celState, setCelState] = useState<string | undefined>(undefined);
 
   const [facetsState, setFacetsState] = useState<{
