@@ -449,7 +449,10 @@ class IncidentDto(IncidentDtoIn):
     incident_type: str | None
     incident_application: str | None
 
-    resolve_on: str = ResolveOn.ALL.value
+    resolve_on: str = Field(
+        default=ResolveOn.ALL.value,
+        description="Resolution strategy for the incident",
+    )
 
     _tenant_id: str = PrivateAttr()
     _alerts: Optional[List[AlertDto]] = PrivateAttr(default=None)
@@ -513,6 +516,10 @@ class IncidentDto(IncidentDtoIn):
             if isinstance(db_incident.severity, int)
             else db_incident.severity
         )
+
+        # some default value for resolve_on
+        if not db_incident.resolve_on:
+            db_incident.resolve_on = ResolveOn.ALL.value
 
         dto = cls(
             id=db_incident.id,
