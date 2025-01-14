@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { DropdownMenu } from "@/shared/ui";
 import { ElementType } from "react";
+import { DynamicIcon } from "@/components/ui";
 
 interface Props {
   alert: AlertDto;
@@ -36,25 +37,6 @@ interface MenuItem {
   onClick: () => void;
   disabled?: boolean;
   show?: boolean;
-}
-
-function DynamicIcon({ providerType }: { providerType: string }) {
-  return (
-    <svg
-      width="24px"
-      height="24px"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-    >
-      <image
-        id="image0"
-        width="24"
-        height="24"
-        href={`/icons/${providerType}-icon.png`}
-      />
-    </svg>
-  );
 }
 
 export default function AlertMenu({

@@ -1,0 +1,64 @@
+---
+title: "AmazonSQS Provider"
+sidebarTitle: "AmazonSQS Provider"
+description: "The AmazonSQS provider enables you to pull & push alerts to the Amazon SQS Queue."
+---
+
+## Overview
+
+The **AmazonSQS Provider** facilitates
+Consuming SQS messages as alerts
+Notifying/Pushing messages to SQS Queue
+
+## Authentication Parameters
+
+- **Access Key Id** (required): Access Key ID generated from your IAM.
+- **Secret Access Key** (required): The secret corresponding to the above key-id.
+- **Region Name** (required): The region of your data center eg. us-east-1, ap-sout-1, etc.
+- **SQS Queue URL** (required): The url for the SQS Queue.
+
+
+## Scopes
+
+- **authenticated**: Mandatory for all operations, ensures the user is authenticated.
+- **sqs::read**: Mandatory for getting alerts, ensures user can read from the Queue.
+- **sqs::write**: Mandatory **only** for Notifying/Pushing messages to queue, ensures user can write to Queue.
+
+If you only want to give read scope to your key-secret pair the permission policy: AmazonSQSReadOnlyAccess
+If you only want to give read & write scope to your key-secret pair the permission policy: AmazonSQSFullAccess
+Both are the policies are prebuilt in AWS.
+
+## Inputs for AmazonSQS Action
+
+- `message`: str: Body/Message for the notification
+- `group_id`: str | None: Mandatory only if Queue is of type FIFO, ignored incase of a normal Queue.
+- `dedup_id`: str | None: Mandatory only if Queue is of type FIFO, ignored incase of a normal Queue.
+- **kwargs: dict | None: You can pass additional key-value pairs, that will be sent as MessageAttributes in the notification.
+
+## Output for AmazonSQS Action
+For more detail, visit [sqs-documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/send_message.html#).
+   ```json
+   {
+        'MD5OfMessageBody': 'string',
+        'MD5OfMessageAttributes': 'string',
+        'MD5OfMessageSystemAttributes': 'string',
+        'MessageId': 'string',
+        'SequenceNumber': 'string'
+   }
+   ```
+
+<Note>
+  - When using the AmazonSQS action, if your queue is fifo, then it is **mandatory** to pass a dedup_id & group_id.
+  - All the extra fields present in the MessageAttribute is stored in alert.label as a key-value pair dictionary.
+  - You can pass these attributes in the SQS Queue message and keep will extract and use these field for the alert
+    - name
+    - status: Possible values 'firing' | 'resolved' | 'acknowledged' | 'suppressed' | 'pending' defaults to 'firing'.
+    - severity: Possible values 'critical' | 'high' | 'warning' | 'info' | 'low' defaults to 'high'
+    - description
+
+</Note>
+
+## Useful Links
+
+- [AmazonSQS Boto3 Examples](https://docs.aws.amazon.com/code-library/latest/ug/python_3_sqs_code_examples.html)
+- [Boto3 SQS Documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html)

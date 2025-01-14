@@ -63,6 +63,7 @@ export interface AlertDto {
   isNoisy?: boolean;
   enriched_fields: string[];
   incident?: string;
+  alert_query?: string;
 
   // From AlertWithIncidentLinkMetadataDto
   is_created_by_ai?: boolean;

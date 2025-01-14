@@ -76,6 +76,7 @@ export default function IncidentAlerts({ incident }: Props) {
   // TODO: Load data on server side
   // Loading state is true if the data is not loaded and there is no error for smoother loading state on initial load
   const isLoading = _alertsLoading || (!alerts && !alertsError);
+  const isTopologyIncident = incident.incident_type === "topology";
 
   useEffect(() => {
     if (alerts && alerts.limit != pagination.pageSize) {
@@ -169,17 +170,22 @@ export default function IncidentAlerts({ incident }: Props) {
       }),
       columnHelper.accessor("is_created_by_ai", {
         id: "is_created_by_ai",
-        header: "🔗 Correlation type",
+        header: "Correlation",
         minSize: 50,
-        cell: (context) => (
-          <>
-            {context.getValue() ? (
-              <div title="Correlated with AI">🤖 AI</div>
-            ) : (
-              <div title="Correlated manually">👨‍💻 Manually</div>
-            )}
-          </>
-        ),
+        cell: (context) => {
+          if (isTopologyIncident) {
+            return <div title="Correlated with topology">🌐 Topology</div>;
+          }
+          return (
+            <>
+              {context.getValue() ? (
+                <div title="Correlated with AI">🤖 AI</div>
+              ) : (
+                <div title="Correlated manually">👨‍💻 Manually</div>
+              )}
+            </>
+          );
+        },
       }),
       columnHelper.accessor("lastReceived", {
         id: "lastReceived",
@@ -266,7 +272,7 @@ export default function IncidentAlerts({ incident }: Props) {
         selectedFingerprints={selectedFingerprints}
         resetAlertsSelection={() => table.resetRowSelection()}
       />
-      <Card className="p-0 overflow-x-auto">
+      <Card className="p-0 overflow-x-auto h-[calc(100vh-28rem)]">
         <Table className="[&>table]:table-fixed">
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -334,7 +340,7 @@ export default function IncidentAlerts({ incident }: Props) {
           {isLoading && (
             <IncidentAlertsTableBodySkeleton
               table={table}
-              pageSize={pagination.pageSize}
+              pageSize={pagination.pageSize - 10}
             />
           )}
         </Table>

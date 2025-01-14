@@ -20,6 +20,8 @@ from pydantic import (
 from sqlalchemy import desc
 from sqlmodel import col
 
+from keep.api.models.db.rule import ResolveOn
+
 if TYPE_CHECKING:
     from keep.api.models.db.alert import Incident
 
@@ -123,6 +125,12 @@ class IncidentSeverity(SeverityBaseInterface):
     WARNING = ("warning", 3)
     INFO = ("info", 2)
     LOW = ("low", 1)
+
+    def from_number(n):
+        for severity in IncidentSeverity:
+            if severity.order == n:
+                return severity
+        raise ValueError(f"No IncidentSeverity with order {n}")
 
 
 class AlertDto(BaseModel):
@@ -437,6 +445,12 @@ class IncidentDto(IncidentDtoIn):
     merged_by: str | None
     merged_at: datetime.datetime | None
 
+    enrichments: dict | None = {}
+    incident_type: str | None
+    incident_application: str | None
+
+    resolve_on: str = ResolveOn.ALL.value
+
     _tenant_id: str = PrivateAttr()
     _alerts: Optional[List[AlertDto]] = PrivateAttr(default=None)
 
@@ -524,6 +538,10 @@ class IncidentDto(IncidentDtoIn):
             merged_into_incident_id=db_incident.merged_into_incident_id,
             merged_by=db_incident.merged_by,
             merged_at=db_incident.merged_at,
+            incident_type=db_incident.incident_type,
+            incident_application=str(db_incident.incident_application),
+            enrichments=db_incident.enrichments,
+            resolve_on=db_incident.resolve_on,
         )
 
         # This field is required for getting alerts when required
@@ -567,13 +585,16 @@ class SplitIncidentRequestDto(BaseModel):
     alert_fingerprints: list[str]
     destination_incident_id: UUID
 
+
 class SplitIncidentResponseDto(BaseModel):
     destination_incident_id: UUID
     moved_alert_fingerprints: list[str]
 
+
 class MergeIncidentsRequestDto(BaseModel):
     source_incident_ids: list[UUID]
     destination_incident_id: UUID
+
 
 class MergeIncidentsResponseDto(BaseModel):
     merged_incident_ids: list[UUID]
@@ -682,3 +703,8 @@ class IncidentCommit(BaseModel):
 class IncidentsClusteringSuggestion(BaseModel):
     incident_suggestion: list[IncidentDto]
     suggestion_id: str
+
+
+class EnrichIncidentRequestBody(BaseModel):
+    enrichments: Dict[str, Any]
+    force: bool = False
