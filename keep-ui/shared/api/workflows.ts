@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { ApiClient } from "./ApiClient";
 import { KeepApiError } from "./KeepApiError";
 import { createServerApiClient } from "./server";
+import { cache } from "react";
 
 export type Provider = {
   id: string;
@@ -103,15 +104,14 @@ export async function getWorkflow(api: ApiClient, id: string) {
 }
 
 export async function getWorkflowWithErrorHandling(
-  id: string,
-  { redirect = true }: { redirect?: boolean } = {}
+  id: string
   // @ts-ignore ignoring since not found will be handled by nextjs
 ): Promise<Workflow> {
   try {
     const api = await createServerApiClient();
     return await getWorkflow(api, id);
   } catch (error) {
-    if (error instanceof KeepApiError && error.statusCode === 404 && redirect) {
+    if (error instanceof KeepApiError && error.statusCode === 404) {
       notFound();
     } else {
       throw error;
@@ -119,11 +119,14 @@ export async function getWorkflowWithErrorHandling(
   }
 }
 
-export async function getWorkflowWithRedirectSafe(id: string) {
+async function _getWorkflowWithRedirectSafe(id: string) {
   try {
-    return await getWorkflowWithErrorHandling(id, { redirect: false });
+    return await getWorkflowWithErrorHandling(id);
   } catch (error) {
     console.error(error);
     return undefined;
   }
 }
+
+// cache the function for server side, so we can use it in the layout, metadata and in the page itself
+export const getWorkflowWithRedirectSafe = cache(_getWorkflowWithRedirectSafe);
