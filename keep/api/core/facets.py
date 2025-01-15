@@ -169,12 +169,11 @@ def delete_facet(tenant_id: str, facet_id: str) -> bool:
         bool: True if the facet was successfully deleted, False otherwise.
     """
     with Session(engine) as session:
-        facet = (
-            session.query(Facet)
-            .filter(Facet.tenant_id == tenant_id)
-            .filter(Facet.id == UUID(facet_id))
-            .first()
-        )
+        facet = session.exec(
+            select(Facet)
+            .where(Facet.tenant_id == tenant_id)
+            .where(Facet.id == UUID(facet_id))
+        ).first()[0] # result returned as tuple
         if facet:
             session.delete(facet)
             session.commit()
