@@ -1,15 +1,15 @@
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
-from sqlalchemy import and_, func, literal, literal_column, select
+from sqlalchemy import and_, func, select
 from sqlmodel import Session, col, text
 
-from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata, FieldMappingConfiguration, JsonMapping, SimpleMapping
+from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata, FieldMappingConfiguration
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider_for_dialect,
 )
 
-from keep.api.core.facets import get_facets
+from keep.api.core.facets import get_facet_options, get_facets
 from keep.api.models.alert import (
     IncidentSorting,
 )
@@ -55,6 +55,45 @@ incident_field_configurations = [
 ]
 
 properties_metadata = PropertiesMetadata(incident_field_configurations)
+
+static_facets = [
+    FacetDto(
+        id="1e7b1d6e-1c2b-4f8e-9f8e-1c2b4f8e9f8e",
+        property_path="status",
+        name="Status",
+        is_static=True,
+        type=FacetType.str
+    ),
+    FacetDto(
+        id="2e7b1d6e-2c2b-4f8e-9f8e-2c2b4f8e9f8e",
+        property_path="severity",
+        name="Severity",
+        is_static=True,
+        type=FacetType.str
+    ),
+    FacetDto(
+        id="3e7b1d6e-3c2b-4f8e-9f8e-3c2b4f8e9f8e",
+        property_path="assignee",
+        name="Assignee",
+        is_static=True,
+        type=FacetType.str
+    ),
+    FacetDto(
+        id="4e7b1d6e-4c2b-4f8e-9f8e-4c2b4f8e9f8e",
+        property_path="alert.service",
+        name="Service",
+        is_static=True,
+        type=FacetType.str
+    ),
+    FacetDto(
+        id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
+        property_path="alert.provider_type",
+        name="Source",
+        is_static=True,
+        type=FacetType.str
+    )
+]
+static_facets_dict = {facet.id: facet for facet in static_facets}
 
 def __build_base_incident_query(tenant_id: str):
     incidents_alerts_cte = (
@@ -210,166 +249,44 @@ def get_last_incidents_by_cel(
     return incidents, total_count
 
 
-def __build_facets_data_query(
-    dialect: str,
-    tenant_id: str,
-    facets_to_load: list[FacetDto],
-    allowed_incident_ids: list[str],
-    cel: str = None,
-) -> str:
-    provider_type = get_cel_to_sql_provider_for_dialect(dialect)
-    instance = provider_type(properties_metadata)
-
-    facet_fields = [
-        {
-            "facet_name": facet.property_path,
-            "facet_id": facet.id,
-            "metadata": properties_metadata.get_property_metadata(facet.property_path),
-        }
-        for facet in facets_to_load
-    ]
-    incidents_alerts_cte = __build_base_incident_query(tenant_id).cte('incidents_alerts_cte')
-    base_query_cte = (
-            select(
-                Incident,
-                incidents_alerts_cte.c.alert_enrichments,
-                incidents_alerts_cte.c.alert_event,
-                incidents_alerts_cte.c.incident_alert_provider_type,
-                Incident.id.label("entity_id"),
-            )
-            .select_from(Incident)
-            .outerjoin(incidents_alerts_cte, Incident.id == incidents_alerts_cte.c.incident_id)
-            .filter(Incident.tenant_id == tenant_id)
-        )
-
-    if allowed_incident_ids:
-        base_query_cte = base_query_cte.filter(
-            Incident.id.in_(allowed_incident_ids)
-        )
-
-    if cel:
-        query_metadata = instance.convert_to_sql_str(cel)
-        base_query_cte = base_query_cte.filter(text(query_metadata.where))
-
-    base_query_cte = base_query_cte.cte("base_query_cte")
-
-    # Main Query: JSON Extraction and Counting
-    union_queries = []
-
-    for facet_field in facet_fields:
-        facet_name = facet_field["facet_name"]
-        metadata = facet_field["metadata"] # TODO: Fix this
-        group_by_exp = []
-
-        for item in metadata:
-            if isinstance(item, JsonMapping):
-                group_by_exp.append(instance.json_extract(item.json_prop, item.prop_in_json))
-            elif isinstance(metadata[0], SimpleMapping):
-                group_by_exp.append(item.map_to)
-
-        group_by_exp += ['NULL']
-
-        union_queries.append(
-            select(
-                literal(facet_name).label("facet_name"),
-                text(f'{instance.coalesce(group_by_exp)} AS facet_value'),
-                func.count(func.distinct(literal_column("entity_id"))).label(
-                    "matches_count"
-                ),
-            )
-            .select_from(base_query_cte)
-            .group_by(text(instance.coalesce(group_by_exp)))
-        )
-
-    query = None
-
-    if len(union_queries) > 1:
-        query = union_queries[0].union_all(*union_queries[1:])
-    else:
-        query = union_queries[0]
-
-    return query
-
-
-static_facets = [
-    FacetDto(
-        id="1e7b1d6e-1c2b-4f8e-9f8e-1c2b4f8e9f8e",
-        property_path="status",
-        name="Status",
-        is_static=True,
-        type=FacetType.str
-    ),
-    FacetDto(
-        id="2e7b1d6e-2c2b-4f8e-9f8e-2c2b4f8e9f8e",
-        property_path="severity",
-        name="Severity",
-        is_static=True,
-        type=FacetType.str
-    ),
-    FacetDto(
-        id="3e7b1d6e-3c2b-4f8e-9f8e-3c2b4f8e9f8e",
-        property_path="assignee",
-        name="Assignee",
-        is_static=True,
-        type=FacetType.str
-    ),
-    FacetDto(
-        id="4e7b1d6e-4c2b-4f8e-9f8e-4c2b4f8e9f8e",
-        property_path="alert.service",
-        name="Service",
-        is_static=True,
-        type=FacetType.str
-    ),
-    FacetDto(
-        id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
-        property_path="alert.provider_type",
-        name="Source",
-        is_static=True,
-        type=FacetType.str
-    )
-]
-static_facets_dict = {facet.id: facet for facet in static_facets}
-
-
 def get_incident_facets_data(
     tenant_id: str,
     facets_to_load: list[str],
     allowed_incident_ids: list[str],
     cel: str = None,
 ) -> dict[str, list[FacetOptionDto]]:
-    with Session(engine) as session:
-        if facets_to_load:
-            facets = get_incident_facets(tenant_id, facets_to_load)
-        else:
-            facets = static_facets
+    if facets_to_load:
+        facets = get_incident_facets(tenant_id, facets_to_load)
+    else:
+        facets = static_facets
 
-        facet_name_to_id_dict = {facet.property_path: facet.id for facet in facets}
-
-        db_query = __build_facets_data_query(
-            dialect=session.bind.dialect.name,
-            tenant_id=tenant_id,
-            facets_to_load=facets,
-            allowed_incident_ids=allowed_incident_ids,
-            cel=cel,
+    incidents_alerts_cte = __build_base_incident_query(tenant_id).cte(
+        "incidents_alerts_cte"
+    )
+    base_query = (
+        select(
+            Incident,
+            incidents_alerts_cte.c.alert_enrichments,
+            incidents_alerts_cte.c.alert_event,
+            incidents_alerts_cte.c.incident_alert_provider_type,
+            Incident.id.label("entity_id"),
         )
-        data = session.exec(db_query).all()
-        result_dict = {}
+        .select_from(Incident)
+        .outerjoin(
+            incidents_alerts_cte, Incident.id == incidents_alerts_cte.c.incident_id
+        )
+        .filter(Incident.tenant_id == tenant_id)
+    )
 
-        for facet_name, facet_value, matches_count in data:
-            facet_id = facet_name_to_id_dict.get(facet_name, facet_name)
+    if allowed_incident_ids:
+        base_query = base_query.filter(Incident.id.in_(allowed_incident_ids))
 
-            if facet_id not in result_dict:
-                result_dict[facet_id] = []
-
-            result_dict[facet_id].append(
-                FacetOptionDto(
-                    display_name=str(facet_value),
-                    value=facet_value,
-                    matches_count=matches_count,
-                )
-            )
-
-        return result_dict
+    return get_facet_options(
+        base_query=base_query,
+        cel=cel,
+        facets=facets,
+        properties_metadata=properties_metadata,
+    )
 
 
 def get_incident_facets(tenant_id: str, facet_ids_to_load: list[str] = None) -> list[FacetDto]:
