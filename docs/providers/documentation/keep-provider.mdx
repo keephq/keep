@@ -9,6 +9,10 @@ description: "Keep provider allows you to query and manage alerts in Keep."
 - `query`: str : The query to retrieve alerts based on specific criteria.
 - `filter`: dict : Optional filters to narrow down the query results.
 
+### Optional
+
+- `workflow_to_update_yaml`: str : The YAML of a workflow to update in Keep. You may find [functions -> raw_render_without_execution](workflow/syntax/functions.mdx) useful.
+
 ## Outputs
 
 - `alerts`: list : A list of alerts that match the query criteria.
