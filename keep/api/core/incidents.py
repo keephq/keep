@@ -96,6 +96,17 @@ static_facets = [
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
 def __build_base_incident_query(tenant_id: str):
+    """
+    Builds a base query for incidents related to a specific tenant.
+    This function constructs a Common Table Expression (CTE) that selects
+    incident-related data, including incident ID, alert enrichments, alert event,
+    and alert provider type. It joins several tables: LastAlertToIncident, LastAlert,
+    Alert, and optionally AlertEnrichment, based on the provided tenant ID.
+    Args:
+        tenant_id (str): The ID of the tenant for which to build the incident query.
+    Returns:
+        sqlalchemy.sql.selectable.CTE: A CTE containing the base incident query.
+    """
     incidents_alerts_cte = (
         select(
             LastAlertToIncident.incident_id.label("incident_id"),
@@ -144,6 +155,26 @@ def __build_last_incidents_query(
     cel: str = None,
     allowed_incident_ids: Optional[List[str]] = None,
 ):
+    """
+    Builds a SQL query to retrieve the last incidents based on various filters and sorting options.
+
+    Args:
+        dialect (str): The SQL dialect to use.
+        tenant_id (str): The tenant ID to filter incidents.
+        limit (int, optional): The maximum number of incidents to return. Defaults to 25.
+        offset (int, optional): The number of incidents to skip before starting to return results. Defaults to 0.
+        timeframe (int, optional): The number of days to look back from the current date for incidents. Defaults to None.
+        upper_timestamp (datetime, optional): The upper bound timestamp for filtering incidents. Defaults to None.
+        lower_timestamp (datetime, optional): The lower bound timestamp for filtering incidents. Defaults to None.
+        is_confirmed (bool, optional): Filter for confirmed incidents. Defaults to False.
+        sorting (Optional[IncidentSorting], optional): The sorting criteria for the incidents. Defaults to IncidentSorting.creation_time.
+        is_predicted (bool, optional): Filter for predicted incidents. Defaults to None.
+        cel (str, optional): The CEL (Common Expression Language) string to convert to SQL. Defaults to None.
+        allowed_incident_ids (Optional[List[str]], optional): List of allowed incident IDs to filter. Defaults to None.
+
+    Returns:
+        sqlalchemy.sql.selectable.Select: The constructed SQL query.
+    """
     provider_type = get_cel_to_sql_provider_for_dialect(dialect)
     instance = provider_type(properties_metadata)
     query_metadata = instance.convert_to_sql_str(cel)
@@ -205,23 +236,22 @@ def get_last_incidents_by_cel(
     allowed_incident_ids: Optional[List[str]] = None,
 ) -> Tuple[list[Incident], int]:
     """
-    Get the last incidents and total amount of incidents.
-
+    Retrieve the last incidents for a given tenant based on various filters and criteria.
     Args:
-        tenant_id (str): The tenant_id to filter the incidents by.
-        limit (int): Amount of objects to return
-        offset (int): Current offset for
-        timeframe (int|null): Return incidents only for the last <N> days
-        is_confirmed (bool): Return confirmed incidents or predictions
-        upper_timestamp: datetime = None,
-        lower_timestamp: datetime = None,
-        is_confirmed (bool): filter incident candidates or real incidents
-        sorting: Optional[IncidentSorting]: how to sort the data
-        with_alerts (bool): Pre-load alerts or not
-        is_predicted (bool): filter only incidents predicted by KeepAI
-        filters (dict): dict of filters
+        tenant_id (str): The ID of the tenant.
+        limit (int, optional): The maximum number of incidents to return. Defaults to 25.
+        offset (int, optional): The number of incidents to skip before starting to collect the result set. Defaults to 0.
+        timeframe (int, optional): The timeframe in which to look for incidents. Defaults to None.
+        upper_timestamp (datetime, optional): The upper bound timestamp for filtering incidents. Defaults to None.
+        lower_timestamp (datetime, optional): The lower bound timestamp for filtering incidents. Defaults to None.
+        is_confirmed (bool, optional): Filter for confirmed incidents. Defaults to False.
+        sorting (Optional[IncidentSorting], optional): The sorting criteria for the incidents. Defaults to IncidentSorting.creation_time.
+        with_alerts (bool, optional): Whether to include alerts in the incidents. Defaults to False.
+        is_predicted (bool, optional): Filter for predicted incidents. Defaults to None.
+        cel (str, optional): The CEL (Common Event Language) filter. Defaults to None.
+        allowed_incident_ids (Optional[List[str]], optional): A list of allowed incident IDs to filter by. Defaults to None.
     Returns:
-        List[Incident]: A list of Incident objects.
+        Tuple[list[Incident], int]: A tuple containing a list of incidents and the total count of incidents.
     """
     with Session(engine) as session:
         sql_query = __build_last_incidents_query(
@@ -255,6 +285,16 @@ def get_incident_facets_data(
     allowed_incident_ids: list[str],
     cel: str = None,
 ) -> dict[str, list[FacetOptionDto]]:
+    """
+    Retrieves incident facets data for a given tenant.
+    Args:
+        tenant_id (str): The ID of the tenant.
+        facets_to_load (list[str]): A list of facets to load.
+        allowed_incident_ids (list[str]): A list of allowed incident IDs.
+        cel (str, optional): A CEL expression to filter the incidents. Defaults to None.
+    Returns:
+        dict[str, list[FacetOptionDto]]: A dictionary where the keys are facet ids and the values are lists of FacetOptionDto objects.
+    """
     if facets_to_load:
         facets = get_incident_facets(tenant_id, facets_to_load)
     else:
@@ -290,6 +330,22 @@ def get_incident_facets_data(
 
 
 def get_incident_facets(tenant_id: str, facet_ids_to_load: list[str] = None) -> list[FacetDto]:
+    """
+    Retrieve incident facets for a given tenant.
+
+    This function returns a list of facets associated with incidents for a specified tenant.
+    If no specific facet IDs are provided, it returns a combination of static facets and
+    dynamically loaded facets for the tenant. If specific facet IDs are provided, it returns
+    the corresponding facets, loading them dynamically if they are not static.
+
+    Args:
+        tenant_id (str): The ID of the tenant for which to retrieve incident facets.
+        facet_ids_to_load (list[str], optional): A list of facet IDs to load. If not provided,
+            all static facets and dynamically loaded facets for the tenant will be returned.
+
+    Returns:
+        list[FacetDto]: A list of FacetDto objects representing the incident facets for the tenant.
+    """
     not_static_facet_ids = []
     facets = []
 
