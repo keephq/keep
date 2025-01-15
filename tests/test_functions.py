@@ -494,11 +494,11 @@ def test_firing_time_with_manual_resolve(create_alert):
     create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=60))
     # It was manually resolved
     enrichment_bl = EnrichmentsBl(tenant_id=SINGLE_TENANT_UUID)
-    enrichment_bl.enrich_alert(
+    enrichment_bl.enrich_entity(
         fingerprint=fingerprint,
         enrichments={"status": "resolved"},
         dispose_on_new_alert=True,
-        action_type=AlertActionType.GENERIC_ENRICH,
+        action_type=ActionType.GENERIC_ENRICH,
         action_callee="tests",
         action_description="tests",
     )

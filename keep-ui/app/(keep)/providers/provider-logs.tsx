@@ -4,6 +4,7 @@ import { useProviderLogs, ProviderLog } from "@/utils/hooks/useProviderLogs";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { KeepApiError } from "@/shared/api";
+import { useConfig } from "@/utils/hooks/useConfig";
 interface ProviderLogsProps {
   providerId: string;
 }
@@ -18,6 +19,7 @@ const LOG_LEVEL_COLORS = {
 
 const ProviderLogs: React.FC<ProviderLogsProps> = ({ providerId }) => {
   const { logs, isLoading, error, refresh } = useProviderLogs({ providerId });
+  const { data: config } = useConfig();
 
   if (isLoading) {
     return <Text>Loading logs...</Text>;
@@ -31,7 +33,12 @@ const ProviderLogs: React.FC<ProviderLogsProps> = ({ providerId }) => {
             title="Provider Logs Not Enabled"
             description="Provider logs need to be enabled on the backend. Please check the documentation for instructions on how to enable provider logs."
             buttonText="View Documentation"
-            onClick={() => window.open("https://docs.keephq.dev", "_blank")}
+            onClick={() =>
+              window.open(
+                `${config?.KEEP_DOCS_URL || "https://docs.keephq.dev"}`,
+                "_blank"
+              )
+            }
           />
         </div>
       );

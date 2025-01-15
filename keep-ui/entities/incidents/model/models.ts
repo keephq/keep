@@ -9,10 +9,14 @@ export enum Status {
   Deleted = "deleted",
 }
 
-export const DefaultIncidentFilteredStatuses: string[] = [Status.Firing, Status.Acknowledged, Status.Merged];
+export const DefaultIncidentFilteredStatuses: string[] = [
+  Status.Firing,
+  Status.Acknowledged,
+  Status.Merged,
+];
 export const DefaultIncidentFilters: object = {
-  "status": DefaultIncidentFilteredStatuses,
-}
+  status: DefaultIncidentFilteredStatuses,
+};
 
 export interface IncidentDto {
   id: string;
@@ -38,6 +42,10 @@ export interface IncidentDto {
   merged_by: string;
   merged_at: Date;
   fingerprint: string;
+  enrichments: { [key: string]: any };
+  incident_type?: string;
+  incident_application?: string;
+  resolve_on: "all_resolved" | "first" | "last" | "never";
 }
 
 export interface IncidentCandidateDto {

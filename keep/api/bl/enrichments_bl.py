@@ -8,7 +8,7 @@ import chevron
 from sqlmodel import Session
 
 from keep.api.core.config import config
-from keep.api.core.db import enrich_alert as enrich_alert_db
+from keep.api.core.db import enrich_entity as enrich_alert_db
 from keep.api.core.db import (
     get_enrichment_with_session,
     get_mapping_rule_by_id,
@@ -17,7 +17,7 @@ from keep.api.core.db import (
 )
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto
-from keep.api.models.db.alert import AlertActionType
+from keep.api.models.db.alert import ActionType
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 
@@ -300,6 +300,11 @@ class EnrichmentsBl:
                 )
             else:
                 enrichments = topology_service.dict(exclude_none=True)
+                # repository could be taken from application too
+                if not topology_service.repository and topology_service.applications:
+                    for application in topology_service.applications:
+                        if application.repository:
+                            enrichments["repository"] = application.repository
                 # Remove redundant fields
                 enrichments.pop("tenant_id", None)
                 enrichments.pop("id", None)
@@ -335,10 +340,10 @@ class EnrichmentsBl:
             # SHAHAR: since when running this enrich_alert, the alert is not in elastic yet (its indexed after),
             #         enrich alert will fail to update the alert in elastic.
             #         hence should_exist = False
-            self.enrich_alert(
+            self.enrich_entity(
                 alert.fingerprint,
                 enrichments,
-                action_type=AlertActionType.MAPPING_RULE_ENRICH,
+                action_type=ActionType.MAPPING_RULE_ENRICH,
                 action_callee="system",
                 action_description=f"Alert enriched with mapping from rule `{rule.name}`",
                 should_exist=False,
@@ -402,11 +407,11 @@ class EnrichmentsBl:
             self.logger.exception("Error while checking matcher")
             return False
 
-    def enrich_alert(
+    def enrich_entity(
         self,
         fingerprint: str,
         enrichments: dict,
-        action_type: AlertActionType,
+        action_type: ActionType,
         action_callee: str,
         action_description: str,
         should_exist=True,
@@ -507,7 +512,7 @@ class EnrichmentsBl:
                 new_enrichments,
                 session=self.db_session,
                 action_callee="system",
-                action_type=AlertActionType.DISPOSE_ENRICHED_ALERT,
+                action_type=ActionType.DISPOSE_ENRICHED_ALERT,
                 action_description=f"Disposing enrichments from alert - {disposed_keys}",
                 force=True,
             )

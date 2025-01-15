@@ -52,6 +52,7 @@ export default function SettingsPage() {
   const [userSubTabIndex, setUserSubTabIndex] = useState<number>(0);
 
   const authType = configData?.AUTH_TYPE as AuthType;
+  const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
 
   // future: feature flags
   const usersAllowed = authType !== AuthType.NOAUTH;
@@ -72,24 +73,24 @@ export default function SettingsPage() {
       newSelectedTab === "users"
         ? 0
         : newSelectedTab === "webhook"
-          ? 1
-          : newSelectedTab === "smtp"
-            ? 2
-            : 0;
+        ? 1
+        : newSelectedTab === "smtp"
+        ? 2
+        : 0;
     const userSubTabIndex =
       newUserSubTab === "users"
         ? 0
         : newUserSubTab === "groups"
-          ? 1
-          : newUserSubTab === "roles"
-            ? 2
-            : newUserSubTab === "permissions"
-              ? 3
-              : newUserSubTab === "api-keys"
-                ? 4
-                : newUserSubTab === "sso"
-                  ? 5
-                  : 0;
+        ? 1
+        : newUserSubTab === "roles"
+        ? 2
+        : newUserSubTab === "permissions"
+        ? 3
+        : newUserSubTab === "api-keys"
+        ? 4
+        : newUserSubTab === "sso"
+        ? 5
+        : 0;
     setTabIndex(tabIndex);
     setUserSubTabIndex(userSubTabIndex);
     setSelectedTab(newSelectedTab);
@@ -158,7 +159,7 @@ export default function SettingsPage() {
           return (
             <EmptyStateTable
               message={`Users management is disabled. See documentation on how to enable it.`}
-              documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
+              documentationURL={`${docsUrl}/deployment/authentication/overview#authentication-features-comparison`}
               icon={UsersIcon}
             >
               <UsersTable
@@ -214,7 +215,7 @@ export default function SettingsPage() {
             <EmptyStateTable
               icon={UserGroupIcon}
               message={`Groups management is disabled with. See documentation on how to enabled it.`}
-              documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
+              documentationURL={`${docsUrl}/deployment/authentication/overview#authentication-features-comparison`}
             >
               <GroupsTable
                 groups={mockGroups}
@@ -249,7 +250,7 @@ export default function SettingsPage() {
             <EmptyStateTable
               icon={ShieldCheckIcon}
               message={`Roles management is disabled with. See documentation on how to enabled it.`}
-              documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
+              documentationURL={`${docsUrl}/deployment/authentication/overview#authentication-features-comparison`}
             >
               <RolesTable
                 roles={mockRoles}
@@ -282,7 +283,7 @@ export default function SettingsPage() {
             <EmptyStateTable
               icon={MdOutlineSecurity}
               message={`Permissions management is disabled with. See documentation on how to enabled it.`}
-              documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
+              documentationURL={`${docsUrl}/deployment/authentication/overview#authentication-features-comparison`}
             >
               <PermissionsTable
                 resources={mockPresets}
@@ -318,7 +319,7 @@ export default function SettingsPage() {
             <EmptyStateTable
               icon={KeyIcon}
               message={`API Keys management is disabled with. See documentation on how to enabled it.`}
-              documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
+              documentationURL={`${docsUrl}/deployment/authentication/overview#authentication-features-comparison`}
             >
               <APIKeysTable
                 apiKeys={mockApiKeys}
@@ -336,7 +337,7 @@ export default function SettingsPage() {
           return (
             <EmptyStateImage
               message={`SSO management is disabled with. See documentation on how to enabled it.`}
-              documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
+              documentationURL={`${docsUrl}/deployment/authentication/overview#authentication-features-comparison`}
               icon={LockClosedIcon}
               imageURL="/sso.png"
             />

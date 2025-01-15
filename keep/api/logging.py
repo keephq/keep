@@ -126,13 +126,11 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
         extra["tenant_id"] = self.tenant_id
         extra["workflow_id"] = self.workflow_id
         extra["workflow_execution_id"] = self.workflow_execution_id
-        # add the steps/actions context
-        # todo: more robust
-        # added: protection from big steps context (< 64kb)
-        if self.context_manager.steps_context_size < 1024 * 64:
-            extra["context"] = (self.context_manager.steps_context,)
-        else:
-            extra["context"] = "truncated (context size > 64kb)"
+
+        step_id = extra.pop("step_id", None)
+        if step_id:
+            # everything added to 'context', will be saved in the db column 'context' and is used by frontend. Feel free to add more context here
+            extra["context"] = {"step_id": step_id}
 
         kwargs["extra"] = extra
         return msg, kwargs

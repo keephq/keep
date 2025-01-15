@@ -13,6 +13,7 @@ import { QuestionMarkCircleIcon } from "@heroicons/react/20/solid";
 import { Link } from "@/components/ui";
 import { useProviders } from "@/utils/hooks/useProviders";
 import AlertMenu from "./alert-menu";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -44,6 +45,8 @@ const AlertSidebar = ({
   const providerName =
     providers?.installed_providers.find((p) => p.id === alert?.providerId)
       ?.display_name || alert?.providerId;
+
+  const { data: config } = useConfig();
 
   const handleRefresh = async () => {
     console.log("Refresh button clicked");
@@ -140,7 +143,10 @@ const AlertSidebar = ({
                             alert instances in Keep. Every provider declares the
                             fields fingerprints are calculated upon.{" "}
                             <Link
-                              href="https://docs.keephq.dev/providers/fingerprints#fingerprints"
+                              href={`${
+                                config?.KEEP_DOCS_URL ||
+                                "https://docs.keephq.dev"
+                              }/providers/fingerprints#fingerprints`}
                               className="text-white"
                             >
                               Docs

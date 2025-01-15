@@ -243,6 +243,7 @@ const DropdownDropdownMenuItem = React.forwardRef<
       className={clsx(
         "DropdownMenuItem",
         props.variant === "destructive" && "text-red-500",
+        disabled && "opacity-50 cursor-not-allowed",
         props.className
       )}
       tabIndex={isActive ? 0 : -1}
