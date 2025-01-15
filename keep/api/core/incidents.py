@@ -54,7 +54,7 @@ incident_field_configurations = [
     FieldMappingConfiguration("merged_at", "merged_at"),
     FieldMappingConfiguration("merged_by", "merged_by"),
     FieldMappingConfiguration("alert.provider_type", "incident_alert_provider_type"),
-    FieldMappingConfiguration(map_from_pattern = "alert.*", map_to=["alert_enrichments", "alert_event"], is_json=True),
+    FieldMappingConfiguration(map_from_pattern = "alert.*", map_to=["alert_enrichments"], is_json=True),
 ]
 
 properties_metadata = PropertiesMetadata(incident_field_configurations)
@@ -220,6 +220,9 @@ def __build_facets_data_query(
     allowed_incident_ids: list[str],
     cel: str = None,
 ) -> str:
+    provider_type = get_cel_to_sql_provider_for_dialect(dialect)
+    instance = provider_type(properties_metadata)
+
     facet_fields = [
         {
             "facet_name": facet.property_path,
@@ -248,8 +251,6 @@ def __build_facets_data_query(
         )
 
     if cel:
-        provider_type = get_cel_to_sql_provider_for_dialect(dialect)
-        instance = provider_type(properties_metadata)
         query_metadata = instance.convert_to_sql_str(cel)
         base_query_cte = base_query_cte.filter(text(query_metadata.where))
 
@@ -260,29 +261,25 @@ def __build_facets_data_query(
 
     for facet_field in facet_fields:
         facet_name = facet_field["facet_name"]
-        metadata = [facet_field["metadata"][1]] if len(facet_field["metadata"]) > 1 else facet_field["metadata"] # TODO: Fix this
-        group_by_exp = None
+        metadata = facet_field["metadata"] # TODO: Fix this
+        group_by_exp = []
 
-        for metadata_mapping in metadata:
-            if isinstance(metadata_mapping, JsonMapping):
-                group_by_exp = func.json_unquote(
-                    func.json_extract(
-                        literal_column(metadata_mapping.json_prop), f"$.{metadata_mapping.prop_in_json}"
-                    )
-                )
-            elif isinstance(metadata_mapping, SimpleMapping):
-                group_by_exp = literal_column(metadata_mapping.map_to)
+        for item in metadata:
+            if isinstance(item, JsonMapping):
+                group_by_exp.append(instance.json_extract(item.json_prop, item.prop_in_json))
+            elif isinstance(metadata[0], SimpleMapping):
+                group_by_exp.append(item.map_to)
 
         union_queries.append(
             select(
                 literal(facet_name).label("facet_name"),
-                group_by_exp.label("facet_value"),
+                text(f'{instance.coalesce(group_by_exp)} AS facet_value'),
                 func.count(func.distinct(literal_column("entity_id"))).label(
                     "matches_count"
                 ),
             )
             .select_from(base_query_cte)
-            .group_by(literal_column('facet_value'))
+            .group_by(text(instance.coalesce(group_by_exp)))
         )
 
     query = None
