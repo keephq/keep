@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import List
 from keep.api.core.cel_to_sql.ast_nodes import (
     ConstantNode,
     MemberAccessNode,
@@ -23,6 +23,65 @@ class BuiltQueryMetadata:
         self.select_json = select_json
 
 class BaseCelToSqlProvider:
+    """
+    Base class for converting CEL (Common Expression Language) expressions to SQL strings.
+    Methods:
+        convert_to_sql_str(cel: str) -> BuiltQueryMetadata:
+            Converts a CEL expression to an SQL string.
+        json_extract(column: str, path: str) -> str:
+            Abstract method to extract JSON data from a column. Must be implemented in the child class.
+        coalesce(args: List[str]) -> str:
+            Abstract method to perform COALESCE operation. Must be implemented in the child class.
+        _visit_parentheses(node: str) -> str:
+            Wraps a given SQL string in parentheses.
+        _visit_logical_node(logical_node: LogicalNode) -> str:
+            Visits a logical node and converts it to an SQL string.
+        _visit_logical_and(left: str, right: str) -> str:
+            Converts a logical AND operation to an SQL string.
+        _visit_logical_or(left: str, right: str) -> str:
+            Converts a logical OR operation to an SQL string.
+        _visit_comparison_node(comparison_node: ComparisonNode) -> str:
+            Visits a comparison node and converts it to an SQL string.
+        _cast_property(exp: str, to_type: type) -> str:
+            Casts a property to a specified type in SQL.
+        _visit_equal(first_operand: str, second_operand: str) -> str:
+            Converts an equality comparison to an SQL string.
+        _visit_not_equal(first_operand: str, second_operand: str) -> str:
+            Converts a not-equal comparison to an SQL string.
+        _visit_greater_than(first_operand: str, second_operand: str) -> str:
+            Converts a greater-than comparison to an SQL string.
+        _visit_greater_than_or_equal(first_operand: str, second_operand: str) -> str:
+            Converts a greater-than-or-equal comparison to an SQL string.
+        _visit_less_than(first_operand: str, second_operand: str) -> str:
+            Converts a less-than comparison to an SQL string.
+        _visit_less_than_or_equal(first_operand: str, second_operand: str) -> str:
+            Converts a less-than-or-equal comparison to an SQL string.
+        _visit_in(first_operand: Node, array: list[ConstantNode]) -> str:
+            Converts an IN operation to an SQL string.
+        _visit_constant_node(value: str) -> str:
+            Converts a constant value to an SQL string.
+        _visit_multiple_fields_node(multiple_fields_node: MultipleFieldsNode) -> str:
+            Visits a multiple fields node and converts it to an SQL string.
+        _visit_member_access_node(member_access_node: MemberAccessNode) -> str:
+            Visits a member access node and converts it to an SQL string.
+        _visit_property_access_node(property_access_node: PropertyAccessNode) -> str:
+            Visits a property access node and converts it to an SQL string.
+        _visit_index_property(property_path: str) -> str:
+            Abstract method to handle index properties. Must be implemented in the child class.
+        _visit_method_calling(property_path: str, method_name: str, method_args: List[str]) -> str:
+            Visits a method calling node and converts it to an SQL string.
+        _visit_contains_method_calling(property_path: str, method_args: List[str]) -> str:
+            Abstract method to handle 'contains' method calls. Must be implemented in the child class.
+        _visit_startwith_method_calling(property_path: str, method_args: List[str]) -> str:
+            Abstract method to handle 'startsWith' method calls. Must be implemented in the child class.
+        _visit_endswith_method_calling(property_path: str, method_args: List[str]) -> str:
+            Abstract method to handle 'endsWith' method calls. Must be implemented in the child class.
+        _visit_unary_node(unary_node: UnaryNode) -> str:
+            Visits a unary node and converts it to an SQL string.
+        _visit_unary_not(operand: str) -> str:
+            Converts a NOT operation to an SQL string.
+        """
+
     __null_replacement = "'__@NULL@__'"
 
     def __init__(self, properties_metadata: PropertiesMetadata):
@@ -149,7 +208,6 @@ class BaseCelToSqlProvider:
             return exp
         if to_type == bool:
             return exp
-            # return "TRUE" if exp == "true" else "FALSE"
 
         raise NotImplementedError(f"{to_type.__name__} type casting is not supported yet")
 
@@ -247,17 +305,17 @@ class BaseCelToSqlProvider:
     def _visit_contains_method_calling(
         self, property_path: str, method_args: List[str]
     ) -> str:
-        raise NotImplementedError("'contains' method call is not supported")
+        raise NotImplementedError("'contains' method must be implemented in the child class")
 
     def _visit_startwith_method_calling(
         self, property_path: str, method_args: List[str]
     ) -> str:
-        raise NotImplementedError("'startswith' method call is not supported")
+        raise NotImplementedError("'startswith' method call must be implemented in the child class")
 
     def _visit_endswith_method_calling(
         self, property_path: str, method_args: List[str]
     ) -> str:
-        raise NotImplementedError("'endswith' method call is not supported")
+        raise NotImplementedError("'endswith' method call must be implemented in the child class")
 
     # endregion
 
