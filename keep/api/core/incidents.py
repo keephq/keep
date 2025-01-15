@@ -24,10 +24,7 @@ from keep.api.models.db.alert import (
 )
 from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto
-from sqlalchemy.dialects import mysql
-import uuid
 
-# from keep.api.models.db.facet import Facet, FacetEntityType
 
 incident_field_configurations = [
     FieldMappingConfiguration("user_generated_name", "user_generated_name"),
@@ -54,7 +51,7 @@ incident_field_configurations = [
     FieldMappingConfiguration("merged_at", "merged_at"),
     FieldMappingConfiguration("merged_by", "merged_by"),
     FieldMappingConfiguration("alert.provider_type", "incident_alert_provider_type"),
-    FieldMappingConfiguration(map_from_pattern = "alert.*", map_to=["alert_enrichments"], is_json=True),
+    FieldMappingConfiguration(map_from_pattern = "alert.*", map_to=["alert_enrichments", "alert_event"], is_json=True),
 ]
 
 properties_metadata = PropertiesMetadata(incident_field_configurations)
@@ -269,6 +266,8 @@ def __build_facets_data_query(
                 group_by_exp.append(instance.json_extract(item.json_prop, item.prop_in_json))
             elif isinstance(metadata[0], SimpleMapping):
                 group_by_exp.append(item.map_to)
+
+        group_by_exp += ['NULL']
 
         union_queries.append(
             select(
