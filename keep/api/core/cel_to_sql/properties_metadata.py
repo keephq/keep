@@ -72,4 +72,4 @@ class PropertiesMetadata:
             
             return [SimpleMapping(item) for item in map_to]
         
-        return [SimpleMapping(prop_path)]
+        return None

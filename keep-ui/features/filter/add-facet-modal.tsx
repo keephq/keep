@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { TextInput } from "@tremor/react";
-import { PlusIcon } from "@heroicons/react/24/outline";
 import Modal from "@/components/ui/Modal";
-import { FiSearch } from "react-icons/fi";
 import { CreateFacetDto } from "./models";
 import { Button } from "@/components/ui";
 

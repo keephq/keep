@@ -13,14 +13,13 @@ from keep.api.core.cel_to_sql.ast_nodes import (
 from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 from datetime import datetime
 
-from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, MultipleFieldsNode, PropertiesMapper
+from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, MultipleFieldsNode, PropertiesMapper, PropertiesMappingException
 from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
+from celpy import CELParseError
 
-class BuiltQueryMetadata:
-    def __init__(self, where: str, select_fields: str = None, select_json: str = None):
-        self.where = where
-        self.select = select_fields
-        self.select_json = select_json
+
+class CelToSqlException(Exception):
+    pass
 
 class BaseCelToSqlProvider:
     """
@@ -88,34 +87,40 @@ class BaseCelToSqlProvider:
         super().__init__()
         self.properties_mapper = PropertiesMapper(properties_metadata)
 
-    def convert_to_sql_str(self, cel: str) -> BuiltQueryMetadata:
+    def convert_to_sql_str(self, cel: str) -> str:
         """
-        Converts a CEL (Common Expression Language) string to an SQL string.
-
+        Converts a CEL (Common Expression Language) expression to an SQL string.
         Args:
             cel (str): The CEL expression to convert.
-            base_query (str): The base SQL query to append the converted CEL expression to.
-
         Returns:
-            str: The resulting SQL query string with the CEL expression converted to SQL.
+            str: The resulting SQL string. Returns an empty string if the input CEL expression is empty.
+        Raises:
+            CelToSqlException: If there is an error parsing the CEL expression, mapping properties, or building the SQL filter.
         """
+        
         if not cel:
-            return BuiltQueryMetadata(where="", select_fields="", select_json="")
+            return ""
 
-        original_query = CelToAstConverter.convert_to_ast(cel)
-        with_mapped_props = self.properties_mapper.map_props_in_ast(original_query)
-        where_clause = self.__build_where_clause(with_mapped_props)
+        try:
+            original_query = CelToAstConverter.convert_to_ast(cel)
+        except CELParseError as e:
+            raise CelToSqlException(f"Error parsing CEL expression: {str(e)}") from e
+        
+        try:
+            with_mapped_props = self.properties_mapper.map_props_in_ast(original_query)
+        except PropertiesMappingException as e:
+            raise CelToSqlException(f"Error while mapping columns: {str(e)}") from e
 
-        return BuiltQueryMetadata(
-                where=where_clause,
-                select_fields='',
-                select_json=''
-            )
+        try:
+            sql_filter = self.__build_sql_filter(with_mapped_props)
+            return sql_filter
+        except NotImplementedError as e:
+            raise CelToSqlException(f"Error while converting CEL expression tree to SQL: {str(e)}") from e
 
-    def __build_where_clause(self, abstract_node: Node) -> str:
+    def __build_sql_filter(self, abstract_node: Node) -> str:
         if isinstance(abstract_node, ParenthesisNode):
             return self._visit_parentheses(
-                self.__build_where_clause(abstract_node.expression)
+                self.__build_sql_filter(abstract_node.expression)
             )
 
         if isinstance(abstract_node, LogicalNode):
@@ -151,8 +156,8 @@ class BaseCelToSqlProvider:
 
     # region Logical Visitors
     def _visit_logical_node(self, logical_node: LogicalNode) -> str:
-        left = self.__build_where_clause(logical_node.left)
-        right = self.__build_where_clause(logical_node.right)
+        left = self.__build_sql_filter(logical_node.left)
+        right = self.__build_sql_filter(logical_node.right)
 
         if logical_node.operator == LogicalNode.AND:
             return self._visit_logical_and(left, right)
@@ -176,8 +181,8 @@ class BaseCelToSqlProvider:
         if comparison_node.operator == ComparisonNode.IN:
             return self._visit_in(comparison_node.first_operand, comparison_node.second_operand)
 
-        first_operand = self.__build_where_clause(comparison_node.first_operand)
-        second_operand = self.__build_where_clause(comparison_node.second_operand)
+        first_operand = self.__build_sql_filter(comparison_node.first_operand)
+        second_operand = self.__build_sql_filter(comparison_node.second_operand)
 
         if comparison_node.operator == ComparisonNode.EQ:
             result = self._visit_equal(first_operand, second_operand)
@@ -233,7 +238,7 @@ class BaseCelToSqlProvider:
         return f"{first_operand} <= {second_operand}"
     
     def _visit_in(self, first_operand: Node, array: list[ConstantNode]) -> str:
-        return f"{self.__build_where_clause(first_operand)} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
+        return f"{self.__build_sql_filter(first_operand)} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
 
     # endregion
 
@@ -254,7 +259,7 @@ class BaseCelToSqlProvider:
 
     # region Member Access Visitors
     def _visit_multiple_fields_node(self, multiple_fields_node: MultipleFieldsNode) -> str:
-        return self.coalesce([self.__build_where_clause(item) for item in multiple_fields_node.fields] + [self.__null_replacement])
+        return self.coalesce([self.__build_sql_filter(item) for item in multiple_fields_node.fields] + [self.__null_replacement])
 
     def _visit_member_access_node(self, member_access_node: MemberAccessNode) -> str:
         if isinstance(member_access_node, PropertyAccessNode):
@@ -322,7 +327,7 @@ class BaseCelToSqlProvider:
     # region Unary Visitors
     def _visit_unary_node(self, unary_node: UnaryNode) -> str:
         if unary_node.operator == UnaryNode.NOT:
-            return self._visit_unary_not(self.__build_where_clause(unary_node.operand))
+            return self._visit_unary_not(self.__build_sql_filter(unary_node.operand))
 
         raise NotImplementedError(
             f"{unary_node.operator} unary operator is not supported yet"

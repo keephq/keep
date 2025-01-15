@@ -37,8 +37,8 @@ def build_facets_data_query(
     instance = provider_type(properties_metadata)
 
     if cel:
-        query_metadata = instance.convert_to_sql_str(cel)
-        base_query = base_query.filter(text(query_metadata.where))
+        sql_filter = instance.convert_to_sql_str(cel)
+        base_query = base_query.filter(text(sql_filter))
 
     base_query = base_query.cte("base_query_cte")
 
@@ -96,28 +96,40 @@ def get_facet_options(
         dict[str, list[FacetOptionDto]]: A dictionary where keys are facet IDs and values are lists of FacetOptionDto objects.
     """
 
+    valid_facets = [facet for facet in facets if properties_metadata.get_property_metadata(facet.property_path)]
+
     with Session(engine) as session:
         db_query = build_facets_data_query(
             dialect=session.bind.dialect.name,
             base_query=base_query,
-            facets=facets,
+            facets=valid_facets,
             properties_metadata=properties_metadata,
             cel=cel,
         )
         data = session.exec(db_query).all()
-        result_dict = {}
+        grouped_by_id_dict = {}
 
-        for facet_id, facet_value, matches_count in data:
-            if facet_id not in result_dict:
-                result_dict[facet_id] = []
+        for facet_data in data:
+            if facet_data.facet_id not in grouped_by_id_dict:
+                grouped_by_id_dict[facet_data.facet_id] = []
 
-            result_dict[facet_id].append(
-                FacetOptionDto(
-                    display_name=str(facet_value),
-                    value=facet_value,
-                    matches_count=matches_count,
-                )
-            )
+            grouped_by_id_dict[facet_data.facet_id].append(facet_data)
+
+        result_dict: dict[str, list[FacetOptionDto]] = {}
+
+        for facet in facets:
+            if facet.id in grouped_by_id_dict:
+                result_dict[facet.id] = [
+                    FacetOptionDto(
+                        display_name=str(item.facet_value),
+                        value=item.facet_value,
+                        matches_count=item.matches_count,
+                    )
+                    for item in grouped_by_id_dict[facet.id]
+                ]
+                continue
+
+            result_dict[facet.id] = []
 
         return result_dict
 

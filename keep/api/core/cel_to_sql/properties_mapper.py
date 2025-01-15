@@ -1,4 +1,3 @@
-import re
 from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
     ConstantNode,
@@ -22,6 +21,9 @@ class JsonPropertyAccessNode(PropertyAccessNode):
 class MultipleFieldsNode(Node):
     def __init__(self, fields: list[PropertyAccessNode]):
         self.fields = fields
+
+class PropertiesMappingException(Exception):
+    pass
 
 class PropertiesMapper:
     def __init__(self, properties_metadata: PropertiesMetadata):
@@ -58,10 +60,18 @@ class PropertiesMapper:
         if not isinstance(comparison_node.first_operand, PropertyAccessNode):
             return comparison_node
 
-        result = []
-        for mapping in self.properties_metadata.get_property_metadata(
+        property_metadata = self.properties_metadata.get_property_metadata(
             comparison_node.first_operand.get_property_path()
-        ):
+        )
+
+        if not property_metadata:
+            raise PropertiesMappingException(
+                f'Missing mapping configuration for property "{comparison_node.first_operand.get_property_path()}" '
+                f'while processing the comparison node: "{comparison_node}".'
+            )
+
+        result = []
+        for mapping in property_metadata:
             property_access_node = self._create_property_access_node(mapping, None)
             result.append(property_access_node)
 
@@ -76,10 +86,18 @@ class PropertiesMapper:
             isinstance(member_access_node, PropertyAccessNode)
             and member_access_node.is_function_call()
         ):
-            result = None
-            for mapping in self.properties_metadata.get_property_metadata(
+            property_metadata = self.properties_metadata.get_property_metadata(
                 member_access_node.get_property_path()
-            ):
+            )
+
+            if not property_metadata:
+                raise PropertiesMappingException(
+                    f'Missing mapping configuration for property "{member_access_node.get_property_path()}" '
+                    f'while processing the comparison node: "{member_access_node}".'
+                )
+
+            result = None
+            for mapping in property_metadata:
                 method_access_node = member_access_node.get_method_access_node().copy()
                 current_node_result = self._create_property_access_node(
                     mapping, method_access_node

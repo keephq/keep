@@ -70,6 +70,7 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.topologies.topologies_service import TopologiesService  # noqa
+from celpy import CELParseError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -163,7 +164,7 @@ def get_all_incidents(
         authenticated_entity=authenticated_entity,
     )
 
-    if cel:
+    try:
         incidents, total_count = get_last_incidents_by_cel(
             tenant_id=tenant_id,
             is_confirmed=confirmed,
@@ -173,16 +174,9 @@ def get_all_incidents(
             cel=cel,
             allowed_incident_ids=allowed_incident_ids,
         )
-    else:
-        incidents, total_count = get_last_incidents(
-            tenant_id=tenant_id,
-            is_confirmed=confirmed,
-            limit=limit,
-            offset=offset,
-            sorting=sorting,
-            filters=filters,
-            allowed_incident_ids=allowed_incident_ids,
-        )
+    except CELParseError as e:
+        logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
+        raise HTTPException(status_code=400, detail=f'Error parsing CEL expression: {cel}')
 
     incidents_dto = []
     for incident in incidents:

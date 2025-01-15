@@ -47,10 +47,10 @@ export const Facet: React.FC<FacetProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    setIsOpen(!!options?.length); // Sync prop change with state
-    setIsLoaded(!!options?.length); // Sync prop change with state
+    setIsOpen(!!options); // Sync prop change with state
+    setIsLoaded(!!options); // Sync prop change with state
 
-    if (isLoading && options?.length) {
+    if (isLoading && options) {
       setIsLoading(false)
     }
   // disabling as the effect has to only run on options change"
@@ -135,7 +135,7 @@ export const Facet: React.FC<FacetProps> = ({
                   <Skeleton containerClassName="h-4 flex-1" />
                 </div>
               ))
-            ) : options.length > 0 ? (
+            ) : options?.length > 0 ? (
               options.map((facetOption, index) => (
                 <FacetValue
                   key={facetOption.display_name + index}

@@ -2,9 +2,12 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
 from sqlalchemy import and_, func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, text
 
+from keep.api.core.cel_to_sql.properties_mapper import PropertiesMappingException
 from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata, FieldMappingConfiguration
+from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider_for_dialect,
 )
@@ -24,7 +27,9 @@ from keep.api.models.db.alert import (
 )
 from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto
+import logging
 
+logger = logging.getLogger(__name__)
 
 incident_field_configurations = [
     FieldMappingConfiguration("user_generated_name", "user_generated_name"),
@@ -175,9 +180,6 @@ def __build_last_incidents_query(
     Returns:
         sqlalchemy.sql.selectable.Select: The constructed SQL query.
     """
-    provider_type = get_cel_to_sql_provider_for_dialect(dialect)
-    instance = provider_type(properties_metadata)
-    query_metadata = instance.convert_to_sql_str(cel)
     incidents_alers_cte = __build_base_incident_query(tenant_id).cte("incidents_alers_cte")
     base_query_cte = (
             select(
@@ -187,38 +189,44 @@ def __build_last_incidents_query(
             .outerjoin(incidents_alers_cte, Incident.id == incidents_alers_cte.c.incident_id)
             .filter(Incident.tenant_id == tenant_id)
         )
-    query_cte = base_query_cte.filter(Incident.is_confirmed == is_confirmed)
+    query = base_query_cte.filter(Incident.is_confirmed == is_confirmed)
 
     if allowed_incident_ids:
-        query_cte = query_cte.filter(Incident.id.in_(allowed_incident_ids))
+        query = query.filter(Incident.id.in_(allowed_incident_ids))
 
     if is_predicted is not None:
-        query_cte = query_cte.filter(Incident.is_predicted == is_predicted)
+        query = query.filter(Incident.is_predicted == is_predicted)
 
     if timeframe:
-        query_cte = query_cte.filter(
+        query = query.filter(
             Incident.start_time
             >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
         )
 
     if upper_timestamp and lower_timestamp:
-        query_cte = query_cte.filter(
+        query = query.filter(
             col(Incident.last_seen_time).between(lower_timestamp, upper_timestamp)
         )
     elif upper_timestamp:
-        query_cte = query_cte.filter(Incident.last_seen_time <= upper_timestamp)
+        query = query.filter(Incident.last_seen_time <= upper_timestamp)
     elif lower_timestamp:
-        query_cte = query_cte.filter(Incident.last_seen_time >= lower_timestamp)
+        query = query.filter(Incident.last_seen_time >= lower_timestamp)
 
     if sorting:
-        query_cte = query_cte.order_by(sorting.get_order_by(Incident))
+        query = query.order_by(sorting.get_order_by(Incident))
 
-    query_cte = query_cte.filter(text(query_metadata.where)).group_by(Incident.id)
+    if cel:
+        provider_type = get_cel_to_sql_provider_for_dialect(dialect)
+        instance = provider_type(properties_metadata)
+        sql_filter = instance.convert_to_sql_str(cel)
+        query = query.filter(text(sql_filter)).group_by(Incident.id)
+
+    query = query.group_by(Incident.id)
 
     # Order by start_time in descending order and limit the results
-    query_cte = query_cte.limit(limit).offset(offset)
+    query = query.limit(limit).offset(offset)
 
-    return query_cte
+    return query
 
 
 def get_last_incidents_by_cel(
@@ -253,24 +261,34 @@ def get_last_incidents_by_cel(
     Returns:
         Tuple[list[Incident], int]: A tuple containing a list of incidents and the total count of incidents.
     """
-    with Session(engine) as session:
-        sql_query = __build_last_incidents_query(
-            dialect=session.bind.dialect.name,
-            tenant_id=tenant_id,
-            limit=limit,
-            offset=offset,
-            timeframe=timeframe,
-            upper_timestamp=upper_timestamp,
-            lower_timestamp=lower_timestamp,
-            is_confirmed=is_confirmed,
-            sorting=sorting,
-            is_predicted=is_predicted,
-            cel=cel,
-            allowed_incident_ids=allowed_incident_ids,
-        )
+    
 
+    with Session(engine) as session:
+        try:
+            sql_query = __build_last_incidents_query(
+                    dialect=session.bind.dialect.name,
+                    tenant_id=tenant_id,
+                    limit=limit,
+                    offset=offset,
+                    timeframe=timeframe,
+                    upper_timestamp=upper_timestamp,
+                    lower_timestamp=lower_timestamp,
+                    is_confirmed=is_confirmed,
+                    sorting=sorting,
+                    is_predicted=is_predicted,
+                    cel=cel,
+                    allowed_incident_ids=allowed_incident_ids,
+                )
+        except CelToSqlException as e:
+            if isinstance(e.__cause__, PropertiesMappingException):
+                # if there is an error in mapping properties, return empty list
+                logger.error(f"Error mapping properties: {str(e)}")
+                return [], 0
+            raise e
+        
         total_count = session.exec(select(func.count()).select_from(sql_query)).scalar()
         all_records = session.exec(sql_query).all()
+
         incidents = [row._asdict().get('Incident') for row in all_records]
 
         if with_alerts:

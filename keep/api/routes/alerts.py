@@ -19,7 +19,7 @@ from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.config import config
-from keep.api.core.db import get_alert_audit as get_alert_audit_db, query_alerts_by_cel
+from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_metrics_by_provider,
