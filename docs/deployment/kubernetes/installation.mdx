@@ -56,6 +56,7 @@ To read about more installation options, see [ingress-nginx installation docs](h
 helm upgrade --install ingress-nginx ingress-nginx \
   --repo https://kubernetes.github.io/ingress-nginx \
   --set controller.config.allow-snippet-annotations=true \
+  --set controller.config.annotations-risk-level=Critical \
   --namespace ingress-nginx --create-namespace
 ```
 
