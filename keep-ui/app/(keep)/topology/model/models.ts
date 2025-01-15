@@ -50,6 +50,7 @@ export type TopologyApplication = {
   id: string;
   name: string;
   description: string;
+  repository: string;
   services: TopologyServiceMinimal[];
   // TODO: Consider adding tags, cost of disruption, etc.
 };

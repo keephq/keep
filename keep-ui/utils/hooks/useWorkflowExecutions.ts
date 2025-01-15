@@ -1,8 +1,8 @@
 import { AlertToWorkflowExecution } from "@/entities/alerts/model";
 import {
   PaginatedWorkflowExecutionDto,
-  WorkflowExecution,
-} from "@/app/(keep)/workflows/builder/types";
+  WorkflowExecutionDetail,
+} from "@/shared/api/workflow-executions";
 import { useSearchParams } from "next/navigation";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
@@ -58,7 +58,7 @@ export const useWorkflowExecution = (
 ) => {
   const api = useApi();
 
-  return useSWR<WorkflowExecution>(
+  return useSWR<WorkflowExecutionDetail>(
     api.isReady()
       ? `/workflows/${workflowId}/runs/${workflowExecutionId}`
       : null,

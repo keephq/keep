@@ -1,4 +1,3 @@
-import { Workflow } from "../models";
 import {
   Edge,
   Node,
@@ -6,45 +5,6 @@ import {
   OnEdgesChange,
   OnNodesChange,
 } from "@xyflow/react";
-
-export interface LogEntry {
-  timestamp: string;
-  message: string;
-  context: string;
-}
-
-export interface WorkflowExecution {
-  id: string;
-  workflow_id: string;
-  tenant_id: string;
-  started: string;
-  triggered_by: string;
-  status: string;
-  results: Record<string, any>;
-  workflow_name?: string;
-  logs?: LogEntry[] | null;
-  error?: string | null;
-  execution_time?: number;
-  event_id?: string;
-  event_type?: string;
-}
-
-export interface PaginatedWorkflowExecutionDto {
-  limit: number;
-  offset: number;
-  count: number;
-  items: WorkflowExecution[];
-  workflow: Workflow;
-  avgDuration: number;
-  passCount: number;
-  failCount: number;
-}
-
-export type WorkflowExecutionFailure = Pick<WorkflowExecution, "error">;
-
-export function isWorkflowExecution(data: any): data is WorkflowExecution {
-  return "id" in data;
-}
 
 export type V2Properties = Record<string, any>;
 export type Definition = {

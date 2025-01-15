@@ -1,0 +1,21 @@
+id: query-mongodb
+name: Query MongoDB
+description: Querying MongoDB
+
+triggers:
+- type: manual
+steps:
+- name: mongodb-step
+  provider:
+    config: '{{ providers.mongo }}'
+    type: mongodb
+    with:
+      # Please note that argument order is important for MongoDB queries.
+      query: |
+        {
+          "find": "mycollection",
+          "filter": {
+            "name": "First Document"
+          }
+        }
+      single_row: true

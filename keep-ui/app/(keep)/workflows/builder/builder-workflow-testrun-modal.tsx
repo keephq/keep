@@ -1,13 +1,17 @@
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Button, Title } from "@tremor/react";
 import ReactLoading from "react-loading";
-import { ExecutionResults } from "./workflow-execution-results";
-import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
+import {
+  isWorkflowExecution,
+  WorkflowExecutionDetail,
+  WorkflowExecutionFailure,
+} from "@/shared/api/workflow-executions";
+import { WorkflowExecutionResults } from "@/features/workflow-execution-results";
 
 interface Props {
   closeModal: () => void;
   workflowId: string;
-  workflowExecution: WorkflowExecution | WorkflowExecutionFailure | null;
+  workflowExecution: WorkflowExecutionDetail | WorkflowExecutionFailure | null;
   workflowRaw: string;
 }
 
@@ -37,10 +41,14 @@ export default function BuilderWorkflowTestRunModalContent({
       </div>
       <div className="flex flex-col">
         {workflowExecution ? (
-          <ExecutionResults
+          <WorkflowExecutionResults
             workflowId={workflowId}
-            workflowRaw={workflowRaw}
-            executionData={workflowExecution}
+            initialWorkflowExecution={workflowExecution}
+            workflowExecutionId={
+              isWorkflowExecution(workflowExecution)
+                ? workflowExecution.id
+                : null
+            }
           />
         ) : (
           <div className="flex justify-center">

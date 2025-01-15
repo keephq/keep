@@ -1,14 +1,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useProviders } from "./useProviders";
-import { Filter, Workflow } from "@/app/(keep)/workflows/models";
-import { Provider } from "@/app/(keep)/providers/providers";
+import { Filter, Workflow } from "@/shared/api/workflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
-
-interface ProvidersData {
-  providers: { [key: string]: { providers: Provider[] } };
-}
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
+import { isProviderInstalled } from "@/shared/lib/provider-utils";
 
 export const useWorkflowRun = (workflow: Workflow) => {
   const api = useApi();
@@ -18,10 +15,10 @@ export const useWorkflowRun = (workflow: Workflow) => {
   let message = "";
   const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
   const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
+  const revalidateMultiple = useRevalidateMultiple();
 
-  const { data: providersData = { providers: {} } as ProvidersData } =
-    useProviders();
-  const providers = providersData.providers;
+  const { data: providersData } = useProviders();
+  const providers = providersData?.providers ?? [];
 
   if (!workflow) {
     return {};
@@ -29,14 +26,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
 
   const notInstalledProviders = workflow?.providers
     ?.filter(
-      (workflowProvider) =>
-        !workflowProvider.installed &&
-        Object.values(providers || {}).some(
-          (provider) =>
-            provider.type === workflowProvider.type &&
-            provider.config &&
-            Object.keys(provider.config).length > 0
-        )
+      (workflowProvider) => !isProviderInstalled(workflowProvider, providers)
     )
     .map((provider) => provider.type);
 
@@ -102,6 +92,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
       }
       setIsRunning(true);
       const result = await api.post(`/workflows/${workflow?.id}/run`, payload);
+      revalidateMultiple([`/workflows/${workflow?.id}/runs`]);
 
       const { workflow_execution_id } = result;
       router.push(`/workflows/${workflow?.id}/runs/${workflow_execution_id}`);
@@ -110,7 +101,6 @@ export const useWorkflowRun = (workflow: Workflow) => {
     } finally {
       setIsRunning(false);
     }
-    setIsRunning(false);
   };
 
   const handleRunClick = async () => {

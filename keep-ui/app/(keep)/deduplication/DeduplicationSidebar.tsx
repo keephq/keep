@@ -25,6 +25,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { Providers } from "@/app/(keep)/providers/providers";
 import SidePanel from "@/components/SidePanel";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface ProviderOption {
   value: string;
@@ -71,6 +72,8 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: config } = useConfig();
 
   const { data: deduplicationFields = {} } = useDeduplicationFields();
   const api = useApi();
@@ -226,7 +229,9 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
             </Text>
             <br></br>
             <a
-              href="https://docs.keephq.dev/overview/deduplication"
+              href={`${
+                config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+              }/overview/deduplication`}
               target="_blank"
               className="text-orange-600 hover:underline mt-4"
             >
@@ -245,8 +250,8 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
             color="orange"
           >
             <Text>
-              Editing a provisioned deduplication rule is not allowed.
-              Please contact your system administrator for more information.
+              Editing a provisioned deduplication rule is not allowed. Please
+              contact your system administrator for more information.
             </Text>
           </Callout>
         </div>
@@ -319,7 +324,10 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   render={({ field }) => (
                     <Select
                       {...field}
-                      isDisabled={!!selectedDeduplicationRule?.default || selectedDeduplicationRule?.is_provisioned}
+                      isDisabled={
+                        !!selectedDeduplicationRule?.default ||
+                        selectedDeduplicationRule?.is_provisioned
+                      }
                       options={alertProviders.map((provider) => ({
                         value: `${provider.type}_${provider.id}`,
                         label: provider.details?.name || provider.id || "main",
@@ -431,10 +439,10 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                     name="full_deduplication"
                     control={control}
                     render={({ field }) => (
-                      <Switch 
-                        disabled={!!selectedDeduplicationRule?.is_provisioned} 
+                      <Switch
+                        disabled={!!selectedDeduplicationRule?.is_provisioned}
                         checked={field.value}
-                        onChange={field.onChange} 
+                        onChange={field.onChange}
                       />
                     )}
                   />

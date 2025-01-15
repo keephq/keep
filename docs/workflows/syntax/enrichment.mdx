@@ -21,6 +21,7 @@ Keep workflows support **enrichment**, a powerful feature that allows you to enh
 The `enrich_alert` directive is used in actions to add or update fields in the alert. You specify a list of key-value pairs where:
 - `key` is the field name to add or update.
 - `value` is the data to assign to the field. It can be a static value or dynamically derived from steps or other parts of the workflow.
+- `disposable` is an optional attribute that determines whether the enrichment is temporary and should be discarded when a new alert is received. If disposable is set to True, the enrichment is added to disposable_enrichments and marked with dispose_on_new_alert=True.
 
 ### Example Workflow with Enrichment
 
@@ -66,7 +67,7 @@ Each enrichment is defined as a key-value pair:
 enrich_alert:
   - key: field_name
     value: field_value
-
+    disposable: true
 ```
 
 - **Static Values:** Use static strings or numbers for straightforward enrichments:
@@ -143,3 +144,9 @@ workflow:
           value: "{{ results.link }}"
 
 ```
+
+## Troubleshooting Enrichment 
+
+
+### Enrichment without an Alert/Incident
+If there is no alert/incident present in the trigger (for example interval trigger or manual call in workflow page), the enrichment rule would not have an alert/incident to apply to. The enrichment process typically requires an alert/incident to be present to apply the specified enrichments. Without an alert/incident, the enrichment rule would not execute as intended. A workaround is to use a foreach directive and pass it an object containing the "fingerprint" variable.

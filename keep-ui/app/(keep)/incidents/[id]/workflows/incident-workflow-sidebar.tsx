@@ -2,18 +2,18 @@ import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { Text, Button, TextInput, Badge, Title, Card } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
-import { WorkflowExecution } from "@/app/(keep)/workflows/builder/types";
 import {
   getIcon,
   getTriggerIcon,
   extractTriggerValue,
 } from "@/app/(keep)/workflows/[workflow_id]/workflow-execution-table";
 import { useWorkflowExecution } from "utils/hooks/useWorkflowExecutions";
+import { WorkflowExecutionDetail } from "@/shared/api/workflow-executions";
 
 interface IncidentWorkflowSidebarProps {
   isOpen: boolean;
   toggle: VoidFunction;
-  selectedExecution: WorkflowExecution;
+  selectedExecution: WorkflowExecutionDetail;
 }
 
 const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
@@ -60,8 +60,8 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
                       selectedExecution.status === "error"
                         ? "red"
                         : selectedExecution.status === "success"
-                        ? "green"
-                        : "orange"
+                          ? "green"
+                          : "orange"
                     }
                   >
                     {selectedExecution.status}
