@@ -38,7 +38,7 @@ class WorkflowStore:
         workflow_execution = get_workflow_execution(tenant_id, workflow_execution_id)
         return workflow_execution
 
-    def create_workflow(self, tenant_id: str, created_by, workflow: dict):
+    def create_workflow(self, tenant_id: str, created_by, workflow: dict, provisioned=False):
         workflow_id = workflow.get("id")
         self.logger.info(f"Creating workflow {workflow_id}")
         interval = self.parser.parse_interval(workflow)
@@ -57,6 +57,7 @@ class WorkflowStore:
             interval=interval,
             is_disabled=Parser.parse_disabled(workflow),
             workflow_raw=yaml.dump(workflow, width=99999),
+            provisioned=provisioned
         )
         self.logger.info(f"Workflow {workflow_id} created successfully")
         return workflow
