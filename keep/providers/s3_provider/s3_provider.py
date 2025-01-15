@@ -2,18 +2,13 @@
 S3 Provider for querying S3 buckets.
 """
 
-import base64
 import dataclasses
-from urllib.parse import urljoin
 
 import boto3
 import pydantic
-import requests
 
-from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
