@@ -49,6 +49,13 @@ nginx   k8s.io/ingress-nginx   <none>       4h19m
 <Info>
 To read about more installation options, see [ingress-nginx installation docs](https://kubernetes.github.io/ingress-nginx/deploy/).
 </Info>
+<Tip>
+Since ingress-nginx 4.12, you'll need to add
+```
+--set controller.config.annotations-risk-level=Critical
+```
+See https://github.com/kubernetes/ingress-nginx/issues/12618#issuecomment-2566084202
+</Tip>
 ```bash
 # simplest way to install
 # we set snippet-annotations to true to allow rewrites
@@ -56,6 +63,7 @@ To read about more installation options, see [ingress-nginx installation docs](h
 helm upgrade --install ingress-nginx ingress-nginx \
   --repo https://kubernetes.github.io/ingress-nginx \
   --set controller.config.allow-snippet-annotations=true \
+  --set controller.config.annotations-risk-level=Critical \
   --namespace ingress-nginx --create-namespace
 ```
 
