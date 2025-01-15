@@ -4,6 +4,7 @@ import { PlusIcon } from "@heroicons/react/24/outline";
 import Modal from "@/components/ui/Modal";
 import { FiSearch } from "react-icons/fi";
 import { CreateFacetDto } from "./models";
+import { Button } from "@/components/ui";
 
 interface AddFacetModalProps {
   isOpen: boolean;
@@ -24,6 +25,12 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
       property_path: propertyPath,
       name: name
     })
+    close();
+  }
+
+  const close = () => {
+    setName("");
+    setPropertyPath("");
     onClose();
   }
 
@@ -34,31 +41,51 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
       title="Add New Facet"
       className="w-[400px]"
     >
-      <div className="p-6">
-        <div className="max-h-96 overflow-auto space-y-1">
-        <TextInput
-          icon={FiSearch}
-          placeholder="Enter facet name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="mb-4"
-        />
-        <TextInput
-          icon={FiSearch}
-          placeholder="Enter facet property path"
-          value={propertyPath}
-          onChange={(e) => setPropertyPath(e.target.value)}
-          className="mb-4"
-        />
+      <div className="mt-3 max-h-96 overflow-auto space-y-1">
+        <div>
+          <div className="mb-1">
+            <span className="font-bold">Facet name</span>
+          </div>
+          
+          <TextInput
+            placeholder="Enter facet name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="mb-4"
+          />
+        </div>
+        <div>
+          <div className="mb-1">
+            <span className="font-bold">Facet property path</span>
+          </div>
+          
+          <TextInput
+            placeholder="Enter facet property path"
+            value={propertyPath}
+            onChange={(e) => setPropertyPath(e.target.value)}
+            className="mb-4"
+          />
         </div>
       </div>
-      <button
-        onClick={() => handleNewFacetCreation()}
-        className="w-full mt-2 px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-2"
+      <div className="flex flex-1 justify-end gap-2">
+        <Button
+          color="orange"
+          size="xs"
+          variant="secondary"
+          onClick={close}
         >
-        <PlusIcon className="h-4 w-4" />
-        Add Facet
-        </button>
+          Cancel
+        </Button>
+        <Button
+          color="orange"
+          size="xs"
+          variant="primary"
+          type="submit"
+          onClick={() => handleNewFacetCreation()}
+        >
+          Create
+        </Button>
+      </div>
     </Modal>
   );
 };
