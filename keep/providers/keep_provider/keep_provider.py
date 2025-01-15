@@ -1,16 +1,20 @@
 """
 Keep Provider is a class that allows to ingest/digest data from Keep.
 """
-
+import yaml
 import logging
+from html import unescape
 from datetime import datetime, timezone
+
 
 from keep.api.core.db import get_alerts_with_filters
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.searchengine.searchengine import SearchEngine
+from keep.workflowmanager.workflowstore import WorkflowStore
 
 
 class KeepProvider(BaseProvider):
@@ -107,6 +111,36 @@ class KeepProvider(BaseProvider):
                 raise
         self.logger.info("Got alerts from Keep", extra={"num_of_alerts": len(alerts)})
         return alerts
+    
+    def _notify(self, **kwargs):
+        if "workflow_to_update_yaml" in kwargs:
+            workflow_to_update_yaml = kwargs["workflow_to_update_yaml"]
+            self.logger.info(
+                "Updating workflow YAML",
+                extra={"workflow_to_update_yaml": workflow_to_update_yaml},
+            )
+            workflowstore = WorkflowStore()
+            # Create the workflow
+            try:
+                # In case the workflow has HTML entities:
+                workflow_to_update_yaml = unescape(workflow_to_update_yaml)
+                workflow_to_update_yaml = yaml.safe_load(workflow_to_update_yaml)
+
+                if 'workflow' in workflow_to_update_yaml:
+                    workflow_to_update_yaml = workflow_to_update_yaml['workflow']
+
+                workflow = workflowstore.create_workflow(
+                    tenant_id=self.context_manager.tenant_id, 
+                    created_by=f"workflow id: {self.context_manager.workflow_id}", 
+                    workflow=workflow_to_update_yaml
+                )
+            except Exception as e:
+                self.logger.exception(
+                    "Failed to create workflow",
+                    extra={"tenant_id": context_manager.tenant_id, "workflow": workflow},
+                )
+                raise ProviderException(f"Failed to create workflow: {e}")
+
 
     def validate_config(self):
         """
