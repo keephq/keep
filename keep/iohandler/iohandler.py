@@ -165,9 +165,9 @@ class IOHandler:
         # Now, extract the token if exists -
         parsed_string = copy.copy(string)
 
-        if string.startswith("keep.render_without_execution(") and string.endswith(")"):
+        if string.startswith("raw_render_without_execution(") and string.endswith(")"):
             tokens = []
-            string = string.replace("keep.render_without_execution(", "", 1)
+            string = string.replace("raw_render_without_execution(", "", 1)
             string = string[::-1].replace(")", "", 1)[::-1]  # Remove the last ')'
             parsed_string = copy.copy(string)
         else:

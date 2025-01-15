@@ -119,7 +119,7 @@ steps:
 
 ```
 
-### `render_without_execution`
+### `raw_render_without_execution`
 
 **Description:** Renders the string without execution of keep instructions inside this string.
 **Example:**
@@ -133,7 +133,7 @@ steps:
     provider:
       type: mock
       with:
-        message: "keep.render_without_execution(My yaml is: {{ yaml }}!)"
+        message: "raw_render_without_execution(My yaml is: {{ yaml }}!)"
 ```
 
 Will output:

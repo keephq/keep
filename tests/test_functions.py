@@ -774,7 +774,7 @@ def test_render_without_execution(mocked_context_manager):
             safe=True,
         )
     
-    template = "keep.render_without_execution(My yaml is: {{ yaml }}!)"
+    template = "raw_render_without_execution(My yaml is: {{ yaml }}!)"
     rendered = iohandler.render(
         template,
         safe=True,

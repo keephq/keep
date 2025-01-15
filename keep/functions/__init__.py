@@ -470,6 +470,3 @@ def is_business_hours(
 
     # Check if hour is between start_hour and end_hour
     return start_hour <= hour < end_hour
-
-
-# render_without_execution function is defined in iohandler.py
