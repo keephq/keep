@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 
 from keep.api.core.db import get_alerts_with_filters
 from keep.api.models.alert import AlertDto
-from keep.api.routes.workflows import __get_workflow_raw_data
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
@@ -129,7 +128,7 @@ class KeepProvider(BaseProvider):
 
                 if 'workflow' in workflow_to_update_yaml:
                     workflow_to_update_yaml = workflow_to_update_yaml['workflow']
-                    
+
                 workflow = workflowstore.create_workflow(
                     tenant_id=self.context_manager.tenant_id, 
                     created_by=f"workflow id: {self.context_manager.workflow_id}", 
