@@ -60,6 +60,14 @@ helm upgrade --install ingress-nginx ingress-nginx \
   --namespace ingress-nginx --create-namespace
 ```
 
+<Tip>
+Since ingress-nginx 4.12, you'll need to add
+```
+--set controller.config.annotations-risk-level=Critical
+```
+See https://github.com/kubernetes/ingress-nginx/issues/12618#issuecomment-2566084202
+</Tip>
+
 Verify installation:
 ```bash
 kubectl get ingressclass
