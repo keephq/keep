@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Facet } from "./facet";
 import { CreateFacetDto, FacetDto, FacetOptionDto } from "./models";
-import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import { AddFacetModal } from "./add-facet-modal";
 
@@ -76,14 +76,20 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     return facetsState[facet_id]?.[option_id] !== false;
   }
 
-  function calculateFacetsState(changedFacetId: string, newFacetsState: FacetState): void {
+  function calculateFacetsState(changedFacetId: string | null, newFacetsState: FacetState): void {
     setFacetsState(newFacetsState);
     var cel = buildCel(facets, facetOptions, newFacetsState);
 
     if (cel !== celState) {
       setCelState(cel);
       onCelChange && onCelChange(cel);
-      onReloadFacetOptions && onReloadFacetOptions(facets.filter(x => x.id !== changedFacetId), cel);
+
+      if (changedFacetId) {
+        onReloadFacetOptions && onReloadFacetOptions(facets.filter(x => x.id !== changedFacetId), cel);
+        return;
+      }
+
+      onReloadFacetOptions && onReloadFacetOptions(facets, cel);
     }
   }
 
@@ -119,7 +125,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     const newFacetState: any = { ...facetsState[facetId] };
     Object.values(facetOptions[facetId]).forEach((option) => (newFacetState[option.display_name] = true));
 
-    calculateFacetsState(facetId, {
+    calculateFacetsState(null, {
       ...facetsState,
       [facetId]: newFacetState,
     });
@@ -132,16 +138,17 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
           {/* Facet button */}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-2"
+            className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-1"
           >
             <PlusIcon className="h-4 w-4" />
             Add Facet
           </button>
           <button
-            className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-2"
+            onClick={() => calculateFacetsState(null, {})}
+            className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-1"
           >
-            <TrashIcon className="h-4 w-4" />
-            Clear filter
+            <XMarkIcon className="h-4 w-4" />
+            Clear filters
           </button>
         </div>
         
