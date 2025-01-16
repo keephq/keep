@@ -159,6 +159,7 @@
             "providers/documentation/mattermost-provider",
             "providers/documentation/microsoft-planner-provider",
             "providers/documentation/mock-provider",
+            "providers/documentation/monday-provider",
             "providers/documentation/mongodb-provider",
             "providers/documentation/mysql-provider",
             "providers/documentation/netdata-provider",

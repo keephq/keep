@@ -524,6 +524,12 @@
             Microsoft Planner
         </a>
     </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/monday-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/monday-icon.png" alt="Monday"/><br/>
+            Monday
+        </a>
+    </td>
 </tr>
 <tr>
   <td align="center" width="150">
