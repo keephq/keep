@@ -54,20 +54,31 @@ class MondayProvider(BaseProvider):
         )
 
     def validate_scopes(self) -> dict[str, bool | str]:
-        response = requests.post(
-            self.url,
-            json={"query": "query { me { id } }"},
-            headers=self._get_auth_headers(),
-        )
+        """
+        Validate scopes for the provider
+        """
+        try:
+            response = requests.post(
+                self.url,
+                json={"query": "query { me { id } }"},
+                headers=self._get_auth_headers(),
+            )
 
-        if response.status_code != 200:
-            response.raise_for_status()
+            if response.status_code != 200:
+                response.raise_for_status()
 
-        self.logger.info(f"Successfully validated scopes {response.json()}")
+            self.logger.info(f"Successfully validated scopes {response.json()}")
 
-        return {"create_pulse": True}
+            return {"create_pulse": True}
+        
+        except Exception as e:
+            self.logger.exception("Failed to validate scopes", extra={"error": e})
+            return {"create_pulse": str(e)}
 
     def _get_auth_headers(self):
+        """
+        Get the authentication headers
+        """
         return {
             "Authorization": self.authentication_config.api_token,
         }
@@ -80,7 +91,7 @@ class MondayProvider(BaseProvider):
         column_values: dict = None,
     ):
         try:
-            self.logger.info("Creating new item...")
+            self.logger.info("Creating new item")
             headers = self._get_auth_headers()
 
             query = """
@@ -105,7 +116,7 @@ class MondayProvider(BaseProvider):
 
             response = requests.post(self.url, json={"query": query, "variables": variables}, headers=headers)
 
-            self.logger.info(f"Response: {response.json()}")
+            self.logger.info("Response received", extra={"resp": response.json()})
             self.logger.info(f"Status Code: {response.status_code}")
         
             try:
@@ -115,7 +126,7 @@ class MondayProvider(BaseProvider):
                 return response.json()
             
             except Exception:
-                self.logger.exception("Failed to create item", extra=response.json())
+                self.logger.exception("Failed to create item", extra={"resp": response.json()})
                 raise ProviderException(f"Failed to create item: {response.json()}")
 
         except Exception as e:
@@ -129,10 +140,45 @@ class MondayProvider(BaseProvider):
         column_values: dict = None,
     ):
         try:
-            self.logger.info("Creating new item...")
+            self.logger.info("Creating new item")
             self._create_new_pulse(board_id, group_id, item_name, column_values)
+            self.logger.info("Item created successfully")
         except Exception as e:
             raise ProviderException(f"Failed to create item: {e}")
 
 if __name__ == "__main__":
-    pass
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+
+    import os
+
+    api_token = os.environ.get("API_TOKEN")
+
+    if api_token is None:
+        raise Exception("API_TOKEN is required")
+    
+    config = ProviderConfig(
+        description="Monday Provider",
+        authentication={
+            "api_token": api_token,
+        },
+    )
+
+    monday_provider = MondayProvider(
+        context_manager=context_manager,
+        provider_id="monday_provider",
+        config=config,
+    )
+
+    board_id = 1956384489
+    group_id = "topics"
+    item_name = "New Item"
+
+    column_values = [{"text_mkm77x3p": "helo"}, {"text_1_mkm7x2ep": "10"}]
+
+    monday_provider._notify(board_id, group_id, item_name, column_values)

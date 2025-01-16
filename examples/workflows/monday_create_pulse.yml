@@ -9,9 +9,18 @@ workflow:
         type: monday
         config: "{{ providers.monday }}"
         with:
+          # Open the board in monday.com web app.
+          # Hover over the board name in the side panel, click on the three dots that appear, and click on ID to copy the board ID.
           board_id: 1956384489
+          # Hover over the group name in the board, click on the three dots that appear, and click on Group ID to copy the group ID.
           group_id: "topics"
+          # Item Name is the name of the pulse you want to add.
           item_name: "Test"
           column_values:
+          # Specify the column IDs and their corresponding values for the new item/pulse.
+          # Hover over the column name in the board, click on the three dots that appear, and click on Column ID to copy the column ID.
+          # The Key is the column ID and the Value is the value you want to set for the column.
             - text_mkm77x3p: "helo"
+              # Here text_mkm77x3p is the column ID and helo is the value.
             - text_1_mkm7x2ep: "10"
+              # Here text_1_mkm7x2ep is the column ID and 10 is the value.
