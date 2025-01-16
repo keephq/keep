@@ -1,7 +1,7 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -15,9 +15,8 @@ import { PlusCircleIcon } from "@heroicons/react/24/outline";
 import PredictedIncidentsTable from "@/app/(keep)/incidents/predicted-incidents-table";
 import { SortingState } from "@tanstack/react-table";
 import { IncidentListError } from "@/features/incident-list/ui/incident-list-error";
-import { FacetsPanel } from "@/features/filter/facets-panel";
-import { useFacetActions, useFacetOptions, useFacets } from "@/features/filter/hooks";
 import { InitialFacetsData } from "@/features/filter/api";
+import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 
 interface Pagination {
   limit: number;
@@ -69,7 +68,6 @@ export function IncidentList({
   );
 
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
-  const facetActions = useFacetActions("incidents");
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
@@ -85,32 +83,6 @@ export function IncidentList({
     setIncidentToEdit(null);
     setIsFormOpen(false);
   };
-
-  const [facetIdsLoaded, setFacetIdsLoaded] = useState<string[]>([])
-
-  const loadOptionsForFacet = (facetId: string) => {
-    setFacetIdsLoaded([facetId])
-  }
-
-  const { data: facetsData, isLoading: facetsDataLoading } = useFacets(
-    "incidents",
-    {
-      revalidateOnFocus: false,
-      revalidateOnMount: !initialFacetsData?.facets,
-      fallbackData: initialFacetsData?.facets,
-    }
-  )
-
-  const { data: facetOptionsData, isLoading: facetsOptionsDataLoading } = useFacetOptions(
-    "incidents",
-    facetsData?.map(facet => facet.id) ?? [],
-    '',
-    {
-      revalidateOnFocus: false,
-      revalidateOnMount: !initialFacetsData?.facetOptions,
-      fallbackData: initialFacetsData?.facetOptions,
-    }
-  )
 
   function renderIncidents() {
     if (incidentsError) {
@@ -175,27 +147,23 @@ export function IncidentList({
             </div>
           </div>
           <div>
-            {isLoading && facetsDataLoading && facetsOptionsDataLoading && (
+            {isLoading && (
               <Loading />
             )}
-            {!(isLoading && facetsDataLoading && facetsOptionsDataLoading) && (
+            
               <div className="flex flex-row gap-5">
-                <FacetsPanel
+                <FacetsPanelServerSide
                   panelId={"incidents"}
-                  facets={facetsData as any}
-                  facetOptions={facetOptionsData as any}
+                  initialFacetsData={initialFacetsData}
                   className="mt-14"
                   onCelChange={(cel) => setFilterCel(cel)}
-                  onAddFacet={(createFacet) => facetActions.addFacet(createFacet)}
-                  onLoadFacetOptions={loadOptionsForFacet}
-                  onDeleteFacet={(facetId) => facetActions.deleteFacet(facetId)}
                 />
                 <div className="flex flex-col gap-5 flex-1">
-                  {renderIncidents()}
+                  {!isLoading && (
+                    renderIncidents()
+                  )}
                 </div>
               </div>
-            )}
-            
           </div>
         </div>
       </div>

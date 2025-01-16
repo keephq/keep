@@ -1,4 +1,6 @@
 from typing import List
+from types import NoneType
+
 from keep.api.core.cel_to_sql.ast_nodes import (
     ConstantNode,
     MemberAccessNode,
@@ -41,8 +43,6 @@ class BaseCelToSqlProvider:
             Converts a logical OR operation to an SQL string.
         _visit_comparison_node(comparison_node: ComparisonNode) -> str:
             Visits a comparison node and converts it to an SQL string.
-        _cast_property(exp: str, to_type: type) -> str:
-            Casts a property to a specified type in SQL.
         _visit_equal(first_operand: str, second_operand: str) -> str:
             Converts an equality comparison to an SQL string.
         _visit_not_equal(first_operand: str, second_operand: str) -> str:
@@ -81,8 +81,6 @@ class BaseCelToSqlProvider:
             Converts a NOT operation to an SQL string.
         """
 
-    __null_replacement = "'__@NULL@__'"
-
     def __init__(self, properties_metadata: PropertiesMetadata):
         super().__init__()
         self.properties_mapper = PropertiesMapper(properties_metadata)
@@ -112,34 +110,44 @@ class BaseCelToSqlProvider:
             raise CelToSqlException(f"Error while mapping columns: {str(e)}") from e
 
         try:
-            sql_filter = self.__build_sql_filter(with_mapped_props)
+            sql_filter = self.__build_sql_filter(with_mapped_props, [])
             return sql_filter
         except NotImplementedError as e:
             raise CelToSqlException(f"Error while converting CEL expression tree to SQL: {str(e)}") from e
+        
+    def _get_default_value_for_type(self, type: type) -> str:
+        return "'__@NULL@__'"
 
-    def __build_sql_filter(self, abstract_node: Node) -> str:
+    def __build_sql_filter(self, abstract_node: Node, stack: list[Node]) -> str:
+        stack.append(abstract_node)
+        result = None
+
         if isinstance(abstract_node, ParenthesisNode):
-            return self._visit_parentheses(
-                self.__build_sql_filter(abstract_node.expression)
+            result = self._visit_parentheses(
+                self.__build_sql_filter(abstract_node.expression, stack)
             )
 
         if isinstance(abstract_node, LogicalNode):
-            return self._visit_logical_node(abstract_node)
+            result = self._visit_logical_node(abstract_node, stack)
 
         if isinstance(abstract_node, ComparisonNode):
-            return self._visit_comparison_node(abstract_node)
+            result = self._visit_comparison_node(abstract_node, stack)
 
         if isinstance(abstract_node, MemberAccessNode):
-            return self._visit_member_access_node(abstract_node)
+            result = self._visit_member_access_node(abstract_node, stack)
 
         if isinstance(abstract_node, UnaryNode):
-            return self._visit_unary_node(abstract_node)
+            result = self._visit_unary_node(abstract_node, stack)
 
         if isinstance(abstract_node, ConstantNode):
-            return self._visit_constant_node(abstract_node.value)
+            result = self._visit_constant_node(abstract_node.value)
         
         if isinstance(abstract_node, MultipleFieldsNode):
-            return self._visit_multiple_fields_node(abstract_node)
+            result = self._visit_multiple_fields_node(abstract_node, None, stack)
+
+        if result:
+            stack.pop()
+            return result
 
         raise NotImplementedError(
             f"{type(abstract_node).__name__} node type is not supported yet"
@@ -148,16 +156,22 @@ class BaseCelToSqlProvider:
     def json_extract(self, column: str, path: str) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
     
+    def json_extract_as_text(self, column: str, path: str) -> str:
+        raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
+    
     def coalesce(self, args: List[str]) -> str:
         raise NotImplementedError("COALESCE is not implemented. Must be implemented in the child class.")
+    
+    def cast(self, exp: str, to_type: type) -> str:
+        raise NotImplementedError("CAST is not implemented. Must be implemented in the child class.")
 
     def _visit_parentheses(self, node: str) -> str:
         return f"({node})"
 
     # region Logical Visitors
-    def _visit_logical_node(self, logical_node: LogicalNode) -> str:
-        left = self.__build_sql_filter(logical_node.left)
-        right = self.__build_sql_filter(logical_node.right)
+    def _visit_logical_node(self, logical_node: LogicalNode, stack: list[Node]) -> str:
+        left = self.__build_sql_filter(logical_node.left, stack)
+        right = self.__build_sql_filter(logical_node.right, stack)
 
         if logical_node.operator == LogicalNode.AND:
             return self._visit_logical_and(left, right)
@@ -177,12 +191,21 @@ class BaseCelToSqlProvider:
     # endregion
 
     # region Comparison Visitors
-    def _visit_comparison_node(self, comparison_node: ComparisonNode) -> str:
+    def _visit_comparison_node(self, comparison_node: ComparisonNode, stack: list[Node]) -> str:
         if comparison_node.operator == ComparisonNode.IN:
-            return self._visit_in(comparison_node.first_operand, comparison_node.second_operand)
+            return self._visit_in(comparison_node.first_operand, comparison_node.second_operand, stack)
 
-        first_operand = self.__build_sql_filter(comparison_node.first_operand)
-        second_operand = self.__build_sql_filter(comparison_node.second_operand)
+        if isinstance(comparison_node.second_operand, ConstantNode):
+            second_operand = self._visit_constant_node(comparison_node.second_operand.value)
+
+            if isinstance(comparison_node.first_operand, PropertyAccessNode):
+                first_operand = self.cast(first_operand, type(comparison_node.second_operand.value))
+            
+            if isinstance(comparison_node.first_operand, MultipleFieldsNode):
+                first_operand = self._visit_multiple_fields_node(comparison_node.first_operand, type(comparison_node.second_operand.value), stack)
+        else:
+            first_operand = self.__build_sql_filter(comparison_node.first_operand, stack)
+            second_operand = self.__build_sql_filter(comparison_node.second_operand, stack)
 
         if comparison_node.operator == ComparisonNode.EQ:
             result = self._visit_equal(first_operand, second_operand)
@@ -202,19 +225,6 @@ class BaseCelToSqlProvider:
             )
 
         return result
-
-    def _cast_property(self, exp: str, to_type: type) -> str:
-        if to_type == datetime:
-            res = f"datetime(REPLACE(REPLACE({exp}, 'T', ' '), 'Z', ''))"
-            return res
-        if to_type == int:
-            return exp
-        if to_type == float:
-            return exp
-        if to_type == bool:
-            return exp
-
-        raise NotImplementedError(f"{to_type.__name__} type casting is not supported yet")
 
     def _visit_equal(self, first_operand: str, second_operand: str) -> str:
         return f"{first_operand} = {second_operand}"
@@ -237,14 +247,26 @@ class BaseCelToSqlProvider:
     def _visit_less_than_or_equal(self, first_operand: str, second_operand: str) -> str:
         return f"{first_operand} <= {second_operand}"
     
-    def _visit_in(self, first_operand: Node, array: list[ConstantNode]) -> str:
-        return f"{self.__build_sql_filter(first_operand)} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
+    def _visit_in(self, first_operand: Node, array: list[ConstantNode], stack: list[Node]) -> str:
+        cast_to = type(array[0].value)
+
+        if not all(isinstance(item.value, cast_to) for item in array):
+            cast_to = str
+
+        if isinstance(first_operand, PropertyAccessNode):
+            first_operand_str = self.cast(self._visit_property_access_node(first_operand, stack), cast_to)
+        elif isinstance(first_operand, MultipleFieldsNode):
+            first_operand_str = self._visit_multiple_fields_node(first_operand, cast_to, stack)
+        else:
+            first_operand_str = self.__build_sql_filter(first_operand, stack)
+
+        return f"{first_operand_str} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
 
     # endregion
 
     def _visit_constant_node(self, value: str) -> str:
         if value is None:
-            return self.__null_replacement
+            return self._get_default_value_for_type(NoneType)
         if isinstance(value, str):
             return f"'{value}'"
         if isinstance(value, bool):
@@ -258,20 +280,31 @@ class BaseCelToSqlProvider:
         raise NotImplementedError(f"{type(value).__name__} constant type is not supported yet")
 
     # region Member Access Visitors
-    def _visit_multiple_fields_node(self, multiple_fields_node: MultipleFieldsNode) -> str:
-        return self.coalesce([self.__build_sql_filter(item) for item in multiple_fields_node.fields] + [self.__null_replacement])
+    def _visit_multiple_fields_node(self, multiple_fields_node: MultipleFieldsNode, cast_to: type, stack) -> str:
+        coalesce_args = []
 
-    def _visit_member_access_node(self, member_access_node: MemberAccessNode) -> str:
+        for item in multiple_fields_node.fields:
+            arg = self._visit_property_access_node(item, stack)
+            if cast_to:
+                arg = self.cast(arg, cast_to)
+            coalesce_args.append(arg)
+
+        
+        coalesce_args.append(self._get_default_value_for_type(cast_to))
+
+        return self.coalesce(coalesce_args)
+
+    def _visit_member_access_node(self, member_access_node: MemberAccessNode, stack) -> str:
         if isinstance(member_access_node, PropertyAccessNode):
             if member_access_node.is_function_call():
                 method_access_node = member_access_node.get_method_access_node()
                 return self._visit_method_calling(
-                   self._visit_property_access_node(member_access_node),
+                   self._visit_property_access_node(member_access_node, stack),
                     method_access_node.member_name,
                     method_access_node.args,
                 )
 
-            return self._visit_property_access_node(member_access_node)
+            return self._visit_property_access_node(member_access_node, stack)
 
         if isinstance(member_access_node, MethodAccessNode):
             return self._visit_method_calling(
@@ -282,9 +315,9 @@ class BaseCelToSqlProvider:
             f"{type(member_access_node).__name__} member access node is not supported yet"
         )
     
-    def _visit_property_access_node(self, property_access_node: PropertyAccessNode) -> str:
+    def _visit_property_access_node(self, property_access_node: PropertyAccessNode, stack: list[Node]) -> str:
         if (isinstance(property_access_node, JsonPropertyAccessNode)):
-            return self.json_extract(property_access_node.json_property_name, property_access_node.property_to_extract)
+            return self.json_extract_as_text(property_access_node.json_property_name, property_access_node.property_to_extract)
         
         return property_access_node.get_property_path()
 
@@ -325,9 +358,9 @@ class BaseCelToSqlProvider:
     # endregion
 
     # region Unary Visitors
-    def _visit_unary_node(self, unary_node: UnaryNode) -> str:
+    def _visit_unary_node(self, unary_node: UnaryNode, stack: list[Node]) -> str:
         if unary_node.operator == UnaryNode.NOT:
-            return self._visit_unary_not(self.__build_sql_filter(unary_node.operand))
+            return self._visit_unary_not(self.__build_sql_filter(unary_node.operand, stack))
 
         raise NotImplementedError(
             f"{unary_node.operator} unary operator is not supported yet"

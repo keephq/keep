@@ -52,15 +52,17 @@ def build_facets_data_query(
         for item in metadata:
             if isinstance(item, JsonMapping):
                 group_by_exp.append(
-                    instance.json_extract(item.json_prop, item.prop_in_json)
+                    instance.json_extract_as_text(item.json_prop, item.prop_in_json)
                 )
             elif isinstance(metadata[0], SimpleMapping):
                 group_by_exp.append(item.map_to)
+        
+        casted = f"{instance.coalesce([instance.cast(item, str) for item in group_by_exp])}"
 
         union_queries.append(
             select(
                 literal(facet.id).label("facet_id"),
-                text(f"{instance.coalesce(group_by_exp)} AS facet_value"),
+                text(f"MIN({casted}) AS facet_value"),
                 func.count(func.distinct(literal_column("entity_id"))).label(
                     "matches_count"
                 ),
@@ -121,11 +123,11 @@ def get_facet_options(
             if facet.id in grouped_by_id_dict:
                 result_dict[facet.id] = [
                     FacetOptionDto(
-                        display_name=str(item.facet_value),
-                        value=item.facet_value,
-                        matches_count=item.matches_count,
+                        display_name=str(facet_value),
+                        value=facet_value,
+                        matches_count=matches_count,
                     )
-                    for item in grouped_by_id_dict[facet.id]
+                    for facet_id, facet_value, matches_count in grouped_by_id_dict[facet.id]
                 ]
                 continue
 

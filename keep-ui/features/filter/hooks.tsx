@@ -37,7 +37,7 @@ type FacetOptionsDict ={
 
 export const useFacetOptions = (
   entityName: string,
-  facetOptionIdsToLoad: string[],
+  facetOptionIdsToLoad: string[] | undefined,
   cel: string = "",
   options: SWRConfiguration = {
     revalidateOnFocus: false,
