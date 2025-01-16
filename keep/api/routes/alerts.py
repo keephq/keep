@@ -10,14 +10,11 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from typing import List, Optional
 
 import celpy
-from arq import ArqRedis
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pusher import Pusher
 
-from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.config import config
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
@@ -315,7 +312,6 @@ def discard_future(
 
 
 def create_process_event_task(
-    bg_tasks: BackgroundTasks,
     tenant_id: str,
     provider_type: str | None,
     provider_id: str | None,
@@ -357,15 +353,13 @@ def create_process_event_task(
     response_model=AlertDto | list[AlertDto],
     status_code=202,
 )
-async def receive_generic_event(
+def receive_generic_event(
     event: AlertDto | list[AlertDto] | dict,
-    bg_tasks: BackgroundTasks,
     request: Request,
     fingerprint: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
-    pusher_client: Pusher = Depends(get_pusher_client),
 ):
     """
     A generic webhook endpoint that can be used by any provider to send alerts to Keep.
@@ -377,30 +371,30 @@ async def receive_generic_event(
     """
     running_tasks: set = request.state.background_tasks
     if REDIS:
-        redis: ArqRedis = await get_pool()
-        job = await redis.enqueue_job(
-            "async_process_event",
-            authenticated_entity.tenant_id,
-            None,
-            None,
-            fingerprint,
-            authenticated_entity.api_key_name,
-            request.state.trace_id,
-            event,
-            _queue_name=KEEP_ARQ_QUEUE_BASIC,
-        )
-        logger.info(
-            "Enqueued job",
-            extra={
-                "job_id": job.job_id,
-                "tenant_id": authenticated_entity.tenant_id,
-                "queue": KEEP_ARQ_QUEUE_BASIC,
-            },
-        )
-        task_name = job.job_id
+        # redis: ArqRedis = await get_pool()
+        # job = await redis.enqueue_job(
+        #     "async_process_event",
+        #     authenticated_entity.tenant_id,
+        #     None,
+        #     None,
+        #     fingerprint,
+        #     authenticated_entity.api_key_name,
+        #     request.state.trace_id,
+        #     event,
+        #     _queue_name=KEEP_ARQ_QUEUE_BASIC,
+        # )
+        # logger.info(
+        #     "Enqueued job",
+        #     extra={
+        #         "job_id": job.job_id,
+        #         "tenant_id": authenticated_entity.tenant_id,
+        #         "queue": KEEP_ARQ_QUEUE_BASIC,
+        #     },
+        # )
+        # task_name = job.job_id
+        pass
     else:
         task_name = create_process_event_task(
-            bg_tasks,
             authenticated_entity.tenant_id,
             None,
             None,
@@ -445,9 +439,8 @@ async def webhook_challenge():
     description="Receive an alert event from a provider",
     status_code=202,
 )
-async def receive_event(
+def receive_event(
     provider_type: str,
-    bg_tasks: BackgroundTasks,
     request: Request,
     provider_id: str | None = None,
     fingerprint: str | None = None,
@@ -455,7 +448,6 @@ async def receive_event(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
-    pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     trace_id = request.state.trace_id
     running_tasks: set = request.state.background_tasks
@@ -486,30 +478,30 @@ async def receive_event(
     event = provider_class.parse_event_raw_body(event)
     logger.debug("Parsed event raw body", extra={"time": time.time() - t})
     if REDIS:
-        redis: ArqRedis = await get_pool()
-        job = await redis.enqueue_job(
-            "async_process_event",
-            authenticated_entity.tenant_id,
-            provider_type,
-            provider_id,
-            fingerprint,
-            authenticated_entity.api_key_name,
-            trace_id,
-            event,
-            _queue_name=KEEP_ARQ_QUEUE_BASIC,
-        )
-        logger.info(
-            "Enqueued job",
-            extra={
-                "job_id": job.job_id,
-                "tenant_id": authenticated_entity.tenant_id,
-                "queue": KEEP_ARQ_QUEUE_BASIC,
-            },
-        )
-        task_name = job.job_id
+        # redis: ArqRedis = await get_pool()
+        # job = await redis.enqueue_job(
+        #     "async_process_event",
+        #     authenticated_entity.tenant_id,
+        #     provider_type,
+        #     provider_id,
+        #     fingerprint,
+        #     authenticated_entity.api_key_name,
+        #     trace_id,
+        #     event,
+        #     _queue_name=KEEP_ARQ_QUEUE_BASIC,
+        # )
+        # logger.info(
+        #     "Enqueued job",
+        #     extra={
+        #         "job_id": job.job_id,
+        #         "tenant_id": authenticated_entity.tenant_id,
+        #         "queue": KEEP_ARQ_QUEUE_BASIC,
+        #     },
+        # )
+        # task_name = job.job_id
+        pass
     else:
         task_name = create_process_event_task(
-            bg_tasks,
             authenticated_entity.tenant_id,
             provider_type,
             provider_id,
