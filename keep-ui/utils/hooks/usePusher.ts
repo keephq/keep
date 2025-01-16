@@ -72,6 +72,7 @@ export const useWebsocket = () => {
       });
 
       PUSHER.connection.bind("error", (err: any) => {
+        void err; // No-op line for debugger target
         console.error("useWebsocket: Pusher connection error:", err);
       });
 
