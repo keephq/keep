@@ -25,14 +25,13 @@ export const useWebsocket = () => {
     channelName = `private-${session?.tenantId}`;
     console.log("useWebsocket: Creating new Pusher instance");
     try {
-      const isRelativeHostAndNotLocal =
-        configData.PUSHER_HOST &&
-        !configData.PUSHER_HOST.includes("://") &&
-        !["localhost", "127.0.0.1"].includes(configData.PUSHER_HOST);
+      // check if the pusher host is relative (e.g. /websocket)
+      const isRelative =
+        configData.PUSHER_HOST && configData.PUSHER_HOST.startsWith("/");
 
       // if relative, get the relative port:
       let port = configData.PUSHER_PORT;
-      if (isRelativeHostAndNotLocal) {
+      if (isRelative) {
         // Handle case where port is empty string (default ports 80/443)
         if (window.location.port) {
           port = parseInt(window.location.port, 10);
@@ -42,17 +41,13 @@ export const useWebsocket = () => {
         }
       }
 
-      console.log(
-        "useWebsocket: isRelativeHostAndNotLocal:",
-        isRelativeHostAndNotLocal
-      );
+      console.log("useWebsocket: isRelativeHostAndNotLocal:", isRelative);
 
       var pusherOptions: PusherOptions = {
-        wsHost: isRelativeHostAndNotLocal
-          ? window.location.hostname
-          : configData.PUSHER_HOST,
-        wsPath: isRelativeHostAndNotLocal ? configData.PUSHER_HOST : "",
-        wsPort: isRelativeHostAndNotLocal ? port : configData.PUSHER_PORT,
+        wsHost: isRelative ? window.location.hostname : configData.PUSHER_HOST,
+        // in case its relative, use path e.g. "/websocket"
+        wsPath: isRelative ? configData.PUSHER_HOST : "",
+        wsPort: isRelative ? port : configData.PUSHER_PORT,
         forceTLS: window.location.protocol === "https:",
         disableStats: true,
         enabledTransports: ["ws", "wss"],
