@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Facet } from "./facet";
 import { CreateFacetDto, FacetDto, FacetOptionDto } from "./models";
-import { PlusIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import { AddFacetModal } from "./add-facet-modal";
 
@@ -163,15 +163,23 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   return (
     <section id={`${panelId}-facets`} className={"w-56 " + className}>
       <div className="space-y-2">
-        {/* Facet button */}
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="w-full mt-2 px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-2"
-        >
-          <PlusIcon className="h-4 w-4" />
-          Add Facet
-        </button>
-
+        <div className="flex justify-between">
+          {/* Facet button */}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-2"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Add Facet
+          </button>
+          <button
+            className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-2"
+          >
+            <TrashIcon className="h-4 w-4" />
+            Clear filter
+          </button>
+        </div>
+        
         {/* Dynamic facets */}
         {facets?.map((facet, index) => (
           <Facet

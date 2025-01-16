@@ -147,10 +147,10 @@ export function IncidentList({
             </div>
           </div>
           <div>
-            {isLoading && (
+            {/* {isLoading && (
               <Loading />
             )}
-            
+             */}
               <div className="flex flex-row gap-5">
                 <FacetsPanelServerSide
                   panelId={"incidents"}
@@ -159,7 +159,7 @@ export function IncidentList({
                   onCelChange={(cel) => setFilterCel(cel)}
                 />
                 <div className="flex flex-col gap-5 flex-1">
-                  {!isLoading && (
+                  {(
                     renderIncidents()
                   )}
                 </div>
