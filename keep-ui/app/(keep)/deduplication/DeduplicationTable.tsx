@@ -28,13 +28,13 @@ import {
   PlusIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
-import Image from "next/image";
 import { useProviders } from "utils/hooks/useProviders";
 import { useApi } from "@/shared/lib/hooks/useApi";
 
 const columnHelper = createColumnHelper<DeduplicationRule>();
 
 import { KeyedMutator } from "swr";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 type DeduplicationTableProps = {
   deduplicationRules: DeduplicationRule[];
@@ -138,7 +138,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         header: "",
         cell: (info) => (
           <div className="flex items-center w-8">
-            <Image
+            <DynamicImageProviderIcon
               className="inline-block"
               key={info.getValue()}
               alt={info.getValue()}

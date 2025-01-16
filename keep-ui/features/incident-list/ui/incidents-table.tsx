@@ -19,7 +19,6 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import Image from "next/image";
 import IncidentTableComponent from "./incident-table-component";
 import Markdown from "react-markdown";
 import remarkRehype from "remark-rehype";
@@ -39,6 +38,7 @@ import {
   TablePagination,
 } from "@/shared/ui";
 import { UserStatefulAvatar } from "@/entities/users/ui";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -191,7 +191,7 @@ export default function IncidentsTable({
       header: "Sources",
       cell: ({ row }) =>
         row.original.alert_sources.map((alert_source, index) => (
-          <Image
+          <DynamicImageProviderIcon
             key={alert_source}
             className={clsx(
               "inline-block",

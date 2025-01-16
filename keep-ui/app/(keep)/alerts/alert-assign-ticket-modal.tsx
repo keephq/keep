@@ -8,6 +8,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 interface AlertAssignTicketModalProps {
   handleClose: () => void;
@@ -110,7 +111,7 @@ const AlertAssignTicketModal = ({
             <PlusIcon className="h-5 w-5 text-gray-400 mr-2" />
           ) : (
             props.data.type && (
-              <img
+              <DynamicImageProviderIcon
                 src={`/icons/${props.data.type}-icon.png`}
                 alt=""
                 style={{ height: "20px", marginRight: "10px" }}
@@ -135,7 +136,7 @@ const AlertAssignTicketModal = ({
             <PlusIcon className="h-5 w-5 text-gray-400 mr-2" />
           ) : (
             data.type && (
-              <img
+              <DynamicImageProviderIcon
                 src={`/icons/${data.type}-icon.png`}
                 alt=""
                 style={{ height: "20px", marginRight: "10px" }}
