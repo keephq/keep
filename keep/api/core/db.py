@@ -1733,7 +1733,11 @@ def update_rule(
 def get_rules(tenant_id, ids=None):
     with Session(engine) as session:
         # Start building the query
-        query = select(Rule).where(Rule.tenant_id == tenant_id)
+        query = (
+            select(Rule)
+            .where(Rule.tenant_id == tenant_id)
+            .where(Rule.is_deleted.is_(False))
+        )
 
         # Apply additional filters if ids are provided
         if ids is not None:
@@ -1769,8 +1773,8 @@ def delete_rule(tenant_id, rule_id):
             select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_uuid)
         ).first()
 
-        if rule:
-            session.delete(rule)
+        if rule and not rule.is_deleted:
+            rule.is_deleted = True
             session.commit()
             return True
         return False

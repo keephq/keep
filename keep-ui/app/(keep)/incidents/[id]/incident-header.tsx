@@ -18,7 +18,7 @@ import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { useIncident } from "@/utils/hooks/useIncidents";
 import { IncidentOverview } from "./incident-overview";
 import { CopilotKit } from "@copilotkit/react-core";
-import { TbTopologyStar3 } from "react-icons/tb";
+import { TbInfoCircle, TbTopologyStar3 } from "react-icons/tb";
 
 export function IncidentHeader({
   incident: initialIncidentData,
@@ -122,6 +122,16 @@ export function IncidentHeader({
                 tooltip="Created by topology correlation"
               >
                 Topology
+              </Badge>
+            )}
+            {incident.rule_is_deleted && (
+              <Badge
+                color="orange"
+                size="xs"
+                icon={TbInfoCircle}
+                tooltip={`Created by deleted rule ${incident.rule_name}`}
+              >
+                Orphaned
               </Badge>
             )}
           </div>
