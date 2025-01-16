@@ -46,6 +46,9 @@ export interface IncidentDto {
   incident_type?: string;
   incident_application?: string;
   resolve_on: "all_resolved" | "first" | "last" | "never";
+  rule_id?: string;
+  rule_name?: string;
+  rule_is_deleted?: boolean;
 }
 
 export interface IncidentCandidateDto {
