@@ -113,6 +113,7 @@
             "providers/documentation/aks-provider",
             "providers/documentation/amazonsqs-provider",
             "providers/documentation/appdynamics-provider",
+            "providers/documentation/s3-provider",
             "providers/documentation/argocd-provider",
             "providers/documentation/auth0-provider",
             "providers/documentation/axiom-provider",
