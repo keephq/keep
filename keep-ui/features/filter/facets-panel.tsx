@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Facet } from "./facet";
 import { CreateFacetDto, FacetDto, FacetOptionDto } from "./models";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
@@ -125,41 +125,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     });
   }
 
-  // useEffect(() => {
-  //   if (onCelChange && facets && facetOptions && facetsState) {
-  //     const cel = Object.values(facets)
-  //       .filter((facet) => facet.id in facetsState)
-  //       .map((facet) => {
-  //         const notSelectedOptions = Object.values(facetOptions[facet.id])
-  //           .filter((facetOption) => facetsState[facet.id][facetOption.display_name] === false)
-  //           .map((option) => {
-  //             if (typeof option.value === 'string') {
-  //               return `'${option.value}'`;
-  //             } else if (option.value == null) {
-  //               return 'null';
-  //             }
-
-  //             return option.value;
-  //           });
-
-  //         if (!notSelectedOptions.length) {
-  //           return;
-  //         }
-
-  //         return `!(${facet.property_path} in [${notSelectedOptions.join(", ")}])`;
-  //       })
-  //       .filter((query) => query)
-  //       .map((facetCel) => `${facetCel}`)
-  //       .map((query) => query)
-  //       .join(" && ");
-
-  //     if (cel !== celState) {
-  //       onCelChange(cel);
-  //       setCelState(cel);
-  //     }
-  //   }
-  // }, [facetOptions, facets, facetsState, onCelChange]);
-
   return (
     <section id={`${panelId}-facets`} className={"w-56 " + className}>
       <div className="space-y-2">
@@ -180,7 +145,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
           </button>
         </div>
         
-        {/* Dynamic facets */}
         {facets?.map((facet, index) => (
           <Facet
             key={facet.id}
