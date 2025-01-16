@@ -1,0 +1,17 @@
+workflow:
+  id: monday-example
+  description: monday-example
+  triggers:
+    - type: manual
+  actions:
+    - name: monday
+      provider:
+        type: monday
+        config: "{{ providers.monday }}"
+        with:
+          board_id: 1956384489
+          group_id: "topics"
+          item_name: "Test"
+          column_values:
+            - text_mkm77x3p: "helo"
+            - text_1_mkm7x2ep: "10"
