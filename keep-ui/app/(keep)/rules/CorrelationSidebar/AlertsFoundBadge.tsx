@@ -1,6 +1,6 @@
 import { Badge } from "@tremor/react";
-import Image from "next/image";
 import { AlertDto } from "@/entities/alerts/model";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 type AlertsFoundBadgeProps = {
   alertsFound: AlertDto[];
@@ -36,7 +36,7 @@ export const AlertsFoundBadge = ({
         }`}
       >
         {images.map((source, index) => (
-          <Image
+          <DynamicImageProviderIcon
             className={`inline-block ${index == 0 || vertical ? "" : "-ml-2"}`}
             key={source}
             alt={source}

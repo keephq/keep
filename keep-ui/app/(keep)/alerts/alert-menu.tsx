@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { DropdownMenu } from "@/shared/ui";
 import { ElementType } from "react";
-import { DynamicIcon } from "@/components/ui";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 interface Props {
   alert: AlertDto;
@@ -171,7 +171,7 @@ export default function AlertMenu({
       },
       ...(provider?.methods?.map((method) => ({
         icon: (props: any) => (
-          <DynamicIcon providerType={provider.type} {...props} />
+          <DynamicImageProviderIcon providerType={provider.type} {...props} />
         ),
         label: method.name,
         onClick: () => openMethodModal(method),

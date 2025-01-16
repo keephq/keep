@@ -40,6 +40,7 @@ import TimeAgo from "react-timeago";
 import clsx from "clsx";
 import { IncidentAlertsTableBodySkeleton } from "./incident-alert-table-body-skeleton";
 import { IncidentAlertsActions } from "./incident-alert-actions";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 interface Props {
   incident: IncidentDto;
@@ -200,7 +201,7 @@ export default function IncidentAlerts({ incident }: Props) {
         maxSize: 100,
         cell: (context) =>
           (context.getValue() ?? []).map((source, index) => (
-            <Image
+            <DynamicImageProviderIcon
               className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
               key={`source-${source}-${index}`}
               alt={source}

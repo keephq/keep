@@ -7,6 +7,7 @@ import { ArrowLongRightIcon } from "@heroicons/react/24/outline";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 interface WebhookSettings {
   webhookDescription: string;
@@ -53,7 +54,7 @@ export const ProviderSemiAutomated = ({ provider }: Props) => {
           provider.display_name.slice(1)}
       </Title>
       <div className="flex">
-        <Image
+        <DynamicImageProviderIcon
           src={`/icons/${provider.type}-icon.png`}
           width={64}
           height={55}

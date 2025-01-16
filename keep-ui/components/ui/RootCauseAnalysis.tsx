@@ -1,5 +1,5 @@
 import { Badge } from "@tremor/react";
-import { DynamicIcon } from "./DynamicIcon";
+import { DynamicImageProviderIcon } from "./DynamicProviderIcon";
 import * as HoverCard from "@radix-ui/react-hover-card";
 import { FieldHeader } from "@/shared/ui";
 
@@ -52,7 +52,7 @@ export function RootCauseAnalysis({
                     className="flex items-start gap-2 text-tremor-content p-2 rounded-tremor-small bg-tremor-background-muted"
                   >
                     <div className="mt-1 shrink-0">
-                      <DynamicIcon
+                      <DynamicImageProviderIcon
                         providerType={point.providerType ?? "keep"}
                         width="16px"
                         height="16px"
