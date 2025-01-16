@@ -12,9 +12,9 @@ from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
 
-from keep.api.core import limiter
 from keep.api.core.config import config
 from keep.api.core.db import count_alerts, get_provider_distribution, get_session
+from keep.api.core.limiter import limiter
 from keep.api.models.db.provider import Provider
 from keep.api.models.provider import Provider as ProviderDTO
 from keep.api.models.provider import ProviderAlertsCountResponseDTO
