@@ -2,7 +2,7 @@
     <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
-<h1 align="center">The open-source alert management and AIOps platform</h1>
+<h1 align="center">The open-source AIOps and alert management platform</h1>
 
 </br>
 
