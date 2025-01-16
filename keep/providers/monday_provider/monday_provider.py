@@ -38,6 +38,8 @@ class MondayProvider(BaseProvider):
         ),
     ]
 
+    PROVIDER_TAGS = ["ticketing"]
+
     url = "https://api.monday.com/v2"
 
     def __init__(
