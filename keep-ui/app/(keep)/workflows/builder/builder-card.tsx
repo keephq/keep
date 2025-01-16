@@ -2,9 +2,11 @@ import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { Card, Callout } from "@tremor/react";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import Loader from "./loader";
+import { EmptyBuilderState } from "./empty-builder-state";
 import { Provider } from "../../providers/providers";
 import { useProviders } from "utils/hooks/useProviders";
+import { useWorkflowBuilderContext } from "./workflow-builder-context";
+import Loading from "../../loading";
 
 const Builder = dynamic(() => import("./builder"), {
   ssr: false, // Prevents server-side rendering
@@ -13,32 +15,21 @@ const Builder = dynamic(() => import("./builder"), {
 interface Props {
   fileContents: string | null;
   fileName: string;
-  enableButtons: () => void;
-  enableGenerate: (state: boolean) => void;
-  triggerGenerate: number;
-  triggerSave: number;
-  triggerRun: number;
   workflow?: string;
   workflowId?: string;
-  isPreview?: boolean;
 }
 
 export function BuilderCard({
   fileContents,
   fileName,
-  enableButtons,
-  enableGenerate,
-  triggerGenerate,
-  triggerRun,
-  triggerSave,
   workflow,
   workflowId,
-  isPreview,
 }: Props) {
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const [installedProviders, setInstalledProviders] = useState<
     Provider[] | null
   >(null);
+  const { enableButtons } = useWorkflowBuilderContext();
 
   const { data, error, isLoading } = useProviders();
 
@@ -46,14 +37,14 @@ export function BuilderCard({
     if (data && !providers && !installedProviders) {
       setProviders(data.providers);
       setInstalledProviders(data.installed_providers);
-      enableButtons();
+      enableButtons(true);
     }
   }, [data, providers, installedProviders, enableButtons]);
 
   if (!providers || isLoading)
     return (
       <Card className="mt-2 p-4 mx-auto">
-        <Loader />
+        <Loading />
       </Card>
     );
 
@@ -75,7 +66,7 @@ export function BuilderCard({
   if (fileContents == "" && !workflow) {
     return (
       <Card className="mt-2 p-4 mx-auto h-[95%]">
-        <Loader />
+        <EmptyBuilderState />
       </Card>
     );
   }
@@ -86,13 +77,8 @@ export function BuilderCard({
       installedProviders={installedProviders}
       loadedAlertFile={fileContents}
       fileName={fileName}
-      enableGenerate={enableGenerate}
-      triggerGenerate={triggerGenerate}
-      triggerSave={triggerSave}
-      triggerRun={triggerRun}
       workflow={workflow}
       workflowId={workflowId}
-      isPreview={isPreview}
     />
   );
 }

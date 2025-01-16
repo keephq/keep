@@ -4,7 +4,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from keep.providers.models.provider_config import ProviderScope
-from keep.providers.models.provider_method import ProviderMethod
+from keep.providers.models.provider_method import ProviderMethodDTO
 
 
 class ProviderAlertsCountResponseDTO(BaseModel):
@@ -36,7 +36,7 @@ class Provider(BaseModel):
     oauth2_url: str | None = None
     scopes: list[ProviderScope] = []
     validatedScopes: dict[str, bool | str] | None = {}
-    methods: list[ProviderMethod] = []
+    methods: list[ProviderMethodDTO] = []
     installed_by: str | None = None
     installation_time: datetime | None = None
     pulling_enabled: bool = True

@@ -12,6 +12,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -91,6 +92,14 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
             alias="Logs Viewer",
         ),
     ]
+    PROVIDER_METHODS = [
+        ProviderMethod(
+            name="query",
+            func_name="execute_query",
+            description="Query the GCP logs",
+            type="view",
+        )
+    ]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -135,6 +144,9 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
                 self._service_account_data
             )
         return self._client
+
+    def execute_query(self, query: str, **kwargs):
+        return self._query(query, **kwargs)
 
     def _query(
         self,
@@ -200,6 +212,8 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
             )
         else:
             name = "Test notification"
+
+        content = documentation.get("content", "")
         incident_id = incident.get("incident_id", "")
         # Get the severity
         if "severity" in incident:
@@ -227,6 +241,15 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
             "+00:00", "Z"
         )
 
+        policy_user_labels = incident.get("policy_user_labels", {})
+
+        extra = {}
+        if "service" in policy_user_labels:
+            extra["service"] = policy_user_labels["service"]
+
+        if "application" in policy_user_labels:
+            extra["application"] = policy_user_labels["application"]
+
         # Construct the alert object
         alert = AlertDto(
             id=incident_id,
@@ -239,6 +262,8 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
             url=url,
             incident_id=incident_id,
             gcp=incident,  # rest of the fields
+            content=content,
+            **extra,
         )
 
         # Set fingerprint if applicable

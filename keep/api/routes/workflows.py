@@ -306,7 +306,7 @@ async def run_workflow_from_definition(
     return workflow_execution
 
 
-async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
+async def __get_workflow_raw_data(request: Request, file: UploadFile | None) -> dict:
     try:
         # we support both File upload (from frontend) or raw yaml (e.g. curl)
         if file:

@@ -1,10 +1,19 @@
 import React, { useState } from "react";
-import { MockStep, MockWorkflow } from "@/shared/api/workflows";
-import Loading from "@/app/(keep)/loading";
-import { Button, Card, Tab, TabGroup, TabList } from "@tremor/react";
+import {
+  MockStep,
+  MockWorkflow,
+  WorkflowTemplate,
+} from "@/shared/api/workflows";
+import { Button, Card } from "@tremor/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { TiArrowRight } from "react-icons/ti";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
+import useSWR from "swr";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { ErrorComponent } from "@/shared/ui";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
 export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
   const isStepPresent =
@@ -18,157 +27,141 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
         if (["threshold", "assert", "foreach"].includes(provider?.type)) {
           return null;
         }
-        return (
-          <>
-            {provider && (
-              <div
-                key={`step-${step.id}`}
-                className="flex items-center gap-2 flex-shrink-0"
-              >
-                {index > 0 && (
-                  <TiArrowRight size={24} className="text-gray-500" />
-                )}
-                <Image
-                  src={`/icons/${provider?.type}-icon.png`}
-                  width={30}
-                  height={30}
-                  alt={provider?.type}
-                  className="flex-shrink-0"
-                />
-              </div>
-            )}
-          </>
-        );
+        return provider ? (
+          <div
+            key={`step-${step.id}-${index}`}
+            className="flex items-center gap-2 flex-shrink-0"
+          >
+            {index > 0 && <TiArrowRight size={24} className="text-gray-500" />}
+            <Image
+              src={`/icons/${provider?.type}-icon.png`}
+              width={30}
+              height={30}
+              alt={provider?.type}
+              className="flex-shrink-0"
+            />
+          </div>
+        ) : null;
       })}
       {workflow?.actions?.map((action: any, index: number) => {
         const provider = action?.provider;
         if (["threshold", "assert", "foreach"].includes(provider?.type)) {
           return null;
         }
-        return (
-          <>
-            {provider && (
-              <div
-                key={`action-${action.id}`}
-                className="flex items-center gap-2 flex-shrink-0"
-              >
-                {(index > 0 || isStepPresent) && (
-                  <TiArrowRight size={24} className="text-gray-500" />
-                )}
-                <Image
-                  src={`/icons/${provider?.type}-icon.png`}
-                  width={30}
-                  height={30}
-                  alt={provider?.type}
-                  className="flex-shrink-0"
-                />
-              </div>
+        return provider ? (
+          <div
+            key={`action-${action.id}-${index}`}
+            className="flex items-center gap-2 flex-shrink-0"
+          >
+            {(index > 0 || isStepPresent) && (
+              <TiArrowRight size={24} className="text-gray-500" />
             )}
-          </>
-        );
+            <Image
+              src={`/icons/${provider?.type}-icon.png`}
+              width={30}
+              height={30}
+              alt={provider?.type}
+              className="flex-shrink-0"
+            />
+          </div>
+        ) : null;
       })}
     </div>
   );
 }
 
-export const MockFilterTabs = ({
-  tabs,
-}: {
-  tabs: { name: string; onClick?: () => void }[];
-}) => (
-  <div className="max-w-lg space-y-12">
-    <TabGroup>
-      <TabList variant="solid">
-        {tabs?.map(
-          (tab: { name: string; onClick?: () => void }, index: number) => (
-            <Tab key={index} value={tab.name}>
-              {tab.name}
-            </Tab>
-          )
-        )}
-      </TabList>
-    </TabGroup>
-  </div>
-);
-
-export default function MockWorkflowCardSection({
-  mockWorkflows,
-  mockError,
-  mockLoading,
-}: {
-  mockWorkflows: MockWorkflow[];
-  mockError: any;
-  mockLoading: boolean | null;
-}) {
+export function WorkflowTemplates() {
+  const api = useApi();
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  /**
+    Add Mock Workflows (6 Random Workflows on Every Request)
+      To add mock workflows, a new backend API endpoint has been created: /workflows/random-templates.
+        1. Fetching Random Templates: When a request is made to this endpoint, all workflow YAML/YML files are read and
+           shuffled randomly.
+        2. Response: Only the first 6 files are parsed and sent in the response.
+   **/
+  const {
+    data: mockWorkflows,
+    error: mockError,
+    isLoading: mockLoading,
+    mutate: refresh,
+  } = useSWR<WorkflowTemplate[]>(
+    api.isReady() ? `/workflows/random-templates` : null,
+    (url: string) => api.get(url),
+    {
+      revalidateOnFocus: false,
+    }
+  );
 
   const getNameFromId = (id: string) => {
     if (!id) {
       return "";
     }
-
     return id.split("-").join(" ");
   };
 
-  // if mockError is not null, handle the error case
-  if (mockError) {
-    return <p>Error: {mockError.message}</p>;
-  }
+  const handlePreview = (template: WorkflowTemplate) => {
+    setLoadingId(template.workflow_raw_id);
+    localStorage.setItem("preview_workflow", JSON.stringify(template));
+    router.push(`/workflows/preview/${template.workflow_raw_id}`);
+  };
 
   return (
     <div className="w-full">
-      <h2 className="text-xl sm:text-2xl font-semibold mb-6">
+      <h2 className="text-xl sm:text-2xl font-semibold mb-6 flex justify-between">
         Discover workflow templates
-      </h2>
-      {/* TODO: Implement the commented out code block */}
-      {/* This is a placeholder comment until the commented out code block is implemented */}
-      {/* <div className="flex flex-col sm:flex-row justify-between mb-6 flex-wrap gap-2">
-        <div className="flex flex-col sm:flex-row flex-wrap gap-2" >
-          <input
-            type="text"
-            placeholder="Search through workflow examples..."
-            className="px-4 py-2 border rounded"
-          />
-          <button className="px-4 py-2 bg-gray-200 border rounded">Integrations used</button>
+        <div className="flex justify-end">
+          <Button
+            icon={ArrowPathIcon}
+            color="orange"
+            size="sm"
+            onClick={() => {
+              refresh();
+            }}
+          >
+            Refresh
+          </Button>
         </div>
-        <MockFilterTabs tabs={[
-          {name: "All workflows"},
-          {name: "Notifications"},
-          {name: "Databases"},
-          {name: "CI/CD"},
-          {name: "Other"},
-          ]}/>
-      </div> */}
-      {mockError && (
-        <p className="text-center text-red-100 m-auto">
-          Error: {mockError.message || "Something went wrong!"}
-        </p>
+      </h2>
+
+      {/* TODO: Filters and search */}
+      {!mockLoading && !mockError && mockWorkflows?.length === 0 && (
+        <p className="text-center m-auto">No workflow templates found</p>
       )}
-      {!mockLoading && !mockError && mockWorkflows.length === 0 && (
-        <p className="text-center m-auto">No workflows found</p>
+      {mockError && (
+        <ErrorComponent error={mockError} reset={() => refresh()} />
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
-        {mockError && (
-          <p className="text-center text-red-100">
-            Error: {mockError.message || "Something went wrong!"}
-          </p>
+        {mockLoading && (
+          <>
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="w-full h-48">
+                <Skeleton className="w-full h-48" />
+              </div>
+            ))}
+          </>
         )}
-        {mockLoading && <Loading />}
         {!mockLoading &&
-          mockWorkflows.length > 0 &&
-          mockWorkflows.map((template: any, index: number) => {
+          mockWorkflows?.length &&
+          mockWorkflows?.map((template, index: number) => {
             const workflow = template.workflow;
             return (
               <Card
                 key={index}
-                className="p-4 flex flex-col justify-between w-full border-2 border-transparent hover:border-orange-400 "
+                className="p-4 flex flex-col justify-between w-full border-2 border-transparent hover:border-orange-400 gap-2"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handlePreview(template);
+                }}
               >
-                <div>
+                <div className="min-h-36">
                   <WorkflowSteps workflow={workflow} />
                   <h3 className="text-lg sm:text-xl font-semibold line-clamp-2">
-                    {workflow.name || getNameFromId(workflow.id)}
+                    {getNameFromId(workflow.id)}
                   </h3>
                   <p className="mt-2 text-sm sm:text-base line-clamp-3">
                     {workflow.description}
@@ -176,16 +169,7 @@ export default function MockWorkflowCardSection({
                 </div>
                 <div>
                   <Button
-                    className="flex justify-center mt-8 px-4 py-2 border-none bg-gray-200 hover:bg-gray-300 bold-medium transition text-black rounded"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setLoadingId(workflow.id);
-                      localStorage.setItem(
-                        "preview_workflow",
-                        JSON.stringify(template)
-                      );
-                      router.push(`/workflows/preview/${workflow.id}`);
-                    }}
+                    variant="secondary"
                     disabled={!!(loadingId && loadingId !== workflow.id)}
                     loading={loadingId === workflow.id}
                   >

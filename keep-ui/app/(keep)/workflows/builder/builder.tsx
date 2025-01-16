@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Callout, Card } from "@tremor/react";
 import { Provider } from "../../providers/providers";
 import {
   parseWorkflow,
   generateWorkflow,
   getToolboxConfiguration,
-  buildAlert,
+  getWorkflowFromDefinition,
   wrapDefinitionV2,
 } from "./utils";
 import {
@@ -13,9 +13,9 @@ import {
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
 import { globalValidatorV2, stepValidatorV2 } from "./builder-validators";
-import { Alert } from "./legacy-workflow.types";
+import { LegacyWorkflow } from "./legacy-workflow.types";
 import BuilderModalContent from "./builder-modal";
-import Loader from "./loader";
+import { EmptyBuilderState } from "./empty-builder-state";
 import { stringify } from "yaml";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
@@ -35,21 +35,18 @@ import useStore from "./builder-store";
 import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
-import { showErrorToast, showSuccessToast } from "@/shared/ui";
+import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 import { CopilotKit } from "@copilotkit/react-core";
 import { BuilderChat } from "./builder-chat";
-import { revalidatePath } from "next/cache";
 import Modal from "@/components/ui/Modal";
+import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
+import { useWorkflowBuilderContext } from "./workflow-builder-context";
 
 interface Props {
   loadedAlertFile: string | null;
   fileName: string;
   providers: Provider[];
-  enableGenerate: (status: boolean) => void;
-  triggerGenerate: number;
-  triggerSave: number;
-  triggerRun: number;
   workflow?: string;
   workflowId?: string;
   installedProviders?: Provider[] | undefined | null;
@@ -66,10 +63,6 @@ function Builder({
   loadedAlertFile,
   fileName,
   providers,
-  enableGenerate,
-  triggerGenerate,
-  triggerSave,
-  triggerRun,
   workflow,
   workflowId,
   installedProviders,
@@ -89,50 +82,47 @@ function Builder({
   const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<
     WorkflowExecutionDetail | WorkflowExecutionFailure | null
   >(null);
-  const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
+  const [legacyWorkflow, setLegacyWorkflow] = useState<LegacyWorkflow | null>(
+    null
+  );
+  const { createWorkflow, updateWorkflow } = useWorkflowActions();
+  const {
+    enableGenerate,
+    triggerGenerate,
+    triggerSave,
+    triggerRun,
+    setIsSaving,
+  } = useWorkflowBuilderContext();
   const router = useRouter();
 
   const searchParams = useSearchParams();
-  const { errorNode, setErrorNode, canDeploy, synced } = useStore();
+  const { errorNode, setErrorNode, synced, reset, canDeploy } = useStore();
 
-  const setStepValidationErrorV2 = (step: V2Step, error: string | null) => {
-    setStepValidationError(error);
-    if (error && step) {
-      return setErrorNode(step.id);
-    }
-    setErrorNode(null);
-  };
+  const setStepValidationErrorV2 = useCallback(
+    (step: V2Step, error: string | null) => {
+      setStepValidationError(error);
+      if (error && step) {
+        return setErrorNode(step.id);
+      }
+      setErrorNode(null);
+    },
+    [setStepValidationError, setErrorNode]
+  );
 
-  const setGlobalValidationErrorV2 = (
-    id: string | null,
-    error: string | null
-  ) => {
-    setGlobalValidationError(error);
-    if (error && id) {
-      return setErrorNode(id);
-    }
-    setErrorNode(null);
-  };
-
-  const updateWorkflow = useCallback(() => {
-    const body = stringify(buildAlert(definition.value));
-    api
-      .request(`/workflows/${workflowId}`, {
-        method: "PUT",
-        body,
-        headers: { "Content-Type": "text/html" },
-      })
-      .then(() => {
-        showSuccessToast("Workflow deployed successfully");
-      })
-      .catch((error: any) => {
-        showErrorToast(error, "Failed to add workflow");
-      });
-  }, [api, definition.value, workflowId]);
+  const setGlobalValidationErrorV2 = useCallback(
+    (id: string | null, error: string | null) => {
+      setGlobalValidationError(error);
+      if (error && id) {
+        return setErrorNode(id);
+      }
+      setErrorNode(null);
+    },
+    [setGlobalValidationError, setErrorNode]
+  );
 
   const testRunWorkflow = () => {
     setTestRunModalOpen(true);
-    const body = stringify(buildAlert(definition.value));
+    const body = stringify(getWorkflowFromDefinition(definition.value));
     api
       .request(`/workflows/test`, {
         method: "POST",
@@ -152,72 +142,64 @@ function Builder({
       });
   };
 
-  const addWorkflow = useCallback(() => {
-    const body = stringify(buildAlert(definition.value));
-    api
-      .request(`/workflows/json`, {
-        method: "POST",
-        body,
-        headers: { "Content-Type": "text/html" },
-      })
-      .then(({ workflow_id }) => {
-        // This is important because it makes sure we will re-fetch the workflow if we get to this page again.
-        // router.push for instance, optimizes re-render of same pages and we don't want that here because of "cache".
-        showSuccessToast("Workflow added successfully");
-        revalidatePath("/workflows/builder");
-        router.push(`/workflows/${workflow_id}`);
-      })
-      .catch((error) => {
-        alert(`Error: ${error}`);
-      });
-  }, [api, definition.value, router]);
-
-  useEffect(() => {
-    setIsLoading(true);
-    try {
-      if (workflow) {
-        setDefinition(
-          wrapDefinitionV2({
-            ...parseWorkflow(workflow, providers),
-            isValid: true,
-          })
-        );
-      } else if (loadedAlertFile == null) {
-        const alertUuid = uuidv4();
-        const alertName = searchParams?.get("alertName");
-        const alertSource = searchParams?.get("alertSource");
-        let triggers = {};
-        if (alertName && alertSource) {
-          triggers = { alert: { source: alertSource, name: alertName } };
+  useEffect(
+    function updateDefinitionFromInput() {
+      setIsLoading(true);
+      try {
+        if (workflow) {
+          setDefinition(
+            wrapDefinitionV2({
+              ...parseWorkflow(workflow, providers),
+              isValid: true,
+            })
+          );
+        } else if (loadedAlertFile == null) {
+          const alertUuid = uuidv4();
+          const alertName = searchParams?.get("alertName");
+          const alertSource = searchParams?.get("alertSource");
+          let triggers = {};
+          if (alertName && alertSource) {
+            triggers = { alert: { source: alertSource, name: alertName } };
+          }
+          setDefinition(
+            wrapDefinitionV2({
+              ...generateWorkflow(
+                alertUuid,
+                "",
+                "",
+                false,
+                {},
+                [],
+                [],
+                triggers
+              ),
+              isValid: true,
+            })
+          );
+        } else {
+          const parsedDefinition = parseWorkflow(loadedAlertFile!, providers);
+          setDefinition(
+            wrapDefinitionV2({
+              ...parsedDefinition,
+              isValid: true,
+            })
+          );
         }
-        setDefinition(
-          wrapDefinitionV2({
-            ...generateWorkflow(alertUuid, "", "", false, {}, [], [], triggers),
-            isValid: true,
-          })
-        );
-      } else {
-        const parsedDefinition = parseWorkflow(loadedAlertFile!, providers);
-        setDefinition(
-          wrapDefinitionV2({
-            ...parsedDefinition,
-            isValid: true,
-          })
-        );
+      } catch (error) {
+        if (error instanceof YAMLException) {
+          showErrorToast(error, "Invalid YAML: " + error.message);
+        } else {
+          showErrorToast(error, "Failed to load workflow");
+        }
       }
-    } catch (error) {
-      if (error instanceof YAMLException) {
-        showErrorToast(error, "Invalid YAML: " + error.message);
-      } else {
-        showErrorToast(error, "Failed to load workflow");
-      }
-    }
-    setIsLoading(false);
-  }, [loadedAlertFile, workflow, searchParams, providers]);
+      setIsLoading(false);
+    },
+    [loadedAlertFile, workflow, searchParams, providers]
+  );
 
   useEffect(() => {
     if (triggerGenerate) {
-      setCompiledAlert(buildAlert(definition.value));
+      setLegacyWorkflow(getWorkflowFromDefinition(definition.value));
       if (!generateModalIsOpen) setGenerateModalIsOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -230,46 +212,70 @@ function Builder({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerRun]);
 
+  const saveWorkflow = useCallback(async () => {
+    if (!synced) {
+      toast(
+        "Please save the previous step or wait while properties sync with the workflow."
+      );
+      return;
+    }
+    if (errorNode || !definition.isValid) {
+      showErrorToast("Please fix the errors in the workflow before saving.");
+      return;
+    }
+    try {
+      setIsSaving(true);
+      if (workflowId) {
+        await updateWorkflow(workflowId, definition.value);
+      } else {
+        const response = await createWorkflow(definition.value);
+        if (response?.workflow_id) {
+          router.push(`/workflows/${response.workflow_id}`);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    synced,
+    errorNode,
+    definition.isValid,
+    definition.value,
+    setIsSaving,
+    workflowId,
+    updateWorkflow,
+    createWorkflow,
+    router,
+  ]);
+
+  // save workflow on "Deploy" button click
   useEffect(() => {
     if (triggerSave) {
-      if (!synced) {
-        toast(
-          "Please save the previous step or wait while properties sync with the workflow."
-        );
-        return;
-      }
-      if (workflowId) {
-        updateWorkflow();
-      } else {
-        addWorkflow();
-      }
+      saveWorkflow();
     }
+    // ignore since we want the latest values, but to run effect only when triggerSave changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerSave]);
 
+  // save workflow on "Save & Deploy" button click from FlowEditor
   useEffect(() => {
-    if (canDeploy && !errorNode && definition.isValid) {
-      if (!synced) {
-        toast(
-          "Please save the previous step or wait while properties sync with the workflow."
-        );
-        return;
-      }
-      if (workflowId) {
-        updateWorkflow();
-      } else {
-        addWorkflow();
-      }
+    if (canDeploy) {
+      saveWorkflow();
     }
-  }, [
-    canDeploy,
-    errorNode,
-    definition.isValid,
-    synced,
-    workflowId,
-    updateWorkflow,
-    addWorkflow,
-  ]);
+    // ignore since we want the latest values, but to run effect only when triggerSave changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canDeploy]);
+
+  useEffect(
+    function resetZustandStateOnUnMount() {
+      return () => {
+        reset();
+      };
+    },
+    [reset]
+  );
 
   useEffect(() => {
     enableGenerate(
@@ -285,14 +291,6 @@ function Builder({
     definition.isValid,
   ]);
 
-  if (isLoading) {
-    return (
-      <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
-        <Loader />
-      </Card>
-    );
-  }
-
   const ValidatorConfigurationV2: {
     step: (
       step: V2Step,
@@ -300,11 +298,21 @@ function Builder({
       definition?: ReactFlowDefinition
     ) => boolean;
     root: (def: FlowDefinition) => boolean;
-  } = {
-    step: (step, parent, definition) =>
-      stepValidatorV2(step, setStepValidationErrorV2, parent, definition),
-    root: (def) => globalValidatorV2(def, setGlobalValidationErrorV2),
-  };
+  } = useMemo(() => {
+    return {
+      step: (step, parent, definition) =>
+        stepValidatorV2(step, setStepValidationErrorV2, parent, definition),
+      root: (def) => globalValidatorV2(def, setGlobalValidationErrorV2),
+    };
+  }, [setStepValidationErrorV2, setGlobalValidationErrorV2]);
+
+  if (isLoading) {
+    return (
+      <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
+        <EmptyBuilderState />
+      </Card>
+    );
+  }
 
   function closeGenerateModal() {
     setGenerateModalIsOpen(false);
@@ -338,65 +346,61 @@ function Builder({
   };
 
   return (
-    <CopilotKit runtimeUrl="/api/copilotkit">
-      <div className="h-full">
-        <Modal
-          onClose={closeGenerateModal}
-          isOpen={generateModalIsOpen}
-          className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
-        >
-          <BuilderModalContent
-            closeModal={closeGenerateModal}
-            compiledAlert={compiledAlert}
-          />
-        </Modal>
-        <Modal
-          isOpen={testRunModalOpen}
-          onClose={closeWorkflowExecutionResultsModal}
-          className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
-        >
-          <BuilderWorkflowTestRunModalContent
-            closeModal={closeWorkflowExecutionResultsModal}
-            workflowExecution={runningWorkflowExecution}
-            workflowRaw={workflow ?? ""}
-            workflowId={workflowId ?? ""}
-          />
-        </Modal>
-        {generateModalIsOpen || testRunModalOpen ? null : (
-          <>
-            {getworkflowStatus()}
-            <Card className="mt-2 p-0 h-[90%] overflow-hidden">
-              <div className="flex h-full">
-                <div className="flex-1 h-full relative">
-                  <ReactFlowProvider>
-                    <ReactFlowBuilder
-                      providers={providers}
-                      installedProviders={installedProviders}
-                      definition={definition}
-                      validatorConfiguration={ValidatorConfigurationV2}
-                      onDefinitionChange={(def: any) => {
-                        setDefinition({
-                          value: {
-                            sequence: def?.sequence || [],
-                            properties: def?.properties || {},
-                          },
-                          isValid: def?.isValid || false,
-                        });
-                      }}
-                      toolboxConfiguration={getToolboxConfiguration(providers)}
-                    />
-                  </ReactFlowProvider>
-                </div>
-                <BuilderChat
-                  definition={definition}
+    <div className="h-full">
+      <Modal
+        onClose={closeGenerateModal}
+        isOpen={generateModalIsOpen}
+        className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
+      >
+        <BuilderModalContent
+          closeModal={closeGenerateModal}
+          compiledAlert={legacyWorkflow}
+        />
+      </Modal>
+      <Modal
+        isOpen={testRunModalOpen}
+        onClose={closeWorkflowExecutionResultsModal}
+        className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
+      >
+        <BuilderWorkflowTestRunModalContent
+          closeModal={closeWorkflowExecutionResultsModal}
+          workflowExecution={runningWorkflowExecution}
+          workflowRaw={workflow ?? ""}
+          workflowId={workflowId ?? ""}
+        />
+      </Modal>
+      <CopilotKit runtimeUrl="/api/copilotkit">
+        {getworkflowStatus()}
+        <Card className="mt-2 p-0 h-[90%] overflow-hidden">
+          <div className="flex h-full">
+            <div className="flex-1 h-full relative">
+              <ReactFlowProvider>
+                <ReactFlowBuilder
+                  providers={providers}
                   installedProviders={installedProviders}
+                  definition={definition}
+                  validatorConfiguration={ValidatorConfigurationV2}
+                  onDefinitionChange={(def: any) => {
+                    setDefinition({
+                      value: {
+                        sequence: def?.sequence || [],
+                        properties: def?.properties || {},
+                      },
+                      isValid: def?.isValid || false,
+                    });
+                  }}
+                  toolboxConfiguration={getToolboxConfiguration(providers)}
                 />
-              </div>
-            </Card>
-          </>
-        )}
-      </div>
-    </CopilotKit>
+              </ReactFlowProvider>
+            </div>
+            <BuilderChat
+              definition={definition}
+              installedProviders={installedProviders}
+            />
+          </div>
+        </Card>
+      </CopilotKit>
+    </div>
   );
 }
 

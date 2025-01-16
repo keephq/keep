@@ -10,6 +10,7 @@ import { Workflow } from "@/shared/api/workflows";
 import WorkflowGraph from "../workflow-graph";
 import { TableFilters } from "./table-filters";
 import { ExecutionTable } from "./workflow-execution-table";
+import { WorkflowOverviewSkeleton } from "./workflow-overview-skeleton";
 
 interface Pagination {
   limit: number;
@@ -80,7 +81,7 @@ export default function WorkflowOverview({
   return (
     <div className="flex flex-col gap-4">
       {/* TODO: Add a working time filter */}
-      {!data || isLoading || (isValidating && <Loading />)}
+      {(!data || isLoading || isValidating) && <WorkflowOverviewSkeleton />}
       {data?.items && (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">

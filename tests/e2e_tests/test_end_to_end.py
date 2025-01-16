@@ -34,6 +34,7 @@ import random
 #    - Copy the generated code to a new test function.
 import string
 import sys
+import re
 from datetime import datetime
 
 from playwright.sync_api import expect
@@ -134,6 +135,8 @@ def test_providers_page_is_accessible(browser):
     Test to check if the providers page is accessible
 
     """
+    log_entries = []
+    setup_console_listener(browser, log_entries)
     try:
         browser.goto(
             "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
@@ -159,17 +162,7 @@ def test_providers_page_is_accessible(browser):
         provider_button = browser.locator(f"button:has-text('{random_provider_name}')")
         provider_button.click()
     except Exception:
-        # Current file + test name for unique html and png dump.
-        current_test_name = (
-            "playwright_dump_"
-            + os.path.basename(__file__)[:-3]
-            + "_"
-            + sys._getframe().f_code.co_name
-        )
-
-        browser.screenshot(path=current_test_name + ".png")
-        with open(current_test_name + ".html", "w") as f:
-            f.write(browser.content())
+        save_failure_artifacts(browser, log_entries)
         raise
 
 
@@ -177,6 +170,8 @@ def test_provider_validation(browser):
     """
     Test field validation for provider fields.
     """
+    log_entries = []
+    setup_console_listener(browser, log_entries)
     try:
         browser.goto("http://localhost:3000/signin")
         # using Kibana Provider
@@ -286,13 +281,40 @@ def test_provider_validation(browser):
         host_input.fill("https://host.com:3000")
         expect(error_msg).to_be_hidden()
     except Exception:
-        current_test_name = (
-            "playwright_dump_"
-            + os.path.basename(__file__)[:-3]
-            + "_"
-            + sys._getframe().f_code.co_name
-        )
-        browser.screenshot(path=current_test_name + ".png")
-        with open(current_test_name + ".html", "w") as f:
-            f.write(browser.content())
+        save_failure_artifacts(browser, log_entries)
+        raise
+
+def test_add_workflow(browser):
+    """
+    Test to add a workflow node
+    """
+    # browser is actually a page object
+    page = browser
+    log_entries = []
+    setup_console_listener(page, log_entries)
+    try:
+        page.goto("http://localhost:3000/signin")
+        page.get_by_role("link", name="Workflows").click()
+        page.get_by_role("button", name="Create a workflow").click()
+        page.get_by_placeholder("Set the name").click()
+        page.get_by_placeholder("Set the name").press("ControlOrMeta+a")
+        page.get_by_placeholder("Set the name").fill("Example Console Workflow")
+        page.get_by_placeholder("Set the name").press("Tab")
+        page.get_by_placeholder("Set the description").fill("Example workflow description")
+        page.get_by_test_id("wf-add-trigger-button").first.click()
+        page.get_by_text("Manual").click()
+        page.get_by_test_id("wf-add-step-button").first.click()
+        page.get_by_placeholder("Search...").click()
+        page.get_by_placeholder("Search...").fill("cons")
+        page.get_by_text("console-action").click()
+        page.wait_for_timeout(500)
+        page.locator(".react-flow__node:has-text('console-action')").click()
+        page.get_by_placeholder("message").click()
+        page.get_by_placeholder("message").fill("Hello world!")
+        page.get_by_role("button", name="Save & Deploy").click()
+        page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        expect(page.get_by_test_id("wf-name")).to_contain_text("Example Console Workflow")
+        expect(page.get_by_test_id("wf-description")).to_contain_text("Example workflow description")
+    except Exception:
+        save_failure_artifacts(page, log_entries)
         raise

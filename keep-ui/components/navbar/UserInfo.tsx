@@ -36,7 +36,6 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
   if (!session || !session.user) {
     return null;
   }
-
   const { userRole, user } = session;
   const { name, image, email } = user;
 
@@ -92,6 +91,7 @@ type UserInfoProps = {
 export const UserInfo = ({ session }: UserInfoProps) => {
   const { data: config } = useConfig();
 
+  const docsUrl = config?.KEEP_DOCS_URL || "https://docs.keephq.dev";
   const { flow } = Frigade.useFlow(ONBOARDING_FLOW_ID);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const isMounted = useMounted();
@@ -133,7 +133,7 @@ export const UserInfo = ({ session }: UserInfoProps) => {
           <LinkWithIcon
             icon={HiOutlineDocumentText}
             iconClassName="w-4"
-            href="https://docs.keephq.dev/"
+            href={docsUrl}
             className="w-auto px-3.5"
             target="_blank"
           >

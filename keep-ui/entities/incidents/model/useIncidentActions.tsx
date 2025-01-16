@@ -25,6 +25,11 @@ type UseIncidentActionsValue = {
     sourceIncidents: IncidentDto[],
     destinationIncident: IncidentDto
   ) => Promise<void>;
+  invokeProviderMethod: (
+    providerId: string,
+    methodName: string,
+    methodParams: { [key: string]: string | boolean | object }
+  ) => Promise<any>;
   confirmPredictedIncident: (incidentId: string) => Promise<void>;
   unlinkAlertsFromIncident: (
     incidentId: string,
@@ -35,6 +40,10 @@ type UseIncidentActionsValue = {
     alertFingerprints: string[],
     destinationIncidentId: string
   ) => Promise<void>;
+  enrichIncident: (
+    incidentId: string,
+    enrichments: { [key: string]: any }
+  ) => Promise<void>;
   mutateIncidentsList: () => void;
   mutateIncident: (incidentId: string) => void;
 };
@@ -43,6 +52,7 @@ type IncidentCreateDto = {
   user_generated_name: string;
   user_summary: string;
   assignee: string;
+  resolve_on: string;
 };
 
 type IncidentUpdateDto = Partial<IncidentCreateDto> &
@@ -67,6 +77,31 @@ export function useIncidentActions(): UseIncidentActionsValue {
           typeof key === "string" && key.startsWith(`/incidents/${incidentId}`)
       ),
     [mutate]
+  );
+
+  const invokeProviderMethod = useCallback(
+    async (
+      providerId: string,
+      methodName: string,
+      methodParams: { [key: string]: string | boolean | object }
+    ) => {
+      const result = await api.post(
+        `/providers/${providerId}/invoke/${methodName}`,
+        methodParams
+      );
+      return result;
+    },
+    [api]
+  );
+
+  const enrichIncident = useCallback(
+    async (incidentId: string, enrichments: { [key: string]: any }) => {
+      const result = await api.post(`/incidents/${incidentId}/enrich`, {
+        enrichments: enrichments,
+      });
+      return result;
+    },
+    [api]
   );
 
   const addIncident = useCallback(
@@ -273,5 +308,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
     mutateIncident,
     unlinkAlertsFromIncident,
     splitIncidentAlerts,
+    invokeProviderMethod,
+    enrichIncident,
   };
 }

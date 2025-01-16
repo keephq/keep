@@ -133,6 +133,11 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
             onClick={(e) => {
               setSelectedEdge(id);
             }}
+            data-testid={
+              source === "trigger_start"
+                ? "wf-add-trigger-button"
+                : "wf-add-step-button"
+            }
           >
             <PlusIcon
               className={`size-7 hover:text-black rounded text-sm bg-white border text-gray-700 ${
