@@ -3,12 +3,16 @@ import React, { useState, useCallback, useEffect } from "react";
 interface ResizableColumnsProps {
   leftChild: React.ReactNode;
   rightChild: React.ReactNode;
+  leftClassName?: string;
+  rightClassName?: string;
   initialLeftWidth?: number;
 }
 
 const ResizableColumns = ({
   leftChild,
+  leftClassName = "bg-gray-50 p-4 overflow-auto",
   rightChild,
+  rightClassName = "flex-1 bg-white p-4 overflow-auto",
   initialLeftWidth = 50,
 }: ResizableColumnsProps) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -50,10 +54,7 @@ const ResizableColumns = ({
       className="flex h-full w-full overflow-hidden rounded"
       onMouseMove={onMouseMove}
     >
-      <div
-        className="bg-gray-50 p-4 overflow-auto"
-        style={{ width: `${leftWidth}%` }}
-      >
+      <div className={leftClassName} style={{ width: `${leftWidth}%` }}>
         {leftChild}
       </div>
 
@@ -62,7 +63,12 @@ const ResizableColumns = ({
         onMouseDown={startDragging}
       />
 
-      <div className="flex-1 bg-white p-4 overflow-auto">{rightChild}</div>
+      <div
+        className={rightClassName}
+        style={{ flexBasis: `${100 - leftWidth}%` }}
+      >
+        {rightChild}
+      </div>
     </div>
   );
 };

@@ -19,6 +19,7 @@ import formatDistance from "date-fns/formatDistance";
 import { differenceInSeconds } from "date-fns";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import { ResultJsonCard } from "@/shared/ui";
 
 function getStepIcon(status: string) {
   switch (status) {
@@ -175,14 +176,7 @@ function LogGroupAccordion({
               >
                 {log.timestamp}: {log.message}
               </p>
-              {result && (
-                <pre className="bg-gray-100 rounded-md overflow-hidden text-xs my-2">
-                  <div className="text-gray-500 bg-gray-50 p-2">result</div>
-                  <div className="overflow-auto max-h-48 break-words whitespace-pre-wrap p-2">
-                    {JSON.stringify(result, null, 2)}
-                  </div>
-                </pre>
-              )}
+              {result && <ResultJsonCard result={result} />}
             </div>
           ))}
         </div>

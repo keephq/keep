@@ -149,11 +149,11 @@ const ReactFlowEditor = ({
           >
             <IoMdClose className="text-2xl" />
           </button>
-          <div className="flex-1 p-2 bg-white border-2 overflow-y-auto">
+          <div className="flex-1 bg-white border-l-2 overflow-y-auto">
             <div style={{ width: "350px" }}>
               <GlobalEditorV2 synced={synced} saveRef={saveRef} />
               {!selectedNode?.includes("empty") && !isTrigger && (
-                <Divider ref={stepEditorRef} />
+                <div className="w-full h-px bg-gray-200" ref={stepEditorRef} />
               )}
               {!selectedNode?.includes("empty") && !isTrigger && (
                 <StepEditorV2

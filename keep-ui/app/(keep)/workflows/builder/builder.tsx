@@ -42,6 +42,7 @@ import { BuilderChat } from "./builder-chat";
 import Modal from "@/components/ui/Modal";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { useWorkflowBuilderContext } from "./workflow-builder-context";
+import ResizableColumns from "@/components/ui/ResizableColumns";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -372,32 +373,39 @@ function Builder({
       <CopilotKit runtimeUrl="/api/copilotkit">
         {getworkflowStatus()}
         <Card className="mt-2 p-0 h-[90%] overflow-hidden">
-          <div className="flex h-full">
-            <div className="flex-1 h-full relative">
-              <ReactFlowProvider>
-                <ReactFlowBuilder
-                  providers={providers}
-                  installedProviders={installedProviders}
-                  definition={definition}
-                  validatorConfiguration={ValidatorConfigurationV2}
-                  onDefinitionChange={(def: any) => {
-                    setDefinition({
-                      value: {
-                        sequence: def?.sequence || [],
-                        properties: def?.properties || {},
-                      },
-                      isValid: def?.isValid || false,
-                    });
-                  }}
-                  toolboxConfiguration={getToolboxConfiguration(providers)}
-                />
-              </ReactFlowProvider>
-            </div>
-            <BuilderChat
-              definition={definition}
-              installedProviders={installedProviders}
-            />
-          </div>
+          <ResizableColumns
+            leftClassName=""
+            rightClassName=""
+            leftChild={
+              <div className="flex-1 h-full relative">
+                <ReactFlowProvider>
+                  <ReactFlowBuilder
+                    providers={providers}
+                    installedProviders={installedProviders}
+                    definition={definition}
+                    validatorConfiguration={ValidatorConfigurationV2}
+                    onDefinitionChange={(def: any) => {
+                      setDefinition({
+                        value: {
+                          sequence: def?.sequence || [],
+                          properties: def?.properties || {},
+                        },
+                        isValid: def?.isValid || false,
+                      });
+                    }}
+                    toolboxConfiguration={getToolboxConfiguration(providers)}
+                  />
+                </ReactFlowProvider>
+              </div>
+            }
+            rightChild={
+              <BuilderChat
+                definition={definition}
+                installedProviders={installedProviders}
+              />
+            }
+            initialLeftWidth={60}
+          />
         </Card>
       </CopilotKit>
     </div>

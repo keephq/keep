@@ -9,6 +9,50 @@ import {
 } from "@/app/(keep)/workflows/builder/types";
 import { ToolboxConfiguration } from "./types";
 
+export const triggerTemplates = {
+  manual: {
+    type: "manual",
+    componentType: "trigger",
+    name: "Manual",
+    id: "manual",
+    properties: {
+      manual: "true",
+    },
+  },
+  alert: {
+    type: "alert",
+    componentType: "trigger",
+    name: "Alert",
+    id: "alert",
+    properties: {
+      alert: {
+        source: "",
+      },
+    },
+  },
+  incident: {
+    type: "incident",
+    componentType: "trigger",
+    name: "Incident",
+    id: "incident",
+    properties: {
+      incident: {
+        events: [],
+      },
+    },
+  },
+  interval: {
+    type: "interval",
+    componentType: "trigger",
+    name: "Interval",
+    id: "interval",
+    properties: {
+      interval: "",
+    },
+  },
+};
+export const triggerTypes = Object.keys(triggerTemplates);
+
 export function getToolboxConfiguration(
   providers: Provider[]
 ): ToolboxConfiguration {
@@ -45,46 +89,10 @@ export function getToolboxConfiguration(
       {
         name: "Triggers",
         steps: [
-          {
-            type: "manual",
-            componentType: "trigger",
-            name: "Manual",
-            id: "manual",
-            properties: {
-              manual: "true",
-            },
-          },
-          {
-            type: "interval",
-            componentType: "trigger",
-            name: "Interval",
-            id: "interval",
-            properties: {
-              interval: "",
-            },
-          },
-          {
-            type: "alert",
-            componentType: "trigger",
-            name: "Alert",
-            id: "alert",
-            properties: {
-              alert: {
-                source: "",
-              },
-            },
-          },
-          {
-            type: "incident",
-            componentType: "trigger",
-            name: "Incident",
-            id: "incident",
-            properties: {
-              incident: {
-                events: [],
-              },
-            },
-          },
+          triggerTemplates.manual,
+          triggerTemplates.alert,
+          triggerTemplates.incident,
+          triggerTemplates.interval,
         ],
       },
       {

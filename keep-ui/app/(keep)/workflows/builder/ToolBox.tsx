@@ -134,16 +134,27 @@ const GroupedMenu = ({
 const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isVisible, setIsVisible] = useState(false);
-  const [open, setOpen] = useState(false);
+  // const [open, setOpen] = useState(false);
   const { toolboxConfiguration, selectedNode, selectedEdge, nodes } =
     useStore();
 
+  const showTriggers = selectedEdge?.startsWith("etrigger_start");
+
+  const open =
+    (!!selectedNode && selectedNode.includes("empty")) || !!selectedEdge;
+
   useEffect(() => {
-    setOpen(
-      (!!selectedNode && selectedNode.includes("empty")) || !!selectedEdge
-    );
-    setIsVisible(!isDraggable);
-  }, [selectedNode, selectedEdge, isDraggable]);
+    if (!!selectedEdge || !!selectedNode) {
+      setIsVisible(true);
+    }
+  }, [selectedEdge, selectedNode]);
+
+  // useEffect(() => {
+  //   // setOpen(
+  //   //   (!!selectedNode && selectedNode.includes("empty")) || !!selectedEdge
+  //   // );
+  //   setIsVisible(!isDraggable);
+  // }, [selectedNode, selectedEdge, isDraggable]);
 
   const triggerNodeMap = nodes
     .filter((node: any) =>
@@ -158,17 +169,22 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
     );
 
   const filteredGroups = useMemo(() => {
-    return (
-      toolboxConfiguration?.groups?.map((group: any) => ({
+    if (!toolboxConfiguration?.groups) {
+      return [];
+    }
+    return toolboxConfiguration.groups
+      .filter((group: any) =>
+        showTriggers ? group?.name === "Triggers" : group?.name !== "Triggers"
+      )
+      .map((group: any) => ({
         ...group,
         steps: group?.steps?.filter(
           (step: any) =>
             step?.name?.toLowerCase().includes(searchTerm?.toLowerCase()) &&
             !triggerNodeMap[step?.id]
         ),
-      })) || []
-    );
-  }, [toolboxConfiguration, searchTerm, nodes?.length]);
+      }));
+  }, [toolboxConfiguration?.groups, showTriggers, searchTerm, triggerNodeMap]);
 
   const checkForSearchResults =
     searchTerm &&
@@ -180,7 +196,7 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
 
   return (
     <div
-      className={`absolute top-50 left-2 rounded border-2 broder-gray-300 bg-white transition-transform duration-300 z-50 ${
+      className={`absolute top-0 left-0 border-r-2 broder-gray-300 bg-white transition-transform duration-300 z-50 ${
         isVisible ? "h-[88%] border-b-0" : "shadow-lg"
       }`}
       style={{ width: "280px" }} // Set a fixed width

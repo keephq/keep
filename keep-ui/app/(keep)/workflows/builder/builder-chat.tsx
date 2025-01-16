@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Provider } from "../../providers/providers";
-import { V2Step, V2Properties } from "./types";
+import { V2Step, V2Properties, FlowNode } from "./types";
 import { CopilotChat, CopilotKitCSSProperties } from "@copilotkit/react-ui";
 import useStore from "./builder-store";
 import {
@@ -13,9 +13,15 @@ import Image from "next/image";
 import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
 import { generateStepDefinition } from "./_actions/getStepJson";
-import { AFTER_TRIGGER_ID, GENERAL_INSTRUCTIONS } from "./_constants";
+import {
+  ADD_TRIGGER_AFTER_EDGE_ID,
+  ADD_STEPS_AFTER_EDGE_ID,
+  GENERAL_INSTRUCTIONS,
+} from "./_constants";
 import { CheckCircleIcon } from "@heroicons/react/20/solid";
 import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
+import { triggerTemplates, triggerTypes } from "./utils";
+import { DebugJSON } from "@/shared/ui";
 
 function IconUrlProvider(data: V2Step) {
   const { type } = data || {};
@@ -56,6 +62,50 @@ const StepPreview = ({ step }: { step: V2Step }) => {
   );
 };
 
+function getTriggerDefinition(triggerType: string, triggerProperties: string) {
+  if (!triggerTypes.includes(triggerType)) {
+    return;
+  }
+  const triggerTemplate =
+    triggerTemplates[triggerType as keyof typeof triggerTemplates];
+
+  // TODO: validate triggerProperties
+  return {
+    ...triggerTemplate,
+    properties: {
+      ...triggerTemplate.properties,
+      ...JSON.parse(triggerProperties),
+    },
+  };
+}
+
+function DebugArgs({
+  args,
+  nodes,
+}: {
+  args: Record<string, any>;
+  nodes: FlowNode[];
+}) {
+  return (
+    <>
+      <code className="text-xs leading-none text-gray-500">
+        {/* {JSON.stringify(args, null, 2)} */}
+        args=
+        {Object.entries(args).map(([k, v]) => (
+          <p key={k}>
+            <b>{k}</b>= {JSON.stringify(v, null, 2)}
+          </p>
+        ))}
+        all_nodes=
+        {nodes.map((n) => `${n.data.id}:${n.data.type}`).join(", ")}
+      </code>
+    </>
+    /* <code className="text-xs leading-none text-gray-500">
+                  {JSON.stringify(definition.value, null, 2)}
+                </code> */
+  );
+}
+
 export function BuilderChat({
   definition,
   installedProviders,
@@ -71,6 +121,7 @@ export function BuilderChat({
 }) {
   console.log("BuilderChat", { definition, installedProviders });
   const {
+    nodes,
     getNextEdge,
     toolboxConfiguration,
     addNodeBetween,
@@ -110,27 +161,6 @@ export function BuilderChat({
 
   const { setMessages } = useCopilotChat();
 
-  // const handleAddingStep = ({stepType,
-  //   nodeOrEdgeId,
-  //   after,
-  //   isStart,
-  //   name,
-  //   aim,
-  // }: {
-  //   stepType: string;
-  //   nodeOrEdgeId: string;
-  //   after: boolean;
-  //   isStart: boolean;
-  //   name: string;
-  //   aim: string;
-  // }) => {
-  //   const step = steps.find((step: any) => step.type === stepType) as V2Step;
-  //   if (!step) {
-  //     return;
-  //   }
-  //   const stepDefinition = generateStepDefinition(name, step, aim);
-  // }
-
   const { v2Properties: properties, updateV2Properties: setProperties } =
     useStore();
 
@@ -169,7 +199,7 @@ export function BuilderChat({
   });
 
   useCopilotAction({
-    name: "removeStep",
+    name: "removeStepNode",
     description: "Remove a step from the workflow",
     parameters: [
       {
@@ -191,6 +221,56 @@ export function BuilderChat({
       }
     },
   });
+
+  useCopilotAction({
+    name: "removeTriggerNode",
+    description: "Remove a trigger from the workflow",
+    parameters: [
+      {
+        name: "triggerNodeId",
+        description:
+          "The id of the trigger to remove. One of 'manual', 'alert', 'incident', 'interval'",
+        type: "string",
+        required: true,
+      },
+    ],
+    handler: ({ triggerNodeId }: { triggerNodeId: string }) => {
+      if (
+        confirm(`Are you sure you want to remove ${triggerNodeId} trigger?`)
+      ) {
+        deleteNodes(triggerNodeId);
+      }
+    },
+  });
+
+  // useCopilotAction({
+  //   name: "addTrigger",
+  //   description: "Add a trigger to the workflow",
+  //   parameters: [
+  //     {
+  //       name: "triggerType",
+  //       description:
+  //         "The type of trigger to generate. One of: manual, alert, incident, or interval.",
+  //       type: "string",
+  //       required: true,
+  //     },
+  //     {
+  //       name: "triggerProperties",
+  //       description: "The properties of the trigger",
+  //       type: "string",
+  //       required: true,
+  //     },
+  //   ],
+  //   handler: ({
+  //     triggerType,
+  //     triggerProperties,
+  //   }: {
+  //     triggerType: string;
+  //     triggerProperties: string;
+  //   }) => {
+
+  //   },
+  // });
 
   useCopilotAction(
     {
@@ -258,6 +338,113 @@ export function BuilderChat({
 
   useCopilotAction(
     {
+      name: "addTrigger",
+      description: "Add a trigger to the workflow",
+      parameters: [
+        {
+          name: "triggerType",
+          description:
+            "The type of trigger to generate. One of: manual, alert, incident, or interval.",
+          type: "string",
+          required: true,
+        },
+        {
+          name: "triggerProperties",
+          description: "The properties of the trigger",
+          type: "string",
+          required: true,
+        },
+      ],
+      renderAndWaitForResponse: ({ status, args, respond }) => {
+        const { triggerType, triggerProperties } = args;
+
+        if (status === "inProgress") {
+          return <div>Loading...</div>;
+        }
+        if (!triggerType || !triggerProperties) {
+          respond?.("trigger type or properties not provided");
+          return <>Trigger type or properties not provided</>;
+        }
+        const triggerDefinition = getTriggerDefinition(
+          triggerType,
+          triggerProperties
+        );
+        if (!triggerDefinition) {
+          respond?.("trigger definition not found");
+          return <>Trigger definition not found</>;
+        }
+        return (
+          <div>
+            <p>Add a trigger to the workflow</p>
+            <DebugArgs args={args} nodes={nodes} />
+            <DebugJSON name="triggerDefinition" json={triggerDefinition} />
+            <p>Do you want to add this trigger to the workflow?</p>
+            <Button
+              variant="primary"
+              onClick={() => {
+                addNodeBetween(
+                  ADD_TRIGGER_AFTER_EDGE_ID,
+                  triggerDefinition,
+                  "edge"
+                );
+                respond?.("trigger added");
+              }}
+            >
+              Add
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => respond?.("do not add trigger")}
+            >
+              No
+            </Button>
+          </div>
+        );
+      },
+    },
+    [steps]
+  );
+
+  const addNodeAfterNode = useCallback(
+    (
+      nodeToAddAfterId: string,
+      step: V2Step,
+      isStart: boolean,
+      respond: (message: string) => void
+    ) => {
+      if (
+        nodeToAddAfterId === "alert" ||
+        nodeToAddAfterId === "incident" ||
+        nodeToAddAfterId === "interval" ||
+        nodeToAddAfterId === "manual"
+      ) {
+        nodeToAddAfterId = "trigger_end";
+      }
+      let node = getNodeById(isStart ? "trigger_end" : nodeToAddAfterId);
+      if (!node) {
+        const nodeByName = definition.value.sequence.find(
+          (s) => s.name === nodeToAddAfterId
+        );
+        if (nodeByName) {
+          node = getNodeById(nodeByName.id);
+        }
+        if (!node) {
+          respond?.("node not found");
+        }
+      }
+      const nextEdge = getNextEdge(nodeToAddAfterId);
+      if (!nextEdge) {
+        respond?.("next edge not found");
+        return;
+      }
+      addNodeBetween(nextEdge.id, step, "edge");
+      respond?.("step added, nodeId=" + step.id);
+    },
+    [addNodeBetween, definition.value.sequence, getNextEdge, getNodeById]
+  );
+
+  useCopilotAction(
+    {
       name: "addStep",
       description:
         "Add a step to the workflow. After adding a step ensure you have the updated workflow definition.",
@@ -269,7 +456,7 @@ export function BuilderChat({
           required: true,
         },
         {
-          name: "nodeIdOrName",
+          name: "addAfterNodeIdOrName",
           description:
             "The 'id' or 'name' property of the step to add the step after, get it from the workflow definition. DO NOT USE the workflow id. If you don't know the id, update the workflow definition and try again.",
           type: "string",
@@ -288,35 +475,16 @@ export function BuilderChat({
           return <div>Loading...</div>;
         }
         console.log("args=", args);
-        const { stepDefinitionJSON, nodeIdOrName, isStart } = args;
-        let step = JSON.parse(stepDefinitionJSON);
-        let node = getNodeById(isStart ? "trigger_end" : nodeIdOrName);
-        if (!node) {
-          const nodeByName = definition.value.sequence.find(
-            (s) => s.name === nodeIdOrName
-          );
-          if (nodeByName) {
-            node = getNodeById(nodeByName.id);
-          }
-          if (!node) {
-            respond?.("node not found");
-            return (
-              <>
-                <code className="text-xs leading-none text-gray-500">
-                  {JSON.stringify(args, null, 2)}
-                </code>
-                <code className="text-xs leading-none text-gray-500">
-                  {JSON.stringify(definition.value, null, 2)}
-                </code>
-                <p className="text-sm text-red-500">Node not found</p>
-              </>
-            );
-          }
+        let { stepDefinitionJSON, addAfterNodeIdOrName, isStart } = args;
+        if (definition.value.sequence.length === 0) {
+          isStart = true;
         }
+        let step = JSON.parse(stepDefinitionJSON);
+
         if (status === "complete") {
           return (
             <div className="flex flex-col gap-1">
-              <code>args={JSON.stringify(args, null, 2)}</code>
+              <DebugArgs args={args} nodes={nodes} />
               <StepPreview step={step} />
               <p className="text-sm text-gray-500">
                 <CheckCircleIcon className="w-4 h-4" /> Step added
@@ -328,7 +496,7 @@ export function BuilderChat({
           <div className="flex flex-col gap-2">
             <div>
               <div>
-                Do you want to add this step after <b>{node.data.name}</b>
+                Do you want to add this step after <b>{addAfterNodeIdOrName}</b>
                 <pre>{step.name}</pre>
                 <code className="text-xs leading-none text-gray-500">
                   {stepDefinitionJSON}
@@ -342,13 +510,12 @@ export function BuilderChat({
                 variant="primary"
                 onClick={async () => {
                   try {
-                    const nextEdge = getNextEdge(node.id);
-                    if (!nextEdge) {
-                      respond?.("next edge not found");
-                      return <></>;
-                    }
-                    addNodeBetween(nextEdge.id, step, "edge");
-                    respond?.("step added");
+                    addNodeAfterNode(
+                      addAfterNodeIdOrName,
+                      step,
+                      !!isStart,
+                      respond
+                    );
                   } catch (e) {
                     console.error(e);
                     respond?.(`error adding step: ${e}`);
@@ -377,13 +544,13 @@ export function BuilderChat({
     return (
       GENERAL_INSTRUCTIONS +
       `Here is the list of providers that are installed: ${installedProviders.map((p) => `type: ${p.type}, id: ${p.id}`).join(", ")}. If you you need to use a provider that is not installed, add step, but mention to user that you need to add the provider first.` +
-      "Then asked to create a whole workflow, you break down the workflow into steps, outline the steps and show it to user, and then iterate over the steps, generate step definitions, show them to user for them to decide if they want to add them to the workflow."
+      "Then asked to create a complete workflow, you break down the workflow into steps, outline the steps, show them to user, and then iterate over the steps one by one, generate step definition, show it to user to decide if they want to add them to the workflow."
     );
   }, [installedProviders]);
 
   return (
     <div
-      className="flex flex-col h-full max-h-screen basis-[600px] grow-0 overflow-auto"
+      className="flex flex-col h-full max-h-screen grow-0 overflow-auto"
       style={
         {
           "--copilot-kit-primary-color":

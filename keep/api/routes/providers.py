@@ -595,7 +595,7 @@ async def install_provider_oauth2(
 def invoke_provider_method(
     provider_id: str,
     method: str,
-    method_params: dict,
+    body: dict = Body(...),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:providers"])
     ),
@@ -605,22 +605,37 @@ def invoke_provider_method(
     logger.info(
         "Invoking provider method", extra={"provider_id": provider_id, "method": method}
     )
-    provider = session.exec(
-        select(Provider).where(
-            (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
-        )
-    ).one()
-
-    if not provider:
-        raise HTTPException(404, detail="Provider not found")
-
+    from sqlalchemy.exc import NoResultFound
+    provider = None
+    
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    provider_config = secret_manager.read_secret(
-        provider.configuration_key, is_json=True
-    )
+    provider_info = body.pop("providerInfo")
+    method_params = body
+
+    try:
+        provider = session.exec(
+            select(Provider).where(
+                (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
+            )
+        ).one()
+        provider_id = provider.id
+        provider_type = provider.type
+        provider_config = secret_manager.read_secret(
+            provider.configuration_key, is_json=True
+        )
+    except NoResultFound:
+        if not provider_id.startswith("default-"):
+            raise HTTPException(404, detail="Provider not found")
+        else:
+            provider_id = provider_info.pop("provider_id")
+            provider_type = provider_info.pop("provider_type", None) or provider_id
+            provider_config = {
+                "authentication": provider_info,
+            }
+
     provider_instance = ProvidersFactory.get_provider(
-        context_manager, provider_id, provider.type, provider_config
+        context_manager, provider_id, provider_type, provider_config
     )
 
     func: Callable = getattr(provider_instance, method, None)

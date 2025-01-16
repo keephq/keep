@@ -11,6 +11,7 @@ import { BiSolidError } from "react-icons/bi";
 import { toast } from "react-toastify";
 import { FlowNode } from "@/app/(keep)/workflows/builder/types";
 import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
+import { DebugNodeInfo } from "./debug-info";
 
 function IconUrlProvider(data: FlowNode["data"]) {
   const { componentType, type } = data || {};
@@ -26,7 +27,6 @@ function IconUrlProvider(data: FlowNode["data"]) {
 }
 
 function CustomNode({ id, data }: FlowNode) {
-  const debug = true;
   const {
     selectedNode,
     setSelectedNode,
@@ -78,6 +78,7 @@ function CustomNode({ id, data }: FlowNode) {
   if (data.id === "trigger_start" || data.id === "trigger_end") {
     return (
       <div className="w-full h-full flex items-center justify-center">
+        <DebugNodeInfo id={id} data={data} />
         <span className="rounded-full bg-orange-50 border border-orange-500 px-4 py-2 flex items-center justify-center">
           {data.name}
         </span>
@@ -101,13 +102,7 @@ function CustomNode({ id, data }: FlowNode) {
             borderColor: errorNode == id ? "red" : "",
           }}
         >
-          {debug && (
-            <div
-              className={`h-fit bg-black text-pink-500 font-mono text-[10px] px-1 py-1 absolute top-0 bottom-0 my-auto right-0 translate-x-[calc(100%+20px)] pointer-events-none`}
-            >
-              {id}
-            </div>
-          )}
+          <DebugNodeInfo id={id} data={data} />
           {isEmptyNode && (
             <div className="p-2 flex-1 flex flex-col items-center justify-center">
               <GoPlus className="w-8 h-8 text-gray-600 font-bold p-0" />

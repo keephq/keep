@@ -5,8 +5,9 @@ import useStore from "./builder-store";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { Button } from "@tremor/react";
 import "@xyflow/react/dist/style.css";
+import { DebugEdgeInfo } from "./debug-info";
 
-interface CustomEdgeProps extends EdgeProps {
+export interface CustomEdgeProps extends EdgeProps {
   label?: string;
   type?: string;
   data?: any;
@@ -25,7 +26,6 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
   style,
 }: CustomEdgeProps) => {
   const { setSelectedEdge, selectedEdge } = useStore();
-  const debug = true;
 
   // Calculate the path and midpoint
   const [edgePath, labelX, labelY] = getSmoothStepPath({
@@ -94,18 +94,14 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
         }} // Add arrowhead
       />
       <EdgeLabelRenderer>
-        {debug && (
-          <div
-            className={`absolute bg-black text-green-500 font-mono text-[10px] px-1 py-1`}
-            style={{
-              transform: `translate(0, -50%) translate(${labelX + 30}px, ${labelY}px)`,
-              pointerEvents: "none",
-              opacity: isLayouted ? 1 : 0,
-            }}
-          >
-            {id}
-          </div>
-        )}
+        <DebugEdgeInfo
+          id={id}
+          source={source}
+          target={target}
+          labelX={labelX}
+          labelY={labelY}
+          isLayouted={isLayouted}
+        />
         {!!dynamicLabel && (
           <div
             className={`absolute ${color} text-white rounded px-3 py-1 border border-gray-700`}

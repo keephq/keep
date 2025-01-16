@@ -7,9 +7,9 @@ import {
   Icon,
   Button,
   Switch,
-  Divider,
+  Callout,
 } from "@tremor/react";
-import { KeyIcon } from "@heroicons/react/20/solid";
+import { ChevronUpIcon, KeyIcon } from "@heroicons/react/20/solid";
 import { Provider } from "@/app/(keep)/providers/providers";
 import {
   BackspaceIcon,
@@ -22,9 +22,16 @@ import { useEffect, useRef, useState } from "react";
 import { V2Properties } from "@/app/(keep)/workflows/builder/types";
 import { Textarea, TextInput } from "@/components/ui";
 import { DynamicIcon } from "@/components/ui";
+import { capitalize } from "@/utils/helpers";
+import { Disclosure } from "@headlessui/react";
+import clsx from "clsx";
+import Modal from "@/components/ui/Modal";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { DebugJSON, ResultJsonCard } from "@/shared/ui";
+import { KeepApiError } from "@/shared/api/KeepApiError";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-col m-2.5">{children}</div>;
+  return <div className="flex flex-col p-4">{children}</div>;
 }
 
 export function GlobalEditorV2({
@@ -41,26 +48,63 @@ export function GlobalEditorV2({
   } = useStore();
 
   return (
-    <EditorLayout>
-      <Title>Keep Workflow Editor</Title>
-      <Text>
-        Use this visual workflow editor to easily create or edit existing Keep
-        workflow YAML specifications.
-      </Text>
-      <Text className="mt-5">
-        Use the edge add button or an empty step (a step with a +) to insert
-        steps, conditions, and actions into your workflow. Then, click the
-        Generate button to compile the workflow or the Deploy button to deploy
-        it to Keep.
-      </Text>
-      <div className="text-right">{synced ? "Synced" : "Not Synced"}</div>
+    <>
+      <EditorLayout>
+        <Title>Keep Workflow Editor</Title>
+        <Text>
+          Easily create or edit existing Keep workflow YAML specifications.
+        </Text>
+        <Text className="mt-5">
+          Use the edge add button or an empty step (a step with a +) to insert
+          steps, conditions, and actions into your workflow. Then, deploy it to
+          Keep or generate the YAML specification.
+        </Text>
+        <div className="text-right">{synced ? "Synced" : "Not Synced"}</div>
+      </EditorLayout>
       <WorkflowEditorV2
         properties={properties}
         setProperties={setProperty}
         selectedNode={selectedNode}
         saveRef={saveRef}
       />
-    </EditorLayout>
+    </>
+  );
+}
+
+function EditorField({
+  name,
+  value,
+  onChange,
+}: {
+  name: string;
+  value: string;
+  onChange: (e: any) => void;
+}) {
+  if (name === "code") {
+    return (
+      <div>
+        <Text className="capitalize">{name}</Text>
+        <Textarea
+          id={`${name}`}
+          placeholder={name}
+          onChange={onChange}
+          className="mb-2.5 min-h-[100px] text-xs font-mono"
+          value={value || ""}
+        />
+      </div>
+    );
+  }
+  return (
+    <div>
+      <Text className="capitalize">{name}</Text>
+      <TextInput
+        id={`${name}`}
+        placeholder={name}
+        onChange={onChange}
+        className="mb-2.5"
+        value={value || ""}
+      />
+    </div>
   );
 }
 
@@ -106,6 +150,9 @@ function KeepStepEditor({
       (p) =>
         p.type === providerType && p.config && Object.keys(p.config).length > 0
     ) ?? false;
+
+  const method = type?.includes("step-") ? "_query" : "_notify";
+  const providerId = installedProviderByType?.[0]?.id || providerConfig;
 
   return (
     <>
@@ -234,33 +281,26 @@ function KeepStepEditor({
           if (typeof currentPropertyValue === "object") {
             currentPropertyValue = JSON.stringify(currentPropertyValue);
           }
-          if (key === "code") {
-            return (
-              <div key={index}>
-                <Text>{key}</Text>
-                <Textarea
-                  id={`${key}`}
-                  placeholder={key}
-                  onChange={propertyChanged}
-                  className="mb-2.5 min-h-[100px] text-xs font-mono"
-                  value={currentPropertyValue || ""}
-                />
-              </div>
-            );
-          }
           return (
-            <div key={index}>
-              <Text>{key}</Text>
-              <TextInput
-                id={`${key}`}
-                placeholder={key}
-                onChange={propertyChanged}
-                className="mb-2.5"
-                value={currentPropertyValue || ""}
-              />
-            </div>
+            <EditorField
+              key={key}
+              name={key}
+              value={currentPropertyValue}
+              onChange={propertyChanged}
+            />
           );
         })}
+      <TestRunButton
+        key={`${providerType}-${method}-${providerId}`}
+        providerInfo={{
+          provider_id: providerId,
+          provider_type: providerType || "",
+        }}
+        method={method}
+        methodParams={properties.with}
+        properties={properties}
+        updateProperty={propertyChanged}
+      />
     </>
   );
 }
@@ -382,246 +422,287 @@ function WorkflowEditorV2({
   const propertyKeys = Object.keys(properties).filter(
     (k) => k !== "isLocked" && k !== "id"
   );
-  let renderDivider = false;
+
+  function renderTrigger(key: string) {
+    if (selectedNode !== key) {
+      return null;
+    }
+    return (
+      <div>
+        <Title className="capitalize mb-2">{key} Trigger</Title>
+        {(() => {
+          switch (key) {
+            case "manual":
+              return (
+                <div key={key}>
+                  <input
+                    type="checkbox"
+                    checked={true}
+                    onChange={(e) =>
+                      handleChange(key, e.target.checked ? "true" : "false")
+                    }
+                    disabled={true}
+                  />
+                </div>
+              );
+
+            case "alert":
+              return (
+                <>
+                  <div className="w-1/2">
+                    <Button
+                      onClick={addFilter}
+                      size="xs"
+                      className="ml-1 mt-1"
+                      variant="light"
+                      color="gray"
+                      icon={FunnelIcon}
+                    >
+                      Add Filter
+                    </Button>
+                  </div>
+                  {properties.alert &&
+                    Object.keys(properties.alert as {}).map((filter) => {
+                      return (
+                        <>
+                          <Subtitle className="mt-2.5">{filter}</Subtitle>
+                          <div className="flex items-center mt-1" key={filter}>
+                            <TextInput
+                              key={filter}
+                              placeholder={`Set alert ${filter}`}
+                              onChange={(e: any) =>
+                                updateAlertFilter(filter, e.target.value)
+                              }
+                              value={
+                                (properties.alert as any)[filter] ||
+                                ("" as string)
+                              }
+                            />
+                            <Icon
+                              icon={BackspaceIcon}
+                              className="cursor-pointer"
+                              color="red"
+                              tooltip={`Remove ${filter} filter`}
+                              onClick={() => deleteFilter(filter)}
+                            />
+                          </div>
+                        </>
+                      );
+                    })}
+                </>
+              );
+
+            case "incident":
+              return (
+                <>
+                  <Subtitle className="mt-2.5">Incident events</Subtitle>
+                  {Array("created", "updated", "deleted").map((event) => (
+                    <div key={`incident-${event}`} className="flex">
+                      <Switch
+                        id={event}
+                        checked={
+                          properties.incident.events?.indexOf(event) > -1
+                        }
+                        onChange={() => {
+                          let events = properties.incident.events || [];
+                          if (events.indexOf(event) > -1) {
+                            events = (events as string[]).filter(
+                              (e) => e !== event
+                            );
+                            setProperties({
+                              ...properties,
+                              [key]: { events: events },
+                            });
+                          } else {
+                            events.push(event);
+                            setProperties({
+                              ...properties,
+                              [key]: { events: events },
+                            });
+                          }
+                        }}
+                        color={"orange"}
+                      />
+                      <label
+                        htmlFor={`incident-${event}`}
+                        className="text-sm text-gray-500"
+                      >
+                        <Text>{event}</Text>
+                      </label>
+                    </div>
+                  ))}
+                </>
+              );
+            case "interval":
+              return (
+                <TextInput
+                  placeholder={`Set the ${key}`}
+                  onChange={(e: any) => handleChange(key, e.target.value)}
+                  value={properties[key] || ("" as string)}
+                />
+              );
+          }
+        })()}
+      </div>
+    );
+  }
+
+  function renderProperty(key: string) {
+    let isConst = key === "consts";
+    if (isConst && !properties[key]) {
+      properties[key] = {};
+    }
+
+    if (key === "consts" && !properties[key]) {
+      return null;
+    }
+
+    return (
+      <div key={key}>
+        {key === selectedNode && <Text className="capitalize mb-2">{key}</Text>}
+        {(() => {
+          switch (key) {
+            case "disabled":
+              return (
+                <div key={key}>
+                  <input
+                    type="checkbox"
+                    checked={properties[key] === "true"}
+                    onChange={(e) =>
+                      handleChange(key, e.target.checked ? "true" : "false")
+                    }
+                  />
+                </div>
+              );
+            case "consts":
+              // if consts is empty, set it to an empty object
+              if (!properties[key]) {
+                return null;
+              }
+              return (
+                <div key={key}>
+                  {Object.entries(
+                    properties[key] as { [key: string]: string }
+                  ).map(([constKey, constValue]) => (
+                    <div key={constKey} className="flex items-center mt-1">
+                      <TextInput
+                        placeholder={`Key ${constKey}`}
+                        value={constKey}
+                        onChange={(e) => {
+                          const updatedConsts = {
+                            ...(properties[key] as {
+                              [key: string]: string;
+                            }),
+                          };
+                          delete updatedConsts[constKey];
+                          updatedConsts[e.target.value] = constValue;
+                          handleChange(key, updatedConsts);
+                        }}
+                      />
+                      <TextInput
+                        placeholder={`Value ${constValue}`}
+                        value={constValue}
+                        onChange={(e) => {
+                          const updatedConsts = {
+                            ...(properties[key] as {
+                              [key: string]: string;
+                            }),
+                          };
+                          updatedConsts[constKey] = e.target.value;
+                          handleChange(key, updatedConsts);
+                        }}
+                      />
+                      <Icon
+                        icon={BackspaceIcon}
+                        className="cursor-pointer"
+                        color="red"
+                        tooltip={`Remove ${constKey}`}
+                        onClick={() => {
+                          const updatedConsts = {
+                            ...(properties[key] as {
+                              [key: string]: string;
+                            }),
+                          };
+                          delete updatedConsts[constKey];
+                          handleChange(key, updatedConsts);
+                        }}
+                      />
+                    </div>
+                  ))}
+                  <Button
+                    onClick={addNewConstant}
+                    size="xs"
+                    className="ml-1 mt-1"
+                    variant="light"
+                    color="gray"
+                    icon={PlusIcon}
+                  >
+                    Add Constant
+                  </Button>
+                </div>
+              );
+            case "description":
+              return (
+                <Textarea
+                  placeholder={capitalize(key)}
+                  onChange={(e: any) => handleChange(key, e.target.value)}
+                  value={properties[key] || ("" as string)}
+                />
+              );
+            default:
+              return (
+                <TextInput
+                  placeholder={capitalize(key)}
+                  onChange={(e: any) => handleChange(key, e.target.value)}
+                  value={properties[key] || ("" as string)}
+                />
+              );
+          }
+        })()}
+      </div>
+    );
+  }
+
+  const triggerProperties = ["manual", "alert", "interval", "incident"];
+  const otherProperties = propertyKeys.filter(
+    (key) => !triggerProperties.includes(key)
+  );
+  const isTriggerSelected =
+    selectedNode && triggerProperties.includes(selectedNode);
+
   return (
     <>
-      <Title className="mt-2.5">Workflow Settings</Title>
-      {propertyKeys.map((key, index) => {
-        const isTrigger = ["manual", "alert", "interval", "incident"].includes(
-          key
-        );
-
-        let isConst = key === "consts";
-        if (isConst && !properties[key]) {
-          properties[key] = {};
-        }
-
-        renderDivider =
-          isTrigger && key === selectedNode ? !renderDivider : false;
-        return (
-          <div key={key}>
-            {renderDivider && <Divider />}
-            {(key === selectedNode || !isTrigger) && (
-              <Text className="capitalize">{key}</Text>
+      <EditorLayout>
+        <Disclosure>
+          <Disclosure.Button className="w-full flex justify-between items-center py-2">
+            {({ open }) => (
+              <>
+                <Title className="">Workflow Settings</Title>
+                <ChevronUpIcon
+                  className={clsx(
+                    { "rotate-180": open },
+                    "mr-2 text-slate-400 size-5"
+                  )}
+                />
+              </>
             )}
-
-            {(() => {
-              switch (key) {
-                case "manual":
-                  return (
-                    selectedNode === "manual" && (
-                      <div key={key}>
-                        <input
-                          type="checkbox"
-                          checked={true}
-                          onChange={(e) =>
-                            handleChange(
-                              key,
-                              e.target.checked ? "true" : "false"
-                            )
-                          }
-                          disabled={true}
-                        />
-                      </div>
-                    )
-                  );
-
-                case "alert":
-                  return (
-                    selectedNode === "alert" && (
-                      <>
-                        <div className="w-1/2">
-                          <Button
-                            onClick={addFilter}
-                            size="xs"
-                            className="ml-1 mt-1"
-                            variant="light"
-                            color="gray"
-                            icon={FunnelIcon}
-                          >
-                            Add Filter
-                          </Button>
-                        </div>
-                        {properties.alert &&
-                          Object.keys(properties.alert as {}).map((filter) => {
-                            return (
-                              <>
-                                <Subtitle className="mt-2.5">{filter}</Subtitle>
-                                <div
-                                  className="flex items-center mt-1"
-                                  key={filter}
-                                >
-                                  <TextInput
-                                    key={filter}
-                                    placeholder={`Set alert ${filter}`}
-                                    onChange={(e: any) =>
-                                      updateAlertFilter(filter, e.target.value)
-                                    }
-                                    value={
-                                      (properties.alert as any)[filter] ||
-                                      ("" as string)
-                                    }
-                                  />
-                                  <Icon
-                                    icon={BackspaceIcon}
-                                    className="cursor-pointer"
-                                    color="red"
-                                    tooltip={`Remove ${filter} filter`}
-                                    onClick={() => deleteFilter(filter)}
-                                  />
-                                </div>
-                              </>
-                            );
-                          })}
-                      </>
-                    )
-                  );
-
-                case "incident":
-                  return (
-                    selectedNode === "incident" && (
-                      <>
-                        <Subtitle className="mt-2.5">Incident events</Subtitle>
-                        {Array("created", "updated", "deleted").map((event) => (
-                          <div key={`incident-${event}`} className="flex">
-                            <Switch
-                              id={event}
-                              checked={
-                                properties.incident.events?.indexOf(event) > -1
-                              }
-                              onChange={() => {
-                                let events = properties.incident.events || [];
-                                if (events.indexOf(event) > -1) {
-                                  events = (events as string[]).filter(
-                                    (e) => e !== event
-                                  );
-                                  setProperties({
-                                    ...properties,
-                                    [key]: { events: events },
-                                  });
-                                } else {
-                                  events.push(event);
-                                  setProperties({
-                                    ...properties,
-                                    [key]: { events: events },
-                                  });
-                                }
-                              }}
-                              color={"orange"}
-                            />
-                            <label
-                              htmlFor={`incident-${event}`}
-                              className="text-sm text-gray-500"
-                            >
-                              <Text>{event}</Text>
-                            </label>
-                          </div>
-                        ))}
-                      </>
-                    )
-                  );
-                case "interval":
-                  return (
-                    selectedNode === "interval" && (
-                      <TextInput
-                        placeholder={`Set the ${key}`}
-                        onChange={(e: any) => handleChange(key, e.target.value)}
-                        value={properties[key] || ("" as string)}
-                      />
-                    )
-                  );
-                case "disabled":
-                  return (
-                    <div key={key}>
-                      <input
-                        type="checkbox"
-                        checked={properties[key] === "true"}
-                        onChange={(e) =>
-                          handleChange(key, e.target.checked ? "true" : "false")
-                        }
-                      />
-                    </div>
-                  );
-                case "consts":
-                  // if consts is empty, set it to an empty object
-                  if (!properties[key]) {
-                    return null;
-                  }
-                  return (
-                    <div key={key}>
-                      {Object.entries(
-                        properties[key] as { [key: string]: string }
-                      ).map(([constKey, constValue]) => (
-                        <div key={constKey} className="flex items-center mt-1">
-                          <TextInput
-                            placeholder={`Key ${constKey}`}
-                            value={constKey}
-                            onChange={(e) => {
-                              const updatedConsts = {
-                                ...(properties[key] as {
-                                  [key: string]: string;
-                                }),
-                              };
-                              delete updatedConsts[constKey];
-                              updatedConsts[e.target.value] = constValue;
-                              handleChange(key, updatedConsts);
-                            }}
-                          />
-                          <TextInput
-                            placeholder={`Value ${constValue}`}
-                            value={constValue}
-                            onChange={(e) => {
-                              const updatedConsts = {
-                                ...(properties[key] as {
-                                  [key: string]: string;
-                                }),
-                              };
-                              updatedConsts[constKey] = e.target.value;
-                              handleChange(key, updatedConsts);
-                            }}
-                          />
-                          <Icon
-                            icon={BackspaceIcon}
-                            className="cursor-pointer"
-                            color="red"
-                            tooltip={`Remove ${constKey}`}
-                            onClick={() => {
-                              const updatedConsts = {
-                                ...(properties[key] as {
-                                  [key: string]: string;
-                                }),
-                              };
-                              delete updatedConsts[constKey];
-                              handleChange(key, updatedConsts);
-                            }}
-                          />
-                        </div>
-                      ))}
-                      <Button
-                        onClick={addNewConstant}
-                        size="xs"
-                        className="ml-1 mt-1"
-                        variant="light"
-                        color="gray"
-                        icon={PlusIcon}
-                      >
-                        Add Constant
-                      </Button>
-                    </div>
-                  );
-                default:
-                  return (
-                    <TextInput
-                      placeholder={`Set the ${key}`}
-                      onChange={(e: any) => handleChange(key, e.target.value)}
-                      value={properties[key] || ("" as string)}
-                    />
-                  );
-              }
-            })()}
-          </div>
-        );
-      })}
+          </Disclosure.Button>
+          <Disclosure.Panel
+            as="ul"
+            className="space-y-2 overflow-auto min-w-[max-content]"
+          >
+            {otherProperties.map((key) => renderProperty(key))}
+          </Disclosure.Panel>
+        </Disclosure>
+      </EditorLayout>
+      {isTriggerSelected && (
+        <>
+          <div className="w-full h-px bg-gray-200" />
+          <EditorLayout>
+            {triggerProperties.map((key) => renderTrigger(key))}
+          </EditorLayout>
+        </>
+      )}
     </>
   );
 }
@@ -643,7 +724,6 @@ export function StepEditorV2({
     type?: string;
   }>({});
   const { selectedNode, updateSelectedNodeData, getNodeById } = useStore();
-
   const deployRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -656,7 +736,7 @@ export function StepEditorV2({
 
   if (!selectedNode) return null;
 
-  const providerType = formData?.type?.split("-")[1];
+  const [method, providerType] = formData?.type?.split("-") || [];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -690,7 +770,7 @@ export function StepEditorV2({
 
   return (
     <EditorLayout>
-      <Title className="capitalize">{providerType}1 Editor</Title>
+      <Title className="capitalize">{providerType} Step</Title>
       <Text className="mt-1">Unique Identifier</Text>
       <TextInput
         className="mb-2.5"
@@ -728,6 +808,7 @@ export function StepEditorV2({
         <Text className="capitalize">Deploy</Text>
         <input ref={deployRef} type="checkbox" defaultChecked />
       </div>
+
       <button
         className="sticky bottom-[-10px] mt-4 bg-orange-500 text-white p-2 rounded"
         onClick={handleSubmit}
@@ -735,5 +816,114 @@ export function StepEditorV2({
         Save & Deploy
       </button>
     </EditorLayout>
+  );
+}
+
+function TestRunButton({
+  providerInfo,
+  method,
+  methodParams,
+  properties,
+  updateProperty,
+}: {
+  providerInfo: { provider_id: string; provider_type: string };
+  method: "_query" | "_notify";
+  methodParams: Record<string, any>;
+  properties: V2Properties;
+  updateProperty: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const api = useApi();
+  const [isOpen, setIsOpen] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [result, setResult] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  function handleRun(
+    e: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>
+  ) {
+    e.preventDefault();
+    async function invokeMethod() {
+      try {
+        setIsLoading(true);
+        setErrors({});
+        const responseObject = await api.post(
+          `/providers/${providerInfo.provider_id}/invoke/${method}`,
+          {
+            ...methodParams,
+            providerInfo: {
+              provider_id: providerInfo.provider_id,
+              provider_type: providerInfo.provider_type,
+            },
+          }
+        );
+        setResult(responseObject);
+      } catch (e: any) {
+        setErrors({
+          [e.message]:
+            e instanceof KeepApiError
+              ? [e.responseJson?.error_msg, e.proposedResolution].join(".\n")
+              : "Unknown error invoking method",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    invokeMethod();
+  }
+
+  return (
+    <>
+      <Button
+        variant="secondary"
+        color="orange"
+        size="sm"
+        onClick={(e) => {
+          setIsOpen(true);
+          handleRun(e);
+        }}
+      >
+        Test step
+      </Button>
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
+        <form className="flex flex-col gap-5" onSubmit={handleRun}>
+          <div>
+            <Title>Test Step</Title>
+            <Subtitle>Test the step with chosen parameters</Subtitle>
+          </div>
+          {methodParams &&
+            Object.entries(methodParams).map(([key, value]) => (
+              <div key={key}>
+                <Text>{key}</Text>
+                <TextInput
+                  value={value}
+                  id={key}
+                  name={key}
+                  onChange={updateProperty}
+                />
+              </div>
+            ))}
+          {errors &&
+            Object.values(errors).length > 0 &&
+            Object.entries(errors).map(([key, error]) => (
+              <Callout title={key} color="red">
+                {error}
+              </Callout>
+            ))}
+          <div>{result && <ResultJsonCard result={result} />}</div>
+          <div className="flex justify-end mt-4 gap-2">
+            <Button
+              onClick={() => setIsOpen(false)}
+              color="orange"
+              variant="secondary"
+            >
+              Cancel
+            </Button>
+            <Button color="orange" disabled={isLoading}>
+              {isLoading ? "Running..." : "Run"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </>
   );
 }

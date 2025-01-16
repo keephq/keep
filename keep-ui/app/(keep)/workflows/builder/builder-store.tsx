@@ -281,6 +281,7 @@ function addNodeBetween(
     set({ selectedNode: newNodeId });
   }
 
+  // debugger;
   switch (newNodeId) {
     case "interval":
     case "manual": {
@@ -288,11 +289,27 @@ function addNodeBetween(
       break;
     }
     case "alert": {
-      set({ v2Properties: { ...get().v2Properties, [newNodeId]: {} } });
+      set({
+        v2Properties: {
+          ...get().v2Properties,
+          [newNodeId]: {},
+        },
+      });
+      const updatedProperties = { ...get().v2Properties, ...step.properties };
+      set({
+        v2Properties: updatedProperties,
+        changes: get().changes + 1,
+        canDeploy: false,
+      });
       break;
     }
     case "incident": {
-      set({ v2Properties: { ...get().v2Properties, [newNodeId]: {} } });
+      set({
+        v2Properties: {
+          ...get().v2Properties,
+          [newNodeId]: {},
+        },
+      });
       break;
     }
   }

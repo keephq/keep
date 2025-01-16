@@ -1,0 +1,1 @@
+export { ResultJsonCard } from "./ResultJsonCard";
