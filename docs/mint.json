@@ -54,7 +54,8 @@
         "alerts/table",
         "alerts/actionmenu",
         "alerts/sidebar",
-        "alerts/presets"
+        "alerts/presets",
+        "alerts/sound"
       ]
     },
     {
