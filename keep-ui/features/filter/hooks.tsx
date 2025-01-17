@@ -1,5 +1,5 @@
-import useSWR, { SWRConfiguration, useSWRConfig, mutate } from "swr";
-import { CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueries } from "./models";
+import useSWR, { SWRConfiguration, useSWRConfig } from "swr";
+import { CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsDict, FacetOptionsQueries } from "./models";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -32,40 +32,27 @@ export const useFacets = (
   };
 };
 
-type FacetOptionsDict = {
-  [facetId: string]: FacetOptionDto[];
-};
-
-function buildFacetOptionsUrl(
-  entityName: string
-): string {
-  const filtersParams = new URLSearchParams();
-
-  let queryString = "";
-
-  if (filtersParams.toString()) {
-    queryString = `?${filtersParams.toString()}`;
-  }
-
-  return `/${entityName}/facets/options${queryString}`;
-}
-
 export const useFacetOptions = (
   entityName: string,
   initialFacetOptions: FacetOptionsDict | undefined,
-  facetsQuery: FacetOptionsQueries
+  facetsQuery: FacetOptionsQueries | null
 ) => {
   const api = useApi();
   const [mergedFacetOptions, setMergedFacetOptions] = useState(
     initialFacetOptions
   );
-  const requestUrl = buildFacetOptionsUrl(entityName);
-  const reloadFacetOptions = useCallback(
-    async (
-      facetsQuery: FacetOptionsQueries,
-    ) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const requestUrl = `/${entityName}/facets/options`;
+
+  useEffect(() => {
+    if (!api.isReady() || !facetsQuery) {
+      return;
+    }
+
+    async function fetch() {
+      setIsLoading(true);
       const fetchedData: FacetOptionsDict = await api.post(
-        buildFacetOptionsUrl(entityName),
+        requestUrl,
         facetsQuery
       );
       const newFacetOptions: FacetOptionsDict = JSON.parse(
@@ -94,48 +81,14 @@ export const useFacetOptions = (
       });
 
       setMergedFacetOptions(newFacetOptions);
-    },
-    [mergedFacetOptions, entityName, api]
-  );
-
-  // useEffect(() => {
-  //   async () => {
-  //     const fetchedData: FacetOptionsDict = await api.post(
-  //       buildFacetOptionsUrl(entityName),
-  //       facetsQuery
-  //     );
-  //     const newFacetOptions: FacetOptionsDict = JSON.parse(
-  //       JSON.stringify(mergedFacetOptions || {})
-  //     );
-  //     Object.entries(fetchedData).forEach(([facetId, newOptions]) => {
-  //       if (newFacetOptions[facetId]) {
-  //         const currentFacetOptionsMap = newFacetOptions[facetId].reduce(
-  //           (accumulator, oldOption) => {
-  //             accumulator[oldOption.display_name] = oldOption;
-  //             oldOption.matches_count = 0;
-  //             return accumulator;
-  //           },
-  //           {} as Record<string, FacetOptionDto>
-  //         );
-
-  //         newOptions.forEach(
-  //           (newOption) =>
-  //             (currentFacetOptionsMap[newOption.display_name] = newOption)
-  //         );
-  //         newFacetOptions[facetId] = Object.values(currentFacetOptionsMap);
-  //         return;
-  //       }
-
-  //       newFacetOptions[facetId] = newOptions;
-  //     });
-
-  //     setMergedFacetOptions(newFacetOptions);
-  //   }
-  // }, [facetsQuery, entityName, api])
+      setIsLoading(false);
+    }
+    fetch();
+  }, [api, api?.isReady(), facetsQuery, requestUrl]);
 
   return {
     facetOptions: mergedFacetOptions,
-    reloadFacetOptions
+    isLoading
   };
 };
 

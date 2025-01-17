@@ -29,11 +29,10 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   const [celState, setCelState] = useState("");
 //   const [celForFacetsState, setCelForFacetsState] = useState("");
   const [facetIdsLoaded, setFacetIdsLoaded] = useState<string[]>([]);
-  const [loadedFacetIds, setLoadedFacetIds] = useState<Set<string> | undefined>(undefined);
-//   const [facetsToLoadState, setFacetsToLoadState] = useState<string[]>([]);
   const facetActions = useFacetActions("incidents", initialFacetsData);
+  const [facetQueriesState, setFacetQueriesState] = useState<{ [key: string]: string } | null>(null);
 
-  const { data: facetsData, isLoading: facetsDataLoading } = useFacets(
+  const { data: facetsData } = useFacets(
     "incidents",
     {
       revalidateOnFocus: false,
@@ -42,26 +41,24 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     }
   );
 
-  const { facetOptions, reloadFacetOptions } = useFacetOptions("incidents", initialFacetsData?.facetOptions);
+  const { facetOptions, isLoading } = useFacetOptions("incidents", initialFacetsData?.facetOptions, facetQueriesState);
 
   useEffect(() => {
-    if (facetsData) {
-        if (loadedFacetIds) {
-            const diff = facetsData
-                .filter(element => !loadedFacetIds.has(element.id));
-            reloadFacetOptions(diff.map((f) => f.id));
-        }
-
-        setLoadedFacetIds(new Set(facetsData.map((f) => f.id)));
+    if (facetsData === initialFacetsData?.facets) {
+        return;
     }
-  }, [facetsData, loadedFacetIds, setLoadedFacetIds]);
-
-//   const { data: facetOptionsData, isLoading: facetsOptionsDataLoading } =
-//     useFacetOptions("incidents", facetsToLoadState?.facetIds, facetsToLoadState?.cel, {
-//       revalidateOnFocus: false,
-//       revalidateOnMount: !initialFacetsData?.facetOptions,
-//       fallbackData: initialFacetsData?.facetOptions,
-//     });
+    
+    const currentFacetQueriesState = facetQueriesState || {};
+    const facetsNotInQuery = facetsData?.filter(facet => !(facet.id in currentFacetQueriesState));
+    
+    if (facetsNotInQuery?.length) {
+        facetsNotInQuery.forEach((facet) => {
+            currentFacetQueriesState[facet.id] = ""; // set empty CEL
+        });
+        
+        setFacetQueriesState({ ...currentFacetQueriesState });
+    }
+  }, [facetsData, setFacetQueriesState]);
 
   return (
     <FacetsPanel
@@ -69,6 +66,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
       className={className || ""}
       facets={(facetsData as any) || []}
       facetOptions={facetOptions as any || {}}
+      areFacetOptionsLoading={isLoading}
       onCelChange={(cel: string) => {
         setCelState(cel);
         onCelChange && onCelChange(cel);
@@ -85,7 +83,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
         facetActions.deleteFacet(facetId);
         onDeleteFacet && onDeleteFacet(facetId);
       }}
-      onReloadFacetOptions={(facetQueries) => reloadFacetOptions(facetQueries)}
+      onReloadFacetOptions={(facetQueries) => setFacetQueriesState({...facetQueries})}
     ></FacetsPanel>
   );
 };

@@ -4,6 +4,7 @@ import { CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueries } from ".
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import { AddFacetModal } from "./add-facet-modal";
+import 'react-loading-skeleton/dist/skeleton.css';
 
 type FacetState = {
   [facetId: string]: { [optionId: string]: boolean };
@@ -44,6 +45,7 @@ export interface FacetsPanelProps {
   className: string;
   facets: FacetDto[];
   facetOptions: { [key: string]: FacetOptionDto[] };
+  areFacetOptionsLoading?: boolean;
   onCelChange: (cel: string) => void;
   onAddFacet: (createFacet: CreateFacetDto) => void;
   onDeleteFacet: (facetId: string) => void;
@@ -56,6 +58,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   className,
   facets,
   facetOptions,
+  areFacetOptionsLoading = false,
   onCelChange = undefined,
   onAddFacet = undefined,
   onDeleteFacet = undefined,
@@ -65,6 +68,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   const [facetsState, setFacetsState] = useState<{
     [facetId: string]: { [optionId: string]: boolean };
   }>({});
+  const [clickedFacetId, setClickedFacetId] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useLocalStorage<boolean>(
     `addFacetModalOpen-${panelId}`,
@@ -96,6 +100,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   }
 
   function toggleFacetOption(facetId: string, value: string) {
+    setClickedFacetId(facetId);
     const currentFacetState: any = facetsState[facetId] || {};
     currentFacetState[value] = !isOptionSelected(facetId, value);
     const newFacetsState = {
@@ -106,6 +111,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   }
 
   function selectOneFacetOption(facetId: string, optionValue: string): void {
+    setClickedFacetId(facetId);
     const newFacetState: any = {};
 
     facetOptions[facetId].forEach(facetOption => {
@@ -124,6 +130,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   }
 
   function selectAllFacetOptions(facetId: string) {
+    setClickedFacetId(facetId);
     const newFacetState: any = { ...facetsState[facetId] };
     Object.values(facetOptions[facetId]).forEach((option) => (newFacetState[option.display_name] = true));
 
@@ -134,7 +141,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   }
 
   return (
-    <section id={`${panelId}-facets`} className={"w-56 " + className}>
+    <section id={`${panelId}-facets`} className={"min-w-56 max-w-56 " + className}>
       <div className="space-y-2">
         <div className="flex justify-between">
           {/* Facet button */}
@@ -156,16 +163,16 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
         
         {facets?.map((facet, index) => (
           <Facet
-            key={facet.id}
+            key={facet.id + index}
             name={facet.name}
             isStatic={facet.is_static}
-            options={facetOptions?.[facet.id] || []}
+            options={facetOptions?.[facet.id]}
             onSelect={(value) => toggleFacetOption(facet.id, value)}
             onSelectOneOption={(value) => selectOneFacetOption(facet.id, value)}
             onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
             facetState={facetsState[facet.id]}
             facetKey={facet.id}
-            showSkeleton={false}
+            showSkeleton={areFacetOptionsLoading && clickedFacetId !== facet.id}
             onLoadOptions={() => onLoadFacetOptions && onLoadFacetOptions(facet.id)}
             onDelete={() => onDeleteFacet && onDeleteFacet(facet.id)}
           />

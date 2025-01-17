@@ -35,7 +35,7 @@ export const Facet: React.FC<FacetProps> = ({
   onSelectOneOption: selectOneOption,
   onSelectAllOptions: selectAllOptions,
   onLoadOptions,
-  onDelete
+  onDelete,
 }) => {
   const pathname = usePathname();
   // Get preset name from URL
@@ -51,10 +51,10 @@ export const Facet: React.FC<FacetProps> = ({
     setIsLoaded(!!options); // Sync prop change with state
 
     if (isLoading && options) {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  // disabling as the effect has to only run on options change"
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // disabling as the effect has to only run on options change"
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options]);
 
   // Store filter value in localStorage per preset and facet
@@ -64,26 +64,84 @@ export const Facet: React.FC<FacetProps> = ({
   );
 
   const handleExpandCollapse = (isOpen: boolean) => {
-    setIsOpen(!isOpen)
+    setIsOpen(!isOpen);
 
     if (!isLoaded && !isLoading) {
       onLoadOptions();
-      setIsLoading(true)
+      setIsLoading(true);
     }
-  }
+  };
 
   function checkIfOptionExclusievlySelected(optionValue: string): boolean {
     if (!facetState) {
-        return false;
+      return false;
     }
 
     const isSelected = facetState?.[optionValue];
-    const restNotSelected = Object.entries(facetState).filter(([key, value]) => key !== optionValue).every(([key, value]) => !value);
+    const restNotSelected = Object.entries(facetState)
+      .filter(([key, value]) => key !== optionValue)
+      .every(([key, value]) => !value);
 
     return isSelected && restNotSelected;
   }
 
   const Icon = isOpen ? ChevronDownIcon : ChevronRightIcon;
+
+  function renderSkeleton(key: string) {
+    <div
+      className="flex h-7 items-center px-2 py-1 gap-2"
+      key={key}
+    >
+      <Skeleton containerClassName="h-4 w-4" />
+      <Skeleton containerClassName="h-4 flex-1" />
+    </div>
+  }
+
+  function renderFacetValue(facetOption: FacetOptionDto, index: number) {
+    if (showSkeleton) {
+      return renderSkeleton(`skeleton-${index}`);
+    }
+
+    return (
+      <FacetValue
+        key={facetOption.display_name + index}
+        label={facetOption.display_name}
+        count={facetOption.matches_count}
+        isExclusivelySelected={checkIfOptionExclusievlySelected(
+          facetOption.display_name
+        )}
+        isSelected={
+          facetState?.[facetOption.display_name] !== false &&
+          facetOption.matches_count > 0
+        }
+        onToggleOption={() => onSelect(facetOption.display_name)}
+        onSelectOneOption={(value: string) => selectOneOption(value)}
+        onSelectAllOptions={() => selectAllOptions()}
+        facetKey={facetKey}
+        showIcon={showIcon}
+      />
+    );
+  }
+
+  function renderBody() {
+    if (!options) {
+      return Array.from({ length: 3 }).map((_, index) => renderSkeleton(`skeleton-${index}`));
+    }
+
+    const filteredOptions = options
+    .filter((facetOption) => facetOption.display_name.toLocaleLowerCase().includes(filter.toLocaleLowerCase()));
+
+    if (!filteredOptions.length) {
+      return (
+        <div className="px-2 py-1 text-sm text-gray-500 italic">
+          No matching values found
+        </div>
+      );
+    }
+
+    return filteredOptions
+      .map((facetOption, index) => renderFacetValue(facetOption, index));
+  }
 
   return (
     <div className="pb-2 border-b border-gray-200">
@@ -95,20 +153,18 @@ export const Facet: React.FC<FacetProps> = ({
           <Icon className="size-5 -m-0.5 text-gray-600" />
           <Title className="text-sm">{name}</Title>
         </div>
-        {
-            !isStatic && (
-              <button
-                onClick={(mouseEvent) => {
-                  mouseEvent.preventDefault();
-                  mouseEvent.stopPropagation();
-                  onDelete();
-                }}
-                className="absolute right-2 top-2 p-1 text-gray-400 hover:text-gray-600"
-              >
-                <TrashIcon className="h-4 w-4" />
-              </button>
-            )
-          }
+        {!isStatic && (
+          <button
+            onClick={(mouseEvent) => {
+              mouseEvent.preventDefault();
+              mouseEvent.stopPropagation();
+              onDelete();
+            }}
+            className="absolute right-2 top-2 p-1 text-gray-400 hover:text-gray-600"
+          >
+            <TrashIcon className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {isOpen && (
@@ -124,39 +180,7 @@ export const Facet: React.FC<FacetProps> = ({
               />
             </div>
           )}
-          <div className="max-h-60 overflow-y-auto">
-            {showSkeleton ? (
-              Array.from({ length: 3 }).map((_, index) => (
-                <div
-                  key={`skeleton-${index}`}
-                  className="flex items-center px-2 py-1 gap-2"
-                >
-                  <Skeleton containerClassName="h-4 w-4" />
-                  <Skeleton containerClassName="h-4 flex-1" />
-                </div>
-              ))
-            ) : options?.length > 0 ? (
-              options.map((facetOption, index) => (
-                <FacetValue
-                  key={facetOption.display_name + index}
-                  label={facetOption.display_name}
-                  count={facetOption.matches_count}
-                  isExclusivelySelected={checkIfOptionExclusievlySelected(facetOption.display_name)}
-                  isSelected={facetState?.[facetOption.display_name] !== false}
-                  onToggleOption={() => onSelect(facetOption.display_name)}
-                  onSelectOneOption={(value: string) => selectOneOption(value)}
-                  onSelectAllOptions={() => selectAllOptions()}
-                  facetKey={facetKey}
-                  showIcon={showIcon}
-                  //   facetFilters={facetFilters}
-                />
-              ))
-            ) : (
-              <div className="px-2 py-1 text-sm text-gray-500 italic">
-                No matching values found
-              </div>
-            )}
-          </div>
+          <div className="max-h-60 overflow-y-auto">{renderBody() as any}</div>
         </div>
       )}
     </div>
