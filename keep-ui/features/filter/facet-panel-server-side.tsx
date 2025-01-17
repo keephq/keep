@@ -1,19 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { CreateFacetDto, FacetDto } from "./models";
+import { CreateFacetDto } from "./models";
 import { useFacetActions, useFacetOptions, useFacets } from "./hooks";
 import { InitialFacetsData } from "./api";
 import { FacetsPanel } from "./facets-panel";
-import { init } from "@sentry/nextjs";
 
 export interface FacetsPanelProps {
   panelId: string;
   className?: string;
   initialFacetsData?: InitialFacetsData;
+  renderFacetOptionLabel?: (facetName: string, optionDisplayName: string) => JSX.Element | string | undefined;
+  renderFacetOptionIcon?: (facetName: string, optionDisplayName: string) => JSX.Element | undefined;
   onCelChange?: (cel: string) => void;
   onAddFacet?: (createFacet: CreateFacetDto) => void;
   onDeleteFacet?: (facetId: string) => void;
-  onLoadFacetOptions?: (facetId: string) => void;
-  onIsLoading?: (isLoading: boolean) => void;
 }
 
 export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
@@ -23,12 +22,9 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   onCelChange = undefined,
   onAddFacet = undefined,
   onDeleteFacet = undefined,
-  onLoadFacetOptions = undefined,
-  onIsLoading,
+  renderFacetOptionIcon,
+  renderFacetOptionLabel
 }) => {
-  const [celState, setCelState] = useState("");
-//   const [celForFacetsState, setCelForFacetsState] = useState("");
-  const [facetIdsLoaded, setFacetIdsLoaded] = useState<string[]>([]);
   const facetActions = useFacetActions("incidents", initialFacetsData);
   const [facetQueriesState, setFacetQueriesState] = useState<{ [key: string]: string } | null>(null);
 
@@ -47,7 +43,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     if (facetsData === initialFacetsData?.facets) {
         return;
     }
-    
+
     const currentFacetQueriesState = facetQueriesState || {};
     const facetsNotInQuery = facetsData?.filter(facet => !(facet.id in currentFacetQueriesState));
     
@@ -67,8 +63,9 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
       facets={(facetsData as any) || []}
       facetOptions={facetOptions as any || {}}
       areFacetOptionsLoading={isLoading}
+      renderFacetOptionLabel={renderFacetOptionLabel}
+      renderFacetOptionIcon={renderFacetOptionIcon}
       onCelChange={(cel: string) => {
-        setCelState(cel);
         onCelChange && onCelChange(cel);
       }}
       onAddFacet={(createFacet) => {
@@ -76,8 +73,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
         onAddFacet && onAddFacet(createFacet);
       }}
       onLoadFacetOptions={(facetId) => {
-        setFacetIdsLoaded([facetId]);
-        onLoadFacetOptions && onLoadFacetOptions(facetId);
+        setFacetQueriesState({...facetQueriesState, [facetId]: ""});
       }}
       onDeleteFacet={(facetId) => {
         facetActions.deleteFacet(facetId);

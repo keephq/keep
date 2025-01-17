@@ -16,6 +16,8 @@ export interface FacetProps {
   showIcon?: boolean;
   facetKey: string;
   facetState: any;
+  renderOptionLabel?: (optionDisplayName: string) => JSX.Element | string | undefined;
+  renderIcon?: (option_display_name: string) => JSX.Element | undefined;
   onSelectOneOption: (value: string) => void;
   onSelectAllOptions: () => void;
   onSelect: (value: string) => void;
@@ -36,6 +38,8 @@ export const Facet: React.FC<FacetProps> = ({
   onSelectAllOptions: selectAllOptions,
   onLoadOptions,
   onDelete,
+  renderIcon,
+  renderOptionLabel
 }) => {
   const pathname = usePathname();
   // Get preset name from URL
@@ -88,13 +92,12 @@ export const Facet: React.FC<FacetProps> = ({
   const Icon = isOpen ? ChevronDownIcon : ChevronRightIcon;
 
   function renderSkeleton(key: string) {
-    <div
-      className="flex h-7 items-center px-2 py-1 gap-2"
-      key={key}
-    >
-      <Skeleton containerClassName="h-4 w-4" />
-      <Skeleton containerClassName="h-4 flex-1" />
-    </div>
+    return (
+      <div className="flex h-7 items-center px-2 py-1 gap-2" key={key}>
+        <Skeleton containerClassName="h-4 w-4" />
+        <Skeleton containerClassName="h-4 flex-1" />
+      </div>
+    );
   }
 
   function renderFacetValue(facetOption: FacetOptionDto, index: number) {
@@ -114,10 +117,11 @@ export const Facet: React.FC<FacetProps> = ({
           facetState?.[facetOption.display_name] !== false &&
           facetOption.matches_count > 0
         }
+        renderLabel={() => renderOptionLabel && renderOptionLabel(facetOption.display_name)}
+        renderIcon={() => renderIcon && renderIcon(facetOption.display_name)}
         onToggleOption={() => onSelect(facetOption.display_name)}
         onSelectOneOption={(value: string) => selectOneOption(value)}
         onSelectAllOptions={() => selectAllOptions()}
-        facetKey={facetKey}
         showIcon={showIcon}
       />
     );
@@ -125,11 +129,16 @@ export const Facet: React.FC<FacetProps> = ({
 
   function renderBody() {
     if (!options) {
-      return Array.from({ length: 3 }).map((_, index) => renderSkeleton(`skeleton-${index}`));
+      return Array.from({ length: 3 }).map((_, index) =>
+        renderSkeleton(`skeleton-${index}`)
+      );
     }
 
-    const filteredOptions = options
-    .filter((facetOption) => facetOption.display_name.toLocaleLowerCase().includes(filter.toLocaleLowerCase()));
+    const filteredOptions = options.filter((facetOption) =>
+      facetOption.display_name
+        .toLocaleLowerCase()
+        .includes(filter.toLocaleLowerCase())
+    );
 
     if (!filteredOptions.length) {
       return (
@@ -139,8 +148,9 @@ export const Facet: React.FC<FacetProps> = ({
       );
     }
 
-    return filteredOptions
-      .map((facetOption, index) => renderFacetValue(facetOption, index));
+    return filteredOptions.map((facetOption, index) =>
+      renderFacetValue(facetOption, index)
+    );
   }
 
   return (

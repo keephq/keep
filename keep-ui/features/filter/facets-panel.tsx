@@ -46,6 +46,8 @@ export interface FacetsPanelProps {
   facets: FacetDto[];
   facetOptions: { [key: string]: FacetOptionDto[] };
   areFacetOptionsLoading?: boolean;
+  renderFacetOptionLabel?: (facetName: string, optionDisplayName: string) => JSX.Element | string | undefined;
+  renderFacetOptionIcon?: (facetName: string, optionDisplayName: string) => JSX.Element | undefined;
   onCelChange: (cel: string) => void;
   onAddFacet: (createFacet: CreateFacetDto) => void;
   onDeleteFacet: (facetId: string) => void;
@@ -59,6 +61,8 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   facets,
   facetOptions,
   areFacetOptionsLoading = false,
+  renderFacetOptionIcon = undefined,
+  renderFacetOptionLabel,
   onCelChange = undefined,
   onAddFacet = undefined,
   onDeleteFacet = undefined,
@@ -172,7 +176,9 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
             facetState={facetsState[facet.id]}
             facetKey={facet.id}
-            showSkeleton={areFacetOptionsLoading && clickedFacetId !== facet.id}
+            renderOptionLabel={(optionDisplayName) => renderFacetOptionLabel && renderFacetOptionLabel(facet.name, optionDisplayName)}
+            renderIcon={(optionDisplayName) => renderFacetOptionIcon && renderFacetOptionIcon(facet.name, optionDisplayName)}
+            showSkeleton={areFacetOptionsLoading && !!facet.id && clickedFacetId !== facet.id}
             onLoadOptions={() => onLoadFacetOptions && onLoadFacetOptions(facet.id)}
             onDelete={() => onDeleteFacet && onDeleteFacet(facet.id)}
           />
