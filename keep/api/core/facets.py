@@ -18,7 +18,7 @@ def build_facets_data_query(
     base_query,
     facets: list[FacetDto],
     properties_metadata: PropertiesMetadata,
-    cel: str,
+    facets_query: dict[str, str],
 ):
     """
     Builds a SQL query to extract and count facet data based on the provided parameters.
@@ -36,9 +36,9 @@ def build_facets_data_query(
     provider_type = get_cel_to_sql_provider_for_dialect(dialect)
     instance = provider_type(properties_metadata)
 
-    if cel:
-        sql_filter = instance.convert_to_sql_str(cel)
-        base_query = base_query.filter(text(sql_filter))
+    # if cel:
+    #     sql_filter = instance.convert_to_sql_str(cel)
+    #     base_query = base_query.filter(text(sql_filter))
 
     base_query = base_query.cte("base_query_cte")
 
@@ -68,7 +68,8 @@ def build_facets_data_query(
                 ),
             )
             .select_from(base_query)
-            .group_by(text(instance.coalesce(group_by_exp)))
+            .filter(text(instance.convert_to_sql_str(facets_query[facet.id])))
+            .group_by(text(instance.coalesce(group_by_exp) if len(group_by_exp) > 1 else group_by_exp[0]))
         )
 
     query = None
@@ -78,13 +79,15 @@ def build_facets_data_query(
     else:
         query = union_queries[0]
 
+    x = str(query.compile())
+
     return query
 
 
 def get_facet_options(
     base_query,
-    cel: str,
     facets: list[FacetDto],
+    facets_query: dict[str, str],
     properties_metadata: PropertiesMetadata,
 ) -> dict[str, list[FacetOptionDto]]:
     """
@@ -106,7 +109,7 @@ def get_facet_options(
             base_query=base_query,
             facets=valid_facets,
             properties_metadata=properties_metadata,
-            cel=cel,
+            facets_query=facets_query,
         )
         data = session.exec(db_query).all()
         grouped_by_id_dict = {}

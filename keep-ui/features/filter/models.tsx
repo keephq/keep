@@ -4,6 +4,13 @@ export interface FacetOptionDto {
     matches_count: number;
 }
 
+export interface FacetOptionsQuery {
+    facet_id: string;
+    cel: string;
+}
+
+export type FacetOptionsQueries = { [facet_id: string]: string };
+
 export interface FacetDto {
     id: string;
     property_path: string;

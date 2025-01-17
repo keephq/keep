@@ -299,9 +299,8 @@ def get_last_incidents_by_cel(
 
 def get_incident_facets_data(
     tenant_id: str,
-    facets_to_load: list[str],
     allowed_incident_ids: list[str],
-    cel: str = None,
+    facets_query: dict[str, str],
 ) -> dict[str, list[FacetOptionDto]]:
     """
     Retrieves incident facets data for a given tenant.
@@ -313,8 +312,8 @@ def get_incident_facets_data(
     Returns:
         dict[str, list[FacetOptionDto]]: A dictionary where the keys are facet ids and the values are lists of FacetOptionDto objects.
     """
-    if facets_to_load:
-        facets = get_incident_facets(tenant_id, facets_to_load)
+    if facets_query:
+        facets = get_incident_facets(tenant_id, facets_query.keys())
     else:
         facets = static_facets
 
@@ -341,8 +340,8 @@ def get_incident_facets_data(
 
     return get_facet_options(
         base_query=base_query,
-        cel=cel,
         facets=facets,
+        facets_query=facets_query,
         properties_metadata=properties_metadata,
     )
 

@@ -15,7 +15,7 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         if len(args) == 1:
             coalesce_args += ['NULL']
 
-        return f"COALESCE({', '.join(args)})"
+        return f"COALESCE({', '.join(coalesce_args)})"
     
     def cast(self, exp, to_type):
         if to_type == str:

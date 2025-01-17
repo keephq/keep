@@ -197,18 +197,16 @@ def get_all_incidents(
         limit=limit, offset=offset, count=total_count, items=incidents_dto
     )
 
-@router.get(
+@router.post(
     "/facets/options",
-    description="Get incident facet options",
+    description="Query incident facet options. Accepts dictionary where key is facet id and value is cel to query facet",
 )
 def fetch_inicident_facet_options(
+    facets_query: dict[str, str],
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
-    facets_to_load: str = Query(None),
-    cel: str = Query(None),
 ) -> dict:
-    facets_to_load = facets_to_load.split(",") if facets_to_load else []
     tenant_id = authenticated_entity.tenant_id
 
     logger.info(
@@ -228,13 +226,10 @@ def fetch_inicident_facet_options(
         authenticated_entity=authenticated_entity,
     )
 
-    # allowed_incident_ids = [(UUID("0c471712-b236-4787-86d6-68653104ab57"))]
-
     facet_options = get_incident_facets_data(
             tenant_id = tenant_id,
-            facets_to_load = facets_to_load,
             allowed_incident_ids=allowed_incident_ids,
-            cel=cel
+            facets_query = facets_query
         )
 
     logger.info(
@@ -284,7 +279,7 @@ def fetch_inicident_facets(
     description="Add facet for incidents",
 )
 async def add_incidents_facet(
-    createFacet: CreateFacetDto,
+    create_facet_dto: CreateFacetDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     )
@@ -298,7 +293,7 @@ async def add_incidents_facet(
     )
     created_facet = create_facet(
         tenant_id=tenant_id,
-        facet=createFacet
+        facet=create_facet_dto
     )
     return created_facet
 

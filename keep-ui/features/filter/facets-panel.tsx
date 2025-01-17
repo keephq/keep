@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Facet } from "./facet";
-import { CreateFacetDto, FacetDto, FacetOptionDto } from "./models";
+import { CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueries } from "./models";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import { AddFacetModal } from "./add-facet-modal";
@@ -48,7 +48,7 @@ export interface FacetsPanelProps {
   onAddFacet: (createFacet: CreateFacetDto) => void;
   onDeleteFacet: (facetId: string) => void;
   onLoadFacetOptions: (facetId: string) => void;
-  onReloadFacetOptions: (facetsToReload: FacetDto[], cel: string) => void;
+  onReloadFacetOptions: (facetsQuery: FacetOptionsQueries) => void;
 }
 
 export const FacetsPanel: React.FC<FacetsPanelProps> = ({
@@ -83,14 +83,16 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     if (cel !== celState) {
       setCelState(cel);
       onCelChange && onCelChange(cel);
-
-      if (changedFacetId) {
-        onReloadFacetOptions && onReloadFacetOptions(facets.filter(x => x.id !== changedFacetId), cel);
-        return;
-      }
-
-      onReloadFacetOptions && onReloadFacetOptions(facets, cel);
     }
+    const facetOptionQueries: FacetOptionsQueries = {};
+
+    facets.forEach((facet) => {
+      const otherFacets = facets.filter((f) => f.id !== facet.id);
+
+      facetOptionQueries[facet.id] = buildCel(otherFacets, facetOptions, newFacetsState);
+    })
+
+    onReloadFacetOptions && onReloadFacetOptions(facetOptionQueries)
   }
 
   function toggleFacetOption(facetId: string, value: string) {

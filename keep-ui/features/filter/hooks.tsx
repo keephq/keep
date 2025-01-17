@@ -1,9 +1,10 @@
-import useSWR, { SWRConfiguration, useSWRConfig } from "swr";
-import { CreateFacetDto, FacetDto, FacetOptionDto } from "./models";
+import useSWR, { SWRConfiguration, useSWRConfig, mutate } from "swr";
+import { CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueries } from "./models";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { showErrorToast } from "@/shared/ui";
+import { InitialFacetsData } from "./api";
 
 export type UseFacetActionsValue = {
   addFacet: (incident: CreateFacetDto) => Promise<FacetDto>;
@@ -31,32 +32,14 @@ export const useFacets = (
   };
 };
 
-type FacetOptionsDict ={
-  [facetId: string]: FacetOptionDto;
+type FacetOptionsDict = {
+  [facetId: string]: FacetOptionDto[];
 };
 
-export const useFacetOptions = (
-  entityName: string,
-  facetOptionIdsToLoad: string[] | undefined,
-  cel: string = "",
-  options: SWRConfiguration = {
-    revalidateOnFocus: false,
-    fallbackData: {}
-  }
-) => {
-  const [facetOptions, setFacetOptions] = useState<FacetOptionsDict>(options.fallbackData ?? {});
-
-  const api = useApi();
-
+function buildFacetOptionsUrl(
+  entityName: string
+): string {
   const filtersParams = new URLSearchParams();
-
-  if (cel) {
-    filtersParams.set("cel", cel);
-  }
-
-  if (facetOptionIdsToLoad?.length) {
-    filtersParams.set("facets_to_load", facetOptionIdsToLoad.join(","));
-  }
 
   let queryString = "";
 
@@ -64,35 +47,102 @@ export const useFacetOptions = (
     queryString = `?${filtersParams.toString()}`;
   }
 
-  const requestUrl = `/${entityName}/facets/options${queryString}`;
+  return `/${entityName}/facets/options${queryString}`;
+}
 
-  const swrValue = useSWR<{ [facetId: string]: FacetOptionDto }>(
-    () => (api.isReady() ? requestUrl : null),
-    (url) => api.get(url),
-    options
+export const useFacetOptions = (
+  entityName: string,
+  initialFacetOptions: FacetOptionsDict | undefined,
+  facetsQuery: FacetOptionsQueries
+) => {
+  const api = useApi();
+  const [mergedFacetOptions, setMergedFacetOptions] = useState(
+    initialFacetOptions
+  );
+  const requestUrl = buildFacetOptionsUrl(entityName);
+  const reloadFacetOptions = useCallback(
+    async (
+      facetsQuery: FacetOptionsQueries,
+    ) => {
+      const fetchedData: FacetOptionsDict = await api.post(
+        buildFacetOptionsUrl(entityName),
+        facetsQuery
+      );
+      const newFacetOptions: FacetOptionsDict = JSON.parse(
+        JSON.stringify(mergedFacetOptions || {})
+      );
+      Object.entries(fetchedData).forEach(([facetId, newOptions]) => {
+        if (newFacetOptions[facetId]) {
+          const currentFacetOptionsMap = newFacetOptions[facetId].reduce(
+            (accumulator, oldOption) => {
+              accumulator[oldOption.display_name] = oldOption;
+              oldOption.matches_count = 0;
+              return accumulator;
+            },
+            {} as Record<string, FacetOptionDto>
+          );
+
+          newOptions.forEach(
+            (newOption) =>
+              (currentFacetOptionsMap[newOption.display_name] = newOption)
+          );
+          newFacetOptions[facetId] = Object.values(currentFacetOptionsMap);
+          return;
+        }
+
+        newFacetOptions[facetId] = newOptions;
+      });
+
+      setMergedFacetOptions(newFacetOptions);
+    },
+    [mergedFacetOptions, entityName, api]
   );
 
-  useEffect(() => {
-    if (swrValue.data) {
-      setFacetOptions({
-        ...facetOptions,
-        ...(swrValue.data as any),
-      });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [swrValue.data]);
+  // useEffect(() => {
+  //   async () => {
+  //     const fetchedData: FacetOptionsDict = await api.post(
+  //       buildFacetOptionsUrl(entityName),
+  //       facetsQuery
+  //     );
+  //     const newFacetOptions: FacetOptionsDict = JSON.parse(
+  //       JSON.stringify(mergedFacetOptions || {})
+  //     );
+  //     Object.entries(fetchedData).forEach(([facetId, newOptions]) => {
+  //       if (newFacetOptions[facetId]) {
+  //         const currentFacetOptionsMap = newFacetOptions[facetId].reduce(
+  //           (accumulator, oldOption) => {
+  //             accumulator[oldOption.display_name] = oldOption;
+  //             oldOption.matches_count = 0;
+  //             return accumulator;
+  //           },
+  //           {} as Record<string, FacetOptionDto>
+  //         );
+
+  //         newOptions.forEach(
+  //           (newOption) =>
+  //             (currentFacetOptionsMap[newOption.display_name] = newOption)
+  //         );
+  //         newFacetOptions[facetId] = Object.values(currentFacetOptionsMap);
+  //         return;
+  //       }
+
+  //       newFacetOptions[facetId] = newOptions;
+  //     });
+
+  //     setMergedFacetOptions(newFacetOptions);
+  //   }
+  // }, [facetsQuery, entityName, api])
 
   return {
-    ...swrValue,
-    data: facetOptions,
-    isLoading: swrValue.isLoading || (!options.fallbackData && !api.isReady()),
+    facetOptions: mergedFacetOptions,
+    reloadFacetOptions
   };
 };
 
 export const useFacetActions = (
-  entityName: string
+  entityName: string,
+  initialFacetsData?: InitialFacetsData
 ): UseFacetActionsValue => {
-  const api = useApi();
   const requestUrl = `/${entityName}/facets`;
 
   const { mutate } = useSWRConfig();
@@ -103,6 +153,8 @@ export const useFacetActions = (
       mutate((key) => typeof key === "string" && key == "/incidents/facets"),
     [mutate]
   );
+
+  const api = useApi();
 
   const addFacet = useCallback(
     async (createFacet: CreateFacetDto) => {

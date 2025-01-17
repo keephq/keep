@@ -144,13 +144,13 @@ export const FacetValue: React.FC<FacetValueProps> = ({
 
   return (
     <div
-      className="flex items-center px-2 py-1 hover:bg-gray-100 rounded-sm cursor-pointer group"
+      className={`flex items-center px-2 py-1 hover:bg-gray-100 rounded-sm cursor-pointer group ${ !count ? "opacity-50 pointer-events-none" : "" }`}
       onClick={handleCheckboxClick}
     >
       <div className="flex items-center min-w-[24px]">
         <input
           type="checkbox"
-          checked={isSelected}
+          checked={isSelected && count > 0}
           onClick={handleCheckboxClick}
           onChange={() => {}}
           style={{ accentColor: "#eb6221" }}
@@ -174,7 +174,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
         >
           {isExclusivelySelected ? "All" : "Only"}
         </button>
-        {count > 0 && (
+        {(
           <Text className="text-xs text-gray-500 group-hover:hidden">
             {count}
           </Text>
