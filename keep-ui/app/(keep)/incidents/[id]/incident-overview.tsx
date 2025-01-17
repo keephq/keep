@@ -12,7 +12,7 @@ import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import Markdown from "react-markdown";
 import { Badge, Callout } from "@tremor/react";
-import { Button, DynamicIcon, Link } from "@/components/ui";
+import { Button, DynamicSVGProviderIcon, Link } from "@/components/ui";
 import { IncidentChangeStatusSelect } from "@/features/change-incident-status";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { DateTimeField, FieldHeader } from "@/shared/ui";
@@ -305,7 +305,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                       icon={
                         incident.enrichments?.incident_provider
                           ? (props: any) => (
-                              <DynamicIcon
+                              <DynamicSVGProviderIcon
                                 providerType={
                                   incident.enrichments?.incident_provider
                                 }
@@ -340,7 +340,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                           color="orange"
                           size="sm"
                           icon={(props: any) => (
-                            <DynamicIcon providerType="github" {...props} />
+                            <DynamicSVGProviderIcon providerType="github" {...props} />
                           )}
                           className="cursor-pointer"
                           onClick={() => window.open(repo, "_blank")}

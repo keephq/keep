@@ -16,8 +16,7 @@ export const CorrelationPlaceholder = () => {
         <div className="text-center space-y-3">
           <Title className="text-2xl">No Correlations Yet</Title>
           <Subtitle className="text-gray-400">
-            Start building correlation and get all relevant alerts in one
-            dedicated place
+            Start building correlations to group alerts into incidents.
           </Subtitle>
         </div>
         <Button
