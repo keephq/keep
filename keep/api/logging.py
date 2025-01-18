@@ -19,10 +19,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 KEEP_STORE_WORKFLOW_LOGS = (
     os.environ.get("KEEP_STORE_WORKFLOW_LOGS", "true").lower() == "true"
 )
-KEEP_UVICORN_ACCESS_LOG_FORMAT = os.environ.get(
-    "KEEP_UVICORN_ACCESS_LOG_FORMAT",
-    '%(t)s %(h)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(L)s',
-)
 
 
 class WorkflowDBHandler(logging.Handler):
