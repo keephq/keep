@@ -6,7 +6,6 @@ services:
     environment:
       - API_URL=http://keep-backend-dev:8080
       - SENTRY_DISABLED=true
-      - AUTH_TYPE=NO_AUTH
     build:
       dockerfile: docker/Dockerfile.dev.ui
     volumes:
@@ -17,9 +16,6 @@ services:
       - keep-backend-dev
 
   keep-backend-dev:
-    environment:
-      - AUTH_TYPE=NO_AUTH
-      - DATABASE_CONNECTION_STRING=sqlite:///state/db.sqlite3?check_same_thread=False
     extends:
       file: docker-compose.common.yml
       service: keep-backend-common
