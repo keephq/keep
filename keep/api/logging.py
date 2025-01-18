@@ -379,3 +379,12 @@ def setup_logging():
     logging.config.dictConfig(CONFIG)
     uvicorn_error_logger = logging.getLogger("uvicorn.error")
     uvicorn_error_logger.__class__ = CustomizedUvicornLogger
+
+    # ADJUST UVICORN ACCESS LOGGER
+    # https://github.com/benoitc/gunicorn/issues/2299
+    # https://github.com/benoitc/gunicorn/issues/2382
+    LOG_FMT = "%(asctime)s - %(otelTraceID)s - %(threadName)s - %(message)s"
+    logger = logging.getLogger("uvicorn.access")
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(LOG_FMT))
+    logger.handlers = [handler]
