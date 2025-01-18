@@ -24,6 +24,7 @@
 
 import os
 import random
+
 # Adding a new test:
 # 1. Manually:
 #    - Create a new test function.
@@ -36,6 +37,8 @@ import string
 import sys
 import re
 from datetime import datetime
+import requests
+from tests.e2e_tests.utils import trigger_alert
 
 from playwright.sync_api import expect
 
@@ -130,6 +133,7 @@ def test_insert_new_alert(browser):  # browser is actually a page object
         save_failure_artifacts(browser, log_entries)
         raise
 
+
 def test_providers_page_is_accessible(browser):
     """
     Test to check if the providers page is accessible
@@ -191,7 +195,7 @@ def test_provider_validation(browser):
         expect(error_msg).to_have_count(1)
         host_input.fill("http://localhost")
         expect(error_msg).to_be_hidden()
-        host_input.fill( "https://keep.kb.us-central1.gcp.cloud.es.io")
+        host_input.fill("https://keep.kb.us-central1.gcp.cloud.es.io")
         expect(error_msg).to_be_hidden()
         # test `port` field validation
         port_input = browser.get_by_placeholder("Enter kibana_port")
@@ -284,6 +288,7 @@ def test_provider_validation(browser):
         save_failure_artifacts(browser, log_entries)
         raise
 
+
 def test_add_workflow(browser):
     """
     Test to add a workflow node
@@ -300,7 +305,9 @@ def test_add_workflow(browser):
         page.get_by_placeholder("Set the name").press("ControlOrMeta+a")
         page.get_by_placeholder("Set the name").fill("Example Console Workflow")
         page.get_by_placeholder("Set the name").press("Tab")
-        page.get_by_placeholder("Set the description").fill("Example workflow description")
+        page.get_by_placeholder("Set the description").fill(
+            "Example workflow description"
+        )
         page.get_by_test_id("wf-add-trigger-button").first.click()
         page.get_by_text("Manual").click()
         page.get_by_test_id("wf-add-step-button").first.click()
@@ -313,8 +320,57 @@ def test_add_workflow(browser):
         page.get_by_placeholder("message").fill("Hello world!")
         page.get_by_role("button", name="Save & Deploy").click()
         page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
-        expect(page.get_by_test_id("wf-name")).to_contain_text("Example Console Workflow")
-        expect(page.get_by_test_id("wf-description")).to_contain_text("Example workflow description")
+        expect(page.get_by_test_id("wf-name")).to_contain_text(
+            "Example Console Workflow"
+        )
+        expect(page.get_by_test_id("wf-description")).to_contain_text(
+            "Example workflow description"
+        )
     except Exception:
         save_failure_artifacts(page, log_entries)
+        raise
+
+
+def test_add_upload_workflow_with_alert_trigger(browser):
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    try:
+        provider_name = "playwright_test_add_upload_workflow_with_alert_trigger"
+        browser.goto("http://localhost:3000/signin")
+        browser.get_by_role("link", name="Workflows").hover()
+        browser.get_by_role("link", name="Workflows").click()
+        browser.get_by_role("button", name="Upload Workflows").click()
+        file_input = browser.locator("#workflowFile")
+        file_input.set_input_files(
+            [r"./workflow-sample.yaml"]
+        )
+        browser.get_by_role("button", name="Upload")
+        browser.wait_for_timeout(10000)
+        trigger_alert("prometheus")
+        browser.wait_for_timeout(3000)
+        browser.reload()
+        browser.wait_for_timeout(3000)
+        workflow_card = browser.locator(
+            "[data-sentry-component='WorkflowTile']",
+            has_text="9b3664f4-b248-4eda-8cc7-e69bc5a8bd92",
+        )
+        expect(workflow_card).not_to_contain_text("No data available")
+    except Exception:
+        save_failure_artifacts(browser, log_entries)
+        raise
+
+
+def test_start_with_keep_db(browser):
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    try:
+        browser.goto("http://localhost:3001/signin")
+        browser.wait_for_timeout(3000)
+        browser.get_by_placeholder("Enter your username").fill("keep")
+        browser.get_by_placeholder("Enter your password").fill("keep")
+        browser.get_by_role("button", name="Sign in").click()
+        browser.wait_for_timeout(5000)
+        expect(browser).to_have_url("http://localhost:3001/incidents")
+    except Exception:
+        save_failure_artifacts(browser, log_entries)
         raise

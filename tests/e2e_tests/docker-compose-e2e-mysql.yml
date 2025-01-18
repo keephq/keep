@@ -1,4 +1,6 @@
 services:
+  ## Keep Services with NO_AUTH
+  # Database Service
   keep-database:
     image: mysql:latest
     environment:
@@ -14,6 +16,7 @@ services:
       timeout: 5s
       retries: 5
 
+  # Frontend Services
   keep-frontend:
     extends:
       file: docker-compose.common.yml
@@ -28,6 +31,7 @@ services:
       - FRIGADE_DISABLED=true
       - SENTRY_DISABLED=true
 
+  # Backend Services
   keep-backend:
     extends:
       file: docker-compose.common.yml
@@ -46,6 +50,81 @@ services:
       keep-database:
         condition: service_healthy
 
+
+  ## Keep Services with DB
+  # Database Service (5433)
+  keep-database-db-auth:
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=keep
+      - MYSQL_DATABASE=keep
+    volumes:
+      - mysql-data:/var/lib/mysql-auth-db
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Frontend Services (3001)
+  keep-frontend-db-auth:
+    build:
+      context: ./keep-ui/
+      dockerfile: ../docker/Dockerfile.ui
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXTAUTH_SECRET=secret
+      - NEXTAUTH_URL=https://3001-35c4n0r-keep-j5ok1nvq1vv.ws-us117.gitpod.io
+      - NEXT_PUBLIC_API_URL=https://8081-35c4n0r-keep-j5ok1nvq1vv.ws-us117.gitpod.io
+      - POSTHOG_KEY=phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
+      - POSTHOG_HOST=https://ingest.keephq.dev
+      - NEXT_PUBLIC_SENTRY_DSN=https://0d4d59e3105ffe8afa27dcb95a222009@o4505515398922240.ingest.us.sentry.io/4508258058764288
+      - PUSHER_HOST=localhost
+      - PUSHER_PORT=6001
+      - PUSHER_APP_KEY=keepappkey
+      - NEXT_PUBLIC_KEEP_VERSION=0.2.9
+      - AUTH_TYPE=DB
+      - API_URL=http://keep-backend-db-auth:8080
+      - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
+      - SENTRY_DISABLED=true
+
+  # Backend Services (8081)
+  keep-backend-db-auth:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - "8081:8080"
+    environment:
+      - PORT=8080
+      - SECRET_MANAGER_TYPE=FILE
+      - SECRET_MANAGER_DIRECTORY=/state
+      - OPENAI_API_KEY=$OPENAI_API_KEY
+      - PUSHER_APP_ID=1
+      - PUSHER_APP_KEY=keepappkey
+      - PUSHER_APP_SECRET=keepappsecret
+      - PUSHER_HOST=keep-websocket-server
+      - PUSHER_PORT=6001
+      - USE_NGROK=false
+      - AUTH_TYPE=DB
+      - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database-db-auth:3306/keep
+      - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
+      - SECRET_MANAGER_DIRECTORY=/app
+      - SQLALCHEMY_WARN_20=1
+      - KEEP_JWT_SECRET=verysecretkey
+      - KEEP_DEFAULT_USERNAME=keep
+      - KEEP_DEFAULT_PASSWORD=keep
+    depends_on:
+      keep-database-db-auth:
+        condition: service_healthy
+
+
+  # Other Services (Common)
   keep-websocket-server:
     extends:
       file: docker-compose.common.yml
@@ -59,5 +138,20 @@ services:
     ports:
       - "9090:9090"
 
+  grafana:
+    image: grafana/grafana-enterprise:10.4.0
+    user: "472" # Grafana's default user ID
+    ports:
+      - "3002:3000"
+    volumes:
+      - ./keep/providers/grafana_provider/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./keep/providers/grafana_provider/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - grafana-storage:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus-server-for-test-target
+
 volumes:
   mysql-data:
+  grafana-storage: {}
