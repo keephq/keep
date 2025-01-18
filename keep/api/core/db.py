@@ -4975,7 +4975,7 @@ def set_last_alert(
                     session.add(last_alert)
 
                 elif not last_alert:
-                    logger.info(
+                    logger.debug(
                         f"No last alert for `{alert.fingerprint}`, creating new"
                     )
                     last_alert = LastAlert(
