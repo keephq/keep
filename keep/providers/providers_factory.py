@@ -222,6 +222,16 @@ class ProvidersFactory:
                         expected_values=expected_values,
                     )
                 )
+            if "func_params" in method.dict():
+                if method.func_params:
+                    # this should not happen
+                    logging.getLogger(__name__).warning(
+                        f"Provider {provider_class.__name__} method {method.func_name} already has func_params"
+                    )
+                # remove it, we already adding it via func_params=func_params
+                else:
+                    delattr(method, "func_params")
+
             methods.append(ProviderMethodDTO(**method.dict(), func_params=func_params))
         return methods
 
@@ -363,7 +373,13 @@ class ProvidersFactory:
                     provider_tags.add("incident")
                 provider_tags = list(provider_tags)
 
-                provider_methods = ProvidersFactory.__get_methods(provider_class)
+                try:
+                    provider_methods = ProvidersFactory.__get_methods(provider_class)
+                except Exception as e:
+                    logger.warning(
+                        f"Could not get provider {provider_directory} methods. ({str(e)})"
+                    )
+                    provider_methods = []
                 # if the provider has a PROVIDER_DISPLAY_NAME, use it, otherwise use the provider type
                 provider_display_name = getattr(
                     provider_class,

@@ -26,7 +26,7 @@ import {
   getIcon,
   getTriggerIcon,
 } from "@/app/(keep)/workflows/[workflow_id]/workflow-execution-table";
-import { WorkflowExecution } from "@/app/(keep)/workflows/builder/types";
+import { WorkflowExecutionDetail } from "@/shared/api/workflow-executions";
 import { useEffect, useState } from "react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -44,7 +44,7 @@ interface Pagination {
   offset: number;
 }
 
-const columnHelper = createColumnHelper<WorkflowExecution>();
+const columnHelper = createColumnHelper<WorkflowExecutionDetail>();
 
 export default function IncidentWorkflowTable({ incident }: Props) {
   const [workflowsPagination, setWorkflowsPagination] = useState<Pagination>({
@@ -53,7 +53,7 @@ export default function IncidentWorkflowTable({ incident }: Props) {
   });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedExecution, setSelectedExecution] =
-    useState<WorkflowExecution | null>(null);
+    useState<WorkflowExecutionDetail | null>(null);
 
   const {
     data: workflows,
@@ -94,7 +94,7 @@ export default function IncidentWorkflowTable({ incident }: Props) {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const handleRowClick = (execution: WorkflowExecution) => {
+  const handleRowClick = (execution: WorkflowExecutionDetail) => {
     setSelectedExecution(execution);
     toggleSidebar();
   };

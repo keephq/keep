@@ -13,8 +13,8 @@ import {
   useIncidentActions,
 } from "@/entities/incidents/model";
 import React, { useState } from "react";
-import Image from "next/image";
 import { IncidentTableComponent } from "@/features/incident-list/ui/incident-table-component";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -55,7 +55,7 @@ export default function PredictedIncidentsTable({
       header: "Alert Sources",
       cell: (context) =>
         context.row.original.alert_sources.map((alert_sources, index) => (
-          <Image
+          <DynamicImageProviderIcon
             className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
             key={alert_sources}
             alt={alert_sources}

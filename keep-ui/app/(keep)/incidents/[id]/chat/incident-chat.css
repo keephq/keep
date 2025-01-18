@@ -1,5 +1,5 @@
 .copilotKitInput {
-  @apply sticky bottom-0 bg-white !important;
+  @apply sticky bottom-0 bg-white w-[98%] !important;
   @apply flex items-center outline-none rounded-tremor-default px-3 py-2 mx-2 text-tremor-default focus:ring-2 transition duration-100 border shadow-tremor-input focus:border-tremor-brand-subtle focus:ring-tremor-brand-muted dark:shadow-dark-tremor-input focus:dark:border-dark-tremor-brand-subtle focus:dark:ring-dark-tremor-brand-muted bg-tremor-background dark:bg-dark-tremor-background hover:bg-tremor-background-muted dark:hover:bg-dark-tremor-background-muted text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis border-tremor-border dark:border-dark-tremor-border placeholder:text-tremor-content dark:placeholder:text-dark-tremor-content !important;
 }
 
@@ -10,12 +10,59 @@
 .copilotKitInput textarea {
   height: unset !important;
   max-height: unset !important;
+  margin-bottom: 5px;
 }
 
 .copilotKitMessages {
-  @apply px-4 !important;
+  @apply h-full flex flex-col !important;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+.copilotKitMessages > div {
+  @apply flex-1 overflow-y-auto !important;
+  overscroll-behavior: contain;
+  will-change: scroll-position;
+}
+
+.copilotKitUserMessage {
+  @apply bg-orange-300 !important;
 }
 
 .copilotKitMessages .suggestion {
   @apply bg-white text-black scale-100 border-tremor-border border-2 hover:border-tremor-brand hover:text-tremor-brand hover:bg-tremor-brand-muted dark:border-dark-tremor-brand dark:hover:bg-dark-tremor-brand-muted transition !important;
+}
+
+.chat-container {
+  @apply h-[calc(100vh-28rem)] flex flex-col;
+  scroll-behavior: smooth;
+}
+
+.chat-messages {
+  @apply flex-1 overflow-y-scroll overflow-x-hidden;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  will-change: scroll-position;
+}
+
+[data-message-role="assistant"] {
+  position: relative;
+}
+
+.message-feedback {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+[data-message-role="assistant"]:hover .message-feedback {
+  opacity: 1;
+}
+
+.message-feedback button {
+  color: var(--tremor-content);
+  opacity: 0.5;
+  transition: opacity 0.2xs;
+}
+.message-feedback button:hover {
+  opacity: 1;
 }

@@ -64,7 +64,7 @@ class WorkflowExecution(SQLModel, table=True):
     id: str = Field(default=None, primary_key=True)
     workflow_id: str = Field(foreign_key="workflow.id")
     tenant_id: str = Field(foreign_key="tenant.id")
-    started: datetime = Field(default_factory=datetime.utcnow)
+    started: datetime = Field(default_factory=datetime.utcnow, index=True)
     triggered_by: str = Field(sa_column=Column(TEXT))
     status: str = Field(sa_column=Column(TEXT))
     is_running: int = Field(default=1)

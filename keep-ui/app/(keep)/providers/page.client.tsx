@@ -8,15 +8,13 @@ import { toast } from "react-toastify";
 import { useProviders } from "@/utils/hooks/useProviders";
 import { showErrorToast } from "@/shared/ui";
 import { Link } from "@/components/ui";
-
-const EXTERNAL_URL_DOCS_URL =
-  "https://docs.keephq.dev/development/external-url";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [installedProviders, setInstalledProviders] = useState<Provider[]>([]);
   const [linkedProviders, setLinkedProviders] = useState<Provider[]>([]); // Added state for linkedProviders
-
+  const { data: config } = useConfig();
   const { data, error } = useProviders();
 
   if (error) {
@@ -30,7 +28,9 @@ export const useFetchProviders = () => {
       Webhooks are disabled because Keep is not accessible from the internet.
       <br />
       <Link
-        href={EXTERNAL_URL_DOCS_URL}
+        href={`${
+          config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+        }/development/external-url`}
         target="_blank"
         rel="noreferrer noopener"
       >
@@ -48,7 +48,11 @@ export const useFetchProviders = () => {
         type: "info",
         position: toast.POSITION.TOP_CENTER,
         autoClose: 10000,
-        onClick: () => window.open(EXTERNAL_URL_DOCS_URL, "_blank"),
+        onClick: () =>
+          window.open(
+            `${config?.KEEP_DOCS_URL || "https://docs.keephq.dev"}`,
+            "_blank"
+          ),
         style: {
           width: "250%", // Set width
           marginLeft: "-75%", // Adjust starting position to left

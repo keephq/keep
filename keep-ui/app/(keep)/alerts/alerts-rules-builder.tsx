@@ -20,8 +20,9 @@ import {
 } from "@/entities/alerts/model";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { TbDatabaseImport } from "react-icons/tb";
-import { components, MenuListProps } from "react-select";
+import { components, MenuListProps, GroupBase } from "react-select";
 import { Select } from "@/shared/ui";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 import { IoSearchOutline } from "react-icons/io5";
 import { FiExternalLink } from "react-icons/fi";
@@ -58,10 +59,18 @@ const kbdStyle = {
   fontWeight: "bold",
 };
 
+// Define an interface for the custom props
+interface CustomMenuListProps
+  extends MenuListProps<any, boolean, GroupBase<any>> {
+  docsUrl: string;
+}
+
 // Custom MenuList with a static line at the end
-const CustomMenuList = (props: MenuListProps<{}>) => {
+const CustomMenuList = (props: CustomMenuListProps) => {
+  const { docsUrl, ...menuListProps } = props;
+
   return (
-    <components.MenuList {...props}>
+    <components.MenuList {...menuListProps}>
       {props.children}
       <div
         style={{
@@ -72,7 +81,7 @@ const CustomMenuList = (props: MenuListProps<{}>) => {
           background: "lightgray",
           color: "black",
           fontSize: "0.9em",
-          borderTop: "1px solid #ddd", // Add a separator if you like
+          borderTop: "1px solid #ddd",
         }}
       >
         <span>
@@ -88,7 +97,7 @@ const CustomMenuList = (props: MenuListProps<{}>) => {
           <kbd style={kbdStyle}>Enter</kbd> to update query
         </span>
         <a
-          href="https://docs.keephq.dev/overview/cel"
+          href={`${docsUrl}/overview/cel`}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -294,6 +303,7 @@ export const AlertsRulesBuilder = ({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { data: config } = useConfig();
 
   const { deletePreset } = usePresetActions();
 
@@ -538,18 +548,27 @@ export const AlertsRulesBuilder = ({
   };
 
   const validateAndOpenSaveModal = (celExpression: string) => {
-    // Use existing validation logic
     const celQuery = formatQuery(parseCEL(celExpression), "cel");
+
+    // Normalize both strings by:
+    // 1. Removing all whitespace
+    // 2. Creating versions with both single and double quotes
+    const normalizedCelQuery = celQuery.replace(/\s+/g, "");
+    const normalizedExpression = celExpression.replace(/\s+/g, "");
+
+    // Create variants with different quote styles
+    const celQuerySingleQuotes = normalizedCelQuery.replace(/"/g, "'");
+    const celQueryDoubleQuotes = normalizedCelQuery.replace(/'/g, '"');
+
     const isValidCEL =
-      celQuery.replace(/\s+/g, "") === celExpression.replace(/\s+/g, "") ||
+      normalizedExpression === celQuerySingleQuotes ||
+      normalizedExpression === celQueryDoubleQuotes ||
       celExpression === "";
 
     if (isValidCEL && celExpression.length) {
-      // If CEL is valid and not empty, set the CEL rules for the preset and open the modal
       setPresetCEL?.(celExpression);
       setIsModalOpen?.(true);
     } else {
-      // If CEL is invalid or empty, inform the user
       alert("You can only save a valid CEL expression.");
       setIsValidCEL(isValidCEL);
     }
@@ -591,7 +610,22 @@ export const AlertsRulesBuilder = ({
                     options={staticOptions}
                     onChange={handleSelectChange}
                     menuIsOpen={true}
-                    components={minimal ? undefined : customComponents}
+                    components={
+                      minimal
+                        ? undefined
+                        : {
+                            ...customComponents,
+                            MenuList: (props) => (
+                              <CustomMenuList
+                                {...props}
+                                docsUrl={
+                                  config?.KEEP_DOCS_URL ||
+                                  "https://docs.keephq.dev"
+                                }
+                              />
+                            ),
+                          }
+                    }
                     onBlur={() => setShowSuggestions(false)}
                   />
                 </div>

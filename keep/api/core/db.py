@@ -141,10 +141,12 @@ def get_session_sync() -> Session:
     return Session(engine)
 
 
-def __convert_to_uuid(value: str) -> UUID | None:
+def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
     try:
         return UUID(value)
     except ValueError:
+        if should_raise:
+            raise ValueError(f"Invalid UUID: {value}")
         return None
 
 
@@ -890,7 +892,7 @@ def add_audit(
     tenant_id: str,
     fingerprint: str,
     user_id: str,
-    action: AlertActionType,
+    action: ActionType,
     description: str,
 ) -> AlertAudit:
     with Session(engine) as session:
@@ -907,12 +909,12 @@ def add_audit(
     return audit
 
 
-def _enrich_alert(
+def _enrich_entity(
     session,
     tenant_id,
     fingerprint,
     enrichments,
-    action_type: AlertActionType,
+    action_type: ActionType,
     action_callee: str,
     action_description: str,
     force=False,
@@ -978,11 +980,11 @@ def _enrich_alert(
         return alert_enrichment
 
 
-def enrich_alert(
+def enrich_entity(
     tenant_id,
     fingerprint,
     enrichments,
-    action_type: AlertActionType,
+    action_type: ActionType,
     action_callee: str,
     action_description: str,
     session=None,
@@ -992,7 +994,7 @@ def enrich_alert(
     # else, the enrichment doesn't exist, create it
     if not session:
         with Session(engine) as session:
-            return _enrich_alert(
+            return _enrich_entity(
                 session,
                 tenant_id,
                 fingerprint,
@@ -1003,7 +1005,7 @@ def enrich_alert(
                 force=force,
                 audit_enabled=audit_enabled,
             )
-    return _enrich_alert(
+    return _enrich_entity(
         session,
         tenant_id,
         fingerprint,
@@ -1734,7 +1736,11 @@ def update_rule(
 def get_rules(tenant_id, ids=None):
     with Session(engine) as session:
         # Start building the query
-        query = select(Rule).where(Rule.tenant_id == tenant_id)
+        query = (
+            select(Rule)
+            .where(Rule.tenant_id == tenant_id)
+            .where(Rule.is_deleted.is_(False))
+        )
 
         # Apply additional filters if ids are provided
         if ids is not None:
@@ -1770,8 +1776,8 @@ def delete_rule(tenant_id, rule_id):
             select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_uuid)
         ).first()
 
-        if rule:
-            session.delete(rule)
+        if rule and not rule.is_deleted:
+            rule.is_deleted = True
             session.commit()
             return True
         return False
@@ -1822,10 +1828,38 @@ def create_incident_for_grouping_rule(
             is_predicted=False,
             is_confirmed=rule.create_on == CreateIncidentOn.ANY.value
             and not rule.require_approve,
+            incident_type=IncidentType.RULE.value,
         )
         session.add(incident)
         session.commit()
         session.refresh(incident)
+    return incident
+
+
+def create_incident_for_topology(
+    tenant_id: str, alert_group: list[Alert], session: Session
+) -> Incident:
+    """Create a new incident from topology-connected alerts"""
+    # Get highest severity from alerts
+    severity = max(alert.severity for alert in alert_group)
+
+    # Get all services
+    services = set()
+    service_names = set()
+    for alert in alert_group:
+        services.update(alert.service_ids)
+        service_names.update(alert.service_names)
+
+    incident = Incident(
+        tenant_id=tenant_id,
+        user_generated_name=f"Topology incident: Multiple alerts across {', '.join(service_names)}",
+        severity=severity.value,
+        status=IncidentStatus.FIRING.value,
+        is_confirmed=True,
+        incident_type=IncidentType.TOPOLOGY.value,  # Set incident type for topology
+        data={"services": list(services), "alert_count": len(alert_group)},
+    )
+
     return incident
 
 
@@ -3346,6 +3380,7 @@ def get_last_incidents(
 
         if with_alerts:
             enrich_incidents_with_alerts(tenant_id, incidents, session)
+        enrich_incidents_with_enrichments(tenant_id, incidents, session)
 
     return incidents, total_count
 
@@ -3356,9 +3391,7 @@ def get_incident_by_id(
     session: Optional[Session] = None,
 ) -> Optional[Incident]:
     if isinstance(incident_id, str):
-        incident_id = __convert_to_uuid(incident_id)
-        if incident_id is None:
-            return None
+        incident_id = __convert_to_uuid(incident_id, should_raise=True)
     with existed_or_new_session(session) as session:
         query = session.query(
             Incident,
@@ -3367,12 +3400,14 @@ def get_incident_by_id(
             Incident.id == incident_id,
         )
         incident = query.first()
-        if with_alerts:
-            enrich_incidents_with_alerts(
-                tenant_id,
-                [incident],
-                session,
-            )
+        if incident:
+            if with_alerts:
+                enrich_incidents_with_alerts(
+                    tenant_id,
+                    [incident],
+                    session,
+                )
+            enrich_incidents_with_enrichments(tenant_id, [incident], session)
 
     return incident
 
@@ -3407,15 +3442,20 @@ def create_incident_from_dto(
             "assignee": incident_dto.assignee,
             "is_predicted": False,  # its not a prediction, but an AI generation
             "is_confirmed": True,  # confirmed by the user :)
+            "incident_type": IncidentType.AI.value,
         }
 
     elif issubclass(type(incident_dto), IncidentDto):
         # we will reach this block when incident is pulled from a provider
         incident_dict = incident_dto.to_db_incident().dict()
-
+        if "incident_type" not in incident_dict:
+            incident_dict["incident_type"] = IncidentType.MANUAL.value
     else:
         # We'll reach this block when a user creates an incident
         incident_dict = incident_dto.dict()
+        # Keep existing incident_type if present, default to MANUAL if not
+        if "incident_type" not in incident_dict:
+            incident_dict["incident_type"] = IncidentType.MANUAL.value
 
     return create_incident_from_dict(tenant_id, incident_dict)
 
@@ -3706,6 +3746,7 @@ def add_alerts_to_incident(
     is_created_by_ai: bool = False,
     session: Optional[Session] = None,
     override_count: bool = False,
+    exclude_unlinked_alerts: bool = False,  # if True, do not add alerts to incident if they are manually unlinked
 ) -> Optional[Incident]:
     logger.info(
         f"Adding alerts to incident {incident.id} in database, total {len(fingerprints)} alerts",
@@ -3741,6 +3782,28 @@ def add_alerts_to_incident(
                 for fingerprint in fingerprints
                 if fingerprint not in existing_fingerprints
             }
+
+            # filter out unlinked alerts
+            if exclude_unlinked_alerts:
+                unlinked_alerts = set(
+                    session.exec(
+                        select(LastAlert.fingerprint)
+                        .join(
+                            LastAlertToIncident,
+                            and_(
+                                LastAlertToIncident.tenant_id == LastAlert.tenant_id,
+                                LastAlertToIncident.fingerprint
+                                == LastAlert.fingerprint,
+                            ),
+                        )
+                        .where(
+                            LastAlertToIncident.deleted_at != NULL_FOR_DELETED_AT,
+                            LastAlertToIncident.tenant_id == tenant_id,
+                            LastAlertToIncident.incident_id == incident.id,
+                        )
+                    ).all()
+                )
+                new_fingerprints = new_fingerprints - unlinked_alerts
 
             if not new_fingerprints:
                 return incident
@@ -3811,6 +3874,7 @@ def add_alerts_to_incident(
             session.add(incident)
             session.commit()
             session.refresh(incident)
+
             return incident
 
 
@@ -4237,7 +4301,10 @@ def get_topology_data_by_dynamic_matcher(
             query = query.where(
                 getattr(TopologyService, matcher) == matchers_value[matcher]
             )
-    return session.exec(query).first()
+        # Add joinedload for applications to avoid detached instance error
+        query = query.options(joinedload(TopologyService.applications))
+        service = session.exec(query).first()
+        return service
 
 
 def get_tags(tenant_id):
@@ -4975,3 +5042,36 @@ def get_provider_logs(
             .all()
         )
     return logs
+
+
+def enrich_incidents_with_enrichments(
+    tenant_id: str,
+    incidents: List[Incident],
+    session: Optional[Session] = None,
+) -> List[Incident]:
+    """Enrich incidents with their enrichment data."""
+    if not incidents:
+        return incidents
+
+    with existed_or_new_session(session) as session:
+        # Get all enrichments for these incidents in one query
+        enrichments = session.exec(
+            select(AlertEnrichment).where(
+                AlertEnrichment.tenant_id == tenant_id,
+                AlertEnrichment.alert_fingerprint.in_(
+                    [str(incident.id) for incident in incidents]
+                ),
+            )
+        ).all()
+
+        # Create a mapping of incident_id to enrichment
+        enrichments_map = {
+            enrichment.alert_fingerprint: enrichment.enrichments
+            for enrichment in enrichments
+        }
+
+        # Add enrichments to each incident
+        for incident in incidents:
+            incident._enrichments = enrichments_map.get(str(incident.id), {})
+
+        return incidents

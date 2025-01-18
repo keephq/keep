@@ -1,0 +1,55 @@
+---
+title: 'Monday'
+sidebar_label: 'Monday Provider'
+description: 'Monday Provider allows you to add new pulses to your boards'
+---
+
+## Overview
+
+Monday Provider enables seamless integration with Monday.com, a work operating system that powers teams to run projects and workflows with confidence. With Monday Provider, you can add new pulses to your boards.
+
+## Authentication Parameters
+
+To connect Monday to Keep, you need to get your API Token from Monday. You can use one of the following methods to get your API Token based on your user level:
+
+#### Admin tab
+
+If you are an admin user on your monday.com account, follow these steps to access your API token:
+
+1. Log into your monday.com account.
+2. Click on your avatar/profile picture in the top right corner.
+3. Select Administration > Connections > API.
+4. Copy your personal token. Please note that you can always regenerate a new token, but doing so will cause any previous tokens to expire.
+
+#### Developer tab
+
+If you are a member user or an admin on your monday.com account, follow these steps to access your API token:
+
+1. Log into your monday.com account.
+2. Click on your profile picture in the top right corner.
+3. Select Developers. This will open the Developer Center in another tab.
+4. Click My Access Tokens > Show.
+5. Copy your personal token. Please note that you can always regenerate a new token, but doing so will cause any previous tokens to expire.
+
+## Connecting Monday to Keep
+
+1. Obtain the API Token from Monday.
+2. Add Monday as a provider in Keep.
+3. Give the provider a name and paste the API Token in the `Personal API Token` field and click `Connect`.
+
+## How to use?
+
+1. In order to add a new pulse to your board, you need the following information:
+   - Board ID: The ID of the board where you want to add the pulse.
+   - Group ID: The ID of the group where you want to add the pulse.
+   - Item Name: The name of the pulse you want to add.
+   - Column Values: The values of the columns you want to set for the pulse.
+2. Open the board where you want to add the pulse in the monday.com app.
+3. Hover over the board name in the side panel and click on the three dots that appear and click on ID to copy the board ID.
+4. Hover over the group name in the board and click on the three dots that appear and click on Group ID to copy the group ID.
+5. Item Name is the name of the pulse you want to add.
+6. Column ID and Column Value are the values of the columns you want to set for the pulse. Hover over the column name in the board and click on the three dots that appear and click on Column ID to copy the column ID. The column value is the value you want to set for the column.
+
+## Usefull Links
+- [Monday.com](https://monday.com/)
+- [Example workflow for Monday Provider](https://github.com/keephq/keep/blob/main/examples/workflows/monday_create_pulse.yml)

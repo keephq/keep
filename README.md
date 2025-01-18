@@ -2,7 +2,7 @@
     <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
-<h1 align="center">The open-source alert management and AIOps platform</h1>
+<h1 align="center">The open-source AIOps and alert management platform</h1>
 
 </br>
 
@@ -67,6 +67,12 @@
 <table>
 <tr>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/amazonsqs-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/amazonsqs-icon.png" alt="AmazonSQS"/><br/>
+            Amazon SQS
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/appdynamics-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/appdynamics-icon.png" alt="AppDynamics"/><br/>
             AppDynamics
@@ -96,14 +102,14 @@
             Checkmk
         </a>
     </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/cilium-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/cilium-icon.png" alt="Cilium"/><br/>
             Cilium
         </a>
     </td>
-</tr>
-<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/cloudwatch-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/cloudwatch-icon.png" alt="CloudWatch"/><br/>
@@ -134,14 +140,14 @@
             Elastic
         </a>
     </td>
+  </tr>
+  <tr>
     <td align="center">
         <a href="https://docs.keephq.dev/providers/documentation/gcpmonitoring-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/gcpmonitoring-icon.png" alt="GCP Monitoring"/><br/>
             GCP Monitoring
         </a>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/grafana-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/grafana-icon.png" alt="Grafana"/><br/>
@@ -170,12 +176,6 @@
         <a href="https://docs.keephq.dev/providers/documentation/new-relic-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/newrelic-icon.png" alt="New Relic"/><br/>
             New Relic
-        </a>
-    </td>
-    <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/documentation/openobserve-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/openobserve-icon.png" alt="OpenObserve"/><br/>
-            OpenObserve
         </a>
     </td>
   </tr>
@@ -219,6 +219,12 @@
 </tr>
 <tr>
   <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/openobserve-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/openobserve-icon.png" alt="OpenObserve"/><br/>
+            OpenObserve
+        </a>
+    </td>
+  <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/site24x7-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/site24x7-icon.png" alt="Site24x7"/><br/>
           Site24x7
@@ -248,14 +254,14 @@
           UptimeKuma
         </a>
   </td>
+</tr>
+<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/victoriametrics-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/victoriametrics-icon.png" alt="VictoriaMetrics"/><br/>
           VictoriaMetrics
         </a>
   </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/zabbix-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/zabbix-icon.png" alt="Zabbix"/><br/>
@@ -516,6 +522,12 @@
         <a href="https://docs.keephq.dev/providers/documentation/microsoft-planner-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/microsoft-planner-icon.svg" alt="Microsoft Planner"/><br/>
             Microsoft Planner
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/monday-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/monday-icon.png" alt="Monday"/><br/>
+            Monday
         </a>
     </td>
 </tr>

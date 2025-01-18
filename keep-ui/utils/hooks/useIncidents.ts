@@ -4,7 +4,7 @@ import {
   PaginatedIncidentAlertsDto,
   PaginatedIncidentsDto,
 } from "@/entities/incidents/model";
-import { PaginatedWorkflowExecutionDto } from "@/app/(keep)/workflows/builder/types";
+import { PaginatedWorkflowExecutionDto } from "@/shared/api/workflow-executions";
 import useSWR, { SWRConfiguration } from "swr";
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";

@@ -1,12 +1,12 @@
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Button, Card, Subtitle, Title } from "@tremor/react";
 import { stringify } from "yaml";
-import { Alert } from "./legacy-workflow.types";
+import { LegacyWorkflow } from "./legacy-workflow.types";
 import { YAMLCodeblock } from "@/shared/ui";
 
 interface Props {
   closeModal: () => void;
-  compiledAlert: Alert | string | null;
+  compiledAlert: LegacyWorkflow | string | null;
   id?: string;
   hideCloseButton?: boolean;
 }

@@ -10,7 +10,8 @@ import keep.functions as functions
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertStatus
-from keep.api.models.db.alert import AlertActionType
+from keep.api.models.db.alert import ActionType
+from keep.iohandler.iohandler import IOHandler
 
 
 @pytest.mark.parametrize(
@@ -493,11 +494,11 @@ def test_firing_time_with_manual_resolve(create_alert):
     create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=60))
     # It was manually resolved
     enrichment_bl = EnrichmentsBl(tenant_id=SINGLE_TENANT_UUID)
-    enrichment_bl.enrich_alert(
+    enrichment_bl.enrich_entity(
         fingerprint=fingerprint,
         enrichments={"status": "resolved"},
         dispose_on_new_alert=True,
-        action_type=AlertActionType.GENERIC_ENRICH,
+        action_type=ActionType.GENERIC_ENRICH,
         action_callee="tests",
         action_description="tests",
     )
@@ -757,3 +758,25 @@ def test_is_business_hours_string_input_with_timezone():
     assert (
         functions.is_business_hours("2024-03-25T20:00:00Z", timezone=paris_tz) == False
     )
+
+
+def test_render_without_execution(mocked_context_manager):
+    """
+    Test rendering a template without executing it's internal keep functions.
+    """
+    template = "My yaml is: {{ yaml }}!"
+    context = {"yaml": "keep.is_business_hours(2024-03-25T14:00:00Z)"}
+    mocked_context_manager.get_full_context.return_value = context
+    iohandler = IOHandler(mocked_context_manager)
+    with pytest.raises(Exception):
+        iohandler.render(
+            template,
+            safe=True,
+        )
+    
+    template = "raw_render_without_execution(My yaml is: {{ yaml }}!)"
+    rendered = iohandler.render(
+        template,
+        safe=True,
+    )
+    assert rendered == "My yaml is: keep.is_business_hours(2024-03-25T14:00:00Z)!"

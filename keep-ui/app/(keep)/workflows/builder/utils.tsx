@@ -1,6 +1,6 @@
 import { load, JSON_SCHEMA } from "js-yaml";
 import { Provider } from "../../providers/providers";
-import { Action, Alert } from "./legacy-workflow.types";
+import { Action, LegacyWorkflow } from "./legacy-workflow.types";
 import { v4 as uuidv4 } from "uuid";
 import {
   Definition,
@@ -396,7 +396,9 @@ function getActionsFromCondition(
   return compiledActions;
 }
 
-export function buildAlert(definition: Definition): Alert {
+export function getWorkflowFromDefinition(
+  definition: Definition
+): LegacyWorkflow {
   const alert = definition;
   const alertId = alert.properties.id as string;
   const name = (alert.properties.name as string) ?? "";
@@ -544,8 +546,16 @@ export function buildAlert(definition: Definition): Alert {
     consts: consts,
     steps: steps,
     actions: actions,
-  } as Alert;
+  } as LegacyWorkflow;
 }
+
+export type DefinitionV2 = {
+  value: {
+    sequence: V2Step[];
+    properties: V2Properties;
+  };
+  isValid: boolean;
+};
 
 export function wrapDefinitionV2({
   properties,
@@ -555,7 +565,7 @@ export function wrapDefinitionV2({
   properties: V2Properties;
   sequence: V2Step[];
   isValid?: boolean;
-}) {
+}): DefinitionV2 {
   return {
     value: {
       sequence: sequence,

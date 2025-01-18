@@ -1,3 +1,9 @@
+import { notFound } from "next/navigation";
+import { ApiClient } from "./ApiClient";
+import { KeepApiError } from "./KeepApiError";
+import { createServerApiClient } from "./server";
+import { cache } from "react";
+
 export type Provider = {
   id: string;
   type: string; // This corresponds to the name of the icon, e.g., "slack", "github", etc.
@@ -16,12 +22,10 @@ export type Trigger = {
   value?: string;
 };
 
-export type WorkflowExecution = {
-  id: string;
+export type LastWorkflowExecution = {
+  execution_time: number;
   status: string;
   started: string;
-  execution_time: number;
-  workflow: Workflow;
 };
 
 export type Workflow = {
@@ -40,10 +44,7 @@ export type Workflow = {
   workflow_raw: string;
   workflow_raw_id: string;
   last_execution_started?: string;
-  last_executions?: Pick<
-    WorkflowExecution,
-    "execution_time" | "status" | "started"
-  >[];
+  last_executions?: LastWorkflowExecution[];
   provisioned?: boolean;
 };
 
@@ -90,3 +91,39 @@ export type MockWorkflow = {
   steps: MockStep[];
   actions: MockAction[];
 };
+
+export type WorkflowTemplate = {
+  name: string;
+  workflow: MockWorkflow;
+  workflow_raw: string;
+  workflow_raw_id: string;
+};
+
+export async function getWorkflow(api: ApiClient, id: string) {
+  return await api.get<Workflow>(`/workflows/${id}`);
+}
+
+/**
+ * Fetches a workflow by ID with error handling for 404 cases
+ * @param id - The unique identifier of the workflow to retrieve
+ * @returns Promise containing the workflow data or undefined if not found
+ * @returns {never} If 404 error occurs (handled by Next.js notFound) or if the API request fails for reasons other than 404
+ */
+export async function _getWorkflowWithRedirectSafe(
+  id: string
+): Promise<Workflow | undefined> {
+  try {
+    const api = await createServerApiClient();
+    return await getWorkflow(api, id);
+  } catch (error) {
+    if (error instanceof KeepApiError && error.statusCode === 404) {
+      notFound();
+    } else {
+      console.error(error);
+      return undefined;
+    }
+  }
+}
+
+// cache the function for server side, so we can use it in the layout, metadata and in the page itself
+export const getWorkflowWithRedirectSafe = cache(_getWorkflowWithRedirectSafe);

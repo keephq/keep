@@ -49,6 +49,7 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { getZodSchema } from "./form-validation";
 import TimeAgo from "react-timeago";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { useConfig } from "@/utils/hooks/useConfig";
 import { KeepApiError, KeepApiReadOnlyError } from "@/shared/api";
 import { showErrorToast } from "@/shared/ui";
 import {
@@ -64,6 +65,7 @@ import {
   GroupFields,
 } from "./form-fields";
 import ProviderLogs from "./provider-logs";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -145,6 +147,7 @@ const ProviderForm = ({
   );
 
   const api = useApi();
+  const { data: config } = useConfig();
 
   function installWebhook(provider: Provider) {
     return toast.promise(
@@ -514,7 +517,11 @@ const ProviderForm = ({
 
       <div className="w-full mt-2" key="install_webhook">
         {provider.can_setup_webhook && !installedProvidersMode && (
-          <div className={`${isLocalhost ? "bg-gray-100 p-2 rounded-tremor-default" : ""}`}>
+          <div
+            className={`${
+              isLocalhost ? "bg-gray-100 p-2 rounded-tremor-default" : ""
+            }`}
+          >
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -568,7 +575,9 @@ const ProviderForm = ({
                   color="gray"
                 >
                   <a
-                    href="https://docs.keephq.dev/development/external-url"
+                    href={`${
+                      config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+                    }/development/external-url`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -645,7 +654,9 @@ const ProviderForm = ({
             </Badge>
           )}
           <Link
-            href={`http://docs.keephq.dev/providers/documentation/${provider.type}-provider`}
+            href={`${
+              config?.KEEP_DOCS_URL || "http://docs.keephq.dev"
+            }/providers/documentation/${provider.type}-provider`}
             target="_blank"
           >
             <Icon
@@ -707,7 +718,7 @@ const ProviderForm = ({
                 className="py-0 pb-2.5"
               />
             </div>
-            <Image
+            <DynamicImageProviderIcon
               src={`/icons/${provider.type}-icon.png`}
               width={64}
               height={55}

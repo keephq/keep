@@ -54,7 +54,8 @@
         "alerts/table",
         "alerts/actionmenu",
         "alerts/sidebar",
-        "alerts/presets"
+        "alerts/presets",
+        "alerts/sound"
       ]
     },
     {
@@ -111,7 +112,9 @@
           "group": "Supported Providers",
           "pages": [
             "providers/documentation/aks-provider",
+            "providers/documentation/amazonsqs-provider",
             "providers/documentation/appdynamics-provider",
+            "providers/documentation/s3-provider",
             "providers/documentation/argocd-provider",
             "providers/documentation/auth0-provider",
             "providers/documentation/axiom-provider",
@@ -157,6 +160,7 @@
             "providers/documentation/mattermost-provider",
             "providers/documentation/microsoft-planner-provider",
             "providers/documentation/mock-provider",
+            "providers/documentation/monday-provider",
             "providers/documentation/mongodb-provider",
             "providers/documentation/mysql-provider",
             "providers/documentation/netdata-provider",
