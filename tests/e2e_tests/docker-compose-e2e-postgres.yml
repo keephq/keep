@@ -72,8 +72,8 @@ services:
       - "3001:3000"
     environment:
       - NEXTAUTH_SECRET=secret
-      - NEXTAUTH_URL=https://3001-35c4n0r-keep-j5ok1nvq1vv.ws-us117.gitpod.io
-      - NEXT_PUBLIC_API_URL=https://8081-35c4n0r-keep-j5ok1nvq1vv.ws-us117.gitpod.io
+      - NEXTAUTH_URL=http://localhost:3001
+      - NEXT_PUBLIC_API_URL=http://localhost:8081
       - POSTHOG_KEY=phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
       - POSTHOG_HOST=https://ingest.keephq.dev
       - NEXT_PUBLIC_SENTRY_DSN=https://0d4d59e3105ffe8afa27dcb95a222009@o4505515398922240.ingest.us.sentry.io/4508258058764288
