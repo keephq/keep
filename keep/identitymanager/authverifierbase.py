@@ -113,7 +113,7 @@ class AuthVerifierBase:
         Raises:
             HTTPException: If authentication or authorization fails.
         """
-        self.logger.info("Starting authentication process")
+        self.logger.debug("Starting authentication process")
         if self.read_only and api_key not in self.read_only_bypass_keys:
             # check if the scopes have scopes other than only read
             if any([scope.split(":")[0] != "read" for scope in self.scopes]):
@@ -130,7 +130,7 @@ class AuthVerifierBase:
 
         self.logger.debug("Starting authorization process")
         self.authorize(authenticated_entity)
-        self.logger.info("Authorization successful")
+        self.logger.debug("Authorization successful")
 
         return authenticated_entity
 

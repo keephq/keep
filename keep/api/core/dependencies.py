@@ -28,9 +28,9 @@ async def extract_generic_body(request: Request) -> dict | bytes | FormData:
         return await request.form()
     else:
         try:
-            logger.info("Parsing body as json")
+            logger.debug("Parsing body as json")
             body = await request.json()
-            logger.info("Parsed body as json")
+            logger.debug("Parsed body as json")
             return body
         except Exception:
             logger.debug("Failed to parse body as json, returning raw body")
@@ -38,7 +38,7 @@ async def extract_generic_body(request: Request) -> dict | bytes | FormData:
 
 
 async def get_pusher_client() -> Pusher | None:
-    logger.info("Getting pusher client")
+    logger.debug("Getting pusher client")
     pusher_disabled = os.environ.get("PUSHER_DISABLED", "false") == "true"
     pusher_host = os.environ.get("PUSHER_HOST")
     pusher_app_id = os.environ.get("PUSHER_APP_ID")
@@ -50,7 +50,7 @@ async def get_pusher_client() -> Pusher | None:
         or pusher_app_key is None
         or pusher_app_secret is None
     ):
-        logger.info("Pusher is disabled or missing environment variables")
+        logger.debug("Pusher is disabled or missing environment variables")
         return None
 
     # TODO: defaults on open source no docker
@@ -67,5 +67,5 @@ async def get_pusher_client() -> Pusher | None:
         ssl=False if os.environ.get("PUSHER_USE_SSL", False) is False else True,
         cluster=os.environ.get("PUSHER_CLUSTER"),
     )
-    logging.info("Pusher client initialized")
+    logging.debug("Pusher client initialized")
     return pusher
