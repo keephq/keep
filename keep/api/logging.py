@@ -3,6 +3,7 @@ import inspect
 import logging
 import logging.config
 import os
+import time
 import uuid
 from datetime import datetime
 from threading import Timer
@@ -18,6 +19,10 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 KEEP_STORE_WORKFLOW_LOGS = (
     os.environ.get("KEEP_STORE_WORKFLOW_LOGS", "true").lower() == "true"
+)
+KEEP_UVICORN_ACCESS_LOG_FORMAT = os.environ.get(
+    "KEEP_UVICORN_ACCESS_LOG_FORMAT",
+    '%(t)s %(h)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(L)s',
 )
 
 
@@ -363,6 +368,47 @@ class CustomizedUvicornLogger(logging.Logger):
         )
 
 
+class CustomizedUvicornAccessLogger(logging.Logger):
+    """Custom logger for Uvicorn access logs with Gunicorn-style format variables"""
+
+    def _log(
+        self,
+        level,
+        msg,
+        args,
+        exc_info=None,
+        extra=None,
+        stack_info=False,
+        stacklevel=1,
+    ):
+        if extra and "request_line" in extra:  # This indicates it's an access log
+            try:
+                # Calculate request time if available
+                request_time = ""
+                if "start_time" in extra:
+                    request_time = time.time() - extra["start_time"]
+
+                # Map Uvicorn's variables to Gunicorn's format
+                format_dict = {
+                    "t": datetime.now().strftime("[%d/%b/%Y:%H:%M:%S %z]"),
+                    "h": extra.get("client_addr", "-"),
+                    "r": extra.get("request_line", "-"),
+                    "s": extra.get("status_code", "-"),
+                    "b": extra.get("response_size", "-"),
+                    "f": extra.get("referer", "-"),
+                    "a": extra.get("user_agent", "-"),
+                    "L": f"{request_time:.6f}" if request_time else "-",
+                }
+                print("YYY")
+                msg = KEEP_UVICORN_ACCESS_LOG_FORMAT % format_dict
+            except Exception as e:
+                msg = f"Error formatting access log: {str(e)}"
+
+        logging.Logger._log(
+            self, level, msg, args, exc_info, extra, stack_info, stacklevel
+        )
+
+
 def setup_logging():
     # Add file handler if KEEP_LOG_FILE is set
     if KEEP_LOG_FILE:
@@ -379,3 +425,12 @@ def setup_logging():
     logging.config.dictConfig(CONFIG)
     uvicorn_error_logger = logging.getLogger("uvicorn.error")
     uvicorn_error_logger.__class__ = CustomizedUvicornLogger
+
+    # ADJUST UVICORN ACCESS LOGGER
+    # https://github.com/benoitc/gunicorn/issues/2299
+    # https://github.com/benoitc/gunicorn/issues/2382
+    LOG_FMT = "%(asctime)s - %(otelTraceID)s - %(threadName)s - %(message)s"
+    logger = logging.getLogger("uvicorn.access")
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(LOG_FMT))
+    logger.handlers = [handler]
