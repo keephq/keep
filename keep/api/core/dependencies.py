@@ -37,7 +37,8 @@ async def extract_generic_body(request: Request) -> dict | bytes | FormData:
             return await request.body()
 
 
-def get_pusher_client() -> Pusher | None:
+async def get_pusher_client() -> Pusher | None:
+    logger.info("Getting pusher client")
     pusher_disabled = os.environ.get("PUSHER_DISABLED", "false") == "true"
     pusher_host = os.environ.get("PUSHER_HOST")
     pusher_app_id = os.environ.get("PUSHER_APP_ID")
@@ -49,11 +50,11 @@ def get_pusher_client() -> Pusher | None:
         or pusher_app_key is None
         or pusher_app_secret is None
     ):
-        logger.debug("Pusher is disabled or missing environment variables")
+        logger.info("Pusher is disabled or missing environment variables")
         return None
 
     # TODO: defaults on open source no docker
-    return Pusher(
+    pusher = Pusher(
         host=pusher_host,
         port=(
             int(os.environ.get("PUSHER_PORT"))
@@ -66,3 +67,5 @@ def get_pusher_client() -> Pusher | None:
         ssl=False if os.environ.get("PUSHER_USE_SSL", False) is False else True,
         cluster=os.environ.get("PUSHER_CLUSTER"),
     )
+    logging.info("Pusher client initialized")
+    return pusher
