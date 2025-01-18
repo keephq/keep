@@ -3,7 +3,6 @@ import inspect
 import logging
 import logging.config
 import os
-import time
 import uuid
 from datetime import datetime
 from threading import Timer
@@ -363,47 +362,6 @@ class CustomizedUvicornLogger(logging.Logger):
             frame = frame.f_back
 
         # Call the original _log function to handle the logging with trace_id
-        logging.Logger._log(
-            self, level, msg, args, exc_info, extra, stack_info, stacklevel
-        )
-
-
-class CustomizedUvicornAccessLogger(logging.Logger):
-    """Custom logger for Uvicorn access logs with Gunicorn-style format variables"""
-
-    def _log(
-        self,
-        level,
-        msg,
-        args,
-        exc_info=None,
-        extra=None,
-        stack_info=False,
-        stacklevel=1,
-    ):
-        if extra and "request_line" in extra:  # This indicates it's an access log
-            try:
-                # Calculate request time if available
-                request_time = ""
-                if "start_time" in extra:
-                    request_time = time.time() - extra["start_time"]
-
-                # Map Uvicorn's variables to Gunicorn's format
-                format_dict = {
-                    "t": datetime.now().strftime("[%d/%b/%Y:%H:%M:%S %z]"),
-                    "h": extra.get("client_addr", "-"),
-                    "r": extra.get("request_line", "-"),
-                    "s": extra.get("status_code", "-"),
-                    "b": extra.get("response_size", "-"),
-                    "f": extra.get("referer", "-"),
-                    "a": extra.get("user_agent", "-"),
-                    "L": f"{request_time:.6f}" if request_time else "-",
-                }
-                print("YYY")
-                msg = KEEP_UVICORN_ACCESS_LOG_FORMAT % format_dict
-            except Exception as e:
-                msg = f"Error formatting access log: {str(e)}"
-
         logging.Logger._log(
             self, level, msg, args, exc_info, extra, stack_info, stacklevel
         )
