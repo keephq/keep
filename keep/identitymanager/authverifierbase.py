@@ -91,7 +91,7 @@ class AuthVerifierBase:
                 "KEEP_READ_ONLY_BYPASS_KEY must be set if KEEP_READ_ONLY is enabled"
             )
 
-    def __call__(
+    async def __call__(
         self,
         request: Request,
         api_key: Optional[str] = Security(auth_header),
