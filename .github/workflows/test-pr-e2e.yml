@@ -93,12 +93,12 @@ jobs:
         run: |
           # Add commands to wait for the database to be ready
           if [ "${{ matrix.db_type }}" == "mysql" ]; then
-            until docker exec $(docker ps -qf "name=keep-database") mysqladmin ping -h "localhost" --silent; do
+            until docker exec $(docker ps -qf "name=keep-database-1") mysqladmin ping -h "localhost" --silent; do
               echo "Waiting for MySQL to be ready..."
               sleep 2
             done
           elif [ "${{ matrix.db_type }}" == "postgres" ]; then
-            until docker exec $(docker ps -qf "name=keep-database") pg_isready -h localhost -U keepuser; do
+            until docker exec $(docker ps -qf "name=keep-database-1") pg_isready -h localhost -U keepuser; do
               echo "Waiting for Postgres to be ready..."
               sleep 2
             done
