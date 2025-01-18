@@ -4944,7 +4944,7 @@ def get_last_alert_by_fingerprint(
 def set_last_alert(
     tenant_id: str, alert: Alert, session: Optional[Session] = None, max_retries=3
 ) -> None:
-    logger.info(f"Seting last alert for `{alert.fingerprint}`")
+    logger.debug(f"Seting last alert for `{alert.fingerprint}`")
     with existed_or_new_session(session) as session:
         for attempt in range(max_retries):
             logger.debug(
