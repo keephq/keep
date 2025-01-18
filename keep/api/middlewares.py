@@ -7,8 +7,6 @@ import jwt
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from keep.api.core.db import get_api_key
-
 logger = logging.getLogger(__name__)
 try:
     KEEP_VERSION = metadata.version("keep")
@@ -28,7 +26,8 @@ def _extract_identity(request: Request, attribute="email") -> str:
         if not api_key:
             return "anonymous"
 
-        api_key = get_api_key(api_key)
+        # api_key = get_api_key(api_key)
+        api_key = None
         if api_key:
             return api_key.tenant_id
         return "anonymous"
