@@ -230,7 +230,6 @@ async def lifespan(app: FastAPI):
 def get_app(
     auth_type: IdentityManagerTypes = IdentityManagerTypes.NOAUTH.value,
 ) -> FastAPI:
-    keep.api.logging.setup_logging()
     keep_api_url = config("KEEP_API_URL", default=None)
     if not keep_api_url:
         logger.info(
