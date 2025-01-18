@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
@@ -334,7 +335,7 @@ def get_app(
 
     app.add_middleware(LoggingMiddleware)
     # SHAHAR: uncomment before merging!
-    # app.add_middleware(SlowAPIMiddleware)
+    app.add_middleware(SlowAPIMiddleware)
 
     if config("KEEP_METRICS", default="true", cast=bool):
         Instrumentator(

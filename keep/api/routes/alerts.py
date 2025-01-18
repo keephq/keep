@@ -358,7 +358,7 @@ def create_process_event_task(
     response_model=AlertDto | list[AlertDto],
     status_code=202,
 )
-@limiter.limit(config("KEEP_LIMIT_CONCURRENCY", default="100/minute", cast=str))
+# @limiter.limit(config("KEEP_LIMIT_CONCURRENCY", default="100/minute", cast=str))
 async def receive_generic_event(
     event: AlertDto | list[AlertDto] | dict,
     bg_tasks: BackgroundTasks,
