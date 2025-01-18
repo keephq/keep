@@ -3333,9 +3333,6 @@ def get_last_incidents(
         if filters:
             query = apply_incident_filters(session, filters, query)
 
-        # if cel:
-        #     query = enrich_with_filter_from_cel(query, cel)
-
         if sorting:
             query = query.order_by(sorting.get_order_by(Incident))
 
@@ -3573,7 +3570,7 @@ def get_incident_alerts_and_links_by_incident_id(
 
     if limit is not None and offset is not None:
         query = query.limit(limit).offset(offset)
-    strq = str(query)
+
     return query.all(), total_count
 
 

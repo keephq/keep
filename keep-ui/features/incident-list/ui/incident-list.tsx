@@ -237,10 +237,6 @@ export function IncidentList({
             </div>
           </div>
           <div>
-            {/* {isLoading && (
-              <Loading />
-            )}
-             */}
             <div className="flex flex-row gap-5">
               <FacetsPanelServerSide
                 panelId={"incidents"}

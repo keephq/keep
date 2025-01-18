@@ -35,11 +35,6 @@ def build_facets_data_query(
     """
     provider_type = get_cel_to_sql_provider_for_dialect(dialect)
     instance = provider_type(properties_metadata)
-
-    # if cel:
-    #     sql_filter = instance.convert_to_sql_str(cel)
-    #     base_query = base_query.filter(text(sql_filter))
-
     base_query = base_query.cte("base_query_cte")
 
     # Main Query: JSON Extraction and Counting

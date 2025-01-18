@@ -333,7 +333,6 @@ def get_incident(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:incident"])
     ),
-
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
