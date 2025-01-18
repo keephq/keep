@@ -5,7 +5,7 @@ import requests
 def trigger_alert(provider_name):
     provider = ProvidersFactory.get_provider_class(provider_name)
     requests.post(
-        f"https://8080-35c4n0r-keep-j5ok1nvq1vv.ws-us117.gitpod.io/alerts/event/{provider_name}",
+        f"http://localhost:8080/alerts/event/{provider_name}",
         headers={
             "Content-Type": "application/json",
             "Accept": "application/json",

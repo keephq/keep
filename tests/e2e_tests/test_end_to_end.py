@@ -340,6 +340,7 @@ def test_add_upload_workflow_with_alert_trigger(browser):
         browser.get_by_role("link", name="Workflows").hover()
         browser.get_by_role("link", name="Workflows").click()
         browser.get_by_role("button", name="Upload Workflows").click()
+        browser.wait_for_timeout(5000)
         file_input = browser.locator("#workflowFile")
         file_input.set_input_files(
             [r"./workflow-sample.yaml"]
