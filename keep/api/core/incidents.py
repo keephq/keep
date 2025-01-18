@@ -84,16 +84,16 @@ static_facets = [
         type=FacetType.str
     ),
     FacetDto(
-        id="4e7b1d6e-4c2b-4f8e-9f8e-4c2b4f8e9f8e",
-        property_path="alert.service",
-        name="Service",
+        id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
+        property_path="alert.provider_type",
+        name="Source",
         is_static=True,
         type=FacetType.str
     ),
     FacetDto(
-        id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
-        property_path="alert.provider_type",
-        name="Source",
+        id="4e7b1d6e-4c2b-4f8e-9f8e-4c2b4f8e9f8e",
+        property_path="alert.service",
+        name="Service",
         is_static=True,
         type=FacetType.str
     )

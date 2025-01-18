@@ -1,6 +1,5 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import Loading from "@/app/(keep)/loading";
 import React, { useCallback, useState } from "react";
 import type {
   IncidentDto,
@@ -24,6 +23,7 @@ import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import { useUser } from "@/entities/users/model/useUser";
+import { severityMapping } from "@/entities/alerts/model";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -121,7 +121,7 @@ export function IncidentList({
         );
       }
       if (facetName === "severity") {
-        return <SeverityBorderIcon severity={facetOptionName as UISeverity} />;
+        return <SeverityBorderIcon severity={(severityMapping[Number(facetOptionName)] || facetOptionName) as UISeverity} />;
       }
       if (facetName === "assignee") {
         return <UserStatefulAvatar email={facetOptionName} size="xs" />;
@@ -145,21 +145,7 @@ export function IncidentList({
           />
         );
       }
-      // if (facetKey === "incident") {
-      //   if (incident) {
-      //     return (
-      //       <Icon
-      //         icon={getStatusIcon(incident.status)}
-      //         size="sm"
-      //         color={getStatusColor(incident.status)}
-      //         className="!p-0"
-      //       />
-      //     );
-      //   }
-      //   return (
-      //     <Icon icon={FireIcon} size="sm" className="text-gray-600 !p-0" />
-      //   );
-      // }
+
       return undefined;
     },
     []
@@ -169,16 +155,21 @@ export function IncidentList({
     (facetName: string, facetOptionName: string) => {
       facetName = facetName.toLowerCase();
       
-      if (facetName === "assignee") {
-        if (facetOptionName === "n/a") {
-          return "Not assigned";
+      switch (facetName) {
+        case "assignee":
+          if (facetOptionName === "n/a") {
+            return "Not assigned";
+          }
+          return <AssigneeLabel email={facetOptionName} />;
+        case "dismissed":
+          return facetOptionName === "true" ? "Dismissed" : "Not dismissed";
+        case "severity": {
+            const label = severityMapping[Number(facetOptionName)] || facetOptionName;
+            return <span className="capitalize">{label}</span>;
         }
-        return <AssigneeLabel email={facetOptionName} />;
+        default:
+          return <span className="capitalize">{facetOptionName}</span>;
       }
-      if (facetName === "dismissed") {
-        return facetOptionName === "true" ? ("Dismissed") : ("Not dismissed");
-      }
-      return <span className="capitalize">{facetOptionName}</span>;
     },
     []
   );
