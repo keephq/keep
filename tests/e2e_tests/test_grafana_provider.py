@@ -27,7 +27,7 @@ def get_grafana_access_token(role: str):
     }
     auth = ("admin", "admin")
     service_account = requests.post(
-        f"{GRAFANA_HOST}/api/serviceaccounts",
+        f"{GRAFANA_HOST_LOCAL}/api/serviceaccounts",
         headers=headers,
         json=json_data_service_account,
         auth=auth,
@@ -39,7 +39,7 @@ def get_grafana_access_token(role: str):
     }
 
     token_response = requests.post(
-        f'{GRAFANA_HOST}/api/serviceaccounts/{service_account["id"]}/tokens',
+        f'{GRAFANA_HOST_LOCAL}/api/serviceaccounts/{service_account["id"]}/tokens',
         headers=headers,
         json=json_data__token,
         auth=("admin", "admin"),
