@@ -317,7 +317,7 @@ class WorkflowStore:
                         created_by="system",
                         interval=workflow_interval,
                         is_disabled=workflow_disabled,
-                        workflow_raw=yaml.dump(workflow_yaml, width=99999),
+                        workflow_raw=cyaml.dump(workflow_yaml, width=99999),
                         provisioned=True,
                         provisioned_file=workflow_path,
                     )
