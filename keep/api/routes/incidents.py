@@ -74,7 +74,6 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.topologies.topologies_service import TopologiesService  # noqa
-from celpy import CELParseError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
