@@ -11,11 +11,11 @@ from importlib import metadata
 
 import click
 import requests
-import yaml
 from dotenv import find_dotenv, load_dotenv
 from prettytable import PrettyTable
 
 from keep.api.core.posthog import posthog_client
+from keep.functions import cyaml
 from keep.providers.models.provider_config import ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
@@ -103,7 +103,7 @@ class Info:
         try:
             with open(file=keep_config, mode="r") as f:
                 self.logger.debug("Loading configuration file.")
-                self.config = yaml.safe_load(f) or {}
+                self.config = cyaml.safe_load(f) or {}
                 self.logger.debug("Configuration file loaded.")
 
         except FileNotFoundError:
@@ -123,7 +123,7 @@ class Info:
             self.random_user_id = str(uuid.uuid4())
             self.config["random_user_id"] = self.random_user_id
             with open(file=keep_config, mode="w") as f:
-                yaml.dump(self.config, f)
+                cyaml.dump(self.config, f)
 
         arguments = sys.argv
 
