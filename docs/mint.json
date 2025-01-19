@@ -65,11 +65,16 @@
     {
       "group": "AIOps",
       "pages": [
-        "overview/correlation",
+        {
+          "group": "Correlation",
+          "pages": [
+            "overview/correlation-rules",
+            "overview/correlation-topology"
+          ]
+        },
         "overview/deduplication",
         "overview/enrichment/extraction",
         "overview/enrichment/mapping",
-        "overview/servicetopology",
         "overview/maintenance-windows",
         "overview/workflow-automation"
       ]
