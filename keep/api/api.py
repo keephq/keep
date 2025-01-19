@@ -358,6 +358,10 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
+# SHAHAR:
+# This (and instrument_middleware) is a helper function to wrap the call of a middleware with timing
+# It will log the time it took for the middleware to run
+# It should NOT be used in production!
 def wrap_call(middleware_cls, original_call):
     # if the call is already wrapped, return it
     if hasattr(original_call, "_timing_wrapped"):

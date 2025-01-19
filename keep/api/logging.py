@@ -255,6 +255,11 @@ CONFIG = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
+        "slowapi": {
+            "handlers": ["default"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
         # shut the open telemetry logger down since it keep pprints  <Token var=<ContextVar name='current_context' default={} at was created in a different Context
         #       https://github.com/open-telemetry/opentelemetry-python/issues/2606
         "opentelemetry.context": {

@@ -4,12 +4,12 @@ ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
     PYTHONUNBUFFERED=1
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    iproute2 \
-    net-tools \
-    procps && \
-    rm -rf /var/lib/apt/lists/*
+# RUN apt-get update && \
+#     apt-get install -y --no-install-recommends \
+#     iproute2 \
+#    net-tools \
+#    procps && \
+#    rm -rf /var/lib/apt/lists/*
 
 RUN useradd --user-group --system --create-home --no-log-init keep
 WORKDIR /app
