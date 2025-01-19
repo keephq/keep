@@ -32,6 +32,7 @@ from keep.api.core.db import (
     get_incidents_meta_for_tenant,
     get_last_alerts,
     get_last_incidents,
+    get_rule,
     get_session,
     get_workflow_executions_for_incident_or_alert,
     merge_incidents_to_id,
@@ -214,7 +215,11 @@ def get_incident(
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    incident_dto = IncidentDto.from_db_incident(incident)
+    rule = None
+    if incident.rule_id:
+        rule = get_rule(tenant_id, incident.rule_id)
+
+    incident_dto = IncidentDto.from_db_incident(incident, rule)
 
     return incident_dto
 
@@ -476,16 +481,16 @@ def get_incident_workflows(
         "Fetching incident's workflows",
         extra={"incident_id": incident_id, "tenant_id": tenant_id},
     )
-    workflow_executions, total_count = (
-        get_workflow_executions_for_incident_or_alert(
-            tenant_id=tenant_id,
-            incident_id=str(incident_id),
-            limit=limit,
-            offset=offset,
-        )
+    workflow_executions, total_count = get_workflow_executions_for_incident_or_alert(
+        tenant_id=tenant_id,
+        incident_id=str(incident_id),
+        limit=limit,
+        offset=offset,
     )
 
-    workflow_execution_dtos = [WorkflowExecutionDTO(**we._mapping) for we in workflow_executions]
+    workflow_execution_dtos = [
+        WorkflowExecutionDTO(**we._mapping) for we in workflow_executions
+    ]
 
     paginated_workflow_execution_dtos = WorkflowExecutionsPaginatedResultsDto(
         limit=limit, offset=offset, count=total_count, items=workflow_execution_dtos

@@ -3,7 +3,6 @@
 import { AlertDto } from "@/entities/alerts/model";
 import { IncidentDto } from "@/entities/incidents/model";
 import { useUsers } from "@/entities/users/model/useUsers";
-import Image from "next/image";
 import UserAvatar from "@/components/navbar/UserAvatar";
 import "./incident-activity.css";
 import {
@@ -17,6 +16,7 @@ import { IncidentActivityComment } from "./ui/IncidentActivityComment";
 import { useMemo } from "react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 interface IncidentActivity {
   id: string;
@@ -144,7 +144,7 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
       const source = (activity.initiator as AlertDto)?.source?.[0];
       const imagePath = `/icons/${source}-icon.png`;
       return (
-        <Image
+        <DynamicImageProviderIcon
           key={`icon-${activity.id}`}
           alt={source}
           height={24}
