@@ -1,18 +1,20 @@
 ---
-title: "Topology based Correlation"
+title: "Topology Correlation"
 ---
 
 The Topology Processor is a core component of Keep that helps correlate alerts based on your infrastructure's topology, creating meaningful incidents that reflect the relationships between your services and applications.
 It automatically analyzes incoming alerts and their relationship to your infrastructure topology, creating incidents when multiple related services or components of an application are affected.
 
-<Tip>
-  The Topology Processor is disabled by default. To enable it, set the
-  environment variable `KEEP_TOPOLOGY_PROCESSOR=true`.
-</Tip>
+Read more about [Service Topology](/overview/servicetopology).
 
 <Frame width="100" height="200">
   <img height="10" src="/images/correlation-topology.png" />
 </Frame>
+
+<Tip>
+  The Topology Processor is disabled by default. To enable it, set the
+  environment variable `KEEP_TOPOLOGY_PROCESSOR=true`.
+</Tip>
 
 ## How It Works
 

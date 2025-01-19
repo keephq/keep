@@ -76,6 +76,7 @@
         "overview/enrichment/extraction",
         "overview/enrichment/mapping",
         "overview/maintenance-windows",
+        "overview/servicetopology",
         "overview/workflow-automation"
       ]
     },
