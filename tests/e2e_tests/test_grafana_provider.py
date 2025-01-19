@@ -154,30 +154,22 @@ def test_grafana_provider(browser):
                     print("Failed to load alerts after maximum attempts.")
                     raise Exception("Failed to load alerts after maximum attempts.")
 
-        locator = browser.locator(
-            f"button:has-text('Grafana'):has-text('Connected'):has-text('{provider_name}')"
-        )
+        providers_to_delete = [provider_name_readonly, provider_name_success]
 
-        # Get the count of matching elements
-        count = locator.count()
-
-        if count == 0:
-            raise Exception("No matching providers found.")
-
-        for index in range(count):
-            count -= 1
+        for provider_to_delete in providers_to_delete:
             # Perform actions on each matching element
-            item = locator.nth(index)
-            item.click()
+            browser.locator(
+                f"button:has-text('Grafana'):has-text('Connected'):has-text('{provider_to_delete}')"
+            ).click()
             browser.once("dialog", lambda dialog: dialog.accept())
             browser.get_by_role("button", name="Delete").click()
 
             # Assert provider was deleted
             expect(
                 browser.locator(
-                    f"button:has-text('Grafana'):has-text('Connected'):has-text('{provider_name}')"
+                    f"button:has-text('Grafana'):has-text('Connected'):has-text('{provider_to_delete}')"
                 )
-            ).to_have_count(count)
+            ).to_have_count(0)
 
     except Exception:
         # Current file + test name for unique html and png dump.
