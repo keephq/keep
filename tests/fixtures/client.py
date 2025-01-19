@@ -11,6 +11,7 @@ from keep.api.models.db.tenant import TenantApiKey
 
 @pytest.fixture
 def test_app(monkeypatch, request):
+    monkeypatch.setenv("KEEP_USE_LIMITER", "false")
     # Check if request.param is a dict or a string
     if isinstance(request.param, dict):
         # Set environment variables based on the provided dictionary
@@ -52,11 +53,12 @@ def test_app(monkeypatch, request):
 # Fixture for TestClient using the test_app fixture
 @pytest.fixture
 def client(test_app, db_session, monkeypatch):
-    # disable pusher
+    # Your existing environment setup
     monkeypatch.setenv("PUSHER_DISABLED", "true")
     monkeypatch.setenv("KEEP_DEBUG_TASKS", "true")
     monkeypatch.setenv("LOGGING_LEVEL", "DEBUG")
     monkeypatch.setenv("SQLALCHEMY_WARN_20", "1")
+
     with TestClient(test_app) as client:
         yield client
 
