@@ -84,6 +84,7 @@ CONSUMER = config("CONSUMER", default="true", cast=bool)
 TOPOLOGY = config("KEEP_TOPOLOGY_PROCESSOR", default="false", cast=bool)
 KEEP_DEBUG_TASKS = config("KEEP_DEBUG_TASKS", default="false", cast=bool)
 KEEP_DEBUG_MIDDLEWARES = config("KEEP_DEBUG_MIDDLEWARES", default="false", cast=bool)
+KEEP_USE_LIMITER = config("KEEP_USE_LIMITER", default="false", cast=bool)
 
 AUTH_TYPE = config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH.value).lower()
 try:
@@ -334,7 +335,8 @@ def get_app(
         )
 
     app.add_middleware(LoggingMiddleware)
-    app.add_middleware(SlowAPIMiddleware)
+    if KEEP_USE_LIMITER:
+        app.add_middleware(SlowAPIMiddleware)
 
     if config("KEEP_METRICS", default="true", cast=bool):
         Instrumentator(
