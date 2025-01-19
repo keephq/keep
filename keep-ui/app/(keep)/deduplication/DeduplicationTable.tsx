@@ -13,7 +13,7 @@ import {
   Badge,
   SparkAreaChart,
 } from "@tremor/react";
-import { Tooltip } from "@/shared/ui/Tooltip";
+import { Tooltip } from "@/shared/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   createColumnHelper,
@@ -25,17 +25,16 @@ import { DeduplicationRule } from "@/app/(keep)/deduplication/models";
 import DeduplicationSidebar from "@/app/(keep)/deduplication/DeduplicationSidebar";
 import {
   TrashIcon,
-  PauseIcon,
   PlusIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
-import Image from "next/image";
 import { useProviders } from "utils/hooks/useProviders";
 import { useApi } from "@/shared/lib/hooks/useApi";
 
 const columnHelper = createColumnHelper<DeduplicationRule>();
 
 import { KeyedMutator } from "swr";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 type DeduplicationTableProps = {
   deduplicationRules: DeduplicationRule[];
@@ -121,13 +120,25 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       "Represents the percentage of alerts successfully deduplicated. Higher values indicate better deduplication efficiency, meaning fewer redundant alerts.",
   };
 
+  function resolveDeleteButtonTooltip(deduplicationRule: DeduplicationRule): string {
+    if (deduplicationRule.default) {
+      return "Cannot delete default rule";
+    }
+
+    if (deduplicationRule.is_provisioned) {
+      return "Cannot delete provisioned rule.";
+    }
+
+    return "Delete Rule"
+  }
+
   const DEDUPLICATION_TABLE_COLS = useMemo(
     () => [
       columnHelper.accessor("provider_type", {
         header: "",
         cell: (info) => (
           <div className="flex items-center w-8">
-            <Image
+            <DynamicImageProviderIcon
               className="inline-block"
               key={info.getValue()}
               alt={info.getValue()}
@@ -266,11 +277,9 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
               variant="secondary"
               icon={TrashIcon}
               tooltip={
-                info.row.original.default
-                  ? "Cannot delete default rule"
-                  : "Delete Rule"
+                resolveDeleteButtonTooltip(info.row.original)
               }
-              disabled={info.row.original.default}
+              disabled={info.row.original.default || info.row.original.is_provisioned}
               onClick={(e) => handleDeleteRule(info.row.original, e)}
             />
           </div>

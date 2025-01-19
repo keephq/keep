@@ -1,15 +1,17 @@
 import React, { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import NodeMenu from "./NodeMenu";
-import useStore, { FlowNode, V2Step } from "./builder-store";
+import useStore from "./builder-store";
 import Image from "next/image";
 import { GoPlus } from "react-icons/go";
 import { MdNotStarted } from "react-icons/md";
 import { GoSquareFill } from "react-icons/go";
 import { PiDiamondsFourFill, PiSquareLogoFill } from "react-icons/pi";
 import { BiSolidError } from "react-icons/bi";
-import { FaHandPointer } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { FlowNode } from "@/app/(keep)/workflows/builder/types";
+import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 function IconUrlProvider(data: FlowNode["data"]) {
   const { componentType, type } = data || {};
@@ -46,7 +48,7 @@ function CustomNode({ id, data }: FlowNode) {
     const { type } = step;
     switch (type) {
       case "manual":
-        return <FaHandPointer size={32} />;
+        return <CursorArrowRaysIcon className="size-8" />;
       case "interval":
         return <PiDiamondsFourFill size={32} />;
     }
@@ -71,6 +73,18 @@ function CustomNode({ id, data }: FlowNode) {
       return;
     }
     setSelectedNode(id);
+  }
+
+  if (data.id === "trigger_start" || data.id === "trigger_end") {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <span className="rounded-full bg-orange-50 border border-orange-500 px-4 py-2 flex items-center justify-center">
+          {data.name}
+        </span>
+        <Handle type="target" position={Position.Top} className="w-32" />
+        <Handle type="source" position={Position.Bottom} className="w-32" />
+      </div>
+    );
   }
 
   return (
@@ -104,7 +118,7 @@ function CustomNode({ id, data }: FlowNode) {
             <div className="container p-2 flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
               {getTriggerIcon(data)}
               {!!data && !["interval", "manual"].includes(data.type) && (
-                <Image
+                <DynamicImageProviderIcon
                   src={IconUrlProvider(data) || "/keep.png"}
                   alt={data?.type}
                   className="object-cover w-8 h-8 rounded-full bg-gray-100"

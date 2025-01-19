@@ -157,6 +157,18 @@ Sentry configuration controls Keep's integration with Sentry for error monitorin
 |:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
 | **SENTRY_DISABLED** | Disables Sentry integration | No | "false" | "true" or "false" |
 
+
+### Frigade
+
+<Info>
+Frigade configuration controls Keep's integration with the Frigade onboarding platform.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **FRIGADE_DISABLED** | Disables Frigade integration | No | "false" | "true" or "false" |
+
+
 ### Ngrok
 <Info>
 Ngrok configuration enables secure tunneling to your Keep instance. These settings are particularly useful for development or when you need to expose your local Keep instance to the internet securely.
@@ -207,6 +219,24 @@ ARQ (Asynchronous Task Queue) configuration controls Keep's background task proc
 | **ARQ_KEEP_RESULT** | Duration to keep job results (in seconds) | No | 3600 | Positive integer |
 | **ARQ_EXPIRES** | Default job expiration time (in seconds) | No | 3600 | Positive integer |
 | **ARQ_EXPIRES_AI** | AI job expiration time (in seconds) | No | 3600000 | Positive integer |
+
+### Rate Limiting
+<Info>
+Rate limiting configuration controls how many requests can be made to Keep's API endpoints within a specified time period. This helps prevent abuse and ensures system stability.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **KEEP_USE_LIMITER** | Enables or disables rate limiting | No | "false" | "true" or "false" |
+| **KEEP_LIMIT_CONCURRENCY** | Sets the rate limit for API endpoints | No | "100/minute" | Format: "{number}/{interval}" where interval can be "second", "minute", "hour", "day" |
+
+<Note>
+Currently, rate limiting is applied to the following endpoints:
+- POST `/alerts/event` - Generic event ingestion endpoint
+- POST `/alerts/{provider_type}` - Provider-specific event ingestion endpoints
+
+These endpoints are rate-limited according to the `KEEP_LIMIT_CONCURRENCY` setting when `KEEP_USE_LIMITER` is enabled.
+</Note>
 
 ## Frontend Environment Variables
 <Info>

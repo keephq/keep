@@ -66,32 +66,6 @@ export type FlowNode = Node & {
   isNested: boolean;
 };
 
-const initialNodes: Partial<FlowNode>[] = [
-  {
-    id: "a",
-    position: { x: 0, y: 0 },
-    data: { label: "Node A", type: "custom" },
-    type: "custom",
-  },
-  {
-    id: "b",
-    position: { x: 0, y: 100 },
-    data: { label: "Node B", type: "custom" },
-    type: "custom",
-  },
-  {
-    id: "c",
-    position: { x: 0, y: 200 },
-    data: { label: "Node C", type: "custom" },
-    type: "custom",
-  },
-];
-
-const initialEdges: Edge[] = [
-  { id: "a->b", type: "custom-edge", source: "a", target: "b" },
-  { id: "b->c", type: "custom-edge", source: "b", target: "c" },
-];
-
 export type FlowState = {
   nodes: FlowNode[];
   edges: Edge[];
@@ -157,7 +131,27 @@ export type FlowState = {
   setSynced: (synced: boolean) => void;
   canDeploy: boolean;
   setCanDeploy: (deploy: boolean) => void;
+  reset: () => void;
 };
+
+export type FlowStateValues = Pick<
+  FlowState,
+  | "nodes"
+  | "edges"
+  | "selectedNode"
+  | "v2Properties"
+  | "openGlobalEditor"
+  | "stepEditorOpenForNode"
+  | "toolboxConfiguration"
+  | "isLayouted"
+  | "selectedEdge"
+  | "changes"
+  | "firstInitilisationDone"
+  | "lastSavedChanges"
+  | "errorNode"
+  | "synced"
+  | "canDeploy"
+>;
 
 export type StoreGet = () => FlowState;
 export type StoreSet = (
@@ -292,7 +286,7 @@ function addNodeBetween(
   }
 }
 
-const useStore = create<FlowState>((set, get) => ({
+const defaultState: FlowStateValues = {
   nodes: [],
   edges: [],
   selectedNode: null,
@@ -308,6 +302,10 @@ const useStore = create<FlowState>((set, get) => ({
   errorNode: null,
   synced: true,
   canDeploy: false,
+};
+
+const useStore = create<FlowState>((set, get) => ({
+  ...defaultState,
   setCanDeploy: (deploy) => set({ canDeploy: deploy }),
   setSynced: (sync) => set({ synced: sync }),
   setErrorNode: (id) => set({ errorNode: id }),
@@ -579,6 +577,7 @@ const useStore = create<FlowState>((set, get) => ({
     };
     set({ nodes: [...get().nodes, newNode] });
   },
+  reset: () => set(defaultState),
 }));
 
 export default useStore;

@@ -19,13 +19,11 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import Image from "next/image";
 import IncidentTableComponent from "./incident-table-component";
 import Markdown from "react-markdown";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import ManualRunWorkflowModal from "@/app/(keep)/workflows/manual-run-workflow-modal";
-import AlertTableCheckbox from "@/app/(keep)/alerts/alert-table-checkbox";
 import { Button, Link } from "@/components/ui";
 import { MergeIncidentsModal } from "@/features/merge-incidents";
 import { IncidentDropdownMenu } from "./incident-dropdown-menu";
@@ -34,8 +32,13 @@ import { IncidentChangeStatusSelect } from "@/features/change-incident-status/";
 import { useIncidentActions } from "@/entities/incidents/model";
 import { IncidentSeverityBadge } from "@/entities/incidents/ui";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
-import { DateTimeField, TablePagination } from "@/shared/ui";
+import {
+  DateTimeField,
+  TableIndeterminateCheckbox,
+  TablePagination,
+} from "@/shared/ui";
 import { UserStatefulAvatar } from "@/entities/users/ui";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -120,8 +123,10 @@ export default function IncidentsTable({
   const columns = [
     columnHelper.display({
       id: "selected",
+      minSize: 32,
+      maxSize: 32,
       header: (context) => (
-        <AlertTableCheckbox
+        <TableIndeterminateCheckbox
           checked={context.table.getIsAllRowsSelected()}
           indeterminate={context.table.getIsSomeRowsSelected()}
           onChange={context.table.getToggleAllRowsSelectedHandler()}
@@ -129,7 +134,7 @@ export default function IncidentsTable({
         />
       ),
       cell: (context) => (
-        <AlertTableCheckbox
+        <TableIndeterminateCheckbox
           checked={context.row.getIsSelected()}
           indeterminate={context.row.getIsSomeSelected()}
           onChange={context.row.getToggleSelectedHandler()}
@@ -186,7 +191,7 @@ export default function IncidentsTable({
       header: "Sources",
       cell: ({ row }) =>
         row.original.alert_sources.map((alert_source, index) => (
-          <Image
+          <DynamicImageProviderIcon
             key={alert_source}
             className={clsx(
               "inline-block",
@@ -280,7 +285,6 @@ export default function IncidentsTable({
     enableSorting: true,
     enableMultiSort: false,
     manualSorting: true,
-    debugTable: true,
   });
 
   const selectedRowIds = Object.entries(
@@ -310,11 +314,11 @@ export default function IncidentsTable({
       return;
     }
 
-    if (
-      !confirm(
-        `Are you sure you want to delete ${selectedRowIds.length} incidents? This action cannot be undone.`
-      )
-    ) {
+    const isConfirmed = confirm(
+      `Are you sure you want to delete ${selectedRowIds.length} incidents? This action cannot be undone.`
+    );
+
+    if (!isConfirmed) {
       return;
     }
 

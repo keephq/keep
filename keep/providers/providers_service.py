@@ -8,8 +8,13 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from keep.api.core.db import engine, get_all_provisioned_providers, get_provider_by_name
-from keep.api.models.db.provider import Provider
+from keep.api.core.db import (
+    engine,
+    get_all_provisioned_providers,
+    get_provider_by_name,
+    get_provider_logs,
+)
+from keep.api.models.db.provider import Provider, ProviderExecutionLog
 from keep.api.models.provider import Provider as ProviderModel
 from keep.contextmanager.contextmanager import ContextManager
 from keep.event_subscriber.event_subscriber import EventSubscriber
@@ -192,6 +197,10 @@ class ProvidersService:
 
         pulling_enabled = provider_info.pop("pulling_enabled", True)
 
+        # if pulling_enabled is "true" or "false" cast it to boolean
+        if isinstance(pulling_enabled, str):
+            pulling_enabled = pulling_enabled.lower() == "true"
+
         provider_config = {
             "authentication": provider_info,
             "name": provider.name,
@@ -227,34 +236,48 @@ class ProvidersService:
     def delete_provider(
         tenant_id: str, provider_id: str, session: Session, allow_provisioned=False
     ):
-        provider = session.exec(
+        provider_model: Provider = session.exec(
             select(Provider).where(
                 (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
             )
         ).one_or_none()
 
-        if not provider:
+        if not provider_model:
             raise HTTPException(404, detail="Provider not found")
 
-        if provider.provisioned and not allow_provisioned:
+        if provider_model.provisioned and not allow_provisioned:
             raise HTTPException(403, detail="Cannot delete a provisioned provider")
 
         context_manager = ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+        config = secret_manager.read_secret(provider_model.configuration_key, is_json=True)
+        provider = ProvidersFactory.get_provider(
+                context_manager, provider_model.id, provider_model.type, config
+            )
 
         try:
-            secret_manager.delete_secret(provider.configuration_key)
+            secret_manager.delete_secret(provider_model.configuration_key)
         except Exception:
             logger.exception("Failed to delete the provider secret")
 
-        if provider.consumer:
+        if provider_model.consumer:
             try:
                 event_subscriber = EventSubscriber.get_instance()
-                event_subscriber.remove_consumer(provider)
+                event_subscriber.remove_consumer(provider_model)
             except Exception:
                 logger.exception("Failed to unregister provider as a consumer")
 
-        session.delete(provider)
+        try:
+            provider.clean_up()
+        except NotImplementedError:
+            logger.info(
+                "Being deleted provider of type %s does not have a clean_up method",
+                provider_model.type
+            )
+        except Exception:
+            logger.exception(msg="Failed to clean up provider")
+
+        session.delete(provider_model)
         session.commit()
 
     @staticmethod
@@ -334,3 +357,9 @@ class ProvidersService:
             except Exception:
                 logger.exception(f"Failed to provision provider {provider_name}")
                 continue
+
+    @staticmethod
+    def get_provider_logs(
+        tenant_id: str, provider_id: str
+    ) -> List[ProviderExecutionLog]:
+        return get_provider_logs(tenant_id, provider_id)

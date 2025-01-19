@@ -1,20 +1,19 @@
 import { Fragment } from "react";
-import Image from "next/image";
 import { Dialog, Transition } from "@headlessui/react";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { Button, Title, Badge, Divider } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import AlertTimeline from "./alert-timeline";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { TopologyMap } from "../topology/ui/map";
 import { TopologySearchProvider } from "@/app/(keep)/topology/TopologySearchContext";
-import { AlertSeverityLabel } from "./alert-severity-border";
-import { FieldHeader } from "@/shared/ui/FieldHeader";
+import { FieldHeader, SeverityLabel, UISeverity, Tooltip } from "@/shared/ui";
 import { QuestionMarkCircleIcon } from "@heroicons/react/20/solid";
-import { Tooltip } from "@/shared/ui/Tooltip";
 import { Link } from "@/components/ui";
+import { DynamicImageProviderIcon } from "@/components/ui";
 import { useProviders } from "@/utils/hooks/useProviders";
 import AlertMenu from "./alert-menu";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -46,6 +45,8 @@ const AlertSidebar = ({
   const providerName =
     providers?.installed_providers.find((p) => p.id === alert?.providerId)
       ?.display_name || alert?.providerId;
+
+  const { data: config } = useConfig();
 
   const handleRefresh = async () => {
     console.log("Refresh button clicked");
@@ -82,8 +83,6 @@ const AlertSidebar = ({
                   alert={alert!}
                   presetName="feed"
                   isInSidebar={true}
-                  isMenuOpen={isOpen}
-                  setIsMenuOpen={toggle}
                   setRunWorkflowModalAlert={setRunWorkflowModalAlert}
                   setDismissModalAlert={setDismissModalAlert}
                   setChangeStatusAlert={setChangeStatusAlert}
@@ -95,7 +94,9 @@ const AlertSidebar = ({
                   as={Title}
                 >
                   {alert?.severity && (
-                    <AlertSeverityLabel severity={alert.severity} />
+                    <SeverityLabel
+                      severity={alert.severity as unknown as UISeverity}
+                    />
                   )}
                   {alert?.name ? alert.name : "Alert Details"}
                 </Dialog.Title>
@@ -119,7 +120,7 @@ const AlertSidebar = ({
                   )}
                   <p>
                     <FieldHeader>Source</FieldHeader>
-                    <Image
+                    <DynamicImageProviderIcon
                       src={`/icons/${alert.source![0]}-icon.png`}
                       alt={alert.source![0]}
                       width={24}
@@ -142,7 +143,10 @@ const AlertSidebar = ({
                             alert instances in Keep. Every provider declares the
                             fields fingerprints are calculated upon.{" "}
                             <Link
-                              href="https://docs.keephq.dev/providers/fingerprints#fingerprints"
+                              href={`${
+                                config?.KEEP_DOCS_URL ||
+                                "https://docs.keephq.dev"
+                              }/providers/fingerprints#fingerprints`}
                               className="text-white"
                             >
                               Docs

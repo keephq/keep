@@ -13,7 +13,7 @@ import {
   useTopologySearchContext,
 } from "../../TopologySearchContext";
 import { ApplicationModal } from "@/app/(keep)/topology/ui/applications/application-modal";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 type ModalState = {
   isOpen: boolean;
@@ -133,7 +133,7 @@ export function ApplicationsList({
                 variant="primary"
                 color="orange"
                 onClick={() => {
-                  setModalState(initialModalState);
+                  setModalState({ ...initialModalState, isOpen: true });
                 }}
               >
                 Add Application

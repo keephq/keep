@@ -1,4 +1,3 @@
-
 services:
   keep-database:
     image: postgres:13
@@ -24,6 +23,7 @@ services:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
       - SENTRY_DISABLED=true
 
   keep-backend:
@@ -35,9 +35,11 @@ services:
       dockerfile: docker/Dockerfile.api
     environment:
       - AUTH_TYPE=NO_AUTH
-      - DATABASE_CONNECTION_STRING=postgresql://keepuser:keeppassword@keep-database:5432/keepdb
+      - DATABASE_CONNECTION_STRING=postgresql+psycopg2://keepuser:keeppassword@keep-database:5432/keepdb
       - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
+      - SQLALCHEMY_WARN_20=1
     depends_on:
       - keep-database
 

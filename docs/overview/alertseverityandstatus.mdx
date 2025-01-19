@@ -1,0 +1,48 @@
+---
+title: "Alerts Severity and Status"
+---
+
+In Keep, alerts are treated as first-class citizens, with clearly defined severities and statuses to aid in quick and efficient response.
+
+
+## Alert Severity
+Alert severity in Keep is classified into five categories, helping teams prioritize their response based on the urgency and impact of the alert.
+
+| Severity Level | Description                                           | Expected Value |
+|----------------|-------------------------------------------------------|----------------|
+| CRITICAL       | Requires immediate action.                            | "critical"     |
+| HIGH           | Needs to be addressed soon.                           | "high"         |
+| WARNING        | Indicates a ppotential problem.                        | "warning"      |
+| INFO           | Provides information, no immediate action required.   | "info"         |
+| LOW            | Minor issues or lowest priority.                      | "low"          |
+
+## Alert Status
+The status of an alert in Keep reflects its current state in the alert lifecycle.
+
+| Status       | Description                                                                 | Expected Value |
+|--------------|-----------------------------------------------------------------------------|----------------|
+| FIRING       | Active alert indicating an ongoing issue.                                   | "firing"       |
+| RESOLVED     | The issue has been resolved, and the alert is no longer active.             | "resolved"     |
+| ACKNOWLEDGED | The alert has been acknowledged but not resolved.                           | "acknowledged" |
+| SUPPRESSED   | Alert is suppressed due to various reasons.                                 | "suppressed"   |
+| PENDING      | No Data or insufficient data to determine the alert state.                  | "pending"      |
+
+
+## Provider Alert Mappings
+Different providers might have their specific ways of defining and handling alert severity and status.
+Keep standardizes these variations by mapping them to the defined enums (AlertSeverity and AlertStatus).
+
+Here's how various providers align with Keep's alert system:
+
+| Provider      | Severity Mapping                                                               | Status Mapping                                                                                                  |
+|---------------|--------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| CloudWatch    | N/A                                                                            | ALARM -> FIRING, OK -> RESOLVED, INSUFFICIENT_DATA -> PENDING                                                   |
+| Prometheus    | "critical" -> CRITICAL  "warning" -> WARNING, "info" -> INFO, "low" -> LOW     | "firing" -> FIRING, "resolved" -> RESOLVED                                                                     |
+| Datadog       | "P4" -> INFO, "P3" -> WARNING, "P2" -> HIGH, "P1" -> CRITICAL                  | "Triggered" -> FIRING, "Recovered" -> RESOLVED, "Muted" -> SUPPRESSED                                          |
+| PagerDuty     | "P1" -> CRITICAL, "P2" -> HIGH, "P3" -> WARNING, "P4" -> INFO                  | "triggered" -> FIRING, "acknowledged" -> ACKNOWLEDGED, "resolved" -> RESOLVED                                  |
+| Pingdom       | N/A                                                                            | "down" -> FIRING, "up" -> RESOLVED, "paused" -> SUPPRESSED                                                      |
+| Dynatrace     | "critical" -> CRITICAL, "warning" -> WARNING, "info" -> INFO                   | "open" -> FIRING, "closed" -> RESOLVED, "acknowledged" -> ACKNOWLEDGED                                         |
+| Grafana       | "critical" -> CRITICAL, "high" -> HIGH, "warning" -> WARNING, "info" -> INFO   | "ok" -> RESOLVED, "paused" -> SUPPRESSED, "alerting" -> FIRING, "pending" -> PENDING, "no_data" -> PENDING     |
+| New Relic     | "critical" -> CRITICAL, "warning" -> WARNING, "info" -> INFO                   | "open" -> FIRING, "closed" -> RESOLVED, "acknowledged" -> ACKNOWLEDGED                                         |
+| Sentry        | "fatal" -> CRITICAL, "error" -> HIGH, "warning" -> WARNING, "info" -> INFO, "debug" -> LOW | "resolved" -> RESOLVED, "unresolved" -> FIRING, "ignored" -> SUPPRESSED |
+| Zabbix        | "not_classified" -> LOW, "information" -> INFO, "warning" -> WARNING, "average" -> WARNING, "high" -> HIGH, "disaster" -> CRITICAL | "problem" -> FIRING, "ok" -> RESOLVED, "acknowledged" -> ACKNOWLEDGED, "suppressed" -> SUPPRESSED |

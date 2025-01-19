@@ -1,30 +1,28 @@
-import { Menu, Portal, Transition } from "@headlessui/react";
-import { Fragment, useEffect } from "react";
-import { Icon } from "@tremor/react";
+import { Menu } from "@headlessui/react";
+import { useCallback, useMemo } from "react";
 import {
   ChevronDoubleRightIcon,
   ArchiveBoxIcon,
-  EllipsisHorizontalIcon,
   PlusIcon,
   UserPlusIcon,
   PlayIcon,
   EyeIcon,
   AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/outline";
+import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import { IoNotificationsOffOutline } from "react-icons/io5";
-import Link from "next/link";
 import { ProviderMethod } from "@/app/(keep)/providers/providers";
-import { AlertDto } from "./models";
-import { useFloating } from "@floating-ui/react";
+import { AlertDto } from "@/entities/alerts/model";
 import { useProviders } from "utils/hooks/useProviders";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { DropdownMenu } from "@/shared/ui";
+import { ElementType } from "react";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 interface Props {
   alert: AlertDto;
-  isMenuOpen?: boolean;
-  setIsMenuOpen?: (key: string) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[]) => void;
   setChangeStatusAlert?: (alert: AlertDto) => void;
@@ -33,10 +31,16 @@ interface Props {
   setIsIncidentSelectorOpen?: (open: boolean) => void;
 }
 
+interface MenuItem {
+  icon: ElementType;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  show?: boolean;
+}
+
 export default function AlertMenu({
   alert,
-  isMenuOpen,
-  setIsMenuOpen,
   setRunWorkflowModalAlert,
   setDismissModalAlert,
   setChangeStatusAlert,
@@ -55,347 +59,199 @@ export default function AlertMenu({
   const { usePresetAlerts } = useAlerts();
   const { mutate } = usePresetAlerts(presetName, { revalidateOnMount: false });
 
-  const { refs, x, y } = useFloating();
-
-  const alertName = alert.name;
   const fingerprint = alert.fingerprint;
-  const alertSource = alert.source![0];
 
   const provider = installedProviders.find((p) => p.type === alert.source[0]);
 
-  const DynamicIcon = (props: any) => (
-    <svg
-      width="24px"
-      height="24px"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      {...props}
-    >
-      {" "}
-      <image
-        id="image0"
-        width={"24"}
-        height={"24"}
-        href={`/icons/${alert.source![0]}-icon.png`}
-      />
-    </svg>
+  const onDismiss = useCallback(async () => {
+    setDismissModalAlert?.([alert]);
+  }, [alert, setDismissModalAlert]);
+
+  const callAssignEndpoint = useCallback(
+    async (unassign: boolean = false) => {
+      if (
+        confirm(
+          "After assigning this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
+        )
+      ) {
+        const res = await api.post(
+          `/alerts/${fingerprint}/assign/${alert.lastReceived.toISOString()}`
+        );
+        if (res.ok) {
+          await mutate();
+        }
+      }
+    },
+    [alert, fingerprint, api, mutate]
   );
 
-  const onDismiss = async () => {
-    setDismissModalAlert?.([alert]);
-  };
-
-  const callAssignEndpoint = async (unassign: boolean = false) => {
-    if (
-      confirm(
-        "After assigning this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
-      )
-    ) {
-      const res = await api.post(
-        `/alerts/${fingerprint}/assign/${alert.lastReceived.toISOString()}`
-      );
-      if (res.ok) {
-        await mutate();
+  const isMethodEnabled = useCallback(
+    (method: ProviderMethod) => {
+      if (provider) {
+        return method.scopes.every(
+          (scope) => provider.validatedScopes[scope] === true
+        );
       }
-    }
-  };
 
-  const isMethodEnabled = (method: ProviderMethod) => {
-    if (provider) {
-      return method.scopes.every(
-        (scope) => provider.validatedScopes[scope] === true
+      return false;
+    },
+    [provider]
+  );
+
+  const openMethodModal = useCallback(
+    (method: ProviderMethod) => {
+      router.replace(
+        `/alerts/${presetName}?methodName=${method.name}&providerId=${
+          provider!.id
+        }&alertFingerprint=${alert.fingerprint}`,
+        {
+          scroll: false,
+        }
       );
-    }
+    },
+    [alert, presetName, provider, router]
+  );
 
-    return false;
-  };
-
-  const openMethodModal = (method: ProviderMethod) => {
-    router.replace(
-      `/alerts/${presetName}?methodName=${method.name}&providerId=${
-        provider!.id
-      }&alertFingerprint=${alert.fingerprint}`,
-      {
-        scroll: false,
-      }
-    );
-    handleCloseMenu();
-  };
-
-  const openAlertPayloadModal = () => {
+  const openAlertPayloadModal = useCallback(() => {
     router.replace(
       `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}`,
       {
         scroll: false,
       }
     );
-    handleCloseMenu();
-  };
+  }, [alert, presetName, router]);
 
   const canAssign = true; // TODO: keep track of assignments for auditing
 
-  const handleMenuToggle = () => {
-    setIsMenuOpen!(alert.fingerprint);
-  };
+  const menuItems = useMemo<MenuItem[]>(
+    () => [
+      {
+        icon: PlayIcon,
+        label: "Run Workflow",
+        onClick: () => setRunWorkflowModalAlert?.(alert),
+      },
+      {
+        icon: PlusIcon,
+        label: "Workflow",
+        onClick: () =>
+          router.push(
+            `/workflows/builder?alertName=${encodeURIComponent(
+              alert.name
+            )}&alertSource=${alert.source![0]}`
+          ),
+        show: !isInSidebar,
+      },
+      {
+        icon: ArchiveBoxIcon,
+        label: "History",
+        onClick: () =>
+          router.replace(
+            `/alerts/${presetName}?fingerprint=${alert.fingerprint}`,
+            { scroll: false }
+          ),
+      },
+      {
+        icon: AdjustmentsHorizontalIcon,
+        label: "Enrich",
+        onClick: () =>
+          router.replace(
+            `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}&enrich=true`
+          ),
+      },
+      {
+        icon: UserPlusIcon,
+        label: "Self-Assign",
+        onClick: () => callAssignEndpoint(),
+        show: canAssign,
+      },
+      {
+        icon: EyeIcon,
+        label: "View Alert",
+        onClick: openAlertPayloadModal,
+      },
+      ...(provider?.methods?.map((method) => ({
+        icon: (props: any) => (
+          <DynamicImageProviderIcon providerType={provider.type} {...props} />
+        ),
+        label: method.name,
+        onClick: () => openMethodModal(method),
+        disabled: !isMethodEnabled(method),
+      })) ?? []),
+      {
+        icon: IoNotificationsOffOutline,
+        label: alert.dismissed ? "Restore" : "Dismiss",
+        onClick: onDismiss,
+      },
+      {
+        icon: ChevronDoubleRightIcon,
+        label: "Change Status",
+        onClick: () => setChangeStatusAlert?.(alert),
+      },
+      {
+        icon: PlusIcon,
+        label: "Correlate Incident",
+        onClick: () => setIsIncidentSelectorOpen?.(true),
+        show: !!setIsIncidentSelectorOpen,
+      },
+    ],
+    [
+      isInSidebar,
+      canAssign,
+      openAlertPayloadModal,
+      provider?.methods,
+      alert,
+      onDismiss,
+      setIsIncidentSelectorOpen,
+      setRunWorkflowModalAlert,
+      router,
+      presetName,
+      callAssignEndpoint,
+      isMethodEnabled,
+      openMethodModal,
+      setChangeStatusAlert,
+    ]
+  );
 
-  const handleCloseMenu = () => {
-    setIsMenuOpen!("");
-  };
+  const visibleMenuItems = useMemo(
+    () => menuItems.filter((item) => item.show !== false),
+    [menuItems]
+  );
 
-  useEffect(() => {
-    const rowElement = document.getElementById(`alert-row-${fingerprint}`);
-    if (rowElement) {
-      if (isMenuOpen) {
-        rowElement.classList.add("menu-open");
-      } else {
-        rowElement.classList.remove("menu-open");
-      }
-    }
-  }, [isMenuOpen, fingerprint]);
-
-  const menuItems = (
-    <>
-      <Menu.Item>
-        {({ active }) => (
-          <button
-            className={`${active ? "bg-slate-200" : "text-gray-900"} ${
-              isInSidebar ? "text-nowrap" : ""
-            } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-            onClick={() => {
-              setRunWorkflowModalAlert?.(alert);
-              handleCloseMenu();
-            }}
-          >
-            <PlayIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-            Run Workflow
-          </button>
-        )}
-      </Menu.Item>
-      {!isInSidebar && (
-        <Menu.Item>
-          {({ active }) => (
-            <Link
-              href={`/workflows/builder?alertName=${encodeURIComponent(
-                alertName
-              )}&alertSource=${alertSource}`}
-              className={`${active ? "bg-slate-200" : "text-gray-900"} ${
-                isInSidebar ? "text-nowrap" : ""
-              } group flex items-center rounded-md px-2 py-2 text-xs`}
-            >
-              <PlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-              Workflow
-            </Link>
-          )}
-        </Menu.Item>
-      )}
-
-      <Menu.Item>
-        {({ active }) => (
-          <button
-            onClick={() => {
-              router.replace(
-                `/alerts/${presetName}?fingerprint=${alert.fingerprint}`,
-                {
-                  scroll: false,
-                }
-              );
-              handleCloseMenu();
-            }}
-            className={`${active ? "bg-slate-200" : "text-gray-900"} ${
-              isInSidebar ? "text-nowrap" : ""
-            } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-          >
-            <ArchiveBoxIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-            History
-          </button>
-        )}
-      </Menu.Item>
-      <Menu.Item>
-        {({ active }) => (
-          <button
-            onClick={() => {
-              router.replace(
-                `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}&enrich=true`
-              );
-              handleCloseMenu();
-            }}
-            className={`${
-              active ? "bg-slate-200" : "text-gray-900"
-            } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-          >
-            <AdjustmentsHorizontalIcon
-              className="mr-2 h-4 w-4"
-              aria-hidden="true"
-            />
-            Enrich
-          </button>
-        )}
-      </Menu.Item>
-      {canAssign && (
-        <Menu.Item>
-          {({ active }) => (
-            <button
-              onClick={() => {
-                callAssignEndpoint();
-                handleCloseMenu();
-              }}
-              className={`${active ? "bg-slate-200" : "text-gray-900"} ${
-                isInSidebar ? "text-nowrap" : ""
-              } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-            >
-              <UserPlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-              Self-Assign
-            </button>
-          )}
-        </Menu.Item>
-      )}
-      <Menu.Item>
-        {({ active }) => (
-          <button
-            onClick={openAlertPayloadModal}
-            className={`${active ? "bg-slate-200" : "text-gray-900"} ${
-              isInSidebar ? "text-nowrap" : ""
-            } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-          >
-            <EyeIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-            View Alert
-          </button>
-        )}
-      </Menu.Item>
-      {provider?.methods && provider.methods.length > 0 && (
-        <div className={`px-1 py-1 ${isInSidebar ? "flex text-nowrap" : ""}`}>
-          {provider.methods.map((method) => {
-            const methodEnabled = isMethodEnabled(method);
+  if (isInSidebar) {
+    // For sidebar we want to show the menu items in a horizontal scrollable menu
+    return (
+      <Menu as="div" className="w-full">
+        <div className="flex space-x-2 w-full overflow-x-scroll">
+          {visibleMenuItems.map((item, index) => {
+            const Icon = item.icon;
             return (
-              <Menu.Item key={method.name}>
-                {({ active }) => (
-                  <button
-                    className={`${active ? "bg-slate-200" : "text-gray-900"} ${
-                      !methodEnabled ? "text-slate-300 cursor-not-allowed" : ""
-                    } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-                    disabled={!methodEnabled}
-                    title={!methodEnabled ? "Missing required scopes" : ""}
-                    onClick={() => {
-                      openMethodModal(method);
-                    }}
-                  >
-                    <DynamicIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                    {method.name}
-                  </button>
-                )}
-              </Menu.Item>
+              <button
+                key={item.label + index}
+                onClick={item.onClick}
+                disabled={item.disabled}
+                className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+              >
+                <Icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </button>
             );
           })}
         </div>
-      )}
-      <Menu.Item>
-        {({ active }) => (
-          <button
-            onClick={() => {
-              onDismiss();
-              handleCloseMenu();
-            }}
-            className={`${
-              active ? "bg-slate-200" : "text-gray-900"
-            } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-          >
-            <IoNotificationsOffOutline
-              className="mr-2 h-4 w-4"
-              aria-hidden="true"
-            />
-            {alert.dismissed ? "Restore" : "Dismiss"}
-          </button>
-        )}
-      </Menu.Item>
-      <Menu.Item>
-        {({ active }) => (
-          <button
-            onClick={() => {
-              setChangeStatusAlert?.(alert);
-              handleCloseMenu();
-            }}
-            className={`${active ? "bg-slate-200" : "text-gray-900"} ${
-              isInSidebar ? "text-nowrap" : ""
-            } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-          >
-            <ChevronDoubleRightIcon
-              className="mr-2 h-4 w-4"
-              aria-hidden="true"
-            />
-            Change Status
-          </button>
-        )}
-      </Menu.Item>
-      {setIsIncidentSelectorOpen && (
-        <Menu.Item>
-          {({ active }) => (
-            <button
-              onClick={() => {
-                setIsIncidentSelectorOpen(true);
-                handleCloseMenu();
-              }}
-              className={`${active ? "bg-slate-200" : "text-gray-900"} ${
-                isInSidebar ? "text-nowrap" : ""
-              } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-            >
-              <PlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-              Correlate Incident
-            </button>
-          )}
-        </Menu.Item>
-      )}
-    </>
-  );
+      </Menu>
+    );
+  }
 
   return (
-    <>
-      {!isInSidebar ? (
-        <Menu>
-          <Menu.Button ref={refs.setReference} onClick={handleMenuToggle}>
-            <Icon
-              icon={EllipsisHorizontalIcon}
-              className="hover:bg-gray-100"
-              color="gray"
-              title="Alert actions"
-            />
-          </Menu.Button>
-          {isMenuOpen && (
-            <Portal>
-              <div
-                className="fixed inset-0"
-                aria-hidden="true"
-                onClick={handleCloseMenu}
-              />
-              <Transition
-                as={Fragment}
-                show={isMenuOpen}
-                enter="transition ease-out duration-100"
-                enterFrom="transform opacity-0 scale-95"
-                enterTo="transform opacity-100 scale-100"
-                leave="transition ease-in duration-75"
-                leaveFrom="transform opacity-100 scale-100"
-                leaveTo="transform opacity-0 scale-95"
-              >
-                <Menu.Items
-                  static
-                  ref={refs.setFloating}
-                  className="z-50 absolute mt-2 divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
-                  style={{ left: (x ?? 0) - 50, top: y ?? 0 }}
-                >
-                  {menuItems}
-                </Menu.Items>
-              </Transition>
-            </Portal>
-          )}
-        </Menu>
-      ) : (
-        <Menu as="div" className="w-full">
-          <div className="flex space-x-2 w-full overflow-x-scroll">
-            {menuItems}
-          </div>
-        </Menu>
-      )}
-    </>
+    <DropdownMenu.Menu icon={EllipsisHorizontalIcon} label="">
+      {visibleMenuItems.map((item, index) => (
+        <DropdownMenu.Item
+          key={item.label + index}
+          icon={item.icon}
+          label={item.label}
+          onClick={item.onClick}
+          disabled={item.disabled}
+        />
+      ))}
+    </DropdownMenu.Menu>
   );
 }

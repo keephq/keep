@@ -1,90 +1,30 @@
 import { useWorkflowExecutionsV2 } from "@/utils/hooks/useWorkflowExecutions";
-import { useWorkflowRun } from "@/utils/hooks/useWorkflowRun";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
-import {
-  Callout,
-  Button,
-  Title,
-  Card,
-  Tab,
-  TabGroup,
-  TabList,
-} from "@tremor/react";
+import { Callout, Title, Card } from "@tremor/react";
 import { load, JSON_SCHEMA } from "js-yaml";
 import { useSearchParams } from "next/navigation";
-import {
-  useState,
-  useEffect,
-  Dispatch,
-  SetStateAction,
-  useLayoutEffect,
-} from "react";
+import { useState, useEffect } from "react";
 import Loading from "@/app/(keep)/loading";
 import { WorkflowSteps } from "../mockworkflows";
-import { Workflow } from "../models";
+import { Workflow } from "@/shared/api/workflows";
 import WorkflowGraph from "../workflow-graph";
-import AlertTriggerModal from "../workflow-run-with-alert-modal";
 import { TableFilters } from "./table-filters";
 import { ExecutionTable } from "./workflow-execution-table";
-import { PaginatedWorkflowExecutionDto } from "../builder/types";
+import { WorkflowOverviewSkeleton } from "./workflow-overview-skeleton";
 
 interface Pagination {
   limit: number;
   offset: number;
 }
 
-const tabs = [
-  { name: "All Time", value: "alltime" },
-  { name: "Last 30d", value: "last_30d" },
-  { name: "Last 7d", value: "last_7d" },
-  { name: "Today", value: "today" },
-];
-
-export function StatsCard({
-  children,
-  data,
-}: {
-  children: any;
-  data?: string;
-}) {
+export function StatsCard({ children }: { children: any }) {
   return (
-    <Card className="group relative container flex flex-col p-4 space-y-2 min-w-1/5">
-      {!!data && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-800 text-white rounded py-1 p-2 text-2xl font-bold">
-          {data}
-        </div>
-      )}
+    <Card className="flex flex-col p-4 min-w-1/5 gap-2 justify-between">
       {children}
     </Card>
   );
 }
 
-export const FilterTabs = ({
-  tabs,
-  setTab,
-  tab,
-}: {
-  tabs: { name: string; value: string }[];
-  setTab: Dispatch<SetStateAction<number>>;
-  tab: number;
-}) => {
-  return (
-    <div className="max-w-lg space-y-12 pt-6">
-      <TabGroup
-        index={tab}
-        onIndexChange={(index: number) => {
-          setTab(index);
-        }}
-      >
-        <TabList variant="solid" color="black" className="bg-gray-300">
-          {tabs.map((tabItem, index) => (
-            <Tab key={tabItem.value}>{tabItem.name}</Tab>
-          ))}
-        </TabList>
-      </TabGroup>
-    </div>
-  );
-};
 export default function WorkflowOverview({
   workflow_id,
 }: {
@@ -94,7 +34,6 @@ export default function WorkflowOverview({
     limit: 25,
     offset: 0,
   });
-  const [tab, setTab] = useState<number>(1);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -102,22 +41,13 @@ export default function WorkflowOverview({
       ...executionPagination,
       offset: 0,
     });
-  }, [tab, searchParams]);
+  }, [searchParams]);
 
   const { data, isLoading, error, isValidating } = useWorkflowExecutionsV2(
     workflow_id,
-    tab,
     executionPagination.limit,
     executionPagination.offset
   );
-
-  const {
-    isRunning,
-    handleRunClick,
-    getTriggerModalProps,
-    isRunButtonDisabled,
-    message,
-  } = useWorkflowRun(data?.workflow!);
 
   if (error) {
     return (
@@ -149,32 +79,13 @@ export default function WorkflowOverview({
   const workflow = { last_executions: data?.items } as Partial<Workflow>;
 
   return (
-    <>
-      <div className="sticky top-0 flex justify-between items-end">
-        <div className="flex-1">
-          {/*TO DO update searchParams for these filters*/}
-          <FilterTabs tabs={tabs} setTab={setTab} tab={tab} />
-        </div>
-        {!!data?.workflow && (
-          <Button
-            disabled={isRunning || isRunButtonDisabled}
-            className="p-2 px-4"
-            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.stopPropagation();
-              e.preventDefault();
-              handleRunClick?.();
-            }}
-            tooltip={message}
-          >
-            Run now
-          </Button>
-        )}
-      </div>
-      {!data || isLoading || (isValidating && <Loading />)}
+    <div className="flex flex-col gap-4">
+      {/* TODO: Add a working time filter */}
+      {(!data || isLoading || isValidating) && <WorkflowOverviewSkeleton />}
       {data?.items && (
-        <div className="mt-2 flex flex-col gap-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-0.5">
-            <StatsCard data={`${data.count ?? 0}`}>
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <StatsCard>
               <Title>Total Executions</Title>
               <div>
                 <h1 className="text-2xl font-bold">
@@ -182,8 +93,8 @@ export default function WorkflowOverview({
                 </h1>
               </div>
             </StatsCard>
-            <StatsCard data={`${data.passCount}/${data.failCount}`}>
-              <Title>Pass / Fail ratio</Title>
+            <StatsCard>
+              <Title>Pass / Fail Ratio</Title>
               <div>
                 <h1 className="text-2xl font-bold">
                   {formatNumber(data.passCount)}
@@ -205,7 +116,7 @@ export default function WorkflowOverview({
               </div>
             </StatsCard>
             <StatsCard>
-              <Title>Avg. duration</Title>
+              <Title>Avg. Duration</Title>
               <div>
                 <h1 className="text-2xl font-bold">
                   {(data.avgDuration ?? 0).toFixed(2)}
@@ -217,13 +128,16 @@ export default function WorkflowOverview({
               <WorkflowSteps workflow={parsedWorkflowFile} />
             </StatsCard>
           </div>
-          <WorkflowGraph
-            showLastExecutionStatus={false}
-            workflow={workflow}
-            limit={executionPagination.limit}
-            showAll={true}
-            size="sm"
-          />
+          <Card>
+            <Title>Executions Graph</Title>
+            <WorkflowGraph
+              showLastExecutionStatus={false}
+              workflow={workflow}
+              limit={executionPagination.limit}
+              showAll={true}
+              size="sm"
+            />
+          </Card>
           <h1 className="text-xl font-bold mt-4">Execution History</h1>
           <TableFilters workflowId={data.workflow.id} />
           <ExecutionTable
@@ -232,9 +146,6 @@ export default function WorkflowOverview({
           />
         </div>
       )}
-      {!!data?.workflow && !!getTriggerModalProps && (
-        <AlertTriggerModal {...getTriggerModalProps()} />
-      )}
-    </>
+    </div>
   );
 }

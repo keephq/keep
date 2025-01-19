@@ -4,23 +4,24 @@ import {
   PaginatedIncidentAlertsDto,
   PaginatedIncidentsDto,
 } from "@/entities/incidents/model";
-import { PaginatedWorkflowExecutionDto } from "@/app/(keep)/workflows/builder/types";
+import { PaginatedWorkflowExecutionDto } from "@/shared/api/workflow-executions";
 import useSWR, { SWRConfiguration } from "swr";
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
 import { useAlerts } from "./useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { DefaultIncidentFilters } from "@/entities/incidents/model/models";
 
 interface IncidentUpdatePayload {
   incident_id: string | null;
 }
 
-interface Filters {
-  status: string[];
-  severity: string[];
-  assignees: string[];
-  sources: string[];
-  affected_services: string[];
+export interface Filters {
+  status?: string[];
+  severity?: string[];
+  assignees?: string[];
+  sources?: string[];
+  affected_services?: string[];
 }
 
 export const useIncidents = (
@@ -28,7 +29,7 @@ export const useIncidents = (
   limit: number = 25,
   offset: number = 0,
   sorting: { id: string; desc: boolean } = { id: "creation_time", desc: false },
-  filters: Filters | {} = {},
+  filters: Filters | {} = DefaultIncidentFilters,
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }

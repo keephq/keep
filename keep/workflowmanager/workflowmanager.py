@@ -10,11 +10,12 @@ from keep.api.core.db import (
     get_previous_alert_by_fingerprint,
     save_workflow_results,
 )
+from keep.api.core.metrics import workflow_execution_duration
 from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
-from keep.workflowmanager.workflowscheduler import WorkflowScheduler
+from keep.workflowmanager.workflowscheduler import WorkflowScheduler, timing_histogram
 from keep.workflowmanager.workflowstore import WorkflowStore
 
 
@@ -33,6 +34,7 @@ class WorkflowManager:
         self.debug = config("WORKFLOW_MANAGER_DEBUG", default=False, cast=bool)
         if self.debug:
             self.logger.setLevel(logging.DEBUG)
+
         self.scheduler = WorkflowScheduler(self)
         self.workflow_store = WorkflowStore()
         self.started = False
@@ -42,13 +44,18 @@ class WorkflowManager:
         if self.started:
             self.logger.info("Workflow manager already started")
             return
+
         await self.scheduler.start()
         self.started = True
 
     def stop(self):
         """Stops the workflow manager"""
+        if not self.started:
+            return
         self.scheduler.stop()
         self.started = False
+        # Clear the scheduler reference
+        self.scheduler = None
 
     def _apply_filter(self, filter_val, value):
         # if it's a regex, apply it
@@ -333,37 +340,6 @@ class WorkflowManager:
         else:
             return getattr(event, filter_key, None)
 
-    # TODO should be fixed to support the usual CLI
-    def run(self, workflows: list[Workflow]):
-        """
-        Run list of workflows.
-
-        Args:
-            workflow (str): Either an workflow yaml or a directory containing workflow yamls or a list of URLs to get the workflows from.
-            providers_file (str, optional): The path to the providers yaml. Defaults to None.
-        """
-        self.logger.info("Running workflow(s)")
-        workflows_errors = []
-        # If at least one workflow has an interval, run workflows using the scheduler,
-        #   otherwise, just run it
-        if any([Workflow.workflow_interval for Workflow in workflows]):
-            # running workflows in scheduler mode
-            self.logger.info(
-                "Found at least one workflow with an interval, running in scheduler mode"
-            )
-            self.scheduler_mode = True
-            # if the workflows doesn't have an interval, set the default interval
-            for workflow in workflows:
-                workflow.workflow_interval = workflow.workflow_interval
-            # This will halt until KeyboardInterrupt
-            self.scheduler.run_workflows(workflows)
-            self.logger.info("Workflow(s) scheduled")
-        else:
-            # running workflows in the regular mode
-            workflows_errors = self._run_workflows_from_cli(workflows)
-
-        return workflows_errors
-
     def _check_premium_providers(self, workflow: Workflow):
         """
         Check if the workflow uses premium providers in multi tenant mode.
@@ -428,6 +404,7 @@ class WorkflowManager:
                 },
             )
 
+    @timing_histogram(workflow_execution_duration)
     def _run_workflow(
         self, workflow: Workflow, workflow_execution_id: str, test_run=False
     ):

@@ -4,6 +4,8 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 
 import dataclasses
 import datetime
+import logging
+import time
 
 import pydantic
 import requests
@@ -14,10 +16,13 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
-from keep.providers.grafana_provider.grafana_alert_format_description import \
-    GrafanaAlertFormatDescription
+from keep.providers.grafana_provider.grafana_alert_format_description import (
+    GrafanaAlertFormatDescription,
+)
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+
+logger = logging.getLogger(__name__)
 
 
 @pydantic.dataclasses.dataclass
@@ -39,7 +44,7 @@ class GrafanaProviderAuthConfig:
             "required": True,
             "description": "Grafana host",
             "hint": "e.g. https://keephq.grafana.net",
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         },
     )
 
@@ -192,7 +197,14 @@ class GrafanaProvider(BaseProvider):
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
+        # Check if this is a legacy alert based on structure
+        if "evalMatches" in event:
+            return GrafanaProvider._format_legacy_alert(event)
+
         alerts = event.get("alerts", [])
+
+        logger.info("Formatting Grafana alerts", extra={"num_of_alerts": len(alerts)})
+
         formatted_alerts = []
         for alert in alerts:
             labels = alert.get("labels", {})
@@ -208,6 +220,16 @@ class GrafanaProvider(BaseProvider):
             environment = labels.get(
                 "deployment_environment", labels.get("environment", "unknown")
             )
+
+            extra = {}
+
+            annotations = alert.get("annotations", {})
+            if annotations:
+                extra["annotations"] = annotations
+            values = alert.get("values", {})
+            if values:
+                extra["values"] = values
+
             alert_dto = AlertDto(
                 id=alert.get("fingerprint"),
                 fingerprint=fingerprint,
@@ -221,6 +243,7 @@ class GrafanaProvider(BaseProvider):
                 description=alert.get("annotations", {}).get("summary", ""),
                 source=["grafana"],
                 labels=labels,
+                **extra,  # add annotations and values
             )
             # enrich extra payload with labels
             for label in labels:
@@ -228,6 +251,35 @@ class GrafanaProvider(BaseProvider):
                     setattr(alert_dto, label, labels[label])
             formatted_alerts.append(alert_dto)
         return formatted_alerts
+
+    @staticmethod
+    def _format_legacy_alert(event: dict) -> AlertDto:
+        # Legacy alerts have a different structure
+        status = (
+            AlertStatus.FIRING
+            if event.get("state") == "alerting"
+            else AlertStatus.RESOLVED
+        )
+        severity = GrafanaProvider.SEVERITIES_MAP.get("critical", AlertSeverity.INFO)
+
+        alert_dto = AlertDto(
+            id=str(event.get("ruleId", "")),
+            fingerprint=str(event.get("ruleId", "")),
+            name=event.get("ruleName", ""),
+            status=status,
+            severity=severity,
+            lastReceived=datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+            description=event.get("message", ""),
+            source=["grafana"],
+            labels={
+                "metric": event.get("metric", ""),
+                "ruleId": str(event.get("ruleId", "")),
+                "ruleName": event.get("ruleName", ""),
+                "ruleUrl": event.get("ruleUrl", ""),
+                "state": event.get("state", ""),
+            },
+        )
+        return [alert_dto]
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
@@ -388,7 +440,248 @@ class GrafanaProvider(BaseProvider):
                 self.logger.info("Updated policices to match alerts to webhook")
             else:
                 self.logger.info("Policies already match alerts to webhook")
+
+        # After setting up unified alerting, check and setup legacy alerting if enabled
+        try:
+            self.logger.info("Checking legacy alerting")
+            if self._is_legacy_alerting_enabled():
+                self.logger.info("Legacy alerting is enabled")
+                self._setup_legacy_alerting_webhook(
+                    webhook_name, keep_api_url, api_key, setup_alerts
+                )
+                self.logger.info("Legacy alerting setup successful")
+
+        except Exception:
+            self.logger.warning(
+                "Failed to check or setup legacy alerting", exc_info=True
+            )
+
         self.logger.info("Webhook successfuly setup")
+
+    def _get_all_alerts(self, alerts_api: str, headers: dict) -> list:
+        """Helper function to get all alerts with proper pagination"""
+        all_alerts = []
+        page = 0
+        page_size = 1000  # Grafana's recommended limit
+
+        try:
+            while True:
+                params = {
+                    "dashboardId": None,
+                    "panelId": None,
+                    "limit": page_size,
+                    "startAt": page * page_size,
+                }
+
+                self.logger.debug(
+                    f"Fetching alerts page {page + 1}", extra={"params": params}
+                )
+
+                response = requests.get(
+                    alerts_api, params=params, verify=False, headers=headers, timeout=30
+                )
+                response.raise_for_status()
+
+                page_alerts = response.json()
+                if not page_alerts:  # No more alerts to fetch
+                    break
+
+                all_alerts.extend(page_alerts)
+
+                # If we got fewer alerts than the page size, we've reached the end
+                if len(page_alerts) < page_size:
+                    break
+
+                page += 1
+                time.sleep(0.2)  # Add delay to avoid rate limiting
+
+            self.logger.info(f"Successfully fetched {len(all_alerts)} alerts")
+            return all_alerts
+
+        except requests.exceptions.RequestException as e:
+            self.logger.error("Failed to fetch alerts", extra={"error": str(e)})
+            raise
+
+    def _is_legacy_alerting_enabled(self) -> bool:
+        """Check if legacy alerting is enabled by trying to access legacy endpoints"""
+        try:
+            headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
+            notification_api = (
+                f"{self.authentication_config.host}/api/alert-notifications"
+            )
+            response = requests.get(notification_api, verify=False, headers=headers)
+            # If we get a 404, legacy alerting is disabled
+            # If we get a 200, legacy alerting is enabled
+            # If we get a 401/403, we don't have permissions
+            return response.status_code == 200
+        except Exception:
+            self.logger.warning("Failed to check legacy alerting status", exc_info=True)
+            return False
+
+    def _update_dashboard_alert(
+        self, dashboard_uid: str, panel_id: int, notification_uid: str, headers: dict
+    ) -> bool:
+        """Helper function to update a single dashboard alert"""
+        try:
+            # Get the dashboard
+            dashboard_api = (
+                f"{self.authentication_config.host}/api/dashboards/uid/{dashboard_uid}"
+            )
+            dashboard_response = requests.get(
+                dashboard_api, verify=False, headers=headers, timeout=30
+            )
+            dashboard_response.raise_for_status()
+
+            dashboard = dashboard_response.json()["dashboard"]
+            updated = False
+
+            # Find the panel and update its alert
+            for panel in dashboard.get("panels", []):
+                if panel.get("id") == panel_id and "alert" in panel:
+                    if "notifications" not in panel["alert"]:
+                        panel["alert"]["notifications"] = []
+                    # Check if notification already exists
+                    if not any(
+                        notif.get("uid") == notification_uid
+                        for notif in panel["alert"]["notifications"]
+                    ):
+                        panel["alert"]["notifications"].append(
+                            {"uid": notification_uid}
+                        )
+                        updated = True
+
+            if updated:
+                # Update the dashboard
+                update_dashboard_api = (
+                    f"{self.authentication_config.host}/api/dashboards/db"
+                )
+                update_response = requests.post(
+                    update_dashboard_api,
+                    verify=False,
+                    json={"dashboard": dashboard, "overwrite": True},
+                    headers=headers,
+                    timeout=30,
+                )
+                update_response.raise_for_status()
+                return True
+
+            return False
+
+        except requests.exceptions.RequestException as e:
+            self.logger.warning(
+                f"Failed to update dashboard {dashboard_uid}", extra={"error": str(e)}
+            )
+            return False
+
+    def _setup_legacy_alerting_webhook(
+        self,
+        webhook_name: str,
+        keep_api_url: str,
+        api_key: str,
+        setup_alerts: bool = True,
+    ):
+        """Setup webhook for legacy alerting"""
+        self.logger.info("Setting up legacy alerting notification channel")
+        headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
+
+        try:
+            # Create legacy notification channel
+            notification_api = (
+                f"{self.authentication_config.host}/api/alert-notifications"
+            )
+            self.logger.debug(f"Using notification API endpoint: {notification_api}")
+
+            notification = {
+                "name": webhook_name,
+                "type": "webhook",
+                "isDefault": False,
+                "sendReminder": False,
+                "settings": {
+                    "url": keep_api_url,
+                    "httpMethod": "POST",
+                    "username": "keep",
+                    "password": api_key,
+                },
+            }
+            self.logger.debug(f"Prepared notification config: {notification}")
+
+            # Check if notification channel exists
+            self.logger.info("Checking for existing notification channels")
+            existing_channels = requests.get(
+                notification_api, verify=False, headers=headers
+            ).json()
+            self.logger.debug(f"Found {len(existing_channels)} existing channels")
+
+            channel_exists = any(
+                channel
+                for channel in existing_channels
+                if channel.get("name") == webhook_name
+            )
+
+            if not channel_exists:
+                self.logger.info(f"Creating new notification channel '{webhook_name}'")
+                response = requests.post(
+                    notification_api, verify=False, json=notification, headers=headers
+                )
+                if not response.ok:
+                    error_msg = response.json()
+                    self.logger.error(
+                        f"Failed to create notification channel: {error_msg}"
+                    )
+                    raise Exception(error_msg)
+
+                notification_uid = response.json().get("uid")
+                self.logger.info(
+                    f"Created legacy notification channel with UID: {notification_uid}"
+                )
+            else:
+                self.logger.info(
+                    f"Legacy notification channel '{webhook_name}' already exists"
+                )
+                notification_uid = next(
+                    channel["uid"]
+                    for channel in existing_channels
+                    if channel.get("name") == webhook_name
+                )
+                self.logger.debug(
+                    f"Using existing notification channel UID: {notification_uid}"
+                )
+
+            if setup_alerts:
+                alerts_api = f"{self.authentication_config.host}/api/alerts"
+                self.logger.info("Starting alert setup process")
+
+                # Get all alerts using the helper function
+                self.logger.info("Fetching all alerts")
+                all_alerts = self._get_all_alerts(alerts_api, headers)
+                self.logger.info(f"Found {len(all_alerts)} alerts to process")
+
+                updated_count = 0
+                for alert in all_alerts:
+                    dashboard_uid = alert.get("dashboardUid")
+                    panel_id = alert.get("panelId")
+
+                    if dashboard_uid and panel_id:
+                        self.logger.debug(
+                            f"Processing alert - Dashboard: {dashboard_uid}, Panel: {panel_id}"
+                        )
+                        if self._update_dashboard_alert(
+                            dashboard_uid, panel_id, notification_uid, headers
+                        ):
+                            updated_count += 1
+                            self.logger.debug(
+                                f"Successfully updated alert {updated_count}"
+                            )
+                        # Add delay to avoid rate limiting
+                        time.sleep(0.1)
+
+                self.logger.info(
+                    f"Completed alert updates - Updated {updated_count} alerts with notification channel"
+                )
+
+        except Exception as e:
+            self.logger.exception(f"Failed to setup legacy alerting: {str(e)}")
+            raise
 
     def __extract_rules(self, alerts: dict, source: list) -> list[AlertDto]:
         alert_ids = []
@@ -509,6 +802,8 @@ class GrafanaProvider(BaseProvider):
         if not alert_type:
             alert_type = random.choice(list(ALERTS.keys()))
 
+        to_wrap_with_provider_type = kwargs.get("to_wrap_with_provider_type")
+
         if "payload" in ALERTS[alert_type]:
             alert_payload = ALERTS[alert_type]["payload"]
         else:
@@ -552,11 +847,14 @@ class GrafanaProvider(BaseProvider):
         fingerprint = hashlib.md5(fingerprint_src.encode()).hexdigest()
         alert_payload["fingerprint"] = fingerprint
 
-        return {
+        final_payload = {
             "alerts": [alert_payload],
             "severity": alert_payload.get("labels", {}).get("severity"),
             "title": alert_type,
         }
+        if to_wrap_with_provider_type:
+            return {"keep_source_type": "grafana", "event": final_payload}
+        return final_payload
 
 
 if __name__ == "__main__":
@@ -583,5 +881,7 @@ if __name__ == "__main__":
         provider_type="grafana",
         provider_config=config,
     )
-    alerts = provider.setup_webhook("test", "http://localhost:8000", "1234", True)
+    alerts = provider.setup_webhook(
+        "test", "http://localhost:3000/alerts/event/grafana", "some-api-key", True
+    )
     print(alerts)

@@ -1,9 +1,12 @@
 import { load, JSON_SCHEMA } from "js-yaml";
 import { Provider } from "../../providers/providers";
-import { Action, Alert } from "./alert";
-import { stringify } from "yaml";
-import { V2Properties, V2Step, Definition } from "./builder-store";
+import { Action, LegacyWorkflow } from "./legacy-workflow.types";
 import { v4 as uuidv4 } from "uuid";
+import {
+  Definition,
+  V2Properties,
+  V2Step,
+} from "@/app/(keep)/workflows/builder/types";
 
 export function getToolboxConfiguration(providers: Provider[]) {
   /**
@@ -246,6 +249,13 @@ export function generateWorkflow(
   };
 }
 
+export function loadWorkflowYAML(workflowString: string): Definition {
+  const parsedWorkflowFile = load(workflowString, {
+    schema: JSON_SCHEMA,
+  }) as any;
+  return parsedWorkflowFile;
+}
+
 export function parseWorkflow(
   workflowString: string,
   providers: Provider[]
@@ -386,23 +396,9 @@ function getActionsFromCondition(
   return compiledActions;
 }
 
-export function downloadFileFromString(data: string, filename: string) {
-  /**
-   * Generated with ChatGPT
-   */
-  var blob = new Blob([data], { type: "text/plain" });
-  var url = URL.createObjectURL(blob);
-
-  var link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-
-  link.click();
-
-  URL.revokeObjectURL(url);
-}
-
-export function buildAlert(definition: Definition): Alert {
+export function getWorkflowFromDefinition(
+  definition: Definition
+): LegacyWorkflow {
   const alert = definition;
   const alertId = alert.properties.id as string;
   const name = (alert.properties.name as string) ?? "";
@@ -550,8 +546,16 @@ export function buildAlert(definition: Definition): Alert {
     consts: consts,
     steps: steps,
     actions: actions,
-  } as Alert;
+  } as LegacyWorkflow;
 }
+
+export type DefinitionV2 = {
+  value: {
+    sequence: V2Step[];
+    properties: V2Properties;
+  };
+  isValid: boolean;
+};
 
 export function wrapDefinitionV2({
   properties,
@@ -561,7 +565,7 @@ export function wrapDefinitionV2({
   properties: V2Properties;
   sequence: V2Step[];
   isValid?: boolean;
-}) {
+}): DefinitionV2 {
   return {
     value: {
       sequence: sequence,

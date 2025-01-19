@@ -1,6 +1,6 @@
 import React from "react";
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath } from "@xyflow/react";
-import type { Edge, EdgeProps } from "@xyflow/react";
+import type { EdgeProps } from "@xyflow/react";
 import useStore from "./builder-store";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { Button } from "@tremor/react";
@@ -24,7 +24,7 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
   data,
   style,
 }: CustomEdgeProps) => {
-  const { deleteEdges, edges, setSelectedEdge, selectedEdge } = useStore();
+  const { setSelectedEdge, selectedEdge } = useStore();
 
   // Calculate the path and midpoint
   const [edgePath, labelX, labelY] = getSmoothStepPath({
@@ -34,9 +34,6 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
     targetY,
     borderRadius: 10,
   });
-
-  const midpointX = (sourceX + targetX) / 2;
-  const midpointY = (sourceY + targetY) / 2;
 
   let dynamicLabel = label;
   const isLayouted = !!data?.isLayouted;
@@ -54,8 +51,9 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
     dynamicLabel === "True"
       ? "left-0 bg-green-500"
       : dynamicLabel === "False"
-      ? "bg-red-500"
-      : "bg-orange-500";
+        ? "bg-red-500"
+        : "bg-orange-500";
+
   return (
     <>
       <BaseEdge
@@ -122,6 +120,11 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
             onClick={(e) => {
               setSelectedEdge(id);
             }}
+            data-testid={
+              source === "trigger_start"
+                ? "wf-add-trigger-button"
+                : "wf-add-step-button"
+            }
           >
             <PlusIcon
               className={`size-7 hover:text-black rounded text-sm bg-white border text-gray-700 ${

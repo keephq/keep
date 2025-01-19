@@ -1,13 +1,18 @@
 import copy
 import logging
 
+from sqlalchemy import and_
+
 from keep.api.core.db import get_session_sync
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.db.topology import (
+    TopologyApplicationDtoIn,
     TopologyService,
     TopologyServiceDependency,
+    TopologyServiceDtoIn,
     TopologyServiceInDto,
 )
+from keep.topologies.topologies_service import TopologiesService
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +42,17 @@ def process_topology(
             extra=extra,
         )
 
+        # delete dependencies
+        session.query(TopologyServiceDependency).filter(
+            TopologyServiceDependency.service.has(
+                and_(
+                    TopologyService.source_provider_id == provider_id,
+                    TopologyService.tenant_id == tenant_id,
+                )
+            )
+        ).delete(synchronize_session=False)
+
+        # delete services
         session.query(TopologyService).filter(
             TopologyService.source_provider_id == provider_id,
             TopologyService.tenant_id == tenant_id,
@@ -68,11 +84,41 @@ def process_topology(
         session.flush()
         service_to_keep_service_id_map[service.service] = db_service.id
 
+    application_to_services = {}
+    application_to_name = {}
+
     # Then create the dependencies
     for service in topology_data:
+
+        # Group all services by application (this is for processing application related data in the next step)
+        if service.application_relations is not None:
+            service_id = service_to_keep_service_id_map.get(service.service)
+            for application_id in service.application_relations:
+
+                application_to_name[application_id] = service.application_relations[
+                    application_id
+                ]
+
+                if application_id not in application_to_services:
+                    application_to_services[application_id] = [service_id]
+                else:
+                    application_to_services[application_id].append(service_id)
+
         for dependency in service.dependencies:
             service_id = service_to_keep_service_id_map.get(service.service)
+            if service_id > len(topology_data):
+                logger.debug(
+                    "Found a dangling service, skipping",
+                    extra={"service": service.service, "service_id": service_id},
+                )
+                continue
             depends_on_service_id = service_to_keep_service_id_map.get(dependency)
+            if depends_on_service_id > len(topology_data):
+                logger.debug(
+                    "Found a dangling service, skipping",
+                    extra={"service": service.service, "dependency": dependency},
+                )
+                continue
             if not service_id or not depends_on_service_id:
                 logger.debug(
                     "Found a dangling service, skipping",
@@ -88,6 +134,21 @@ def process_topology(
             )
 
     session.commit()
+
+    # Now create or update the application
+    for application_id in application_to_services:
+        TopologiesService.create_or_update_application(
+            tenant_id=tenant_id,
+            application=TopologyApplicationDtoIn(
+                id=application_id,
+                name=application_to_name[application_id],
+                services=[
+                    TopologyServiceDtoIn(id=service_id)
+                    for service_id in application_to_services[application_id]
+                ],
+            ),
+            session=session,
+        )
 
     try:
         session.close()

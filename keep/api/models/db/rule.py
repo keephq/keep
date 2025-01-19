@@ -7,12 +7,20 @@ from sqlmodel import JSON, Column, Field, SQLModel
 # Currently a rule_definition is a list of SQL expressions
 # We use querybuilder for that
 
+
 class ResolveOn(Enum):
     # the alert was triggered
     FIRST = "first_resolved"
     LAST = "last_resolved"
     ALL = "all_resolved"
     NEVER = "never"
+
+
+class CreateIncidentOn(Enum):
+    # the alert was triggered
+    ANY = "any"
+    ALL = "all"
+
 
 # TODOs/Pitfalls down the road which we hopefully need to address in the future:
 # 1. nested attibtues (event.foo.bar = 1)
@@ -41,3 +49,5 @@ class Rule(SQLModel, table=True):
     item_description: str = None
     require_approve: bool = False
     resolve_on: str = ResolveOn.NEVER.value
+    create_on: str = CreateIncidentOn.ANY.value
+    is_deleted: bool = False

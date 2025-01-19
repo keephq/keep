@@ -1,6 +1,10 @@
-import { AlertDto, Severity } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { Table } from "@tanstack/table-core";
-import { DynamicFacet } from "./alert-table-facet-dynamic";
+
+export interface DynamicFacet {
+  key: string;
+  name: string;
+}
 
 export interface FacetValue {
   label: string;

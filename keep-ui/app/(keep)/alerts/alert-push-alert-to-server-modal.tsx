@@ -8,12 +8,13 @@ import {
 } from "react-hook-form";
 import Modal from "@/components/ui/Modal";
 import { useProviders } from "utils/hooks/useProviders";
-import ImageWithFallback from "@/components/ImageWithFallback";
 import { useAlerts } from "utils/hooks/useAlerts";
-import { usePresets } from "utils/hooks/usePresets";
-import Select from "@/components/ui/Select";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
+import { Select } from "@/shared/ui";
+
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 interface PushAlertToServerModalProps {
   handleClose: () => void;
@@ -31,11 +32,8 @@ const PushAlertToServerModal = ({
   presetName,
 }: PushAlertToServerModalProps) => {
   const [alertSources, setAlertSources] = useState<AlertSource[]>([]);
-  const { useAllPresets } = usePresets();
-  const { mutate: presetsMutator } = useAllPresets({
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-  });
+  const revalidateMultiple = useRevalidateMultiple();
+  const presetsMutator = () => revalidateMultiple(["/preset"]);
   const { usePresetAlerts } = useAlerts();
   const { mutate: mutateAlerts } = usePresetAlerts(presetName);
 
@@ -80,6 +78,11 @@ const PushAlertToServerModal = ({
 
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
     try {
+      // if type is string, parse it to JSON
+      if (typeof data.alertJson === "string") {
+        data.alertJson = JSON.parse(data.alertJson);
+      }
+
       const response = await api.post(
         `/alerts/event/${data.source.type}`,
         data.alertJson
@@ -129,9 +132,8 @@ const PushAlertToServerModal = ({
                   getOptionLabel={(source) => source.name}
                   formatOptionLabel={(source) => (
                     <div className="flex items-center" key={source.type}>
-                      <ImageWithFallback
+                      <DynamicImageProviderIcon
                         src={`/icons/${source.type}-icon.png`}
-                        fallbackSrc={`/icons/keep-icon.png`}
                         width={32}
                         height={32}
                         alt={source.type}

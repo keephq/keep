@@ -6,13 +6,15 @@ import Loading from "@/app/(keep)/loading";
 import { useFilterContext } from "./filter-context";
 import { toast } from "react-toastify";
 import { useProviders } from "@/utils/hooks/useProviders";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
+import { Link } from "@/components/ui";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [installedProviders, setInstalledProviders] = useState<Provider[]>([]);
   const [linkedProviders, setLinkedProviders] = useState<Provider[]>([]); // Added state for linkedProviders
-
+  const { data: config } = useConfig();
   const { data, error } = useProviders();
 
   if (error) {
@@ -25,8 +27,16 @@ export const useFetchProviders = () => {
     <div>
       Webhooks are disabled because Keep is not accessible from the internet.
       <br />
-      <br />
-      Click for Keep docs on how to enabled it 📚
+      <Link
+        href={`${
+          config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+        }/development/external-url`}
+        target="_blank"
+        rel="noreferrer noopener"
+      >
+        Read docs
+      </Link>{" "}
+      to learn how to enable it.
     </div>
   );
 
@@ -40,7 +50,7 @@ export const useFetchProviders = () => {
         autoClose: 10000,
         onClick: () =>
           window.open(
-            "https://docs.keephq.dev/development/external-url",
+            `${config?.KEEP_DOCS_URL || "https://docs.keephq.dev"}`,
             "_blank"
           ),
         style: {

@@ -4,16 +4,19 @@ import { KeepApiError, KeepApiReadOnlyError } from "./KeepApiError";
 import { getApiUrlFromConfig } from "@/shared/lib/getApiUrlFromConfig";
 import { getApiURL } from "@/utils/apiUrl";
 import * as Sentry from "@sentry/nextjs";
+import { signOut as signOutClient } from "next-auth/react";
 
 const READ_ONLY_ALLOWED_METHODS = ["GET", "OPTIONS"];
 const READ_ONLY_ALWAYS_ALLOWED_URLS = ["/alerts/audit"];
 
 export class ApiClient {
+  private readonly isServer: boolean;
   constructor(
     private readonly session: Session | null,
-    private readonly config: InternalConfig | null,
-    private readonly isServer: boolean
-  ) {}
+    private readonly config: InternalConfig | null
+  ) {
+    this.isServer = typeof window === "undefined";
+  }
 
   isReady() {
     return !!this.session && !!this.config;
@@ -28,6 +31,21 @@ export class ApiClient {
     };
   }
 
+  getToken() {
+    return this.session?.accessToken;
+  }
+
+  getApiBaseUrl() {
+    if (this.isServer) {
+      return getApiURL();
+    }
+    const baseUrl = getApiUrlFromConfig(this.config);
+    if (baseUrl.startsWith("/")) {
+      return `${window.location.origin}${baseUrl}`;
+    }
+    return baseUrl;
+  }
+
   async handleResponse(response: Response, url: string) {
     // Ensure that the fetch was successful
     if (!response.ok) {
@@ -35,6 +53,10 @@ export class ApiClient {
       if (response.headers.get("content-type")?.includes("application/json")) {
         const data = await response.json();
         if (response.status === 401) {
+          // on server, middleware will handle the sign out
+          if (!this.isServer) {
+            await signOutClient();
+          }
           throw new KeepApiError(
             `${data.message || data.detail}`,
             url,
@@ -61,7 +83,7 @@ export class ApiClient {
           );
         }
       }
-      throw new Error("An error occurred while fetching the data.");
+      throw new Error("An error occurred while fetching the data");
     }
 
     if (response.headers.get("content-length") === "0") {

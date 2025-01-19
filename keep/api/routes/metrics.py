@@ -1,17 +1,55 @@
-import chevron
-
-from fastapi import Query
 from typing import List
-from fastapi import APIRouter, Depends, Response
 
+import chevron
+from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi.responses import JSONResponse
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    CollectorRegistry,
+    generate_latest,
+    multiprocess,
+)
+
+from keep.api.core.config import config
+from keep.api.core.db import (
+    get_last_alerts_for_incidents,
+    get_last_incidents,
+    get_workflow_executions_count,
+)
+from keep.api.core.limiter import limiter
 from keep.api.models.alert import AlertDto
-from keep.api.core.db import get_last_incidents, get_last_alerts_for_incidents, get_workflow_executions_count
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()
 
 CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
+NO_AUTH_METRICS = config("KEEP_NO_AUTH_METRICS", default=False, cast=bool)
+
+if NO_AUTH_METRICS:
+
+    @router.get("/processing", include_in_schema=False)
+    async def get_processing_metrics(
+        request: Request,
+    ):
+        registry = CollectorRegistry()
+        multiprocess.MultiProcessCollector(registry)
+        metrics = generate_latest(registry)
+        return Response(content=metrics, media_type=CONTENT_TYPE_LATEST)
+
+else:
+
+    @router.get("/processing", include_in_schema=False)
+    async def get_processing_metrics(
+        request: Request,
+        authenticated_entity: AuthenticatedEntity = Depends(
+            IdentityManagerFactory.get_auth_verifier(["read:metrics"])
+        ),
+    ):
+        registry = CollectorRegistry()
+        multiprocess.MultiProcessCollector(registry)
+        metrics = generate_latest(registry)
+        return Response(content=metrics, media_type=CONTENT_TYPE_LATEST)
 
 
 @router.get("")
@@ -40,7 +78,7 @@ def get_metrics(
         type: Bearer
         credentials: "{Your API Key}"
 
-      # Optional, you can add labels to exported incidents. 
+      # Optional, you can add labels to exported incidents.
       # Label values will be equal to the last incident's alert payload value matching the label.
       # Attention! Don't add "flaky" labels which could change from alert to alert within the same incident.
       # Good labels: ['labels.department', 'labels.team'], bad labels: ['labels.severity', 'labels.pod_id']
@@ -52,7 +90,7 @@ def get_metrics(
     ```
     """
     # We don't use im-memory metrics countrs here which is typical for prometheus exporters,
-    # they would make us expose our app's pod id's. This is a customer-facing endpoing
+    # they would make us expose our app's pod id's. This is a customer-facing endpoint
     # we're deploying to SaaS, and we want to hide our internal infra.
 
     tenant_id = authenticated_entity.tenant_id
@@ -68,17 +106,23 @@ def get_metrics(
         is_confirmed=True,
     )
 
-    last_alerts_for_incidents = get_last_alerts_for_incidents([incident.id for incident in incidents])
-    
+    last_alerts_for_incidents = get_last_alerts_for_incidents(
+        [incident.id for incident in incidents]
+    )
+
     for incident in incidents:
-        incident_name = incident.user_generated_name if incident.user_generated_name else incident.ai_generated_name
+        incident_name = (
+            incident.user_generated_name
+            if incident.user_generated_name
+            else incident.ai_generated_name
+        )
         extra_labels = ""
         try:
             last_alert = last_alerts_for_incidents[str(incident.id)][0]
             last_alert_dto = AlertDto(**last_alert.event)
         except IndexError:
             last_alert_dto = None
-        
+
         if labels is not None:
             for label in labels:
                 label_value = chevron.render("{{ " + label + " }}", last_alert_dto)
@@ -86,7 +130,7 @@ def get_metrics(
                 extra_labels += f' {label}="{label_value}"'
 
         export += f'alerts_total{{incident_name="{incident_name}" incident_id="{incident.id}"{extra_labels}}} {incident.alerts_count}\n'
-    
+
     # Exporting stats about open incidents
     export += "\n\n"
     export += "# HELP open_incidents_total The total number of open incidents.\r\n"
@@ -104,3 +148,19 @@ def get_metrics(
     export += f"workflows_executions_total {{status=\"other\"}} {workflow_execution_counts['other']}\n"
 
     return Response(content=export, media_type=CONTENT_TYPE_LATEST)
+
+
+@router.get("/dumb", include_in_schema=False)
+@limiter.limit(config("KEEP_LIMIT_CONCURRENCY", default="10/minute", cast=str))
+async def get_dumb(request: Request) -> JSONResponse:
+    """
+    This endpoint is used to test the rate limiting.
+
+    Args:
+        request (Request): The request object.
+
+    Returns:
+        JSONResponse: A JSON response with the message "hello world" ({"hello": "world"}).
+    """
+    # await asyncio.sleep(5)
+    return JSONResponse(content={"hello": "world"})

@@ -44,6 +44,7 @@ class ProviderConfigurationException(Exception):
 
 class ProvidersFactory:
     _loaded_providers_cache = None
+    _loaded_deduplication_rules_cache = None
 
     @staticmethod
     def get_provider_class(
@@ -221,6 +222,16 @@ class ProvidersFactory:
                         expected_values=expected_values,
                     )
                 )
+            if "func_params" in method.dict():
+                if method.func_params:
+                    # this should not happen
+                    logging.getLogger(__name__).warning(
+                        f"Provider {provider_class.__name__} method {method.func_name} already has func_params"
+                    )
+                # remove it, we already adding it via func_params=func_params
+                else:
+                    delattr(method, "func_params")
+
             methods.append(ProviderMethodDTO(**method.dict(), func_params=func_params))
         return methods
 
@@ -362,7 +373,13 @@ class ProvidersFactory:
                     provider_tags.add("incident")
                 provider_tags = list(provider_tags)
 
-                provider_methods = ProvidersFactory.__get_methods(provider_class)
+                try:
+                    provider_methods = ProvidersFactory.__get_methods(provider_class)
+                except Exception as e:
+                    logger.warning(
+                        f"Could not get provider {provider_directory} methods. ({str(e)})"
+                    )
+                    provider_methods = []
                 # if the provider has a PROVIDER_DISPLAY_NAME, use it, otherwise use the provider type
                 provider_display_name = getattr(
                     provider_class,
@@ -413,9 +430,9 @@ class ProvidersFactory:
                 )
                 continue
             # for some providers that depends on grpc like cilium provider, this might fail on imports not from Keep (such as the docs script)
-            except TypeError:
+            except TypeError as e:
                 logger.warning(
-                    f"Cannot import provider {provider_directory}, unexpected error."
+                    f"Cannot import provider {provider_directory}, unexpected error. ({str(e)})"
                 )
                 continue
 
@@ -598,6 +615,9 @@ class ProvidersFactory:
         Returns:
             list: The default deduplications for each provider.
         """
+        if ProvidersFactory._loaded_deduplication_rules_cache:
+            return ProvidersFactory._loaded_deduplication_rules_cache
+
         default_deduplications = []
         all_providers = ProvidersFactory.get_all_providers()
 
@@ -621,7 +641,9 @@ class ProvidersFactory:
                     full_deduplication=False,
                     # not relevant for default deduplication rules
                     ignore_fields=[],
+                    is_provisioned=False,
                 )
                 default_deduplications.append(deduplication_dto)
 
+        ProvidersFactory._loaded_deduplication_rules_cache = default_deduplications
         return default_deduplications

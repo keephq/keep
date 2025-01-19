@@ -1,9 +1,8 @@
-import { Dispatch, SetStateAction } from "react";
 import {
+  Definition as FlowDefinition,
   ReactFlowDefinition,
   V2Step,
-  Definition as FlowDefinition,
-} from "./builder-store";
+} from "@/app/(keep)/workflows/builder/types";
 
 export function globalValidatorV2(
   definition: FlowDefinition,
@@ -29,7 +28,7 @@ export function globalValidatorV2(
   ) {
     setGlobalValidationError(
       "trigger_start",
-      "Workflow Should at least have one trigger."
+      "Workflow should have at least one trigger."
     );
     return false;
   }

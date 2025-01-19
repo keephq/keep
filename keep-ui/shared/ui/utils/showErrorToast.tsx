@@ -23,8 +23,15 @@ export function showErrorToast(
       options
     );
   } else if (error instanceof KeepApiError) {
-    toast.error(customMessage || error.message, options);
+    toast.error(
+      customMessage || `${error.message}. ${error.proposedResolution}`,
+      options
+    );
   } else {
-    toast.error(`${customMessage + ": " || ""}Unknown error`, options);
+    toast.error(
+      customMessage ||
+        (error instanceof Error ? error.message : "Unknown error"),
+      options
+    );
   }
 }

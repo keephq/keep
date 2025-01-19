@@ -14,7 +14,7 @@ from fastapi import (
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from keep.api.consts import PROVIDER_PULL_INTERVAL_DAYS, STATIC_PRESETS
+from keep.api.consts import PROVIDER_PULL_INTERVAL_MINUTE, STATIC_PRESETS
 from keep.api.core.db import get_db_preset_by_name
 from keep.api.core.db import get_presets as get_presets_db
 from keep.api.core.db import (
@@ -87,13 +87,13 @@ def pull_data_from_providers(
 
         if provider.last_pull_time is not None:
             now = datetime.now()
-            days_passed = (now - provider.last_pull_time).days
-            if days_passed <= PROVIDER_PULL_INTERVAL_DAYS:
+            minutes_passed = (now - provider.last_pull_time).total_seconds() / 60
+            if minutes_passed <= PROVIDER_PULL_INTERVAL_MINUTE:
                 logger.info(
                     "Skipping provider data pulling since not enough time has passed",
                     extra={
                         **extra,
-                        "days_passed": days_passed,
+                        "minutes_passed": minutes_passed,
                         "provider_last_pull_time": str(provider.last_pull_time),
                     },
                 )
@@ -151,7 +151,7 @@ def pull_data_from_providers(
             try:
                 if isinstance(provider_class, BaseTopologyProvider):
                     logger.info("Pulling topology data", extra=extra)
-                    topology_data = provider_class.pull_topology()
+                    topology_data, _ = provider_class.pull_topology()
                     logger.info(
                         "Pulling topology data finished, processing",
                         extra={**extra, "topology_length": len(topology_data)},
@@ -165,10 +165,10 @@ def pull_data_from_providers(
                     f"Provider {provider.type} ({provider.id}) does not implement pulling topology data",
                     extra=extra,
                 )
-            except Exception:
+            except Exception as e:
                 logger.exception(
                     f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
-                    extra={**extra},
+                    extra={**extra, "exception": str(e)},
                 )
 
             for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
@@ -318,39 +318,41 @@ def create_preset(
 
 
 @router.delete(
-    "/{uuid}",
+    "/{preset_id}",
     description="Delete a preset for tenant",
 )
 def delete_preset(
-    uuid: str,
+    preset_id: uuid.UUID,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["delete:presets"])
     ),
     session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
-    logger.info("Deleting preset", extra={"uuid": uuid})
+    logger.info("Deleting preset", extra={"uuid": preset_id})
     # Delete links
-    session.query(PresetTagLink).filter(PresetTagLink.preset_id == uuid).delete()
+    session.query(PresetTagLink).filter(PresetTagLink.preset_id == preset_id).delete()
 
     statement = (
-        select(Preset).where(Preset.tenant_id == tenant_id).where(Preset.id == uuid)
+        select(Preset)
+        .where(Preset.tenant_id == tenant_id)
+        .where(Preset.id == preset_id)
     )
     preset = session.exec(statement).first()
     if not preset:
         raise HTTPException(404, "Preset not found")
     session.delete(preset)
     session.commit()
-    logger.info("Deleted preset", extra={"uuid": uuid})
+    logger.info("Deleted preset", extra={"uuid": preset_id})
     return {}
 
 
 @router.put(
-    "/{uuid}",
+    "/{preset_id}",
     description="Update a preset for tenant",
 )
 def update_preset(
-    uuid: str,
+    preset_id: uuid.UUID,
     body: CreateOrUpdatePresetDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:presets"])
@@ -358,9 +360,11 @@ def update_preset(
     session: Session = Depends(get_session),
 ) -> PresetDto:
     tenant_id = authenticated_entity.tenant_id
-    logger.info("Updating preset", extra={"uuid": uuid})
+    logger.info("Updating preset", extra={"uuid": preset_id})
     statement = (
-        select(Preset).where(Preset.tenant_id == tenant_id).where(Preset.id == uuid)
+        select(Preset)
+        .where(Preset.tenant_id == tenant_id)
+        .where(Preset.id == preset_id)
     )
     preset = session.exec(statement).first()
     if not preset:
@@ -412,7 +416,7 @@ def update_preset(
 
     session.commit()
     session.refresh(preset)
-    logger.info("Updated preset", extra={"uuid": uuid})
+    logger.info("Updated preset", extra={"uuid": preset_id})
     return PresetDto(**preset.to_dict())
 
 

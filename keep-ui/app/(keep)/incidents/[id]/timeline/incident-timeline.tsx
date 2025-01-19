@@ -7,7 +7,7 @@ import { AuditEvent, useAlerts } from "@/utils/hooks/useAlerts";
 import { useIncidentAlerts } from "@/utils/hooks/useIncidents";
 import { Card } from "@tremor/react";
 import AlertSeverity from "@/app/(keep)/alerts/alert-severity";
-import { AlertDto } from "@/app/(keep)/alerts/models";
+import { AlertDto } from "@/entities/alerts/model";
 import {
   format,
   parseISO,
@@ -15,9 +15,9 @@ import {
   differenceInHours,
   differenceInDays,
 } from "date-fns";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 const severityColors = {
   critical: "bg-red-300",
@@ -84,7 +84,7 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
         <p className="text-gray-400">Source:</p>
         <div className="flex items-center">
           {alert.source.map((source, index) => (
-            <Image
+            <DynamicImageProviderIcon
               className={`inline-block mr-2 ${index == 0 ? "" : "-ml-2"}`}
               key={source}
               alt={source}

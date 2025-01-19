@@ -1,17 +1,16 @@
 import React, { useCallback, useMemo } from "react";
 import { Icon } from "@tremor/react";
-import Image from "next/image";
 import { Text } from "@tremor/react";
 import { FacetValueProps } from "./alert-table-facet-types";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import { BellIcon, BellSlashIcon, FireIcon } from "@heroicons/react/24/outline";
-import { Severity } from "./models";
-import { AlertSeverityBorderIcon } from "./alert-severity-border";
 import clsx from "clsx";
 import { useIncidents } from "@/utils/hooks/useIncidents";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { useUser } from "@/entities/users/model/useUser";
+import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -75,7 +74,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
     (label: string, facetKey: string) => {
       if (facetKey === "source") {
         return (
-          <Image
+          <DynamicImageProviderIcon
             className="inline-block"
             alt={label}
             height={16}
@@ -90,7 +89,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
         );
       }
       if (facetKey === "severity") {
-        return <AlertSeverityBorderIcon severity={label as Severity} />;
+        return <SeverityBorderIcon severity={label as UISeverity} />;
       }
       if (facetKey === "assignee") {
         return <UserStatefulAvatar email={label} size="xs" />;

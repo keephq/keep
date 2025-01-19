@@ -57,38 +57,80 @@ class Workflow:
         self.logger.debug(f"Running steps for workflow {self.workflow_id}")
         for step in self.workflow_steps:
             try:
-                self.logger.info("Running step %s", step.step_id)
+                self.logger.info(
+                    "Running step %s",
+                    step.step_id,
+                    extra={"step_id": step.step_id},
+                )
                 step_ran = step.run()
                 if step_ran:
-                    self.logger.info("Step %s ran successfully", step.step_id)
+                    self.logger.info(
+                        "Step %s ran successfully",
+                        step.step_id,
+                        extra={"step_id": step.step_id},
+                    )
+                # if the step ran + the step configured to stop the workflow:
+                if step_ran and not step.continue_to_next_step:
+                    self.logger.info(
+                        "Step %s ran successfully, stopping because continue_to_next is False",
+                        step.step_id,
+                        extra={"step_id": step.step_id},
+                    )
+                    break
             except StepError as e:
                 self.logger.error(f"Step {step.step_id} failed: {e}")
                 raise
         self.logger.debug(f"Steps for workflow {self.workflow_id} ran successfully")
 
     def run_action(self, action: Step):
-        self.logger.info("Running action %s", action.name)
+        self.logger.info(
+            "Running action %s",
+            action.name,
+            extra={"step_id": action.step_id},
+        )
         try:
+            action_stop = False
             action_ran = action.run()
             action_error = None
             if action_ran:
-                self.logger.info("Action %s ran successfully", action.name)
+                self.logger.info(
+                    "Action %s ran successfully",
+                    action.name,
+                    extra={
+                        "step_id": action.step_id,
+                    },
+                )
+            if action_ran and not action.continue_to_next_step:
+                self.logger.info(
+                    "Action %s ran successfully, stopping because continue_to_next is False",
+                    action.name,
+                    extra={
+                        "step_id": action.step_id,
+                    },
+                )
+                action_stop = True
         except Exception as e:
-            self.logger.error(f"Action {action.name} failed: {e}")
+            self.logger.error(f"Action {action.name} failed: {e}", extra={
+                "step_id": action.step_id,
+            })
             action_ran = False
             action_error = f"Failed to run action {action.name}: {str(e)}"
-        return action_ran, action_error
+        return action_ran, action_error, action_stop
 
     def run_actions(self):
         self.logger.debug("Running actions")
         actions_firing = []
         actions_errors = []
         for action in self.workflow_actions:
-            action_status, action_error = self.run_action(action)
+            action_status, action_error, action_stop = self.run_action(action)
             if action_error:
                 actions_firing.append(action_status)
                 actions_errors.append(action_error)
-        self.logger.debug("Actions run")
+            # if the action ran + the action configured to stop the workflow:
+            elif action_status and action_stop:
+                self.logger.info("Action stop, stopping the workflow")
+                break
+        self.logger.debug("Actions ran")
         return actions_firing, actions_errors
 
     def run(self, workflow_execution_id):
@@ -110,9 +152,3 @@ class Workflow:
         actions_firing, actions_errors = self.run_actions()
         self.logger.info(f"Finish to run workflow {self.workflow_id}")
         return actions_errors
-
-    def _handle_actions(self):
-        self.logger.debug(f"Handling actions for workflow {self.workflow_id}")
-        for action in self.workflow_actions:
-            action.run()
-        self.logger.debug(f"Actions handled for workflow {self.workflow_id}")

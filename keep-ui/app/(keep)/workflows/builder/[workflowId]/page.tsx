@@ -1,4 +1,5 @@
-import PageClient from "../page.client";
+import { Metadata } from "next";
+import { WorkflowBuilderPageClient } from "../page.client";
 import { createServerApiClient } from "@/shared/api/server";
 
 type WorkflowRawResponse = {
@@ -18,6 +19,14 @@ export default async function PageWithId({
     }
   );
   return (
-    <PageClient workflow={text.workflow_raw} workflowId={params.workflowId} />
+    <WorkflowBuilderPageClient
+      workflowRaw={text.workflow_raw}
+      workflowId={params.workflowId}
+    />
   );
 }
+
+export const metadata: Metadata = {
+  title: "Keep - Workflow Builder",
+  description: "Build workflows with a UI builder.",
+};

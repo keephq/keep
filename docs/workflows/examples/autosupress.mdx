@@ -1,0 +1,33 @@
+---
+title: "Suppressing Alerts Automatically"
+---
+
+<Info>
+
+Link to the [workflow](https://github.com/keephq/keep/blob/main/examples/workflows/autosupress.yml).
+
+</Info>
+
+This workflow demonstrates how to suppress alerts by marking them as dismissed.
+
+
+Explanation:
+- Trigger: Activated by any alert.
+- Action: Enrich the alert by adding a `dismissed` field with the value `true`.
+
+
+```yaml
+workflow:
+  id: autosupress
+  description: demonstrates how to automatically suppress alerts
+  triggers:
+    - type: alert
+  actions:
+    - name: dismiss-alert
+      provider:
+        type: mock
+        with:
+          enrich_alert:
+            - key: dismissed
+              value: "true"
+```

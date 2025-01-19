@@ -1,10 +1,10 @@
+import { Edge } from "@xyflow/react";
 import {
   FlowNode,
   NodeData,
   V2Properties,
   V2Step,
-} from "@/app/(keep)/workflows/builder/builder-store";
-import { Edge } from "@xyflow/react";
+} from "@/app/(keep)/workflows/builder/types";
 
 function getKeyBasedSquence(step: V2Step, id: string, type: string) {
   return `${step.type}__${id}__empty_${type}`;
@@ -607,7 +607,7 @@ export function getTriggerStep(properties: V2Properties) {
   return [
     {
       id: "trigger_start",
-      name: "Trigger Start",
+      name: "Triggers",
       type: "trigger",
       componentType: "trigger",
       edgeTarget: triggerStartTargets,
@@ -617,7 +617,7 @@ export function getTriggerStep(properties: V2Properties) {
     ...steps,
     {
       id: "trigger_end",
-      name: "Workflow start",
+      name: "Workflow steps",
       type: "",
       componentType: "trigger",
       cantDelete: true,

@@ -4,7 +4,6 @@ import os
 from typing import Any, Dict, List, Optional
 
 import validators
-import yaml
 from fastapi import (
     APIRouter,
     Body,
@@ -20,6 +19,7 @@ from opentelemetry import trace
 from sqlmodel import Session
 
 from keep.api.core.db import (
+    get_alert_by_event_id,
     get_installed_providers,
     get_last_workflow_workflow_to_alert_executions,
     get_session,
@@ -35,7 +35,9 @@ from keep.api.models.workflow import (
     WorkflowExecutionLogsDTO,
     WorkflowToAlertExecutionDTO,
 )
+from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import WorkflowExecutionsPaginatedResultsDto
+from keep.functions import cyaml
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.parser.parser import Parser
@@ -116,6 +118,9 @@ def get_workflows(
 
         # create the workflow DTO
         try:
+            workflow_raw = cyaml.safe_load(workflow.workflow_raw)
+            # very big width to avoid line breaks
+            workflow_raw = cyaml.dump(workflow_raw, width=99999)
             workflow_dto = WorkflowDTO(
                 id=workflow.id,
                 name=workflow.name,
@@ -128,7 +133,7 @@ def get_workflows(
                 interval=workflow.interval,
                 providers=providers_dto,
                 triggers=triggers,
-                workflow_raw=workflow.workflow_raw,
+                workflow_raw=workflow_raw,
                 revision=workflow.revision,
                 last_updated=workflow.last_updated,
                 last_executions=last_executions,
@@ -165,6 +170,8 @@ def export_workflows(
 )
 def run_workflow(
     workflow_id: str,
+    event_type: Optional[str] = Query(None),
+    event_id: Optional[str] = Query(None),
     body: Optional[Dict[Any, Any]] = Body(None),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:workflows"])
@@ -173,40 +180,57 @@ def run_workflow(
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
+
     # if the workflow id is the name of the workflow (e.g. the CLI has only the name)
     if not validators.uuid(workflow_id):
         logger.info("Workflow ID is not a UUID, trying to get the ID by name")
         workflow_id = getattr(get_workflow_by_name(tenant_id, workflow_id), "id", None)
+
     workflowmanager = WorkflowManager.get_instance()
 
-    # Finally, run it
     try:
-
-        if body.get("type", "alert") == "alert":
-            event_class = AlertDto
+        # Handle replay from query parameters
+        if event_type and event_id:
+            if event_type == "alert":
+                # Fetch alert from your alert store
+                alert_db = get_alert_by_event_id(tenant_id, event_id)
+                event = convert_db_alerts_to_dto_alerts([alert_db])[0]
+            elif event_type == "incident":
+                # SHAHAR: TODO
+                raise NotImplementedError("Incident replay is not supported yet")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid event type: {event_type}",
+                )
         else:
-            event_class = IncidentDto
-
-        event_body = body.get("body", {}) or body
-
-        # if its event that was triggered by the UI with the Modal
-        fingerprint = event_body.get("fingerprint", "")
-        if (fingerprint and "test-workflow" in fingerprint) or not body:
-            # some random
-            event_body["id"] = event_body.get("fingerprint", "manual-run")
-            event_body["name"] = event_body.get("fingerprint", "manual-run")
-            event_body["lastReceived"] = datetime.datetime.now(
-                tz=datetime.timezone.utc
-            ).isoformat()
-            if "source" in event_body and not isinstance(event_body["source"], list):
-                event_body["source"] = [event_body["source"]]
-        try:
-            event = event_class(**event_body)
-        except TypeError:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid event format",
+            # Handle regular run from body
+            event_body = body.get("body", {}) or body
+            event_class = (
+                AlertDto if body.get("type", "alert") == "alert" else IncidentDto
             )
+
+            # Handle UI triggered events
+            fingerprint = event_body.get("fingerprint", "")
+            if (fingerprint and "test-workflow" in fingerprint) or not body:
+                event_body["id"] = event_body.get("fingerprint", "manual-run")
+                event_body["name"] = event_body.get("fingerprint", "manual-run")
+                event_body["lastReceived"] = datetime.datetime.now(
+                    tz=datetime.timezone.utc
+                ).isoformat()
+                if "source" in event_body and not isinstance(
+                    event_body["source"], list
+                ):
+                    event_body["source"] = [event_body["source"]]
+
+            try:
+                event = event_class(**event_body)
+            except TypeError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid event format",
+                )
+
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
             workflow_id, tenant_id, created_by, event
         )
@@ -219,6 +243,7 @@ def run_workflow(
             status_code=500,
             detail=f"Failed to run workflow {workflow_id}: {e}",
         )
+
     logger.info(
         "Workflow ran successfully",
         extra={
@@ -281,14 +306,14 @@ async def run_workflow_from_definition(
     return workflow_execution
 
 
-async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
+async def __get_workflow_raw_data(request: Request, file: UploadFile | None) -> dict:
     try:
         # we support both File upload (from frontend) or raw yaml (e.g. curl)
         if file:
             workflow_raw_data = await file.read()
         else:
             workflow_raw_data = await request.body()
-        workflow_data = yaml.safe_load(workflow_raw_data)
+        workflow_data = cyaml.safe_load(workflow_raw_data)
         # backward comptability
         if "alert" in workflow_data:
             workflow_data = workflow_data.pop("alert")
@@ -296,7 +321,7 @@ async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
         elif "workflow" in workflow_data:
             workflow_data = workflow_data.pop("workflow")
 
-    except yaml.YAMLError:
+    except cyaml.YAMLError:
         logger.exception("Invalid YAML format")
         raise HTTPException(status_code=400, detail="Invalid YAML format")
     return workflow_data
@@ -337,6 +362,33 @@ async def create_workflow(
         return WorkflowCreateOrUpdateDTO(
             workflow_id=workflow.id, status="updated", revision=workflow.revision
         )
+
+
+@router.get("/executions", description="Get workflow executions by alert fingerprint")
+def get_workflow_executions_by_alert_fingerprint(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+    session: Session = Depends(get_session),
+) -> list[WorkflowToAlertExecutionDTO]:
+    with tracer.start_as_current_span("get_workflow_executions_by_alert_fingerprint"):
+        latest_workflow_to_alert_executions = (
+            get_last_workflow_workflow_to_alert_executions(
+                session=session, tenant_id=authenticated_entity.tenant_id
+            )
+        )
+
+    return [
+        WorkflowToAlertExecutionDTO(
+            workflow_id=workflow_execution.workflow_execution.workflow_id,
+            workflow_execution_id=workflow_execution.workflow_execution_id,
+            alert_fingerprint=workflow_execution.alert_fingerprint,
+            workflow_status=workflow_execution.workflow_execution.status,
+            workflow_started=workflow_execution.workflow_execution.started,
+            event_id=workflow_execution.event_id,
+        )
+        for workflow_execution in latest_workflow_to_alert_executions
+    ]
 
 
 @router.post(
@@ -466,7 +518,7 @@ async def update_workflow_by_id(
         workflow["name"] = workflow_from_db.name
     workflow_from_db.description = workflow.get("description")
     workflow_from_db.interval = workflow_interval
-    workflow_from_db.workflow_raw = yaml.dump(workflow)
+    workflow_from_db.workflow_raw = cyaml.dump(workflow, width=99999)
     workflow_from_db.last_updated = datetime.datetime.now()
     session.add(workflow_from_db)
     session.commit()
@@ -492,7 +544,8 @@ def get_raw_workflow_by_id(
             )
         },
     )
-    
+
+
 @router.get("/{workflow_id}", description="Get workflow by ID")
 def get_workflow_by_id(
     workflow_id: str,
@@ -503,69 +556,61 @@ def get_workflow_by_id(
     tenant_id = authenticated_entity.tenant_id
     # get all workflow
     workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
-    
     if not workflow:
         logger.warning(
             f"Tenant tried to get workflow {workflow_id} that does not exist",
             extra={"tenant_id": tenant_id},
         )
         raise HTTPException(404, "Workflow not found")
-    
-    try: 
-        workflow_yaml = yaml.safe_load(workflow.workflow_raw)
+
+    installed_providers = get_installed_providers(tenant_id)
+    installed_providers_by_type = {}
+    for installed_provider in installed_providers:
+        if installed_provider.type not in installed_providers_by_type:
+            installed_providers_by_type[installed_provider.type] = {
+                installed_provider.name: installed_provider
+            }
+        else:
+            installed_providers_by_type[installed_provider.type][
+                installed_provider.name
+            ] = installed_provider
+
+    workflowstore = WorkflowStore()
+    try:
+        providers_dto, triggers = workflowstore.get_workflow_meta_data(
+            tenant_id=tenant_id,
+            workflow=workflow,
+            installed_providers_by_type=installed_providers_by_type,
+        )
+    except Exception as e:
+        logger.error(f"Error fetching workflow meta data: {e}")
+        providers_dto, triggers = [], []  # Default in case of failure
+
+    try:
+        workflow_yaml = cyaml.safe_load(workflow.workflow_raw)
         valid_workflow_yaml = {"workflow": workflow_yaml}
-        final_workflow_raw = yaml.dump(valid_workflow_yaml)
+        final_workflow_raw = cyaml.dump(valid_workflow_yaml, width=99999)
         workflow_dto = WorkflowDTO(
             id=workflow.id,
             name=workflow.name,
-            description=workflow.description
-            or "[This workflow has no description]",
+            description=workflow.description or "[This workflow has no description]",
             created_by=workflow.created_by,
             creation_time=workflow.creation_time,
             interval=workflow.interval,
-            providers=[],
-            triggers=[],
+            providers=providers_dto,
+            triggers=triggers,
             workflow_raw=final_workflow_raw,
-            revision=workflow.revision,
             last_updated=workflow.last_updated,
             disabled=workflow.is_disabled,
-            provisioned=workflow.provisioned,
         )
         return workflow_dto
-    except yaml.YAMLError:
+    except cyaml.YAMLError:
         logger.exception("Invalid YAML format")
         raise HTTPException(status_code=500, detail="Error fetching workflow meta data")
- 
-
-
-@router.get("/executions", description="Get workflow executions by alert fingerprint")
-def get_workflow_executions_by_alert_fingerprint(
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
-    ),
-    session: Session = Depends(get_session),
-) -> list[WorkflowToAlertExecutionDTO]:
-    with tracer.start_as_current_span("get_workflow_executions_by_alert_fingerprint"):
-        latest_workflow_to_alert_executions = (
-            get_last_workflow_workflow_to_alert_executions(
-                session=session, tenant_id=authenticated_entity.tenant_id
-            )
-        )
-
-    return [
-        WorkflowToAlertExecutionDTO(
-            workflow_id=workflow_execution.workflow_execution.workflow_id,
-            workflow_execution_id=workflow_execution.workflow_execution_id,
-            alert_fingerprint=workflow_execution.alert_fingerprint,
-            workflow_status=workflow_execution.workflow_execution.status,
-            workflow_started=workflow_execution.workflow_execution.started,
-        )
-        for workflow_execution in latest_workflow_to_alert_executions
-    ]
 
 
 @router.get("/{workflow_id}/runs", description="Get workflow executions by ID")
-def get_workflow_by_id(
+def get_workflow_runs_by_id(
     workflow_id: str,
     tab: int = 1,
     limit: int = 25,
@@ -690,6 +735,17 @@ def get_workflow_execution_status(
             detail=f"Workflow execution {workflow_execution_id} not found",
         )
 
+    event_id = None
+    event_type = None
+
+    if workflow_execution.workflow_to_alert_execution:
+        event_id = workflow_execution.workflow_to_alert_execution.event_id
+        event_type = "alert"
+    # TODO: sub triggers? on create? on update?
+    elif workflow_execution.workflow_to_incident_execution:
+        event_id = workflow_execution.workflow_to_incident_execution.incident_id
+        event_type = "incident"
+
     workflow_execution_dto = WorkflowExecutionDTO(
         id=workflow_execution.id,
         workflow_id=workflow_execution.workflow_id,
@@ -708,5 +764,7 @@ def get_workflow_execution_status(
             for log in workflow_execution.logs
         ],
         results=workflow_execution.results,
+        event_id=event_id,
+        event_type=event_type,
     )
     return workflow_execution_dto

@@ -54,9 +54,13 @@ export function getConfig(): InternalConfig {
     POSTHOG_DISABLED: process.env.POSTHOG_DISABLED,
     POSTHOG_HOST: process.env.POSTHOG_HOST,
     SENTRY_DISABLED: process.env.SENTRY_DISABLED,
+    FRIGADE_DISABLED: process.env.FRIGADE_DISABLED,
     READ_ONLY: process.env.KEEP_READ_ONLY === "true",
     OPEN_AI_API_KEY_SET: !!process.env.OPEN_AI_API_KEY || !!process.env.OPENAI_API_KEY,
     // NOISY ALERTS DISABLED BY DEFAULT TO SPARE SPACE ON THE TABLE
     NOISY_ALERTS_ENABLED: process.env.NOISY_ALERTS_ENABLED === "true",
+    // The URL of the documentation site
+    KEEP_DOCS_URL: process.env.KEEP_DOCS_URL || "https://docs.keephq.dev",
+    KEEP_CONTACT_US_URL: process.env.KEEP_CONTACT_US_URL || "https://slack.keephq.dev/",
   };
 }

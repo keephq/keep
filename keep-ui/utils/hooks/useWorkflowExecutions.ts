@@ -1,8 +1,8 @@
-import { AlertToWorkflowExecution } from "@/app/(keep)/alerts/models";
+import { AlertToWorkflowExecution } from "@/entities/alerts/model";
 import {
   PaginatedWorkflowExecutionDto,
-  WorkflowExecution,
-} from "@/app/(keep)/workflows/builder/types";
+  WorkflowExecutionDetail,
+} from "@/shared/api/workflow-executions";
 import { useSearchParams } from "next/navigation";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
@@ -23,7 +23,6 @@ export const useWorkflowExecutions = (
 
 export const useWorkflowExecutionsV2 = (
   workflowId: string,
-  tab: number = 0,
   limit: number = 25,
   offset: number = 0
 ) => {
@@ -35,20 +34,21 @@ export const useWorkflowExecutionsV2 = (
   offset = searchParams?.get("offset")
     ? Number(searchParams?.get("offset"))
     : offset;
-  tab = searchParams?.get("tab") ? Number(searchParams?.get("tab")) : tab;
   limit = limit > 100 ? 50 : limit;
   limit = limit <= 0 ? 25 : limit;
   offset = offset < 0 ? 0 : offset;
-  tab = tab < 0 ? 0 : tab;
-  tab = tab > 3 ? 3 : tab;
 
   return useSWR<PaginatedWorkflowExecutionDto>(
     api.isReady()
-      ? `/workflows/${workflowId}/runs?v2=true&tab=${tab}&limit=${limit}&offset=${offset}${
+      ? `/workflows/${workflowId}/runs?v2=true&limit=${limit}&offset=${offset}${
           searchParams ? `&${searchParams.toString()}` : ""
         }`
       : null,
-    (url: string) => api.get(url)
+    (url: string) => api.get(url),
+    {
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
+    }
   );
 };
 
@@ -58,7 +58,7 @@ export const useWorkflowExecution = (
 ) => {
   const api = useApi();
 
-  return useSWR<WorkflowExecution>(
+  return useSWR<WorkflowExecutionDetail>(
     api.isReady()
       ? `/workflows/${workflowId}/runs/${workflowExecutionId}`
       : null,

@@ -1,17 +1,15 @@
 import { IncidentList } from "@/features/incident-list";
-import {
-  getIncidents,
-  GetIncidentsParams,
-} from "@/entities/incidents/api/incidents";
+import { getIncidents, GetIncidentsParams } from "@/entities/incidents/api";
 import { PaginatedIncidentsDto } from "@/entities/incidents/model";
 import { createServerApiClient } from "@/shared/api/server";
+import {DefaultIncidentFilters} from "@/entities/incidents/model/models";
 
 const defaultIncidentsParams: GetIncidentsParams = {
   confirmed: true,
   limit: 20,
   offset: 0,
   sorting: { id: "creation_time", desc: true },
-  filters: {},
+  filters: DefaultIncidentFilters,
 };
 
 export default async function Page() {

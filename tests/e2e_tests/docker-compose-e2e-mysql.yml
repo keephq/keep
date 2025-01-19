@@ -1,19 +1,18 @@
-
 services:
   keep-database:
-      image: mysql:latest
-      environment:
-        - MYSQL_ROOT_PASSWORD=keep
-        - MYSQL_DATABASE=keep
-      volumes:
-        - mysql-data:/var/lib/mysql
-      ports:
-        - "3306:3306"
-      healthcheck:
-        test: ["CMD-SHELL", "mysqladmin ping -h localhost"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=keep
+      - MYSQL_DATABASE=keep
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   keep-frontend:
     extends:
@@ -26,6 +25,7 @@ services:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
       - SENTRY_DISABLED=true
 
   keep-backend:
@@ -39,7 +39,9 @@ services:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
       - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
+      - SQLALCHEMY_WARN_20=1
     depends_on:
       keep-database:
         condition: service_healthy

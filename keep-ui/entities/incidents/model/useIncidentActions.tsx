@@ -3,7 +3,7 @@ import { toast } from "react-toastify";
 import { useSWRConfig } from "swr";
 import { IncidentDto, Status } from "./models";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 type UseIncidentActionsValue = {
   addIncident: (incident: IncidentCreateDto) => Promise<IncidentDto>;
@@ -25,7 +25,25 @@ type UseIncidentActionsValue = {
     sourceIncidents: IncidentDto[],
     destinationIncident: IncidentDto
   ) => Promise<void>;
+  invokeProviderMethod: (
+    providerId: string,
+    methodName: string,
+    methodParams: { [key: string]: string | boolean | object }
+  ) => Promise<any>;
   confirmPredictedIncident: (incidentId: string) => Promise<void>;
+  unlinkAlertsFromIncident: (
+    incidentId: string,
+    alertFingerprints: string[]
+  ) => Promise<void>;
+  splitIncidentAlerts: (
+    incidentId: string,
+    alertFingerprints: string[],
+    destinationIncidentId: string
+  ) => Promise<void>;
+  enrichIncident: (
+    incidentId: string,
+    enrichments: { [key: string]: any }
+  ) => Promise<void>;
   mutateIncidentsList: () => void;
   mutateIncident: (incidentId: string) => void;
 };
@@ -34,6 +52,7 @@ type IncidentCreateDto = {
   user_generated_name: string;
   user_summary: string;
   assignee: string;
+  resolve_on: string;
 };
 
 type IncidentUpdateDto = Partial<IncidentCreateDto> &
@@ -58,6 +77,31 @@ export function useIncidentActions(): UseIncidentActionsValue {
           typeof key === "string" && key.startsWith(`/incidents/${incidentId}`)
       ),
     [mutate]
+  );
+
+  const invokeProviderMethod = useCallback(
+    async (
+      providerId: string,
+      methodName: string,
+      methodParams: { [key: string]: string | boolean | object }
+    ) => {
+      const result = await api.post(
+        `/providers/${providerId}/invoke/${methodName}`,
+        methodParams
+      );
+      return result;
+    },
+    [api]
+  );
+
+  const enrichIncident = useCallback(
+    async (incidentId: string, enrichments: { [key: string]: any }) => {
+      const result = await api.post(`/incidents/${incidentId}/enrich`, {
+        enrichments: enrichments,
+      });
+      return result;
+    },
+    [api]
   );
 
   const addIncident = useCallback(
@@ -187,6 +231,72 @@ export function useIncidentActions(): UseIncidentActionsValue {
     [api, mutateIncident, mutateIncidentsList]
   );
 
+  const unlinkAlertsFromIncident = useCallback(
+    async (
+      incidentId: string,
+      alertFingerprints: string[],
+      {
+        skipConfirmation = false,
+      }: {
+        skipConfirmation?: boolean;
+      } = {}
+    ) => {
+      if (!alertFingerprints.length) {
+        showErrorToast(new Error("Please select alerts to unlink."));
+        return;
+      }
+
+      if (
+        !skipConfirmation &&
+        !confirm(
+          `Are you sure you want to unlink ${
+            alertFingerprints.length === 1
+              ? "alert"
+              : `${alertFingerprints.length} alerts`
+          } from this incident?`
+        )
+      ) {
+        return;
+      }
+
+      try {
+        const result = await api.delete(
+          `/incidents/${incidentId}/alerts`,
+          alertFingerprints
+        );
+        mutateIncidentsList();
+        mutateIncident(incidentId);
+        toast.success("Alerts unlinked from incident successfully");
+        return result;
+      } catch (error) {
+        showErrorToast(error, "Failed to unlink alerts from incident");
+      }
+    },
+    [api, mutateIncident, mutateIncidentsList]
+  );
+
+  const splitIncidentAlerts = useCallback(
+    async (
+      incidentId: string,
+      alertFingerprints: string[],
+      destinationIncidentId: string
+    ) => {
+      try {
+        const result = await api.post(`/incidents/${incidentId}/split`, {
+          alert_fingerprints: alertFingerprints,
+          destination_incident_id: destinationIncidentId,
+        });
+        mutateIncidentsList();
+        mutateIncident(incidentId);
+        toast.success("Alerts split successfully");
+        return result;
+      } catch (error) {
+        showErrorToast(error, "Failed to split incident alerts");
+      }
+    },
+    [api, mutateIncident, mutateIncidentsList]
+  );
+
   return {
     addIncident,
     updateIncident,
@@ -196,5 +306,9 @@ export function useIncidentActions(): UseIncidentActionsValue {
     confirmPredictedIncident,
     mutateIncidentsList,
     mutateIncident,
+    unlinkAlertsFromIncident,
+    splitIncidentAlerts,
+    invokeProviderMethod,
+    enrichIncident,
   };
 }

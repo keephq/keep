@@ -12,7 +12,7 @@ import React, { ReactNode } from "react";
 import { IncidentDto } from "@/entities/incidents/model";
 import { FaArrowDown, FaArrowRight, FaArrowUp } from "react-icons/fa";
 import clsx from "clsx";
-import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
+import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 
 interface Props {
   table: ReactTable<IncidentDto>;
@@ -51,8 +51,8 @@ const SortableHeaderCell = ({ header, children }: SortableHeaderCellProps) => {
                 column.getNextSortingOrder() === "asc"
                   ? "Sort ascending"
                   : column.getNextSortingOrder() === "desc"
-                  ? "Sort descending"
-                  : "Clear sort"
+                    ? "Sort descending"
+                    : "Clear sort"
               }
               icon={
                 column.getIsSorted()
@@ -100,29 +100,29 @@ export const IncidentTableComponent = (props: Props) => {
       </TableHead>
       <TableBody>
         {table.getRowModel().rows.map((row) => (
-          <>
-            <TableRow
-              key={row.id}
-              className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted"
-            >
-              {row.getVisibleCells().map((cell) => {
-                const { style, className } =
-                  getCommonPinningStylesAndClassNames(cell.column);
-                return (
-                  <TableCell
-                    key={cell.id}
-                    style={style}
-                    className={clsx(
-                      className,
-                      cell.column.id === "actions" ? "p-1" : ""
-                    )}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                );
-              })}
-            </TableRow>
-          </>
+          <TableRow
+            key={row.id}
+            className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted"
+          >
+            {row.getVisibleCells().map((cell) => {
+              const { style, className } = getCommonPinningStylesAndClassNames(
+                cell.column
+              );
+              return (
+                <TableCell
+                  key={cell.id}
+                  style={style}
+                  className={clsx(
+                    className,
+                    "bg-white",
+                    cell.column.id === "actions" ? "p-1" : ""
+                  )}
+                >
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              );
+            })}
+          </TableRow>
         ))}
       </TableBody>
     </Table>

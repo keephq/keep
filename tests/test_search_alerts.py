@@ -6,7 +6,7 @@ import pytest
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto
-from keep.api.models.db.alert import AlertActionType
+from keep.api.models.db.alert import ActionType
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
 from keep.searchengine.searchengine import SearchEngine
@@ -147,12 +147,12 @@ def test_search_sanity_3(db_session, setup_alerts):
 def test_search_sanity_4(db_session, setup_alerts):
     # mark alerts as dismissed
     enrichment_bl = EnrichmentsBl(SINGLE_TENANT_UUID)
-    enrichment_bl.enrich_alert(
+    enrichment_bl.enrich_entity(
         fingerprint="test-1",
         enrichments={"dismissed": True},
         action_callee="test",
         action_description="test",
-        action_type=AlertActionType.GENERIC_ENRICH,
+        action_type=ActionType.GENERIC_ENRICH,
     )
     search_query = SearchQuery(
         sql_query={
@@ -1311,6 +1311,7 @@ def test_severity_comparisons(
     )
 
 
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 def test_alerts_enrichment_in_search(db_session, client, test_app, elastic_client):
 
@@ -1381,6 +1382,10 @@ def test_alerts_enrichment_in_search(db_session, client, test_app, elastic_clien
         headers={"x-api-key": "some-key"},
         json=alert_high_dto.dict(),
     )
+
+    while len(client.get("/alerts", headers={"x-api-key": "some-key"}).json()) != 2:
+        time.sleep(0.1)
+
     # And add manual enrichment
     client.post(
         "/alerts/enrich",

@@ -12,16 +12,14 @@ import {
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import "chart.js/auto";
-import { Workflow, WorkflowExecution } from "./models";
-import { differenceInSeconds } from "date-fns";
-import { useRouter } from "next/navigation";
+import { Workflow } from "@/shared/api/workflows";
 import {
   getRandomStatus,
   getLabels,
   getDataValues,
   getColors,
   chartOptions,
-} from "./workflowutils";
+} from "./workflow-utils";
 
 Chart.register(
   CategoryScale,
@@ -47,7 +45,6 @@ export default function WorkflowGraph({
   size?: string;
   showAll?: boolean;
 }) {
-  const router = useRouter();
   const lastExecutions = useMemo(() => {
     let executions = workflow?.last_executions?.slice(0, limit) || [];
     if (showAll) {
@@ -60,7 +57,7 @@ export default function WorkflowGraph({
     return providerNotConfiguredExecutions.length == executions.length
       ? []
       : executions.reverse();
-  }, [workflow?.last_executions]);
+  }, [limit, showAll, workflow?.last_executions]);
 
   const hasNoData = !lastExecutions || lastExecutions.length === 0;
   let status = workflow?.last_execution_status?.toLowerCase() || "";

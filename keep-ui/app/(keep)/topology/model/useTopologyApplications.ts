@@ -1,11 +1,12 @@
+useTopologyApplications;
 import { TopologyApplication } from "./models";
 import useSWR, { SWRConfiguration } from "swr";
 import { useCallback, useMemo } from "react";
 import { useTopology } from "./useTopology";
-import { useRevalidateMultiple } from "@/utils/state";
 import { TOPOLOGY_URL } from "./useTopology";
 import { KeepApiError } from "@/shared/api";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 type UseTopologyApplicationsOptions = {
   initialData?: TopologyApplication[];

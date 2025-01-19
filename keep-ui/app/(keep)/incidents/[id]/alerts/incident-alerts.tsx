@@ -6,6 +6,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import type { RowSelectionState } from "@tanstack/react-table";
 import {
   Card,
   Icon,
@@ -17,26 +18,29 @@ import {
   TableRow,
 } from "@tremor/react";
 import Image from "next/image";
-import AlertSeverity from "@/app/(keep)/alerts/alert-severity";
-import { AlertDto } from "@/app/(keep)/alerts/models";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
-import { getAlertLastReceieved } from "utils/helpers";
+import { AlertDto } from "@/entities/alerts/model";
 import {
   useIncidentAlerts,
   usePollIncidentAlerts,
 } from "utils/hooks/useIncidents";
-import AlertName from "@/app/(keep)/alerts/alert-name";
+import { AlertName } from "@/entities/alerts/ui";
 import IncidentAlertMenu from "./incident-alert-menu";
 import React, { useEffect, useMemo, useState } from "react";
 import type { IncidentDto } from "@/entities/incidents/model";
-import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
+import { getCommonPinningStylesAndClassNames, UISeverity } from "@/shared/ui";
 import { EmptyStateCard } from "@/components/ui";
 import { useRouter } from "next/navigation";
-import { TablePagination } from "@/shared/ui";
-import { AlertSeverityBorder } from "@/app/(keep)/alerts/alert-severity-border";
-import { getStatusIcon } from "@/shared/lib/status-utils";
-import { getStatusColor } from "@/shared/lib/status-utils";
+import {
+  TableIndeterminateCheckbox,
+  TablePagination,
+  TableSeverityCell,
+} from "@/shared/ui";
+import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
+import TimeAgo from "react-timeago";
+import clsx from "clsx";
+import { IncidentAlertsTableBodySkeleton } from "./incident-alert-table-body-skeleton";
+import { IncidentAlertsActions } from "./incident-alert-actions";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 interface Props {
   incident: IncidentDto;
@@ -73,6 +77,7 @@ export default function IncidentAlerts({ incident }: Props) {
   // TODO: Load data on server side
   // Loading state is true if the data is not loaded and there is no error for smoother loading state on initial load
   const isLoading = _alertsLoading || (!alerts && !alertsError);
+  const isTopologyIncident = incident.incident_type === "topology";
 
   useEffect(() => {
     if (alerts && alerts.limit != pagination.pageSize) {
@@ -93,38 +98,40 @@ export default function IncidentAlerts({ incident }: Props) {
 
   const columns = useMemo(
     () => [
-      // TODO: Add back when we have Split action
-      // columnHelper.display({
-      //   id: "selected",
-      //   size: 10,
-      //   header: (context) => (
-      //     <AlertTableCheckbox
-      //       checked={context.table.getIsAllRowsSelected()}
-      //       indeterminate={context.table.getIsSomeRowsSelected()}
-      //       onChange={context.table.getToggleAllRowsSelectedHandler()}
-      //       onClick={(e) => e.stopPropagation()}
-      //     />
-      //   ),
-      //   cell: (context) => (
-      //     <AlertTableCheckbox
-      //       checked={context.row.getIsSelected()}
-      //       indeterminate={context.row.getIsSomeSelected()}
-      //       onChange={context.row.getToggleSelectedHandler()}
-      //       onClick={(e) => e.stopPropagation()}
-      //     />
-      //   ),
-      // }),
       columnHelper.display({
         id: "severity",
-        maxSize: 4,
         header: () => <></>,
         cell: (context) => (
-          <AlertSeverityBorder severity={context.row.original.severity} />
+          <TableSeverityCell
+            severity={context.row.original.severity as unknown as UISeverity}
+          />
         ),
+        size: 4,
+        minSize: 4,
+        maxSize: 4,
         meta: {
           tdClassName: "p-0",
           thClassName: "p-0",
         },
+      }),
+      columnHelper.display({
+        id: "selected",
+        minSize: 32,
+        maxSize: 32,
+        header: (context) => (
+          <TableIndeterminateCheckbox
+            checked={context.table.getIsAllRowsSelected()}
+            indeterminate={context.table.getIsSomeRowsSelected()}
+            onChange={context.table.getToggleAllRowsSelectedHandler()}
+          />
+        ),
+        cell: (context) => (
+          <TableIndeterminateCheckbox
+            checked={context.row.getIsSelected()}
+            indeterminate={context.row.getIsSomeSelected()}
+            onChange={context.row.getToggleSelectedHandler()}
+          />
+        ),
       }),
       columnHelper.display({
         id: "name",
@@ -164,33 +171,37 @@ export default function IncidentAlerts({ incident }: Props) {
       }),
       columnHelper.accessor("is_created_by_ai", {
         id: "is_created_by_ai",
-        header: "🔗 Correlation type",
+        header: "Correlation",
         minSize: 50,
-        cell: (context) => (
-          <>
-            {context.getValue() ? (
-              <div title="Correlated with AI">🤖 AI</div>
-            ) : (
-              <div title="Correlated manually">👨‍💻 Manually</div>
-            )}
-          </>
-        ),
+        cell: (context) => {
+          if (isTopologyIncident) {
+            return <div title="Correlated with topology">🌐 Topology</div>;
+          }
+          return (
+            <>
+              {context.getValue() ? (
+                <div title="Correlated with AI">🤖 AI</div>
+              ) : (
+                <div title="Correlated manually">👨‍💻 Manually</div>
+              )}
+            </>
+          );
+        },
       }),
       columnHelper.accessor("lastReceived", {
         id: "lastReceived",
         header: "Last Event Time",
         minSize: 100,
-        cell: (context) => (
-          <span>{getAlertLastReceieved(context.getValue())}</span>
-        ),
+        // data is a ISO string
+        cell: (context) => <TimeAgo date={context.getValue()} />,
       }),
       columnHelper.accessor("source", {
         id: "source",
         header: "Source",
-        minSize: 100,
+        maxSize: 100,
         cell: (context) =>
           (context.getValue() ?? []).map((source, index) => (
-            <Image
+            <DynamicImageProviderIcon
               className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
               key={`source-${source}-${index}`}
               alt={source}
@@ -204,6 +215,7 @@ export default function IncidentAlerts({ incident }: Props) {
       columnHelper.display({
         id: "remove",
         header: "Correlation",
+        maxSize: 110,
         cell: (context) =>
           incident.is_confirmed && (
             <IncidentAlertMenu
@@ -216,14 +228,19 @@ export default function IncidentAlerts({ incident }: Props) {
     [incident.id, incident.is_confirmed]
   );
 
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
   const table = useReactTable({
     data: alerts?.items ?? [],
     columns: columns,
     rowCount: alerts?.count ?? 0,
+    getRowId: (row) => row.fingerprint,
+    onRowSelectionChange: setRowSelection,
     state: {
+      rowSelection,
       pagination,
       columnPinning: {
-        left: ["selected"],
+        left: ["severity", "selected", "name"],
         right: ["remove"],
       },
     },
@@ -247,21 +264,38 @@ export default function IncidentAlerts({ incident }: Props) {
     );
   }
 
+  const selectedFingerprints = Object.keys(rowSelection);
+
   return (
     <>
-      <Card className="p-0 overflow-hidden">
-        <Table>
+      <IncidentAlertsActions
+        incidentId={incident.id}
+        selectedFingerprints={selectedFingerprints}
+        resetAlertsSelection={() => table.resetRowSelection()}
+      />
+      <Card className="p-0 overflow-x-auto h-[calc(100vh-28rem)]">
+        <Table className="[&>table]:table-fixed">
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow
+                key={headerGroup.id}
+                className="border-b border-tremor-border dark:border-dark-tremor-border"
+              >
                 {headerGroup.headers.map((header, index) => {
                   const { style, className } =
-                    getCommonPinningStylesAndClassNames(header.column);
+                    getCommonPinningStylesAndClassNames(
+                      header.column,
+                      table.getState().columnPinning.left?.length,
+                      table.getState().columnPinning.right?.length
+                    );
                   return (
                     <TableHeaderCell
                       key={`header-${header.id}-${index}`}
                       style={style}
-                      className={className}
+                      className={clsx(
+                        header.column.columnDef.meta?.thClassName,
+                        className
+                      )}
                     >
                       {flexRender(
                         header.column.columnDef.header,
@@ -276,18 +310,22 @@ export default function IncidentAlerts({ incident }: Props) {
           {alerts && alerts?.items?.length > 0 && (
             <TableBody>
               {table.getRowModel().rows.map((row, index) => (
-                <TableRow
-                  key={`row-${row.id}-${index}`}
-                  className="hover:bg-slate-100"
-                >
+                <TableRow key={`row-${row.id}-${index}`}>
                   {row.getVisibleCells().map((cell, index) => {
                     const { style, className } =
-                      getCommonPinningStylesAndClassNames(cell.column);
+                      getCommonPinningStylesAndClassNames(
+                        cell.column,
+                        table.getState().columnPinning.left?.length,
+                        table.getState().columnPinning.right?.length
+                      );
                     return (
                       <TableCell
                         key={`cell-${cell.id}-${index}`}
                         style={style}
-                        className={className}
+                        className={clsx(
+                          cell.column.columnDef.meta?.tdClassName,
+                          className
+                        )}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -300,24 +338,12 @@ export default function IncidentAlerts({ incident }: Props) {
               ))}
             </TableBody>
           )}
-          {
-            // Skeleton
-            (isLoading || (alerts?.items ?? []).length === 0) && (
-              <TableBody>
-                {Array(pagination.pageSize)
-                  .fill("")
-                  .map((index, rowIndex) => (
-                    <TableRow key={`row-${index}-${rowIndex}`}>
-                      {columns.map((c, cellIndex) => (
-                        <TableCell key={`cell-${c.id}-${cellIndex}`}>
-                          <Skeleton />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-              </TableBody>
-            )
-          }
+          {isLoading && (
+            <IncidentAlertsTableBodySkeleton
+              table={table}
+              pageSize={pagination.pageSize - 10}
+            />
+          )}
         </Table>
       </Card>
 

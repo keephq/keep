@@ -2,13 +2,13 @@ import copy
 import json
 import logging
 import os
+import re
 import typing
-
-import yaml
 
 from keep.actions.actions_factory import ActionsCRUD
 from keep.api.core.db import get_workflow_id
 from keep.contextmanager.contextmanager import ContextManager
+from keep.functions import cyaml
 from keep.providers.providers_factory import ProvidersFactory
 from keep.step.step import Step, StepType
 from keep.step.step_provider_parameter import StepProviderParameter
@@ -137,8 +137,7 @@ class Parser:
         self.logger.debug("Parsing workflow")
         workflow_id = self._get_workflow_id(tenant_id, workflow)
         context_manager = ContextManager(
-            tenant_id=tenant_id,
-            workflow_id=workflow_id,
+            tenant_id=tenant_id, workflow_id=workflow_id, workflow=workflow
         )
         # Parse the providers (from the workflow yaml or from the providers directory)
         self._load_providers_config(
@@ -253,6 +252,16 @@ class Parser:
             (e.g. {"slack-prod": {"authentication": {"webhook_url": "https://hooks.slack.com/services/..."}}})
         """
         providers_json = os.environ.get("KEEP_PROVIDERS")
+
+        # check if env var is absolute or relative path to a providers json file
+        if providers_json and re.compile(r"^(\/|\.\/|\.\.\/).*\.json$").match(
+            providers_json
+        ):
+            with open(
+                file=providers_json, mode="r", encoding="utf8"
+            ) as file:
+                providers_json = file.read()
+
         if providers_json:
             try:
                 self.logger.debug(
@@ -322,8 +331,8 @@ class Parser:
     ):
         with open(providers_file, "r") as file:
             try:
-                providers = yaml.safe_load(file)
-            except yaml.YAMLError:
+                providers = cyaml.safe_load(file)
+            except cyaml.YAMLError:
                 self.logger.exception(f"Error parsing providers file {providers_file}")
                 raise
             context_manager.providers_context.update(providers)
@@ -455,8 +464,8 @@ class Parser:
         if actions_file and os.path.isfile(actions_file):
             with open(actions_file, "r") as file:
                 try:
-                    actions_content = yaml.safe_load(file)
-                except yaml.YAMLError:
+                    actions_content = cyaml.safe_load(file)
+                except cyaml.YAMLError:
                     self.logger.exception(f"Error parsing actions file {actions_file}")
                     raise
                 # create a hashmap -> action
@@ -543,8 +552,8 @@ class Parser:
             actions = []
             with open(actions_file, "r") as file:
                 try:
-                    actions = yaml.safe_load(file)
-                except yaml.YAMLError:
+                    actions = cyaml.safe_load(file)
+                except cyaml.YAMLError:
                     self.logger.exception(f"Error parsing actions file {actions_file}")
                     raise
             # convert actions into dictionary of unique object by id

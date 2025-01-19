@@ -1,4 +1,4 @@
-import { AlertDto } from "./models"; // Adjust the import path as needed
+import { AlertDto } from "@/entities/alerts/model"; // Adjust the import path as needed
 import Modal from "@/components/ui/Modal"; // Ensure this path matches your project structure
 import { Button, Icon, Switch, Text } from "@tremor/react";
 import { toast } from "react-toastify";
@@ -6,7 +6,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import "./ViewAlertModal.css";
 import React, { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 interface ViewAlertModalProps {
   alert: AlertDto | null | undefined;
@@ -99,7 +99,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     <Modal
       onClose={handleClose}
       isOpen={isOpen}
-      className="overflow-visible max-w-fit"
+      className="overflow-visible max-w-[800px]"
     >
       <div className="flex justify-between items-center mb-4 min-w-full">
         <h2 className="text-lg font-semibold">Alert Details</h2>
@@ -130,7 +130,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
         </div>
       </div>
       {alert && (
-        <pre className="p-2 bg-gray-100 rounded mt-2 overflow-auto">
+        <pre className="p-2 bg-gray-100 rounded mt-2 overflow-auto whitespace-pre-wrap break-all">
           <p>&#123;</p>
           {highlightKeys(alert, alert.enriched_fields)}
           <p>&#125;</p>

@@ -1,18 +1,21 @@
 import { useState } from "react";
 import { Button } from "@tremor/react";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { PlusIcon, RocketIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
-import { usePresets } from "utils/hooks/usePresets";
 import { useRouter } from "next/navigation";
 import { SilencedDoorbellNotification } from "@/components/icons";
 import AlertAssociateIncidentModal from "./alert-associate-incident-modal";
 import CreateIncidentWithAIModal from "./alert-create-incident-ai-modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { Table } from "@tanstack/react-table";
+
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 interface Props {
   selectedRowIds: string[];
   alerts: AlertDto[];
+  table: Table<AlertDto>;
   clearRowSelection: () => void;
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
   mutateAlerts?: () => void;
@@ -23,6 +26,7 @@ interface Props {
 export default function AlertActions({
   selectedRowIds,
   alerts,
+  table,
   clearRowSelection,
   setDismissModalAlert,
   mutateAlerts,
@@ -30,18 +34,16 @@ export default function AlertActions({
   isIncidentSelectorOpen,
 }: Props) {
   const router = useRouter();
-  const { useAllPresets } = usePresets();
   const api = useApi();
-  const { mutate: presetsMutator } = useAllPresets({
-    revalidateOnFocus: false,
-  });
+  const revalidateMultiple = useRevalidateMultiple();
+  const presetsMutator = () => revalidateMultiple(["/preset"]);
 
   const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
     useState<boolean>(false);
 
-  const selectedAlerts = alerts.filter((_alert, index) =>
-    selectedRowIds.includes(index.toString())
-  );
+  const selectedAlerts = table
+    .getSelectedRowModel()
+    .rows.map((row) => row.original);
 
   async function addOrUpdatePreset() {
     const newPresetName = prompt("Enter new preset name");

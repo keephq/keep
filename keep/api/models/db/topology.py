@@ -17,6 +17,7 @@ class TopologyApplication(SQLModel, table=True):
     tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id")))
     name: str
     description: Optional[str] = None
+    repository: Optional[str] = None
     services: List["TopologyService"] = Relationship(
         back_populates="applications", link_model=TopologyServiceApplication
     )
@@ -39,6 +40,7 @@ class TopologyService(SQLModel, table=True):
     mac_address: Optional[str] = None
     category: Optional[str] = None
     manufacturer: Optional[str] = None
+    namespace: Optional[str] = None
 
     updated_at: Optional[datetime] = Field(
         sa_column=Column(
@@ -53,7 +55,7 @@ class TopologyService(SQLModel, table=True):
         back_populates="service",
         sa_relationship_kwargs={
             "foreign_keys": "[TopologyServiceDependency.service_id]",
-            "cascade": "all, delete-orphan"
+            "cascade": "all, delete-orphan",
         },
     )
 
@@ -112,10 +114,14 @@ class TopologyServiceDtoBase(BaseModel, extra="ignore"):
     mac_address: Optional[str] = None
     category: Optional[str] = None
     manufacturer: Optional[str] = None
+    namespace: Optional[str] = None
 
 
 class TopologyServiceInDto(TopologyServiceDtoBase):
     dependencies: dict[str, str] = {}  # dict of service it depends on : protocol
+    application_relations: Optional[dict[UUID, str]] = (
+        None  # An option field, pass it in the form of {application_id_1: application_name_1, application_id_2: application_name_2, ...} tha t the service belongs to, the process_topology function handles the creation/updation of the application
+    )
 
 
 class TopologyServiceDependencyDto(BaseModel, extra="ignore"):
@@ -128,6 +134,7 @@ class TopologyApplicationDto(BaseModel, extra="ignore"):
     id: UUID
     name: str
     description: Optional[str] = None
+    repository: Optional[str] = None
     services: List[TopologyService] = Relationship(
         back_populates="applications", link_model="TopologyServiceApplication"
     )
@@ -141,6 +148,7 @@ class TopologyApplicationDtoIn(BaseModel, extra="ignore"):
     id: Optional[UUID] = None
     name: str
     description: Optional[str] = None
+    repository: Optional[str] = None
     services: List[TopologyServiceDtoIn] = []
 
 
@@ -169,6 +177,7 @@ class TopologyApplicationDtoOut(TopologyApplicationDto):
             id=application.id,
             name=application.name,
             description=application.description,
+            repository=application.repository,
             services=[
                 TopologyApplicationServiceDto.from_orm(service)
                 for service in application.services
@@ -212,4 +221,5 @@ class TopologyServiceDtoOut(TopologyServiceDtoBase):
             ],
             application_ids=application_ids,
             updated_at=service.updated_at,
+            namespace=service.namespace,
         )

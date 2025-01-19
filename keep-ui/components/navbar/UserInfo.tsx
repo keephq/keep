@@ -6,18 +6,18 @@ import { Session } from "next-auth";
 import { useConfig } from "utils/hooks/useConfig";
 import { AuthType } from "@/utils/authenticationType";
 import Link from "next/link";
-import { AiOutlineRight } from "react-icons/ai";
 import { VscDebugDisconnect } from "react-icons/vsc";
 import { useFloating } from "@floating-ui/react";
-import { Icon, Subtitle } from "@tremor/react";
+import { Subtitle } from "@tremor/react";
 import UserAvatar from "./UserAvatar";
 import * as Frigade from "@frigade/react";
 import { useState } from "react";
 import Onboarding from "./Onboarding";
 import { useSignOut } from "@/shared/lib/hooks/useSignOut";
 import { FaSlack } from "react-icons/fa";
-import { ThemeControl } from "@/shared/ui/theme/ThemeControl";
+import { ThemeControl } from "@/shared/ui";
 import { HiOutlineDocumentText } from "react-icons/hi2";
+import { useMounted } from "@/shared/lib/hooks/useMounted";
 
 const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 
@@ -26,15 +26,18 @@ type UserDropdownProps = {
 };
 
 const UserDropdown = ({ session }: UserDropdownProps) => {
-  const { userRole, user } = session;
-  const { name, image, email } = user;
-
   const { data: configData } = useConfig();
   const signOut = useSignOut();
   const { refs, floatingStyles } = useFloating({
     placement: "right-end",
     strategy: "fixed",
   });
+
+  if (!session || !session.user) {
+    return null;
+  }
+  const { userRole, user } = session;
+  const { name, image, email } = user;
 
   const isNoAuth = configData?.AUTH_TYPE === AuthType.NOAUTH;
   return (
@@ -86,27 +89,33 @@ type UserInfoProps = {
 };
 
 export const UserInfo = ({ session }: UserInfoProps) => {
+  const { data: config } = useConfig();
+
+  const docsUrl = config?.KEEP_DOCS_URL || "https://docs.keephq.dev";
   const { flow } = Frigade.useFlow(ONBOARDING_FLOW_ID);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const isMounted = useMounted();
 
   return (
     <>
       <ul className="space-y-2 p-2">
-        {flow?.isCompleted === false && (
-          <li>
-            <Frigade.ProgressBadge
-              flowId={ONBOARDING_FLOW_ID}
-              onClick={() => setIsOnboardingOpen(true)}
-            />
-            <Onboarding
-              isOpen={isOnboardingOpen}
-              toggle={() => setIsOnboardingOpen(false)}
-              variables={{
-                name: session?.user.name ?? session?.user.email,
-              }}
-            />
-          </li>
-        )}
+        {isMounted &&
+          !config?.FRIGADE_DISABLED &&
+          flow?.isCompleted === false && (
+            <li>
+              <Frigade.ProgressBadge
+                flowId={ONBOARDING_FLOW_ID}
+                onClick={() => setIsOnboardingOpen(true)}
+              />
+              <Onboarding
+                isOpen={isOnboardingOpen}
+                toggle={() => setIsOnboardingOpen(false)}
+                variables={{
+                  name: session?.user?.name ?? session?.user?.email,
+                }}
+              />
+            </li>
+          )}
         <li>
           <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
             Providers
@@ -124,7 +133,7 @@ export const UserInfo = ({ session }: UserInfoProps) => {
           <LinkWithIcon
             icon={HiOutlineDocumentText}
             iconClassName="w-4"
-            href="https://docs.keephq.dev/"
+            href={docsUrl}
             className="w-auto px-3.5"
             target="_blank"
           >

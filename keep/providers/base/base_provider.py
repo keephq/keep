@@ -19,14 +19,17 @@ import opentelemetry.trace as trace
 import requests
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.core.db import (get_custom_deduplication_rule, get_enrichments,
-                              get_provider_by_name, is_linked_provider)
-from keep.api.models.alert import (AlertDto, AlertSeverity, AlertStatus,
-                                   IncidentDto)
-from keep.api.models.db.alert import AlertActionType
+from keep.api.core.db import (
+    get_custom_deduplication_rule,
+    get_enrichments,
+    get_provider_by_name,
+    is_linked_provider,
+)
+from keep.api.logging import ProviderLoggerAdapter
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentDto
+from keep.api.models.db.alert import ActionType
 from keep.api.models.db.topology import TopologyServiceInDto
-from keep.api.utils.enrichment_helpers import \
-    parse_and_enrich_deleted_and_assignees
+from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
@@ -90,13 +93,24 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.webhook_markdown = webhook_markdown
         self.provider_description = provider_description
         self.context_manager = context_manager
-        self.logger = context_manager.get_logger(self.provider_id)
+
+        # Initialize the logger with our custom adapter
+        base_logger = logging.getLogger(self.provider_id)
+        # If logs should be stored on the DB, use the custom adapter
+        if os.environ.get("KEEP_STORE_PROVIDER_LOGS", "false").lower() == "true":
+            self.logger = ProviderLoggerAdapter(
+                base_logger, self, context_manager.tenant_id, provider_id
+            )
+        else:
+            self.logger = base_logger
+
         self.logger.setLevel(
             os.environ.get(
                 "KEEP_{}_PROVIDER_LOG_LEVEL".format(self.provider_id.upper()),
                 os.environ.get("LOG_LEVEL", "INFO"),
             )
         )
+
         self.validate_config()
         self.logger.debug(
             "Base provider initialized", extra={"provider": self.__class__.__name__}
@@ -244,10 +258,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
             # remove the last comma
             enrichment_string = enrichment_string[:-2]
             # enrich the alert with _enrichments
-            enrichments_bl.enrich_alert(
+            enrichments_bl.enrich_entity(
                 fingerprint,
                 _enrichments,
-                action_type=AlertActionType.WORKFLOW_ENRICH,  # shahar: todo: should be specific, good enough for now
+                action_type=ActionType.WORKFLOW_ENRICH,  # shahar: todo: should be specific, good enough for now
                 action_callee="system",
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
                 audit_enabled=audit_enabled,
@@ -258,10 +272,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 enrichment_string += f"{key}={value}, "
             # remove the last comma
             enrichment_string = enrichment_string[:-2]
-            enrichments_bl.enrich_alert(
+            enrichments_bl.enrich_entity(
                 fingerprint,
                 disposable_enrichments,
-                action_type=AlertActionType.WORKFLOW_ENRICH,
+                action_type=ActionType.WORKFLOW_ENRICH,
                 action_callee="system",
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
                 dispose_on_new_alert=True,
@@ -316,7 +330,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" = None
+        event: dict | list[dict], provider_instance: "BaseProvider" = None
     ) -> AlertDto | list[AlertDto]:
         """
         Format an incoming alert.
@@ -335,7 +349,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
     @classmethod
     def format_alert(
         cls,
-        event: dict,
+        event: dict | list[dict],
         tenant_id: str | None,
         provider_type: str | None,
         provider_id: str | None,
@@ -352,8 +366,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     provider_instance = None
                 else:
                     # To prevent circular imports
-                    from keep.providers.providers_factory import \
-                        ProvidersFactory
+                    from keep.providers.providers_factory import ProvidersFactory
 
                     provider_instance: BaseProvider = (
                         ProvidersFactory.get_installed_provider(
@@ -557,6 +570,15 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("setup_webhook() method not implemented")
 
+    def clean_up(self):
+        """
+        Clean up the provider.
+
+        Raises:s
+            NotImplementedError: for providers who does not implement this method.
+        """
+        raise NotImplementedError("clean_up() method not implemented")
+
     @staticmethod
     def get_alert_schema() -> dict:
         """
@@ -683,7 +705,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
             id=alert_data.get("id", str(uuid.uuid4())),
             name=alert_data.get("name", "alert-from-event-queue"),
             status=alert_data.get("status", AlertStatus.FIRING),
-            lastReceived=alert_data.get("lastReceived", datetime.datetime.now()),
+            lastReceived=alert_data.get(
+                "lastReceived",
+                datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+            ),
             environment=alert_data.get("environment", "alert-from-event-queue"),
             isDuplicate=alert_data.get("isDuplicate", False),
             duplicateReason=alert_data.get("duplicateReason", None),
@@ -737,7 +762,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         Check if provider has been recorded in the database.
         """
-        provider = get_provider_by_name(self.context_manager.tenant_id, self.config.name)
+        provider = get_provider_by_name(
+            self.context_manager.tenant_id, self.config.name
+        )
         return provider is not None
 
     @property
@@ -746,13 +773,14 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Check if provider exist in env provisioning.
         """
         from keep.parser.parser import Parser
+
         parser = Parser()
         parser._parse_providers_from_env(self.context_manager)
         return self.config.name in self.context_manager.providers_context
 
 
 class BaseTopologyProvider(BaseProvider):
-    def pull_topology(self) -> list[TopologyServiceInDto]:
+    def pull_topology(self) -> tuple[list[TopologyServiceInDto], dict]:
         raise NotImplementedError("get_topology() method not implemented")
 
 

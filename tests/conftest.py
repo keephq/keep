@@ -11,12 +11,12 @@ import pytest
 import requests
 from dotenv import find_dotenv, load_dotenv
 from pytest_docker.plugin import get_docker_services
+from sqlalchemy import event, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import Session, SQLModel, create_engine
 from starlette_context import context, request_cycle_context
 
-from keep.api.core.db import set_last_alert
 # This import is required to create the tables
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
@@ -32,6 +32,40 @@ from keep.contextmanager.contextmanager import ContextManager
 
 original_request = requests.Session.request  # noqa
 load_dotenv(find_dotenv())
+
+class PusherMock:
+
+    def __init__(self):
+        self.triggers = []
+
+    def trigger(self, channel, event_name, data):
+        self.triggers.append((channel, event_name, data))
+
+class WorkflowManagerMock:
+
+    def __init__(self):
+        self.events = []
+
+    def get_instance(self):
+        return self
+
+    def insert_incident(self, tenant_id, incident_dto, action):
+        self.events.append((tenant_id, incident_dto, action))
+
+
+class ElasticClientMock:
+
+    def __init__(self):
+        self.alerts = []
+        self.tenant_id = None
+        self.enabled = True
+
+    def __call__(self, tenant_id):
+        self.tenant_id = tenant_id
+        return self
+
+    def index_alerts(self, alerts):
+        self.alerts.append((self.tenant_id, alerts))
 
 
 @pytest.fixture
@@ -157,7 +191,7 @@ def mysql_container(docker_ip, docker_services):
 
 
 @pytest.fixture
-def db_session(request):
+def db_session(request, monkeypatch):
     # Create a database connection
     os.environ["DB_ECHO"] = "true"
     if (
@@ -168,6 +202,24 @@ def db_session(request):
     ):
         db_type = request.param.get("db")
         db_connection_string = request.getfixturevalue(f"{db_type}_container")
+        monkeypatch.setenv("DATABASE_CONNECTION_STRING", db_connection_string)
+        t = SQLModel.metadata.tables["workflowexecution"]
+        curr_index = next(
+            (
+                index
+                for index in t.indexes
+                if index.name == "idx_workflowexecution_workflow_tenant_started_status"
+            )
+        )
+        t.indexes.remove(curr_index)
+        status_index = Index(
+            "idx_workflowexecution_workflow_tenant_started_status",
+            "workflow_id",
+            "tenant_id",
+            "started",
+            sqlalchemy.text("status(255)"),
+        )
+        t.append_constraint(status_index)
         mock_engine = create_engine(db_connection_string)
     # sqlite
     else:
@@ -177,6 +229,23 @@ def db_session(request):
             connect_args={"check_same_thread": False},
             poolclass=StaticPool,
         )
+
+        # @tb: leaving this here if anybody else gets to problem with nested transactions
+        # https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#serializable-isolation-savepoints-transactional-ddl
+        @event.listens_for(mock_engine, "connect")
+        def do_connect(dbapi_connection, connection_record):
+            # disable pysqlite's emitting of the BEGIN statement entirely.
+            # also stops it from emitting COMMIT before any DDL.
+            dbapi_connection.isolation_level = None
+
+        @event.listens_for(mock_engine, "begin")
+        def do_begin(conn):
+            # emit our own BEGIN
+            try:
+                conn.exec_driver_sql(text("BEGIN EXCLUSIVE"))
+            except Exception:
+                pass
+
     SQLModel.metadata.create_all(mock_engine)
 
     # Mock the environment variables so db.py will use it
@@ -184,7 +253,9 @@ def db_session(request):
 
     # Create a session
     # Passing class_=Session to use the Session class from sqlmodel (https://github.com/fastapi/sqlmodel/issues/75#issuecomment-2109911909)
-    SessionLocal = sessionmaker(class_=Session, autocommit=False, autoflush=False, bind=mock_engine)
+    SessionLocal = sessionmaker(
+        class_=Session, autocommit=False, autoflush=False, bind=mock_engine
+    )
     session = SessionLocal()
     # Prepopulate the database with test data
 
@@ -510,8 +581,7 @@ def setup_alerts(elastic_client, db_session, request):
 
     existed_last_alerts = db_session.query(LastAlert).all()
     existed_last_alerts_dict = {
-        last_alert.fingerprint: last_alert
-        for last_alert in existed_last_alerts
+        last_alert.fingerprint: last_alert for last_alert in existed_last_alerts
     }
 
     last_alerts = []
@@ -520,9 +590,7 @@ def setup_alerts(elastic_client, db_session, request):
             last_alert = existed_last_alerts_dict[alert.fingerprint]
             last_alert.alert_id = alert.id
             last_alert.timestamp = alert.timestamp
-            last_alerts.append(
-                last_alert
-            )
+            last_alerts.append(last_alert)
         else:
             last_alerts.append(
                 LastAlert(
@@ -580,18 +648,15 @@ def setup_stress_alerts_no_elastic(db_session):
 
         existed_last_alerts = db_session.query(LastAlert).all()
         existed_last_alerts_dict = {
-            last_alert.fingerprint: last_alert
-            for last_alert in existed_last_alerts
+            last_alert.fingerprint: last_alert for last_alert in existed_last_alerts
         }
         last_alerts = []
         for alert in alerts:
             if alert.fingerprint in existed_last_alerts_dict:
                 last_alert = existed_last_alerts_dict[alert.fingerprint]
                 last_alert.alert_id = alert.id
-                last_alert.timestamp=alert.timestamp
-                last_alerts.append(
-                    last_alert
-                )
+                last_alert.timestamp = alert.timestamp
+                last_alerts.append(last_alert)
             else:
                 last_alerts.append(
                     LastAlert(
@@ -625,7 +690,9 @@ def setup_stress_alerts(
 
 @pytest.fixture
 def create_alert(db_session):
-    def _create_alert(fingerprint, status, timestamp, details=None, tenant_id=SINGLE_TENANT_UUID):
+    def _create_alert(
+        fingerprint, status, timestamp, details=None, tenant_id=SINGLE_TENANT_UUID
+    ):
         details = details or {}
         random_name = "test-{}".format(fingerprint)
         process_event(
@@ -634,7 +701,9 @@ def create_alert(db_session):
             tenant_id=tenant_id,
             provider_id="test",
             provider_type=(
-                details["source"][0] if details and "source" in details and details["source"] else None
+                details["source"][0]
+                if details and "source" in details and details["source"]
+                else None
             ),
             fingerprint=fingerprint,
             api_key_name="test",
@@ -658,11 +727,14 @@ def pytest_addoption(parser):
     """
 
     parser.addoption(
-        "--integration", action="store_const", const=True,
-        dest="run_integration")
+        "--integration", action="store_const", const=True, dest="run_integration"
+    )
     parser.addoption(
-        "--non-integration", action="store_const", const=True,
-        dest="run_non_integration")
+        "--non-integration",
+        action="store_const",
+        const=True,
+        dest="run_non_integration",
+    )
 
 
 def pytest_configure(config):
@@ -706,9 +778,9 @@ def pytest_collection_modifyitems(items):
         elif "keycloak_client" in fixturenames:
             item.add_marker("integration")
         elif (
-                hasattr(item, "callspec")
-                and "db_session" in item.callspec.params
-                and item.callspec.params["db_session"]
-                and "db" in item.callspec.params["db_session"]
+            hasattr(item, "callspec")
+            and "db_session" in item.callspec.params
+            and item.callspec.params["db_session"]
+            and "db" in item.callspec.params["db_session"]
         ):
             item.add_marker("integration")

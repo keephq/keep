@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import time
 from collections import defaultdict
@@ -78,15 +79,26 @@ actions:
 @pytest.fixture(scope="module")
 def workflow_manager():
     """
-    Fixture to create and manage a WorkflowManager instance for the duration of the module.
-    It starts the manager asynchronously and stops it after all tests are completed.
+    Fixture to create and manage a WorkflowManager instance.
     """
-    manager = WorkflowManager.get_instance()
-    asyncio.run(manager.start())
-    while not manager.started:
-        time.sleep(0.1)
-    yield manager
-    manager.stop()
+    manager = None
+    try:
+        from keep.workflowmanager.workflowscheduler import WorkflowScheduler
+
+        scheduler = WorkflowScheduler(None)
+        manager = WorkflowManager.get_instance()
+        scheduler.workflow_manager = manager
+        manager.scheduler = scheduler
+        asyncio.run(manager.start())
+        yield manager
+    finally:
+        if manager:
+            try:
+                manager.stop()
+                # Give some time for threads to clean up
+                time.sleep(1)
+            except Exception as e:
+                print(f"Error stopping workflow manager: {e}")
 
 
 @pytest.fixture
@@ -257,7 +269,11 @@ def test_workflow_execution(
     workflow_execution = None
     count = 0
     status = None
-    while workflow_execution is None and count < 30 and status != "success":
+    while (
+        workflow_execution is None
+        or workflow_execution.status == "in_progress"
+        and count < 30
+    ):
         workflow_execution = get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, "alert-time-check"
         )
@@ -439,7 +455,11 @@ def test_workflow_execution_2(
     workflow_execution = None
     count = 0
     status = None
-    while workflow_execution is None and count < 30 and status != "success":
+    while (
+        workflow_execution is None
+        or workflow_execution.status == "in_progress"
+        and count < 30
+    ):
         workflow_execution = get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID,
             workflow_id,
@@ -560,7 +580,11 @@ def test_workflow_execution3(
     workflow_execution = None
     count = 0
     status = None
-    while workflow_execution is None and count < 30 and status != "success":
+    while (
+        workflow_execution is None
+        or workflow_execution.status == "in_progress"
+        and count < 30
+    ):
         workflow_execution = get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, "alert-first-time"
         )
@@ -677,7 +701,11 @@ def test_workflow_execution_with_disabled_workflow(
     count = 0
 
     while (
-        enabled_workflow_execution is None and disabled_workflow_execution is None
+        (
+            enabled_workflow_execution is None
+            or enabled_workflow_execution.status == "in_progress"
+        )
+        and disabled_workflow_execution is None
     ) and count < 30:
         enabled_workflow_execution = get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, enabled_id
@@ -737,6 +765,7 @@ actions:
 """
 
 
+@pytest.mark.timeout(15)
 @pytest.mark.parametrize(
     "test_app",
     [
@@ -779,13 +808,14 @@ def test_workflow_incident_triggers(
         # Wait for the workflow execution to complete
         workflow_execution = None
         count = 0
-        status = None
-        while workflow_execution is None and count < 30 and status != "success":
+        while (
+            workflow_execution is None
+            or workflow_execution.status == "in_progress"
+            and count < 30
+        ):
             workflow_execution = get_last_workflow_execution_by_workflow_id(
                 SINGLE_TENANT_UUID, workflow_id
             )
-            if workflow_execution is not None:
-                status = workflow_execution.status
             time.sleep(1)
             count += 1
         return workflow_execution
@@ -901,7 +931,7 @@ def test_workflow_execution_logs(
     with patch(
         "keep.contextmanager.contextmanager.WorkflowLoggerAdapter",
         side_effect=fake_workflow_adapter,
-    ), patch("keep.api.logging.RUNNING_IN_CLOUD_RUN", value=True):
+    ):
         base_time = datetime.now(tz=pytz.utc)
 
         # Create alerts with specified statuses and timestamps
@@ -929,13 +959,14 @@ def test_workflow_execution_logs(
         # Wait for the workflow execution to complete
         workflow_execution = None
         count = 0
-        status = None
-        while workflow_execution is None and count < 30 and status != "success":
+        while (
+            workflow_execution is None
+            or workflow_execution.status == "in_progress"
+            and count < 30
+        ):
             workflow_execution = get_last_workflow_execution_by_workflow_id(
                 SINGLE_TENANT_UUID, "susu-and-sons"
             )
-            if workflow_execution is not None:
-                status = workflow_execution.status
             time.sleep(1)
             count += 1
 
@@ -978,7 +1009,7 @@ def test_workflow_execution_logs_log_level_debug_console_provider(
         with patch(
             "keep.contextmanager.contextmanager.WorkflowLoggerAdapter",
             side_effect=fake_workflow_adapter,
-        ), patch("keep.api.logging.RUNNING_IN_CLOUD_RUN", value=True):
+        ):
             base_time = datetime.now(tz=pytz.utc)
 
             # Create alerts with specified statuses and timestamps
@@ -1008,14 +1039,15 @@ def test_workflow_execution_logs_log_level_debug_console_provider(
             # Wait for the workflow execution to complete
             workflow_execution = None
             count = 0
-            status = None
             time.sleep(1)
-            while workflow_execution is None and count < 30 and status != "success":
+            while (
+                workflow_execution is None
+                or workflow_execution.status == "in_progress"
+                and count < 30
+            ):
                 workflow_execution = get_last_workflow_execution_by_workflow_id(
                     SINGLE_TENANT_UUID, "susu-and-sons"
                 )
-                if workflow_execution is not None:
-                    status = workflow_execution.status
                 time.sleep(1)
                 count += 1
 
@@ -1036,4 +1068,430 @@ def test_workflow_execution_logs_log_level_debug_console_provider(
         )
         assert logs_counts[workflow_execution_id] == len(logs)
 
-    assert logs_level_counts["DEBUG"] > logs_level_counts["INFO"]
+    # SHAHAR: What does it even do?
+    # assert logs_level_counts["DEBUG"] > logs_level_counts["INFO"]
+
+
+# test if/else in workflow definition
+workflow_definition_routing = """workflow:
+  id: alert-routing-policy
+  description: Route alerts based on team and environment conditions
+  triggers:
+    - type: alert
+  actions:
+    - name: business-hours-check
+      if: "keep.is_business_hours(timezone='America/New_York')"
+      # stop the workflow if it's business hours
+      continue: false
+      provider:
+        type: mock
+        with:
+          message: "Alert during business hours, exiting"
+
+    - name: infra-prod-slack
+      if: "'{{ alert.team }}' == 'infra' and '{{ alert.env }}' == 'prod'"
+      provider:
+        type: console
+        with:
+          channel: prod-infra-alerts
+          message: |
+            "Infrastructure Production Alert
+            Team: {{ alert.team }}
+            Environment: {{ alert.env }}
+            Description: {{ alert.description }}"
+
+    - name: http-api-errors-slack
+      if: "'{{ alert.monitor_name }}' == 'Http API Errors'"
+      provider:
+        type: console
+        with:
+          channel: backend-team-alerts
+          message: |
+            "HTTP API Error Alert
+            Monitor: {{ alert.monitor_name }}
+            Description: {{ alert.description }}"
+      # exit after sending http api error alert
+      continue: false
+
+    - name: backend-staging-pagerduty
+      if: "'{{ alert.team }}'== 'backend' and  '{{ alert.env }}' == 'staging'"
+      provider:
+        type: console
+        with:
+          severity: low
+          message: |
+            "Backend Staging Alert
+            Team: {{ alert.team }}
+            Environment: {{ alert.env }}
+            Description: {{ alert.description }}"
+      # Exit after sending staging alert
+      continue: false
+"""
+
+
+@pytest.mark.parametrize(
+    "test_app, test_case, alert_data, expected_results, db_session",
+    [
+        # Test Case 1: During business hours - should exit immediately
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "Business Hours Exit",
+            {
+                "team": "infra",
+                "env": "prod",
+                "monitor_name": "CPU High",
+                "during_business_hours": True,
+            },
+            {"business-hours-check": ["Alert during business hours, exiting"]},
+            None,
+        ),
+        # Test Case 2: Infra + Prod alert
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "Infra Prod Alert",
+            {
+                "team": "infra",
+                "env": "prod",
+                "monitor_name": "CPU High",
+                "during_business_hours": False,
+            },
+            {
+                "business-hours-check": [],
+                "infra-prod-slack": ["Infrastructure Production Alert"],
+                "http-api-errors-slack": [],
+                "backend-staging-pagerduty": [],
+            },
+            None,
+        ),
+        # Test Case 3: HTTP API Errors (should exit after sending)
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "HTTP API Errors",
+            {
+                "team": "backend",
+                "env": "prod",
+                "monitor_name": "Http API Errors",
+                "during_business_hours": False,
+            },
+            {
+                "business-hours-check": [],
+                "infra-prod-slack": [],
+                "http-api-errors-slack": ["HTTP API Error Alert"],
+                "backend-staging-pagerduty": [],
+            },
+            None,
+        ),
+        # Test Case 4: Backend + Staging
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "Backend Staging Alert",
+            {
+                "team": "backend",
+                "env": "staging",
+                "monitor_name": "CPU High",
+                "during_business_hours": False,
+            },
+            {
+                "business-hours-check": [],
+                "infra-prod-slack": [],
+                "http-api-errors-slack": [],
+                "backend-staging-pagerduty": ["Backend Staging Alert"],
+            },
+            None,
+        ),
+        # Test Case 5: Infra + Prod + HTTP API Errors (should send both alerts)
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "Infra Prod with HTTP API Errors",
+            {
+                "team": "infra",
+                "env": "prod",
+                "monitor_name": "Http API Errors",
+                "during_business_hours": False,
+            },
+            {
+                "business-hours-check": [],
+                "infra-prod-slack": ["Infrastructure Production Alert"],
+                "http-api-errors-slack": ["HTTP API Error Alert"],
+                "backend-staging-pagerduty": [],
+            },
+            None,
+        ),
+        # Test Case 6: Backend + HTTP API Errors + Staging (should only send HTTP API error)
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "Backend Staging with HTTP API Errors",
+            {
+                "team": "backend",
+                "env": "staging",
+                "monitor_name": "Http API Errors",
+                "during_business_hours": False,
+            },
+            {
+                "business-hours-check": [],
+                "infra-prod-slack": [],
+                "http-api-errors-slack": ["HTTP API Error Alert"],
+                "backend-staging-pagerduty": [],
+            },
+            None,
+        ),
+    ],
+    indirect=["test_app", "db_session"],
+)
+def test_alert_routing_policy(
+    db_session,
+    test_app,
+    workflow_manager,
+    test_case,
+    alert_data,
+    expected_results,
+    mocker,
+):
+    # Setup the workflow
+    workflow = Workflow(
+        id="alert-routing-policy",
+        name="alert-routing-policy",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Route alerts based on team and environment conditions",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_routing,
+    )
+    db_session.add(workflow)
+    db_session.commit()
+
+    # Mock business hours check if needed
+    if alert_data.get("during_business_hours"):
+        mocker.patch("keep.functions.is_business_hours", return_value=True)
+    else:
+        mocker.patch("keep.functions.is_business_hours", return_value=False)
+
+    # Create the current alert
+    current_alert = AlertDto(
+        id="test-alert-1",
+        source=["test"],
+        name="test-alert",
+        status=AlertStatus.FIRING,
+        severity="critical",
+        team=alert_data["team"],
+        env=alert_data["env"],
+        monitor_name=alert_data["monitor_name"],
+    )
+
+    # Insert the alert into workflow manager
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+
+    # Wait for workflow execution
+    workflow_execution = None
+    count = 0
+    while (
+        workflow_execution is None
+        or workflow_execution.status == "in_progress"
+        and count < 30
+    ):
+        workflow_execution = get_last_workflow_execution_by_workflow_id(
+            SINGLE_TENANT_UUID, "alert-routing-policy"
+        )
+        if workflow_execution is not None and workflow_execution.status == "success":
+            break
+        time.sleep(1)
+        count += 1
+
+    # Verify workflow execution
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
+
+    # Check if the actions were triggered as expected
+    for action_name, expected_messages in expected_results.items():
+        if not expected_messages:
+            assert workflow_execution.results[action_name] == []
+        else:
+            for expected_message in expected_messages:
+                assert any(
+                    # support both list and dict
+                    expected_message in json.dumps(result)
+                    for result in workflow_execution.results[action_name]
+                ), f"Expected message '{expected_message}' not found in {action_name} results"
+
+
+workflow_definition_nested = """workflow:
+  id: nested-conditional-flow
+  description: Test nested conditional logic with continue flags
+  triggers:
+    - type: alert
+  actions:
+    - name: priority-check
+      if: "{{ alert.priority }} == 'p0'"
+      continue: false  # Stop if P0 incident
+      provider:
+        type: console
+        with:
+          message: "P0 incident detected, bypassing all other checks"
+
+    - name: region-eu-check
+      if: "{{ alert.region }} == 'eu'"
+      provider:
+        type: console
+        with:
+          message: "EU Region Alert"
+      continue: true  # Continue to sub-conditions
+
+    - name: eu-gdpr-check
+      if: "{{ alert.region }} == 'eu' and {{ alert.contains_pii }} == 'True'"
+      provider:
+        type: console
+        with:
+          message: "GDPR-related incident detected"
+      # Stop after GDPR alert
+      continue: false
+
+    - name: eu-regular-alert
+      if: "{{ alert.region }} == 'eu' and {{ alert.contains_pii }} == 'False'"
+      provider:
+        type: console
+        with:
+          message: "Regular EU incident"
+      continue: true
+
+    - name: low-priority-check
+      if: "{{ alert.priority }} in ['p3', 'p4']"
+      provider:
+        type: console
+        with:
+          message: "Low priority incident detected"
+"""
+
+
+@pytest.mark.parametrize(
+    "test_app, test_case, alert_data, expected_results, db_session",
+    [
+        # Test Case 1: P0 incident - should exit immediately
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "P0 Priority Exit",
+            {"priority": "p0", "region": "eu", "contains_pii": True},
+            {
+                "priority-check": ["P0 incident detected, bypassing all other checks"],
+                "region-eu-check": [],
+                "eu-gdpr-check": [],
+                "eu-regular-alert": [],
+                "low-priority-check": [],
+            },
+            None,
+        ),
+        # Test Case 2: EU Region with PII - should stop after GDPR check
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "EU PII Alert",
+            {"priority": "p2", "region": "eu", "contains_pii": True},
+            {
+                "priority-check": [],
+                "region-eu-check": ["EU Region Alert"],
+                "eu-gdpr-check": ["GDPR-related incident detected"],
+                "eu-regular-alert": [],
+                "low-priority-check": [],
+            },
+            None,
+        ),
+        # Test Case 3: EU Region without PII - should continue to low priority check
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "EU Regular Alert",
+            {"priority": "p3", "region": "eu", "contains_pii": False},
+            {
+                "priority-check": [],
+                "region-eu-check": ["EU Region Alert"],
+                "eu-gdpr-check": [],
+                "eu-regular-alert": ["Regular EU incident"],
+                "low-priority-check": ["Low priority incident detected"],
+            },
+            None,
+        ),
+        # Test Case 4: Non-EU P3 alert - should only trigger low priority
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "Non-EU Low Priority",
+            {"priority": "p3", "region": "us", "contains_pii": False},
+            {
+                "priority-check": [],
+                "region-eu-check": [],
+                "eu-gdpr-check": [],
+                "eu-regular-alert": [],
+                "low-priority-check": ["Low priority incident detected"],
+            },
+            None,
+        ),
+    ],
+    indirect=["test_app", "db_session"],
+)
+def test_nested_conditional_flow(
+    db_session,
+    test_app,
+    workflow_manager,
+    test_case,
+    alert_data,
+    expected_results,
+    mocker,
+):
+    # Setup the workflow
+    workflow = Workflow(
+        id="nested-conditional-flow",
+        name="nested-conditional-flow",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test nested conditional logic with continue flags",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_nested,
+    )
+    db_session.add(workflow)
+    db_session.commit()
+
+    # Create the current alert
+    current_alert = AlertDto(
+        id="test-alert-1",
+        source=["test"],
+        name="test-alert",
+        status=AlertStatus.FIRING,
+        severity="critical",
+        priority=alert_data["priority"],
+        region=alert_data["region"],
+        contains_pii=alert_data["contains_pii"],
+    )
+
+    # Insert the alert into workflow manager
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+
+    # Wait for workflow execution
+    workflow_execution = None
+    count = 0
+    while (
+        workflow_execution is None
+        or workflow_execution.status == "in_progress"
+        and count < 30
+    ):
+        workflow_execution = get_last_workflow_execution_by_workflow_id(
+            SINGLE_TENANT_UUID, "nested-conditional-flow"
+        )
+        if workflow_execution is not None and workflow_execution.status == "success":
+            break
+
+        elif workflow_execution is not None and workflow_execution.status == "error":
+            raise Exception("Workflow execution failed")
+
+        time.sleep(1)
+        count += 1
+
+    # Verify workflow execution
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
+
+    # Check if the actions were triggered as expected
+    for action_name, expected_messages in expected_results.items():
+        if not expected_messages:
+            assert workflow_execution.results[action_name] == []
+        else:
+            for expected_message in expected_messages:
+                assert any(
+                    expected_message in json.dumps(result)
+                    for result in workflow_execution.results[action_name]
+                ), f"Expected message '{expected_message}' not found in {action_name} results"

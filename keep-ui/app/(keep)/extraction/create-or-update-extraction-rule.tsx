@@ -20,7 +20,8 @@ import { extractNamedGroups } from "./extractions-table";
 import { useExtractions } from "utils/hooks/useExtractionRules";
 import { AlertsRulesBuilder } from "@/app/(keep)/alerts/alerts-rules-builder";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface Props {
   extractionToEdit: ExtractionRule | null;
@@ -41,6 +42,8 @@ export default function CreateOrUpdateExtractionRule({
   const [regex, setRegex] = useState<string>("");
   const [extractedAttributes, setExtractedAttributes] = useState<string[]>([]);
   const [priority, setPriority] = useState<number>(0);
+  const { data: config } = useConfig();
+
   const editMode = extractionToEdit !== null;
 
   useEffect(() => {
@@ -190,7 +193,9 @@ export default function CreateOrUpdateExtractionRule({
         <div className="flex items-center">
           Extraction Definition{" "}
           <a
-            href="https://docs.keephq.dev/overview/enrichment/extraction"
+            href={`${
+              config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+            }/overview/enrichment/extraction`}
             target="_blank"
           >
             <Icon
@@ -241,7 +246,12 @@ export default function CreateOrUpdateExtractionRule({
       <div className="mt-2.5">
         <Text>
           Condition
-          <a href="https://docs.keephq.dev/overview/presets" target="_blank">
+          <a
+            href={`${
+              config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+            }/overview/presets`}
+            target="_blank"
+          >
             <Icon
               icon={InformationCircleIcon}
               variant="simple"

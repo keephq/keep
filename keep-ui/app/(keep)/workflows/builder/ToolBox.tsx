@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Disclosure } from "@headlessui/react";
 import { Subtitle } from "@tremor/react";
 import { IoChevronUp, IoClose } from "react-icons/io5";
-import Image from "next/image";
 import { IoIosArrowDown } from "react-icons/io";
-import useStore, { V2Step } from "./builder-store";
-import { FaHandPointer } from "react-icons/fa";
+import useStore from "./builder-store";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import clsx from "clsx";
+import { V2Step } from "@/app/(keep)/workflows/builder/types";
+import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 const GroupedMenu = ({
   name,
@@ -54,7 +55,7 @@ const GroupedMenu = ({
     const { type } = step;
     switch (type) {
       case "manual":
-        return <FaHandPointer size={32} />;
+        return <CursorArrowRaysIcon className="size-8" />;
       case "interval":
         return <PiDiamondsFourFill size={32} />;
     }
@@ -73,49 +74,59 @@ const GroupedMenu = ({
   };
 
   return (
-    <Disclosure as="div" className="space-y-1">
-      {({ open }) => (
-        <>
-          <Disclosure.Button className="w-full flex justify-between items-center p-2">
-            <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
-              {name}
-            </Subtitle>
-            <IoChevronUp
-              className={clsx({ "rotate-180": open }, "mr-2 text-slate-400")}
-            />
-          </Disclosure.Button>
-          {(open || !isDraggable) && (
-            <Disclosure.Panel
-              as="ul"
-              className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4"
-            >
-              {steps.length > 0 &&
-                steps.map((step: any) => (
-                  <li
-                    key={step.type}
-                    className="dndnode p-2 my-1 border border-gray-300 rounded cursor-pointer truncate flex justify-start gap-2 items-center"
-                    onDragStart={(event) => handleDragStart(event, { ...step })}
-                    draggable={isDraggable}
-                    title={step.name}
-                    onClick={(e) => handleAddNode(e, step)}
-                  >
-                    {getTriggerIcon(step)}
-                    {!!step && !["interval", "manual"].includes(step.type) && (
-                      <Image
-                        src={IconUrlProvider(step) || "/keep.png"}
-                        alt={step?.type}
-                        className="object-contain aspect-auto"
-                        width={32}
-                        height={32}
-                      />
-                    )}
-                    <Subtitle className="truncate">{step.name}</Subtitle>
-                  </li>
-                ))}
-            </Disclosure.Panel>
-          )}
-        </>
-      )}
+    <Disclosure
+      as="div"
+      className="space-y-1"
+      defaultOpen={isOpen}
+      key={isOpen ? "open" : "closed" + name}
+    >
+      {({ open }) => {
+        return (
+          <>
+            <Disclosure.Button className="w-full flex justify-between items-center p-2">
+              <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
+                {name}
+              </Subtitle>
+              <IoChevronUp
+                className={clsx({ "rotate-180": open }, "mr-2 text-slate-400")}
+              />
+            </Disclosure.Button>
+            {(open || !isDraggable) && (
+              <Disclosure.Panel
+                as="ul"
+                className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4"
+              >
+                {steps.length > 0 &&
+                  steps.map((step: any) => (
+                    <li
+                      key={step.type}
+                      className="dndnode p-2 my-1 border border-gray-300 rounded cursor-pointer truncate flex justify-start gap-2 items-center"
+                      onDragStart={(event) =>
+                        handleDragStart(event, { ...step })
+                      }
+                      draggable={isDraggable}
+                      title={step.name}
+                      onClick={(e) => handleAddNode(e, step)}
+                    >
+                      {getTriggerIcon(step)}
+                      {!!step &&
+                        !["interval", "manual"].includes(step.type) && (
+                          <DynamicImageProviderIcon
+                            src={IconUrlProvider(step) || "/keep.png"}
+                            alt={step?.type}
+                            className="object-contain aspect-auto"
+                            width={32}
+                            height={32}
+                          />
+                        )}
+                      <Subtitle className="truncate">{step.name}</Subtitle>
+                    </li>
+                  ))}
+              </Disclosure.Panel>
+            )}
+          </>
+        );
+      }}
     </Disclosure>
   );
 };

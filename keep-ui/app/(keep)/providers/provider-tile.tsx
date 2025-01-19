@@ -17,10 +17,10 @@ import {
   MapIcon,
   Cog6ToothIcon,
 } from "@heroicons/react/20/solid";
-import "./provider-tile.css";
-import moment from "moment";
-import ImageWithFallback from "@/components/ImageWithFallback";
 import { FaCode } from "react-icons/fa";
+import TimeAgo from "react-timeago";
+import "./provider-tile.css";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 interface Props {
   provider: Provider;
@@ -165,8 +165,12 @@ export default function ProviderTile({ provider, onClick }: Props) {
         "min-h-36 tile-basis text-left min-w-0 py-4 px-4 relative group flex justify-around items-center bg-white rounded-lg shadow hover:grayscale-0 gap-3" +
         // Add fixed height only if provider card doesn't have much content
         (!provider.installed && !provider.linked ? " h-32" : "") +
-        (!provider.linked ? "cursor-pointer hover:shadow-lg" : "") +
-        (provider.coming_soon ? " opacity-50 cursor-not-allowed" : "")
+        (!provider.linked
+          ? " cursor-pointer hover:shadow-lg"
+          : " cursor-auto") +
+        (provider.coming_soon && !provider.linked
+          ? " opacity-50 cursor-not-allowed"
+          : "")
       }
       onClick={provider.coming_soon ? undefined : onClick}
       disabled={provider.coming_soon}
@@ -219,7 +223,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
           <div>
             <Title className="capitalize" title={provider.details?.name}>
               {provider.display_name}{" "}
-              {provider.coming_soon && (
+              {provider.coming_soon && !provider.linked && (
                 <span className="text-sm">(Coming Soon)</span>
               )}
             </Title>
@@ -231,7 +235,8 @@ export default function ProviderTile({ provider, onClick }: Props) {
             )}
             {provider.last_alert_received ? (
               <Text>
-                Last alert: {moment(provider.last_alert_received).fromNow()}
+                Last alert:{" "}
+                <TimeAgo date={provider.last_alert_received + "Z"} />
               </Text>
             ) : (
               <p></p>
@@ -246,9 +251,8 @@ export default function ProviderTile({ provider, onClick }: Props) {
       </div>
       <div className="flex flex-col justify-center h-full">
         <div className="flex-grow flex items-center">
-          <ImageWithFallback
+          <DynamicImageProviderIcon
             src={`/icons/${provider.type}-icon.png`}
-            fallbackSrc={`/icons/keep-icon.png`}
             width={48}
             height={48}
             alt={provider.type}

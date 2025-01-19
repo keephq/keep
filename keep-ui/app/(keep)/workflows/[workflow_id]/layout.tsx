@@ -1,25 +1,23 @@
-"use client";
-import { ArrowLeftIcon } from "@radix-ui/react-icons";
-import Link from "next/link";
+import { getWorkflowWithRedirectSafe } from "@/shared/api/workflows";
+import { WorkflowBreadcrumbs } from "./workflow-breadcrumbs";
+import WorkflowDetailHeader from "./workflow-detail-header";
 
-export default function Layout({
+export default async function Layout({
   children,
   params,
 }: {
-  children: any;
+  children: React.ReactNode;
   params: { workflow_id: string };
 }) {
+  const workflow = await getWorkflowWithRedirectSafe(params.workflow_id);
   return (
-    <>
-      <div className="flex flex-col mb-4 h-full gap-6">
-        <Link
-          href="/workflows"
-          className="flex items-center text-gray-500 hover:text-gray-700"
-        >
-          <ArrowLeftIcon className="h-5 w-5 mr-1" /> Back to Workflows
-        </Link>
-        <div className="flex-1 overflow-auto h-full">{children}</div>
-      </div>
-    </>
+    <div className="flex flex-col mb-4 h-full gap-6">
+      <WorkflowBreadcrumbs workflowId={params.workflow_id} />
+      <WorkflowDetailHeader
+        workflowId={params.workflow_id}
+        initialData={workflow}
+      />
+      <div className="flex-1 h-full">{children}</div>
+    </div>
   );
 }
