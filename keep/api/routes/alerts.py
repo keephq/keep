@@ -315,7 +315,6 @@ def discard_future(
 
 
 def create_process_event_task(
-    bg_tasks: BackgroundTasks,
     tenant_id: str,
     provider_type: str | None,
     provider_id: str | None,
@@ -365,7 +364,6 @@ async def receive_generic_event(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
-    pusher_client: Pusher = Depends(get_pusher_client),
 ):
     """
     A generic webhook endpoint that can be used by any provider to send alerts to Keep.
@@ -400,7 +398,6 @@ async def receive_generic_event(
         task_name = job.job_id
     else:
         task_name = create_process_event_task(
-            bg_tasks,
             authenticated_entity.tenant_id,
             None,
             None,
@@ -447,7 +444,6 @@ async def webhook_challenge():
 )
 async def receive_event(
     provider_type: str,
-    bg_tasks: BackgroundTasks,
     request: Request,
     provider_id: str | None = None,
     fingerprint: str | None = None,
@@ -455,7 +451,6 @@ async def receive_event(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
-    pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     trace_id = request.state.trace_id
     running_tasks: set = request.state.background_tasks
@@ -509,7 +504,6 @@ async def receive_event(
         task_name = job.job_id
     else:
         task_name = create_process_event_task(
-            bg_tasks,
             authenticated_entity.tenant_id,
             provider_type,
             provider_id,
