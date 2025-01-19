@@ -95,7 +95,7 @@ class AlertDeduplicator:
             )
             alert.isPartialDuplicate = True
         else:
-            self.logger.info(
+            self.logger.debug(
                 "Alert is not deduplicated",
                 extra={
                     "alert_id": alert.id,
