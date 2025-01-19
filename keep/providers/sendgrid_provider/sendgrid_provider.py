@@ -11,6 +11,7 @@ from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.functions import cyaml
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
@@ -209,9 +210,8 @@ if __name__ == "__main__":
     )
     scopes = provider.validate_scopes()
     print(scopes)
-    import yaml
 
-    mail = yaml.safe_load(
+    mail = cyaml.safe_load(
         """to:
 - "youremail@gmail.com"
 - "youranotheremail@gmail.com"
