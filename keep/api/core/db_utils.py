@@ -202,6 +202,12 @@ def create_async_db_engine():
                 async_connection_string = DB_CONNECTION_STRING.replace(
                     "mysql:", "mysql+aiomysql:"
                 )
+            # support psycopg2
+            elif DB_CONNECTION_STRING.startswith("postgresql+psycopg2"):
+                async_connection_string = DB_CONNECTION_STRING.replace(
+                    "postgresql+psycopg2:", "postgresql+asyncpg:"
+                )
+            # support postgres without psycopg2
             elif DB_CONNECTION_STRING.startswith("postgresql"):
                 async_connection_string = DB_CONNECTION_STRING.replace(
                     "postgresql:", "postgresql+asyncpg:"
