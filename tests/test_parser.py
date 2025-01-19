@@ -13,6 +13,7 @@ from fastapi import HTTPException
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.action import Action
 from keep.contextmanager.contextmanager import ContextManager
+from keep.functions import cyaml
 from keep.parser.parser import Parser, ParserUtils
 from keep.providers.mock_provider.mock_provider import MockProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -203,7 +204,7 @@ class TestProvidersFromFile:
         monkeypatch.setattr(
             builtins, "open", mocker.mock_open(read_data="does not matter")
         )
-        monkeypatch.setattr(yaml, "safe_load", mock_safeload)
+        monkeypatch.setattr(cyaml, "safe_load", mock_safeload)
 
         # ACT
         parse_file_setup(context_manager)
@@ -223,7 +224,7 @@ class TestProvidersFromFile:
         monkeypatch.setattr(
             builtins, "open", mocker.mock_open(read_data="does not matter")
         )
-        monkeypatch.setattr(yaml, "safe_load", mock_safeload)
+        monkeypatch.setattr(cyaml, "safe_load", mock_safeload)
 
         # ACT/ASSERT
         with pytest.raises(yaml.YAMLError):
