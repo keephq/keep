@@ -31,10 +31,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 incident_field_configurations = [
-    FieldMappingConfiguration("user_generated_name", "user_generated_name"),
-    FieldMappingConfiguration("ai_generated_name", "ai_generated_name"),
-    FieldMappingConfiguration("user_summary", "user_summary"),
-    FieldMappingConfiguration("generated_summary", "generated_summary"),
+    FieldMappingConfiguration("name", ["user_generated_name", "ai_generated_name"]),
+    FieldMappingConfiguration("summary", "user_summary", "generated_summary"),
     FieldMappingConfiguration("assignee", "assignee"),
     FieldMappingConfiguration("severity", "severity"),
     FieldMappingConfiguration("status", "status"),
@@ -45,13 +43,6 @@ incident_field_configurations = [
     FieldMappingConfiguration("is_predicted", "is_predicted"),
     FieldMappingConfiguration("is_confirmed", "is_confirmed"),
     FieldMappingConfiguration("alerts_count", "alerts_count"),
-    FieldMappingConfiguration("affected_services", "affected_services"),
-    FieldMappingConfiguration("sources", "sources"),
-    FieldMappingConfiguration("rule_id", "rule_id"),
-    FieldMappingConfiguration("rule_fingerprint", "rule_fingerprint"),
-    FieldMappingConfiguration("fingerprint", "fingerprint"),
-    FieldMappingConfiguration("same_incident_in_the_past_id", "incident_same_incident_in_the_past_id"),
-    FieldMappingConfiguration("merged_into_incident_id", "merged_into_incident_id"),
     FieldMappingConfiguration("merged_at", "merged_at"),
     FieldMappingConfiguration("merged_by", "merged_by"),
     FieldMappingConfiguration("alert.provider_type", "incident_alert_provider_type"),
