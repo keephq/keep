@@ -19,9 +19,9 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         return f"COALESCE({', '.join(coalesce_args)})"
 
     def cast(self, exp, to_type):
-        if to_type == str:
+        if to_type is str:
             to_type_str = "TEXT"
-        elif to_type == NoneType:
+        elif to_type is NoneType:
             return exp
         else:
             raise ValueError(f"Unsupported type: {type}")

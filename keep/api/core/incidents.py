@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
 from sqlalchemy import and_, func, select
-from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, text
 
 from keep.api.core.cel_to_sql.properties_mapper import PropertiesMappingException

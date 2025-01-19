@@ -20,9 +20,9 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         return f"COALESCE({', '.join(args)})"
 
     def cast(self, exp, to_type):
-        if to_type == str:
+        if to_type is str:
             to_type_str = "TEXT"
-        elif to_type == int:
+        elif to_type is int:
             to_type_str = "INTEGER"
         else:
             raise ValueError(f"Unsupported type: {type}")

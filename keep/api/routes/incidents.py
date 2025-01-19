@@ -31,7 +31,6 @@ from keep.api.core.db import (
     get_incident_by_id,
     get_incidents_meta_for_tenant,
     get_last_alerts,
-    get_last_incidents,
     get_rule,
     get_session,
     get_workflow_executions_for_incident_or_alert,

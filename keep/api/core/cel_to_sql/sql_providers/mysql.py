@@ -11,7 +11,7 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         return f'JSON_UNQUOTE(JSON_EXTRACT({column}, "$.{path}"))'
 
     def cast(self, exp, to_type):
-        if to_type == str:
+        if to_type is str:
             to_type_str = "CHAR"
         elif to_type == NoneType:
             return exp

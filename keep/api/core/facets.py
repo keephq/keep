@@ -74,8 +74,6 @@ def build_facets_data_query(
     else:
         query = union_queries[0]
 
-    x = str(query.compile())
-
     return query
 
 

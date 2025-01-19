@@ -14,7 +14,6 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Tuple, Type, Union
 from uuid import UUID, uuid4
-import celpy
 
 import validators
 from dateutil.tz import tz
@@ -43,8 +42,6 @@ from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
 from keep.api.consts import STATIC_PRESETS
-from keep.api.core.cel_to_sql.sql_providers.postgresql import CelToPostgreSqlProvider
-from keep.api.core.cel_to_sql.sql_providers.sqlite import CelToSqliteProvider
 from keep.api.core.config import config
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -3374,7 +3371,7 @@ def get_last_incidents(
 
         # Order by start_time in descending order and limit the results
         query = query.limit(limit).offset(offset)
-        sql_str = str(query)
+
         # Execute the query
         incidents = query.all()
 

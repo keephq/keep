@@ -199,7 +199,7 @@ class BaseCelToSqlProvider:
             second_operand = self._visit_constant_node(comparison_node.second_operand.value)
 
             if isinstance(comparison_node.first_operand, PropertyAccessNode):
-                first_operand = self.cast(first_operand, type(comparison_node.second_operand.value))
+                first_operand = self.cast(self.__build_sql_filter(comparison_node.first_operand, stack), type(comparison_node.second_operand.value))
             
             if isinstance(comparison_node.first_operand, MultipleFieldsNode):
                 first_operand = self._visit_multiple_fields_node(comparison_node.first_operand, type(comparison_node.second_operand.value), stack)
