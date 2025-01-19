@@ -6,7 +6,6 @@ import uuid
 
 import requests
 import validators
-import yaml
 from fastapi import HTTPException
 
 from keep.api.core.db import (
@@ -24,6 +23,7 @@ from keep.api.core.db import (
 )
 from keep.api.models.db.workflow import Workflow as WorkflowModel
 from keep.api.models.workflow import ProviderDTO
+from keep.functions import cyaml
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflow import Workflow
@@ -56,7 +56,7 @@ class WorkflowStore:
             created_by=created_by,
             interval=interval,
             is_disabled=Parser.parse_disabled(workflow),
-            workflow_raw=yaml.dump(workflow, width=99999),
+            workflow_raw=cyaml.dump(workflow, width=99999),
         )
         self.logger.info(f"Workflow {workflow_id} created successfully")
         return workflow
@@ -100,9 +100,9 @@ class WorkflowStore:
 
     def get_raw_workflow(self, tenant_id: str, workflow_id: str) -> str:
         raw_workflow = get_raw_workflow(tenant_id, workflow_id)
-        workflow_yaml = yaml.safe_load(raw_workflow)
+        workflow_yaml = cyaml.safe_load(raw_workflow)
         valid_workflow_yaml = {"workflow": workflow_yaml}
-        return yaml.dump(valid_workflow_yaml, width=99999)
+        return cyaml.dump(valid_workflow_yaml, width=99999)
 
     def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
         workflow = get_raw_workflow(tenant_id, workflow_id)
@@ -111,7 +111,7 @@ class WorkflowStore:
                 status_code=404,
                 detail=f"Workflow {workflow_id} not found",
             )
-        workflow_yaml = yaml.safe_load(workflow)
+        workflow_yaml = cyaml.safe_load(workflow)
         workflow = self.parser.parse(tenant_id, workflow_yaml)
         if len(workflow) > 1:
             raise HTTPException(
@@ -293,7 +293,7 @@ class WorkflowStore:
 
                 try:
                     with open(workflow_path, "r") as yaml_file:
-                        workflow_yaml = yaml.safe_load(yaml_file)
+                        workflow_yaml = cyaml.safe_load(yaml_file)
                         if "workflow" in workflow_yaml:
                             workflow_yaml = workflow_yaml["workflow"]
                         # backward compatibility
@@ -347,8 +347,8 @@ class WorkflowStore:
         """
         self.logger.debug("Parsing workflow")
         try:
-            workflow = yaml.safe_load(stream)
-        except yaml.YAMLError as e:
+            workflow = cyaml.safe_load(stream)
+        except cyaml.YAMLError as e:
             self.logger.error(f"Error parsing workflow: {e}")
             raise e
         return workflow
@@ -386,7 +386,7 @@ class WorkflowStore:
                 workflow_yaml = self._parse_workflow_to_dict(file_path)
                 if "workflow" in workflow_yaml:
                     workflow_yaml["name"] = workflow_yaml["workflow"]["id"]
-                    workflow_yaml["workflow_raw"] = yaml.dump(workflow_yaml)
+                    workflow_yaml["workflow_raw"] = cyaml.dump(workflow_yaml)
                     workflow_yaml["workflow_raw_id"] = workflow_yaml["workflow"]["id"]
                     workflows.append(workflow_yaml)
                     count += 1
@@ -466,7 +466,7 @@ class WorkflowStore:
                 return providers_dto, triggers
 
             # Parse the workflow YAML safely
-            workflow_yaml = yaml.safe_load(workflow_raw_data)
+            workflow_yaml = cyaml.safe_load(workflow_raw_data)
             if not workflow_yaml:
                 self.logger.error(
                     f"Parsed workflow_yaml is empty or invalid: {workflow_raw_data}"
