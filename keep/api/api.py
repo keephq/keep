@@ -334,7 +334,6 @@ def get_app(
         )
 
     app.add_middleware(LoggingMiddleware)
-    # SHAHAR: uncomment before merging!
     app.add_middleware(SlowAPIMiddleware)
 
     if config("KEEP_METRICS", default="true", cast=bool):
