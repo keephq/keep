@@ -37,7 +37,7 @@ async def extract_generic_body(request: Request) -> dict | bytes | FormData:
             return await request.body()
 
 
-async def get_pusher_client() -> Pusher | None:
+def get_pusher_client() -> Pusher | None:
     logger.debug("Getting pusher client")
     pusher_disabled = os.environ.get("PUSHER_DISABLED", "false") == "true"
     pusher_host = os.environ.get("PUSHER_HOST")
