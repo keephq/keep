@@ -335,7 +335,6 @@ def test_add_upload_workflow_with_alert_trigger(browser):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
-        provider_name = "playwright_test_add_upload_workflow_with_alert_trigger"
         browser.goto("http://localhost:3000/signin")
         browser.get_by_role("link", name="Workflows").hover()
         browser.get_by_role("link", name="Workflows").click()
@@ -343,7 +342,7 @@ def test_add_upload_workflow_with_alert_trigger(browser):
         browser.wait_for_timeout(5000)
         file_input = browser.locator("#workflowFile")
         file_input.set_input_files(
-            [r"./keep/test/e2e_tests/workflow-sample.yaml"]
+            "./tests/e2e_tests/workflow-sample.yaml"
         )
         browser.get_by_role("button", name="Upload")
         browser.wait_for_timeout(10000)
