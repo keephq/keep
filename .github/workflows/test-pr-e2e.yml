@@ -221,6 +221,8 @@ jobs:
         run: |
           docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-backend > backend_logs-${{ matrix.db_type }}.txt
           docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-frontend > frontend_logs-${{ matrix.db_type }}.txt
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-backend-db-auth > backend_logs-${{ matrix.db_type }}-db-auth.txt
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-frontend-db-auth > frontend_logs-${{ matrix.db_type }}-db-auth.txt
         continue-on-error: true
 
       - name: Upload test artifacts on failure
@@ -233,6 +235,8 @@ jobs:
             playwright_dump_*.png
             backend_logs-${{ matrix.db_type }}.txt
             frontend_logs-${{ matrix.db_type }}.txt
+            backend_logs-${{ matrix.db_type }}-db-auth.txt
+            frontend_logs-${{ matrix.db_type }}-db-auth.txt
         continue-on-error: true
 
       - name: Tear down environment
