@@ -4,6 +4,7 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 
 import dataclasses
 import datetime
+import logging
 import time
 
 import pydantic
@@ -20,6 +21,8 @@ from keep.providers.grafana_provider.grafana_alert_format_description import (
 )
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+
+logger = logging.getLogger(__name__)
 
 
 @pydantic.dataclasses.dataclass
@@ -199,6 +202,9 @@ class GrafanaProvider(BaseProvider):
             return GrafanaProvider._format_legacy_alert(event)
 
         alerts = event.get("alerts", [])
+
+        logger.info("Formatting Grafana alerts", extra={"num_of_alerts": len(alerts)})
+
         formatted_alerts = []
         for alert in alerts:
             labels = alert.get("labels", {})

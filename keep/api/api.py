@@ -1,8 +1,11 @@
 import asyncio
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
+from functools import wraps
 from importlib import metadata
+from typing import Awaitable, Callable
 
 import requests
 import uvicorn
@@ -13,6 +16,7 @@ from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
@@ -79,6 +83,8 @@ SCHEDULER = config("SCHEDULER", default="true", cast=bool)
 CONSUMER = config("CONSUMER", default="true", cast=bool)
 TOPOLOGY = config("KEEP_TOPOLOGY_PROCESSOR", default="false", cast=bool)
 KEEP_DEBUG_TASKS = config("KEEP_DEBUG_TASKS", default="false", cast=bool)
+KEEP_DEBUG_MIDDLEWARES = config("KEEP_DEBUG_MIDDLEWARES", default="false", cast=bool)
+KEEP_USE_LIMITER = config("KEEP_USE_LIMITER", default="false", cast=bool)
 
 AUTH_TYPE = config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH.value).lower()
 try:
@@ -329,6 +335,8 @@ def get_app(
         )
 
     app.add_middleware(LoggingMiddleware)
+    if KEEP_USE_LIMITER:
+        app.add_middleware(SlowAPIMiddleware)
 
     if config("KEEP_METRICS", default="true", cast=bool):
         Instrumentator(
@@ -339,6 +347,62 @@ def get_app(
     if config("KEEP_OTEL_ENABLED", default="true", cast=bool):
         keep.api.observability.setup(app)
 
+    # if debug middlewares are enabled, instrument them
+    if KEEP_DEBUG_MIDDLEWARES:
+        logger.info("Instrumenting middlewares")
+        app = instrument_middleware(app)
+        logger.info("Instrumented middlewares")
+    return app
+
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+
+# SHAHAR:
+# This (and instrument_middleware) is a helper function to wrap the call of a middleware with timing
+# It will log the time it took for the middleware to run
+# It should NOT be used in production!
+def wrap_call(middleware_cls, original_call):
+    # if the call is already wrapped, return it
+    if hasattr(original_call, "_timing_wrapped"):
+        return original_call
+
+    @wraps(original_call)
+    async def timed_call(
+        self,
+        scope: dict,
+        receive: Callable[[], Awaitable[dict]],
+        send: Callable[[dict], Awaitable[None]],
+    ):
+        if scope["type"] != "http":
+            return await original_call(self, scope, receive, send)
+
+        start_time = time.time()
+        try:
+            response = await original_call(self, scope, receive, send)
+            return response
+        finally:
+            process_time = (time.time() - start_time) * 1000
+            path = scope.get("path", "")
+            method = scope.get("method", "")
+            middleware_name = self.__class__.__name__
+            logger.info(
+                f"⏱️ {middleware_name:<40} {method} {path} took {process_time:>8.2f}ms"
+            )
+
+    timed_call._timing_wrapped = True
+    return timed_call
+
+
+def instrument_middleware(app):
+    # Get middleware from FastAPI app
+    for middleware in app.user_middleware:
+        if hasattr(middleware.cls, "__call__"):
+            original_call = middleware.cls.__call__
+            middleware.cls.__call__ = wraps(original_call)(
+                wrap_call(middleware.cls, original_call)
+            )
     return app
 
 
