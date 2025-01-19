@@ -11,7 +11,7 @@ from typing import List, Optional
 
 import celpy
 from arq import ArqRedis
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pusher import Pusher
 
@@ -358,7 +358,6 @@ def create_process_event_task(
 )
 async def receive_generic_event(
     event: AlertDto | list[AlertDto] | dict,
-    bg_tasks: BackgroundTasks,
     request: Request,
     fingerprint: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
