@@ -17,10 +17,10 @@ import {
   MapIcon,
   Cog6ToothIcon,
 } from "@heroicons/react/20/solid";
-import ImageWithFallback from "@/components/ImageWithFallback";
 import { FaCode } from "react-icons/fa";
 import TimeAgo from "react-timeago";
 import "./provider-tile.css";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 interface Props {
   provider: Provider;
@@ -251,9 +251,8 @@ export default function ProviderTile({ provider, onClick }: Props) {
       </div>
       <div className="flex flex-col justify-center h-full">
         <div className="flex-grow flex items-center">
-          <ImageWithFallback
+          <DynamicImageProviderIcon
             src={`/icons/${provider.type}-icon.png`}
-            fallbackSrc={`/icons/keep-icon.png`}
             width={48}
             height={48}
             alt={provider.type}

@@ -1,0 +1,57 @@
+---
+title: "AWS S3"
+sidebarTitle: "AWS S3 Provider"
+description: "AWS S3 provider to query S3 buckets"
+---
+
+## Inputs
+
+- `bucket`: str : The bucket to read the files from.
+
+## Limitations
+
+Querying only yaml, yml, json, xml and csv files.
+
+## Outputs
+
+Files's content as a dict.
+
+## Authentication Parameters
+
+- access_key
+- secret_access_key
+
+Please note that during the installation, the provider is performing `list_buckets` to validate the config. Here is an example IAM policy:
+```
+{
+	"Version": "2025-01-15",
+	"Statement": [
+		{
+			"Sid": "VisualEditor0",
+			"Effect": "Allow",
+			"Action": [
+				"s3:ListBucket",
+				"s3:GetObject",
+				"s3:GetBucketLocation",
+				"s3:ListAllMyBuckets"
+			],
+			"Resource": "*"
+		}
+	]
+}
+```
+
+## Example of usage
+
+
+```
+steps:
+  - name: s3-dump
+    provider:
+      config: '{{ providers.s3 }}'
+      type: s3
+      with:
+        bucket: "keep-workflows"
+```
+
+- [Example workflow](https://github.com/keephq/keep/blob/main/examples/workflows/update_workflows_from_s3.yml)

@@ -1,11 +1,11 @@
 import React from "react";
 import { Subtitle, Button, Card, Title } from "@tremor/react";
 import { Chrono } from "react-chrono";
-import Image from "next/image";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { AlertDto } from "@/entities/alerts/model";
 import { AuditEvent } from "utils/hooks/useAlerts";
 import { getInitials } from "@/components/navbar/UserAvatar";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 const formatTimestamp = (timestamp: Date | string) => {
   const date = new Date(timestamp);
@@ -45,7 +45,7 @@ const AlertTimeline: React.FC<AlertTimelineProps> = ({
       style={{ width: "400px" }}
     >
       {entry.user_id.toLowerCase() === "system" ? (
-        <Image
+        <DynamicImageProviderIcon
           src="/icons/keep-icon.png"
           alt="Keep Logo"
           width={40}

@@ -9,7 +9,6 @@ import {
 import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
 import { AlertName } from "@/entities/alerts/ui";
-import Image from "next/image";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
@@ -26,6 +25,7 @@ import {
   TableSeverityCell,
   UISeverity,
 } from "@/shared/ui";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -265,7 +265,7 @@ export const useAlertTableCols = (
               imagePath = "/icons/mailgun-icon.png";
             }
             return (
-              <Image
+              <DynamicImageProviderIcon
                 className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
                 key={source}
                 alt={source}

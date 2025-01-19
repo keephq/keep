@@ -6,7 +6,6 @@ import {
 } from "@/shared/api/workflows";
 import { Button, Card } from "@tremor/react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { TiArrowRight } from "react-icons/ti";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -14,6 +13,7 @@ import useSWR from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { ErrorComponent } from "@/shared/ui";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
   const isStepPresent =
@@ -33,7 +33,7 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
             className="flex items-center gap-2 flex-shrink-0"
           >
             {index > 0 && <TiArrowRight size={24} className="text-gray-500" />}
-            <Image
+            <DynamicImageProviderIcon
               src={`/icons/${provider?.type}-icon.png`}
               width={30}
               height={30}
@@ -56,7 +56,7 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
             {(index > 0 || isStepPresent) && (
               <TiArrowRight size={24} className="text-gray-500" />
             )}
-            <Image
+            <DynamicImageProviderIcon
               src={`/icons/${provider?.type}-icon.png`}
               width={30}
               height={30}

@@ -65,6 +65,7 @@ import {
   GroupFields,
 } from "./form-fields";
 import ProviderLogs from "./provider-logs";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -717,7 +718,7 @@ const ProviderForm = ({
                 className="py-0 pb-2.5"
               />
             </div>
-            <Image
+            <DynamicImageProviderIcon
               src={`/icons/${provider.type}-icon.png`}
               width={64}
               height={55}

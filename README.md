@@ -2,7 +2,7 @@
     <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
-<h1 align="center">The open-source alert management and AIOps platform</h1>
+<h1 align="center">The open-source AIOps and alert management platform</h1>
 
 </br>
 
@@ -522,6 +522,12 @@
         <a href="https://docs.keephq.dev/providers/documentation/microsoft-planner-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/microsoft-planner-icon.svg" alt="Microsoft Planner"/><br/>
             Microsoft Planner
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/monday-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/monday-icon.png" alt="Monday"/><br/>
+            Monday
         </a>
     </td>
 </tr>
