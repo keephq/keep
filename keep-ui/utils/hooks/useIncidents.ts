@@ -7,9 +7,10 @@ import {
 import { PaginatedWorkflowExecutionDto } from "@/shared/api/workflow-executions";
 import useSWR, { SWRConfiguration } from "swr";
 import { useWebsocket } from "./usePusher";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAlerts } from "./useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { v4 as uuidv4 } from "uuid";
 
 interface IncidentUpdatePayload {
   incident_id: string | null;
@@ -163,11 +164,13 @@ export const usePollIncidentAlerts = (incidentId: string) => {
 
 export const usePollIncidents = (mutateIncidents: any) => {
   const { bind, unbind } = useWebsocket();
+  const [incidentChangeToken, setIncidentChangeToken] = useState<string | null>(null);
   const handleIncoming = useCallback(
     (data: any) => {
       mutateIncidents();
+      setIncidentChangeToken(uuidv4()); // changes every time incident change happens on the server
     },
-    [mutateIncidents]
+    [mutateIncidents, setIncidentChangeToken]
   );
 
   useEffect(() => {
@@ -176,6 +179,10 @@ export const usePollIncidents = (mutateIncidents: any) => {
       unbind("incident-change", handleIncoming);
     };
   }, [bind, unbind, handleIncoming]);
+
+  return {
+    incidentChangeToken
+  }
 };
 
 export const useIncidentsMeta = (

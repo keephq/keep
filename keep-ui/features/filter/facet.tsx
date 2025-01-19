@@ -12,7 +12,8 @@ export interface FacetProps {
   name: string;
   isStatic: boolean;
   options: FacetOptionDto[];
-  showSkeleton: boolean;
+  optionsLoading: boolean;
+  optionsReloading: boolean;
   showIcon?: boolean;
   facetKey: string;
   facetState: any;
@@ -31,7 +32,8 @@ export const Facet: React.FC<FacetProps> = ({
   options,
   facetKey,
   showIcon = true,
-  showSkeleton,
+  optionsLoading,
+  optionsReloading,
   facetState,
   onSelect,
   onSelectOneOption: selectOneOption,
@@ -101,15 +103,12 @@ export const Facet: React.FC<FacetProps> = ({
   }
 
   function renderFacetValue(facetOption: FacetOptionDto, index: number) {
-    if (showSkeleton) {
-      return renderSkeleton(`skeleton-${index}`);
-    }
-
     return (
       <FacetValue
         key={facetOption.display_name + index}
         label={facetOption.display_name}
         count={facetOption.matches_count}
+        showIcon={showIcon}
         isExclusivelySelected={checkIfOptionExclusievlySelected(
           facetOption.display_name
         )}
@@ -122,13 +121,12 @@ export const Facet: React.FC<FacetProps> = ({
         onToggleOption={() => onSelect(facetOption.display_name)}
         onSelectOneOption={(value: string) => selectOneOption(value)}
         onSelectAllOptions={() => selectAllOptions()}
-        showIcon={showIcon}
       />
     );
   }
 
   function renderBody() {
-    if (!options) {
+    if (optionsLoading) {
       return Array.from({ length: 3 }).map((_, index) =>
         renderSkeleton(`skeleton-${index}`)
       );
@@ -190,7 +188,7 @@ export const Facet: React.FC<FacetProps> = ({
               />
             </div>
           )}
-          <div className="max-h-60 overflow-y-auto">{renderBody() as any}</div>
+          <div className={`max-h-60 overflow-y-auto${optionsReloading ? ' pointer-events-none opacity-70' : ''}`}>{renderBody() as any}</div>
         </div>
       )}
     </div>

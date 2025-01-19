@@ -5,81 +5,124 @@ import { InitialFacetsData } from "./api";
 import { FacetsPanel } from "./facets-panel";
 
 export interface FacetsPanelProps {
-  panelId: string;
+  /** Entity name to fetch facets, e.g., "incidents" for /incidents/facets and /incidents/facets/options */
+  entityName: string;
   className?: string;
   initialFacetsData?: InitialFacetsData;
-  renderFacetOptionLabel?: (facetName: string, optionDisplayName: string) => JSX.Element | string | undefined;
-  renderFacetOptionIcon?: (facetName: string, optionDisplayName: string) => JSX.Element | undefined;
+  /** Revalidation token to force recalculation of the facets */
+  revalidationToken?: string | null;
+  renderFacetOptionLabel?: (
+    facetName: string,
+    optionDisplayName: string
+  ) => JSX.Element | string | undefined;
+  renderFacetOptionIcon?: (
+    facetName: string,
+    optionDisplayName: string
+  ) => JSX.Element | undefined;
+  /** Callback to handle the change of the CEL when options toggle */
   onCelChange?: (cel: string) => void;
-  onAddFacet?: (createFacet: CreateFacetDto) => void;
-  onDeleteFacet?: (facetId: string) => void;
 }
 
 export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
-  panelId,
+  entityName,
   className,
   initialFacetsData,
+  revalidationToken,
   onCelChange = undefined,
-  onAddFacet = undefined,
-  onDeleteFacet = undefined,
   renderFacetOptionIcon,
-  renderFacetOptionLabel
+  renderFacetOptionLabel,
 }) => {
-  const facetActions = useFacetActions("incidents", initialFacetsData);
-  const [facetQueriesState, setFacetQueriesState] = useState<{ [key: string]: string } | null>(null);
+  const facetActions = useFacetActions(entityName, initialFacetsData);
+  const [facetQueriesState, setFacetQueriesState] = useState<{
+    [key: string]: string;
+  } | null>(null);
 
-  const { data: facetsData } = useFacets(
-    "incidents",
-    {
-      revalidateOnFocus: false,
-      revalidateOnMount: !initialFacetsData?.facets,
-      fallbackData: initialFacetsData?.facets,
-    }
+  const { data: facetsData } = useFacets(entityName, {
+    revalidateOnFocus: false,
+    revalidateOnMount: !initialFacetsData?.facets,
+    fallbackData: initialFacetsData?.facets,
+  });
+
+  const { facetOptions, isLoading } = useFacetOptions(
+    entityName,
+    initialFacetsData?.facetOptions,
+    facetQueriesState
   );
 
-  const { facetOptions, isLoading } = useFacetOptions("incidents", initialFacetsData?.facetOptions, facetQueriesState);
-
-  useEffect(() => {
-    if (facetsData === initialFacetsData?.facets) {
+  useEffect(
+    function reloadOptions() {
+      if (facetsData === initialFacetsData?.facets) {
         return;
+      }
+
+      if (!facetQueriesState) {
+        return;
+      }
+
+      const newFacetQueriesState = buildFacetsQueriesState();
+
+      if (newFacetQueriesState) {
+        setFacetQueriesState(newFacetQueriesState);
+      }
+    },
+    // disabled because this effect uses currentFacetQueriesState that's also change in that effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [facetsData]
+  );
+
+  function buildFacetsQueriesState() {
+    let newFacetQueriesState: { [key: string]: string } | undefined = undefined;
+
+    facetsData?.forEach((facet) => {
+      if (!newFacetQueriesState) {
+        newFacetQueriesState = {};
+      }
+      if (facetQueriesState && facet.id in facetQueriesState) {
+        newFacetQueriesState[facet.id] = facetQueriesState[facet.id];
+      } else {
+        newFacetQueriesState[facet.id] = "";
+      }
+    });
+
+    if (newFacetQueriesState) {
+      return newFacetQueriesState;
     }
 
-    const currentFacetQueriesState = facetQueriesState || {};
-    const facetsNotInQuery = facetsData?.filter(facet => !(facet.id in currentFacetQueriesState));
-    
-    if (facetsNotInQuery?.length) {
-        facetsNotInQuery.forEach((facet) => {
-            currentFacetQueriesState[facet.id] = ""; // set empty CEL
-        });
-        
-        setFacetQueriesState({ ...currentFacetQueriesState });
-    }
-  }, [facetsData, setFacetQueriesState]);
+    return null;
+  }
+
+  useEffect(
+    function watchRevalidationToken() {
+      if (revalidationToken) {
+        console.log({ revalidationToken, facetQueriesState });
+        setFacetQueriesState(buildFacetsQueriesState());
+      }
+    },
+    // disabled as it should watch only revalidationToken
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [revalidationToken]
+  );
 
   return (
     <FacetsPanel
-      panelId={panelId}
+      panelId={entityName}
       className={className || ""}
       facets={(facetsData as any) || []}
-      facetOptions={facetOptions as any || {}}
+      facetOptions={(facetOptions as any) || {}}
       areFacetOptionsLoading={isLoading}
       renderFacetOptionLabel={renderFacetOptionLabel}
       renderFacetOptionIcon={renderFacetOptionIcon}
       onCelChange={(cel: string) => {
         onCelChange && onCelChange(cel);
       }}
-      onAddFacet={(createFacet) => {
-        facetActions.addFacet(createFacet);
-        onAddFacet && onAddFacet(createFacet);
-      }}
+      onAddFacet={(createFacet) => facetActions.addFacet(createFacet)}
       onLoadFacetOptions={(facetId) => {
-        setFacetQueriesState({...facetQueriesState, [facetId]: ""});
+        setFacetQueriesState({ ...facetQueriesState, [facetId]: "" });
       }}
-      onDeleteFacet={(facetId) => {
-        facetActions.deleteFacet(facetId);
-        onDeleteFacet && onDeleteFacet(facetId);
-      }}
-      onReloadFacetOptions={(facetQueries) => setFacetQueriesState({...facetQueries})}
+      onDeleteFacet={(facetId) => facetActions.deleteFacet(facetId)}
+      onReloadFacetOptions={(facetQueries) =>
+        setFacetQueriesState({ ...facetQueries })
+      }
     ></FacetsPanel>
   );
 };

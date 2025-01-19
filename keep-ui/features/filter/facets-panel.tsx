@@ -171,6 +171,8 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             name={facet.name}
             isStatic={facet.is_static}
             options={facetOptions?.[facet.id]}
+            optionsLoading={!facetOptions?.[facet.id]}
+            optionsReloading={areFacetOptionsLoading && !!facet.id && clickedFacetId !== facet.id}
             onSelect={(value) => toggleFacetOption(facet.id, value)}
             onSelectOneOption={(value) => selectOneFacetOption(facet.id, value)}
             onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
@@ -178,7 +180,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             facetKey={facet.id}
             renderOptionLabel={(optionDisplayName) => renderFacetOptionLabel && renderFacetOptionLabel(facet.name, optionDisplayName)}
             renderIcon={(optionDisplayName) => renderFacetOptionIcon && renderFacetOptionIcon(facet.name, optionDisplayName)}
-            showSkeleton={areFacetOptionsLoading && !!facet.id && clickedFacetId !== facet.id}
             onLoadOptions={() => onLoadFacetOptions && onLoadFacetOptions(facet.id)}
             onDelete={() => onDeleteFacet && onDeleteFacet(facet.id)}
           />

@@ -1,6 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -73,13 +73,18 @@ export function IncidentList({
 
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
     useIncidents(false);
-  usePollIncidents(mutateIncidents);
+  const { incidentChangeToken } = usePollIncidents(mutateIncidents);
 
   const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
     null
   );
 
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+  const [filterRevalidationToken, setFilterRevalidationToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFilterRevalidationToken(incidentChangeToken);
+  }, [incidentChangeToken])
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
@@ -239,12 +244,13 @@ export function IncidentList({
           <div>
             <div className="flex flex-row gap-5">
               <FacetsPanelServerSide
-                panelId={"incidents"}
+                entityName={"incidents"}
                 initialFacetsData={initialFacetsData}
                 className="mt-14"
                 onCelChange={(cel) => setFilterCel(cel)}
                 renderFacetOptionIcon={renderFacetOptionIcon}
                 renderFacetOptionLabel={renderFacetOptionLabel}
+                revalidationToken={filterRevalidationToken}
               />
               <div className="flex flex-col gap-5 flex-1">
                 {renderIncidents()}
