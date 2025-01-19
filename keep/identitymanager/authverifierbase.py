@@ -11,7 +11,7 @@ from fastapi.security import (
 )
 
 from keep.api.core.config import config
-from keep.api.core.db import async_get_api_key, update_key_last_used
+from keep.api.core.db import get_api_key, update_key_last_used
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.rbac import Admin as AdminRole
 from keep.identitymanager.rbac import get_role_by_role_name
@@ -91,7 +91,7 @@ class AuthVerifierBase:
                 "KEEP_READ_ONLY_BYPASS_KEY must be set if KEEP_READ_ONLY is enabled"
             )
 
-    async def __call__(
+    def __call__(
         self,
         request: Request,
         api_key: Optional[str] = Security(auth_header),
@@ -123,9 +123,7 @@ class AuthVerifierBase:
                     detail="Read only instance, but non-read scopes requested",
                 )
 
-        authenticated_entity = await self.authenticate(
-            request, api_key, authorization, token
-        )
+        authenticated_entity = self.authenticate(request, api_key, authorization, token)
         self.logger.debug(
             f"Authentication successful for entity: {authenticated_entity}"
         )
@@ -136,7 +134,7 @@ class AuthVerifierBase:
 
         return authenticated_entity
 
-    async def authenticate(
+    def authenticate(
         self,
         request: Request,
         api_key: Optional[str],
@@ -175,7 +173,7 @@ class AuthVerifierBase:
         if api_key:
             self.logger.debug("Attempting to authenticate with API key")
             try:
-                return await self._verify_api_key(request, api_key, authorization)
+                return self._verify_api_key(request, api_key, authorization)
             except HTTPException:
                 raise
             except Exception:
@@ -277,7 +275,7 @@ class AuthVerifierBase:
         self.logger.debug("API key extracted successfully")
         return api_key
 
-    async def _verify_api_key(
+    def _verify_api_key(
         self,
         request: Request,
         api_key: str = Security(auth_header),
@@ -298,7 +296,7 @@ class AuthVerifierBase:
             HTTPException: If the API key is invalid.
         """
         self.logger.debug("Verifying API key")
-        tenant_api_key = await async_get_api_key(api_key)
+        tenant_api_key = get_api_key(api_key)
         if not tenant_api_key:
             self.logger.warning("Invalid API Key")
             raise HTTPException(status_code=401, detail="Invalid API Key")

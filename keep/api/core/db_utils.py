@@ -12,7 +12,6 @@ import pymysql
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from sqlalchemy import func
-from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.ddl import CreateColumn
 from sqlalchemy.sql.functions import GenericFunction
@@ -164,86 +163,6 @@ def create_db_engine():
     else:
         engine = create_engine(
             "sqlite:///./keep.db",
-            connect_args={"check_same_thread": False},
-            echo=DB_ECHO,
-            json_serializer=dumps,
-        )
-    return engine
-
-
-def create_async_db_engine():
-    """
-    Creates an async database engine based on the environment variables.
-    """
-    if RUNNING_IN_CLOUD_RUN and not KEEP_FORCE_CONNECTION_STRING:
-        # For MySQL in Cloud Run
-        engine = create_async_engine(
-            "mysql+aiomysql://",
-            creator=__get_conn,  # Note: You'll need an async version of this
-            echo=DB_ECHO,
-            json_serializer=dumps,
-            pool_size=DB_POOL_SIZE,
-            max_overflow=DB_MAX_OVERFLOW,
-        )
-    elif DB_CONNECTION_STRING == "impersonate":
-        # For MySQL with impersonation
-        engine = create_async_engine(
-            "mysql+aiomysql://",
-            creator=__get_conn_impersonate,  # Note: You'll need an async version of this
-            echo=DB_ECHO,
-            json_serializer=dumps,
-        )
-    elif DB_CONNECTION_STRING:
-        try:
-            logger.info(f"Creating an async connection pool with size {DB_POOL_SIZE}")
-            # Convert connection string to async version
-            async_connection_string = DB_CONNECTION_STRING
-            if DB_CONNECTION_STRING.startswith("mysql"):
-                async_connection_string = DB_CONNECTION_STRING.replace(
-                    "mysql:", "mysql+aiomysql:"
-                )
-            # support psycopg2
-            elif DB_CONNECTION_STRING.startswith("postgresql+psycopg2"):
-                async_connection_string = DB_CONNECTION_STRING.replace(
-                    "postgresql+psycopg2:", "postgresql+asyncpg:"
-                )
-            # support postgres without psycopg2
-            elif DB_CONNECTION_STRING.startswith("postgresql"):
-                async_connection_string = DB_CONNECTION_STRING.replace(
-                    "postgresql:", "postgresql+asyncpg:"
-                )
-            elif "sqlite://" in DB_CONNECTION_STRING:
-                async_connection_string = DB_CONNECTION_STRING.replace(
-                    "sqlite://", "sqlite+aiosqlite://"
-                )
-
-            engine = create_async_engine(
-                async_connection_string,
-                pool_size=(
-                    DB_POOL_SIZE if "sqlite" not in async_connection_string else None
-                ),
-                max_overflow=(
-                    DB_MAX_OVERFLOW if "sqlite" not in async_connection_string else None
-                ),
-                json_serializer=dumps,
-                echo=DB_ECHO,
-                pool_pre_ping=True if KEEP_DB_PRE_PING_ENABLED else False,
-            )
-        # SQLite does not support pool_size
-        except TypeError:
-            # For SQLite, use aiosqlite
-            async_connection_string = DB_CONNECTION_STRING.replace(
-                "sqlite:", "sqlite+aiosqlite:"
-            )
-            engine = create_async_engine(
-                async_connection_string,
-                json_serializer=dumps,
-                echo=DB_ECHO,
-            )
-    else:
-        # Default SQLite case
-        engine = create_async_engine(
-            "sqlite+aiosqlite:///./keep.db",
             connect_args={"check_same_thread": False},
             echo=DB_ECHO,
             json_serializer=dumps,

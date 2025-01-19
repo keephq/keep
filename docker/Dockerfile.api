@@ -4,6 +4,7 @@ ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
     PYTHONUNBUFFERED=1
 
+# THIS IS FOR DEBUGGING PURPOSES
 # RUN apt-get update && \
 #     apt-get install -y --no-install-recommends \
 #     iproute2 \

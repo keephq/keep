@@ -37,18 +37,13 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, subqueryload
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
 from keep.api.consts import STATIC_PRESETS
 from keep.api.core.config import config
-from keep.api.core.db_utils import (
-    create_async_db_engine,
-    create_db_engine,
-    get_json_extract_field,
-)
+from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
 # This import is required to create the tables
@@ -87,7 +82,6 @@ load_dotenv(find_dotenv())
 
 
 engine = create_db_engine()
-async_engine = create_async_db_engine()
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
 
 
@@ -1503,25 +1497,6 @@ def get_api_key(api_key: str) -> TenantApiKey:
         statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
         tenant_api_key = session.exec(statement).first()
     return tenant_api_key
-
-
-# for high throughput
-async def async_get_api_key(api_key: str) -> TenantApiKey:
-    """
-    Get a tenant API key asynchronously.
-
-    Args:
-        api_key (str): The API key to look up
-
-    Returns:
-        TenantApiKey: The found tenant API key or None
-    """
-    api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
-    async with AsyncSession(async_engine) as session:
-        statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
-        result = await session.execute(statement)
-        tenant_api_key = result.scalar_one_or_none()
-        return tenant_api_key
 
 
 def get_user_by_api_key(api_key: str):
@@ -4969,7 +4944,7 @@ def get_last_alert_by_fingerprint(
 def set_last_alert(
     tenant_id: str, alert: Alert, session: Optional[Session] = None, max_retries=3
 ) -> None:
-    logger.debug(f"Seting last alert for `{alert.fingerprint}`")
+    logger.info(f"Seting last alert for `{alert.fingerprint}`")
     with existed_or_new_session(session) as session:
         for attempt in range(max_retries):
             logger.debug(
@@ -5000,7 +4975,7 @@ def set_last_alert(
                     session.add(last_alert)
 
                 elif not last_alert:
-                    logger.debug(
+                    logger.info(
                         f"No last alert for `{alert.fingerprint}`, creating new"
                     )
                     last_alert = LastAlert(
