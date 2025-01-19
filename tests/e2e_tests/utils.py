@@ -9,7 +9,7 @@ def trigger_alert(provider_name):
         headers={
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "X-API-KEY": "3db87031-41c7-43cf-9a20-7cdbcf32f97d",
+            "X-API-KEY": "really_random_secret",
         },
         json=provider.simulate_alert(),
     )
