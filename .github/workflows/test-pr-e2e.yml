@@ -105,6 +105,20 @@ jobs:
               sleep 2
             done
           fi
+          
+          
+          if [ "${{ matrix.db_type }}" == "mysql" ]; then
+            until docker exec $(docker ps -qf "name=keep-database-db-auth-1") mysqladmin ping -h "localhost" --silent; do
+              echo "Waiting for MySQL (DB AUTH) to be ready..."
+              sleep 2
+            done
+          elif [ "${{ matrix.db_type }}" == "postgres" ]; then
+            until docker exec $(docker ps -qf "name=keep-database-db-auth-1") pg_isready -h localhost -U keepuser; do
+              echo "Waiting for Postgres (DB AUTH) to be ready..."
+              sleep 2
+            done
+          fi          
+          
 
           # wait to keep backend on port 8080
           echo "Waiting for Keep backend to be ready..."
@@ -117,6 +131,16 @@ jobs:
               exit 1
             fi
             echo "Waiting for Keep backend to be ready... (Attempt: $((attempt+1)))"
+            attempt=$((attempt+1))
+            sleep 2
+          done
+          
+          until $(curl --output /dev/null --silent --fail http://localhost:8081/healthcheck); do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Max attempts reached, exiting... Sometimes Keep can't start because of double-headed migrations, use: 'alembic -c keep/alembic.ini history' to investigate, or check artifacts."
+              exit 1
+            fi
+            echo "Waiting for Keep backend (DB AUTH) to be ready... (Attempt: $((attempt+1)))"
             attempt=$((attempt+1))
             sleep 2
           done
@@ -133,6 +157,26 @@ jobs:
               exit 1
             fi
             echo "Waiting for Keep frontend to be ready... (Attempt: $((attempt+1)))"
+            attempt=$((attempt+1))
+            sleep 2
+          done
+          
+          until $(curl --output /dev/null --silent --fail http://localhost:3001/); do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Max attempts reached, exiting..."
+              exit 1
+            fi
+            echo "Waiting for Keep frontend (DB AUTH) to be ready... (Attempt: $((attempt+1)))"
+            attempt=$((attempt+1))
+            sleep 2
+          done
+
+          until $(curl --output /dev/null --silent --fail http://localhost:3002/api/health); do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Max attempts reached, exiting... "
+              exit 1
+            fi
+            echo "Waiting for Grafana to be ready... (Attempt: $((attempt+1)))"
             attempt=$((attempt+1))
             sleep 2
           done
