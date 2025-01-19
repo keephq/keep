@@ -12,7 +12,8 @@ from tests.e2e_tests.utils import trigger_alert
 
 os.environ["PLAYWRIGHT_HEADLESS"] = "false"
 
-GRAFANA_HOST = "http://localhost:3002"
+GRAFANA_HOST = "http://grafana:3002"
+GRAFANA_HOST_LOCAL = "http://localhost:3002"
 KEEP_UI_URL = "http://localhost:3000"
 
 
