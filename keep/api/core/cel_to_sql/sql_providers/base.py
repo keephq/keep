@@ -95,7 +95,7 @@ class BaseCelToSqlProvider:
         Raises:
             CelToSqlException: If there is an error parsing the CEL expression, mapping properties, or building the SQL filter.
         """
-        
+
         if not cel:
             return ""
 
@@ -103,7 +103,7 @@ class BaseCelToSqlProvider:
             original_query = CelToAstConverter.convert_to_ast(cel)
         except CELParseError as e:
             raise CelToSqlException(f"Error parsing CEL expression: {str(e)}") from e
-        
+
         try:
             with_mapped_props = self.properties_mapper.map_props_in_ast(original_query)
         except PropertiesMappingException as e:
@@ -114,7 +114,7 @@ class BaseCelToSqlProvider:
             return sql_filter
         except NotImplementedError as e:
             raise CelToSqlException(f"Error while converting CEL expression tree to SQL: {str(e)}") from e
-        
+
     def _get_default_value_for_type(self, type: type) -> str:
         return "'__@NULL@__'"
 
@@ -141,7 +141,7 @@ class BaseCelToSqlProvider:
 
         if isinstance(abstract_node, ConstantNode):
             result = self._visit_constant_node(abstract_node.value)
-        
+
         if isinstance(abstract_node, MultipleFieldsNode):
             result = self._visit_multiple_fields_node(abstract_node, None, stack)
 
@@ -155,13 +155,13 @@ class BaseCelToSqlProvider:
 
     def json_extract(self, column: str, path: str) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
-    
+
     def json_extract_as_text(self, column: str, path: str) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
-    
+
     def coalesce(self, args: List[str]) -> str:
         raise NotImplementedError("COALESCE is not implemented. Must be implemented in the child class.")
-    
+
     def cast(self, exp: str, to_type: type) -> str:
         raise NotImplementedError("CAST is not implemented. Must be implemented in the child class.")
 
@@ -193,14 +193,22 @@ class BaseCelToSqlProvider:
     # region Comparison Visitors
     def _visit_comparison_node(self, comparison_node: ComparisonNode, stack: list[Node]) -> str:
         if comparison_node.operator == ComparisonNode.IN:
-            return self._visit_in(comparison_node.first_operand, comparison_node.second_operand, stack)
+            return self._visit_in(
+                comparison_node.first_operand,
+                (
+                    comparison_node.second_operand
+                    if isinstance(comparison_node.second_operand, list)
+                    else [comparison_node.second_operand]
+                ),
+                stack,
+            )
 
         if isinstance(comparison_node.second_operand, ConstantNode):
             second_operand = self._visit_constant_node(comparison_node.second_operand.value)
 
             if isinstance(comparison_node.first_operand, PropertyAccessNode):
                 first_operand = self.cast(self.__build_sql_filter(comparison_node.first_operand, stack), type(comparison_node.second_operand.value))
-            
+
             if isinstance(comparison_node.first_operand, MultipleFieldsNode):
                 first_operand = self._visit_multiple_fields_node(comparison_node.first_operand, type(comparison_node.second_operand.value), stack)
         else:
@@ -246,7 +254,7 @@ class BaseCelToSqlProvider:
 
     def _visit_less_than_or_equal(self, first_operand: str, second_operand: str) -> str:
         return f"{first_operand} <= {second_operand}"
-    
+
     def _visit_in(self, first_operand: Node, array: list[ConstantNode], stack: list[Node]) -> str:
         cast_to = type(array[0].value)
 
@@ -289,7 +297,6 @@ class BaseCelToSqlProvider:
                 arg = self.cast(arg, cast_to)
             coalesce_args.append(arg)
 
-        
         coalesce_args.append(self._get_default_value_for_type(cast_to))
 
         return self.coalesce(coalesce_args)
@@ -314,11 +321,11 @@ class BaseCelToSqlProvider:
         raise NotImplementedError(
             f"{type(member_access_node).__name__} member access node is not supported yet"
         )
-    
+
     def _visit_property_access_node(self, property_access_node: PropertyAccessNode, stack: list[Node]) -> str:
         if (isinstance(property_access_node, JsonPropertyAccessNode)):
             return self.json_extract_as_text(property_access_node.json_property_name, property_access_node.property_to_extract)
-        
+
         return property_access_node.get_property_path()
 
     def _visit_index_property(self, property_path: str) -> str:

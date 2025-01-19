@@ -21,6 +21,7 @@ from keep.api.bl.ai_suggestion_bl import AISuggestionBl
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, REDIS
+from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.db import (
     DestinationIncidentNotFound,
     add_audit,
@@ -177,7 +178,7 @@ def get_all_incidents(
             cel=cel,
             allowed_incident_ids=allowed_incident_ids,
         )
-    except CELParseError as e:
+    except CelToSqlException as e:
         logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
         raise HTTPException(status_code=400, detail=f'Error parsing CEL expression: {cel}')
 
