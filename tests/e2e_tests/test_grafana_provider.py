@@ -154,7 +154,6 @@ def test_grafana_provider(browser):
                     print("Failed to load alerts after maximum attempts.")
                     raise Exception("Failed to load alerts after maximum attempts.")
 
-
         browser.get_by_role("link", name="Providers").hover()
         browser.get_by_role("link", name="Providers").click()
         providers_to_delete = [provider_name_readonly, provider_name_success]
