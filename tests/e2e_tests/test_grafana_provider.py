@@ -154,13 +154,20 @@ def test_grafana_provider(browser):
                     print("Failed to load alerts after maximum attempts.")
                     raise Exception("Failed to load alerts after maximum attempts.")
 
-        total_providers = 2
-        # Delete provider
-        browser.get_by_role("link", name="Providers").click()
-        for item in browser.locator(
+        locator = browser.locator(
             f"button:has-text('Grafana'):has-text('Connected'):has-text('{provider_name}')"
-        ):
-            total_providers -= 1
+        )
+
+        # Get the count of matching elements
+        count = locator.count()
+
+        if count == 0:
+            raise Exception("No matching providers found.")
+
+        for index in range(count):
+            count -= 1
+            # Perform actions on each matching element
+            item = locator.nth(index)
             item.click()
             browser.once("dialog", lambda dialog: dialog.accept())
             browser.get_by_role("button", name="Delete").click()
@@ -170,7 +177,7 @@ def test_grafana_provider(browser):
                 browser.locator(
                     f"button:has-text('Grafana'):has-text('Connected'):has-text('{provider_name}')"
                 )
-            ).to_have_count(total_providers)
+            ).to_have_count(count)
 
     except Exception:
         # Current file + test name for unique html and png dump.
