@@ -139,6 +139,10 @@ jobs:
           
           attempt=0
           max_attempts=10
+          echo attempt
+          echo "$attempt"
+          echo "$max_attempts"
+          curl http://localhost:8081/healthcheck
           echo "Waiting for Keep backend (DB AUTH) to be ready..."
           until $(curl --output /dev/null --silent --fail http://localhost:8081/healthcheck); do
             if [ "$attempt" -ge "$max_attempts" ]; then
