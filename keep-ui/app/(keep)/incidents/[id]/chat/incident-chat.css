@@ -63,6 +63,7 @@
   opacity: 0.5;
   transition: opacity 0.2xs;
 }
+
 .message-feedback button:hover {
   opacity: 1;
 }
@@ -83,7 +84,45 @@
 .prose {
   max-width: none;
   font-size: 0.875rem;
-  line-height: 1.5;
+  line-height: 1.25rem !important;
+}
+
+/* New message text styles */
+.message-text {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.message-text p {
+  margin: 0 !important;
+  padding: 0;
+}
+
+.message-text > div > div {
+  margin: 0 !important;
+}
+
+.message-text h1,
+.message-text h2,
+.message-text h3,
+.message-text h4,
+.message-text h5,
+.message-text h6 {
+  margin: 0 !important;
+  padding: 0;
+}
+
+/* Override Tailwind prose margins */
+.prose p {
+  margin: 0 !important;
+}
+
+.prose > * {
+  margin: 0 !important;
+}
+
+.prose pre {
+  margin: 0.5rem 0 !important;
 }
 
 @keyframes pulse {
@@ -98,4 +137,31 @@
 
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Add these specific overrides to your chat.css */
+.message-text .prose p {
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
+}
+
+.message-text .prose ol,
+.message-text .prose ul {
+  margin: 0 !important;
+  padding-left: 1.5rem !important;
+}
+
+.message-text .prose li {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.message-text .prose * {
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Override any mb-2 classes that might be added */
+.message-text [class*="mb-"] {
+  margin-bottom: 0 !important;
 }

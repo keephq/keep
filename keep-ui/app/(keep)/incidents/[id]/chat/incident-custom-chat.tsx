@@ -1,192 +1,23 @@
 import { useState, useEffect, useRef } from "react";
 import { Card } from "@tremor/react";
 import { Button } from "@tremor/react";
-import { StopIcon, TrashIcon } from "@radix-ui/react-icons";
+import { TrashIcon } from "@radix-ui/react-icons";
 import {
   Message,
   TextMessage,
   MessageRole,
-  ActionExecutionMessage,
-  ResultMessage,
-  AgentStateMessage,
 } from "@copilotkit/runtime-client-gql";
-import {
-  CopilotTask,
-  useCopilotChat,
-  useCopilotContext,
-} from "@copilotkit/react-core";
-import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
-import { useRouter } from "next/navigation";
+import { CopilotTask } from "@copilotkit/react-core";
 import type { IncidentDto } from "@/entities/incidents/model";
-import Image from "next/image";
 import { User } from "next-auth";
-import { ChatMarkdown } from "./chatmarkdown";
-
-function UserAvatar({
-  user,
-  className = "",
-}: {
-  user?: User | null;
-  className?: string;
-}) {
-  if (!user?.image) {
-    return (
-      <div
-        className={`${className} bg-gray-200 rounded-full flex items-center justify-center`}
-      >
-        <span className="text-gray-500 text-sm">{user?.name?.[0] || "A"}</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`${className} relative rounded-full overflow-hidden`}>
-      <Image
-        src={user.image}
-        alt={user.name || "User"}
-        className="object-cover"
-        fill
-        sizes="(max-width: 32px) 32px"
-      />
-    </div>
-  );
-}
-
-function MessageBotHeader() {
-  return (
-    <div className="flex items-center gap-2 mb-2">
-      <Image src="/keep.svg" alt="Keep AI Logo" width={32} height={32} />
-      <span className="font-semibold">Keep Incidents Resolver</span>
-    </div>
-  );
-}
-
-function MessageUserHeader({ user }: { user?: User | null }) {
-  return (
-    <div className="flex items-center gap-2 mb-2">
-      <UserAvatar user={user} className="h-6 w-6" />
-      <span className="font-semibold">{user?.name || "Anonymous"}</span>
-    </div>
-  );
-}
-
-function LoadingSpinner() {
-  return (
-    <div className="flex items-center justify-center p-2">
-      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
-    </div>
-  );
-}
-
-function RenderMessage({
-  message,
-  isLastMessage,
-  isLoading,
-}: {
-  message: Message;
-  isLastMessage?: boolean;
-  isLoading?: boolean;
-}) {
-  if (message instanceof TextMessage) {
-    return (
-      <div>
-        <div className="prose prose-sm max-w-none break-words">
-          <div className="max-w-[95%] whitespace-pre-wrap">
-            <ChatMarkdown>{message.content}</ChatMarkdown>
-          </div>
-        </div>
-        {isLastMessage && isLoading && <LoadingSpinner />}
-      </div>
-    );
-  }
-
-  if (message instanceof ActionExecutionMessage) {
-    return (
-      <div className="text-sm text-gray-500 break-words">
-        Executing action: {message.name}
-        {message.arguments && (
-          <pre className="mt-1 text-xs bg-gray-100 p-2 rounded overflow-x-auto">
-            {JSON.stringify(message.arguments, null, 2)}
-          </pre>
-        )}
-        {isLastMessage && isLoading && <LoadingSpinner />}
-      </div>
-    );
-  }
-
-  if (message instanceof ResultMessage) {
-    return (
-      <div className="text-sm break-words">
-        <div className="text-gray-500">Action result:</div>
-        <pre className="mt-1 text-xs bg-gray-100 p-2 rounded overflow-x-auto">
-          {typeof message.result === "string"
-            ? message.result
-            : JSON.stringify(message.result, null, 2)}
-        </pre>
-        {isLastMessage && isLoading && <LoadingSpinner />}
-      </div>
-    );
-  }
-
-  if (message instanceof AgentStateMessage) {
-    return (
-      <div className="text-sm text-gray-500">
-        Agent state update: {message.agentName}
-        {isLastMessage && isLoading && <LoadingSpinner />}
-      </div>
-    );
-  }
-
-  return null;
-}
-
-function CustomChatFooter({
-  user,
-  inputValue,
-  setInputValue,
-  onSubmit,
-  isLoading,
-  onStopGeneration,
-}: {
-  user?: User | null;
-  inputValue: string;
-  setInputValue: (value: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  isLoading: boolean;
-  onStopGeneration: () => void;
-}) {
-  return (
-    <div className="border-t bg-white p-4">
-      <form onSubmit={onSubmit} className="flex items-start gap-4">
-        <UserAvatar user={user} className="h-8 w-8 mt-2" />
-        <div className="flex-1 relative">
-          <textarea
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="For example: Find the root cause of this incident"
-            className="w-full p-3 pr-24 border rounded-lg resize-none focus:ring-2 focus:ring-orange-300 min-h-[80px]"
-            disabled={isLoading}
-          />
-          <div className="absolute bottom-2 right-2">
-            {!isLoading ? (
-              <Button
-                type="submit"
-                color="orange"
-                disabled={!inputValue.trim()}
-              >
-                Submit
-              </Button>
-            ) : (
-              <Button color="orange" onClick={onStopGeneration} icon={StopIcon}>
-                Stop
-              </Button>
-            )}
-          </div>
-        </div>
-      </form>
-    </div>
-  );
-}
+import {
+  MessageBotHeader,
+  MessageUserHeader,
+} from "./components/MessageHeaders";
+import { MessageRenderer } from "./components/MessageRenderer";
+import { ChatFooter } from "./components/ChatFooter";
+import { useCopilotChat } from "@copilotkit/react-core";
+import "./incident-chat.css";
 
 interface CustomIncidentChatProps {
   incident: IncidentDto;
@@ -202,6 +33,7 @@ interface CustomIncidentChatProps {
   setLoadingStates: React.Dispatch<
     React.SetStateAction<{ [key: string]: boolean }>
   >;
+  initialMessage?: string; // Add this prop for the initial message
 }
 
 export function CustomIncidentChat({
@@ -210,10 +42,11 @@ export function CustomIncidentChat({
   user,
   handleFeedback,
   loadingStates,
+  initialMessage = "How can I help you with this incident? 🕵️", // Default initial message
 }: CustomIncidentChatProps) {
-  const router = useRouter();
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initialMessageShownRef = useRef(false);
 
   const {
     visibleMessages,
@@ -234,24 +67,7 @@ export function CustomIncidentChat({
     scrollToBottom();
   }, [visibleMessages]);
 
-  // Filter out empty messages
-  const filteredMessages = visibleMessages.filter((message) => {
-    if (message instanceof TextMessage) {
-      return message.content.trim() !== "";
-    }
-    if (message instanceof ActionExecutionMessage) {
-      return message.name || message.arguments;
-    }
-    if (message instanceof ResultMessage) {
-      return message.result !== undefined && message.result !== null;
-    }
-    if (message instanceof AgentStateMessage) {
-      return message.agentName;
-    }
-    return false;
-  });
-
-  // Load messages from localStorage
+  // Load messages from localStorage or show initial message
   useEffect(() => {
     const savedMessages = localStorage.getItem(
       `copilotkit-messages-${incident.id}`
@@ -267,18 +83,28 @@ export function CustomIncidentChat({
         console.error("Error parsing saved messages:", error);
         localStorage.removeItem(`copilotkit-messages-${incident.id}`);
       }
+    } else if (!initialMessageShownRef.current) {
+      // Show initial message only if there are no saved messages
+      const initialSystemMessage = new TextMessage({
+        content: initialMessage,
+        role: MessageRole.Assistant,
+        id: "initial-message",
+        createdAt: new Date().toISOString(),
+      });
+      setMessages([initialSystemMessage]);
+      initialMessageShownRef.current = true;
     }
-  }, [incident.id]);
+  }, [incident.id, initialMessage]);
 
   // Save messages to localStorage
   useEffect(() => {
-    if (filteredMessages.length > 0) {
+    if (visibleMessages.length > 0) {
       localStorage.setItem(
         `copilotkit-messages-${incident.id}`,
-        JSON.stringify(filteredMessages)
+        JSON.stringify(visibleMessages)
       );
     }
-  }, [filteredMessages, incident.id]);
+  }, [visibleMessages, incident.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,20 +126,9 @@ export function CustomIncidentChat({
     }
   };
 
-  if (!alerts?.items || alerts.items.length === 0) {
-    return (
-      <EmptyStateCard
-        title="Chat not available"
-        description="No alerts found for this incident. Go to the alerts feed and assign alerts to interact with the incident."
-        buttonText="Assign alerts to this incident"
-        onClick={() => router.push("/alerts/feed")}
-      />
-    );
-  }
-
   return (
-    <Card className="flex flex-col max-h-[calc(100vh-10rem)]">
-      <div className="relative flex-1 flex flex-col h-full">
+    <Card className="flex flex-col h-[calc(100vh-10rem)]">
+      <div className="relative flex-1 flex flex-col overflow-hidden">
         <Button
           color="orange"
           variant="secondary"
@@ -321,11 +136,20 @@ export function CustomIncidentChat({
           onClick={() => {
             localStorage.removeItem(`copilotkit-messages-${incident.id}`);
             setMessages([]);
+            // Show initial message again after clearing
+            const initialSystemMessage = new TextMessage({
+              content: initialMessage,
+              role: MessageRole.Assistant,
+              id: "initial-message",
+              createdAt: new Date().toISOString(),
+            });
+            setMessages([initialSystemMessage]);
           }}
           icon={TrashIcon}
           className="absolute top-2 right-2 z-10"
         />
 
+        {/* Rest of the component remains the same */}
         <div className="flex-1 overflow-y-auto p-4">
           <div className="flex flex-col gap-6">
             {visibleMessages.map((message, index) => (
@@ -348,7 +172,7 @@ export function CustomIncidentChat({
                   message.role === MessageRole.User && (
                     <MessageUserHeader user={user} />
                   )}
-                <RenderMessage
+                <MessageRenderer
                   message={message}
                   isLastMessage={index === visibleMessages.length - 1}
                   isLoading={isLoading}
@@ -401,20 +225,15 @@ export function CustomIncidentChat({
           </div>
         </div>
 
-        <CustomChatFooter
+        <ChatFooter
           user={user}
           inputValue={inputValue}
           setInputValue={setInputValue}
           onSubmit={handleSubmit}
           isLoading={isLoading}
           onStopGeneration={stopGeneration}
-          onClearChat={() => {
-            localStorage.removeItem(`copilotkit-messages-${incident.id}`);
-            setMessages([]);
-          }}
         />
       </div>
     </Card>
   );
 }
-export default CustomIncidentChat;
