@@ -229,7 +229,7 @@ CONFIG = {
         },
         "dev_terminal": {
             "()": DevTerminalFormatter,
-            "format": "%(asctime)s - %(thread)s %(threadName)s %(levelname)s - %(message)s",
+            "format": "%(asctime)s - %(thread)s %(otelTraceID)s %(threadName)s %(levelname)s - %(message)s",
         },
     },
     "handlers": {
@@ -252,6 +252,11 @@ CONFIG = {
     "loggers": {
         "": {
             "handlers": ["default", "context"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "slowapi": {
+            "handlers": ["default"],
             "level": LOG_LEVEL,
             "propagate": False,
         },
