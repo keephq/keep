@@ -4,11 +4,8 @@ from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 
 class CelToMySqlProvider(BaseCelToSqlProvider):
-    def json_extract(self, column: str, path: str) -> str:
-        return f'JSON_UNQUOTE(JSON_EXTRACT({column}, "$.{path}"))'
-
     def json_extract_as_text(self, column: str, path: str) -> str:
-        return f'JSON_UNQUOTE(JSON_EXTRACT({column}, "$.{path}"))'
+        return f"JSON_UNQUOTE(JSON_EXTRACT({column}, '$.{path}'))"
 
     def cast(self, exp, to_type):
         if to_type is str:

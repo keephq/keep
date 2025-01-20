@@ -4,13 +4,8 @@ from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 
 class CelToPostgreSqlProvider(BaseCelToSqlProvider):
-    def json_extract(self, column: str, path: str) -> str:
-        return " -> ".join(
-            [column] + [f"'{item}'" for item in path.split(".")]
-        )  # example: 'json_column' -> 'key1' -> 'key2'
-
     def json_extract_as_text(self, column: str, path: str) -> str:
-        return " ->> ".join([column] + [f"'{item}'" for item in path.split(".")])
+        return " ->> ".join([column] + [f"'{item}'" for item in path.split(".")]) # example: 'json_column' ->> 'key1' ->> 'key2'
 
     def coalesce(self, args):
         coalesce_args = args
