@@ -10,12 +10,11 @@ class Node:
     appear in an AST. It does not implement any specific functionality but
     provides a common interface for all AST nodes.
     """
-    pass
 
 class ConstantNode(Node):
     """
     A node representing a constant value in CEL abstract syntax tree.
-    Example: 1, 'string', true
+    Example: 1, 'text', true
 
     Attributes:
         value (Any): The constant value represented by this node.
