@@ -226,7 +226,7 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
 
             self.member_access_stack.append(method)
         else:
-            self.stack.append(f".{right}({exprlist})")
+            raise ValueError("No member access stack")
 
     def member_index(self, tree: lark.Tree) -> None:
         right = self.stack.pop()
@@ -238,33 +238,16 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         self.stack.append(PropertyAccessNode(left, IndexAccessNode(str(right), None)))
 
     def member_object(self, tree: lark.Tree) -> None:
-        if len(tree.children) == 2:
-            fieldinits = self.stack.pop()
-        else:
-            fieldinits = ""
-        left = self.stack.pop()
-        self.stack.append(f"{left}{{{fieldinits}}}")
+        raise NotImplementedError("Member object not implemented")
 
     def dot_ident_arg(self, tree: lark.Tree) -> None:
-        if len(tree.children) == 2:
-            exprlist = self.stack.pop()
-        else:
-            exprlist = ""
-        left = cast(lark.Token, tree.children[0]).value
-        self.stack.append(f".{left}({exprlist})")
+        raise NotImplementedError("Dot ident arg not implemented")
 
     def dot_ident(self, tree: lark.Tree) -> None:
-        left = cast(lark.Token, tree.children[0]).value
-        self.stack.append(f".{left}")
+        raise NotImplementedError("Dot ident not implemented")
 
     def ident_arg(self, tree: lark.Tree) -> None:
-        if len(tree.children) == 2:
-            exprlist = self.stack.pop()
-        else:
-            exprlist = ""
-
-        left = cast(lark.Token, tree.children[0]).value
-        self.stack.append(f"{left}({exprlist})")
+        raise NotImplementedError("Ident arg not implemented")
 
     def ident(self, tree: lark.Tree) -> None:
         property_member = PropertyAccessNode(member_name=cast(lark.Token, tree.children[0]).value, value=None)
@@ -273,8 +256,11 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         self.member_access_stack.append(property_member)
 
     def paren_expr(self, tree: lark.Tree) -> None:
-        if self.stack:
-            self.stack.append(ParenthesisNode(expression = self.stack.pop()))
+        if not self.stack:
+            raise ValueError("Cannot handle parenthesis expression without stack")
+            
+        self.stack.append(ParenthesisNode(expression = self.stack.pop()))
+        
 
     def list_lit(self, tree: lark.Tree) -> None:
         if self.stack:

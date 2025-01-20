@@ -8,11 +8,11 @@ export interface InitialFacetsData {
 
 export async function getInitialFacets(
   api: ApiClient,
-  entityType: string
+  entityName: string
 ): Promise<InitialFacetsData> {
-  const facets = await api.get<FacetDto[]>(`/${entityType}/facets`);
+  const facets = await api.get<FacetDto[]>(`/${entityName}/facets`);
   const facetOptions = await api.post<{ [key: string]: FacetOptionDto[] }>(
-    `/${entityType}/facets/options`, facets.map((f) => f.id).reduce((acc, id) => ({...acc, [id]: ''}), {})
+    `/${entityName}/facets/options`, facets.map((f) => f.id).reduce((acc, id) => ({...acc, [id]: ''}), {})
   );
 
   return { facets, facetOptions };
