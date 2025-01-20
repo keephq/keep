@@ -58,6 +58,24 @@ For more detail, visit [sqs-documentation](https://boto3.amazonaws.com/v1/docume
 
 </Note>
 
+<Note>
+Permissions needed for the key-id pair are:
+1. AmazonSQSFullAccess: If you want to notify + receive, this is sqs::read + sqs::write scope.
+2. AmazonSQSReadOnlyAccess: If you want to just receive, this is the sqs::read scope.
+
+You can find these under:
+IAM > Users > <YOUR_USER> > Permission > Add Permissions > Add Permissions > Attach policies directly > Search for SQS.
+
+To create key-id pair, follow this:
+1. Search IAM in AWS console, press enter.
+2. Go to users
+3. Select the user that you want to
+4. Click on `Create access key`
+5. Select `Third party service`, Click `Next`
+6. Add `Description Tag` click `Next`
+7. Copy/Download the key-id pair.
+</Note>
+
 ## Useful Links
 
 - [AmazonSQS Boto3 Examples](https://docs.aws.amazon.com/code-library/latest/ug/python_3_sqs_code_examples.html)
