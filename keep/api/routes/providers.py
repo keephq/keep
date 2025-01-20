@@ -14,6 +14,7 @@ from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
 from keep.api.core.db import count_alerts, get_provider_distribution, get_session
+from keep.api.core.limiter import limiter
 from keep.api.models.db.provider import Provider
 from keep.api.models.provider import Provider as ProviderDTO
 from keep.api.models.provider import ProviderAlertsCountResponseDTO
@@ -133,6 +134,7 @@ def get_provider_logs(
     description="export all installed providers",
     response_model=list[ProviderDTO],
 )
+@limiter.exempt
 def get_installed_providers(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:providers"])

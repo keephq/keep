@@ -2,13 +2,13 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Disclosure } from "@headlessui/react";
 import { Subtitle } from "@tremor/react";
 import { IoChevronUp, IoClose } from "react-icons/io5";
-import Image from "next/image";
 import { IoIosArrowDown } from "react-icons/io";
 import useStore from "./builder-store";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import clsx from "clsx";
 import { V2Step } from "@/app/(keep)/workflows/builder/types";
 import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 const GroupedMenu = ({
   name,
@@ -111,7 +111,7 @@ const GroupedMenu = ({
                       {getTriggerIcon(step)}
                       {!!step &&
                         !["interval", "manual"].includes(step.type) && (
-                          <Image
+                          <DynamicImageProviderIcon
                             src={IconUrlProvider(step) || "/keep.png"}
                             alt={step?.type}
                             className="object-contain aspect-auto"

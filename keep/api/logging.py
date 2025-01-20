@@ -229,7 +229,7 @@ CONFIG = {
         },
         "dev_terminal": {
             "()": DevTerminalFormatter,
-            "format": "%(asctime)s - %(thread)s %(threadName)s %(levelname)s - %(message)s",
+            "format": "%(asctime)s - %(thread)s %(otelTraceID)s %(threadName)s %(levelname)s - %(message)s",
         },
     },
     "handlers": {
@@ -252,6 +252,11 @@ CONFIG = {
     "loggers": {
         "": {
             "handlers": ["default", "context"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "slowapi": {
+            "handlers": ["default"],
             "level": LOG_LEVEL,
             "propagate": False,
         },
@@ -379,3 +384,12 @@ def setup_logging():
     logging.config.dictConfig(CONFIG)
     uvicorn_error_logger = logging.getLogger("uvicorn.error")
     uvicorn_error_logger.__class__ = CustomizedUvicornLogger
+
+    # ADJUST UVICORN ACCESS LOGGER
+    # https://github.com/benoitc/gunicorn/issues/2299
+    # https://github.com/benoitc/gunicorn/issues/2382
+    LOG_FMT = "%(asctime)s - %(otelTraceID)s - %(threadName)s - %(message)s"
+    logger = logging.getLogger("uvicorn.access")
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(LOG_FMT))
+    logger.handlers = [handler]

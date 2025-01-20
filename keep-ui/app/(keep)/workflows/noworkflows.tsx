@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MdArrowForwardIos } from "react-icons/md";
 import { IoMdCard } from "react-icons/io";
-import Image from "next/image";
 import { useConfig } from "utils/hooks/useConfig";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 const DetailsSection = () => {
   const router = useRouter();
@@ -30,7 +30,7 @@ const DetailsSection = () => {
 
   return (
     <section className="flex flex-col items-center justify-center mb-10">
-      <Image
+      <DynamicImageProviderIcon
         src="/icons/workflow-icon.png"
         alt="loading"
         width={200}

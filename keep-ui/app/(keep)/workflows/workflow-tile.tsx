@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
@@ -29,8 +28,8 @@ import {
 import { HiBellAlert } from "react-icons/hi2";
 import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import { DynamicIcon } from "@/components/ui";
 import "./workflow-tile.css";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 function TriggerTile({ trigger }: { trigger: Trigger }) {
   return (
@@ -124,7 +123,7 @@ export const ProvidersCarousel = ({
               disabled={provider.installed}
               className="bg-transparent border-none hover:bg-transparent p-0"
             >
-              <Image
+              <DynamicImageProviderIcon
                 src={`/icons/${provider.type}-icon.png`}
                 width={30}
                 height={30}
@@ -327,17 +326,23 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                 {...props}
               >
                 <div className="flex justify-center items-center">
-                  <DynamicIcon
+                  <DynamicImageProviderIcon
                     providerType={alertSource!}
-                    width="16px"
-                    height="16px"
+                    width="16"
+                    height="16"
                     color="orange"
                   />
                 </div>
               </Badge>
             ) : (
               <Badge
-                icon={() => <DynamicIcon providerType={alertSource!} />}
+                icon={() => (
+                  <DynamicImageProviderIcon
+                    providerType={alertSource!}
+                    height="16"
+                    width="16"
+                  />
+                )}
                 key={t}
                 size="xs"
                 color="orange"
@@ -473,7 +478,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                 >
                   <div className="flex items-center justify-center gap-0.5">
                     {!fallBackIcon ? (
-                      <Image
+                      <DynamicImageProviderIcon
                         src={`/icons/${alertSource}-icon.png`}
                         width={20}
                         height={20}

@@ -5,11 +5,10 @@ import os
 import re
 import typing
 
-import yaml
-
 from keep.actions.actions_factory import ActionsCRUD
 from keep.api.core.db import get_workflow_id
 from keep.contextmanager.contextmanager import ContextManager
+from keep.functions import cyaml
 from keep.providers.providers_factory import ProvidersFactory
 from keep.step.step import Step, StepType
 from keep.step.step_provider_parameter import StepProviderParameter
@@ -332,8 +331,8 @@ class Parser:
     ):
         with open(providers_file, "r") as file:
             try:
-                providers = yaml.safe_load(file)
-            except yaml.YAMLError:
+                providers = cyaml.safe_load(file)
+            except cyaml.YAMLError:
                 self.logger.exception(f"Error parsing providers file {providers_file}")
                 raise
             context_manager.providers_context.update(providers)
@@ -465,8 +464,8 @@ class Parser:
         if actions_file and os.path.isfile(actions_file):
             with open(actions_file, "r") as file:
                 try:
-                    actions_content = yaml.safe_load(file)
-                except yaml.YAMLError:
+                    actions_content = cyaml.safe_load(file)
+                except cyaml.YAMLError:
                     self.logger.exception(f"Error parsing actions file {actions_file}")
                     raise
                 # create a hashmap -> action
@@ -553,8 +552,8 @@ class Parser:
             actions = []
             with open(actions_file, "r") as file:
                 try:
-                    actions = yaml.safe_load(file)
-                except yaml.YAMLError:
+                    actions = cyaml.safe_load(file)
+                except cyaml.YAMLError:
                     self.logger.exception(f"Error parsing actions file {actions_file}")
                     raise
             # convert actions into dictionary of unique object by id

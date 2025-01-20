@@ -8,13 +8,13 @@ import {
 } from "react-hook-form";
 import Modal from "@/components/ui/Modal";
 import { useProviders } from "utils/hooks/useProviders";
-import ImageWithFallback from "@/components/ImageWithFallback";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { Select } from "@/shared/ui";
 
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 interface PushAlertToServerModalProps {
   handleClose: () => void;
@@ -132,9 +132,8 @@ const PushAlertToServerModal = ({
                   getOptionLabel={(source) => source.name}
                   formatOptionLabel={(source) => (
                     <div className="flex items-center" key={source.type}>
-                      <ImageWithFallback
+                      <DynamicImageProviderIcon
                         src={`/icons/${source.type}-icon.png`}
-                        fallbackSrc={`/icons/keep-icon.png`}
                         width={32}
                         height={32}
                         alt={source.type}
