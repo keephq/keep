@@ -13,19 +13,62 @@ from keep.api.core.cel_to_sql.ast_nodes import (
 from keep.api.core.cel_to_sql.properties_metadata import JsonMapping, PropertiesMetadata, SimpleMapping
 
 class JsonPropertyAccessNode(PropertyAccessNode):
+    """
+    A node representing access to a property within a JSON object.
+
+    This class extends PropertyAccessNode to allow for the extraction of a specific property
+    from a JSON object using a method access node.
+
+    Attributes:
+        json_property_name (str): The name of the JSON property to access.
+        property_to_extract (str): The specific property to extract from the JSON object.
+        method_access_node (MethodAccessNode): The method access node used for extraction. (*.contains, *.startsWith, etc)
+    """
     def __init__(self, json_property_name: str, property_to_extract: str, method_access_node: MethodAccessNode):
         super().__init__(f"JSON({json_property_name}).{property_to_extract}", method_access_node)
         self.json_property_name = json_property_name
         self.property_to_extract = property_to_extract
 
 class MultipleFieldsNode(Node):
+    """
+    A node representing multiple fields in a property access structure.
+    It's used when for example one being queried field refers to multiple fields in the database.
+
+    Attributes:
+        fields (list[PropertyAccessNode]): A list of PropertyAccessNode instances representing the fields.
+    
+    Args:
+        fields (list[PropertyAccessNode]): A list of PropertyAccessNode instances to initialize the node with.
+    """
     def __init__(self, fields: list[PropertyAccessNode]):
         self.fields = fields
 
 class PropertiesMappingException(Exception):
+    """
+    Exception raised for errors in the properties mapping process.
+
+    Attributes:
+        message (str): Explanation of the error.
+    """
     pass
 
 class PropertiesMapper:
+    """
+    A class to map properties in an abstract syntax tree (AST) based on provided metadata.
+    Attributes:
+        properties_metadata (PropertiesMetadata): Metadata containing property mappings.
+    Methods:
+        __init__(properties_metadata: PropertiesMetadata):
+            Initializes the PropertiesMapper with the given properties metadata.
+        map_props_in_ast(abstract_node: Node) -> Node:
+            Maps properties in the given AST node based on the properties metadata.
+        __visit_comparison_node(comparison_node: ComparisonNode) -> Node:
+            Visits and processes a comparison node, mapping properties as needed.
+        _visit_member_access_node(member_access_node: MemberAccessNode) -> Node:
+            Visits and processes a member access node, mapping properties as needed.
+        _create_property_access_node(mapping, method_access_node: MethodAccessNode) -> Node:
+            Creates a property access node based on the given mapping and method access node.
+    """
     def __init__(self, properties_metadata: PropertiesMetadata):
         self.properties_metadata = properties_metadata
 
