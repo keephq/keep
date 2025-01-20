@@ -116,7 +116,10 @@ class BaseCelToSqlProvider:
             raise CelToSqlException(f"Error while converting CEL expression tree to SQL: {str(e)}") from e
 
     def _get_default_value_for_type(self, type: type) -> str:
-        return "NULL"
+        if type is str or type is NoneType:
+            return "'__@NULL@__'" # This is a workaround for handling NULL values in SQL
+
+        raise NotImplementedError(f"{type.__name__} type is not supported yet")
 
     def __build_sql_filter(self, abstract_node: Node, stack: list[Node]) -> str:
         stack.append(abstract_node)
