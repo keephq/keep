@@ -221,7 +221,7 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         if self.member_access_stack:
             left: PropertyAccessNode = self.member_access_stack.pop()
 
-            method = MethodAccessNode(member_name=right, args=exprlist)
+            method = MethodAccessNode(member_name=right, args=reversed(exprlist))
             left.value = method
 
             self.member_access_stack.append(method)
@@ -265,7 +265,7 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
     def list_lit(self, tree: lark.Tree) -> None:
         if self.stack:
             left = self.stack.pop()
-            self.stack.append(left)
+            self.stack.append([item for item in reversed(left)])
 
     def map_lit(self, tree: lark.Tree) -> None:
         raise NotImplementedError("Map literal not implemented")
