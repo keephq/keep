@@ -29,7 +29,7 @@ import { HiBellAlert } from "react-icons/hi2";
 import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import "./workflow-tile.css";
-import { DynamicImageProviderIcon, DynamicSVGProviderIcon } from "@/components/ui";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 function TriggerTile({ trigger }: { trigger: Trigger }) {
   return (
@@ -326,17 +326,23 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                 {...props}
               >
                 <div className="flex justify-center items-center">
-                  <DynamicSVGProviderIcon
+                  <DynamicImageProviderIcon
                     providerType={alertSource!}
-                    width="16px"
-                    height="16px"
+                    width="16"
+                    height="16"
                     color="orange"
                   />
                 </div>
               </Badge>
             ) : (
               <Badge
-                icon={() => <DynamicSVGProviderIcon providerType={alertSource!} />}
+                icon={() => (
+                  <DynamicImageProviderIcon
+                    providerType={alertSource!}
+                    height="16"
+                    width="16"
+                  />
+                )}
                 key={t}
                 size="xs"
                 color="orange"
