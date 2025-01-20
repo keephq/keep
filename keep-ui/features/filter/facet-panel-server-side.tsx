@@ -55,10 +55,6 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
         return;
       }
 
-      if (!facetQueriesState) {
-        return;
-      }
-
       const newFacetQueriesState = buildFacetsQueriesState();
 
       if (newFacetQueriesState) {

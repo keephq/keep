@@ -1,3 +1,4 @@
+from types import NoneType
 from typing import List
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
@@ -24,10 +25,18 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
             to_type_str = "TEXT"
         elif to_type is int:
             to_type_str = "INTEGER"
+        elif to_type is NoneType:
+            return exp
         else:
             raise ValueError(f"Unsupported type: {type}")
 
         return f"{exp}::{to_type_str}"
+    
+    def _get_default_value_for_type(self, type):
+        if type is str or type is NoneType:
+            return "'__@NULL@__'"
+
+        return super()._get_default_value_for_type(type)
 
     def _visit_contains_method_calling(
         self, property_path: str, method_args: List[str]
