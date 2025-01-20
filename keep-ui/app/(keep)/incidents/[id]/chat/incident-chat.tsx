@@ -30,12 +30,7 @@ import "./incident-chat.css";
 import { useSession } from "next-auth/react";
 import { StopIcon, TrashIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
-
-const INSTRUCTIONS = `You are an expert incident resolver who's capable of resolving incidents in a variety of ways. You can get traces from providers, search for traces, create incidents, update incident name and summary, and more. You can also ask the user for information if you need it.
-You should always answer short and concise answers, always trying to suggest the next best action to investigate or resolve the incident.
-Any time you're not sure about something, ask the user for clarification.
-If you used some provider's method to get data, present the icon of the provider you used.
-If you think your response is relevant for the root cause analysis, add a "root_cause" tag to the message and call the "enrichRCA" method to enrich the incident.`;
+import { CustomIncidentChat } from "./incident-custom-chat";
 
 export function IncidentChat({
   incident,
@@ -556,33 +551,12 @@ export function IncidentChat({
     await rcaTask.run(context, messageContent);
   };
 
-  if (!alerts?.items || alerts.items.length === 0)
-    return (
-      <EmptyStateCard
-        title="Chat not available"
-        description="No alerts found for this incident. Go to the alerts feed and assign alerts to interact with the incident."
-        buttonText="Assign alerts to this incident"
-        onClick={() => router.push("/alerts/feed")}
-      />
-    );
-
   return (
-    <Card className="h-full">
-      <div className="chat-container">
-        <div className="chat-messages">
-          <CopilotChat
-            className="-mx-2"
-            instructions={INSTRUCTIONS}
-            labels={{
-              title: "Incident Assistant",
-              initial:
-                "Hi! Lets work together to resolve this incident! Ask me anything",
-              placeholder: "For example: Find the root cause of this incident",
-            }}
-            ResponseButton={CustomResponseButton}
-          />
-        </div>
-      </div>
-    </Card>
+    <CustomIncidentChat
+      incident={incident}
+      mutateIncident={mutateIncident}
+      alerts={alerts}
+      user={session?.user}
+    />
   );
 }

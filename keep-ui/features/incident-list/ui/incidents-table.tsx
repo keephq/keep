@@ -159,7 +159,7 @@ export default function IncidentsTable({
       cell: ({ row }) => (
         <div className="min-w-32 lg:min-w-64 xl:min-w-96">
           <Link
-            href={`/incidents/${row.original.id}/alerts`}
+            href={`/incidents/${row.original.id}/overview`}
             className="text-pretty"
           >
             {getIncidentName(row.original)}

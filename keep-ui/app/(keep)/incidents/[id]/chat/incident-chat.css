@@ -66,3 +66,36 @@
 .message-feedback button:hover {
   opacity: 1;
 }
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 28rem);
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+.prose {
+  max-width: none;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

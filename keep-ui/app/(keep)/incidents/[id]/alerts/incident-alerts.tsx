@@ -268,11 +268,16 @@ export default function IncidentAlerts({ incident }: Props) {
 
   return (
     <>
-      <IncidentAlertsActions
-        incidentId={incident.id}
-        selectedFingerprints={selectedFingerprints}
-        resetAlertsSelection={() => table.resetRowSelection()}
-      />
+      <div className="flex justify-between items-center mb-2.5">
+        <h2 className="text-tremor-default font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+          Alerts
+        </h2>
+        <IncidentAlertsActions
+          incidentId={incident.id}
+          selectedFingerprints={selectedFingerprints}
+          resetAlertsSelection={() => table.resetRowSelection()}
+        />
+      </div>
       <Card className="p-0 overflow-x-auto h-[calc(100vh-28rem)]">
         <Table className="[&>table]:table-fixed">
           <TableHead>

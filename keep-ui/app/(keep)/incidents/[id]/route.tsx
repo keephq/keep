@@ -7,5 +7,5 @@ type PageProps = {
 
 // This is just a redirect from legacy route
 export function GET(request: Request, props: PageProps) {
-  redirect(`/incidents/${props.params.id}/alerts`);
+  redirect(`/incidents/${props.params.id}/overview`);
 }

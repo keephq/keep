@@ -33,18 +33,18 @@ export function IncidentLayoutClient({
         <ResizableColumns
           leftChild={
             <div className="pr-2">
-              <div className="flex-1 min-w-0">{children}</div>
-            </div>
-          }
-          rightChild={
-            <div className="pl-2">
               <IncidentChatClientPage
                 mutateIncident={mutate}
                 incident={incident}
               />
             </div>
           }
-          initialLeftWidth={60}
+          rightChild={
+            <div className="pl-2">
+              <div className="flex-1 min-w-0">{children}</div>
+            </div>
+          }
+          initialLeftWidth={40}
         />
       ) : (
         <div className="flex-1 min-w-0">{children}</div>

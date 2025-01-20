@@ -17,7 +17,7 @@ const CustomSingleValue = (
 ) => (
   <components.SingleValue {...props}>
     <div className="flex items-center">
-      {props.data.logoUrl ? (
+      {props.data.logoUrl && (
         <Image
           className="inline-block mr-2"
           alt={props.data.label}
@@ -25,7 +25,7 @@ const CustomSingleValue = (
           width={24}
           height={24}
         />
-      ) : null}
+      )}
       {props.children}
     </div>
   </components.SingleValue>
@@ -35,16 +35,18 @@ const CustomOption = (
   props: OptionProps<OptionType, false, GroupBase<OptionType>>
 ) => (
   <components.Option {...props}>
-    {props.data.logoUrl ? (
-      <Image
-        className="inline-block mr-2"
-        alt={props.data.label}
-        src={props.data.logoUrl}
-        width={24}
-        height={24}
-      />
-    ) : null}
-    {props.children}
+    <div className="flex items-center">
+      {props.data.logoUrl && (
+        <Image
+          className="inline-block mr-2"
+          alt={props.data.label}
+          src={props.data.logoUrl}
+          width={24}
+          height={24}
+        />
+      )}
+      {props.children}
+    </div>
   </components.Option>
 );
 
@@ -53,11 +55,24 @@ const customComponents = {
   SingleValue: CustomSingleValue as any,
 };
 
+interface SelectProps2<
+  Option,
+  IsMulti extends boolean,
+  Group extends GroupBase<Option>,
+> extends SelectProps<Option, IsMulti, Group> {
+  backgroundColor?: string;
+  optionColor?: string;
+}
+
 export function Select<
   Option = OptionType,
   IsMulti extends boolean = false,
   Group extends GroupBase<Option> = GroupBase<Option>,
->(props: SelectProps<Option, IsMulti, Group>) {
+>({
+  backgroundColor = "white",
+  optionColor = "black",
+  ...props
+}: SelectProps2<Option, IsMulti, Group>) {
   const customSelectStyles: StylesConfig<Option, IsMulti, Group> = {
     control: (provided, state) => ({
       ...provided,
@@ -65,21 +80,22 @@ export function Select<
       borderRadius: "0.5rem",
       "&:hover": { borderColor: "orange" },
       boxShadow: state.isFocused ? "0 0 0 1px orange" : provided.boxShadow,
-      backgroundColor: "white",
+      backgroundColor,
     }),
     singleValue: (provided) => ({
       ...provided,
       display: "flex",
       alignItems: "center",
+      color: optionColor,
     }),
     option: (provided, state) => ({
       ...provided,
       backgroundColor: state.isSelected
         ? "orange"
         : state.isFocused
-          ? "rgba(255, 165, 0, 0.1)"
-          : "transparent",
-      color: state.isSelected ? "white" : "black",
+        ? "rgba(255, 165, 0, 0.1)"
+        : "transparent",
+      color: state.isSelected ? "white" : optionColor,
       "&:hover": state.isSelected
         ? {}
         : {
@@ -96,7 +112,7 @@ export function Select<
       ...provided,
       padding: "0.1rem 0.25rem",
       paddingLeft: "0.5rem",
-      color: "black",
+      color: optionColor,
     }),
     multiValueRemove: (provided) => ({
       ...provided,

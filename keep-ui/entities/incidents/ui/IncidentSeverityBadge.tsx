@@ -44,7 +44,12 @@ export function IncidentSeverityBadge({ severity, size = "xs" }: Props) {
   }
 
   return (
-    <Badge color={color} className="capitalize" size={size} icon={icon}>
+    <Badge
+      color={color}
+      className="capitalize rounded-full"
+      size={size}
+      icon={icon}
+    >
       {capitalize(severity)}
     </Badge>
   );

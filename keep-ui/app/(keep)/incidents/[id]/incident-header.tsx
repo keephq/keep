@@ -1,52 +1,23 @@
-"use client";
-
-import {
-  useIncidentActions,
-  type IncidentDto,
-} from "@/entities/incidents/model";
-import { Badge, Button, Icon, Subtitle, Title } from "@tremor/react";
-import { Link } from "@/components/ui";
-import { ArrowRightIcon } from "@heroicons/react/16/solid";
-import { MdBlock, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
 import React, { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import ManualRunWorkflowModal from "@/app/(keep)/workflows/manual-run-workflow-modal";
-import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident";
-import Modal from "@/components/ui/Modal";
+import { Title, Badge, Icon, Button } from "@tremor/react";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { MdPlayArrow, MdModeEdit } from "react-icons/md";
+import { Link } from "@/components/ui";
+import { IncidentDto } from "@/entities/incidents/model";
 import { IncidentSeverityBadge } from "@/entities/incidents/ui";
+import { IncidentStatusBadge } from "@/entities/incidents/ui";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
-import { useIncident } from "@/utils/hooks/useIncidents";
-import { IncidentOverview } from "./incident-overview";
-import { CopilotKit } from "@copilotkit/react-core";
-import { TbInfoCircle, TbTopologyStar3 } from "react-icons/tb";
+import { DateTimeField } from "@/shared/ui";
+import Modal from "@/components/ui/Modal";
+import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident";
+import ManualRunWorkflowModal from "@/app/(keep)/workflows/manual-run-workflow-modal";
+import { IncidentAssignee } from "@/entities/incidents/ui/IncidentAssignee";
 
-export function IncidentHeader({
-  incident: initialIncidentData,
-}: {
-  incident: IncidentDto;
-}) {
-  const { data: fetchedIncident } = useIncident(initialIncidentData.id, {
-    fallbackData: initialIncidentData,
-    revalidateOnMount: false,
-  });
-  const { deleteIncident, confirmPredictedIncident } = useIncidentActions();
-  const incident = fetchedIncident || initialIncidentData;
-
-  const router = useRouter();
-  const pathname = usePathname();
-
+export function IncidentHeader({ incident }: { incident: IncidentDto }) {
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
-
   const [runWorkflowModalIncident, setRunWorkflowModalIncident] =
-    useState<IncidentDto | null>();
+    useState<IncidentDto | null>(null);
 
-  const handleCloseForm = () => {
-    setIsFormOpen(false);
-  };
-
-  const handleFinishEdit = () => {
-    setIsFormOpen(false);
-  };
   const handleRunWorkflow = () => {
     setRunWorkflowModalIncident(incident);
   };
@@ -55,138 +26,105 @@ export function IncidentHeader({
     setIsFormOpen(true);
   };
 
-  const pathNameCapitalized = pathname
-    .split("/")
-    .pop()
-    ?.replace(/^[a-z]/, (match) => match.toUpperCase());
-
   return (
-    <CopilotKit runtimeUrl="/api/copilotkit">
-      <header className="flex flex-col gap-4">
-        <div className="flex flex-row justify-between items-end">
-          <div>
-            <Subtitle className="text-sm">
-              <Link href="/incidents">All Incidents</Link>{" "}
-              <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
-              {incident.is_confirmed ? "" : "Possible "}
-              {getIncidentName(incident)}
-              {pathNameCapitalized && (
-                <>
-                  <Icon icon={ArrowRightIcon} color="gray" size="xs" />
-                  {pathNameCapitalized}
-                </>
-              )}
-            </Subtitle>
+    <div className="flex flex-col gap-4">
+      {/* Title and Back Button */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/incidents"
+            className="p-2 hover:bg-gray-100 rounded-full text-gray-400"
+          >
+            <ArrowLeftIcon className="h-6 w-6" />
+          </Link>
+          <Title>{getIncidentName(incident)}</Title>
+        </div>
+
+        {incident.is_confirmed && (
+          <div className="flex gap-2">
+            <Button
+              color="orange"
+              size="xs"
+              variant="secondary"
+              icon={MdPlayArrow}
+              onClick={handleRunWorkflow}
+            >
+              Run Workflow
+            </Button>
+            <Button
+              color="orange"
+              size="xs"
+              variant="secondary"
+              icon={MdModeEdit}
+              onClick={handleStartEdit}
+            >
+              Edit Incident
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Summary */}
+      <div className="text-gray-400 max-w-3xl">
+        {incident.user_summary || incident.generated_summary}
+      </div>
+
+      {/* Metadata Box */}
+      <div className="bg-gray-200 rounded-lg p-3">
+        <div className="flex flex-wrap gap-4 divide-x divide-gray-300">
+          <div className="flex items-center">
+            <IncidentSeverityBadge severity={incident.severity} size="md" />
           </div>
 
-          {incident.is_confirmed && (
-            <div>
-              <Button
-                color="orange"
-                size="xs"
-                variant="secondary"
-                className="mr-2"
-                icon={MdPlayArrow}
-                onClick={(e: React.MouseEvent) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleRunWorkflow();
-                }}
-              >
-                Run Workflow
-              </Button>
-              <Button
-                color="orange"
-                size="xs"
-                variant="secondary"
-                icon={MdModeEdit}
-                onClick={(e: React.MouseEvent) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleStartEdit();
-                }}
-              >
-                Edit Incident
-              </Button>
-            </div>
-          )}
-        </div>
-        <div className="flex justify-between items-end text-sm gap-2">
-          <div className="prose-2xl flex-grow flex gap-1">
-            <IncidentSeverityBadge severity={incident.severity} />
-            {incident.incident_type == "topology" && (
-              <Badge
-                color="blue"
-                size="xs"
-                icon={TbTopologyStar3}
-                tooltip="Created by topology correlation"
-              >
-                Topology
-              </Badge>
-            )}
-            {incident.rule_is_deleted && (
-              <Badge
-                color="orange"
-                size="xs"
-                icon={TbInfoCircle}
-                tooltip={`Created by deleted rule ${incident.rule_name}`}
-              >
-                Orphaned
-              </Badge>
-            )}
+          <div className="flex items-center gap-2 pl-4">
+            <IncidentStatusBadge status={incident.status} size="md" />
           </div>
-          {!incident.is_confirmed && (
-            <div className="space-x-1 flex flex-row items-center justify-center">
-              <Button
-                color="orange"
-                size="xs"
-                tooltip="Confirm incident"
-                variant="secondary"
-                title="Confirm"
-                icon={MdDone}
-                onClick={(e: React.MouseEvent) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  confirmPredictedIncident(incident.id!);
-                }}
-              >
-                Confirm
-              </Button>
-              <Button
-                color="red"
-                size="xs"
-                variant="secondary"
-                tooltip={"Discard"}
-                icon={MdBlock}
-                onClick={async (e: React.MouseEvent) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const success = await deleteIncident(incident.id);
-                  if (success) {
-                    router.push("/incidents");
-                  }
-                }}
-              />
-            </div>
-          )}
+
+          <div className="flex items-center pl-4">
+            <IncidentAssignee
+              assignee={incident.assignee}
+              incidentId={incident.id}
+            />
+          </div>
+
+          <div className="flex items-center pl-4">
+            <span className="text-gray-400 mr-4">Started</span>
+            <DateTimeField
+              date={incident.start_time}
+              showRelative={false}
+              className="text-gray-900"
+            />
+          </div>
+
+          <div className="flex items-center pl-4">
+            <span className="text-gray-400 mr-4">Last seen</span>
+            <DateTimeField
+              date={incident.last_seen_time}
+              showRelative={false}
+              className="text-gray-900"
+            />
+          </div>
         </div>
-      </header>
-      <IncidentOverview incident={incident} />
+      </div>
+
       <Modal
         isOpen={isFormOpen}
-        onClose={handleCloseForm}
+        onClose={() => setIsFormOpen(false)}
         className="w-[600px]"
         title="Edit Incident"
       >
         <CreateOrUpdateIncidentForm
           incidentToEdit={incident}
-          exitCallback={handleFinishEdit}
+          exitCallback={() => setIsFormOpen(false)}
         />
       </Modal>
+
       <ManualRunWorkflowModal
         incident={runWorkflowModalIncident}
         handleClose={() => setRunWorkflowModalIncident(null)}
       />
-    </CopilotKit>
+    </div>
   );
 }
+
+export default IncidentHeader;
