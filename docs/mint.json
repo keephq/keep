@@ -114,6 +114,7 @@
       "pages": [
         "providers/overview",
         "providers/adding-a-new-provider",
+        "providers/provider-methods",
         {
           "group": "Supported Providers",
           "pages": [
