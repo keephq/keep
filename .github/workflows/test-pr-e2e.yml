@@ -88,8 +88,6 @@ jobs:
           DOCKER_BUILDKIT=1 docker compose \
             --project-directory . \
             -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml up -d
-          
-          docker ps
 
       - name: Wait for database to be ready
         run: |
