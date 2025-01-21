@@ -180,10 +180,6 @@ export function IncidentList({
   );
 
   function renderIncidents() {
-    if (incidentsError) {
-      return <IncidentListError incidentError={incidentsError} />;
-    }
-
     if (incidents && incidents.items.length > 0) {
       return (
         <IncidentsTable
@@ -242,20 +238,29 @@ export function IncidentList({
             </div>
           </div>
           <div>
-            <div className="flex flex-row gap-5">
-              <FacetsPanelServerSide
-                entityName={"incidents"}
-                initialFacetsData={initialFacetsData}
-                className="mt-14"
-                onCelChange={(cel) => setFilterCel(cel)}
-                renderFacetOptionIcon={renderFacetOptionIcon}
-                renderFacetOptionLabel={renderFacetOptionLabel}
-                revalidationToken={filterRevalidationToken}
-              />
-              <div className="flex flex-col gap-5 flex-1">
-                {renderIncidents()}
-              </div>
-            </div>
+            {
+              incidentsError ? (
+                <IncidentListError incidentError={incidentsError} />
+              ) : null
+            }
+            {
+              incidentsError ? null : (
+                <div className="flex flex-row gap-5">
+                  <FacetsPanelServerSide
+                    entityName={"incidents"}
+                    initialFacetsData={initialFacetsData}
+                    className="mt-14"
+                    onCelChange={(cel) => setFilterCel(cel)}
+                    renderFacetOptionIcon={renderFacetOptionIcon}
+                    renderFacetOptionLabel={renderFacetOptionLabel}
+                    revalidationToken={filterRevalidationToken}
+                  />
+                  <div className="flex flex-col gap-5 flex-1">
+                    {renderIncidents()}
+                  </div>
+                </div>
+              )
+            }
           </div>
         </div>
       </div>
