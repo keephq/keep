@@ -3314,7 +3314,7 @@ def get_last_incidents(
     with_alerts: bool = False,
     is_predicted: bool = None,
     filters: Optional[dict] = None,
-    allowed_incident_ids: Optional[List[str]] = None,
+    allowed_incident_ids: Optional[List[str]] = None
 ) -> Tuple[list[Incident], int]:
     """
     Get the last incidents and total amount of incidents.
@@ -3371,6 +3371,7 @@ def get_last_incidents(
 
         # Order by start_time in descending order and limit the results
         query = query.limit(limit).offset(offset)
+
         # Execute the query
         incidents = query.all()
 
@@ -3379,7 +3380,6 @@ def get_last_incidents(
         enrich_incidents_with_enrichments(tenant_id, incidents, session)
 
     return incidents, total_count
-
 
 def get_incident_by_id(
     tenant_id: str,
