@@ -24,7 +24,7 @@ export function UserAvatar({ user, className = "" }: UserAvatarProps) {
         alt={user.name || "User"}
         className="object-cover"
         fill
-        sizes="(max-width: 32px) 32px"
+        sizes="32px 32px"
       />
     </div>
   );

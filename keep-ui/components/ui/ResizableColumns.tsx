@@ -51,7 +51,7 @@ const ResizableColumns = ({
       onMouseMove={onMouseMove}
     >
       <div
-        className="bg-gray-50 p-4 overflow-auto"
+        className="bg-gray-50 overflow-auto"
         style={{ width: `${leftWidth}%` }}
       >
         {leftChild}
@@ -62,7 +62,7 @@ const ResizableColumns = ({
         onMouseDown={startDragging}
       />
 
-      <div className="flex-1 bg-white p-4 overflow-auto">{rightChild}</div>
+      <div className="flex-1 bg-white overflow-auto">{rightChild}</div>
     </div>
   );
 };

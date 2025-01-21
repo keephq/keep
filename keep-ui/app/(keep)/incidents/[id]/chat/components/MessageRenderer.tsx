@@ -20,9 +20,9 @@ export function MessageRenderer({
   isLastMessage,
   isLoading,
 }: MessageRendererProps) {
-  const messageWrapper = "relative px-4 py-6";
-  const messageContent = "pl-6"; // Left padding for the line
-  const verticalLine = "absolute top-0 left-0 w-[2px] h-full bg-gray-200";
+  const messageWrapper = "relative px-4";
+  const messageContent = "pl-8"; // Increased left padding from 6 to 8
+  const verticalLine = "absolute top-0 left-[10px] w-[2px] h-full bg-gray-200"; // Added left offset
 
   if (message instanceof TextMessage) {
     return (
@@ -30,7 +30,7 @@ export function MessageRenderer({
         <div className={verticalLine} />
         <div className={messageContent}>
           <div className="message-text break-words">
-            <div className="max-w-[95%] whitespace-pre-wrap prose prose-sm [&>*]:!m-0 [&_p]:!m-0 [&_ol]:!m-0 [&_ul]:!m-0 [&_li]:!m-0">
+            <div className="max-w-[95%] prose prose-sm [&>*]:!m-0 [&_p]:!m-0 [&_ol]:!m-0 [&_ul]:!m-0 [&_li]:!m-0">
               <ChatMarkdown>{message.content}</ChatMarkdown>
             </div>
           </div>

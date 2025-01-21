@@ -274,7 +274,7 @@ export function AlertTable({
 
   return (
     // Add h-screen to make it full height and remove the default flex-col gap
-    <div className="h-screen flex flex-col gap-4">
+    <div className="h-full flex flex-col gap-4">
       {/* Add padding to account for any top nav/header */}
       <div className="px-4 flex-none">
         <TitleAndFilters

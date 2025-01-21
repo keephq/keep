@@ -26,29 +26,37 @@ export function IncidentLayoutClient({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="h-full flex flex-col">
       <IncidentHeader incident={incident} />
       <IncidentTabsNavigation incident={incident} />
-      {AIEnabled ? (
-        <ResizableColumns
-          leftChild={
-            <div className="pr-2">
-              <IncidentChatClientPage
-                mutateIncident={mutate}
-                incident={incident}
-              />
-            </div>
-          }
-          rightChild={
-            <div className="pl-2">
-              <div className="flex-1 min-w-0">{children}</div>
-            </div>
-          }
-          initialLeftWidth={40}
-        />
-      ) : (
-        <div className="flex-1 min-w-0">{children}</div>
-      )}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {" "}
+        {/* Add overflow-hidden */}
+        {AIEnabled ? (
+          <ResizableColumns
+            leftChild={
+              <div className="h-full">
+                {" "}
+                {/* Remove overflow-hidden */}
+                <IncidentChatClientPage
+                  mutateIncident={mutate}
+                  incident={incident}
+                />
+              </div>
+            }
+            rightChild={
+              <div className="h-full">
+                {" "}
+                {/* Remove overflow-hidden */}
+                {children}
+              </div>
+            }
+            initialLeftWidth={40}
+          />
+        ) : (
+          <div className="h-full">{children}</div>
+        )}
+      </div>
     </div>
   );
 }

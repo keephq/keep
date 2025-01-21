@@ -27,10 +27,10 @@ export function IncidentHeader({ incident }: { incident: IncidentDto }) {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col">
       {/* Title and Back Button */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
           <Link
             href="/incidents"
             className="p-2 hover:bg-gray-100 rounded-full text-gray-400"
@@ -70,7 +70,7 @@ export function IncidentHeader({ incident }: { incident: IncidentDto }) {
       </div>
 
       {/* Metadata Box */}
-      <div className="bg-gray-200 rounded-lg p-3">
+      <div className="bg-gray-200 p-3">
         <div className="flex flex-wrap gap-4 divide-x divide-gray-300">
           <div className="flex items-center">
             <IncidentSeverityBadge severity={incident.severity} size="md" />

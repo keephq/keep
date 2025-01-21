@@ -31,7 +31,7 @@ export function ChatFooter({
   };
 
   return (
-    <div className="border-t bg-white p-4">
+    <div className="border-t bg-white p-2">
       <form onSubmit={onSubmit} className="flex items-center gap-4">
         <UserAvatar user={user} className="h-8 w-8" />
         <div className="flex-1 relative">

@@ -21,7 +21,7 @@ export default async function Layout({
     );
   } catch (error) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col h-full">
         <IncidentHeaderSkeleton />
         {children}
       </div>

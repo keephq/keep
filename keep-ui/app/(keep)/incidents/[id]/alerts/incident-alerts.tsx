@@ -41,7 +41,8 @@ import clsx from "clsx";
 import { IncidentAlertsTableBodySkeleton } from "./incident-alert-table-body-skeleton";
 import { IncidentAlertsActions } from "./incident-alert-actions";
 import { DynamicImageProviderIcon } from "@/components/ui";
-
+import { useRef, useCallback } from "react";
+import { AlertNameWithDescription } from "@/entities/alerts/ui";
 interface Props {
   incident: IncidentDto;
 }
@@ -51,18 +52,98 @@ interface Pagination {
   offset: number;
 }
 
+function useOptimalTableRows(
+  containerRef: RefObject<HTMLElement>,
+  { minRows = 3, maxRows = 20, rowHeight = 110, uiElementsHeight = 136 } = {}
+) {
+  const [availableHeight, setAvailableHeight] = useState(0);
+  const initialHeightSet = useRef(false);
+
+  useEffect(() => {
+    if (!containerRef.current || initialHeightSet.current) return;
+
+    let resizeObserver: ResizeObserver; // Declare here so we can use in cleanup
+
+    // Function to calculate and update height - only once
+    const updateHeight = () => {
+      if (initialHeightSet.current) return;
+
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect && rect.height > 0) {
+        setAvailableHeight(rect.height);
+        initialHeightSet.current = true;
+
+        // Cleanup listeners once we have our height
+        if (resizeObserver) {
+          resizeObserver.disconnect();
+        }
+        window.removeEventListener("resize", updateHeight);
+      }
+    };
+
+    // Initial calculation
+    updateHeight();
+
+    // Create resize observer for initial size detection
+    resizeObserver = new ResizeObserver(updateHeight);
+    resizeObserver.observe(containerRef.current);
+
+    // Add window resize listener for initial zoom state
+    window.addEventListener("resize", updateHeight);
+
+    // Cleanup
+    return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, []);
+
+  return useMemo(() => {
+    const tableHeight = availableHeight - uiElementsHeight;
+    const optimalRows = Math.max(minRows, Math.floor(tableHeight / rowHeight));
+    return Math.min(optimalRows, maxRows);
+  }, [availableHeight, minRows, maxRows, rowHeight, uiElementsHeight]);
+}
+
 const columnHelper = createColumnHelper<AlertDto>();
 
 export default function IncidentAlerts({ incident }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const optimalPageSize = useOptimalTableRows(containerRef);
+
   const [alertsPagination, setAlertsPagination] = useState<Pagination>({
-    limit: 20,
+    limit: optimalPageSize,
     offset: 0,
   });
 
+  // Keep pagination in sync with optimal page size
   const [pagination, setTablePagination] = useState({
     pageIndex: 0,
-    pageSize: 20,
+    pageSize: optimalPageSize,
   });
+
+  useEffect(() => {
+    setTablePagination((prev) => ({
+      pageIndex: 0,
+      pageSize: optimalPageSize,
+    }));
+
+    setAlertsPagination((prev) => ({
+      limit: optimalPageSize,
+      offset: 0,
+    }));
+  }, [optimalPageSize]);
+
+  useEffect(() => {
+    if (pagination.pageSize !== alertsPagination.limit) {
+      setAlertsPagination({
+        limit: pagination.pageSize,
+        offset: pagination.pageIndex * pagination.pageSize,
+      });
+    }
+  }, [pagination]);
 
   const {
     data: alerts,
@@ -139,17 +220,7 @@ export default function IncidentAlerts({ incident }: Props) {
         minSize: 100,
         cell: (context) => (
           <div className="max-w-[300px]">
-            <AlertName alert={context.row.original} />
-          </div>
-        ),
-      }),
-      columnHelper.accessor("description", {
-        id: "description",
-        header: "Description",
-        minSize: 100,
-        cell: (context) => (
-          <div title={context.getValue()}>
-            <div className="truncate">{context.getValue()}</div>
+            <AlertNameWithDescription alert={context.row.original} />
           </div>
         ),
       }),
@@ -267,10 +338,10 @@ export default function IncidentAlerts({ incident }: Props) {
   const selectedFingerprints = Object.keys(rowSelection);
 
   return (
-    <>
+    <div className="flex flex-col h-full" ref={containerRef}>
       <div className="flex justify-between items-center mb-2.5">
-        <h2 className="text-tremor-default font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-          Alerts
+        <h2 className="text-tremor-default font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+          ALERTS
         </h2>
         <IncidentAlertsActions
           incidentId={incident.id}
@@ -278,83 +349,88 @@ export default function IncidentAlerts({ incident }: Props) {
           resetAlertsSelection={() => table.resetRowSelection()}
         />
       </div>
-      <Card className="p-0 overflow-x-auto h-[calc(100vh-28rem)]">
-        <Table className="[&>table]:table-fixed">
-          <TableHead>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow
-                key={headerGroup.id}
-                className="border-b border-tremor-border dark:border-dark-tremor-border"
-              >
-                {headerGroup.headers.map((header, index) => {
-                  const { style, className } =
-                    getCommonPinningStylesAndClassNames(
-                      header.column,
-                      table.getState().columnPinning.left?.length,
-                      table.getState().columnPinning.right?.length
-                    );
-                  return (
-                    <TableHeaderCell
-                      key={`header-${header.id}-${index}`}
-                      style={style}
-                      className={clsx(
-                        header.column.columnDef.meta?.thClassName,
-                        className
-                      )}
-                    >
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                    </TableHeaderCell>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHead>
-          {alerts && alerts?.items?.length > 0 && (
-            <TableBody>
-              {table.getRowModel().rows.map((row, index) => (
-                <TableRow key={`row-${row.id}-${index}`}>
-                  {row.getVisibleCells().map((cell, index) => {
+
+      {/* Table container with flex-1 and overflow handling */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="h-full overflow-auto">
+          <Table>
+            <TableHead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow
+                  key={headerGroup.id}
+                  className="border-b border-tremor-border dark:border-dark-tremor-border"
+                >
+                  {headerGroup.headers.map((header, index) => {
                     const { style, className } =
                       getCommonPinningStylesAndClassNames(
-                        cell.column,
+                        header.column,
                         table.getState().columnPinning.left?.length,
                         table.getState().columnPinning.right?.length
                       );
                     return (
-                      <TableCell
-                        key={`cell-${cell.id}-${index}`}
+                      <TableHeaderCell
+                        key={`header-${header.id}-${index}`}
                         style={style}
                         className={clsx(
-                          cell.column.columnDef.meta?.tdClassName,
+                          header.column.columnDef.meta?.thClassName,
                           className
                         )}
                       >
                         {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
+                          header.column.columnDef.header,
+                          header.getContext()
                         )}
-                      </TableCell>
+                      </TableHeaderCell>
                     );
                   })}
                 </TableRow>
               ))}
-            </TableBody>
-          )}
-          {isLoading && (
-            <IncidentAlertsTableBodySkeleton
-              table={table}
-              pageSize={pagination.pageSize - 10}
-            />
-          )}
-        </Table>
-      </Card>
+            </TableHead>
+            {alerts && alerts?.items?.length > 0 && (
+              <TableBody>
+                {table.getRowModel().rows.map((row, index) => (
+                  <TableRow key={`row-${row.id}-${index}`}>
+                    {row.getVisibleCells().map((cell, index) => {
+                      const { style, className } =
+                        getCommonPinningStylesAndClassNames(
+                          cell.column,
+                          table.getState().columnPinning.left?.length,
+                          table.getState().columnPinning.right?.length
+                        );
+                      return (
+                        <TableCell
+                          key={`cell-${cell.id}-${index}`}
+                          style={style}
+                          className={clsx(
+                            cell.column.columnDef.meta?.tdClassName,
+                            className
+                          )}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableBody>
+            )}
+            {isLoading && (
+              <IncidentAlertsTableBodySkeleton
+                table={table}
+                pageSize={optimalPageSize}
+              />
+            )}
+          </Table>
+        </div>
+      </div>
 
-      <div className="mt-4 mb-8">
+      {/* Pagination at the bottom */}
+      <div className="mt-4">
         <TablePagination table={table} />
       </div>
-    </>
+    </div>
   );
 }

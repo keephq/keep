@@ -34,8 +34,8 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   const session = await auth();
 
   return (
-    <html lang="en" className={`bg-gray-50 ${mulish.className}`}>
-      <body className="h-screen flex flex-col lg:grid lg:grid-cols-[fit-content(250px)_30px_auto] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[0px_30px_auto]">
+    <html lang="en" className={`h-full bg-gray-50 ${mulish.className}`}>
+      <body className="h-full flex flex-col lg:grid lg:grid-cols-[fit-content(250px)_30px_auto] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[0px_30px_auto] overflow-hidden">
         {/* ThemeScript must be the first thing to avoid flickering */}
         <ThemeScript />
         <ConfigProvider config={config}>
@@ -47,7 +47,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   <PostHogPageView />
                   <Navbar />
                   {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
-                  <main className="page-container flex flex-col col-start-3 overflow-auto">
+                  <main className="h-full page-container flex flex-col col-start-3 overflow-auto">
                     {/* Add the banner here, before the navbar */}
                     {config.READ_ONLY && <ReadOnlyBanner />}
                     <div className="flex-1">{children}</div>

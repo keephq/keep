@@ -19,7 +19,7 @@ const components: Components = {
   // Renders paragraphs of text with bottom margin
   // Used for standard text blocks in markdown
   p({ children }) {
-    return <p className="mb-2">{children}</p>;
+    return <p>{children}</p>;
   },
 
   // Renders hyperlinks that open in new tab
@@ -77,19 +77,19 @@ const components: Components = {
   // Renders unordered lists with bullet points
   // Used when markdown contains * or - list items
   ul({ children }) {
-    return <ul className="list-disc pl-6">{children}</ul>;
+    return <ul className="list-disc pl-6 my-0">{children}</ul>;
   },
 
   // Renders ordered lists with numbers
   // Used when markdown contains 1. 2. 3. list items
   ol({ children }) {
-    return <ol className="list-decimal pl-6">{children}</ol>;
+    return <ol className="list-decimal pl-6 my-0">{children}</ol>;
   },
 
   // Renders list items within ul/ol
   // Used for each item in a list
   li({ children }) {
-    return <li>{children}</li>;
+    return <li className="my-0">{children}</li>;
   },
 
   // Renders heading level 1
