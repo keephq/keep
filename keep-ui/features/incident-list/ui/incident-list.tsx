@@ -165,7 +165,7 @@ export function IncidentList({
       
       switch (facetName) {
         case "assignee":
-          if (facetOptionName === "n/a") {
+          if (!facetOptionName) {
             return "Not assigned";
           }
           return <AssigneeLabel email={facetOptionName} />;

@@ -32,6 +32,10 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
     onClose();
   }
 
+  function isSubmitEnabled(): boolean {
+    return name.trim().length > 0 && propertyPath.trim().length > 0;
+  }
+
   return (
     <Modal
       isOpen={isOpen}
@@ -47,6 +51,7 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
           
           <TextInput
             placeholder="Enter facet name"
+            required={true}
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="mb-4"
@@ -59,6 +64,7 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
           
           <TextInput
             placeholder="Enter facet property path"
+            required={true}
             value={propertyPath}
             onChange={(e) => setPropertyPath(e.target.value)}
             className="mb-4"
@@ -79,6 +85,7 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
           size="xs"
           variant="primary"
           type="submit"
+          disabled={!isSubmitEnabled()}
           onClick={() => handleNewFacetCreation()}
         >
           Create
