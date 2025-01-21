@@ -15,6 +15,7 @@ export type GetIncidentsParams = {
   offset: number;
   sorting: { id: string; desc: boolean };
   filters: Filters | {};
+  cel?: string;
 };
 
 function buildIncidentsUrl(params: GetIncidentsParams) {
@@ -29,6 +30,10 @@ function buildIncidentsUrl(params: GetIncidentsParams) {
       });
     }
   });
+
+  if (params.cel) {
+    filtersParams.append("cel", params.cel);
+  }
 
   return `/incidents?confirmed=${params.confirmed}&limit=${params.limit}&offset=${params.offset}&sorting=${
     params.sorting.desc ? "-" : ""
