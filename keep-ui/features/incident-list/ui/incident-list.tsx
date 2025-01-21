@@ -211,11 +211,9 @@ export function IncidentList({
     );
   }
 
-  function getUncheckedFacetOptionsByDefault(): Record<string, string[]> {
-    return {
-      "status": ["resolved", "deleted"],
-    };
-  }
+  const uncheckedFacetOptionsByDefault: Record<string, string[]> = {
+    "Status": ["resolved", "deleted"],
+  };
 
   return (
     <div className="flex h-full w-full">
@@ -268,7 +266,7 @@ export function IncidentList({
                     entityName={"incidents"}
                     clearFiltersToken={clearFiltersToken}
                     initialFacetsData={initialFacetsData}
-                    uncheckedByDefaultOptionValues={getUncheckedFacetOptionsByDefault()}
+                    uncheckedByDefaultOptionValues={uncheckedFacetOptionsByDefault}
                     onCelChange={(cel) => setFilterCel(cel)}
                     renderFacetOptionIcon={renderFacetOptionIcon}
                     renderFacetOptionLabel={renderFacetOptionLabel}

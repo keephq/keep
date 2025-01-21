@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Facet } from "./facet";
 import { CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueries } from "./models";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
@@ -82,6 +82,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   onLoadFacetOptions = undefined,
   onReloadFacetOptions = undefined,
 }) => {
+  const defaultStateHandledForFacetIds = useMemo(() => new Set<string>(), []);
   const [facetsState, setFacetsState] = useState<FacetState>({});
   const [clickedFacetId, setClickedFacetId] = useState<string | null>(null);
 
@@ -90,6 +91,22 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     false
   );
   const [celState, setCelState] = useState("");
+
+  function getFacetState(facetId: string): Set<string> {
+    if (!defaultStateHandledForFacetIds.has(facetId) && uncheckedByDefaultOptionValues && Object.keys(uncheckedByDefaultOptionValues).length) {
+      const facetState = new Set<string>(...(facetsState[facetId] || []));
+      const facet = facets.find((f) => f.id === facetId);
+
+      if (facet) {
+        uncheckedByDefaultOptionValues[facet?.name]?.forEach((optionValue) => facetState.add(optionValue));
+        defaultStateHandledForFacetIds.add(facetId);
+      }
+
+      facetsState[facetId] = facetState;
+    }
+
+    return facetsState[facetId] || new Set<string>();
+  }
 
   const isOptionSelected = (facet_id: string, option_id: string) => {
     return !facetsState[facet_id] || !facetsState[facet_id].has(option_id);
@@ -160,7 +177,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     calculateFacetsState({});
   }
 
-  useEffect(() => {
+  useEffect(function clearFiltersWhenTokenChange(): void {
     if (clearFiltersToken) {
       clearFilters();
     }
@@ -199,7 +216,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             onSelect={(value) => toggleFacetOption(facet.id, value)}
             onSelectOneOption={(value) => selectOneFacetOption(facet.id, value)}
             onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
-            facetState={facetsState[facet.id] || new Set<string>()}
+            facetState={getFacetState(facet.id)}
             facetKey={facet.id}
             renderOptionLabel={(optionDisplayName) => renderFacetOptionLabel && renderFacetOptionLabel(facet.name, optionDisplayName)}
             renderIcon={(optionDisplayName) => renderFacetOptionIcon && renderFacetOptionIcon(facet.name, optionDisplayName)}

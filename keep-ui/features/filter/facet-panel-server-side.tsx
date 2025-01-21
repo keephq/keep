@@ -122,6 +122,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
       facetOptions={(facetOptions as any) || {}}
       areFacetOptionsLoading={isLoading}
       clearFiltersToken={clearFiltersToken}
+      uncheckedByDefaultOptionValues={uncheckedByDefaultOptionValues}
       renderFacetOptionLabel={renderFacetOptionLabel}
       renderFacetOptionIcon={renderFacetOptionIcon}
       onCelChange={(cel: string) => {
