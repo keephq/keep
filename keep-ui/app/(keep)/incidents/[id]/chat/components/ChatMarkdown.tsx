@@ -15,16 +15,20 @@ const MemoizedReactMarkdown: FC<Options> = memo(
 interface MarkdownProps {
   children: string;
 }
-
 const components: Components = {
+  // Renders paragraphs of text with bottom margin
+  // Used for standard text blocks in markdown
   p({ children }) {
     return <p className="mb-2">{children}</p>;
   },
-  a({ children, ...props }) {
+
+  // Renders hyperlinks that open in new tab
+  // Used when markdown contains [text](url) syntax
+  a({ children, href }) {
     return (
       <a
         className="text-blue-600 underline"
-        {...props}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -32,15 +36,21 @@ const components: Components = {
       </a>
     );
   },
-  code({ inline, className, children, ...props }) {
+
+  // Renders code blocks and inline code
+  // Used for both inline `code` and fenced code blocks ```code```
+  // Supports syntax highlighting for fenced code blocks with language specified
+  code({ inline, className, children, ...props }: any) {
     const match = /language-(\w+)/.exec(className || "");
     const language = match ? match[1] : "";
     const content = String(children).replace(/\n$/, "");
 
+    // Special case for cursor placeholder
     if (content === "▍") {
       return <span className="animate-pulse mt-1">▍</span>;
     }
 
+    // Inline code rendering
     if (inline) {
       return (
         <code className="bg-gray-100 rounded px-1 py-0.5" {...props}>
@@ -49,10 +59,11 @@ const components: Components = {
       );
     }
 
+    // Code block rendering with syntax highlighting
     return (
       <div className="my-2">
         <SyntaxHighlighter
-          style={atomDark}
+          style={atomDark as { [key: string]: React.CSSProperties }}
           language={language}
           PreTag="div"
           {...props}
@@ -62,24 +73,45 @@ const components: Components = {
       </div>
     );
   },
+
+  // Renders unordered lists with bullet points
+  // Used when markdown contains * or - list items
   ul({ children }) {
-    return <ul className="list-disc pl-6 mb-2">{children}</ul>;
+    return <ul className="list-disc pl-6">{children}</ul>;
   },
+
+  // Renders ordered lists with numbers
+  // Used when markdown contains 1. 2. 3. list items
   ol({ children }) {
-    return <ol className="list-decimal pl-6 mb-2">{children}</ol>;
+    return <ol className="list-decimal pl-6">{children}</ol>;
   },
+
+  // Renders list items within ul/ol
+  // Used for each item in a list
   li({ children }) {
-    return <li className="mb-1">{children}</li>;
+    return <li>{children}</li>;
   },
+
+  // Renders heading level 1
+  // Used when markdown contains # Heading
   h1({ children }) {
     return <h1 className="text-2xl font-bold mb-3">{children}</h1>;
   },
+
+  // Renders heading level 2
+  // Used when markdown contains ## Heading
   h2({ children }) {
     return <h2 className="text-xl font-bold mb-2">{children}</h2>;
   },
+
+  // Renders heading level 3
+  // Used when markdown contains ### Heading
   h3({ children }) {
     return <h3 className="text-lg font-bold mb-2">{children}</h3>;
   },
+
+  // Renders blockquotes
+  // Used when markdown contains > quoted text
   blockquote({ children }) {
     return (
       <blockquote className="border-l-4 border-gray-200 pl-4 my-2 italic">
@@ -94,7 +126,7 @@ export function ChatMarkdown({ children }: MarkdownProps) {
     <div className="prose prose-sm max-w-none">
       <MemoizedReactMarkdown
         components={components}
-        remarkPlugins={[remarkGfm, remarkMath]}
+        remarkPlugins={[remarkGfm as any, remarkMath as any]}
       >
         {children}
       </MemoizedReactMarkdown>
