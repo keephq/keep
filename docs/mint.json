@@ -60,7 +60,7 @@
     },
     {
       "group": "Incidents",
-      "pages": ["incidents/overview"]
+      "pages": ["incidents/overview", "incidents/facets"]
     },
     {
       "group": "AIOps",

@@ -1,0 +1,29 @@
+[
+    {
+        "input_cel": "alert.severity == 'HIGH'",
+        "description": "Queried field refers to multiple JSON columns",
+        "expected_sql_dialect_based": {
+            "mysql": "COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.severity')) as CHAR), CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.severity')) as CHAR), '__@NULL@__') = 'HIGH'",
+            "postgresql": "COALESCE(alert_enrichments ->> 'severity'::TEXT, alert_event ->> 'severity'::TEXT, '__@NULL@__') = 'HIGH'",
+            "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.severity') as TEXT), CAST(json_extract(alert_event, '$.severity') as TEXT), '__@NULL@__') = 'HIGH'"
+        }
+    },
+    {
+        "input_cel": "name != 'Payments incident'",
+        "description": "Queried field refers to multipl columns",
+        "expected_sql_dialect_based": {
+            "mysql": "COALESCE(CAST(user_generated_name as CHAR), CAST(ai_generated_name as CHAR), '__@NULL@__') != 'Payments incident'",
+            "postgresql": "COALESCE(user_generated_name::TEXT, ai_generated_name::TEXT, '__@NULL@__') != 'Payments incident'",
+            "sqlite": "COALESCE(CAST(user_generated_name as TEXT), CAST(ai_generated_name as TEXT), '__@NULL@__') != 'Payments incident'"
+        }
+    },
+    {
+        "input_cel": "!(name in ['Payments incident', 'API incident', 'Network incident', null])",
+        "description": "IN operator along with NOT",
+        "expected_sql_dialect_based": {
+            "mysql": "NOT (COALESCE(CAST(user_generated_name as CHAR), CAST(ai_generated_name as CHAR), '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
+            "postgresql": "NOT (COALESCE(user_generated_name::TEXT, ai_generated_name::TEXT, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
+            "sqlite": "NOT (COALESCE(CAST(user_generated_name as TEXT), CAST(ai_generated_name as TEXT), '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))"
+        }
+    }
+]

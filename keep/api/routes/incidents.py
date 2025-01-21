@@ -21,6 +21,7 @@ from keep.api.bl.ai_suggestion_bl import AISuggestionBl
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, REDIS
+from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.db import (
     DestinationIncidentNotFound,
     add_audit,
@@ -31,13 +32,14 @@ from keep.api.core.db import (
     get_incident_by_id,
     get_incidents_meta_for_tenant,
     get_last_alerts,
-    get_last_incidents,
     get_rule,
     get_session,
     get_workflow_executions_for_incident_or_alert,
     merge_incidents_to_id,
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
+from keep.api.core.facets import create_facet, delete_facet
+from keep.api.core.incidents import get_incident_facets, get_incident_facets_data, get_last_incidents_by_cel
 from keep.api.models.alert import (
     AlertDto,
     EnrichAlertRequestBody,
@@ -56,6 +58,7 @@ from keep.api.models.alert import (
     SplitIncidentRequestDto,
     SplitIncidentResponseDto,
 )
+from keep.api.models.facet import CreateFacetDto, FacetDto
 from keep.api.models.db.alert import ActionType, AlertAudit
 from keep.api.models.workflow import WorkflowExecutionDTO
 from keep.api.routes.alerts import _enrich_alert
@@ -127,6 +130,7 @@ def get_all_incidents(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
+    cel: str = Query(None),
 ) -> IncidentsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
 
@@ -163,15 +167,19 @@ def get_all_incidents(
         authenticated_entity=authenticated_entity,
     )
 
-    incidents, total_count = get_last_incidents(
-        tenant_id=tenant_id,
-        is_confirmed=confirmed,
-        limit=limit,
-        offset=offset,
-        sorting=sorting,
-        filters=filters,
-        allowed_incident_ids=allowed_incident_ids,
-    )
+    try:
+        incidents, total_count = get_last_incidents_by_cel(
+            tenant_id=tenant_id,
+            is_confirmed=confirmed,
+            limit=limit,
+            offset=offset,
+            sorting=sorting,
+            cel=cel,
+            allowed_incident_ids=allowed_incident_ids,
+        )
+    except CelToSqlException as e:
+        logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
+        raise HTTPException(status_code=400, detail=f'Error parsing CEL expression: {cel}')
 
     incidents_dto = []
     for incident in incidents:
@@ -191,6 +199,132 @@ def get_all_incidents(
     return IncidentsPaginatedResultsDto(
         limit=limit, offset=offset, count=total_count, items=incidents_dto
     )
+
+@router.post(
+    "/facets/options",
+    description="Query incident facet options. Accepts dictionary where key is facet id and value is cel to query facet",
+)
+def fetch_inicident_facet_options(
+    facets_query: dict[str, str],
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching incident facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    # get all preset ids that the user has access to
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        authenticated_entity.tenant_id
+    )
+    # Note: if no limitations (allowed_preset_ids is []), then all presets are allowed
+    allowed_incident_ids = identity_manager.get_user_permission_on_resource_type(
+        resource_type="incident",
+        authenticated_entity=authenticated_entity,
+    )
+
+    facet_options = get_incident_facets_data(
+            tenant_id = tenant_id,
+            allowed_incident_ids=allowed_incident_ids,
+            facets_query = facets_query
+        )
+
+    logger.info(
+        "Fetched incident facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facet_options
+
+
+@router.get(
+    "/facets",
+    description="Get incident facets",
+)
+def fetch_inicident_facets(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    )
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching incident facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    facets = get_incident_facets(
+            tenant_id = tenant_id
+        )
+
+    logger.info(
+        "Fetched incident facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facets
+
+
+@router.post(
+    "/facets",
+    description="Add facet for incidents",
+)
+async def add_incidents_facet(
+    create_facet_dto: CreateFacetDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    )
+) -> FacetDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Creating facet for incident",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    created_facet = create_facet(
+        tenant_id=tenant_id,
+        facet=create_facet_dto
+    )
+    return created_facet
+
+@router.delete(
+    "/facets/{facet_id}",
+    description="Delete facet for incidents",
+)
+async def delete_incidents_facet(
+    facet_id: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    )
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Deleting facet for incident",
+        extra={
+            "tenant_id": tenant_id,
+            "facet_id": facet_id,
+        },
+    )
+    is_deleted = delete_facet(
+        tenant_id=tenant_id,
+        facet_id=facet_id
+    )
+    
+    if not is_deleted:
+        raise HTTPException(status_code=404, detail="Facet not found")
 
 
 @router.get(

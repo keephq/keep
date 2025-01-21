@@ -4,4 +4,4 @@ export { Textarea } from "./Textarea";
 export { Button } from "./Button";
 export { Link } from "./Link";
 export { EmptyStateCard } from "./EmptyStateCard";
-export { DynamicImageProviderIcon, DynamicSVGProviderIcon } from "./DynamicProviderIcon";
+export { DynamicImageProviderIcon } from "./DynamicProviderIcon";

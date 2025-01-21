@@ -1,0 +1,35 @@
+Faceted search is a powerful mechanism for enhancing search functionality, allowing users to filter and refine search results dynamically using multiple dimensions or "facets." These facets are predefined categories or attributes of the data. In Keep, the Incidents page supports faceted search by incident attributes.
+
+### Predefined Incident Facets
+These are predefined Incident facets that can be used to filter incidents:
+- **Status**: Filter by Incident status
+- **Severity**: Filter by Incident severity
+- **Assignee**: Filter by Incident assignee
+- **Source**: Filter by alert source
+- **Service**: Filter by the service the Incident relates to
+
+### Custom Facets Creation
+Keep also supports custom facets creation. Here is how to do this:
+1. Click the "Add facet" button in the filtering panel.
+2. Enter the Facet name. This is the name that will be displayed in the filter panel.
+3. Enter the Facet property path the facet will filter by.
+4. Click "Create".
+
+<Frame width="100" height="200">
+    <img height="10" src="/images/incidents/add_facet_for_incident.png" />
+</Frame>
+
+### Supported Properties to create Facets for
+Incident supports facets by direct Incident fields and also by Alert's data linked to the Incident. Here is a list of properties you can create facets for:
+- **name**: Incident name
+- **summary**: Incident summary
+- **creation_time**: Incident creation time
+- **start_time**: Incident start time
+- **end_time**: Incident end time
+- **last_seen_time**: Incident last seen time
+- **is_predicted**: Whether the Incident is predicted
+- **is_confirmed**: Whether the Incident is confirmed
+- **alerts_count**: Number of alerts associated with the Incident
+- **merged_at**: When the Incident was merged
+- **merged_by**: Who merged the Incident
+- **alert.***: Refers to alert properties in the Incident. Examples: alert.labels.monitor, alert.monitor, etc.
