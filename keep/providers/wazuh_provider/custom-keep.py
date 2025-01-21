@@ -1,3 +1,7 @@
+# This file is not intended to be executed on the Keep side.
+# It is stored in this repository to be served from GitHub for use within Wazuh.
+# Following: https://documentation.wazuh.com/current/user-manual/manager/integration-with-external-apis.html#creating-an-integration-script
+
 import json
 import os
 import sys
