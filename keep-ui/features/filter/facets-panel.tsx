@@ -133,43 +133,46 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
 
   function toggleFacetOption(facetId: string, value: string) {
     setClickedFacetId(facetId);
-    facetsState[facetId] = facetsState[facetId] || new Set<string>();
+    const facetState = getFacetState(facetId);
 
     if (isOptionSelected(facetId, value)) {
-      facetsState[facetId].add(value)
+      facetState.add(value)
     } else {
-      facetsState[facetId].delete(value)
+      facetState.delete(value)
     }
 
-    calculateFacetsState({ ...facetsState });
+    calculateFacetsState({ ...facetsState, [facetId]: facetState });
   }
 
   function selectOneFacetOption(facetId: string, optionValue: string): void {
     setClickedFacetId(facetId);
-    facetsState[facetId] = facetsState[facetId] || new Set<string>();
+    const facetState = getFacetState(facetId);
 
     facetOptions[facetId].forEach(facetOption => {
       if (facetOption.display_name === optionValue) {
-        facetsState[facetId].delete(optionValue);
+        facetState.delete(optionValue);
         return;
       }
 
-      facetsState[facetId].add(facetOption.display_name);
+      facetState.add(facetOption.display_name);
     })
 
     calculateFacetsState({
-      ...facetsState
+      ...facetsState,
+      [facetId]: facetState,
     });
   }
 
   function selectAllFacetOptions(facetId: string) {
     setClickedFacetId(facetId);
-    facetsState[facetId] = facetsState[facetId] || new Set<string>();
+    const facetState = getFacetState(facetId);
+
     Object.values(facetOptions[facetId])
-      .forEach((option) => (facetsState[facetId].delete(option.display_name)));
+      .forEach((option) => (facetState.delete(option.display_name)));
 
     calculateFacetsState({
       ...facetsState,
+      [facetId]: facetState,
     });
   }
 
