@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Facet } from "./facet";
 import { CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueries } from "./models";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
@@ -46,6 +46,8 @@ export interface FacetsPanelProps {
   facets: FacetDto[];
   facetOptions: { [key: string]: FacetOptionDto[] };
   areFacetOptionsLoading?: boolean;
+  /** Token to clear filters related to facets */
+  clearFiltersToken?: string | null;
   renderFacetOptionLabel?: (facetName: string, optionDisplayName: string) => JSX.Element | string | undefined;
   renderFacetOptionIcon?: (facetName: string, optionDisplayName: string) => JSX.Element | undefined;
   onCelChange: (cel: string) => void;
@@ -61,6 +63,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   facets,
   facetOptions,
   areFacetOptionsLoading = false,
+  clearFiltersToken,
   renderFacetOptionIcon = undefined,
   renderFacetOptionLabel,
   onCelChange = undefined,
@@ -133,6 +136,10 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     });
   }
 
+  function clearFilters(): void {
+    calculateFacetsState(null, {});
+  }
+
   function selectAllFacetOptions(facetId: string) {
     setClickedFacetId(facetId);
     const newFacetState: any = { ...facetsState[facetId] };
@@ -143,6 +150,13 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       [facetId]: newFacetState,
     });
   }
+
+  useEffect(() => {
+    if (clearFiltersToken) {
+      clearFilters();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clearFiltersToken]);
 
   return (
     <section id={`${panelId}-facets`} className={"min-w-56 max-w-56 " + className}>
@@ -157,7 +171,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             Add Facet
           </button>
           <button
-            onClick={() => calculateFacetsState(null, {})}
+            onClick={() => clearFilters()}
             className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-1"
           >
             <XMarkIcon className="h-4 w-4" />

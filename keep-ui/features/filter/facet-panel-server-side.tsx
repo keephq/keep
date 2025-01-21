@@ -9,8 +9,16 @@ export interface FacetsPanelProps {
   entityName: string;
   className?: string;
   initialFacetsData?: InitialFacetsData;
-  /** Revalidation token to force recalculation of the facets */
+  /** 
+   * Revalidation token to force recalculation of the facets.
+   * Will call API to recalculate facet options every revalidationToken value change
+  */
   revalidationToken?: string | null;
+  /** 
+   * Token to clear filters related to facets.
+   * Filters will be cleared every clearFiltersToken value change.
+   **/
+  clearFiltersToken?: string | null;
   renderFacetOptionLabel?: (
     facetName: string,
     optionDisplayName: string
@@ -28,6 +36,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   className,
   initialFacetsData,
   revalidationToken,
+  clearFiltersToken,
   onCelChange = undefined,
   renderFacetOptionIcon,
   renderFacetOptionLabel,
@@ -106,6 +115,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
       facets={(facetsData as any) || []}
       facetOptions={(facetOptions as any) || {}}
       areFacetOptionsLoading={isLoading}
+      clearFiltersToken={clearFiltersToken}
       renderFacetOptionLabel={renderFacetOptionLabel}
       renderFacetOptionIcon={renderFacetOptionIcon}
       onCelChange={(cel: string) => {
