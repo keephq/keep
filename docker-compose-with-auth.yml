@@ -5,7 +5,7 @@ services:
       service: keep-frontend-common
     image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
     environment:
-      - AUTH_TYPE=SINGLE_TENANT
+      - AUTH_TYPE=DB
       - API_URL=http://keep-backend:8080
     volumes:
       - ./state:/state
@@ -18,7 +18,7 @@ services:
       service: keep-backend-common
     image: us-central1-docker.pkg.dev/keephq/keep/keep-api
     environment:
-      - AUTH_TYPE=SINGLE_TENANT
+      - AUTH_TYPE=DB
       - KEEP_JWT_SECRET=verysecretkey
       - KEEP_DEFAULT_USERNAME=keep
       - KEEP_DEFAULT_PASSWORD=keep
