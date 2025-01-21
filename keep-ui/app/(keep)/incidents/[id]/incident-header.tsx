@@ -70,7 +70,7 @@ export function IncidentHeader({ incident }: { incident: IncidentDto }) {
       </div>
 
       {/* Metadata Box */}
-      <div className="bg-gray-200 p-3">
+      <div className="bg-gray-200 p-2">
         <div className="flex flex-wrap gap-4 divide-x divide-gray-300">
           <div className="flex items-center">
             <IncidentSeverityBadge severity={incident.severity} size="md" />

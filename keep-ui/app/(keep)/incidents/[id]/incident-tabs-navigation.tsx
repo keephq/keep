@@ -2,13 +2,14 @@ import { IoIosGitNetwork } from "react-icons/io";
 import { Workflows } from "components/icons";
 import { useParams, usePathname } from "next/navigation";
 import { TabLinkNavigation, TabNavigationLink } from "@/shared/ui";
-import { HomeIcon, BoltIcon } from "@heroicons/react/24/outline";
+import { BoltIcon } from "@heroicons/react/24/outline";
 import { CiViewTimeline } from "react-icons/ci";
 import { IncidentDto } from "@/entities/incidents/model";
 import { useIncident } from "@/utils/hooks/useIncidents";
+import { GrOverview } from "react-icons/gr";
 
 export const tabs = [
-  { icon: HomeIcon, label: "Overview", path: "overview" },
+  { icon: GrOverview, label: "Overview", path: "overview" },
   { icon: BoltIcon, label: "Activity", path: "activity", prefetch: true },
   { icon: CiViewTimeline, label: "Timeline", path: "timeline" },
   {

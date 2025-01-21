@@ -54,7 +54,12 @@ interface Pagination {
 
 function useOptimalTableRows(
   containerRef: RefObject<HTMLElement>,
-  { minRows = 3, maxRows = 20, rowHeight = 110, uiElementsHeight = 136 } = {}
+  {
+    minRows = 2,
+    maxRows = 20,
+    rowHeight = 110,
+    uiElementsHeight = 236 /* Height of UI elements: header (40px) + pagination (48px) + margins/padding (108px) */,
+  } = {}
 ) {
   const [availableHeight, setAvailableHeight] = useState(0);
   const initialHeightSet = useRef(false);

@@ -1,4 +1,3 @@
-// keep-ui/app/(keep)/incidents/[id]/overview/overview-client.tsx
 "use client";
 
 import React from "react";
@@ -6,15 +5,9 @@ import { Card } from "@tremor/react";
 import { IncidentDto } from "@/entities/incidents/model";
 import IncidentAlerts from "../alerts/incident-alerts";
 import { useIncident } from "@/utils/hooks/useIncidents";
-
-// Placeholder chart component
-function MetricsChart() {
-  return (
-    <div className="h-32 bg-gray-50 rounded-lg flex items-center justify-center">
-      <span className="text-gray-400">Metrics visualization placeholder</span>
-    </div>
-  );
-}
+import { MetadataCard } from "./components/MetadataCard";
+import { AlertTimeline } from "./components/AlertTimeline";
+import { MetricsRadar } from "./components/MetricsRadar";
 
 export default function OverviewClientPage({
   initialIncident,
@@ -28,16 +21,35 @@ export default function OverviewClientPage({
   if (!incident) return null;
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Metrics section with fixed height */}
-      <Card>
-        <h3 className="text-lg font-medium mb-4">Metrics</h3>
-        <div className="grid grid-cols-3 gap-4">
-          <MetricsChart />
-          <MetricsChart />
-          <MetricsChart />
-        </div>
-      </Card>
+    <div className="h-full flex flex-col space-y-4">
+      {/* Metrics section with three cards */}
+      <div className="grid grid-cols-3 gap-4 h-96">
+        <Card className="h-full overflow-hidden">
+          <MetadataCard incident={incident} />
+        </Card>
+        <Card className="h-full overflow-hidden">
+          <div className="h-full flex flex-col">
+            <h3 className="text-sm text-gray-500 mb-4">EVENT TIMELINE</h3>
+            <div className="flex-1">
+              <AlertTimeline />
+            </div>
+            <button className="mt-4 text-sm text-gray-500">
+              See whole incident timeline
+            </button>
+          </div>
+        </Card>
+        <Card className="h-full overflow-hidden">
+          <div className="h-full flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-sm text-gray-500">ACCURACY SCORE</h3>
+              <span className="text-2xl font-semibold">68</span>
+            </div>
+            <div className="flex-1">
+              <MetricsRadar />
+            </div>
+          </div>
+        </Card>
+      </div>
 
       {/* Alerts section that takes remaining height and scrolls internally */}
       <Card className="flex-1 flex flex-col min-h-0">

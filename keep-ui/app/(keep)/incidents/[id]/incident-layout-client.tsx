@@ -51,7 +51,7 @@ export function IncidentLayoutClient({
                 {children}
               </div>
             }
-            initialLeftWidth={40}
+            initialLeftWidth={30}
           />
         ) : (
           <div className="h-full">{children}</div>
