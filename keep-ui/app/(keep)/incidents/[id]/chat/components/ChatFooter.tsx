@@ -3,36 +3,41 @@ import { StopIcon } from "@radix-ui/react-icons";
 import { IoIosArrowForward } from "react-icons/io";
 import { User } from "next-auth";
 import { UserAvatar } from "./UserAvatar";
-
-interface ChatFooterProps {
-  user?: User | null;
-  inputValue: string;
-  setInputValue: (value: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  isLoading: boolean;
-  onStopGeneration: () => void;
-}
+import { useState } from "react";
 
 export function ChatFooter({
   user,
-  inputValue,
-  setInputValue,
-  onSubmit,
   isLoading,
   onStopGeneration,
-}: ChatFooterProps) {
+  onMessageSubmit, // New prop instead of onSubmit
+}: {
+  user?: User | null;
+  isLoading: boolean;
+  onStopGeneration: () => void;
+  onMessageSubmit: (message: string) => void;
+}) {
+  const [inputValue, setInputValue] = useState(""); // Move state here
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || isLoading) return;
+
+    onMessageSubmit(inputValue);
+    setInputValue(""); // Clear input after submission
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (inputValue.trim()) {
-        onSubmit(e as any);
+        handleSubmit(e);
       }
     }
   };
 
   return (
     <div className="border-t bg-white">
-      <form onSubmit={onSubmit} className="flex items-center gap-2 mt-2">
+      <form onSubmit={handleSubmit} className="flex items-center gap-2 mt-2">
         <UserAvatar user={user} className="h-8 w-8" />
         <div className="flex-1 relative">
           <textarea
