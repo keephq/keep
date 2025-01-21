@@ -19,6 +19,11 @@ export interface FacetsPanelProps {
    * Filters will be cleared every clearFiltersToken value change.
    **/
   clearFiltersToken?: string | null;
+  /** 
+   * Object with facets that should be unchecked by default.
+   * Key is the facet name, value is the list of option values to uncheck.
+   **/
+  uncheckedByDefaultOptionValues?: { [key: string]: string[] };
   renderFacetOptionLabel?: (
     facetName: string,
     optionDisplayName: string
@@ -38,6 +43,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   revalidationToken,
   clearFiltersToken,
   onCelChange = undefined,
+  uncheckedByDefaultOptionValues,
   renderFacetOptionIcon,
   renderFacetOptionLabel,
 }) => {
