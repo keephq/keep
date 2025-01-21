@@ -7,10 +7,10 @@ import {
 import { PaginatedWorkflowExecutionDto } from "@/shared/api/workflow-executions";
 import useSWR, { SWRConfiguration } from "swr";
 import { useWebsocket } from "./usePusher";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAlerts } from "./useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { DefaultIncidentFilters } from "@/entities/incidents/model/models";
+import { v4 as uuidv4 } from "uuid";
 
 interface IncidentUpdatePayload {
   incident_id: string | null;
@@ -29,7 +29,7 @@ export const useIncidents = (
   limit: number = 25,
   offset: number = 0,
   sorting: { id: string; desc: boolean } = { id: "creation_time", desc: false },
-  filters: Filters | {} = DefaultIncidentFilters,
+  cel: string = "",
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
@@ -38,15 +38,9 @@ export const useIncidents = (
 
   const filtersParams = new URLSearchParams();
 
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value.length == 0) {
-      filtersParams.delete(key as string);
-    } else {
-      value.forEach((s: string) => {
-        filtersParams.append(key, s);
-      });
-    }
-  });
+  if (cel) {
+    filtersParams.set("cel", cel);
+  }
 
   const swrValue = useSWR<PaginatedIncidentsDto>(
     () =>
@@ -170,11 +164,13 @@ export const usePollIncidentAlerts = (incidentId: string) => {
 
 export const usePollIncidents = (mutateIncidents: any) => {
   const { bind, unbind } = useWebsocket();
+  const [incidentChangeToken, setIncidentChangeToken] = useState<string | null>(null);
   const handleIncoming = useCallback(
     (data: any) => {
       mutateIncidents();
+      setIncidentChangeToken(uuidv4()); // changes every time incident change happens on the server
     },
-    [mutateIncidents]
+    [mutateIncidents, setIncidentChangeToken]
   );
 
   useEffect(() => {
@@ -183,6 +179,10 @@ export const usePollIncidents = (mutateIncidents: any) => {
       unbind("incident-change", handleIncoming);
     };
   }, [bind, unbind, handleIncoming]);
+
+  return {
+    incidentChangeToken
+  }
 };
 
 export const useIncidentsMeta = (
