@@ -1,79 +1,21 @@
-import hashlib
-import json
 import logging
-import random
-import uuid
-from collections import defaultdict
-from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Dict, List, Tuple, Type, Union
-from uuid import UUID, uuid4
 
-import validators
-from dateutil.tz import tz
-from dotenv import find_dotenv, load_dotenv
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from psycopg2.errors import NoActiveSqlTransaction
 from sqlalchemy import (
-    String,
     and_,
-    case,
-    cast,
     desc,
-    func,
-    literal,
     literal_column,
-    null,
     select,
-    union,
-    update,
 )
-from sqlalchemy.dialects.mysql import insert as mysql_insert
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, subqueryload
-from sqlalchemy.sql import exists, expression
-from sqlmodel import Session, SQLModel, col, or_, select, text
+from sqlmodel import Session, select, text
 
-from keep.api.consts import STATIC_PRESETS
-from keep.api.core.config import config
-from keep.api.core.db_utils import create_db_engine, get_json_extract_field
-from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
 # This import is required to create the tables
 from keep.api.core.facets import get_facet_options, get_facets
-from keep.api.models.ai_external import (
-    ExternalAIConfigAndMetadata,
-    ExternalAIConfigAndMetadataDto,
-)
-from keep.api.models.alert import (
-    AlertStatus,
-    IncidentDto,
-    IncidentDtoIn,
-    IncidentSorting,
-)
-from keep.api.models.db.action import Action
-from keep.api.models.db.ai_external import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.extraction import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.facet import FacetType
-from keep.api.models.db.maintenance_window import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.system import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.facet import FacetDto, FacetOptionDto
-from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.core.db import engine
 from keep.api.core.cel_to_sql.properties_metadata import FieldMappingConfiguration, PropertiesMetadata
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import get_cel_to_sql_provider_for_dialect
-from keep.api.core import db
 
 logger = logging.getLogger(__name__)
 
