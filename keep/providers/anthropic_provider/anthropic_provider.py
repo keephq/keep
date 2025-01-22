@@ -20,7 +20,7 @@ class AnthropicProviderAuthConfig:
 
 
 class AnthropicProvider(BaseProvider):
-    PROVIDER_DISPLAY_NAME = "Anthropic Claude"
+    PROVIDER_DISPLAY_NAME = "Anthropic"
     PROVIDER_CATEGORY = ["AI"]
 
     def __init__(

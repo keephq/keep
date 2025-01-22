@@ -44,7 +44,6 @@ class LlamacppProvider(BaseProvider):
     def _query(
         self,
         prompt,
-        model=None,  # Not used as model is specified in config
         max_tokens=1024,
     ):
         # Build the API URL for completion
