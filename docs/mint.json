@@ -113,7 +113,7 @@
           "pages": [
             "providers/documentation/aks-provider",
             "providers/documentation/amazonsqs-provider",
-            "providers/documentation/antropic-provider",
+            "providers/documentation/anthropic-provider",
             "providers/documentation/appdynamics-provider",
             "providers/documentation/s3-provider",
             "providers/documentation/argocd-provider",
