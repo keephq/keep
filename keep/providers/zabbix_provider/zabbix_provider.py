@@ -36,7 +36,7 @@ class ZabbixProviderAuthConfig:
             "description": "Zabbix Frontend URL",
             "hint": "https://zabbix.example.com",
             "sensitive": False,
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         }
     )
     auth_token: str = dataclasses.field(
@@ -301,7 +301,9 @@ class ZabbixProvider(BaseProvider):
             validated_scopes[scope.name] = True
         return validated_scopes
 
-    def __send_request(self, method: str, params: dict = None):
+    def __send_request(
+        self, method: str, params: dict = None, include_auth: bool = True
+    ):
         """
         Send a request to Zabbix API.
 
@@ -324,8 +326,10 @@ class ZabbixProvider(BaseProvider):
             "id": random.randint(1000, 2000),
         }
 
-        # zabbix < 6.4 compatibility
-        data["auth"] = f"{self.authentication_config.auth_token}"
+        # in zabbix >=7.2 it makes requests fail.
+        if include_auth:
+            # zabbix < 6.4 compatibility
+            data["auth"] = f"{self.authentication_config.auth_token}"
 
         response = requests.post(url, json=data, headers=headers)
 
@@ -349,7 +353,13 @@ class ZabbixProvider(BaseProvider):
                     "response_json": response_json,
                 },
             )
-            raise ProviderMethodException(response_json.get("error", {}).get("data"))
+            error_data = response_json.get("error", {}).get("data")
+
+            # Try to send the request without auth, probably zabbix >=7.2
+            if 'unexpected parameter "auth".' in error_data and include_auth:
+                return self.__send_request(method, params, include_auth=False)
+
+            raise ProviderMethodException(error_data)
         return response_json
 
     def _get_alerts(self) -> list[AlertDto]:

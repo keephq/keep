@@ -16,7 +16,7 @@ export interface FacetProps {
   optionsReloading: boolean;
   showIcon?: boolean;
   facetKey: string;
-  facetState: any;
+  facetState: Set<string>;
   renderOptionLabel?: (optionDisplayName: string) => JSX.Element | string | undefined;
   renderIcon?: (option_display_name: string) => JSX.Element | undefined;
   onSelectOneOption: (value: string) => void;
@@ -83,10 +83,10 @@ export const Facet: React.FC<FacetProps> = ({
       return false;
     }
 
-    const isSelected = facetState?.[optionValue];
-    const restNotSelected = Object.entries(facetState)
-      .filter(([key, value]) => key !== optionValue)
-      .every(([key, value]) => !value);
+    const isSelected = !facetState.has(optionValue);
+    const restNotSelected = options
+      .filter((option) => option.display_name !== optionValue)
+      .every((option) => facetState.has(option.display_name));
 
     return isSelected && restNotSelected;
   }
@@ -113,7 +113,7 @@ export const Facet: React.FC<FacetProps> = ({
           facetOption.display_name
         )}
         isSelected={
-          facetState?.[facetOption.display_name] !== false &&
+          !facetState.has(facetOption.display_name) &&
           facetOption.matches_count > 0
         }
         renderLabel={() => renderOptionLabel && renderOptionLabel(facetOption.display_name)}
