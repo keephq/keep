@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Tuple
 
 from sqlalchemy import (
     and_,
     desc,
-    literal_column,
+    func,
     select,
 )
 from sqlmodel import Session, select, text
@@ -67,19 +68,15 @@ def __build_base_query(
 ):
     base_query_cte = (
         select(
-            AlertEnrichment,
+            AlertEnrichment.id.label("alert_enrichment_id"),
+            AlertEnrichment.tenant_id.label("alert_enrichment_tenant_id"),
+            AlertEnrichment.alert_fingerprint.label("alert_enrichment_fingerprint"),
+            AlertEnrichment.enrichments.label('alert_enrichment_json'),
             LastAlert.alert_id,
             LastAlert.tenant_id.label("last_alert_tenant_id"),
-            AlertEnrichment.enrichments.label('alert_enrichment_json'),
             LastAlert.first_timestamp.label("startedAt"),
         )
         .select_from(LastAlert)
-        # .join(
-        #     Alert,
-        #     and_(
-        #         LastAlert.tenant_id == Alert.tenant_id, LastAlert.alert_id == Alert.id
-        #     ),
-        # )
         .outerjoin(
             AlertEnrichment,
             and_(
@@ -106,11 +103,13 @@ def __build_base_query(
 
     return (
         select(
-            AlertEnrichment,
             Alert,
+            base_query_cte.c.alert_enrichment_id,
+            base_query_cte.c.alert_enrichment_tenant_id,
+            base_query_cte.c.alert_enrichment_fingerprint,
+            base_query_cte.c.alert_enrichment_json,
+            base_query_cte.c.startedAt,
             Alert.id.label('entity_id'),
-            literal_column('alert_enrichment_json'),
-            literal_column('startedAt'),
         )
         .select_from(base_query_cte)
         .join(
@@ -180,9 +179,6 @@ def build_alerts_query(
         sql_filter = instance.convert_to_sql_str(cel)
         stmt = stmt.where(text(sql_filter))
 
-    # Order by timestamp in descending order and limit the results
-    stmt = stmt.order_by(desc(Alert.timestamp)).limit(limit)
-    steq = str(stmt.compile(compile_kwargs={"literal_binds": True}))
     return stmt
 
 def get_last_alerts(
@@ -195,7 +191,7 @@ def get_last_alerts(
     with_incidents=False,
     fingerprints=None,
     cel=None
-) -> list[Alert]:
+) -> Tuple[list[Alert], int]:
     with Session(engine) as session:
         dialect_name = session.bind.dialect.name
 
@@ -214,7 +210,10 @@ def get_last_alerts(
 
         # Execute the query
         start_time = datetime.now()
-        alerts_with_start = session.execute(query).all()
+        total_count = session.exec(select(func.count()).select_from(query)).one()
+        alerts_with_start = session.execute(
+            query.order_by(desc(Alert.timestamp)).limit(limit)
+        ).all()
         end_time = datetime.now()
         execution_time = (end_time - start_time).total_seconds()
         logger.info(f"Query execution time: {execution_time} seconds")
@@ -222,16 +221,22 @@ def get_last_alerts(
         # Process results based on dialect
         alerts = []
         for alert_data in alerts_with_start:
-            alert: Alert = alert_data[1]
+            alert: Alert = alert_data[0]
             startedAt = alert_data.startedAt
-            alert_enrichment = alert_data[0]
-            alert.alert_enrichment = alert_enrichment
+            alert.alert_enrichment = None
+            
+            if alert_data.alert_enrichment_id is not None:
+                alert.alert_enrichment = AlertEnrichment(
+                        id=alert_data.alert_enrichment_id,
+                        tenant_id=alert_data.alert_enrichment_tenant_id,
+                        alert_fingerprint=alert_data.alert_enrichment_fingerprint,
+                        enrichments=alert_data.alert_enrichment_json
+                    )
             alert.event["startedAt"] = str(startedAt)
             alert.event["event_id"] = str(alert.id)
-            
             alerts.append(alert)
 
-        return alerts
+        return alerts, total_count
 
 
 def get_alert_facets_data(

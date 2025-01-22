@@ -136,7 +136,8 @@ def get_all_alerts(
     ),
     cel = Query(None),
     limit: int = 1000,
-) -> list[AlertDto]:
+    offset: int = 0,
+):
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Fetching alerts from DB",
@@ -144,7 +145,7 @@ def get_all_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts = get_last_alerts(tenant_id=tenant_id, limit=limit, cel=cel)
+    db_alerts, total_count = get_last_alerts(tenant_id=tenant_id, limit=limit, cel=cel)
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
         "Fetched alerts from DB",
@@ -153,7 +154,12 @@ def get_all_alerts(
         },
     )
 
-    return enriched_alerts_dto
+    return {
+        "limit": limit,
+        "offset": offset,
+        "count": total_count,
+        "results": enriched_alerts_dto,
+    }
 
 
 @router.get("/{fingerprint}/history", description="Get alert history")
