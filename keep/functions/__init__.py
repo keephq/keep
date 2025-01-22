@@ -470,3 +470,34 @@ def is_business_hours(
 
     # Check if hour is between start_hour and end_hour
     return start_hour <= hour < end_hour
+
+
+def dictget(data: str | dict, key: str, default: any = None) -> any:
+    """
+    Get a value from a dictionary with a default fallback.
+
+    Args:
+        data (str | dict): The dictionary to search in. Can be a JSON string or dict.
+        key (str): The key to look up
+        default (any): The default value to return if key is not found
+
+    Returns:
+        any: The value found in the dictionary or the default value
+
+    Example:
+        >>> d = {"s1": "critical", "s2": "error"}
+        >>> dictget(d, "s1", "info")
+        'critical'
+        >>> dictget(d, "s3", "info")
+        'info'
+    """
+    if isinstance(data, str):
+        try:
+            data = json_loads(data)
+        except Exception:
+            return default
+
+    if not isinstance(data, dict):
+        return default
+
+    return data.get(key, default)
