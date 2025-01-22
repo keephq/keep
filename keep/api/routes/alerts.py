@@ -24,8 +24,8 @@ from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_metrics_by_provider,
     get_enrichment,
-    get_last_alerts,
 )
+from keep.api.core.alerts import get_alert_facets, get_alert_facets_data, get_last_alerts
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
@@ -60,6 +60,72 @@ process_event_executor = ThreadPoolExecutor(
 )
 
 
+@router.post(
+    "/facets/options",
+    description="Query alert facet options. Accepts dictionary where key is facet id and value is cel to query facet",
+)
+def fetch_alert_facet_options(
+    facets_query: dict[str, str],
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching alert facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    facet_options = get_alert_facets_data(
+            tenant_id = tenant_id,
+            facets_query = facets_query
+        )
+
+    logger.info(
+        "Fetched alert facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facet_options
+
+
+@router.get(
+    "/facets",
+    description="Get alert facets",
+)
+def fetch_alert_facets(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    )
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching alert facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    facets = get_alert_facets(
+            tenant_id = tenant_id
+        )
+
+    logger.info(
+        "Fetched alert facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facets
+
+
 @router.get(
     "",
     description="Get last alerts occurrence",
@@ -68,6 +134,7 @@ def get_all_alerts(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
+    cel = Query(None),
     limit: int = 1000,
 ) -> list[AlertDto]:
     tenant_id = authenticated_entity.tenant_id
@@ -77,7 +144,7 @@ def get_all_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts = get_last_alerts(tenant_id=tenant_id, limit=limit)
+    db_alerts = get_last_alerts(tenant_id=tenant_id, limit=limit, cel=cel)
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
         "Fetched alerts from DB",
