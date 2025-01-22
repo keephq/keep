@@ -87,7 +87,6 @@ class OllamaProvider(BaseProvider):
 
 
 if __name__ == "__main__":
-    import os
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])

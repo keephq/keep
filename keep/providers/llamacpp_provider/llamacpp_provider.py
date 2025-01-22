@@ -1,4 +1,3 @@
-import json
 import dataclasses
 import pydantic
 import requests
@@ -75,7 +74,6 @@ class LlamacppProvider(BaseProvider):
 
 
 if __name__ == "__main__":
-    import os
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
