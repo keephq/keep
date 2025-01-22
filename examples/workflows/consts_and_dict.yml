@@ -1,0 +1,26 @@
+workflow:
+  id: example-consts-and-dict
+  description: example-consts-and-dict
+  triggers:
+    - type: manual
+
+  consts:
+    severities:
+      {
+        "s1": "critical",
+        "s2": "error",
+        "s3": "warning",
+        "s4": "info",
+        "critical": "critical",
+        "error": "error",
+        "warning": "warning",
+        "info": "info",
+      }
+
+  actions:
+    - name: echo
+      provider:
+        type: console
+        with:
+          logger: true
+          message: keep.dictget( "{{ consts.severities }}", "{{ alert.severity }}", "info")
