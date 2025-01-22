@@ -12,6 +12,8 @@ from sqlmodel import Session, select, text
 
 # This import is required to create the tables
 from keep.api.core.facets import get_facet_options, get_facets
+from keep.api.models.db.alert import Alert, AlertEnrichment, Incident, LastAlert, LastAlertToIncident
+from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto
 from keep.api.core.db import engine
 from keep.api.core.cel_to_sql.properties_metadata import FieldMappingConfiguration, PropertiesMetadata
