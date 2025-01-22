@@ -110,7 +110,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             name="Search",
             func_name="search",
             scopes=["authorized"],
-            description="Search freely in Graylog",
+            description="Search using elastic query language in Graylog",
             type="action",
         ),
     ]
@@ -757,6 +757,9 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
 
     def _query(self, events_search_parameters: dict, **kwargs: dict):
         self.logger.info("Querying Graylog with specified parameters")
+        # If there's a query, use the search method
+        if kwargs.get("query"):
+            return self.search(**kwargs)
         alerts = self.__get_alerts(json_data=events_search_parameters)["events"]
         return [GraylogProvider.__map_event_to_alert(event=event) for event in alerts]
 
