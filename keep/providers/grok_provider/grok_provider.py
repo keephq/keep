@@ -1,36 +1,29 @@
 import json
 import dataclasses
 import pydantic
-
-from openai import OpenAI
+import requests
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
 
 @pydantic.dataclasses.dataclass
-class OpenaiProviderAuthConfig:
+class GrokProviderAuthConfig:
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "OpenAI Platform API Key",
+            "description": "X.AI Grok API Key",
             "sensitive": True,
         },
     )
-    organization_id: str | None = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "OpenAI Platform Organization ID",
-            "sensitive": False,
-        },
-        default=None,
-    )
 
 
-class OpenaiProvider(BaseProvider):
-    PROVIDER_DISPLAY_NAME = "OpenAI"
+class GrokProvider(BaseProvider):
+    PROVIDER_DISPLAY_NAME = "Grok"
     PROVIDER_CATEGORY = ["AI"]
+    API_BASE = "https://api.x.ai/v1"  # Example API base URL
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -38,7 +31,7 @@ class OpenaiProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
-        self.authentication_config = OpenaiProviderAuthConfig(
+        self.authentication_config = GrokProviderAuthConfig(
             **self.config.authentication
         )
 
@@ -52,29 +45,47 @@ class OpenaiProvider(BaseProvider):
     def _query(
         self,
         prompt,
-        model="gpt-3.5-turbo",
+        model="grok-1",
         max_tokens=1024,
         structured_output_format=None,
     ):
-        client = OpenAI(
-            api_key=self.authentication_config.api_key,
-            organization=self.authentication_config.organization_id,
-        )
-        response = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=max_tokens,
-            response_format=structured_output_format,
-        )
-        response = response.choices[0].message.content
-        try:
-            response = json.loads(response)
-        except Exception:
-            pass
-
-        return {
-            "response": response,
+        headers = {
+            "Authorization": f"Bearer {self.authentication_config.api_key}",
+            "Content-Type": "application/json"
         }
+
+        # Prepare payload with structured output if needed
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": max_tokens,
+        }
+
+        if structured_output_format:
+            payload["response_format"] = structured_output_format
+
+        try:
+            response = requests.post(
+                f"{self.API_BASE}/chat/completions",
+                headers=headers,
+                json=payload
+            )
+            response.raise_for_status()
+            content = response.json()["choices"][0]["message"]["content"]
+
+            # Try to parse as JSON if structured output was requested
+            if structured_output_format:
+                try:
+                    content = json.loads(content)
+                except Exception:
+                    pass
+
+            return {
+                "response": content,
+            }
+
+        except requests.exceptions.RequestException as e:
+            raise ProviderException(f"Error calling Grok API: {str(e)}")
 
 
 if __name__ == "__main__":
@@ -87,25 +98,25 @@ if __name__ == "__main__":
         workflow_id="test",
     )
 
-    api_key = os.environ.get("API_KEY")
+    api_key = os.environ.get("GROK_API_KEY")
 
     config = ProviderConfig(
-        description="My Provider",
+        description="Grok Provider",
         authentication={
             "api_key": api_key,
         },
     )
 
-    provider = OpenaiProvider(
+    provider = GrokProvider(
         context_manager=context_manager,
-        provider_id="my_provider",
+        provider_id="grok_provider",
         config=config,
     )
 
     print(
         provider.query(
             prompt="Here is an alert, define environment for it: Clients are panicking, nothing works.",
-            model="gpt-4o-mini",
+            model="grok-1",
             structured_output_format={
                 "type": "json_schema",
                 "json_schema": {
@@ -127,5 +138,3 @@ if __name__ == "__main__":
             max_tokens=100,
         )
     )
-
-    # https://platform.openai.com/docs/guides/function-calling
