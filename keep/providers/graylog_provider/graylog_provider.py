@@ -18,6 +18,8 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.models.provider_method import ProviderMethod
+from keep.providers.providers_factory import ProvidersFactory
 
 
 class ResourceAlreadyExists(Exception):
@@ -51,7 +53,7 @@ class GraylogProviderAuthConfig:
             "required": True,
             "description": "Deployment Url",
             "hint": "Example: http://127.0.0.1:9000",
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         },
     )
 
@@ -103,7 +105,15 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             alias="Rules Reader",
         ),
     ]
-
+    PROVIDER_METHODS = [
+        ProviderMethod(
+            name="Search",
+            func_name="search",
+            scopes=["authorized"],
+            description="Search freely in Graylog",
+            type="action",
+        ),
+    ]
     FINGERPRINT_FIELDS = ["event_definition_id"]
 
     def __init__(
@@ -127,6 +137,64 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
         self.authentication_config = GraylogProviderAuthConfig(
             **self.config.authentication
         )
+
+    def search(
+        self,
+        query: str,
+        query_type: str = "elastic",
+        timerange_seconds: int = 300,
+        timerange_type: str = "relative",
+    ):
+        self.logger.info(f"Searching in Graylog with query: {query}")
+        query_id = str(uuid.uuid4())
+        search_type_id = str(uuid.uuid4())
+        search_body = {
+            "parameters": [],
+            "queries": [
+                {
+                    "id": query_id,
+                    "query": {"type": query_type, "query_string": query},
+                    "timerange": {"from": timerange_seconds, "type": timerange_type},
+                    "search_types": [
+                        {
+                            "timerange": None,
+                            "query": None,
+                            "streams": [],
+                            "type": "messages",
+                            "id": search_type_id,
+                            "name": None,
+                            "limit": 150,
+                            "offset": 0,
+                            "sort": [{"field": "timestamp", "order": "DESC"}],
+                            "fields": [],
+                            "decorators": [],
+                            "filter": None,
+                            "filters": [],
+                        }
+                    ],
+                }
+            ],
+        }
+        search_request = requests.post(
+            url=self.__get_url(paths=["views", "search"]),
+            headers=self._headers,
+            auth=self._auth,
+            json=search_body,
+        )
+        search_request.raise_for_status()
+        search_id = search_request.json().get("id")
+        execute_request = requests.post(
+            url=self.__get_url(paths=["views", "search", search_id, "execute"]),
+            headers=self._headers,
+            auth=self._auth,
+        )
+        execute_request.raise_for_status()
+        response = execute_request.json()
+        self.logger.info(f"Searched in Graylog with query: {query}")
+        results = next(iter(response["results"].values()))  # we only have 1 search type
+        search_types = results.get("search_types", {})
+        search = search_types.get(search_type_id)
+        return search.get("messages", [])
 
     @property
     def graylog_host(self):
@@ -691,3 +759,36 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
         self.logger.info("Querying Graylog with specified parameters")
         alerts = self.__get_alerts(json_data=events_search_parameters)["events"]
         return [GraylogProvider.__map_event_to_alert(event=event) for event in alerts]
+
+
+if __name__ == "__main__":
+    # Output debug messages
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    # Load environment variables
+    import os
+
+    auth_token = os.environ.get("GRAYLOG_TOKEN")
+
+    provider_config = {
+        "authentication": {
+            "graylog_access_token": auth_token,
+            "graylog_user_name": "admin",
+            "deployment_url": "http://localhost:9000",
+        },
+    }
+    provider: GraylogProvider = ProvidersFactory.get_provider(
+        context_manager,
+        provider_id="graylog",
+        provider_type="graylog",
+        provider_config=provider_config,
+    )
+    logs = provider.search(
+        query="first", timerange_seconds=3600, timerange_type="relative"
+    )
+    print(logs)
