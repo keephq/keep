@@ -359,6 +359,7 @@ def create_process_event_task(
 async def receive_generic_event(
     event: AlertDto | list[AlertDto] | dict,
     request: Request,
+    provider_id: str | None = None,
     fingerprint: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
@@ -379,7 +380,7 @@ async def receive_generic_event(
             "async_process_event",
             authenticated_entity.tenant_id,
             None,
-            None,
+            provider_id,
             fingerprint,
             authenticated_entity.api_key_name,
             request.state.trace_id,
@@ -399,7 +400,7 @@ async def receive_generic_event(
         task_name = create_process_event_task(
             authenticated_entity.tenant_id,
             None,
-            None,
+            provider_id,
             fingerprint,
             authenticated_entity.api_key_name,
             request.state.trace_id,
