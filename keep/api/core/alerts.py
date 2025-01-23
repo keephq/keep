@@ -6,6 +6,7 @@ from sqlalchemy import (
     and_,
     desc,
     func,
+    literal_column,
     select,
 )
 from sqlmodel import Session, select, text
@@ -63,16 +64,76 @@ static_facets = [
 ]
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
+def __build_base_query_based_on_alert(
+    tenant_id,
+):
+    base_query_cte = (
+        select(
+            # Alert,
+            Alert.id.label('entity_id'),
+            AlertEnrichment.id.label("alert_enrichment_id"),
+            AlertEnrichment.tenant_id.label("alert_enrichment_tenant_id"),
+            AlertEnrichment.alert_fingerprint.label("alert_enrichment_fingerprint"),
+            AlertEnrichment.enrichments.label('alert_enrichment_json'),
+            # LastAlert.alert_id,
+            Alert.tenant_id.label("last_alert_tenant_id"),
+            Alert.timestamp.label("startedAt"),
+        )
+        .select_from(Alert)
+        .outerjoin(
+            AlertEnrichment,
+            and_(
+                Alert.tenant_id == AlertEnrichment.tenant_id,
+                Alert.fingerprint == AlertEnrichment.alert_fingerprint,
+            ),
+        )
+        .outerjoin(
+            LastAlertToIncident,
+            and_(
+                Alert.tenant_id == LastAlertToIncident.tenant_id,
+                Alert.fingerprint == LastAlertToIncident.fingerprint,
+            ),
+        )
+        .outerjoin(
+            Incident,
+            and_(
+                LastAlertToIncident.tenant_id == Incident.tenant_id,
+                LastAlertToIncident.incident_id == Incident.id,
+            ),
+        )
+        .where(Alert.tenant_id == tenant_id)
+    ).cte("base_query")
+
+    return (
+        select(
+            Alert,
+            Alert.id.label('entity_id'),
+            base_query_cte.c.alert_enrichment_id,
+            base_query_cte.c.alert_enrichment_tenant_id,
+            base_query_cte.c.alert_enrichment_fingerprint,
+            base_query_cte.c.alert_enrichment_json,
+            base_query_cte.c.startedAt,
+        )
+        .select_from(base_query_cte)
+        .join(
+            Alert,
+            and_(
+                base_query_cte.c.last_alert_tenant_id == Alert.tenant_id, base_query_cte.c.entity_id == Alert.id
+            ),
+        )
+    )
+
 def __build_base_query(
     tenant_id,
 ):
     base_query_cte = (
         select(
+            AlertEnrichment,
+            LastAlert.alert_id,
             AlertEnrichment.id.label("alert_enrichment_id"),
             AlertEnrichment.tenant_id.label("alert_enrichment_tenant_id"),
             AlertEnrichment.alert_fingerprint.label("alert_enrichment_fingerprint"),
             AlertEnrichment.enrichments.label('alert_enrichment_json'),
-            LastAlert.alert_id,
             LastAlert.tenant_id.label("last_alert_tenant_id"),
             LastAlert.first_timestamp.label("startedAt"),
         )
@@ -104,12 +165,12 @@ def __build_base_query(
     return (
         select(
             Alert,
+            Alert.id.label('entity_id'),
             base_query_cte.c.alert_enrichment_id,
             base_query_cte.c.alert_enrichment_tenant_id,
             base_query_cte.c.alert_enrichment_fingerprint,
             base_query_cte.c.alert_enrichment_json,
             base_query_cte.c.startedAt,
-            Alert.id.label('entity_id'),
         )
         .select_from(base_query_cte)
         .join(
@@ -124,11 +185,9 @@ def build_alerts_query(
         dialect_name: str,
         tenant_id,
         provider_id=None,
-        limit=1000,
         timeframe=None,
         upper_timestamp=None,
         lower_timestamp=None,
-        with_incidents=False,
         fingerprints=None,
         cel=None
     ):
@@ -185,6 +244,7 @@ def get_last_alerts(
     tenant_id,
     provider_id=None,
     limit=1000,
+    offset=0,
     timeframe=None,
     upper_timestamp=None,
     lower_timestamp=None,
@@ -199,20 +259,22 @@ def get_last_alerts(
             dialect_name,
             tenant_id,
             provider_id,
-            limit,
             timeframe,
             upper_timestamp,
             lower_timestamp,
-            with_incidents,
             fingerprints,
             cel
         )
+
+        query = query.group_by(Alert.id)
+
+        str_q = str(query.compile(compile_kwargs={"literal_binds": True}))
 
         # Execute the query
         start_time = datetime.now()
         total_count = session.exec(select(func.count()).select_from(query)).one()
         alerts_with_start = session.execute(
-            query.order_by(desc(Alert.timestamp)).limit(limit)
+            query.order_by(desc(Alert.timestamp)).limit(limit).offset(offset)
         ).all()
         end_time = datetime.now()
         execution_time = (end_time - start_time).total_seconds()
