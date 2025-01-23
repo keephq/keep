@@ -274,6 +274,7 @@ type AlertsRulesBuilderProps = {
   setIsModalOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   setPresetCEL?: React.Dispatch<React.SetStateAction<string>>;
   updateOutputCEL?: React.Dispatch<React.SetStateAction<string>>;
+  onCelChanges?: (cel: string) => void;
   showSqlImport?: boolean;
   customFields?: Field[];
   showSave?: boolean;
@@ -299,6 +300,7 @@ export const AlertsRulesBuilder = ({
   minimal = false,
   showToast = false,
   shouldSetQueryParam = true,
+  onCelChanges
 }: AlertsRulesBuilderProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -486,7 +488,8 @@ export const AlertsRulesBuilder = ({
       return table?.resetGlobalFilter();
     }
 
-    return table?.setGlobalFilter(celRules);
+    onCelChanges && onCelChanges(celRules);
+    table?.setGlobalFilter(celRules);
   };
 
   const onGenerateQuery = () => {

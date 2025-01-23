@@ -90,6 +90,7 @@ export function AlertTableServerSide({
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(null);
   const [filterRevalidationToken, setFilterRevalidationToken] = useState<string | null>(null);
   const [filterCel, setFilterCel] = useState<string>("");
+  const [searchCel, setSearchCel] = useState<string>("");
   
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
@@ -309,7 +310,9 @@ export function AlertTableServerSide({
     []
   );
 
-  useEffect(() => { onFilterCelChange && onFilterCelChange(filterCel) }, [filterCel]);
+  useEffect(() => {
+    onFilterCelChange && onFilterCelChange([searchCel, filterCel].filter(Boolean).join(' && '));
+  }, [filterCel, searchCel]);
 
   return (
     // Add h-screen to make it full height and remove the default flex-col gap
@@ -338,7 +341,7 @@ export function AlertTableServerSide({
             isIncidentSelectorOpen={isIncidentSelectorOpen}
           />
         ) : (
-          <AlertPresetManager table={table} presetName={presetName} />
+          <AlertPresetManager presetName={presetName} onCelChanges={(searchCel) => setSearchCel(searchCel)} />
         )}
       </div>
 

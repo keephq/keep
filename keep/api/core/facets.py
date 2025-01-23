@@ -132,7 +132,7 @@ def get_facet_options(
         return result_dict
 
 
-def create_facet(tenant_id: str, facet: CreateFacetDto) -> FacetDto:
+def create_facet(tenant_id: str, entity_type, facet: CreateFacetDto) -> FacetDto:
     """
     Creates a new facet for a given tenant and returns the created facet's details.
     Args:
@@ -148,7 +148,7 @@ def create_facet(tenant_id: str, facet: CreateFacetDto) -> FacetDto:
             tenant_id=tenant_id,
             name=facet.name,
             description=facet.description,
-            entity_type="incident",
+            entity_type=entity_type,
             property_path=facet.property_path,
             type=FacetType.str.value,
             user_id="system",
@@ -167,7 +167,7 @@ def create_facet(tenant_id: str, facet: CreateFacetDto) -> FacetDto:
     return None
 
 
-def delete_facet(tenant_id: str, facet_id: str) -> bool:
+def delete_facet(tenant_id: str, entity_type: str, facet_id: str) -> bool:
     """
     Deletes a facet from the database for a given tenant.
 
@@ -183,6 +183,7 @@ def delete_facet(tenant_id: str, facet_id: str) -> bool:
             select(Facet)
             .where(Facet.tenant_id == tenant_id)
             .where(Facet.id == UUID(facet_id))
+            .where(Facet.entity_type == entity_type)
         ).first()[0] # result returned as tuple
         if facet:
             session.delete(facet)

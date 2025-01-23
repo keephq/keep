@@ -103,7 +103,7 @@ export const useFacetActions = (
   const mutateFacetsList = useCallback(
     () =>
       // Adding "?" to the key because the list always has a query param
-      mutate((key) => typeof key === "string" && key == "/incidents/facets"),
+      mutate((key) => typeof key === "string" && key == `/${entityName}/facets`),
     [mutate]
   );
 

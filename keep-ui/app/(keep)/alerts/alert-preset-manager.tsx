@@ -13,10 +13,11 @@ import { CopilotKit } from "@copilotkit/react-core";
 interface Props {
   presetName: string;
   // TODO: pass specific functions not the whole table?
-  table: Table<AlertDto>;
+  table?: Table<AlertDto>;
+  onCelChanges?: (cel: string) => void;
 }
 
-export function AlertPresetManager({ presetName, table }: Props) {
+export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
   const { dynamicPresets } = usePresets({
     revalidateOnFocus: false,
   });
@@ -74,6 +75,7 @@ export function AlertPresetManager({ presetName, table }: Props) {
           selectedPreset={selectedPreset}
           setIsModalOpen={setIsModalOpen}
           setPresetCEL={setPresetCEL}
+          onCelChanges={onCelChanges}
         />
       </div>
       <Modal

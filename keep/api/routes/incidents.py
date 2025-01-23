@@ -277,54 +277,54 @@ def fetch_inicident_facets(
     return facets
 
 
-@router.post(
-    "/facets",
-    description="Add facet for incidents",
-)
-async def add_incidents_facet(
-    create_facet_dto: CreateFacetDto,
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
-    )
-) -> FacetDto:
-    tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Creating facet for incident",
-        extra={
-            "tenant_id": tenant_id,
-        },
-    )
-    created_facet = create_facet(
-        tenant_id=tenant_id,
-        facet=create_facet_dto
-    )
-    return created_facet
+# @router.post(
+#     "/facets",
+#     description="Add facet for incidents",
+# )
+# async def add_incidents_facet(
+#     create_facet_dto: CreateFacetDto,
+#     authenticated_entity: AuthenticatedEntity = Depends(
+#         IdentityManagerFactory.get_auth_verifier(["write:incident"])
+#     )
+# ) -> FacetDto:
+#     tenant_id = authenticated_entity.tenant_id
+#     logger.info(
+#         "Creating facet for incident",
+#         extra={
+#             "tenant_id": tenant_id,
+#         },
+#     )
+#     created_facet = create_facet(
+#         tenant_id=tenant_id,
+#         facet=create_facet_dto
+#     )
+#     return created_facet
 
-@router.delete(
-    "/facets/{facet_id}",
-    description="Delete facet for incidents",
-)
-async def delete_incidents_facet(
-    facet_id: str,
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
-    )
-):
-    tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Deleting facet for incident",
-        extra={
-            "tenant_id": tenant_id,
-            "facet_id": facet_id,
-        },
-    )
-    is_deleted = delete_facet(
-        tenant_id=tenant_id,
-        facet_id=facet_id
-    )
+# @router.delete(
+#     "/facets/{facet_id}",
+#     description="Delete facet for incidents",
+# )
+# async def delete_incidents_facet(
+#     facet_id: str,
+#     authenticated_entity: AuthenticatedEntity = Depends(
+#         IdentityManagerFactory.get_auth_verifier(["write:incident"])
+#     )
+# ):
+#     tenant_id = authenticated_entity.tenant_id
+#     logger.info(
+#         "Deleting facet for incident",
+#         extra={
+#             "tenant_id": tenant_id,
+#             "facet_id": facet_id,
+#         },
+#     )
+#     is_deleted = delete_facet(
+#         tenant_id=tenant_id,
+#         facet_id=facet_id
+#     )
     
-    if not is_deleted:
-        raise HTTPException(status_code=404, detail="Facet not found")
+#     if not is_deleted:
+#         raise HTTPException(status_code=404, detail="Facet not found")
 
 
 @router.get(
