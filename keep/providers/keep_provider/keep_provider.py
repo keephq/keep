@@ -112,8 +112,7 @@ class KeepProvider(BaseProvider):
                 raise
         self.logger.info("Got alerts from Keep", extra={"num_of_alerts": len(alerts)})
         return alerts
-        
-    
+
     def _notify(self, **kwargs):
         if "workflow_to_update_yaml" in kwargs:
             workflow_to_update_yaml = kwargs["workflow_to_update_yaml"]
@@ -143,9 +142,6 @@ class KeepProvider(BaseProvider):
                 )
                 raise ProviderException(f"Failed to create workflow: {e}")
         else:
-            """
-            Send alert to Keep.
-            """
             alert = AlertDto(
                 name=kwargs['name'],
                 status=kwargs.get('status'),
