@@ -138,10 +138,12 @@ export function IncidentChat({
     useIncidentActions();
   const providersWithGetTrace = useMemo(
     () =>
-      providers?.installed_providers.filter(
-        (provider) =>
-          provider.methods?.some((method) => method.func_name === "get_trace")
-      ),
+      providers?.installed_providers
+        .filter(
+          (provider) =>
+            provider.methods?.some((method) => method.func_name === "get_trace")
+        )
+        .map((provider) => provider.id),
     [providers]
   );
 
@@ -177,13 +179,19 @@ export function IncidentChat({
     value: alerts?.items,
   });
   useCopilotReadable({
-    description: "The providers you can get traces from",
+    description: "The provider ids you can get traces from",
     value: providersWithGetTrace,
   });
   useCopilotReadable({
     description:
       "The installed providers and the methods you can invoke using invokeProviderMethod",
-    value: providers?.installed_providers,
+    value: providers?.installed_providers
+      .filter((provider) => !!provider.methods)
+      .map((provider) => ({
+        id: provider.id,
+        type: provider.type,
+        methods: provider.methods,
+      })),
   });
 
   // Actions
