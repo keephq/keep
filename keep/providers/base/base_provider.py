@@ -45,6 +45,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_COMING_SOON = False  # tb: if the provider is coming soon, we show it in the UI but don't allow it to be added
     PROVIDER_CATEGORY: list[
         Literal[
+            "AI",
             "Monitoring",
             "Incident Management",
             "Cloud Infrastructure",
