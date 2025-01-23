@@ -185,6 +185,7 @@ receivers:
         "warning": AlertSeverity.WARNING,
         "low": AlertSeverity.LOW,
         "test": AlertSeverity.INFO,
+        "info": AlertSeverity.INFO,
     }
 
     STATUS_MAP = {
@@ -410,7 +411,8 @@ receivers:
         response = requests.get(
             f"{self.vmalert_host}/api/v1/alerts", auth=self._get_auth()
         )
-        if response.status_code == 200:
+        try:
+            response.raise_for_status()
             alerts = []
             response = response.json()
             for alert in response["data"]["alerts"]:
@@ -421,7 +423,7 @@ receivers:
                         description=alert["annotations"]["description"],
                         message=alert["annotations"]["summary"],
                         status=VictoriametricsProvider.STATUS_MAP[alert["state"]],
-                        severity=VictoriametricsProvider.STATUS_MAP[
+                        severity=VictoriametricsProvider.SEVERITIES_MAP[
                             alert["labels"]["severity"]
                         ],
                         startedAt=alert["activeAt"],
@@ -432,9 +434,9 @@ receivers:
                     )
                 )
             return alerts
-        else:
-            self.logger.error("Failed to get alerts", extra=response.json())
-            raise Exception("Could not get alerts")
+        except Exception as e:
+            self.logger.exception("Failed to get alerts")
+            raise e
 
     def _query(self, query="", start="", end="", step="", queryType="", **kwargs: dict):
         """Query metrics from VM Backend."""
@@ -474,3 +476,60 @@ receivers:
         else:
             self.logger.error("Invalid query type")
             raise Exception("Invalid query type")
+
+
+if __name__ == "__main__":
+    # Output debug messages
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+
+    # Load environment variables
+    import os
+
+    from keep.providers.providers_factory import ProvidersFactory
+
+    vmalerthost = os.environ.get("VMALERT_HOST") or "http://localhost:8880"
+    user = os.environ.get("VMALERT_USER") or "admin"
+    password = os.environ.get("VMALERT_PASSWORD") or "secret"
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    config = {
+        "authentication": {
+            "VMAlertURL": vmalerthost,
+            "BasicAuthUsername": user,
+            "BasicAuthPassword": password,
+        },
+    }
+    provider = ProvidersFactory.get_provider(
+        context_manager,
+        provider_id="vm-keephq",
+        provider_type="victoriametrics",
+        provider_config=config,
+    )
+    alerts = provider.get_alerts()
+
+    vmbackendhost = os.environ.get("VMBACKEND_HOST") or "http://localhost:8428"
+    user = os.environ.get("VMBACKEND_USER") or "admin"
+    password = os.environ.get("VMBACKEND_PASSWORD") or "secret"
+
+    config = {
+        "authentication": {
+            "VMBackendURL": vmbackendhost,
+            "BasicAuthUsername": user,
+            "BasicAuthPassword": password,
+        },
+    }
+    provider = ProvidersFactory.get_provider(
+        context_manager,
+        provider_id="vm-keephq",
+        provider_type="victoriametrics",
+        provider_config=config,
+    )
+    query = provider.query(
+        query="avg(rate(process_cpu_seconds_total))", queryType="query"
+    )
+
+    print(alerts)
