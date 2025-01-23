@@ -63,6 +63,7 @@ interface AlertDistritbuionData {
 }
 
 export type TProviderCategory =
+  | "AI"
   | "Monitoring"
   | "Incident Management"
   | "Cloud Infrastructure"

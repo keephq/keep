@@ -1,0 +1,44 @@
+id: enrich-using-ai
+description: Enrich alerts using structured output from LLMs
+triggers:
+  - type: manual
+
+steps:
+  - name: get-enrichments
+    provider:
+      config: "{{ providers.my_openai }}"
+      type: openai
+      with:
+        prompt: "You received such an alert {{alert}}, generate missing fields."
+        model: "gpt-4o-mini" # This model supports structured output
+        structured_output_format: # We limit what model could return
+          type: json_schema
+          json_schema:
+            name: missing_fields
+            schema:
+              type: object
+              properties:
+                environment:
+                  type: string
+                  enum: 
+                    - "production"
+                    - "pre-prod"
+                    - "debug"
+                  description: "Be pessimistic, return pre-prod or production only if you see evidence in the alert body."
+                impacted_customer_name:
+                  type: string
+                  description: "Return undefined if you are not sure about the customer."
+              required: ["environment", "impacted_customer_name"]
+              additionalProperties: false
+            strict: true
+
+actions:
+  - name: enrich-alert
+    provider:
+      type: mock
+      with:
+        enrich_alert:
+          - key: environment
+            value: "{{ steps.get-enrichments.results.response.environment }}"
+          - key: impacted_customer_name
+            value: "{{ steps.get-enrichments.results.response.impacted_customer_name }}"
