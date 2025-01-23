@@ -12,8 +12,10 @@ description: "The OpenAI Provider allows for integrating OpenAI's language model
 
 The OpenAI Provider supports the following functions:
 
-- `query`: Interact with OpenAI's models by sending prompts and receiving responses
+- `prompt`: Interact with OpenAI's models by sending prompts and receiving responses
 - `model`: The model to be used, defaults to `gpt-3.5-turbo`
+- `max_tokens`: Limit amount of tokens returned by the model, default 1024.
+- `structured_output_format`: Optional JSON format for the structured output (check examples at the GitHub).
 
 ## Outputs
 
