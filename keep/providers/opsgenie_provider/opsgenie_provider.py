@@ -101,7 +101,7 @@ class OpsgenieProvider(BaseProvider):
                     break
             else:
                 self.logger.error("Failed to find OpsGenie integration")
-                return {"opsgenie:create": f"Failed to find {self.authentication_config.integration_name}"}
+                return {"opsgenie:create": f"Failed to find Integration name {self.authentication_config.integration_name}"}
 
             # Get the integration details and check if it has write access
             response = requests.get(
@@ -118,7 +118,7 @@ class OpsgenieProvider(BaseProvider):
                 scopes["opsgenie:create"] = "OpsGenie integration does not have write access"
             
         except Exception as e:
-            self.logger.exception(f"Failed to validate OpsGenie scopes due to an unexpected error: {e}")
+            self.logger.exception("Failed to create OpsGenie alert")
             scopes["opsgenie:create"] = str(e)
         return scopes
 
