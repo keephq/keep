@@ -1,8 +1,7 @@
 import json
 import dataclasses
 import pydantic
-
-from openai import OpenAI
+import google.generativeai as genai
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -10,26 +9,18 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 @pydantic.dataclasses.dataclass
-class OpenaiProviderAuthConfig:
+class GeminiProviderAuthConfig:
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "OpenAI Platform API Key",
+            "description": "Google AI API Key",
             "sensitive": True,
         },
     )
-    organization_id: str | None = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "OpenAI Platform Organization ID",
-            "sensitive": False,
-        },
-        default=None,
-    )
 
 
-class OpenaiProvider(BaseProvider):
-    PROVIDER_DISPLAY_NAME = "OpenAI"
+class GeminiProvider(BaseProvider):
+    PROVIDER_DISPLAY_NAME = "Gemini"
     PROVIDER_CATEGORY = ["AI"]
 
     def __init__(
@@ -38,7 +29,7 @@ class OpenaiProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
-        self.authentication_config = OpenaiProviderAuthConfig(
+        self.authentication_config = GeminiProviderAuthConfig(
             **self.config.authentication
         )
 
@@ -52,28 +43,40 @@ class OpenaiProvider(BaseProvider):
     def _query(
         self,
         prompt,
-        model="gpt-3.5-turbo",
+        model="gemini-pro",
         max_tokens=1024,
         structured_output_format=None,
     ):
-        client = OpenAI(
-            api_key=self.authentication_config.api_key,
-            organization=self.authentication_config.organization_id,
+        genai.configure(api_key=self.authentication_config.api_key)
+        
+        model = genai.GenerativeModel(model)
+        
+        # Prepare system prompt for structured output if needed
+        if structured_output_format:
+            schema = structured_output_format.get("json_schema", {})
+            prompt = (
+                f"You must respond with valid JSON that matches this schema: {json.dumps(schema)}\n"
+                f"Your response must be parseable JSON and nothing else.\n\n"
+                f"User query: {prompt}"
+            )
+
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                max_output_tokens=max_tokens,
+            ),
         )
-        response = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=max_tokens,
-            response_format=structured_output_format,
-        )
-        response = response.choices[0].message.content
+        
+        content = response.text
+        
+        # Try to parse as JSON if structured output was requested
         try:
-            response = json.loads(response)
+            content = json.loads(content)
         except Exception:
             pass
 
         return {
-            "response": response,
+            "response": content,
         }
 
 
@@ -87,25 +90,25 @@ if __name__ == "__main__":
         workflow_id="test",
     )
 
-    api_key = os.environ.get("API_KEY")
+    api_key = os.environ.get("GOOGLE_API_KEY")
 
     config = ProviderConfig(
-        description="My Provider",
+        description="Gemini Provider",
         authentication={
             "api_key": api_key,
         },
     )
 
-    provider = OpenaiProvider(
+    provider = GeminiProvider(
         context_manager=context_manager,
-        provider_id="my_provider",
+        provider_id="gemini_provider",
         config=config,
     )
 
     print(
         provider.query(
             prompt="Here is an alert, define environment for it: Clients are panicking, nothing works.",
-            model="gpt-4o-mini",
+            model="gemini-pro",
             structured_output_format={
                 "type": "json_schema",
                 "json_schema": {
@@ -127,5 +130,3 @@ if __name__ == "__main__":
             max_tokens=100,
         )
     )
-
-    # https://platform.openai.com/docs/guides/function-calling

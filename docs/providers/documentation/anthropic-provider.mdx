@@ -1,0 +1,38 @@
+---
+title: "Anthropic Provider"
+description: "The Anthropic Provider allows for integrating Anthropic's Claude language models into Keep."
+---
+
+<Tip>
+  The Anthropic Provider supports querying Claude language models for prompt-based
+  interactions.
+</Tip>
+
+## Inputs
+
+The Claude Provider supports the following imputs:
+
+- `prompt`: Interact with Claude models by sending prompts and receiving responses
+- `model`: The model to be used, defaults to `claude-3-sonnet-20240229`
+- `max_tokens`: Limit amount of tokens returned by the model, default 1024.
+- `structured_output_format`: Optional JSON format for the structured output (check examples at the GitHub).
+
+## Outputs
+
+Currently, the Claude Provider outputs the response from the model based on the prompt provided.
+
+## Authentication Parameters
+
+To use the Claude Provider, you'll need an API Key from Anthropic. The required parameter for authentication is:
+
+- **api_key** (required): Your Anthropic API Key.
+
+## Connecting with the Provider
+
+To connect to Claude, you'll need to obtain an API Key:
+
+1. Log in to your Anthropic account at [Anthropic Console](https://console.anthropic.com).
+2. Navigate to the **API Keys** section.
+3. Click on **Create Key** to generate a new API key for Keep.
+
+Use the generated API key in the `authentication` section of your Claude Provider configuration.

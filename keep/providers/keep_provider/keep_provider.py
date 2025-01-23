@@ -15,6 +15,7 @@ from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.searchengine.searchengine import SearchEngine
 from keep.workflowmanager.workflowstore import WorkflowStore
+from keep.api.tasks.process_event_task import process_event
 
 
 class KeepProvider(BaseProvider):
@@ -111,7 +112,7 @@ class KeepProvider(BaseProvider):
                 raise
         self.logger.info("Got alerts from Keep", extra={"num_of_alerts": len(alerts)})
         return alerts
-    
+
     def _notify(self, **kwargs):
         if "workflow_to_update_yaml" in kwargs:
             workflow_to_update_yaml = kwargs["workflow_to_update_yaml"]
@@ -140,6 +141,33 @@ class KeepProvider(BaseProvider):
                     extra={"tenant_id": context_manager.tenant_id, "workflow": workflow},
                 )
                 raise ProviderException(f"Failed to create workflow: {e}")
+        else:
+            alert = AlertDto(
+                name=kwargs['name'],
+                status=kwargs.get('status'),
+                lastReceived=kwargs.get('lastReceived'),
+                environment=kwargs.get('environment', "undefined"),
+                duplicateReason=kwargs.get('duplicateReason'),
+                service=kwargs.get('service'),
+                message=kwargs.get('message'),
+                description=kwargs.get('description'),
+                severity=kwargs.get('severity'),
+                pushed=True,
+                url=kwargs.get('url'),
+                labels=kwargs.get('labels'),
+                ticket_url=kwargs.get('ticket_url'),
+                fingerprint=kwargs.get('fingerprint'),
+            )
+            process_event(
+                {},
+                self.context_manager.tenant_id,
+                "keep",
+                None,
+                kwargs.get('fingerprint'),
+                None,
+                None,
+                alert,
+            )
 
 
     def validate_config(self):
