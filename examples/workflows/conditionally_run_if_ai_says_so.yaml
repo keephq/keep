@@ -1,0 +1,35 @@
+id: auto-fix-mysql-table-overflow
+description: Clean heavy mysql tables after consulting with OpenAI using structured output
+triggers:
+  - type: manual
+
+steps:
+  - name: ask-openai-if-this-workflow-is-applicable
+    provider:
+      config: "{{ providers.my_openai }}"
+      type: openai
+      with:
+        prompt: "There is a task cleaning MySQL database. Should we run the task if we received an alert with such a name {{ alert.name }}?"
+        model: "gpt-4o-mini" # This model supports structured output
+        structured_output_format:  # We limit what model could return
+          type: json_schema
+          json_schema:
+            name: workflow_applicability
+            schema:
+              type: object
+              properties:
+                should_run:
+                  type: boolean
+                  description: "Whether the workflow should be executed based on the alert"
+              required: ["should_run"]
+              additionalProperties: false
+            strict: true
+
+actions:
+  - name: clean-db-step
+    if: "{{ steps.ask-openai-if-this-workflow-is-applicable.results.response.should_run }}"
+    provider:
+      config: "{{ providers.mysql }}"
+      type: mysql
+      with:
+        query: DELETE FROM bookstore.cache ORDER BY id DESC LIMIT 100;

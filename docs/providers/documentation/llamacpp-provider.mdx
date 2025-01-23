@@ -1,0 +1,59 @@
+---
+title: "Llama.cpp Provider"
+description: "The Llama.cpp Provider allows for integrating locally running Llama.cpp models into Keep."
+---
+
+<Tip>
+  The Llama.cpp Provider supports querying local Llama.cpp models for prompt-based
+  interactions. Make sure you have Llama.cpp server running locally with your desired model.
+</Tip>
+
+### **Cloud Limitation**
+This provider is disabled for cloud environments and can only be used in local or self-hosted environments.
+
+## Inputs
+
+The Llama.cpp Provider supports the following inputs:
+
+- `prompt`: Interact with Llama.cpp models by sending prompts and receiving responses
+- `max_tokens`: Limit amount of tokens returned by the model, default 1024
+
+## Outputs
+
+Currently, the Llama.cpp Provider outputs the response from the model based on the prompt provided.
+
+## Authentication Parameters
+
+The Llama.cpp Provider requires the following configuration parameters:
+
+- **host** (required): The Llama.cpp server host URL, defaults to "http://localhost:8080"
+
+## Connecting with the Provider
+
+To use the Llama.cpp Provider:
+
+1. Install Llama.cpp on your system
+2. Download or convert your model to GGUF format
+3. Start the Llama.cpp server with HTTP interface:
+   ```bash
+   ./server --model /path/to/your/model.gguf --host 0.0.0.0 --port 8080
+   ```
+4. Configure the host URL and model path in your Keep configuration
+
+## Prerequisites
+
+- Llama.cpp must be installed and compiled with server support
+- A GGUF format model file must be available on your system
+- The Llama.cpp server must be running and accessible
+- The server must have sufficient resources to load and run your model
+
+## Model Compatibility
+
+The provider works with any GGUF format model compatible with Llama.cpp, including:
+- LLaMA and LLaMA-2 models
+- Mistral models
+- OpenLLaMA models
+- Vicuna models
+- And other compatible model architectures
+
+Make sure your model is in GGUF format before using it with the provider.
