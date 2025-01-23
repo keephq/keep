@@ -21,6 +21,7 @@ import EnrichAlertSidePanel from "@/app/(keep)/alerts/EnrichAlertSidePanel";
 import Loading from "../loading";
 import { Preset } from "@/entities/presets/model/types";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
+import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
 
 const defaultPresets: Preset[] = [
   {
@@ -41,7 +42,8 @@ type AlertsProps = {
 
 export default function Alerts({ presetName }: AlertsProps) {
   const api = useApi();
-  const { usePresetAlerts } = useAlerts();
+  const [filterCel, setFilterCel] = useState<string>("");
+  const { useLastAlerts } = useAlerts();
   const { data: providersData = { installed_providers: [] } } = useProviders();
   const router = useRouter();
 
@@ -84,7 +86,7 @@ export default function Alerts({ presetName }: AlertsProps) {
     isLoading: isAsyncLoading,
     mutate: mutateAlerts,
     error: alertsError,
-  } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
+  } = useLastAlerts(filterCel, 20, 0);
 
   const isLoading = isAsyncLoading || !api.isReady();
 
@@ -127,7 +129,7 @@ export default function Alerts({ presetName }: AlertsProps) {
 
   return (
     <>
-      <AlertTableTabPanel
+      <AlertTableTabPanelServerSide
         key={selectedPreset.name}
         preset={selectedPreset}
         alerts={alerts}
@@ -138,8 +140,8 @@ export default function Alerts({ presetName }: AlertsProps) {
         setDismissModalAlert={setDismissModalAlert}
         setChangeStatusAlert={setChangeStatusAlert}
         mutateAlerts={mutateAlerts}
+        onFilterCelChange={(cel) => setFilterCel(cel)}
       />
-
       <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
       <AlertDismissModal
         alert={dismissModalAlert}

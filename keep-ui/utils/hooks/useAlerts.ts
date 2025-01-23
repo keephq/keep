@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { AlertDto } from "@/entities/alerts/model";
 import useSWR, { SWRConfiguration } from "swr";
 import { toDateObjectWithFallback } from "utils/helpers";
@@ -114,11 +114,54 @@ export const useAlerts = () => {
     );
   };
 
+  const useLastAlerts = (
+    cel: string,
+    limit: number,
+    offset: number,
+    options: SWRConfiguration = { revalidateOnFocus: false }
+  ) => {
+    const filtersParams = new URLSearchParams();
+
+    if (offset !== undefined) {
+      filtersParams.set("offset", String(offset));
+    }
+
+    if (limit !== undefined) {
+      filtersParams.set("limit", String(limit));
+    }
+
+    if (cel) {
+      filtersParams.set("cel", cel);
+    }
+
+    let requestUrl = `/alerts`;
+
+    if (filtersParams.toString()) {
+      requestUrl += `?${filtersParams.toString()}`;
+    }
+
+    const swrValue = useSWR<any>(
+      () =>
+        api.isReady() ? requestUrl : null,
+      (url) => api.get(url),
+      options
+    );
+
+    return {
+      ...swrValue,
+      data: swrValue.data?.results as AlertDto[],
+      totalCount: swrValue.data?.count,
+      limit: swrValue.data?.limit,
+      offset: swrValue.data?.offset
+    };
+  };
+
   return {
     useAlertHistory,
     useAllAlerts,
     usePresetAlerts,
     useAlertAudit,
     useMultipleFingerprintsAlertAudit,
+    useLastAlerts
   };
 };

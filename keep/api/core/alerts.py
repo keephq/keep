@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 alert_field_configurations = [
     FieldMappingConfiguration("provider_type", "provider_type"),
     FieldMappingConfiguration("provider_id", "provider_id"),
-    FieldMappingConfiguration(map_from_pattern = "incident.name", map_to=['incident.user_generated_name', 'incident.ai_generated_name']),
+    FieldMappingConfiguration(map_from_pattern = "incident.name", map_to=['incident_user_generated_name', 'incident_ai_generated_name']),
     FieldMappingConfiguration(map_from_pattern = "*", map_to=["alert_enrichment_json", "event"], is_json=True),
 ]
 properties_metadata = PropertiesMetadata(alert_field_configurations)
@@ -78,6 +78,8 @@ def __build_base_query_based_on_alert(
             # LastAlert.alert_id,
             Alert.tenant_id.label("last_alert_tenant_id"),
             Alert.timestamp.label("startedAt"),
+            Incident.user_generated_name.label("incident_user_generated_name"),
+            Incident.ai_generated_name.label("incident_ai_generated_name"),
         )
         .select_from(Alert)
         .outerjoin(
@@ -113,6 +115,7 @@ def __build_base_query_based_on_alert(
             base_query_cte.c.alert_enrichment_fingerprint,
             base_query_cte.c.alert_enrichment_json,
             base_query_cte.c.startedAt,
+            
         )
         .select_from(base_query_cte)
         .join(
@@ -136,6 +139,8 @@ def __build_base_query(
             AlertEnrichment.enrichments.label('alert_enrichment_json'),
             LastAlert.tenant_id.label("last_alert_tenant_id"),
             LastAlert.first_timestamp.label("startedAt"),
+            Incident.user_generated_name.label("incident_user_generated_name"),
+            Incident.ai_generated_name.label("incident_ai_generated_name"),
         )
         .select_from(LastAlert)
         .outerjoin(
@@ -166,11 +171,12 @@ def __build_base_query(
         select(
             Alert,
             Alert.id.label('entity_id'),
-            base_query_cte.c.alert_enrichment_id,
-            base_query_cte.c.alert_enrichment_tenant_id,
-            base_query_cte.c.alert_enrichment_fingerprint,
-            base_query_cte.c.alert_enrichment_json,
-            base_query_cte.c.startedAt,
+            # base_query_cte.c.alert_enrichment_id,
+            # base_query_cte.c.alert_enrichment_tenant_id,
+            # base_query_cte.c.alert_enrichment_fingerprint,
+            # base_query_cte.c.alert_enrichment_json,
+            # base_query_cte.c.startedAt,
+            *base_query_cte.columns
         )
         .select_from(base_query_cte)
         .join(
