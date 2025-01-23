@@ -95,7 +95,6 @@ uvloop = "^0.21.0"
 httptools = "^0.6.4"
 anthropic = "^0.44.0"
 google-generativeai = "^0.8.4"
-numexpr = "^2.10.2"
 js2py = "^0.74"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
