@@ -146,6 +146,16 @@ class VictoriametricsProviderAuthConfig:
         default=None,
     )
 
+    SkipValidation: bool = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Enter 'true' to skip validation of authentication",
+            "config_sub_group": "validation",
+            "config_main_group": "validation",
+        },
+        default=False,
+    )
+
 
 class VictoriametricsProvider(BaseProvider):
     """Install Webhooks and receive alerts from Victoriametrics."""
@@ -211,6 +221,8 @@ receivers:
     def validate_scopes(self) -> dict[str, bool | str]:
         """Validate scopes by checking configured services."""
         results = []
+        if self.authentication_config.SkipValidation == True:
+            return {"connected": True}
 
         if self.vmalert_enabled:
             vmalert_response = requests.get(self.vmalert_host, auth=self._get_auth())
