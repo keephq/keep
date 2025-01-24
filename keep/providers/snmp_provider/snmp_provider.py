@@ -19,6 +19,7 @@ from pysnmp.hlapi.v3arch.asyncio.cmdgen import (
     bulk_cmd
 )
 from pysnmp.smi.rfc1902 import ObjectIdentity
+from pysnmp.proto.rfc1902 import Integer, OctetString, IpAddress, Counter32, Counter64, Gauge32, Unsigned32, TimeTicks, Bits, Opaque
 from pysnmp.carrier.asyncio.dgram import udp
 from pysnmp.entity import engine, config
 from pysnmp.smi import builder, view, compiler
@@ -35,7 +36,7 @@ from keep.validation.fields import UrlPort
 from keep.exceptions.provider_exception import ProviderException
 
 
-@pydantic.dataclasses.dataclass
+@pydantic.dataclasses.dataclass(config=dict(validate_assignment=True))
 class SnmpProviderAuthConfig:
     """SNMP authentication configuration."""
     
@@ -52,7 +53,7 @@ class SnmpProviderAuthConfig:
     community_string: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "SNMP community string for authentication",
+            "description": "SNMP community string for authentication (required for v1/v2c)",
             "sensitive": True,
             "config_main_group": "authentication",
         },
@@ -74,7 +75,7 @@ class SnmpProviderAuthConfig:
     username: str = dataclasses.field(
         metadata={
             "required": False,
-            "description": "SNMPv3 username",
+            "description": "SNMPv3 username (required for v3)",
             "config_main_group": "authentication",
         },
         default="",
@@ -84,7 +85,7 @@ class SnmpProviderAuthConfig:
         default="SHA",
         metadata={
             "required": False,
-            "description": "SNMPv3 authentication protocol",
+            "description": "SNMPv3 authentication protocol (required for v3)",
             "type": "select",
             "options": ["MD5", "SHA"],
             "config_main_group": "authentication",
@@ -95,7 +96,7 @@ class SnmpProviderAuthConfig:
         metadata={
             "required": False,
             "sensitive": True,
-            "description": "SNMPv3 authentication key",
+            "description": "SNMPv3 authentication key (required for v3)",
             "config_main_group": "authentication",
         },
         default="",
@@ -105,7 +106,7 @@ class SnmpProviderAuthConfig:
         default="AES",
         metadata={
             "required": False,
-            "description": "SNMPv3 privacy protocol",
+            "description": "SNMPv3 privacy protocol (required for v3)",
             "type": "select",
             "options": ["DES", "AES"],
             "config_main_group": "authentication",
@@ -116,7 +117,7 @@ class SnmpProviderAuthConfig:
         metadata={
             "required": False,
             "sensitive": True,
-            "description": "SNMPv3 privacy key",
+            "description": "SNMPv3 privacy key (required for v3)",
             "config_main_group": "authentication",
         },
         default="",
@@ -131,6 +132,23 @@ class SnmpProviderAuthConfig:
         },
         default_factory=list,
     )
+
+    def __post_init__(self):
+        """Validate SNMPv3 fields after initialization."""
+        if self.snmp_version == 'v3':
+            required_fields = {
+                'username': 'Username',
+                'auth_key': 'Authentication key',
+                'priv_key': 'Privacy key'
+            }
+            
+            missing_fields = []
+            for field, display_name in required_fields.items():
+                if not getattr(self, field):
+                    missing_fields.append(display_name)
+            
+            if missing_fields:
+                raise ProviderException(f"The following fields are required for SNMPv3: {', '.join(missing_fields)}")
 
 
 class SnmpProvider(BaseProvider):
@@ -170,10 +188,10 @@ class SnmpProvider(BaseProvider):
                     try:
                         if not dispatcher.loopingcall.done():
                             dispatcher.loopingcall.cancel()
-                            # Wait for cancellation to complete
+                            # Wait for the future to complete after cancellation
                             try:
-                                asyncio.wait_for(dispatcher.loopingcall, timeout=1)
-                            except (asyncio.TimeoutError, asyncio.CancelledError):
+                                await asyncio.shield(dispatcher.loopingcall)
+                            except asyncio.CancelledError:
                                 pass
                     except Exception as e:
                         self.logger.debug(f"Error canceling dispatcher timeout: {e}")
@@ -202,23 +220,16 @@ class SnmpProvider(BaseProvider):
             **self.config.authentication
         )
 
-        # Validate SNMPv3 configuration if v3 is selected
-        if self.authentication_config.snmp_version == "v3":
-            if not self.authentication_config.username:
-                raise ProviderException("Username is required for SNMPv3")
-            if not self.authentication_config.auth_key:
-                raise ProviderException("Authentication key is required for SNMPv3")
-            if not self.authentication_config.priv_key:
-                raise ProviderException("Privacy key is required for SNMPv3")
-
         # Validate MIB directories
         for mib_dir in self.authentication_config.mib_dirs:
             if not os.path.isdir(mib_dir):
                 raise ProviderException(f"MIB directory does not exist: {mib_dir}")
 
-    def validate_scopes(self) -> dict[str, bool | str]:
+    def validate_scopes(self) -> dict[str, bool]:
         """
         Validate that the scopes provided are correct.
+        Returns a dictionary mapping scope names to boolean values indicating if they are valid.
+        Any validation errors will be logged at debug level.
         """
         try:
             # Try to create an SNMP engine with the provided config
@@ -252,7 +263,8 @@ class SnmpProvider(BaseProvider):
             snmp_engine.transport_dispatcher.close_dispatcher()
             return {"receive_traps": True}
         except Exception as e:
-            return {"receive_traps": str(e)}
+            self.logger.debug(f"SNMP trap receiver validation failed: {str(e)}")
+            return {"receive_traps": False}
 
     def _setup_mib_compiler(self):
         """
@@ -372,13 +384,19 @@ class SnmpProvider(BaseProvider):
                             var_binds, cb_ctx):
                 """
                 Callback function to handle received SNMP traps.
+                
+                This function processes incoming SNMP traps and converts them to alerts.
+                It carefully extracts and validates trap information, ensuring all critical
+                fields are properly populated.
                 """
                 try:
                     self.logger.info("Received SNMP trap")
+                    
+                    # Initialize trap data with required fields
                     trap_data = {
                         'trap_type': 'SNMP Trap',
-                        'message': '',
-                        'description': '',
+                        'message': [],  # List to collect message parts
+                        'description': [],  # List to collect description parts
                         'severity': AlertSeverity.INFO,
                         'variables': {},
                         'context': {
@@ -387,28 +405,63 @@ class SnmpProvider(BaseProvider):
                         }
                     }
                     
+                    # First pass: Collect all variables and their values
                     for name, val in var_binds:
                         try:
-                            if isinstance(name, ObjectIdentifier):
-                                var_name = self._parse_trap_oid(name)
-                            else:
-                                var_name = str(name)
-                                
-                            trap_data['variables'][var_name] = val.prettyPrint()
+                            var_name = self._parse_trap_oid(name) if isinstance(name, ObjectIdentifier) else str(name)
+                            var_value = val.prettyPrint()
+                            trap_data['variables'][var_name] = var_value
                             
-                            # Try to identify trap type and severity from common OIDs
-                            if 'trapType' in var_name.lower():
-                                trap_data['trap_type'] = val.prettyPrint()
-                            elif 'severity' in var_name.lower():
-                                trap_data['severity'] = val.prettyPrint()
-                            elif 'message' in var_name.lower():
-                                trap_data['message'] = val.prettyPrint()
-                            elif 'description' in var_name.lower():
-                                trap_data['description'] = val.prettyPrint()
+                            # Store the raw name-value pair for pattern matching
+                            name_lower = var_name.lower()
+                            
+                            # Identify trap metadata from variable names using comprehensive pattern matching
+                            if any(type_pattern in name_lower for type_pattern in ['traptype', 'trap.type', 'event.type']):
+                                trap_data['trap_type'] = var_value
+                            elif any(sev_pattern in name_lower for sev_pattern in ['severity', 'priority', 'level']):
+                                trap_data['severity'] = var_value
+                            elif any(msg_pattern in name_lower for msg_pattern in ['message', 'msg', 'text']):
+                                trap_data['message'].append(var_value)
+                            elif any(desc_pattern in name_lower for desc_pattern in ['description', 'desc', 'details']):
+                                trap_data['description'].append(var_value)
                                 
                         except Exception as e:
                             self.logger.error(f"Error processing trap variable {name}: {str(e)}")
+                            # Fallback: store raw values if processing fails
                             trap_data['variables'][str(name)] = str(val)
+                    
+                    # Second pass: Post-process collected data
+                    
+                    # Join collected messages and descriptions
+                    trap_data['message'] = ' '.join(filter(None, trap_data['message'])) or 'SNMP Trap Received'
+                    trap_data['description'] = ' '.join(filter(None, trap_data['description']))
+                    
+                    # Map severity string to AlertSeverity enum if it's a string
+                    if isinstance(trap_data['severity'], str):
+                        severity_map = {
+                            'emergency': AlertSeverity.CRITICAL,
+                            'alert': AlertSeverity.CRITICAL,
+                            'critical': AlertSeverity.CRITICAL,
+                            'error': AlertSeverity.HIGH,
+                            'warning': AlertSeverity.WARNING,
+                            'notice': AlertSeverity.INFO,
+                            'info': AlertSeverity.INFO,
+                            'debug': AlertSeverity.INFO,
+                            # Add numeric severity mappings
+                            '0': AlertSeverity.INFO,
+                            '1': AlertSeverity.WARNING,
+                            '2': AlertSeverity.HIGH,
+                            '3': AlertSeverity.CRITICAL
+                        }
+                        trap_data['severity'] = severity_map.get(
+                            trap_data['severity'].lower(),
+                            AlertSeverity.INFO
+                        )
+                    
+                    # Ensure description includes all variables if no specific description was found
+                    if not trap_data['description']:
+                        var_desc = [f"{k}: {v}" for k, v in trap_data['variables'].items()]
+                        trap_data['description'] = "Trap Variables:\n" + "\n".join(var_desc)
                     
                     self.logger.debug(f"Processed trap data: {trap_data}")
                     alert = self._format_alert(trap_data)
@@ -500,13 +553,22 @@ class SnmpProvider(BaseProvider):
         target_host = kwargs.get('host')
         target_port = kwargs.get('port', 161)
         oid = kwargs.get('oid')
+        timeout = kwargs.get('timeout', 10)  # Default 10 second timeout
+        retries = kwargs.get('retries', 3)   # Default 3 retries
         
         if not target_host or not oid:
             raise ProviderException("Host and OID are required for SNMP queries")
 
-        snmp_engine = SnmpEngine()
+        snmp_engine = None
+        dispatcher = None
         
         try:
+            snmp_engine = SnmpEngine()
+            
+            # Initialize MIB view controller if not already initialized
+            if not self.mib_view_controller:
+                self._setup_mib_compiler()
+            
             auth_data = None
             if self.authentication_config.snmp_version == 'v3':
                 auth_data = UsmUserData(
@@ -518,7 +580,11 @@ class SnmpProvider(BaseProvider):
                 auth_data = CommunityData(self.authentication_config.community_string, 
                                         mpModel=0 if self.authentication_config.snmp_version == 'v1' else 1)
 
-            transport_target = await UdpTransportTarget.create((target_host, target_port))
+            transport_target = await UdpTransportTarget.create(
+                (target_host, target_port),
+                timeout=timeout,
+                retries=retries
+            )
             context_data = ContextData()
             
             obj_type = ObjectType(ObjectIdentity(oid))
@@ -551,20 +617,73 @@ class SnmpProvider(BaseProvider):
                     )
                 elif operation == 'SET':
                     value = kwargs.get('value')
+                    value_type = kwargs.get('value_type', 'string').lower()
+                    
                     if value is None:
                         raise ProviderException("Value is required for SET operation")
+
+                    # Map of supported SNMP value types and their corresponding classes
+                    type_map = {
+                        'integer': Integer,
+                        'int': Integer,
+                        'int32': Integer,
+                        'string': OctetString,
+                        'octetstring': OctetString,
+                        'ipaddress': IpAddress,
+                        'counter32': Counter32,
+                        'counter64': Counter64,
+                        'gauge32': Gauge32,
+                        'unsigned32': Unsigned32,
+                        'timeticks': TimeTicks,
+                        'bits': Bits,
+                        'opaque': Opaque
+                    }
+
+                    if value_type not in type_map:
+                        raise ProviderException(
+                            f"Unsupported value type: {value_type}. "
+                            f"Supported types are: {', '.join(type_map.keys())}"
+                        )
+
+                    try:
+                        # Convert the value to the appropriate SNMP type
+                        snmp_type = type_map[value_type]
+                        if value_type in ['integer', 'int', 'int32', 'counter32', 'counter64', 'gauge32', 'unsigned32', 'timeticks']:
+                            typed_value = snmp_type(int(value))
+                        elif value_type == 'ipaddress':
+                            # Validate IP address format
+                            import ipaddress
+                            ipaddress.ip_address(value)  # This will raise ValueError if invalid
+                            typed_value = snmp_type(value)
+                        elif value_type == 'bits':
+                            # Expect a comma-separated list of bit positions
+                            bit_positions = [int(x.strip()) for x in str(value).split(',')]
+                            typed_value = snmp_type(names=bit_positions)
+                        else:
+                            typed_value = snmp_type(str(value))
+
+                    except (ValueError, TypeError) as e:
+                        raise ProviderException(
+                            f"Invalid value format for type {value_type}: {str(e)}"
+                        )
+
                     error_indication, error_status, error_index, var_binds = await set_cmd(
                         snmp_engine,
                         auth_data,
                         transport_target,
                         context_data,
-                        obj_type,
-                        value
+                        ObjectType(ObjectIdentity(oid), typed_value)
                     )
                 else:
                     raise ProviderException(f"Unsupported SNMP operation: {operation}")
 
                 if error_indication:
+                    error_msg = str(error_indication)
+                    if "No SNMP response received before timeout" in error_msg:
+                        raise ProviderException(
+                            f"SNMP {operation} timed out after {timeout} seconds with {retries} retries. "
+                            f"Consider increasing timeout or retries."
+                        )
                     raise ProviderException(f"SNMP error: {error_indication}")
                 elif error_status:
                     raise ProviderException(f"SNMP error: {error_status.prettyPrint()}")
@@ -572,8 +691,29 @@ class SnmpProvider(BaseProvider):
                 results = []
                 for var_bind in var_binds:
                     name, value = var_bind
+                    # Use MIB view controller to translate OID to proper MIB name
+                    try:
+                        if self.mib_view_controller:
+                            mib_name = self.mib_view_controller.get_node_name(name)
+                            if len(mib_name) > 0:
+                                # First element is the MIB module name (e.g. 'SNMPv2-MIB')
+                                mib_module = str(mib_name[0])
+                                # Rest are the object parts (e.g. 'sysDescr', '0')
+                                object_parts = []
+                                for part in mib_name[1:]:
+                                    if isinstance(part, (str, int)):
+                                        object_parts.append(str(part))
+                                oid = f"{mib_module}::{'.'.join(object_parts)}"
+                            else:
+                                oid = name.prettyPrint()
+                        else:
+                            oid = name.prettyPrint()
+                    except Exception as e:
+                        self.logger.debug(f"Failed to translate OID using MIB: {str(e)}")
+                        oid = name.prettyPrint()
+                        
                     results.append({
-                        'oid': name.prettyPrint(),
+                        'oid': oid,
                         'value': value.prettyPrint()
                     })
 
@@ -605,4 +745,4 @@ class SnmpProvider(BaseProvider):
                 try:
                     snmp_engine.transport_dispatcher.close_dispatcher()
                 except Exception as e:
-                    self.logger.debug(f"Error during final engine cleanup: {e}")
+                    self.logger.debug(f"Error during final cleanup: {e}")

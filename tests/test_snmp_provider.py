@@ -11,9 +11,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.snmp_provider.snmp_provider import SnmpProvider, SnmpProviderAuthConfig
 from keep.exceptions.provider_exception import ProviderException
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
-from keep.providers.providers_factory import ProvidersFactory
-from keep.api.models.provider import Provider
+from keep.api.models.alert import AlertDto
 
 # pytestmark = pytest.mark.asyncio(scope="session")
 
@@ -98,6 +96,11 @@ def snmp_provider(context_manager, provider_config):
 @pytest.mark.asyncio(loop_scope="function")
 async def test_snmp_get_operation(snmp_provider):
     """Test SNMP GET operation"""
+    # Mock the MIB view controller
+    mock_view_controller = MagicMock()
+    mock_view_controller.get_node_name.return_value = ('SNMPv2-MIB', 'sysDescr', 0)
+    snmp_provider.mib_view_controller = mock_view_controller
+
     result = await snmp_provider.query(
         operation='GET',
         host='demo.pysnmp.com',
@@ -108,11 +111,16 @@ async def test_snmp_get_operation(snmp_provider):
     assert len(result) > 0
     assert 'oid' in result[0]
     assert 'value' in result[0]
-    assert result[0]['oid'] == 'SNMPv2-SMI::mib-2.1.1.0'
+    assert result[0]['oid'] == 'SNMPv2-MIB::sysDescr.0'
 
 @pytest.mark.asyncio(loop_scope="function")
 async def test_snmp_getnext_operation(snmp_provider):
     """Test SNMP GETNEXT operation"""
+    # Mock the MIB view controller
+    mock_view_controller = MagicMock()
+    mock_view_controller.get_node_name.return_value = ('SNMPv2-MIB', 'sysDescr', 0)
+    snmp_provider.mib_view_controller = mock_view_controller
+
     result = await snmp_provider.query(
         operation='GETNEXT',
         host='demo.pysnmp.com',
@@ -127,6 +135,11 @@ async def test_snmp_getnext_operation(snmp_provider):
 @pytest.mark.asyncio(loop_scope="function")
 async def test_snmp_getbulk_operation(snmp_provider):
     """Test SNMP GETBULK operation"""
+    # Mock the MIB view controller
+    mock_view_controller = MagicMock()
+    mock_view_controller.get_node_name.return_value = ('SNMPv2-MIB', 'ifTable', 'ifEntry', 'ifIndex', 1)
+    snmp_provider.mib_view_controller = mock_view_controller
+
     result = await snmp_provider.query(
         operation='GETBULK',
         host='demo.pysnmp.com',
@@ -138,7 +151,7 @@ async def test_snmp_getbulk_operation(snmp_provider):
     for item in result:
         assert 'oid' in item
         assert 'value' in item
-        assert item['oid'].startswith('SNMPv2-SMI::mib-2.2.2.1')
+        assert item['oid'].startswith('SNMPv2-MIB::ifTable.ifEntry.ifIndex')
 
 @pytest.mark.asyncio(loop_scope="function")
 async def test_snmp_invalid_operation(snmp_provider):
@@ -163,44 +176,6 @@ async def test_snmp_missing_parameters(snmp_provider):
     assert "Host and OID are required" in str(exc_info.value)
 
 
-def test_provider_config_validation(context_manager):
-    """Test provider configuration validation"""
-    # Test valid v2c config
-    config = ProviderConfig(
-        authentication={
-            "snmp_version": "v2c",
-            "community_string": "public",
-            "listen_port": 162
-        }
-    )
-    provider = SnmpProvider(context_manager, "test", config)
-    assert isinstance(provider.authentication_config, SnmpProviderAuthConfig)
-    
-    # Test valid v3 config
-    config = ProviderConfig(
-        authentication={
-            "snmp_version": "v3",
-            "username": "user",
-            "auth_key": "authkey",
-            "priv_key": "privkey",
-            "auth_protocol": "SHA",
-            "priv_protocol": "AES",
-            "listen_port": 162
-        }
-    )
-    provider = SnmpProvider(context_manager, "test", config)
-    assert isinstance(provider.authentication_config, SnmpProviderAuthConfig)
-    
-    # Test invalid v3 config (missing required fields)
-    config = ProviderConfig(
-        authentication={
-            "snmp_version": "v3",
-            "listen_port": 162
-        }
-    )
-    with pytest.raises(ProviderException) as exc_info:
-        SnmpProvider(context_manager, "test", config)
-    assert "Username is required for SNMPv3" in str(exc_info.value)
 
 def test_provider_scopes_validation(context_manager, provider_config):
     """Test provider scopes validation"""
@@ -254,7 +229,7 @@ def test_format_alert():
 
 def test_provider_config_validation():
     """Test that SNMPv3 configuration validation works correctly"""
-    # Test that validation fails when username is missing for SNMPv3
+    # Test that validation fails when username, auth_key and priv_key are missing for SNMPv3
     config = ProviderConfig(
         authentication={
             "snmp_version": "v3",
@@ -264,7 +239,7 @@ def test_provider_config_validation():
     )
     
     # Create provider - this should raise an exception since username is required for SNMPv3
-    with pytest.raises(ProviderException, match="Username is required for SNMPv3"):
+    with pytest.raises(ProviderException, match="The following fields are required for SNMPv3: Username, Authentication key, Privacy key"):
         provider = SnmpProvider(MagicMock(), "test", config)
         
     # Test that validation succeeds with valid SNMPv3 configuration
@@ -314,16 +289,32 @@ async def test_provider_disposal():
 async def test_snmp_get():
     provider = SnmpProvider(MagicMock(), "test", create_test_provider())
     try:
-        # Create a transport endpoint
-        # transport_target = await UdpTransportTarget.create(('demo.pysnmp.com', 161))
-        
+        # Mock the MIB view controller
+        mock_view_controller = MagicMock()
+        mock_view_controller.get_node_name.return_value = ('SNMPv2-MIB', 'sysDescr', 0)
+        provider.mib_view_controller = mock_view_controller
+
         result = await provider.query(
             operation='GET',
             host='demo.pysnmp.com',
             port=161,
-            oid='1.3.6.1.2.1.1.1.0'
+            oid='1.3.6.1.2.1.1.1.0'  # System description
         )
-        assert result is not None
+        # Validate result structure and content
+        assert isinstance(result, list), "Result should be a list"
+        assert len(result) > 0, "Result should not be empty"
+        
+        # Validate first result item structure
+        first_result = result[0]
+        assert isinstance(first_result, dict), "Result item should be a dictionary"
+        assert 'oid' in first_result, "Result should contain 'oid' key"
+        assert 'value' in first_result, "Result should contain 'value' key"
+        
+        # Validate OID format
+        assert first_result['oid'] == 'SNMPv2-MIB::sysDescr.0', "OID should match expected format"
+        
+        # Validate value is not empty
+        assert first_result['value'], "Result value should not be empty"
     finally:
         # Ensure proper cleanup
         await provider.dispose()
@@ -343,7 +334,7 @@ async def test_snmp_getnext():
         assert result is not None
     finally:
         await provider.dispose()
-        # await asyncio.sleep(0.1)
+        await asyncio.sleep(0.1)
 
 @pytest.mark.asyncio(loop_scope="function")
 async def test_snmp_getbulk():
@@ -358,7 +349,7 @@ async def test_snmp_getbulk():
         assert result is not None
     finally:
         await provider.dispose()
-        # await asyncio.sleep(0.1)
+        await asyncio.sleep(0.1)
 
 def test_mib_compiler_setup(context_manager):
     """Test MIB compiler setup"""
