@@ -8,6 +8,7 @@ For more details on how to configure Checkmk to send alerts to Keep, see https:/
 
 import os
 import sys
+
 import requests
 
 
@@ -19,9 +20,12 @@ def GetPluginParams():
     API_KEY = str(env_vars.get("NOTIFY_PARAMETER_2"))
 
     # "None", if not in the environment variables
-    if (WebHookURL == "None" or API_KEY == "None"):
+    if WebHookURL == "None" or API_KEY == "None":
         print("keep-plugin: Missing Webhook URL or API Key")
-        return 2, ""    # https://docs.checkmk.com/latest/en/notifications.html#_traceable_notifications
+        return (
+            2,
+            "",
+        )  # https://docs.checkmk.com/latest/en/notifications.html#_traceable_notifications
 
     return 0, WebHookURL
 
@@ -80,7 +84,7 @@ def GetNotificationDetails():
         "contact_pager": CONTACTPAGER,
         "date": DATE,
         "long_date_time": LONGDATETIME,
-        "short_date_time": SHORTDATETIME
+        "short_date_time": SHORTDATETIME,
     }
 
     # Host related information
@@ -97,10 +101,21 @@ def GetNotificationDetails():
         "severity": "OK",
         "url": HOST_URL,
         "check_command": HOST_CHECK_COMMAND,
-        **general
+        **general,
     }
 
     # Service related information
+    # See NOTIFY_NOTIFICATIONTYPE in https://docs.checkmk.com/latest/en/notifications.html#environment_variables
+    if NOTIFICATIONTYPE == "RECOVERY":
+        status = "UP"
+    elif NOTIFICATIONTYPE == "PROBLEM":
+        status = "DOWN"
+    elif NOTIFICATIONTYPE == "ACKNOWLEDGEMENT":
+        status = "ACKNOWLEDGED"
+    # FLAPPINGSTART, FLAPPINGSTOP, FLAPPINGDISABLED, DOWNTIMESTART, DOWNTIMEEND, DOWNTIMECANCELLED, etc
+    else:
+        status = "DOWN"
+
     service_notify = {
         "id": SERVICE_PROBLEM_ID,
         "summary": f"CheckMK {HOSTNAME}/{SERVICE} {EVENT_SERVICE}",
@@ -111,12 +126,12 @@ def GetNotificationDetails():
         "event": EVENT_SERVICE,
         "output": OUTPUT_SERVICE,
         "long_output": LONG_OUTPUT_SERVICE,
-        "status": "UP",
+        "status": status,
         "severity": CURRENT_SERVICE_STATE,
         "url": SERVICE_URL,
         "check_command": SERVICE_CHECK_COMMAND,
         "perf_data": PERF_DATA,
-        **general
+        **general,
     }
 
     # Handle HOST and SERVICE notifications
@@ -135,9 +150,9 @@ def StartKeepWorkflow(WebHookURL, data):
     API_KEY = str(os.environ.get("NOTIFY_PARAMETER_2"))
 
     headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-API-KEY': API_KEY
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-API-KEY": API_KEY,
     }
 
     try:
@@ -147,7 +162,8 @@ def StartKeepWorkflow(WebHookURL, data):
             print("keep-plugin: Workflow started successfully.")
         else:
             print(
-                f"keep-plugin: Failed to start the workflow. Status code: {response.status_code}")
+                f"keep-plugin: Failed to start the workflow. Status code: {response.status_code}"
+            )
             print(response.text)
             return_code = 2
     except Exception as e:
@@ -162,7 +178,7 @@ def main():
     return_code, WebHookURL = GetPluginParams()
 
     if return_code != 0:
-        return return_code   # Abort, if parameter for the webhook is missing
+        return return_code  # Abort, if parameter for the webhook is missing
 
     print("keep-plugin: Getting notification details...")
     data = GetNotificationDetails()
@@ -173,5 +189,5 @@ def main():
     return return_code
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

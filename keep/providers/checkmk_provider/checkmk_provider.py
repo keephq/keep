@@ -37,6 +37,7 @@ class CheckmkProvider(BaseProvider):
     STATUS_MAP = {
         "UP": AlertStatus.RESOLVED,
         "DOWN": AlertStatus.FIRING,
+        "ACKNOWLEDGED": AlertStatus.ACKNOWLEDGED,
         "UNREACH": AlertStatus.FIRING,
     }
 
