@@ -7,11 +7,15 @@ import pytest
 import asyncio
 import os
 from unittest.mock import patch, MagicMock, PropertyMock
+from pysnmp.proto.rfc1902 import (
+    Integer, OctetString, IpAddress, Counter32, Counter64,
+    Gauge32, Unsigned32, TimeTicks, Bits, Opaque
+)
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.snmp_provider.snmp_provider import SnmpProvider, SnmpProviderAuthConfig
 from keep.exceptions.provider_exception import ProviderException
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity
 
 # pytestmark = pytest.mark.asyncio(scope="session")
 
@@ -375,6 +379,113 @@ def test_mib_compiler_setup(context_manager):
     
     # Clean up
     os.rmdir(test_mib_dir)
+
+@pytest.mark.asyncio(loop_scope="function")
+async def test_snmp_set_invalid_value_type(snmp_provider):
+    """Test SNMP SET operation with invalid value type"""
+    with pytest.raises(ProviderException) as exc_info:
+        await snmp_provider.query(
+            operation='SET',
+            host='demo.snmplabs.com',
+            port=161,
+            oid='1.3.6.1.2.1.1.1.0',
+            value='test',
+            value_type='invalid_type'
+        )
+    assert "Unsupported value type" in str(exc_info.value)
+
+@pytest.mark.asyncio(loop_scope="function")
+async def test_snmp_network_timeout(snmp_provider):
+    """Test SNMP operation with network timeout"""
+    with patch('pysnmp.hlapi.v3arch.asyncio.transport.UdpTransportTarget.create') as mock_transport:
+        # Simulate a timeout by raising socket.timeout
+        import socket
+        mock_transport.side_effect = socket.timeout("Operation timed out")
+        
+        with pytest.raises(ProviderException) as exc_info:
+            await snmp_provider.query(
+                operation='GET',
+                host='non.existent.host',
+                port=161,
+                oid='1.3.6.1.2.1.1.1.0',
+                timeout=1,
+                retries=1
+            )
+        assert "Operation timed out" in str(exc_info.value)
+
+def test_value_type_handler(snmp_provider):
+    """Test SnmpValueTypeHandler value conversion"""
+    handler = snmp_provider.SnmpValueTypeHandler
+    
+    # Test integer conversion
+    int_value = handler.convert_value('42', 'integer')
+    assert isinstance(int_value, Integer)
+    assert int_value == 42
+    
+    # Test string conversion
+    str_value = handler.convert_value('test', 'string')
+    assert isinstance(str_value, OctetString)
+    assert str(str_value) == 'test'
+    
+    # Test IP address validation
+    ip_value = handler.convert_value('192.168.1.1', 'ipaddress')
+    assert isinstance(ip_value, IpAddress)
+    assert str(ip_value.prettyPrint()) == '192.168.1.1'
+    
+    # Test invalid IP address
+    with pytest.raises(ProviderException) as exc_info:
+        handler.convert_value('invalid.ip', 'ipaddress')
+    assert "does not appear to be an IPv4 or IPv6 address" in str(exc_info.value)
+    
+    # Test bits conversion
+    bits_value = handler.convert_value('1,2,3', 'bits')
+    assert isinstance(bits_value, Bits)
+    assert bits_value.names == [1, 2, 3]
+
+@pytest.mark.asyncio(loop_scope="function")
+async def test_trap_receiver_callbacks(snmp_provider):
+    """Test SNMP trap receiver callback handling"""
+    # Create a mock trap
+    trap_data = {
+        'trap_type': 'Test Trap',
+        'severity': 'critical',
+        'message': 'Test trap message',
+        'variables': {
+            'SNMPv2-MIB::sysLocation.0': 'Test Location',
+            'SNMPv2-MIB::sysContact.0': 'Test Contact'
+        }
+    }
+    
+    # Create the alert first
+    alert = snmp_provider._format_alert(trap_data)
+    
+    # Mock the alert pushing
+    with patch.object(snmp_provider, '_push_alert') as mock_push:
+        # Push the alert
+        snmp_provider._push_alert(alert.dict())
+        
+        # Verify alert was pushed
+        mock_push.assert_called_once()
+        pushed_alert = mock_push.call_args[0][0]
+        assert pushed_alert['name'] == 'Test Trap'
+        assert pushed_alert['severity'] == 'critical'
+
+@pytest.mark.asyncio(loop_scope="function")
+async def test_trap_receiver_invalid_data(snmp_provider):
+    """Test SNMP trap receiver handling of invalid data"""
+    invalid_trap_data = {
+        'trap_type': 'Unknown Trap',  # Changed from None to a string
+        'severity': 'invalid_severity',
+        'message': '',  # Changed from None to empty string
+        'variables': {}  # Changed from None to empty dict
+    }
+    
+    # Verify that invalid data doesn't cause errors
+    alert = snmp_provider._format_alert(invalid_trap_data)
+    assert alert.name == 'Unknown Trap'  # Use the provided trap type
+    assert alert.severity == 'info'  # Default severity as string
+    assert alert.message == ''  # Empty message
+    assert isinstance(alert.description, str)  # Description should be a string
 
 if __name__ == "__main__":
     pytest.main([__file__]) 

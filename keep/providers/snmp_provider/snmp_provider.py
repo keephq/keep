@@ -177,6 +177,41 @@ class SnmpProvider(BaseProvider):
         self.trap_receiver = None
         self.mib_view_controller = None
 
+    async def _cleanup_dispatcher(self, dispatcher, operation_name=""):
+        """
+        Helper method to safely cleanup SNMP dispatcher resources.
+        """
+        if not dispatcher:
+            return
+        
+        # Handle loopingcall cleanup
+        if hasattr(dispatcher, 'loopingcall'):
+            try:
+                loopingcall = dispatcher.loopingcall
+                if isinstance(loopingcall, asyncio.Future) and not loopingcall.done():
+                    loopingcall.cancel()
+                    try:
+                        await asyncio.shield(loopingcall)
+                    except (asyncio.CancelledError, Exception) as e:
+                        self.logger.debug(f"Error during loopingcall cleanup ({operation_name}): {e}")
+            except Exception as e:
+                self.logger.debug(f"Error handling loopingcall ({operation_name}): {e}")
+        
+        # Close transports
+        if hasattr(dispatcher, '_transports'):
+            for transport in dispatcher._transports.values():
+                if hasattr(transport, 'close'):
+                    try:
+                        transport.close()
+                    except Exception as e:
+                        self.logger.debug(f"Error closing transport ({operation_name}): {e}")
+        
+        # Close dispatcher
+        try:
+            dispatcher.close_dispatcher()
+        except Exception as e:
+            self.logger.debug(f"Error closing dispatcher ({operation_name}): {e}")
+
     async def dispose(self):
         """
         Clean up SNMP engine and trap receiver.
@@ -184,23 +219,7 @@ class SnmpProvider(BaseProvider):
         if self.snmp_engine:
             try:
                 dispatcher = self.snmp_engine.transport_dispatcher
-                if hasattr(dispatcher, 'loopingcall'):
-                    try:
-                        if not dispatcher.loopingcall.done():
-                            dispatcher.loopingcall.cancel()
-                            # Wait for the future to complete after cancellation
-                            try:
-                                await asyncio.shield(dispatcher.loopingcall)
-                            except asyncio.CancelledError:
-                                pass
-                    except Exception as e:
-                        self.logger.debug(f"Error canceling dispatcher timeout: {e}")
-                
-                if hasattr(dispatcher, '_transports'):
-                    for transport in dispatcher._transports.values():
-                        if hasattr(transport, 'close'):
-                            transport.close()
-                dispatcher.close_dispatcher()
+                await self._cleanup_dispatcher(dispatcher, "dispose")
                 self.snmp_engine = None
             except Exception as e:
                 self.logger.error(f"Error disposing SNMP engine: {str(e)}")
@@ -545,22 +564,93 @@ class SnmpProvider(BaseProvider):
         """
         return True
 
+    @dataclasses.dataclass
+    class SnmpQueryParams:
+        """Parameters for SNMP query operations."""
+        host: str
+        oid: str
+        operation: typing.Literal["GET", "GETNEXT", "GETBULK", "SET"] = "GET"
+        port: int = 161
+        timeout: int = 10
+        retries: int = 3
+        value: typing.Optional[typing.Any] = None
+        value_type: typing.Optional[str] = None
+
+    class SnmpValueTypeHandler:
+        """Handler for SNMP value type conversions."""
+        
+        TYPE_MAP = {
+            'integer': Integer,
+            'int': Integer,
+            'int32': Integer,
+            'string': OctetString,
+            'octetstring': OctetString,
+            'ipaddress': IpAddress,
+            'counter32': Counter32,
+            'counter64': Counter64,
+            'gauge32': Gauge32,
+            'unsigned32': Unsigned32,
+            'timeticks': TimeTicks,
+            'bits': Bits,
+            'opaque': Opaque
+        }
+        
+        NUMERIC_TYPES = {'integer', 'int', 'int32', 'counter32', 'counter64', 
+                         'gauge32', 'unsigned32', 'timeticks'}
+        
+        @classmethod
+        def convert_value(cls, value: typing.Any, value_type: str) -> typing.Any:
+            """Convert a value to its appropriate SNMP type."""
+            value_type = value_type.lower()
+            
+            if value_type not in cls.TYPE_MAP:
+                raise ProviderException(
+                    f"Unsupported value type: {value_type}. "
+                    f"Supported types are: {', '.join(cls.TYPE_MAP.keys())}"
+                )
+            
+            snmp_type = cls.TYPE_MAP[value_type]
+            
+            try:
+                if value_type in cls.NUMERIC_TYPES:
+                    try:
+                        return snmp_type(int(str(value).strip()))
+                    except (ValueError, TypeError) as e:
+                        raise ProviderException(f"Invalid numeric value '{value}' for type {value_type}: {str(e)}")
+                elif value_type == 'ipaddress':
+                    import ipaddress
+                    try:
+                        ipaddress.ip_address(str(value))  # Validate IP address format
+                        return snmp_type(str(value))
+                    except ValueError as e:
+                        raise ProviderException(f"Invalid IP address format: {str(e)}")
+                elif value_type == 'bits':
+                    try:
+                        bit_positions = [int(x.strip()) for x in str(value).split(',')]
+                        return snmp_type(names=bit_positions)
+                    except (ValueError, TypeError) as e:
+                        raise ProviderException(f"Invalid bits format. Expected comma-separated integers: {str(e)}")
+                else:
+                    return snmp_type(str(value))
+            except Exception as e:
+                if isinstance(e, ProviderException):
+                    raise
+                raise ProviderException(f"Error converting value '{value}' to type {value_type}: {str(e)}")
+
     async def query(self, **kwargs):
         """
-        Query SNMP agent using GET, GETNEXT, or GETBULK operations.
+        Query SNMP agent using GET, GETNEXT, GETBULK, or SET operations.
         """
-        operation = kwargs.get('operation', 'GET')
-        target_host = kwargs.get('host')
-        target_port = kwargs.get('port', 161)
-        oid = kwargs.get('oid')
-        timeout = kwargs.get('timeout', 10)  # Default 10 second timeout
-        retries = kwargs.get('retries', 3)   # Default 3 retries
-        
-        if not target_host or not oid:
+        # Check required parameters first
+        if not kwargs.get('host') or not kwargs.get('oid'):
             raise ProviderException("Host and OID are required for SNMP queries")
+            
+        try:
+            params = self.SnmpQueryParams(**kwargs)
+        except TypeError as e:
+            raise ProviderException(f"Invalid query parameters: {str(e)}")
 
         snmp_engine = None
-        dispatcher = None
         
         try:
             snmp_engine = SnmpEngine()
@@ -569,180 +659,107 @@ class SnmpProvider(BaseProvider):
             if not self.mib_view_controller:
                 self._setup_mib_compiler()
             
-            auth_data = None
-            if self.authentication_config.snmp_version == 'v3':
-                auth_data = UsmUserData(
-                    self.authentication_config.username,
-                    self.authentication_config.auth_key,
-                    self.authentication_config.priv_key
+            auth_data = self._get_auth_data()
+            try:
+                transport_target = await UdpTransportTarget.create(
+                    (str(params.host), int(params.port)),
+                    timeout=int(params.timeout),
+                    retries=int(params.retries)
                 )
-            else:
-                auth_data = CommunityData(self.authentication_config.community_string, 
-                                        mpModel=0 if self.authentication_config.snmp_version == 'v1' else 1)
-
-            transport_target = await UdpTransportTarget.create(
-                (target_host, target_port),
-                timeout=timeout,
-                retries=retries
-            )
+            except Exception as e:
+                raise ProviderException(f"Failed to create transport target: {str(e)}")
             context_data = ContextData()
             
-            obj_type = ObjectType(ObjectIdentity(oid))
+            # Prepare the object type based on operation
+            if params.operation == 'SET':
+                if params.value is None:
+                    raise ProviderException("Value is required for SET operation")
+                if params.value_type is None:
+                    raise ProviderException("Value type is required for SET operation")
+                try:
+                    typed_value = self.SnmpValueTypeHandler.convert_value(
+                        params.value, 
+                        params.value_type
+                    )
+                    obj_identity = ObjectIdentity(params.oid)
+                    obj_type = ObjectType(obj_identity, typed_value)
+                except Exception as e:
+                    raise ProviderException(f"Failed to convert value for SET operation: {str(e)}")
+            else:
+                obj_type = ObjectType(ObjectIdentity(params.oid))
             
-            try:
-                if operation == 'GET':
-                    error_indication, error_status, error_index, var_binds = await get_cmd(
-                        snmp_engine,
-                        auth_data,
-                        transport_target,
-                        context_data,
-                        obj_type
+            # Execute SNMP command
+            cmd_map = {
+                'GET': get_cmd,
+                'GETNEXT': next_cmd,
+                'GETBULK': bulk_cmd,
+                'SET': set_cmd
+            }
+            
+            cmd_func = cmd_map.get(params.operation)
+            if not cmd_func:
+                raise ProviderException(f"Unsupported SNMP operation: {params.operation}")
+            
+            # Add GETBULK specific parameters
+            cmd_args = [snmp_engine, auth_data, transport_target, context_data]
+            if params.operation == 'GETBULK':
+                cmd_args.extend([0, 25])  # non-repeaters, max-repetitions
+            cmd_args.append(obj_type)
+            
+            error_indication, error_status, error_index, var_binds = await cmd_func(*cmd_args)
+            
+            if error_indication:
+                error_msg = str(error_indication)
+                if "No SNMP response received before timeout" in error_msg:
+                    raise ProviderException(
+                        f"SNMP {params.operation} timed out after {params.timeout} seconds "
+                        f"with {params.retries} retries. Consider increasing timeout or retries."
                     )
-                elif operation == 'GETNEXT':
-                    error_indication, error_status, error_index, var_binds = await next_cmd(
-                        snmp_engine,
-                        auth_data,
-                        transport_target,
-                        context_data,
-                        obj_type
-                    )
-                elif operation == 'GETBULK':
-                    error_indication, error_status, error_index, var_binds = await bulk_cmd(
-                        snmp_engine,
-                        auth_data,
-                        transport_target,
-                        context_data,
-                        0, 25,  # non-repeaters, max-repetitions
-                        obj_type
-                    )
-                elif operation == 'SET':
-                    value = kwargs.get('value')
-                    value_type = kwargs.get('value_type', 'string').lower()
-                    
-                    if value is None:
-                        raise ProviderException("Value is required for SET operation")
+                raise ProviderException(f"SNMP error: {error_indication}")
+            elif error_status:
+                raise ProviderException(f"SNMP error: {error_status.prettyPrint()}")
 
-                    # Map of supported SNMP value types and their corresponding classes
-                    type_map = {
-                        'integer': Integer,
-                        'int': Integer,
-                        'int32': Integer,
-                        'string': OctetString,
-                        'octetstring': OctetString,
-                        'ipaddress': IpAddress,
-                        'counter32': Counter32,
-                        'counter64': Counter64,
-                        'gauge32': Gauge32,
-                        'unsigned32': Unsigned32,
-                        'timeticks': TimeTicks,
-                        'bits': Bits,
-                        'opaque': Opaque
-                    }
-
-                    if value_type not in type_map:
-                        raise ProviderException(
-                            f"Unsupported value type: {value_type}. "
-                            f"Supported types are: {', '.join(type_map.keys())}"
-                        )
-
-                    try:
-                        # Convert the value to the appropriate SNMP type
-                        snmp_type = type_map[value_type]
-                        if value_type in ['integer', 'int', 'int32', 'counter32', 'counter64', 'gauge32', 'unsigned32', 'timeticks']:
-                            typed_value = snmp_type(int(value))
-                        elif value_type == 'ipaddress':
-                            # Validate IP address format
-                            import ipaddress
-                            ipaddress.ip_address(value)  # This will raise ValueError if invalid
-                            typed_value = snmp_type(value)
-                        elif value_type == 'bits':
-                            # Expect a comma-separated list of bit positions
-                            bit_positions = [int(x.strip()) for x in str(value).split(',')]
-                            typed_value = snmp_type(names=bit_positions)
-                        else:
-                            typed_value = snmp_type(str(value))
-
-                    except (ValueError, TypeError) as e:
-                        raise ProviderException(
-                            f"Invalid value format for type {value_type}: {str(e)}"
-                        )
-
-                    error_indication, error_status, error_index, var_binds = await set_cmd(
-                        snmp_engine,
-                        auth_data,
-                        transport_target,
-                        context_data,
-                        ObjectType(ObjectIdentity(oid), typed_value)
-                    )
-                else:
-                    raise ProviderException(f"Unsupported SNMP operation: {operation}")
-
-                if error_indication:
-                    error_msg = str(error_indication)
-                    if "No SNMP response received before timeout" in error_msg:
-                        raise ProviderException(
-                            f"SNMP {operation} timed out after {timeout} seconds with {retries} retries. "
-                            f"Consider increasing timeout or retries."
-                        )
-                    raise ProviderException(f"SNMP error: {error_indication}")
-                elif error_status:
-                    raise ProviderException(f"SNMP error: {error_status.prettyPrint()}")
-
-                results = []
-                for var_bind in var_binds:
-                    name, value = var_bind
-                    # Use MIB view controller to translate OID to proper MIB name
-                    try:
-                        if self.mib_view_controller:
-                            mib_name = self.mib_view_controller.get_node_name(name)
-                            if len(mib_name) > 0:
-                                # First element is the MIB module name (e.g. 'SNMPv2-MIB')
-                                mib_module = str(mib_name[0])
-                                # Rest are the object parts (e.g. 'sysDescr', '0')
-                                object_parts = []
-                                for part in mib_name[1:]:
-                                    if isinstance(part, (str, int)):
-                                        object_parts.append(str(part))
-                                oid = f"{mib_module}::{'.'.join(object_parts)}"
-                            else:
-                                oid = name.prettyPrint()
-                        else:
-                            oid = name.prettyPrint()
-                    except Exception as e:
-                        self.logger.debug(f"Failed to translate OID using MIB: {str(e)}")
-                        oid = name.prettyPrint()
-                        
-                    results.append({
-                        'oid': oid,
-                        'value': value.prettyPrint()
-                    })
-
-                return results
-
-            finally:
-                # Clean up transport dispatcher
-                if snmp_engine and hasattr(snmp_engine, 'transport_dispatcher'):
-                    dispatcher = snmp_engine.transport_dispatcher
-                    if hasattr(dispatcher, 'loopingcall'):
-                        try:
-                            if not dispatcher.loopingcall.done():
-                                dispatcher.loopingcall.cancel()
-                            await dispatcher.loopingcall
-                        except (asyncio.CancelledError, Exception) as e:
-                            self.logger.debug(f"Error canceling dispatcher timeout: {e}")
-                    
-                    try:
-                        dispatcher.close_dispatcher()
-                    except Exception as e:
-                        self.logger.debug(f"Error closing dispatcher: {e}")
+            return [
+                {
+                    'oid': self._format_oid(name),
+                    'value': value.prettyPrint()
+                }
+                for name, value in var_binds
+            ]
 
         except Exception as e:
-            self.logger.error(f"Error performing SNMP {operation}: {str(e)}")
-            raise ProviderException(f"SNMP {operation} failed: {str(e)}")
+            self.logger.error(f"Error performing SNMP {params.operation}: {str(e)}")
+            raise ProviderException(f"SNMP {params.operation} failed: {str(e)}")
         finally:
-            # Ensure engine resources are cleaned up
             if snmp_engine and hasattr(snmp_engine, 'transport_dispatcher'):
-                try:
-                    snmp_engine.transport_dispatcher.close_dispatcher()
-                except Exception as e:
-                    self.logger.debug(f"Error during final cleanup: {e}")
+                await self._cleanup_dispatcher(snmp_engine.transport_dispatcher, f"query_{params.operation}")
+
+    def _get_auth_data(self) -> typing.Union[UsmUserData, CommunityData]:
+        """Get authentication data based on SNMP version."""
+        if self.authentication_config.snmp_version == 'v3':
+            return UsmUserData(
+                self.authentication_config.username,
+                self.authentication_config.auth_key,
+                self.authentication_config.priv_key
+            )
+        return CommunityData(
+            self.authentication_config.community_string,
+            mpModel=0 if self.authentication_config.snmp_version == 'v1' else 1
+        )
+
+    def _format_oid(self, name: ObjectIdentifier) -> str:
+        """Format OID using MIB information if available."""
+        try:
+            if self.mib_view_controller:
+                mib_name = self.mib_view_controller.get_node_name(name)
+                if len(mib_name) > 0:
+                    mib_module = str(mib_name[0])
+                    object_parts = [
+                        str(part) for part in mib_name[1:]
+                        if isinstance(part, (str, int))
+                    ]
+                    return f"{mib_module}::{'.'.join(object_parts)}"
+        except Exception as e:
+            self.logger.debug(f"Failed to translate OID using MIB: {str(e)}")
+        
+        return name.prettyPrint()
