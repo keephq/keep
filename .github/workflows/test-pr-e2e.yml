@@ -120,6 +120,21 @@ jobs:
           fi      
           echo "Database (DB AUTH) is ready!"
           
+          attempt=0
+          max_attempts=10
+          echo "Waiting for Keep backend (DB AUTH) to be ready..."
+          until $(curl --output /dev/null --silent --fail http://localhost:8081/healthcheck); do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Max attempts reached, exiting... Sometimes Keep can't start because of double-headed migrations, use: 'alembic -c keep/alembic.ini history' to investigate, or check artifacts."
+              exit 1
+            fi
+            echo "Waiting for Keep backend (DB AUTH) to be ready... (Attempt: $((attempt+1)))"
+            attempt=$((attempt+1))
+            sleep 2
+          done
+          echo "Keep backend (DB AUTH) is ready!"
+          # wait to the backend
+          
 
           # wait to keep backend on port 8080
           echo "Waiting for Keep backend to be ready..."
@@ -136,24 +151,6 @@ jobs:
             sleep 2
           done
           echo "Keep backend is ready!"
-          
-          attempt2=0
-          max_attempts2=10
-          echo "Hello world: $(attempt2)"
-          echo "MAX_ATTEMPTS: $(max_attempts2)"
-          echo $(curl http://localhost:8081/healthcheck)
-          echo "Waiting for Keep backend (DB AUTH) to be ready..."
-          until $(curl --output /dev/null --silent --fail http://localhost:8081/healthcheck); do
-            if [ "$attempt2" -ge "$max_attempts2" ]; then
-              echo "Max attempts reached, exiting... Sometimes Keep can't start because of double-headed migrations, use: 'alembic -c keep/alembic.ini history' to investigate, or check artifacts."
-              exit 1
-            fi
-            echo "Waiting for Keep backend (DB AUTH) to be ready... (Attempt: $((attempt+1)))"
-            attempt2=$((attempt2+1))
-            sleep 2
-          done
-          echo "Keep backend (DB AUTH) is ready!"
-          # wait to the backend
           
           
           echo "Waiting for Keep frontend to be ready..."
