@@ -1,7 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import Loading from "@/app/(keep)/loading";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -14,27 +13,36 @@ import Modal from "@/components/ui/Modal";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
 import PredictedIncidentsTable from "@/app/(keep)/incidents/predicted-incidents-table";
 import { SortingState } from "@tanstack/react-table";
-import { IncidentTableFilters } from "./incident-table-filters";
-import { useIncidentFilterContext } from "./incident-table-filters-context";
 import { IncidentListError } from "@/features/incident-list/ui/incident-list-error";
+import { InitialFacetsData } from "@/features/filter/api";
+import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
+import Image from "next/image";
+import { Icon } from "@tremor/react";
+import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
+import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
+import { UserStatefulAvatar } from "@/entities/users/ui";
+import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
+import { useUser } from "@/entities/users/model/useUser";
+import { severityMapping } from "@/entities/alerts/model";
+import { IncidentsNotFoundPlaceholder } from "./incidents-not-found";
+import { v4 as uuidV4 } from 'uuid';
+
+const AssigneeLabel = ({ email }: { email: string }) => {
+  const user = useUser(email);
+  return user ? user.name : email;
+};
 
 interface Pagination {
   limit: number;
   offset: number;
 }
 
-interface Filters {
-  status: string[];
-  severity: string[];
-  assignees: string[];
-  sources: string[];
-  affected_services: string[];
-}
-
 export function IncidentList({
   initialData,
+  initialFacetsData,
 }: {
   initialData?: PaginatedIncidentsDto;
+  initialFacetsData?: InitialFacetsData;
 }) {
   const [incidentsPagination, setIncidentsPagination] = useState<Pagination>({
     limit: 20,
@@ -45,22 +53,7 @@ export function IncidentList({
     { id: "creation_time", desc: true },
   ]);
 
-  const {
-    statuses,
-    severities,
-    assignees,
-    services,
-    sources,
-    areFiltersApplied,
-  } = useIncidentFilterContext();
-
-  const filters: Filters = {
-    status: statuses,
-    severity: severities,
-    assignees: assignees,
-    affected_services: services,
-    sources: sources,
-  };
+  const [filterCel, setFilterCel] = useState<string>("");
 
   const {
     data: incidents,
@@ -72,22 +65,29 @@ export function IncidentList({
     incidentsPagination.limit,
     incidentsPagination.offset,
     incidentsSorting[0],
-    filters,
+    filterCel,
     {
       revalidateOnFocus: false,
       revalidateOnMount: !initialData,
       fallbackData: initialData,
     }
   );
+
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
     useIncidents(false);
-  usePollIncidents(mutateIncidents);
+  const { incidentChangeToken } = usePollIncidents(mutateIncidents);
 
   const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
     null
   );
 
+  const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(null);
+  const [filterRevalidationToken, setFilterRevalidationToken] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    setFilterRevalidationToken(incidentChangeToken);
+  }, [incidentChangeToken])
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
@@ -104,17 +104,86 @@ export function IncidentList({
     setIsFormOpen(false);
   };
 
+  const renderFacetOptionIcon = useCallback(
+    (facetName: string, facetOptionName: string) => {
+      facetName = facetName.toLowerCase();
+
+      if (facetName === "source") {
+        if (facetOptionName === "None") {
+          return;
+        }
+
+        return (
+          <Image
+            className="inline-block"
+            alt={facetOptionName}
+            height={16}
+            width={16}
+            title={facetOptionName}
+            src={
+              facetOptionName.includes("@")
+                ? "/icons/mailgun-icon.png"
+                : `/icons/${facetOptionName}-icon.png`
+            }
+          />
+        );
+      }
+      if (facetName === "severity") {
+        return <SeverityBorderIcon severity={(severityMapping[Number(facetOptionName)] || facetOptionName) as UISeverity} />;
+      }
+      if (facetName === "assignee") {
+        return <UserStatefulAvatar email={facetOptionName} size="xs" />;
+      }
+      if (facetName === "status") {
+        return (
+          <Icon
+            icon={getStatusIcon(facetOptionName)}
+            size="sm"
+            color={getStatusColor(facetOptionName)}
+            className="!p-0"
+          />
+        );
+      }
+      if (facetName === "dismissed") {
+        return (
+          <Icon
+            icon={facetOptionName === "true" ? BellSlashIcon : BellIcon}
+            size="sm"
+            className="text-gray-600 !p-0"
+          />
+        );
+      }
+
+      return undefined;
+    },
+    []
+  );
+
+  const renderFacetOptionLabel = useCallback(
+    (facetName: string, facetOptionName: string) => {
+      facetName = facetName.toLowerCase();
+      
+      switch (facetName) {
+        case "assignee":
+          if (!facetOptionName) {
+            return "Not assigned";
+          }
+          return <AssigneeLabel email={facetOptionName} />;
+        case "dismissed":
+          return facetOptionName === "true" ? "Dismissed" : "Not dismissed";
+        case "severity": {
+            const label = severityMapping[Number(facetOptionName)] || facetOptionName;
+            return <span className="capitalize">{label}</span>;
+        }
+        default:
+          return <span className="capitalize">{facetOptionName}</span>;
+      }
+    },
+    []
+  );
+
   function renderIncidents() {
-    if (incidentsError) {
-      return <IncidentListError incidentError={incidentsError} />;
-    }
-
-    if (isLoading) {
-      // TODO: only show this on the initial load
-      return <Loading />;
-    }
-
-    if (incidents && (incidents.items.length > 0 || areFiltersApplied)) {
+    if (incidents && incidents.items.length > 0) {
       return (
         <IncidentsTable
           incidents={incidents}
@@ -126,6 +195,14 @@ export function IncidentList({
       );
     }
 
+    if (filterCel && incidents?.items.length === 0) {
+      return (
+        <Card className="flex-grow ">
+          <IncidentsNotFoundPlaceholder onClearFilters={() => setClearFiltersToken(uuidV4())} />
+        </Card>
+      );
+    }
+
     // This is shown on the cold page load. FIXME
     return (
       <Card className="flex-grow">
@@ -133,6 +210,10 @@ export function IncidentList({
       </Card>
     );
   }
+
+  const uncheckedFacetOptionsByDefault: Record<string, string[]> = {
+    "Status": ["resolved", "deleted"],
+  };
 
   return (
     <div className="flex h-full w-full">
@@ -171,9 +252,33 @@ export function IncidentList({
               </Button>
             </div>
           </div>
-          {/* Filters are placed here so the table could be in loading/not-found state without affecting the controls */}
-          <IncidentTableFilters />
-          {renderIncidents()}
+          <div>
+            {
+              incidentsError ? (
+                <IncidentListError incidentError={incidentsError} />
+              ) : null
+            }
+            {
+              incidentsError ? null : (
+                <div className="flex flex-row gap-5">
+                  <FacetsPanelServerSide
+                    className="mt-14"
+                    entityName={"incidents"}
+                    clearFiltersToken={clearFiltersToken}
+                    initialFacetsData={initialFacetsData}
+                    uncheckedByDefaultOptionValues={uncheckedFacetOptionsByDefault}
+                    onCelChange={(cel) => setFilterCel(cel)}
+                    renderFacetOptionIcon={renderFacetOptionIcon}
+                    renderFacetOptionLabel={renderFacetOptionLabel}
+                    revalidationToken={filterRevalidationToken}
+                  />
+                  <div className="flex flex-col gap-5 flex-1">
+                    {renderIncidents()}
+                  </div>
+                </div>
+              )
+            }
+          </div>
         </div>
       </div>
       <Modal

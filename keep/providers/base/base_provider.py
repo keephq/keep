@@ -45,6 +45,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_COMING_SOON = False  # tb: if the provider is coming soon, we show it in the UI but don't allow it to be added
     PROVIDER_CATEGORY: list[
         Literal[
+            "AI",
             "Monitoring",
             "Incident Management",
             "Cloud Infrastructure",
@@ -721,6 +722,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             event_id=alert_data.get("event_id", str(uuid.uuid4())),
             url=alert_data.get("url", None),
             fingerprint=alert_data.get("fingerprint", None),
+            providerId=self.provider_id,
         )
         # push the alert to the provider
         url = f'{os.environ["KEEP_API_URL"]}/alerts/event'
@@ -729,7 +731,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
             "Accept": "application/json",
             "X-API-KEY": self.context_manager.api_key,
         }
-        response = requests.post(url, json=alert_model.dict(), headers=headers)
+        response = requests.post(
+            url,
+            json=alert_model.dict(),
+            headers=headers,
+            params={"provider_id": self.provider_id},
+        )
         try:
             response.raise_for_status()
             self.logger.info("Alert pushed successfully")

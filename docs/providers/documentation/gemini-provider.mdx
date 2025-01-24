@@ -1,0 +1,38 @@
+---
+title: "Gemini Provider"
+description: "The Gemini Provider allows for integrating Google's Gemini language models into Keep."
+---
+
+<Tip>
+  The Gemini Provider supports querying Gemini language models for prompt-based
+  interactions.
+</Tip>
+
+## Inputs
+
+The Gemini Provider supports the following inputs:
+
+- `prompt`: Interact with Gemini models by sending prompts and receiving responses
+- `model`: The model to be used, defaults to `gemini-pro`
+- `max_tokens`: Limit amount of tokens returned by the model, default 1024.
+- `structured_output_format`: Optional JSON format for the structured output (check examples at the GitHub).
+
+## Outputs
+
+Currently, the Gemini Provider outputs the response from the model based on the prompt provided.
+
+## Authentication Parameters
+
+To use the Gemini Provider, you'll need an API Key from Google AI Studio. The required parameter for authentication is:
+
+- **api_key** (required): Your Google AI API Key.
+
+## Connecting with the Provider
+
+To connect to Gemini, you'll need to obtain an API Key:
+
+1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey).
+2. Click on **Create API Key** or use an existing one.
+3. Copy your API key for Keep.
+
+Use the generated API key in the `authentication` section of your Gemini Provider configuration.

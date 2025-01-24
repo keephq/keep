@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.34.9"
+version = "0.34.13"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
@@ -93,6 +93,9 @@ prometheus-fastapi-instrumentator = "^7.0.0"
 slowapi = "^0.1.9"
 uvloop = "^0.21.0"
 httptools = "^0.6.4"
+anthropic = "^0.44.0"
+google-generativeai = "^0.8.4"
+js2py = "^0.74"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
 pre-commit-hooks = "^4.4.0"
