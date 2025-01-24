@@ -1,5 +1,6 @@
 from types import NoneType
 from typing import List
+from keep.api.core.cel_to_sql.ast_nodes import ConstantNode
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 
@@ -26,16 +27,25 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         return f"CAST({exp} as {to_type_str})"
 
     def _visit_contains_method_calling(
-        self, property_path: str, method_args: List[str]
+        self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
-        return f'{property_path} LIKE '%{method_args[0]}%''
+        if len(method_args) != 1:
+            raise ValueError(f'{property_path}.contains accepts 1 argument but got {len(method_args)}')
+
+        return f'{property_path} LIKE '%{method_args[0].value}%''
 
     def _visit_starts_with_method_calling(
-        self, property_path: str, method_args: List[str]
+        self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
-        return f"{property_path} LIKE '{method_args[0]}%'"
+        if len(method_args) != 1:
+            raise ValueError(f'{property_path}.startsWith accepts 1 argument but got {len(method_args)}')
+
+        return f"{property_path} LIKE '{method_args[0].value}%'"
 
     def _visit_ends_with_method_calling(
-        self, property_path: str, method_args: List[str]
+        self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
-        return f"{property_path} LIKE '%{method_args[0]}'"
+        if len(method_args) != 1:
+            raise ValueError(f'{property_path}.endsWith accepts 1 argument but got {len(method_args)}')
+
+        return f"{property_path} LIKE '%{method_args[0].value}'"
