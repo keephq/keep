@@ -88,6 +88,8 @@ psycopg-binary = "^3.2.3"
 psycopg = "^3.2.3"
 prometheus-client = "^0.21.1"
 psycopg2-binary = "^2.9.10"
+pysnmp = "7.1.16"
+pysmi = "1.5.9"
 
 prometheus-fastapi-instrumentator = "^7.0.0"
 slowapi = "^0.1.9"
@@ -179,3 +181,7 @@ env = "GH_TOKEN"
 [tool.semantic_release.publish]
 dist_glob_patterns = ["dist/*"]
 upload_to_vcs_release = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
