@@ -79,13 +79,7 @@ services:
       - NEXTAUTH_SECRET=secret
       - NEXTAUTH_URL=http://localhost:3001
       - NEXT_PUBLIC_API_URL=http://localhost:8081
-      - POSTHOG_KEY=phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
-      - POSTHOG_HOST=https://ingest.keephq.dev
-      - NEXT_PUBLIC_SENTRY_DSN=https://0d4d59e3105ffe8afa27dcb95a222009@o4505515398922240.ingest.us.sentry.io/4508258058764288
-      - PUSHER_HOST=localhost
-      - PUSHER_PORT=6001
-      - PUSHER_APP_KEY=keepappkey
-      - NEXT_PUBLIC_KEEP_VERSION=0.2.9
+      - POSTHOG_DISABLED=true
       - AUTH_TYPE=DB
       - API_URL=http://keep-backend-db-auth:8080
       - POSTHOG_DISABLED=true
@@ -139,7 +133,7 @@ services:
       - "9090:9090"
 
   grafana:
-    image: grafana/grafana-enterprise:10.4.0
+    image: grafana/grafana-enterprise:11.4.0
     user: "472" # Grafana's default user ID
     ports:
       - "3002:3000"
