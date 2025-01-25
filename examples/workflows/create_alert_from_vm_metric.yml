@@ -15,15 +15,15 @@ workflow:
 
   actions:
     - name: create-alert
-      # only create an alert if the CPU usage is greater than 0.005
-      if: "{{ steps.victoriametrics-step.results.data.result.0.value.1 }} > 0.001 "
       provider:
         type: keep
+        # (optional) pending time for the alert
+        for: 1m
         # create an alert with the following details
         with:
           name: "High CPU Usage"
           description: "CPU usage is high on the VM (created from VM metric)"
-          severity: '{{ steps.victoriametrics-step.results.data.result.0.value.1 }} > 0.9 ? "critical" : {{ steps.victoriametrics-step.results.data.result.0.value.1 }} > 0.7 ? "warning" : "info"'
+          severity: '{{ value.1 }} > 0.9 ? "critical" : {{ value.1 }} > 0.7 ? "warning" : "info"'
           labels:
             environment: production
             app: myapp

@@ -74,6 +74,7 @@ class ContextManager:
         #     and we want to use it in iohandler, we need to import it before the eval
         self.dependencies = set()
         self.workflow_execution_id = None
+        self.workflow_id = None
         self._api_key = None
         self.__loggers = {}
 
@@ -100,8 +101,9 @@ class ContextManager:
             session.close()
         return self._api_key
 
-    def set_execution_context(self, workflow_execution_id):
+    def set_execution_context(self, workflow_id, workflow_execution_id):
         self.workflow_execution_id = workflow_execution_id
+        self.workflow_id = workflow_id
         self.logger_adapter.workflow_execution_id = workflow_execution_id
         for logger in self.__loggers.values():
             logger.workflow_execution_id = workflow_execution_id

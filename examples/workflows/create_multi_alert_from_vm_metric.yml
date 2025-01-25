@@ -1,0 +1,45 @@
+workflow:
+  id: query-victoriametrics-multi
+  name: victoriametrics-multi-alert-example
+  description: victoriametrics
+  triggers:
+    - type: manual
+  steps:
+    - name: victoriametrics-step
+      provider:
+        config: "{{ providers.vm }}"
+        type: victoriametrics
+        with:
+          # "multil alerts"
+          # returns the sum of the CPU usage for each job
+          # this will return
+          # [{'metric': {'job': 'victoriametrics'}, 'value': [1737808021, '0.022633333333333307']}]
+          # [{'metric': {'job': 'vmagent'}, 'value': [1737808021, '0.009299999999999998']}]
+          # ...
+          query: sum(rate(process_cpu_seconds_total)) by (job)
+          queryType: query
+
+  actions:
+    - name: create-alert
+      provider:
+        type: keep
+        # create an alert with the following details
+        with:
+          # special alert attributes
+          if: "{{ value.1 }} > 0.001 "
+          for: 1m
+          fingerprint_fields:
+            - job
+          # alert attributes
+          alert:
+            name: "High CPU Usage"
+            description: "CPU usage is high on the VM (created from VM metric)"
+            severity: '{{ value.1 }} > 0.9 ? "critical" : {{ value.1 }} > 0.7 ? "warning" : "info"'
+            labels:
+              # "job" is mandatory for the fingerprint
+              job: "{{ metric.job }}"
+              environment: production
+              app: myapp
+              service: api
+              team: devops
+              owner: alice
