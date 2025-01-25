@@ -1288,24 +1288,6 @@ trio = ["trio (>=0.23)"]
 wmi = ["wmi (>=1.5.1)"]
 
 [[package]]
-name = "ecdsa"
-version = "0.19.0"
-description = "ECDSA cryptographic signature library (pure python)"
-optional = false
-python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.6"
-files = [
-    {file = "ecdsa-0.19.0-py2.py3-none-any.whl", hash = "sha256:2cea9b88407fdac7bbeca0833b189e4c9c53f2ef1e1eaa29f6224dbc809b707a"},
-    {file = "ecdsa-0.19.0.tar.gz", hash = "sha256:60eaad1199659900dd0af521ed462b793bbdf867432b3948e87416ae4caf6bf8"},
-]
-
-[package.dependencies]
-six = ">=1.9.0"
-
-[package.extras]
-gmpy = ["gmpy"]
-gmpy2 = ["gmpy2"]
-
-[[package]]
 name = "elastic-transport"
 version = "8.15.1"
 description = "Transport classes and utilities shared among Python Elastic client libraries"
@@ -3007,7 +2989,7 @@ name = "ndg-httpsclient"
 version = "0.5.1"
 description = "Provides enhanced HTTPS support for httplib and urllib2 using PyOpenSSL"
 optional = false
-python-versions = ">=2.7,<3.0.0 || >=3.4.0"
+python-versions = ">=2.7,<3.0.dev0 || >=3.4.dev0"
 files = [
     {file = "ndg_httpsclient-0.5.1-py2-none-any.whl", hash = "sha256:d2c7225f6a1c6cf698af4ebc962da70178a99bcde24ee6d1961c4f3338130d57"},
     {file = "ndg_httpsclient-0.5.1-py3-none-any.whl", hash = "sha256:dd174c11d971b6244a891f7be2b32ca9853d3797a72edb34fa5d7b07d8fff7d4"},
@@ -4478,27 +4460,6 @@ files = [
 ]
 
 [[package]]
-name = "python-jose"
-version = "3.3.0"
-description = "JOSE implementation in Python"
-optional = false
-python-versions = "*"
-files = [
-    {file = "python-jose-3.3.0.tar.gz", hash = "sha256:55779b5e6ad599c6336191246e95eb2293a9ddebd555f796a65f838f07e5d78a"},
-    {file = "python_jose-3.3.0-py2.py3-none-any.whl", hash = "sha256:9b1376b023f8b298536eedd47ae1089bcdb848f1535ab30555cd92002d78923a"},
-]
-
-[package.dependencies]
-ecdsa = "!=0.15"
-pyasn1 = "*"
-rsa = "*"
-
-[package.extras]
-cryptography = ["cryptography (>=3.4.0)"]
-pycrypto = ["pyasn1", "pycrypto (>=2.6.0,<2.7.0)"]
-pycryptodome = ["pyasn1", "pycryptodome (>=3.3.1,<4.0.0)"]
-
-[[package]]
 name = "python-json-logger"
 version = "2.0.7"
 description = "A python library adding a json log formatter"
@@ -5808,4 +5769,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "4e964a1857ac02dd12d32302c69392c614348a9dd269004deedbf9a0e5d108f9"
+content-hash = "198a2966e0e24eb5b78aa2ca3e5acf29ddaa1ffda1ef219ebce4f856253b5d3a"
