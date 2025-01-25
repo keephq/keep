@@ -15,22 +15,25 @@ workflow:
 
   actions:
     - name: create-alert
-      alias:
-        # assign the value of the query result to the alias `cpu`
-        # so we can use it anywhere in the action
-        cpu: "{{ steps.victoriametrics-step.results.data.result.0.value.1 }}"
       # only create an alert if the CPU usage is greater than 0.005
-      if: "{{ aliases.cpu }} > 0.005 "
+      if: "{{ steps.victoriametrics-step.results.data.result.0.value.1 }} > 0.001 "
       provider:
         type: keep
         # create an alert with the following details
         with:
           name: "High CPU Usage"
           description: "CPU usage is high on the VM (created from VM metric)"
-          severity: '{{ aliases.cpu }} > 0.9 ? "critical" : {{ aliases.cpu }} > 0.7 ? "warning" : "info"'
+          severity: '{{ steps.victoriametrics-step.results.data.result.0.value.1 }} > 0.9 ? "critical" : {{ steps.victoriametrics-step.results.data.result.0.value.1 }} > 0.7 ? "warning" : "info"'
           labels:
             environment: production
             app: myapp
             service: api
             team: devops
             owner: alice
+          # optional: customize the fingerprint based on these fields
+          fingerprint_fields:
+            - environment
+            - app
+            - service
+            - team
+            - owner
