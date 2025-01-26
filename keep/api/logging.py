@@ -198,6 +198,9 @@ LOG_FORMAT = os.environ.get("LOG_FORMAT", LOG_FORMAT_OPEN_TELEMETRY)
 
 class DevTerminalFormatter(logging.Formatter):
     def format(self, record):
+        if not hasattr(record, "otelTraceID"):
+            record.otelTraceID = "-"  # or any default value you prefer
+
         message = super().format(record)
         extra_info = ""
 
