@@ -17,7 +17,7 @@ class OpsgenieProviderAuthConfig:
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Ops genie api key",
+            "description": "OpsGenie api key",
             "hint": "https://support.atlassian.com/opsgenie/docs/create-a-default-api-integration/",
             "sensitive": True,
         },
@@ -26,7 +26,7 @@ class OpsgenieProviderAuthConfig:
     integration_name: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Ops genie integration name",
+            "description": "OpsGenie integration name",
             "hint": "https://support.atlassian.com/opsgenie/docs/create-a-default-api-integration/",
         },
     )
