@@ -339,12 +339,35 @@ def test_stateless_alerts_multiple_alerts_resolved(db_session, context):
 
 #### Stateful Alerts ####
 
+steps_multi_dict2 = {
+    "this": {
+        "provider_parameters": {
+            "query": "sum(rate(process_cpu_seconds_total)) by (job)",
+            "queryType": "query",
+        },
+        "results": [
+            {
+                "metric": {"job": "victoriametrics2"},
+                "value": [1737898557, "0.02330000000000003"],
+            },
+            {
+                "metric": {"job": "vmagent2"},
+                "value": [1737898557, "0.008633333333333439"],
+            },
+            {
+                "metric": {"job": "vmalert2"},
+                "value": [1737898557, "0.004199999999999969"],
+            },
+        ],
+    }
+}
+
 
 @pytest.mark.parametrize(
     "context",
     [
         {
-            "steps": steps_multi_dict,
+            "steps": steps_multi_dict2,
         }
     ],
 )
@@ -378,7 +401,7 @@ def test_stateful_alerts_firing(db_session, context):
         for alert in result:
             assert alert.status == AlertStatus.PENDING
             assert alert.labels["environment"] == "production"
-            assert alert.labels["job"] in ["victoriametrics", "vmagent", "vmalert"]
+            assert alert.labels["job"] in ["victoriametrics2", "vmagent2", "vmalert2"]
 
         # Store initial alerts
         pending_alerts = {a.labels["job"]: a for a in result}
@@ -395,14 +418,38 @@ def test_stateful_alerts_firing(db_session, context):
             assert alert.status == AlertStatus.FIRING
             assert alert.lastReceived > pending_alerts[alert.labels["job"]].lastReceived
             assert alert.labels["environment"] == "production"
-            assert alert.labels["job"] in ["victoriametrics", "vmagent", "vmalert"]
+            assert alert.labels["job"] in ["victoriametrics2", "vmagent2", "vmalert2"]
+
+
+steps_multi_dict3 = {
+    "this": {
+        "provider_parameters": {
+            "query": "sum(rate(process_cpu_seconds_total)) by (job)",
+            "queryType": "query",
+        },
+        "results": [
+            {
+                "metric": {"job": "victoriametrics3"},
+                "value": [1737898557, "0.02330000000000003"],
+            },
+            {
+                "metric": {"job": "vmagent3"},
+                "value": [1737898557, "0.008633333333333439"],
+            },
+            {
+                "metric": {"job": "vmalert3"},
+                "value": [1737898557, "0.004199999999999969"],
+            },
+        ],
+    }
+}
 
 
 @pytest.mark.parametrize(
     "context",
     [
         {
-            "steps": steps_multi_dict,
+            "steps": steps_multi_dict3,
         }
     ],
 )
@@ -436,7 +483,7 @@ def test_stateful_alerts_resolved(db_session, context):
         for alert in result:
             assert alert.status == AlertStatus.PENDING
             assert alert.labels["environment"] == "production"
-            assert alert.labels["job"] in ["victoriametrics", "vmagent", "vmalert"]
+            assert alert.labels["job"] in ["victoriametrics3", "vmagent3", "vmalert3"]
 
         # Store initial alerts
         pending_alerts = {a.labels["job"]: a for a in result}
@@ -447,15 +494,15 @@ def test_stateful_alerts_resolved(db_session, context):
         # Update values to be below threshold
         context["steps"]["this"]["results"] = [
             {
-                "metric": {"job": "victoriametrics"},
+                "metric": {"job": "victoriametrics3"},
                 "value": [1737898558, "0.0001"],
             },
             {
-                "metric": {"job": "vmagent"},
+                "metric": {"job": "vmagent3"},
                 "value": [1737898558, "0.0001"],
             },
             {
-                "metric": {"job": "vmalert"},
+                "metric": {"job": "vmalert3"},
                 "value": [1737898558, "0.0001"],
             },
         ]
@@ -468,14 +515,30 @@ def test_stateful_alerts_resolved(db_session, context):
             assert alert.status == AlertStatus.RESOLVED
             assert alert.lastReceived > pending_alerts[alert.labels["job"]].lastReceived
             assert alert.labels["environment"] == "production"
-            assert alert.labels["job"] in ["victoriametrics", "vmagent", "vmalert"]
+            assert alert.labels["job"] in ["victoriametrics3", "vmagent3", "vmalert3"]
 
 
+@pytest.mark.parametrize(
+    "context",
+    [
+        {
+            "steps": steps_multi_dict3,
+        }
+    ],
+)
 def test_stateful_alerts_multiple_alerts(db_session, context):
     # test that multiple stateful alerts are created when the condition is met
     pass
 
 
+@pytest.mark.parametrize(
+    "context",
+    [
+        {
+            "steps": steps_multi_dict,
+        }
+    ],
+)
 def test_stateful_alerts_multiple_alerts_resolved(db_session, context):
     # test that multiple stateful alerts are resolved when the condition is no longer met
     pass
