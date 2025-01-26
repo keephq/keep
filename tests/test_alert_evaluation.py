@@ -207,28 +207,6 @@ def test_stateless_alerts_resolved(
 
 
 steps_multi_dict = {
-    "victoriametrics-step": {
-        "provider_parameters": {
-            "query": "sum(rate(process_cpu_seconds_total)) by (job)",
-            "queryType": "query",
-        },
-        "results": [
-            {
-                "metric": {"job": "victoriametrics"},
-                "value": [1737898557, "0.02330000000000003"],
-            },
-            {
-                "metric": {"job": "vmagent"},
-                "value": [1737898557, "0.008633333333333439"],
-            },
-            {
-                "metric": {"job": "vmalert"},
-                "value": [1737898557, "0.004199999999999969"],
-            },
-        ],
-        "vars": {},
-        "aliases": {},
-    },
     "this": {
         "provider_parameters": {
             "query": "sum(rate(process_cpu_seconds_total)) by (job)",
@@ -248,26 +226,121 @@ steps_multi_dict = {
                 "value": [1737898557, "0.004199999999999969"],
             },
         ],
-        "vars": {},
-        "aliases": {},
-    },
-    "create-alert": {
-        "provider_parameters": {},
-        "results": [],
-        "vars": {},
-        "aliases": {},
-    },
+    }
 }
 
 
-def test_statless_alerts_multiple_alerts(provider, context):
-    # test that multiple alerts are created when the condition is met
-    pass
+@pytest.mark.parametrize(
+    "context",
+    [
+        {
+            "steps": steps_multi_dict,
+        }
+    ],
+)
+def test_statless_alerts_multiple_alerts(db_session, context):
+    """Test that multiple alerts are created when the condition is met"""
+    kwargs = {
+        "alert": {
+            "description": "CPU usage is high on {{ metric.job }}",
+            "labels": {
+                "job": "{{ metric.job }}",
+                "environment": "production",
+            },
+            "name": "High CPU Usage - {{ metric.job }}",
+            "severity": '{{ value.1 }} > 0.02 ? "critical" : {{ value.1 }} > 0.01 ? "warning" : "info"',
+        },
+        "if": "{{ value.1 }} > 0.001",
+    }
+    context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
+    context_manager.context = context
+    context_manager.get_full_context = lambda: context
+    provider = KeepProvider(context_manager, "test", {})
+    result = provider._notify(**kwargs)
+    assert len(result) == 3
+
+    # Check victoriametrics alert
+    vm_alert = next(a for a in result if a.labels["job"] == "victoriametrics")
+    assert vm_alert.status == AlertStatus.FIRING
+    assert vm_alert.name == "High CPU Usage - victoriametrics"
+    assert vm_alert.description == "CPU usage is high on victoriametrics"
+    assert vm_alert.severity == "critical"
+
+    # Check vmagent alert
+    vmagent_alert = next(a for a in result if a.labels["job"] == "vmagent")
+    assert vmagent_alert.status == AlertStatus.FIRING
+    assert vmagent_alert.name == "High CPU Usage - vmagent"
+    assert vmagent_alert.description == "CPU usage is high on vmagent"
+    assert vmagent_alert.severity == "info"
+
+    # Check vmalert alert
+    vmalert_alert = next(a for a in result if a.labels["job"] == "vmalert")
+    assert vmalert_alert.status == AlertStatus.FIRING
+    assert vmalert_alert.name == "High CPU Usage - vmalert"
+    assert vmalert_alert.description == "CPU usage is high on vmalert"
+    assert vmalert_alert.severity == "info"
 
 
-def test_stateless_alerts_multiple_alerts_resolved(provider, context):
-    # test that multiple alerts are resolved when the condition is no longer met
-    pass
+@pytest.mark.parametrize(
+    "context",
+    [
+        {
+            "steps": steps_multi_dict,
+        }
+    ],
+)
+def test_stateless_alerts_multiple_alerts_resolved(db_session, context):
+    """Test that multiple alerts are resolved when the condition is no longer met"""
+    kwargs = {
+        "alert": {
+            "description": "CPU usage is high on {{ metric.job }}",
+            "labels": {
+                "job": "{{ metric.job }}",
+                "environment": "production",
+            },
+            "name": "High CPU Usage - {{ metric.job }}",
+            "severity": '{{ value.1 }} > 0.02 ? "critical" : {{ value.1 }} > 0.01 ? "warning" : "info"',
+        },
+        "if": "{{ value.1 }} > 0.001",
+    }
+
+    # First create firing alerts
+    context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
+    context_manager.context = context
+    context_manager.get_full_context = lambda: context
+    provider = KeepProvider(context_manager, "test", {})
+    result = provider._notify(**kwargs)
+    assert len(result) == 3
+    firing_alerts = {a.labels["job"]: a for a in result}
+
+    # Update values to be below threshold
+    context["steps"]["this"]["results"] = [
+        {
+            "metric": {"job": "victoriametrics"},
+            "value": [1737898558, "0.0001"],
+        },
+        {
+            "metric": {"job": "vmagent"},
+            "value": [1737898558, "0.0001"],
+        },
+        {
+            "metric": {"job": "vmalert"},
+            "value": [1737898558, "0.0001"],
+        },
+    ]
+
+    # Check resolved alerts
+    result = provider._notify(**kwargs)
+    assert len(result) == 3
+
+    for alert in result:
+        assert alert.status == AlertStatus.RESOLVED
+        assert alert.lastReceived > firing_alerts[alert.labels["job"]].lastReceived
+        assert alert.labels["environment"] == "production"
+        assert alert.labels["job"] in ["victoriametrics", "vmagent", "vmalert"]
+
+
+#### Stateful Alerts ####
 
 
 def test_stateful_alerts_firing(provider, context):

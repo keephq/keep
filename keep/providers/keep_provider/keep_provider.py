@@ -149,7 +149,7 @@ class KeepProvider(BaseProvider):
             alert.fingerprint = self.get_alert_fingerprint(alert, fingerprint_fields)
         # else, use labels
         else:
-            fingerprint_fields = list(labels.keys())
+            fingerprint_fields = ["labels." + label for label in list(labels.keys())]
             alert.fingerprint = self.get_alert_fingerprint(alert, fingerprint_fields)
         return alert
 
