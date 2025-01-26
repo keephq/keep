@@ -23,6 +23,7 @@ class OpsgenieProviderAuthConfig:
         },
     )
 
+    # Integration Name is only used for validating scopes
     integration_name: str = dataclasses.field(
         metadata={
             "required": True,
