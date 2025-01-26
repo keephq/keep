@@ -72,7 +72,9 @@ steps_dict = {
         ),
     ],
 )
-def test_stateless_alerts_firing(provider, context, severity, if_condition, value):
+def test_stateless_alerts_firing(
+    db_session, provider, context, severity, if_condition, value
+):
     """Test alerts without 'for' duration - should go straight to FIRING"""
     kwargs = {
         "alert": {
