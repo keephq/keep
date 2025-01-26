@@ -1,7 +1,10 @@
 id: auto-fix-mysql-table-overflow
 description: Clean heavy mysql tables after consulting with OpenAI using structured output
 triggers:
-  - type: manual
+  - type: incident
+    events:
+      - updated
+      - created
 
 steps:
   - name: ask-openai-if-this-workflow-is-applicable
