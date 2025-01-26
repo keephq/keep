@@ -1,44 +1,56 @@
 workflow:
+  # Unique identifier for this workflow
   id: query-victoriametrics-multi
+  # Display name shown in the UI
   name: victoriametrics-multi-alert-example
+  # Brief description of what this workflow does
   description: victoriametrics
   triggers:
+    # This workflow can be triggered manually from the UI
     - type: manual
   steps:
+    # Query VictoriaMetrics for CPU metrics
     - name: victoriametrics-step
       provider:
+        # Use the VictoriaMetrics provider configuration
         config: "{{ providers.vm }}"
         type: victoriametrics
         with:
-          # "multil alerts"
-          # returns the sum of the CPU usage for each job
-          # this will return
-          # [{'metric': {'job': 'victoriametrics'}, 'value': [1737808021, '0.022633333333333307']}]
-          # [{'metric': {'job': 'vmagent'}, 'value': [1737808021, '0.009299999999999998']}]
-          # ...
+          # Query that returns the sum of CPU usage for each job
+          # Example response:
+          # [
+          #   {'metric': {'job': 'victoriametrics'}, 'value': [1737808021, '0.022633333333333307']},
+          #   {'metric': {'job': 'vmagent'}, 'value': [1737808021, '0.009299999999999998']}
+          # ]
           query: sum(rate(process_cpu_seconds_total)) by (job)
           queryType: query
 
   actions:
+    # Create an alert in Keep based on the query results
     - name: create-alert
       provider:
         type: keep
-        # create an alert with the following details
         with:
-          # special alert attributes
+          # Only create alert if CPU usage is above threshold
           if: "{{ value.1 }} > 0.01 "
+          # Alert must persist for 1 minute
           for: 1m
+          # Use job label to create unique fingerprint for each alert
           fingerprint_fields:
             - labels.job
-          # alert attributes
           alert:
+            # Alert name includes the specific job
             name: "High CPU Usage on {{ metric.job }}"
             description: "CPU usage is high on the VM (created from VM metric)"
-            # tenrary expression support
+            # Set severity based on CPU usage thresholds:
+            # > 0.9 = critical
+            # > 0.7 = warning
+            # else = info
             severity: '{{ value.1 }} > 0.9 ? "critical" : {{ value.1 }} > 0.7 ? "warning" : "info"'
             labels:
-              # "job" is mandatory for the fingerprint
+              # Job label is required for alert fingerprinting
               job: "{{ metric.job }}"
+              # Additional context labels
               environment: production
               app: myapp
               service: api
