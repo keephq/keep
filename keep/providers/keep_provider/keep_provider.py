@@ -191,9 +191,11 @@ class KeepProvider(BaseProvider):
 
             elif curr_alert.status == AlertStatus.PENDING.value:
                 if not alert_still_exists:
-                    # PENDING alerts are immediately dropped when not present
-                    # Don't add to alerts_to_notify as they're just dropped
-                    continue
+                    # If PENDING alerts are not triggered, make them RESOLVED
+                    # TODO: maybe INACTIVE? but we don't have this status yet
+                    curr_alert.status = AlertStatus.RESOLVED
+                    curr_alert.lastReceived = datetime.now(timezone.utc).isoformat()
+                    alerts_to_notify.append(curr_alert)
                 else:
                     # Check if should transition to FIRING
                     if not hasattr(curr_alert, "activeAt"):
@@ -231,7 +233,7 @@ class KeepProvider(BaseProvider):
             if fingerprint not in curr_alerts_map:
                 # Brand new alert - set to PENDING
                 new_alert.status = AlertStatus.PENDING
-                new_alert.activeAt = datetime.now(timezone.utc)
+                new_alert.activeAt = datetime.now(timezone.utc).isoformat()
                 alerts_to_notify.append(new_alert)
 
         return alerts_to_notify

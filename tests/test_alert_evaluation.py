@@ -1,6 +1,9 @@
 # Tests for Keep Rule Evaluation Engine
 
+from datetime import timedelta
+
 import pytest
+from freezegun import freeze_time
 
 from keep.api.models.alert import AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -337,14 +340,135 @@ def test_stateless_alerts_multiple_alerts_resolved(db_session, context):
 #### Stateful Alerts ####
 
 
-def test_stateful_alerts_firing(provider, context):
-    # test that stateful alerts are created when the condition is met
-    pass
+@pytest.mark.parametrize(
+    "context",
+    [
+        {
+            "steps": steps_multi_dict,
+        }
+    ],
+)
+def test_stateful_alerts_firing(db_session, context):
+    """Test that multiple alerts transition from pending to firing after time condition is met"""
+    kwargs = {
+        "alert": {
+            "description": "CPU usage is high on {{ metric.job }}",
+            "labels": {
+                "job": "{{ metric.job }}",
+                "environment": "production",
+            },
+            "name": "High CPU Usage - {{ metric.job }}",
+            "severity": '{{ value.1 }} > 0.02 ? "critical" : {{ value.1 }} > 0.01 ? "warning" : "info"',
+        },
+        "if": "{{ value.1 }} > 0.001",
+        "for": "1m",
+    }
+
+    # First create pending alerts
+    context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
+    context_manager.context = context
+    context_manager.get_full_context = lambda: context
+    provider = KeepProvider(context_manager, "test", {})
+
+    # Get initial state
+    with freeze_time("2024-01-26 10:00:00") as frozen_time:
+        result = provider._notify(**kwargs)
+        assert len(result) == 3
+        # Check all alerts are pending
+        for alert in result:
+            assert alert.status == AlertStatus.PENDING
+            assert alert.labels["environment"] == "production"
+            assert alert.labels["job"] in ["victoriametrics", "vmagent", "vmalert"]
+
+        # Store initial alerts
+        pending_alerts = {a.labels["job"]: a for a in result}
+
+        # Advance time by 1 minute
+        frozen_time.tick(delta=timedelta(minutes=1))
+
+        # Check alerts transition to firing
+        result = provider._notify(**kwargs)
+        assert len(result) == 3
+
+        # Verify alerts are now active
+        for alert in result:
+            assert alert.status == AlertStatus.FIRING
+            assert alert.lastReceived > pending_alerts[alert.labels["job"]].lastReceived
+            assert alert.labels["environment"] == "production"
+            assert alert.labels["job"] in ["victoriametrics", "vmagent", "vmalert"]
 
 
-def test_stateful_alerts_resolved(provider, context):
-    # test that stateful alerts are resolved when the condition is no longer met
-    pass
+@pytest.mark.parametrize(
+    "context",
+    [
+        {
+            "steps": steps_multi_dict,
+        }
+    ],
+)
+def test_stateful_alerts_resolved(db_session, context):
+    """Test that multiple alerts transition from firing to resolved after time condition is met"""
+    kwargs = {
+        "alert": {
+            "description": "CPU usage is high on {{ metric.job }}",
+            "labels": {
+                "job": "{{ metric.job }}",
+                "environment": "production",
+            },
+            "name": "High CPU Usage - {{ metric.job }}",
+            "severity": '{{ value.1 }} > 0.02 ? "critical" : {{ value.1 }} > 0.01 ? "warning" : "info"',
+        },
+        "if": "{{ value.1 }} > 0.001",
+        "for": "1m",
+    }
+
+    # First create pending alerts
+    context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
+    context_manager.context = context
+    context_manager.get_full_context = lambda: context
+    provider = KeepProvider(context_manager, "test", {})
+
+    # Get initial state
+    with freeze_time("2024-01-26 10:00:00") as frozen_time:
+        result = provider._notify(**kwargs)
+        assert len(result) == 3
+        # Check all alerts are pending
+        for alert in result:
+            assert alert.status == AlertStatus.PENDING
+            assert alert.labels["environment"] == "production"
+            assert alert.labels["job"] in ["victoriametrics", "vmagent", "vmalert"]
+
+        # Store initial alerts
+        pending_alerts = {a.labels["job"]: a for a in result}
+
+        # Advance time by 1 minute
+        frozen_time.tick(delta=timedelta(minutes=1))
+
+        # Update values to be below threshold
+        context["steps"]["this"]["results"] = [
+            {
+                "metric": {"job": "victoriametrics"},
+                "value": [1737898558, "0.0001"],
+            },
+            {
+                "metric": {"job": "vmagent"},
+                "value": [1737898558, "0.0001"],
+            },
+            {
+                "metric": {"job": "vmalert"},
+                "value": [1737898558, "0.0001"],
+            },
+        ]
+        # Check alerts transition to firing
+        result = provider._notify(**kwargs)
+        assert len(result) == 3
+
+        # Verify alerts are now active
+        for alert in result:
+            assert alert.status == AlertStatus.RESOLVED
+            assert alert.lastReceived > pending_alerts[alert.labels["job"]].lastReceived
+            assert alert.labels["environment"] == "production"
+            assert alert.labels["job"] in ["victoriametrics", "vmagent", "vmalert"]
 
 
 def test_stateful_alerts_multiple_alerts(provider, context):
