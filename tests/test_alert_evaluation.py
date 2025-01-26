@@ -471,11 +471,11 @@ def test_stateful_alerts_resolved(db_session, context):
             assert alert.labels["job"] in ["victoriametrics", "vmagent", "vmalert"]
 
 
-def test_stateful_alerts_multiple_alerts(provider, context):
+def test_stateful_alerts_multiple_alerts(db_session, context):
     # test that multiple stateful alerts are created when the condition is met
     pass
 
 
-def test_stateful_alerts_multiple_alerts_resolved(provider, context):
+def test_stateful_alerts_multiple_alerts_resolved(db_session, context):
     # test that multiple stateful alerts are resolved when the condition is no longer met
     pass
