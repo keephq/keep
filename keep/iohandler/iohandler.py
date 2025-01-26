@@ -37,7 +37,7 @@ class IOHandler:
         ):
             self.shorten_urls = True
 
-    def render(self, template, safe=False, default=""):
+    def render(self, template, safe=False, default="", additional_context=None):
         # rendering is only support for strings
         if not isinstance(template, str):
             return template
@@ -51,7 +51,7 @@ class IOHandler:
             raise Exception(
                 f"Invalid template - number of ( and ) does not match {template}"
             )
-        val = self.parse(template, safe, default)
+        val = self.parse(template, safe, default, additional_context)
         return val
 
     def quote(self, template):
@@ -135,7 +135,7 @@ class IOHandler:
         else:
             return token
 
-    def parse(self, string, safe=False, default=""):
+    def parse(self, string, safe=False, default="", additional_context=None):
         """Use AST module to parse 'call stack'-like string and return the result
 
         Example -
@@ -160,18 +160,12 @@ class IOHandler:
 
         # first render everything using chevron
         # inject the context
-        string = self._render(string, safe, default)
+        string = self._render(string, safe, default, additional_context)
 
-        # Now, extract the token if exists -
+        # Now, extract the token if exists -תכ
         parsed_string = copy.copy(string)
 
-        if string.startswith("raw_render_without_execution(") and string.endswith(")"):
-            tokens = []
-            string = string.replace("raw_render_without_execution(", "", 1)
-            string = string[::-1].replace(")", "", 1)[::-1]  # Remove the last ')'
-            parsed_string = copy.copy(string)
-        else:
-            tokens = self.extract_keep_functions(parsed_string)
+        tokens = self.extract_keep_functions(parsed_string)
 
         if len(tokens) == 0:
             return parsed_string
@@ -399,7 +393,7 @@ class IOHandler:
                 tree = ast.parse(token.encode("unicode_escape"))
         return _parse(self, tree)
 
-    def _render(self, key: str, safe=False, default=""):
+    def _render(self, key: str, safe=False, default="", additional_context=None):
         if "{{^" in key or "{{ ^" in key:
             self.logger.debug(
                 "Safe render is not supported when there are inverted sections."
@@ -413,6 +407,10 @@ class IOHandler:
             const_rendering = True
 
         context = self.context_manager.get_full_context()
+
+        if additional_context:
+            context.update(additional_context)
+
         # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
         original_stderr = sys.stderr
         sys.stderr = io.StringIO()
@@ -463,7 +461,7 @@ class IOHandler:
             i += 1
         return "".join(result)
 
-    def render_context(self, context_to_render: dict):
+    def render_context(self, context_to_render: dict, additional_context: dict = None):
         """
         Iterates the provider context and renders it using the workflow context.
         """
@@ -472,20 +470,29 @@ class IOHandler:
         for key, value in context_to_render.items():
             if isinstance(value, str):
                 context_to_render[key] = self._render_template_with_context(
-                    value, safe=True
+                    value, safe=True, additional_context=additional_context
                 )
             elif isinstance(value, list):
-                context_to_render[key] = self._render_list_context(value)
+                context_to_render[key] = self._render_list_context(
+                    value, additional_context=additional_context
+                )
             elif isinstance(value, dict):
-                context_to_render[key] = self.render_context(value)
+                context_to_render[key] = self.render_context(
+                    value, additional_context=additional_context
+                )
             elif isinstance(value, StepProviderParameter):
                 safe = value.safe and value.default is not None
                 context_to_render[key] = self._render_template_with_context(
-                    value.key, safe=safe, default=value.default
+                    value.key,
+                    safe=safe,
+                    default=value.default,
+                    additional_context=additional_context,
                 )
         return context_to_render
 
-    def _render_list_context(self, context_to_render: list):
+    def _render_list_context(
+        self, context_to_render: list, additional_context: dict = None
+    ):
         """
         Iterates the provider context and renders it using the workflow context.
         """
@@ -493,16 +500,24 @@ class IOHandler:
             value = context_to_render[i]
             if isinstance(value, str):
                 context_to_render[i] = self._render_template_with_context(
-                    value, safe=True
+                    value, safe=True, additional_context=additional_context
                 )
             if isinstance(value, list):
-                context_to_render[i] = self._render_list_context(value)
+                context_to_render[i] = self._render_list_context(
+                    value, additional_context=additional_context
+                )
             if isinstance(value, dict):
-                context_to_render[i] = self.render_context(value)
+                context_to_render[i] = self.render_context(
+                    value, additional_context=additional_context
+                )
         return context_to_render
 
     def _render_template_with_context(
-        self, template: str, safe: bool = False, default: str = ""
+        self,
+        template: str,
+        safe: bool = False,
+        default: str = "",
+        additional_context: dict = None,
     ) -> str:
         """
         Renders a template with the given context.
@@ -513,7 +528,9 @@ class IOHandler:
         Returns:
             str: rendered template
         """
-        rendered_template = self.render(template, safe, default)
+        rendered_template = self.render(
+            template, safe, default, additional_context=additional_context
+        )
 
         # shorten urls if enabled
         if self.shorten_urls:

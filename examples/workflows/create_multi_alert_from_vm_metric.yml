@@ -26,14 +26,15 @@ workflow:
         # create an alert with the following details
         with:
           # special alert attributes
-          if: "{{ value.1 }} > 0.001 "
+          if: "{{ value.1 }} > 0.01 "
           for: 1m
           fingerprint_fields:
-            - job
+            - labels.job
           # alert attributes
           alert:
-            name: "High CPU Usage"
+            name: "High CPU Usage on {{ metric.job }}"
             description: "CPU usage is high on the VM (created from VM metric)"
+            # tenrary expression support
             severity: '{{ value.1 }} > 0.9 ? "critical" : {{ value.1 }} > 0.7 ? "warning" : "info"'
             labels:
               # "job" is mandatory for the fingerprint

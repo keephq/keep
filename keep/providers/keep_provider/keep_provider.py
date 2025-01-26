@@ -117,60 +117,41 @@ class KeepProvider(BaseProvider):
         self.logger.info("Got alerts from Keep", extra={"num_of_alerts": len(alerts)})
         return alerts
 
-    def _build_alerts(self, alerts, fingerprint_fields=[], **kwargs):
+    def _build_alert(self, alert_data, fingerprint_fields=[], **kwargs):
         """
         Build alerts from Keep.
         """
-        alert_dtos = []
-        for alert_result in alerts:
-            labels = copy.copy(kwargs.get("labels", {}))
-            labels.update(alert_result)
-            alert = AlertDto(
-                name=kwargs["name"],
-                status=kwargs.get("status"),
-                lastReceived=kwargs.get("lastReceived"),
-                environment=kwargs.get("environment", "undefined"),
-                duplicateReason=kwargs.get("duplicateReason"),
-                service=kwargs.get("service"),
-                message=kwargs.get("message"),
-                description=kwargs.get("description"),
-                severity=kwargs.get("severity"),
-                pushed=True,
-                url=kwargs.get("url"),
-                labels=labels,
-                ticket_url=kwargs.get("ticket_url"),
-                fingerprint=kwargs.get("fingerprint"),
-                annotations=kwargs.get("annotations"),
+        labels = copy.copy(kwargs.get("labels", {}))
+        alert = AlertDto(
+            name=kwargs["name"],
+            status=kwargs.get("status"),
+            lastReceived=kwargs.get("lastReceived"),
+            environment=kwargs.get("environment", "undefined"),
+            duplicateReason=kwargs.get("duplicateReason"),
+            service=kwargs.get("service"),
+            message=kwargs.get("message"),
+            description=kwargs.get("description"),
+            severity=kwargs.get("severity"),
+            pushed=True,
+            url=kwargs.get("url"),
+            labels=labels,
+            ticket_url=kwargs.get("ticket_url"),
+            fingerprint=kwargs.get("fingerprint"),
+            annotations=kwargs.get("annotations"),
+        )
+        # if fingerprint_fields are provided, calculate fingerprint
+        if fingerprint_fields:
+            # calculate fingerprint
+            self.logger.info(
+                "Calculating fingerprint for alert",
+                extra={"fingerprint_fields": fingerprint_fields},
             )
-            # if fingerprint_fields are provided, calculate fingerprint
-            if fingerprint_fields:
-                # calculate fingerprint
-                self.logger.info(
-                    "Calculating fingerprint for alert",
-                    extra={"fingerprint_fields": fingerprint_fields},
-                )
-                alert.fingerprint = self.get_alert_fingerprint(
-                    alert, fingerprint_fields
-                )
-            # else, use labels
-            else:
-                fingerprint_fields = list(labels.keys())
-                alert.fingerprint = self.get_alert_fingerprint(
-                    alert, fingerprint_fields
-                )
-            alert_dtos.append(alert)
-
-        # sanity check - if more than one alert has the same fingerprint it means something is wrong
-        # this would happen if the fingerprint fields are not unique
-        fingerprints = {}
-        for alert in alert_dtos:
-            if fingerprints.get(alert.fingerprint):
-                self.logger.warning(
-                    "Alert with the same fingerprint already exists - it means your fingerprint labels are not unique",
-                    extra={"alert": alert},
-                )
-            fingerprints[alert.fingerprint] = True
-        return alert_dtos
+            alert.fingerprint = self.get_alert_fingerprint(alert, fingerprint_fields)
+        # else, use labels
+        else:
+            fingerprint_fields = list(labels.keys())
+            alert.fingerprint = self.get_alert_fingerprint(alert, fingerprint_fields)
+        return alert
 
     def _handle_state_alerts(
         self, _for, state_alerts: list[AlertDto], keep_firing_for=timedelta(minutes=15)
@@ -187,9 +168,7 @@ class KeepProvider(BaseProvider):
         alerts_to_notify = []
         search_engine = SearchEngine(tenant_id=self.context_manager.tenant_id)
         curr_alerts = search_engine.search_alerts_by_cel(
-            cel_query=f"providerId == {self.context_manager.workflow_id}",
-            limit=1,
-            timeframe=1,
+            cel_query=f"providerId == '{self.context_manager.workflow_id}'"
         )
 
         # Create lookup by fingerprint for efficient comparison
@@ -201,20 +180,16 @@ class KeepProvider(BaseProvider):
             now = datetime.now(timezone.utc)
             alert_still_exists = fingerprint in state_alerts_map
 
-            if curr_alert.status == AlertStatus.FIRING:
+            if curr_alert.status == AlertStatus.FIRING.value:
                 if not alert_still_exists:
-                    # Check keep_firing_for logic
-                    if not hasattr(curr_alert, "keep_firing_since"):
-                        curr_alert.keep_firing_since = now
-
-                    if now - curr_alert.keep_firing_since >= keep_firing_for:
-                        curr_alert.status = AlertStatus.INACTIVE
-                        curr_alert.resolvedAt = now
-                        alerts_to_notify.append(curr_alert)
-                    # else: still within keep_firing_for window, maintain FIRING state
+                    # TODO: keep_firing_for logic
+                    # Alert no longer exists, transition to RESOLVED
+                    curr_alert.status = AlertStatus.RESOLVED
+                    curr_alert.lastReceived = datetime.now(timezone.utc).isoformat()
+                    alerts_to_notify.append(curr_alert)
                 # else: alert still exists, maintain FIRING state
 
-            elif curr_alert.status == AlertStatus.PENDING:
+            elif curr_alert.status == AlertStatus.PENDING.value:
                 if not alert_still_exists:
                     # PENDING alerts are immediately dropped when not present
                     # Don't add to alerts_to_notify as they're just dropped
@@ -225,9 +200,30 @@ class KeepProvider(BaseProvider):
                         # This shouldn't happen but handle it gracefully
                         curr_alert.activeAt = curr_alert.lastReceived
 
-                    if now - curr_alert.activeAt >= _for:
+                    if isinstance(curr_alert.activeAt, str):
+                        activeAt = datetime.fromisoformat(curr_alert.activeAt)
+                    else:
+                        activeAt = curr_alert.activeAt
+
+                    # Convert duration string to timedelta
+                    # Parse duration string like "1m", "5m", etc
+                    try:
+                        value = int(_for[:-1])
+                        unit = _for[-1]
+                    except ValueError:
+                        raise ValueError(f"Invalid duration format: {_for}")
+                    if unit == "m":
+                        duration = timedelta(minutes=value)
+                    elif unit == "h":
+                        duration = timedelta(hours=value)
+                    elif unit == "s":
+                        duration = timedelta(seconds=value)
+                    else:
+                        raise ValueError(f"Invalid duration unit: {unit}")
+
+                    if now - activeAt >= duration:
                         curr_alert.status = AlertStatus.FIRING
-                        curr_alert.lastReceived = now
+                        curr_alert.lastReceived = datetime.now(timezone.utc).isoformat()
                         alerts_to_notify.append(curr_alert)
 
         # Handle new alerts not in current state
@@ -236,6 +232,47 @@ class KeepProvider(BaseProvider):
                 # Brand new alert - set to PENDING
                 new_alert.status = AlertStatus.PENDING
                 new_alert.activeAt = datetime.now(timezone.utc)
+                alerts_to_notify.append(new_alert)
+
+        return alerts_to_notify
+
+    def _handle_stateless_alerts(
+        self, stateless_alerts: list[AlertDto]
+    ) -> list[AlertDto]:
+        """
+        Handle alerts without PENDING state - just FIRING or RESOLVED.
+        Args:
+            state_alerts: list of new alerts from current evaluation
+        Returns:
+            list of alerts that need state updates
+        """
+        alerts_to_notify = []
+        search_engine = SearchEngine(tenant_id=self.context_manager.tenant_id)
+        curr_alerts = search_engine.search_alerts_by_cel(
+            cel_query=f"providerId == '{self.context_manager.workflow_id}'"
+        )
+
+        # Create lookup by fingerprint for efficient comparison
+        curr_alerts_map = {alert.fingerprint: alert for alert in curr_alerts}
+        state_alerts_map = {alert.fingerprint: alert for alert in stateless_alerts}
+
+        # Handle existing alerts
+        for fingerprint, curr_alert in curr_alerts_map.items():
+            alert_still_exists = fingerprint in state_alerts_map
+
+            if curr_alert.status == AlertStatus.FIRING.value:
+                if not alert_still_exists:
+                    # Alert no longer exists, transition to RESOLVED
+                    curr_alert.status = AlertStatus.RESOLVED
+                    curr_alert.lastReceived = datetime.now(timezone.utc).isoformat()
+                    alerts_to_notify.append(curr_alert)
+
+        # Handle new alerts not in current state
+        for fingerprint, new_alert in state_alerts_map.items():
+            if fingerprint not in curr_alerts_map:
+                # Brand new alert - set to FIRING immediately
+                new_alert.status = AlertStatus.FIRING
+                new_alert.lastReceived = datetime.now(timezone.utc).isoformat()
                 alerts_to_notify.append(new_alert)
 
         return alerts_to_notify
@@ -258,26 +295,58 @@ class KeepProvider(BaseProvider):
         fingerprint_fields = kwargs.pop("fingerprint_fields", [])
 
         # if we need to check _if, handle the condition
+        trigger_alerts = []
         if _if:
             # if its multialert, handle each alert separately
             if isinstance(alert_results, list):
                 for alert in alert_results:
                     # render
-                    cond = self.io_handler.render(alert)
+                    _if_rendered = self.io_handler.render(
+                        _if, safe=True, additional_context=alert
+                    )
                     # evaluate
-                    if not self._evaluate_if(cond):
+                    if not self._evaluate_if(_if, _if_rendered):
                         continue
+                    trigger_alerts.append(alert)
             else:
                 pass
+        # if no _if, trigger all alerts
+        else:
+            trigger_alerts = alert_results
         # build the alert dtos
-        alert_dtos = self._build_alerts(alert_results, fingerprint_fields, **kwargs)
+        alert_dtos = []
+        # render alert data
+        for alert_results in trigger_alerts:
+            alert_data = copy.copy(kwargs.get("alert", {}))
+            # render alert data
+            rendered_alert_data = self.io_handler.render_context(
+                alert_data, additional_context=alert_results
+            )
+            # render tenrary expressions
+            rendered_alert_data = self._handle_tenrary_exressions(rendered_alert_data)
+            alert_dto = self._build_alert(
+                alert_results, fingerprint_fields, **rendered_alert_data
+            )
+            alert_dtos.append(alert_dto)
+
+        # sanity check - if more than one alert has the same fingerprint it means something is wrong
+        # this would happen if the fingerprint fields are not unique
+        fingerprints = {}
+        for alert in alert_dtos:
+            if fingerprints.get(alert.fingerprint):
+                self.logger.warning(
+                    "Alert with the same fingerprint already exists - it means your fingerprint labels are not unique",
+                    extra={"alert": alert},
+                )
+            fingerprints[alert.fingerprint] = True
+
         # if _for is provided, handle state alerts
         if _for:
             # handle alerts with state
             alerts = self._handle_state_alerts(_for, alert_dtos)
         # else, handle all alerts
         else:
-            alerts = alert_dtos
+            alerts = self._handle_stateless_alerts(alert_dtos)
 
         # handle all alerts
         self.logger.info("handling all alerts", extra={"number_of_alerts": len(alerts)})
@@ -292,6 +361,7 @@ class KeepProvider(BaseProvider):
             event=alerts,
         )
         self.logger.info("Alerts handled")
+        return alerts
 
     def _notify(self, **kwargs):
         if "workflow_to_update_yaml" in kwargs:
@@ -326,8 +396,9 @@ class KeepProvider(BaseProvider):
                 raise ProviderException(f"Failed to create workflow: {e}")
         else:
             self.logger.info("Notifying Alerts", extra={"kwargs": kwargs})
-            self._notify_alert(**kwargs)
+            alerts = self._notify_alert(**kwargs)
             self.logger.info("Alerts notified")
+            return alerts
 
     def validate_config(self):
         """
@@ -344,14 +415,26 @@ class KeepProvider(BaseProvider):
             **event,
         )
 
-    def _evaluate_if(self, if_conf, rendered_providers_parameters):
+    def _evaluate_if(self, if_conf, if_conf_rendered):
         # Evaluate the condition string
+        from asteval import Interpreter
 
-        # aeval = Interpreter()
-        rendered_providers_parameters = self._handle_tenrary_exressions(
-            rendered_providers_parameters
-        )
-        return rendered_providers_parameters
+        aeval = Interpreter()
+        evaluated_if_met = aeval(if_conf_rendered)
+        # tb: when Shahar and I debugged, conclusion was:
+        if isinstance(evaluated_if_met, str):
+            evaluated_if_met = aeval(evaluated_if_met)
+        # if the evaluation failed, raise an exception
+        if aeval.error_msg:
+            self.logger.error(
+                f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {if_conf}, Rendered: {if_conf_rendered}, Error: {aeval.error_msg}",
+                extra={
+                    "condition": if_conf,
+                    "rendered": if_conf_rendered,
+                },
+            )
+            return False
+        return evaluated_if_met
 
     def _handle_tenrary_exressions(self, rendered_providers_parameters):
         # SG: a hack to allow tenrary expressions

@@ -56,12 +56,18 @@ class Step:
     def continue_to_next_step(self):
         return self.__continue_to_next_step
 
+    def _dont_render(self):
+        # special case for Keep provider on _notify with "if" - it should render the parameters itself
+        return self.step_type == StepType.ACTION and "KeepProvider" in str(
+            self.provider.__class__
+        )
+
     def run(self):
         try:
             if self.config.get("foreach"):
                 did_action_run = self._run_foreach()
-            # special case for actions that should run only if a condition is met
-            elif self.step_type == StepType.ACTION and self.config.provider.get("if"):
+            # special case for Keep provider on _notify with "if" - it should render the parameters itself
+            elif self._dont_render():
                 did_action_run = self._run_single(dont_render=True)
             else:
                 did_action_run = self._run_single()

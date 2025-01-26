@@ -17,23 +17,15 @@ workflow:
     - name: create-alert
       provider:
         type: keep
-        # (optional) pending time for the alert
-        for: 1m
-        # create an alert with the following details
         with:
-          name: "High CPU Usage"
-          description: "CPU usage is high on the VM (created from VM metric)"
-          severity: '{{ value.1 }} > 0.9 ? "critical" : {{ value.1 }} > 0.7 ? "warning" : "info"'
-          labels:
-            environment: production
-            app: myapp
-            service: api
-            team: devops
-            owner: alice
-          # optional: customize the fingerprint based on these fields
-          fingerprint_fields:
-            - environment
-            - app
-            - service
-            - team
-            - owner
+          if: "{{ value.1 }} > 0.0040"
+          alert:
+            name: "High CPU Usage"
+            description: "[Single] CPU usage is high on the VM (created from VM metric)"
+            severity: '{{ value.1 }} > 0.9 ? "critical" : {{ value.1 }} > 0.7 ? "warning" : "info"'
+            labels:
+              environment: production
+              app: myapp
+              service: api
+              team: devops
+              owner: alice

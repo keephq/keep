@@ -74,7 +74,6 @@ class ContextManager:
         #     and we want to use it in iohandler, we need to import it before the eval
         self.dependencies = set()
         self.workflow_execution_id = None
-        self.workflow_id = None
         self._api_key = None
         self.__loggers = {}
 
