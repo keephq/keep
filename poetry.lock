@@ -256,17 +256,17 @@ files = [
 
 [[package]]
 name = "asteval"
-version = "0.9.33"
+version = "1.0.6"
 description = "Safe, minimalistic evaluator of python expression using ast module"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "asteval-0.9.33-py3-none-any.whl", hash = "sha256:aae3a0308575a545c8cecc43a6632219e6a90963a56380c74632cf54311e43bf"},
-    {file = "asteval-0.9.33.tar.gz", hash = "sha256:94981701f4d252c88aa5e821121b1aabef73a003da138fc6405169c9e675d24d"},
+    {file = "asteval-1.0.6-py3-none-any.whl", hash = "sha256:5e119ed306e39199fd99c881cea0e306b3f3807f050c9be79829fe274c6378dc"},
+    {file = "asteval-1.0.6.tar.gz", hash = "sha256:1aa8e7304b2e171a90d64dd269b648cacac4e46fe5de54ac0db24776c0c4a19f"},
 ]
 
 [package.extras]
-all = ["Sphinx", "build", "coverage", "pytest", "pytest-cov", "twine"]
+all = ["asteval[dev,doc,test]"]
 dev = ["build", "twine"]
 doc = ["Sphinx"]
 test = ["coverage", "pytest", "pytest-cov"]
@@ -5769,4 +5769,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "198a2966e0e24eb5b78aa2ca3e5acf29ddaa1ffda1ef219ebce4f856253b5d3a"
+content-hash = "8b462c307769d66b5b79e497da1acd23b97b5f112ed8924d5702e521414605b2"
