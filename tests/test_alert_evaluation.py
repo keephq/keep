@@ -6,17 +6,6 @@ from keep.api.models.alert import AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.keep_provider.keep_provider import KeepProvider
 
-
-@pytest.fixture
-def provider(context, value):
-    # setup test provider
-    context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
-    context["steps"]["this"]["results"][0]["value"] = value
-    context_manager.context = context
-    context_manager.get_full_context = lambda: context
-    return KeepProvider(context_manager, "test", {})
-
-
 steps_dict = {
     # this is the step that will be used to trigger the alert
     "this": {
@@ -72,9 +61,7 @@ steps_dict = {
         ),
     ],
 )
-def test_stateless_alerts_firing(
-    db_session, provider, context, severity, if_condition, value
-):
+def test_stateless_alerts_firing(db_session, context, severity, if_condition, value):
     """Test alerts without 'for' duration - should go straight to FIRING"""
     kwargs = {
         "alert": {
@@ -91,7 +78,12 @@ def test_stateless_alerts_firing(
         },
         "if": if_condition,
     }
-    result = provider._notify(**kwargs)
+    context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
+    context["steps"]["this"]["results"][0]["value"] = value
+    context_manager.context = context
+    context_manager.get_full_context = lambda: context
+    keep_provider = KeepProvider(context_manager, "test", {})
+    result = keep_provider._notify(**kwargs)
 
     # alert should not trigger if severity is None
     if not severity:
