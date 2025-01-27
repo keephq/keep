@@ -77,7 +77,7 @@ const NAVIGATION_OPTIONS = [
     icon: KeyIcon,
     label: "Go to API key",
     shortcut: ["a"],
-    navigate: "/settings?selectedTab=api-key",
+    navigate: "/settings?selectedTab=users&userSubTab=api-keys",
   },
 ];
 

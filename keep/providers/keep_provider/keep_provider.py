@@ -564,6 +564,13 @@ class KeepProvider(BaseProvider):
                     created_by=f"workflow id: {self.context_manager.workflow_id}",
                     workflow=workflow_to_update_yaml,
                 )
+                self.logger.info(
+                    "Workflow created successfully",
+                    extra={
+                        "tenant_id": self.context_manager.tenant_id,
+                        "workflow": workflow,
+                    },
+                )
             except Exception as e:
                 self.logger.exception(
                     "Failed to create workflow",

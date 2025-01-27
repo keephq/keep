@@ -635,6 +635,8 @@ def process_event(
 
             # In case when provider_type is not set
             if isinstance(event, dict):
+                if not event.get("name"):
+                    event["name"] = event.get("id", "unknown alert name")
                 event = [AlertDto(**event)]
                 raw_event = [raw_event]
 
