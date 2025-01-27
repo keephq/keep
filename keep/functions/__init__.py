@@ -1,6 +1,7 @@
 import copy
 import datetime
 import json
+import logging
 import re
 import urllib.parse
 from datetime import timedelta
@@ -16,8 +17,9 @@ from keep.api.core.db import get_alerts_by_fingerprint
 from keep.api.models.alert import AlertStatus
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
+logger = logging.getLogger(__name__)
+
 _len = len
-_all = all
 
 
 def all(iterable) -> bool:
@@ -129,7 +131,6 @@ def json_dumps(data: str | dict) -> str:
 
 
 def json_loads(data: str) -> dict:
-
     def parse_bad_json(bad_json):
         # Remove or replace control characters
         control_char_regex = re.compile(r"[\x00-\x1f\x7f-\x9f]")
