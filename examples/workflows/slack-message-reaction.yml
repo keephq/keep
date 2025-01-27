@@ -1,0 +1,87 @@
+id: slack-message-reaction
+description: Sends a Slack message and reacts to it when the alert is resolved
+disabled: false
+triggers:
+  - type: manual
+  - filters:
+      - key: source
+        value: gcpmonitoring
+    type: alert
+consts: {}
+name: Slack Message + Reaction
+owners: []
+services: []
+steps: []
+actions:
+  - name: slack-alert-resolved
+    if: "'{{ alert.slack_timestamp }}' and '{{ alert.status }}' == 'resolved'"
+    provider:
+      config: "{{ providers.keephq }}"
+      type: slack
+      with:
+        channel: C06PF9TCWUF
+        message: "white_check_mark"
+        thread_timestamp: "{{ alert.slack_timestamp }}"
+        notification_type: "reaction"
+  - name: get-tenant-name
+    if: "not '{{ alert.customer_name }}'"
+    provider:
+      config: "{{ providers.readonly }}"
+      type: mysql
+      with:
+        as_dict: true
+        enrich_alert:
+          - key: customer_name
+            value: results.name
+        query: select * from tenant where id = '{{ alert.tenantId }}'
+        single_row: true
+  - name: send-slack-alert
+    if: "not '{{ alert.slack_timestamp }}'"
+    provider:
+      config: "{{ providers.keephq }}"
+      type: slack
+      with:
+        enrich_alert:
+          - key: slack_timestamp
+            value: results.slack_timestamp
+        blocks:
+          - text:
+              emoji: true
+              text: Provider installation failed
+              type: plain_text
+            type: header
+          - elements:
+              - elements:
+                  - text: "Tenant ID: {{alert.tenantId}}{{^alert.tenantId}}n/a{{/alert.tenantId}}"
+                    type: text
+                type: rich_text_section
+            type: rich_text
+          - elements:
+              - elements:
+                  - text: "Tenant Name: {{alert.customer_name}}{{^alert.customer_name}}n/a{{/alert.customer_name}}"
+                    type: text
+                type: rich_text_section
+            type: rich_text
+          - elements:
+              - elements:
+                  - text: "Scopes: {{alert.validatedScopes}}{{^alert.validatedScopes}}n/a{{/alert.validatedScopes}}"
+                    type: text
+                type: rich_text_section
+            type: rich_text
+          - elements:
+              - elements:
+                  - text: "Description: {{alert.content}}"
+                    type: text
+                type: rich_text_section
+            type: rich_text
+          - elements:
+              - action_id: actionId-0
+                text:
+                  emoji: true
+                  text: ":gcp: Original Alert"
+                  type: plain_text
+                type: button
+                url: "{{alert.url}}"
+            type: actions
+        channel: C06PF9TCWUF
+        message: ""
