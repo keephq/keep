@@ -111,6 +111,12 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/checkly-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/checkly-icon.png" alt="Checkly"/><br/>
+            Checkly
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/cloudwatch-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/cloudwatch-icon.png" alt="CloudWatch"/><br/>
             CloudWatch

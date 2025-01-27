@@ -1,0 +1,124 @@
+---
+title: 'Checkly'
+sidebarTitle: 'Checkly Provider'
+description: 'StatusCake allows you to receive alerts from Checkly using API endpoints as well as webhooks'
+---
+
+## Authentication Parameters
+
+The Checkly provider offers two ways to authenticate:
+
+- `Checkly API Key` - This is the API key created in the User Settings of your Checkly account and is used to authenticate requests to the Checkly API.
+- `Checkly Account ID` - This is the account ID of your Checkly account.
+
+## Connecting Checkly to Keep
+
+1. Open Checkly dashboard and click on your profile picture in the top right corner.
+
+2. Click on `User Settings`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/checkly-provider_1.png" />
+</Frame>
+
+3. Open the `API Keys` tab and click on `Create API Key` to generate a new API key.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/checkly-provider_2.png" />
+</Frame>
+
+4. Copy the API key.
+
+5. Open `General` tab under Account Settings and copy the `Account ID`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/checkly-provider_3.png" />
+</Frame>
+
+6. Go to Keep, add Checkly as a provider and enter the API key and Account ID in the respective fields and click on `Connect`.
+
+## Webhooks Integration
+
+1. Open Checkly dashboard and open `Alerts` tab in the left sidebar.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/checkly-provider_4.png" />
+</Frame>
+
+2. Click on `Add more channels`
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/checkly-provider_5.png" />
+</Frame>
+
+3. Select `Webhook` from the list of available channels.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/checkly-provider_6.png" />
+</Frame>
+
+4. Enter a name for the webhook, select the method as `POST`
+
+5. Enter [https://api.keephq.dev/alerts/event/checkly](https://api.keephq.dev/alerts/event/checkly) as the URL.
+
+6. Copy the below snippet and paste in the `Body` of Webhook. Refer the screenshot below for reference.
+
+```json
+{
+  "event": "{{ALERT_TITLE}}",
+  "alert_type": "{{ALERT_TYPE}}",
+  "check_name": "{{CHECK_NAME}}",
+  "group_name": "{{GROUP_NAME}}",
+  "check_id": "{{CHECK_ID}}",
+  "check_type": "{{CHECK_TYPE}}",
+  "check_result_id": "{{CHECK_RESULT_ID}}",
+  "check_error_message": "{{CHECK_ERROR_MESSAGE}}",
+  "response_time": "{{RESPONSE_TIME}}",
+  "api_check_response_status_code": "{{API_CHECK_RESPONSE_STATUS_CODE}}",
+  "api_check_response_status_text": "{{API_CHECK_RESPONSE_STATUS_TEXT}}",
+  "run_location": "{{RUN_LOCATION}}",
+  "ssl_days_remaining": "{{SSL_DAYS_REMAINING}}",
+  "ssl_check_domain": "{{SSL_CHECK_DOMAIN}}",
+  "started_at": "{{STARTED_AT}}",
+  "tags": "{{TAGS}}",
+  "link": "{{RESULT_LINK}}",
+  "region": "{{REGION}}",
+  "uuid": "{{$UUID}}"
+}
+```
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/checkly-provider_7.png" />
+</Frame>
+
+8. Go to Headers tab and add a new header with key as `X-API-KEY` and create a new API key in Keep and paste it as the value and save the webhook.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/checkly-provider_8.png" />
+</Frame>
+
+9. Follow the below steps to create a new API key in Keep.
+
+7. Go to Keep dashboard and click on the profile icon in the botton left corner and click `Settings`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/checkly-provider_9.png" />
+</Frame>
+
+8. Select `Users and Access` tab and then select `API Keys` tab and create a new API key.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/checkly-provider_10.png" />
+</Frame>
+
+9. Give name and select the role as `webhook` and click on `Create API Key`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/checkly-provider_11.png" />
+</Frame>
+
+10. Use the generated API key in the `X-API-KEY` header of the webhook created in Checkly.
+
+## Useful Links
+
+- [Checkly Website](https://www.checklyhq.com/)

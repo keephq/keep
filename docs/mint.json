@@ -137,6 +137,7 @@
             "providers/documentation/bigquery-provider",
             "providers/documentation/centreon-provider",
             "providers/documentation/checkmk-provider",
+            "providers/documentation/checkly-provider",
             "providers/documentation/cilium-provider",
             "providers/documentation/clickhouse-provider",
             "providers/documentation/cloudwatch-provider",
