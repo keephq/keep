@@ -17,4 +17,4 @@ actions:
     provider:
       type: keep
       with:
-        workflow_to_update_yaml: "{{ foreach.value }}"
+        workflow_to_update_yaml: "raw_render_without_execution({{ foreach.value }})"
