@@ -56,10 +56,19 @@ class Step:
     def continue_to_next_step(self):
         return self.__continue_to_next_step
 
+    def _dont_render(self):
+        # special case for Keep provider on _notify with "if" - it should render the parameters itself
+        return self.step_type == StepType.ACTION and "KeepProvider" in str(
+            self.provider.__class__
+        )
+
     def run(self):
         try:
             if self.config.get("foreach"):
                 did_action_run = self._run_foreach()
+            # special case for Keep provider on _notify with "if" - it should render the parameters itself
+            elif self._dont_render():
+                did_action_run = self._run_single(dont_render=True)
             else:
                 did_action_run = self._run_single()
             return did_action_run
@@ -136,7 +145,7 @@ class Step:
                 any_action_run = True
         return any_action_run
 
-    def _run_single(self):
+    def _run_single(self, dont_render=False):
         # Initialize all conditions
         conditions = []
 
@@ -307,12 +316,14 @@ class Step:
 
         # Last, run the action
         try:
-            rendered_providers_parameters = self.io_handler.render_context(
-                self.provider_parameters
-            )
-            rendered_providers_parameters = self._handle_tenrary_exressions(
-                rendered_providers_parameters
-            )
+            if not dont_render:
+                rendered_providers_parameters = self.io_handler.render_context(
+                    self.provider_parameters
+                )
+            # special case for Keep provider (alert evaluation engine)
+            # which needs to evaluate the provider parameters by itself
+            else:
+                rendered_providers_parameters = self.provider_parameters
 
             for curr_retry_count in range(self.__retry_count + 1):
                 self.logger.info(
@@ -359,23 +370,6 @@ class Step:
             raise StepError(e)
 
         return True
-
-    def _handle_tenrary_exressions(self, rendered_providers_parameters):
-        # SG: a hack to allow tenrary expressions
-        #     e.g.'0.012899999999999995 > 0.9 ? "critical" : 0.012899999999999995 > 0.7 ? "warning" : "info"''
-        #
-        #     this is a hack and should be improved
-        for key, value in rendered_providers_parameters.items():
-            try:
-                split_value = value.split(" ")
-                if split_value[1] == ">" and split_value[3] == "?":
-                    import js2py
-
-                    rendered_providers_parameters[key] = js2py.eval_js(value)
-            # we don't care, it's not a tenrary expression
-            except Exception:
-                pass
-        return rendered_providers_parameters
 
 
 class StepError(Exception):

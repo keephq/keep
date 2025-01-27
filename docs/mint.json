@@ -104,6 +104,19 @@
       ]
     },
     {
+      "group": "Alert Evaluation Engine",
+      "pages": [
+        "alertevaluation/overview",
+        {
+          "group": "Examples",
+          "pages": [
+            "alertevaluation/examples/victoriametricssingle",
+            "alertevaluation/examples/victoriametricsmulti"
+          ]
+        }
+      ]
+    },
+    {
       "group": "Providers",
       "pages": [
         "providers/overview",
