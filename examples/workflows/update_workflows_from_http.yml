@@ -16,4 +16,4 @@ actions:
     provider:
       type: keep
       with:
-        workflow_to_update_yaml: "raw_render_without_execution({{ steps.get-workflow.results }})"
+        workflow_to_update_yaml: "raw_render_without_execution({{ steps.get-workflow.results.body }})"
