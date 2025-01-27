@@ -463,7 +463,7 @@ def get_random_workflow_templates(
                 f"Neither {default_directory} nor {fallback_directory} exist"
             )
     workflows = workflowstore.get_random_workflow_templates(
-        tenant_id=tenant_id, workflows_dir=default_directory, limit=6
+        tenant_id=tenant_id, workflows_dir=default_directory, limit=8
     )
     return workflows
 
