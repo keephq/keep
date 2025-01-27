@@ -47,7 +47,7 @@ actions:
         blocks:
           - text:
               emoji: true
-              text: Provider installation failed
+              text: "{{alert.gcp.policy_name}}"
               type: plain_text
             type: header
           - elements:
