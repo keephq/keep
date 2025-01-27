@@ -8,7 +8,7 @@ import {
   TabPanel,
   TabPanels,
 } from "@tremor/react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowUpRightIcon,
   CodeBracketIcon,
@@ -22,7 +22,9 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "utils/hooks/useConfig";
 import { AiOutlineSwap } from "react-icons/ai";
 import { ErrorComponent, TabNavigationLink, YAMLCodeblock } from "@/shared/ui";
+import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import Skeleton from "react-loading-skeleton";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export default function WorkflowDetailPage({
   params,
@@ -34,6 +36,20 @@ export default function WorkflowDetailPage({
   const api = useApi();
   const { data: configData } = useConfig();
   const [tabIndex, setTabIndex] = useState(0);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Set initial tab based on URL query param
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "yaml") {
+      setTabIndex(2);
+    } else if (tab === "builder") {
+      setTabIndex(1);
+    } else {
+      setTabIndex(0);
+    }
+  }, [searchParams]);
 
   const {
     data: workflow,
@@ -53,9 +69,20 @@ export default function WorkflowDetailPage({
     return <ErrorComponent error={error} />;
   }
 
-  // TODO: change url to /workflows/[workflow_id]/[tab] or use the file-based routing
   const handleTabChange = (index: number) => {
     setTabIndex(index);
+    const basePath = `/workflows/${params.workflow_id}`;
+    switch (index) {
+      case 0:
+        router.push(basePath);
+        break;
+      case 1:
+        router.push(`${basePath}?tab=builder`);
+        break;
+      case 2:
+        router.push(`${basePath}?tab=yaml`);
+        break;
+    }
   };
 
   return (
@@ -100,8 +127,8 @@ export default function WorkflowDetailPage({
             {!workflow ? (
               <Skeleton className="w-full h-full" />
             ) : (
-              <Card>
-                <YAMLCodeblock
+              <Card className="h-[calc(100vh-200px)]">
+                <MonacoYAMLEditor
                   yamlString={workflow.workflow_raw!}
                   filename={workflow.id ?? "workflow"}
                 />
