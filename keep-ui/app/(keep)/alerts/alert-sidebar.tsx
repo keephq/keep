@@ -131,7 +131,7 @@ const AlertSidebar = ({
                   </p>
                   <p>
                     <FieldHeader>Description</FieldHeader>
-                    {alert.description}
+                    <pre>{alert.description}</pre>
                   </p>
                   <p>
                     <FieldHeader className="flex items-center gap-1">
