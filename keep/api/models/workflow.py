@@ -42,6 +42,7 @@ class WorkflowDTO(BaseModel):
     last_execution_started: datetime = None
     provisioned: bool = False
     provisioned_file: str = None
+    alertRule: bool = False
 
     @property
     def workflow_raw_id(self):
