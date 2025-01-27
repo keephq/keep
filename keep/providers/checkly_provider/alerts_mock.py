@@ -1,0 +1,21 @@
+ALERTS = {
+  "event": "API Check #1 has recovered",
+  "alert_type": "ALERT_RECOVERY",
+  "check_name": "API Check #1",
+  "group_name": "",
+  "check_id": "927a2982-1007-4b81-b383-eae8bf717e61",
+  "check_type": "API",
+  "check_result_id": "a34867c0-9239-421f-92f2-4408bbd05417",
+  "check_error_message": "",
+  "response_time": "258",
+  "api_check_response_status_code": "200",
+  "api_check_response_status_text": "OK",
+  "run_location": "Singapore",
+  "ssl_days_remaining": "",
+  "ssl_check_domain": "",
+  "started_at": "2025-01-26T11:19:40.544Z",
+  "tags": "",
+  "link": "https://app.checklyhq.com/checks/927a2982-1007-4b81-b383-eae8bf717e61/check-sessions/478cacb1-c40f-4675-89d7-a4e3ecaafb7b",
+  "region": "",
+  "uuid": "4583208e-0bca-48c6-8dc8-d14faf6102b3"
+}
