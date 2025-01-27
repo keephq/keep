@@ -44,7 +44,7 @@ export function IncidentLayoutClient({
               />
             </div>
           }
-          initialLeftWidth={60}
+          initialLeftWidth={65}
         />
       ) : (
         <div className="flex-1 min-w-0">{children}</div>
