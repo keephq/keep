@@ -222,7 +222,7 @@ To send alerts from Checkly to Keep, Use the following webhook url to configure 
         return data
     
     def __get_url(self, query_params: dict = {}):
-        url = f"https://api.checklyhq.com/v1/check-alerts"
+        url = "https://api.checklyhq.com/v1/check-alerts"
         if query_params:
           url += "?"
           for key, value in query_params.items():
