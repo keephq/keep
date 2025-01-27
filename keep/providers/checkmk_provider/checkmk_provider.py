@@ -95,7 +95,7 @@ class CheckmkProvider(BaseProvider):
             host=_check_values("host"),
             alias=_check_values("alias"),
             address=_check_values("address"),
-            service_name=_check_values("service"),
+            service=_check_values("service"),
             source=["checkmk"],
             current_event=_check_values("event"),
             output=_check_values("output"),
