@@ -594,12 +594,14 @@ def process_event(
                     event_list = []
                     for event_item in event:
                         if not isinstance(event_item, AlertDto):
-                            event_list.append(provider_class.format_alert(
-                                tenant_id=tenant_id,
-                                event=event_item,
-                                provider_id=provider_id,
-                                provider_type=provider_type,
-                            ))
+                            event_list.append(
+                                provider_class.format_alert(
+                                    tenant_id=tenant_id,
+                                    event=event_item,
+                                    provider_id=provider_id,
+                                    provider_type=provider_type,
+                                )
+                            )
                         else:
                             event_list.append(event_item)
                     event = event_list
@@ -633,6 +635,8 @@ def process_event(
 
             # In case when provider_type is not set
             if isinstance(event, dict):
+                if not event.get("name"):
+                    event["name"] = event.get("id", "unknown alert name")
                 event = [AlertDto(**event)]
                 raw_event = [raw_event]
 
