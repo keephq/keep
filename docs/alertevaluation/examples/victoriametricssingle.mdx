@@ -1,3 +1,10 @@
+---
+title: "VictoriaMetrics Single Alert Example"
+---
+
+This example demonstrates a simple CPU usage alert based on a metric:
+
+```yaml
 # This workflow queries VictoriaMetrics metrics and creates alerts based on CPU usage
 workflow:
   # Unique identifier for this workflow
@@ -43,3 +50,4 @@ workflow:
               service: api
               team: devops
               owner: alice
+```

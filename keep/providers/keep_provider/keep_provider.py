@@ -162,20 +162,41 @@ class KeepProvider(BaseProvider):
         Returns:
             list of alerts that need state updates
         """
+        self.logger.info(
+            "Starting state alert handling", extra={"num_alerts": len(state_alerts)}
+        )
         alerts_to_notify = []
         search_engine = SearchEngine(tenant_id=self.context_manager.tenant_id)
         curr_alerts = search_engine.search_alerts_by_cel(
             cel_query=f"providerId == '{self.context_manager.workflow_id}'"
         )
+        self.logger.debug(
+            "Found existing alerts", extra={"num_curr_alerts": len(curr_alerts)}
+        )
 
         # Create lookup by fingerprint for efficient comparison
         curr_alerts_map = {alert.fingerprint: alert for alert in curr_alerts}
         state_alerts_map = {alert.fingerprint: alert for alert in state_alerts}
+        self.logger.debug(
+            "Created alert maps",
+            extra={
+                "curr_alerts_count": len(curr_alerts_map),
+                "state_alerts_count": len(state_alerts_map),
+            },
+        )
 
         # Handle existing alerts
         for fingerprint, curr_alert in curr_alerts_map.items():
             now = datetime.now(timezone.utc)
             alert_still_exists = fingerprint in state_alerts_map
+            self.logger.debug(
+                "Processing existing alert",
+                extra={
+                    "fingerprint": fingerprint,
+                    "still_exists": alert_still_exists,
+                    "current_status": curr_alert.status,
+                },
+            )
 
             if curr_alert.status == AlertStatus.FIRING.value:
                 if not alert_still_exists:
@@ -184,11 +205,21 @@ class KeepProvider(BaseProvider):
                     curr_alert.status = AlertStatus.RESOLVED
                     curr_alert.lastReceived = datetime.now(timezone.utc).isoformat()
                     alerts_to_notify.append(curr_alert)
+                    self.logger.info(
+                        "Alert resolved",
+                        extra={
+                            "fingerprint": fingerprint,
+                            "last_received": curr_alert.lastReceived,
+                        },
+                    )
 
                 # else: alert still exists, maintain FIRING state
                 else:
                     curr_alert.status = AlertStatus.FIRING
                     alerts_to_notify.append(curr_alert)
+                    self.logger.debug(
+                        "Alert still firing", extra={"fingerprint": fingerprint}
+                    )
             elif curr_alert.status == AlertStatus.PENDING.value:
                 if not alert_still_exists:
                     # If PENDING alerts are not triggered, make them RESOLVED
@@ -196,11 +227,25 @@ class KeepProvider(BaseProvider):
                     curr_alert.status = AlertStatus.RESOLVED
                     curr_alert.lastReceived = datetime.now(timezone.utc).isoformat()
                     alerts_to_notify.append(curr_alert)
+                    self.logger.info(
+                        "Pending alert resolved",
+                        extra={
+                            "fingerprint": fingerprint,
+                            "last_received": curr_alert.lastReceived,
+                        },
+                    )
                 else:
                     # Check if should transition to FIRING
                     if not hasattr(curr_alert, "activeAt"):
                         # This shouldn't happen but handle it gracefully
                         curr_alert.activeAt = curr_alert.lastReceived
+                        self.logger.debug(
+                            "Alert missing activeAt, using lastReceived",
+                            extra={
+                                "fingerprint": fingerprint,
+                                "activeAt": curr_alert.lastReceived,
+                            },
+                        )
 
                     if isinstance(curr_alert.activeAt, str):
                         activeAt = datetime.fromisoformat(curr_alert.activeAt)
@@ -226,20 +271,44 @@ class KeepProvider(BaseProvider):
                     curr_alert.lastReceived = datetime.now(timezone.utc).isoformat()
                     if now - activeAt >= duration:
                         curr_alert.status = AlertStatus.FIRING
+                        self.logger.info(
+                            "Alert transitioned to firing",
+                            extra={
+                                "fingerprint": fingerprint,
+                                "duration_elapsed": str(now - activeAt),
+                            },
+                        )
                     # Keep pending, update lastReceived
                     else:
                         curr_alert.status = AlertStatus.PENDING
+                        self.logger.debug(
+                            "Alert still pending",
+                            extra={
+                                "fingerprint": fingerprint,
+                                "time_remaining": str(duration - (now - activeAt)),
+                            },
+                        )
                     alerts_to_notify.append(curr_alert)
             # if alert is RESOLVED, add it to the list
             elif curr_alert.status == AlertStatus.RESOLVED.value:
                 if not alert_still_exists:
                     # if alert is not in current state, add it to the list
                     alerts_to_notify.append(curr_alert)
+                    self.logger.debug(
+                        "Keeping resolved alert", extra={"fingerprint": fingerprint}
+                    )
                 else:
                     # if its resolved and with _for, then it first need to be pending
                     curr_alert.status = AlertStatus.PENDING
                     curr_alert.lastReceived = datetime.now(timezone.utc).isoformat()
                     alerts_to_notify.append(curr_alert)
+                    self.logger.info(
+                        "Resolved alert back to pending",
+                        extra={
+                            "fingerprint": fingerprint,
+                            "last_received": curr_alert.lastReceived,
+                        },
+                    )
 
         # Handle new alerts not in current state
         for fingerprint, new_alert in state_alerts_map.items():
@@ -248,7 +317,15 @@ class KeepProvider(BaseProvider):
                 new_alert.status = AlertStatus.PENDING
                 new_alert.activeAt = datetime.now(timezone.utc).isoformat()
                 alerts_to_notify.append(new_alert)
+                self.logger.info(
+                    "New alert created",
+                    extra={"fingerprint": fingerprint, "activeAt": new_alert.activeAt},
+                )
 
+        self.logger.info(
+            "Completed state alert handling",
+            extra={"alerts_to_notify": len(alerts_to_notify)},
+        )
         return alerts_to_notify
 
     def _handle_stateless_alerts(
@@ -261,19 +338,41 @@ class KeepProvider(BaseProvider):
         Returns:
             list of alerts that need state updates
         """
+        self.logger.info(
+            "Starting stateless alert handling",
+            extra={"num_alerts": len(stateless_alerts)},
+        )
         alerts_to_notify = []
         search_engine = SearchEngine(tenant_id=self.context_manager.tenant_id)
         curr_alerts = search_engine.search_alerts_by_cel(
             cel_query=f"providerId == '{self.context_manager.workflow_id}'"
         )
+        self.logger.debug(
+            "Found existing alerts", extra={"num_curr_alerts": len(curr_alerts)}
+        )
 
         # Create lookup by fingerprint for efficient comparison
         curr_alerts_map = {alert.fingerprint: alert for alert in curr_alerts}
         state_alerts_map = {alert.fingerprint: alert for alert in stateless_alerts}
+        self.logger.debug(
+            "Created alert maps",
+            extra={
+                "curr_alerts_count": len(curr_alerts_map),
+                "state_alerts_count": len(state_alerts_map),
+            },
+        )
 
         # Handle existing alerts
         for fingerprint, curr_alert in curr_alerts_map.items():
             alert_still_exists = fingerprint in state_alerts_map
+            self.logger.debug(
+                "Processing existing alert",
+                extra={
+                    "fingerprint": fingerprint,
+                    "still_exists": alert_still_exists,
+                    "current_status": curr_alert.status,
+                },
+            )
 
             if curr_alert.status == AlertStatus.FIRING.value:
                 if not alert_still_exists:
@@ -281,6 +380,13 @@ class KeepProvider(BaseProvider):
                     curr_alert.status = AlertStatus.RESOLVED
                     curr_alert.lastReceived = datetime.now(timezone.utc).isoformat()
                     alerts_to_notify.append(curr_alert)
+                    self.logger.info(
+                        "Alert resolved",
+                        extra={
+                            "fingerprint": fingerprint,
+                            "last_received": curr_alert.lastReceived,
+                        },
+                    )
 
         # Handle new alerts not in current state
         for fingerprint, new_alert in state_alerts_map.items():
@@ -289,47 +395,90 @@ class KeepProvider(BaseProvider):
                 new_alert.status = AlertStatus.FIRING
                 new_alert.lastReceived = datetime.now(timezone.utc).isoformat()
                 alerts_to_notify.append(new_alert)
+                self.logger.info(
+                    "New alert firing",
+                    extra={
+                        "fingerprint": fingerprint,
+                        "last_received": new_alert.lastReceived,
+                    },
+                )
 
+        self.logger.info(
+            "Completed stateless alert handling",
+            extra={"alerts_to_notify": len(alerts_to_notify)},
+        )
         return alerts_to_notify
 
     def _notify_alert(self, **kwargs):
+        self.logger.debug("Starting _notify_alert", extra={"kwargs": kwargs})
         context = self.context_manager.get_full_context()
         alert_step = context.get("alert_step", None)
+        self.logger.debug("Got alert step", extra={"alert_step": alert_step})
+
         # if alert_step is provided, get alert results
         if alert_step:
             alert_results = (
                 context.get("steps", {}).get(alert_step, {}).get("results", {})
             )
+            self.logger.debug(
+                "Got alert results from alert_step",
+                extra={"alert_results": alert_results},
+            )
         # else, the last step results are the alert results
         else:
             # TODO: this is a temporary solution until we have a better way to get the alert results
             alert_results = context.get("steps", {}).get("this", {}).get("results", {})
+            self.logger.debug(
+                "Got alert results from 'this' step",
+                extra={"alert_results": alert_results},
+            )
 
         _if = kwargs.get("if", None)
         _for = kwargs.get("for", None)
         fingerprint_fields = kwargs.pop("fingerprint_fields", [])
+        self.logger.debug(
+            "Got condition parameters",
+            extra={"if": _if, "for": _for, "fingerprint_fields": fingerprint_fields},
+        )
 
         # if we need to check _if, handle the condition
         trigger_alerts = []
         if _if:
+            self.logger.info(
+                "Processing alerts with 'if' condition", extra={"condition": _if}
+            )
             # if its multialert, handle each alert separately
             if isinstance(alert_results, list):
+                self.logger.debug("Processing multiple alerts")
                 for alert in alert_results:
                     # render
                     _if_rendered = self.io_handler.render(
                         _if, safe=True, additional_context=alert
                     )
+                    self.logger.debug(
+                        "Rendered if condition",
+                        extra={"original": _if, "rendered": _if_rendered},
+                    )
                     # evaluate
                     if not self._evaluate_if(_if, _if_rendered):
+                        self.logger.debug(
+                            "Alert did not meet condition", extra={"alert": alert}
+                        )
                         continue
                     trigger_alerts.append(alert)
+                    self.logger.debug("Alert met condition", extra={"alert": alert})
             else:
                 pass
         # if no _if, trigger all alerts
         else:
+            self.logger.info("No 'if' condition - triggering all alerts")
             trigger_alerts = alert_results
+
         # build the alert dtos
         alert_dtos = []
+        self.logger.info(
+            "Building alert DTOs", extra={"trigger_count": len(trigger_alerts)}
+        )
         # render alert data
         for alert_results in trigger_alerts:
             alert_data = copy.copy(kwargs.get("alert", {}))
@@ -337,12 +486,19 @@ class KeepProvider(BaseProvider):
             rendered_alert_data = self.io_handler.render_context(
                 alert_data, additional_context=alert_results
             )
+            self.logger.debug(
+                "Rendered alert data",
+                extra={"original": alert_data, "rendered": rendered_alert_data},
+            )
             # render tenrary expressions
             rendered_alert_data = self._handle_tenrary_exressions(rendered_alert_data)
             alert_dto = self._build_alert(
                 alert_results, fingerprint_fields, **rendered_alert_data
             )
             alert_dtos.append(alert_dto)
+            self.logger.debug(
+                "Built alert DTO", extra={"fingerprint": alert_dto.fingerprint}
+            )
 
         # sanity check - if more than one alert has the same fingerprint it means something is wrong
         # this would happen if the fingerprint fields are not unique
@@ -351,20 +507,26 @@ class KeepProvider(BaseProvider):
             if fingerprints.get(alert.fingerprint):
                 self.logger.warning(
                     "Alert with the same fingerprint already exists - it means your fingerprint labels are not unique",
-                    extra={"alert": alert},
+                    extra={"alert": alert, "fingerprint": alert.fingerprint},
                 )
             fingerprints[alert.fingerprint] = True
 
         # if _for is provided, handle state alerts
         if _for:
+            self.logger.info(
+                "Handling state alerts with 'for' condition", extra={"for": _for}
+            )
             # handle alerts with state
             alerts = self._handle_state_alerts(_for, alert_dtos)
         # else, handle all alerts
         else:
+            self.logger.info("Handling stateless alerts")
             alerts = self._handle_stateless_alerts(alert_dtos)
 
         # handle all alerts
-        self.logger.info("handling all alerts", extra={"number_of_alerts": len(alerts)})
+        self.logger.info(
+            "Processing final alerts", extra={"number_of_alerts": len(alerts)}
+        )
         process_event(
             ctx={},
             tenant_id=self.context_manager.tenant_id,
@@ -375,7 +537,9 @@ class KeepProvider(BaseProvider):
             trace_id=None,
             event=alerts,
         )
-        self.logger.info("Alerts handled")
+        self.logger.info(
+            "Alerts processed successfully", extra={"alert_count": len(alerts)}
+        )
         return alerts
 
     def _notify(self, **kwargs):
