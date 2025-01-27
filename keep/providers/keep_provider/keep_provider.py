@@ -559,7 +559,7 @@ class KeepProvider(BaseProvider):
                 if "workflow" in workflow_to_update_yaml:
                     workflow_to_update_yaml = workflow_to_update_yaml["workflow"]
 
-                workflowstore.create_workflow(
+                workflow = workflowstore.create_workflow(
                     tenant_id=self.context_manager.tenant_id,
                     created_by=f"workflow id: {self.context_manager.workflow_id}",
                     workflow=workflow_to_update_yaml,
