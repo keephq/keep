@@ -105,6 +105,35 @@ class SlackProvider(BaseProvider):
 
         return new_provider_info
 
+    def _notify_reaction(self, channel: str, emoji: str, timestamp: str):
+        if not self.authentication_config.access_token:
+            raise ProviderException("Access token is required to notify reaction")
+
+        self.logger.info(
+            "Notifying reaction to Slack using",
+            extra={
+                "emoji": emoji,
+                "channel": channel,
+                "timestamp": timestamp,
+            },
+        )
+        payload = {
+            "channel": channel,
+            "token": self.authentication_config.access_token,
+            "name": emoji,
+            "timestamp": timestamp,
+        }
+        response = requests.post(
+            f"{SlackProvider.SLACK_API}/reactions.add",
+            data=payload,
+        )
+        if not response.ok:
+            raise ProviderException(
+                f"Failed to notify reaction to Slack: {response.text}"
+            )
+        self.logger.info("Reaction notified to Slack")
+        return response.json()
+
     def _notify(
         self,
         message="",
@@ -114,6 +143,7 @@ class SlackProvider(BaseProvider):
         thread_timestamp="",
         attachments=[],
         username="",
+        notification_type="message",
         **kwargs: dict,
     ):
         """
@@ -123,6 +153,13 @@ class SlackProvider(BaseProvider):
         Args:
             kwargs (dict): The providers with context
         """
+        if notification_type == "reaction":
+            return self._notify_reaction(
+                channel=channel,
+                emoji=message,
+                timestamp=thread_timestamp,
+            )
+
         notify_data = None
         self.logger.info(
             f"Notifying message to Slack using {'webhook' if self.authentication_config.webhook_url else 'access token'}",

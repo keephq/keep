@@ -47,6 +47,7 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
+from keep.workflowmanager.workflowmanager import WorkflowManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -359,6 +360,7 @@ def create_process_event_task(
 async def receive_generic_event(
     event: AlertDto | list[AlertDto] | dict,
     request: Request,
+    provider_id: str | None = None,
     fingerprint: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
@@ -379,7 +381,7 @@ async def receive_generic_event(
             "async_process_event",
             authenticated_entity.tenant_id,
             None,
-            None,
+            provider_id,
             fingerprint,
             authenticated_entity.api_key_name,
             request.state.trace_id,
@@ -399,7 +401,7 @@ async def receive_generic_event(
         task_name = create_process_event_task(
             authenticated_entity.tenant_id,
             None,
-            None,
+            provider_id,
             fingerprint,
             authenticated_entity.api_key_name,
             request.state.trace_id,
@@ -576,6 +578,9 @@ def _enrich_alert(
             "tenant_id": tenant_id,
         },
     )
+
+    should_run_workflow = False
+
     try:
         enrichement_bl = EnrichmentsBl(tenant_id)
         # Shahar: TODO, change to the specific action type, good enough for now
@@ -589,6 +594,7 @@ def _enrich_alert(
                 else ActionType.MANUAL_STATUS_CHANGE
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by {authenticated_entity.email}"
+            should_run_workflow = True
         elif "status" in enrich_data.enrichments and authenticated_entity.api_key_name:
             action_type = (
                 ActionType.API_AUTOMATIC_RESOLVE
@@ -596,6 +602,7 @@ def _enrich_alert(
                 else ActionType.API_STATUS_CHANGE
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by API `{authenticated_entity.api_key_name}`"
+            should_run_workflow = True
         elif "note" in enrich_data.enrichments and enrich_data.enrichments["note"]:
             action_type = ActionType.COMMENT
             action_description = f"Comment added by {authenticated_entity.email} - {enrich_data.enrichments['note']}"
@@ -653,6 +660,12 @@ def _enrich_alert(
             "Alert enriched successfully",
             extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},
         )
+
+        if should_run_workflow:
+            workflow_manager = WorkflowManager.get_instance()
+            workflow_manager.insert_events(
+                tenant_id=tenant_id, events=[enriched_alerts_dto[0]]
+            )
         return {"status": "ok"}
 
     except Exception as e:

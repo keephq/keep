@@ -139,7 +139,16 @@ class Step:
     def _run_single(self):
         # Initialize all conditions
         conditions = []
-        self.context_manager.set_step_vars(self.step_id, _vars=self.vars)
+
+        aliases = self.config.get("alias", {})
+
+        # if aliases are defined, set them in the context
+        for alias_key, alias_val in aliases.items():
+            aliases[alias_key] = self.io_handler.render(alias_val)
+
+        self.context_manager.set_step_vars(
+            self.step_id, _vars=self.vars, _aliases=aliases
+        )
 
         for condition in self.conditions:
             condition_name = condition.get("name", None)
@@ -199,8 +208,8 @@ class Step:
 
         # Now check it
         if if_conf:
-            if_conf = self.io_handler.quote(if_conf)
-            if_met = self.io_handler.render(if_conf, safe=False)
+            quoted_if_conf = self.io_handler.quote(if_conf)
+            if_met = self.io_handler.render(quoted_if_conf, safe=False)
             # Evaluate the condition string
             from asteval import Interpreter
 
@@ -210,11 +219,11 @@ class Step:
             if isinstance(evaluated_if_met, str):
                 evaluated_if_met = aeval(evaluated_if_met)
             # if the evaluation failed, raise an exception
-            if aeval.error_msg:
+            if aeval.error_msg and if_conf == quoted_if_conf:
                 self.logger.error(
-                    f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {if_conf}, Rendered: {if_met}, Error: {aeval.error_msg}",
+                    f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {quoted_if_conf}, Rendered: {if_met}, Error: {aeval.error_msg}",
                     extra={
-                        "condition": if_conf,
+                        "condition": quoted_if_conf,
                         "rendered": if_met,
                         "step_id": self.step_id,
                     },
@@ -222,6 +231,19 @@ class Step:
                 raise Exception(
                     f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {if_conf}, Rendered: {if_met}, Error: {aeval.error_msg}"
                 )
+            # maybe its because of quoting, try again without quoting
+            elif aeval.error_msg:
+                # without quoting
+                aeval_without_quote = Interpreter()
+                if_met = self.io_handler.render(if_conf, safe=False)
+                evaluated_if_met = aeval_without_quote(if_met)
+                if isinstance(evaluated_if_met, str):
+                    evaluated_if_met = aeval_without_quote(evaluated_if_met)
+                # if again error, raise an exception
+                if aeval_without_quote.error_msg:
+                    raise Exception(
+                        f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {if_conf}, Rendered: {if_met}, Error: {aeval_without_quote.error_msg}"
+                    )
 
         else:
             evaluated_if_met = True
@@ -288,6 +310,9 @@ class Step:
             rendered_providers_parameters = self.io_handler.render_context(
                 self.provider_parameters
             )
+            rendered_providers_parameters = self._handle_tenrary_exressions(
+                rendered_providers_parameters
+            )
 
             for curr_retry_count in range(self.__retry_count + 1):
                 self.logger.info(
@@ -334,6 +359,23 @@ class Step:
             raise StepError(e)
 
         return True
+
+    def _handle_tenrary_exressions(self, rendered_providers_parameters):
+        # SG: a hack to allow tenrary expressions
+        #     e.g.'0.012899999999999995 > 0.9 ? "critical" : 0.012899999999999995 > 0.7 ? "warning" : "info"''
+        #
+        #     this is a hack and should be improved
+        for key, value in rendered_providers_parameters.items():
+            try:
+                split_value = value.split(" ")
+                if split_value[1] == ">" and split_value[3] == "?":
+                    import js2py
+
+                    rendered_providers_parameters[key] = js2py.eval_js(value)
+            # we don't care, it's not a tenrary expression
+            except Exception:
+                pass
+        return rendered_providers_parameters
 
 
 class StepError(Exception):
