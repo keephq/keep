@@ -151,9 +151,11 @@ def json_loads(data: str) -> dict:
         try:
             d = parse_bad_json(data)
         except json.JSONDecodeError:
+            logger.exception('Failed to parse "bad" JSON')
             d = {}
     # catch any other exceptions
     except Exception:
+        logger.exception("Failed to parse JSON")
         d = {}
 
     return d
