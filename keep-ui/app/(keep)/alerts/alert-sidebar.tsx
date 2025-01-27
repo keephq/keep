@@ -131,7 +131,7 @@ const AlertSidebar = ({
                   </p>
                   <p>
                     <FieldHeader>Description</FieldHeader>
-                    <pre>{alert.description}</pre>
+                    <pre className="overflow-scroll">{alert.description}</pre>
                   </p>
                   <p>
                     <FieldHeader className="flex items-center gap-1">
@@ -140,16 +140,16 @@ const AlertSidebar = ({
                         content={
                           <>
                             Fingerprints are unique identifiers associated with
-                            alert instances in Keep. Every provider declares the
-                            fields fingerprints are calculated upon.{" "}
+                            alert instances in Keep. Each provider declares the
+                            fields fingerprints are calculated based on.{" "}
                             <Link
                               href={`${
                                 config?.KEEP_DOCS_URL ||
                                 "https://docs.keephq.dev"
-                              }/providers/fingerprints#fingerprints`}
+                              }/overview/fingerprints`}
                               className="text-white"
                             >
-                              Docs
+                              Read more about it here.
                             </Link>
                           </>
                         }
