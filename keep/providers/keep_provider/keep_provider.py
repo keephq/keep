@@ -138,19 +138,16 @@ class KeepProvider(BaseProvider):
             ticket_url=kwargs.get("ticket_url"),
             fingerprint=kwargs.get("fingerprint"),
             annotations=kwargs.get("annotations"),
+            workflowId=self.context_manager.workflow_id,
+            **alert_data,
         )
-        # if fingerprint_fields are provided, calculate fingerprint
-        if fingerprint_fields:
-            # calculate fingerprint
-            self.logger.info(
-                "Calculating fingerprint for alert",
-                extra={"fingerprint_fields": fingerprint_fields},
-            )
-            alert.fingerprint = self.get_alert_fingerprint(alert, fingerprint_fields)
-        # else, use labels
-        else:
+        # if fingerprint_fields are not provided, use labels
+        if not fingerprint_fields:
             fingerprint_fields = ["labels." + label for label in list(labels.keys())]
-            alert.fingerprint = self.get_alert_fingerprint(alert, fingerprint_fields)
+
+        # workflowId is used as the "rule id" - it's used to identify the rule that created the alert
+        fingerprint_fields.append("workflowId")
+        alert.fingerprint = self.get_alert_fingerprint(alert, fingerprint_fields)
         return alert
 
     def _handle_state_alerts(
@@ -161,7 +158,7 @@ class KeepProvider(BaseProvider):
         Args:
             _for: timedelta indicating how long alert should be PENDING before FIRING
             state_alerts: list of new alerts from current evaluation
-            keep_firing_for: how long to keep alerts FIRING after stopping matching (default 15m)
+            keep_firing_for: (future use) how long to keep alerts FIRING after stopping matching (default 15m)
         Returns:
             list of alerts that need state updates
         """
@@ -187,8 +184,11 @@ class KeepProvider(BaseProvider):
                     curr_alert.status = AlertStatus.RESOLVED
                     curr_alert.lastReceived = datetime.now(timezone.utc).isoformat()
                     alerts_to_notify.append(curr_alert)
-                # else: alert still exists, maintain FIRING state
 
+                # else: alert still exists, maintain FIRING state
+                else:
+                    curr_alert.status = AlertStatus.FIRING
+                    alerts_to_notify.append(curr_alert)
             elif curr_alert.status == AlertStatus.PENDING.value:
                 if not alert_still_exists:
                     # If PENDING alerts are not triggered, make them RESOLVED
@@ -223,10 +223,23 @@ class KeepProvider(BaseProvider):
                     else:
                         raise ValueError(f"Invalid duration unit: {unit}")
 
+                    curr_alert.lastReceived = datetime.now(timezone.utc).isoformat()
                     if now - activeAt >= duration:
                         curr_alert.status = AlertStatus.FIRING
-                        curr_alert.lastReceived = datetime.now(timezone.utc).isoformat()
-                        alerts_to_notify.append(curr_alert)
+                    # Keep pending, update lastReceived
+                    else:
+                        curr_alert.status = AlertStatus.PENDING
+                    alerts_to_notify.append(curr_alert)
+            # if alert is RESOLVED, add it to the list
+            elif curr_alert.status == AlertStatus.RESOLVED.value:
+                if not alert_still_exists:
+                    # if alert is not in current state, add it to the list
+                    alerts_to_notify.append(curr_alert)
+                else:
+                    # if its resolved and with _for, then it first need to be pending
+                    curr_alert.status = AlertStatus.PENDING
+                    curr_alert.lastReceived = datetime.now(timezone.utc).isoformat()
+                    alerts_to_notify.append(curr_alert)
 
         # Handle new alerts not in current state
         for fingerprint, new_alert in state_alerts_map.items():
