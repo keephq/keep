@@ -14,13 +14,13 @@ const MonacoYAMLEditor = ({
 }: {
   yamlString: string;
   filename: string;
-  workflowId?: string;
+  workflowId: string;
 }) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [isCopied, setIsCopied] = React.useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
-  const { createWorkflow, updateWorkflow } = useWorkflowActions();
+  const { updateWorkflow } = useWorkflowActions();
 
   // Sort YAML keys in desired order
   const sortYamlKeys = (yamlStr: string) => {
@@ -63,7 +63,7 @@ const MonacoYAMLEditor = ({
         }
       });
 
-      return yaml.dump(sorted, { indent: 2 });
+      return yaml.dump(sorted, { indent: 2, lineWidth: 9999 });
     } catch (err) {
       console.error("Failed to sort YAML:", err);
       return yamlStr;
@@ -92,12 +92,8 @@ const MonacoYAMLEditor = ({
       const parsedYaml = yaml.load(content) as {
         workflow: Record<string, unknown>;
       };
-
-      if (workflowId) {
-        await updateWorkflow(workflowId, parsedYaml.workflow);
-      } else {
-        await createWorkflow(parsedYaml.workflow);
-      }
+      // update workflow
+      await updateWorkflow(workflowId!, parsedYaml);
 
       setOriginalContent(content);
       setHasChanges(false);
@@ -156,7 +152,7 @@ const MonacoYAMLEditor = ({
     fontSize: 14,
     renderWhitespace: "all",
     wordWrap: "off",
-    // wordWrapColumn: 120,
+    // : 120,
     theme: "vs-light",
   };
 

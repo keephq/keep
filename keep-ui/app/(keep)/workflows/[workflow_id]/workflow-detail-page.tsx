@@ -131,6 +131,7 @@ export default function WorkflowDetailPage({
                 <MonacoYAMLEditor
                   yamlString={workflow.workflow_raw!}
                   filename={workflow.id ?? "workflow"}
+                  workflowId={workflow.id}
                 />
               </Card>
             )}
