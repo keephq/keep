@@ -608,7 +608,12 @@ class IOHandler:
             rendered = html.unescape(rendered)
 
             # If no more changes or no more mustache tags, we're done
-            if rendered == current or "{{" not in rendered:
+            # we don't want to render providers. ever, so this is a hack for it for now
+            if (
+                rendered == current
+                or "{{" not in rendered
+                and "providers." not in rendered
+            ):
                 return rendered
 
             current = rendered
