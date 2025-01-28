@@ -531,7 +531,7 @@ def test_stateful_alerts_multiple_alerts(db_session, context):
         more_alerts = genereate_multi_dict("6")
         context["steps"] = more_alerts
         context_manager.get_full_context = (
-            lambda exclude_providers, exclude_env: context
+            lambda exclude_providers=False, exclude_env=False: context
         )
         result = provider._notify(**kwargs)
         assert len(result) == 6
