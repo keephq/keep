@@ -406,7 +406,7 @@ class IOHandler:
             )
             safe = False
 
-        context = self.context_manager.get_full_context()
+        context = self.context_manager.get_full_context(exclude_providers=True)
 
         if additional_context:
             context.update(additional_context)
