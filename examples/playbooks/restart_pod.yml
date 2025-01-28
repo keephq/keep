@@ -1,16 +1,40 @@
+# yaml-language-server: $schema=none
 workflow:
-  id: restart-pod
-  description: demonstrates how to automatically restart pod
-  triggers:
-    - type: alert
-      filters:
-        - key: name
-          value: PodCrashLooping
-  actions:
-    - name: dismiss-alert
-      provider:
-        type: mock
-        with:
-          enrich_alert:
-            - key: dismissed
-              value: "true"
+  - id: restart-pod
+    description: demonstrates how to automatically restart pod
+    triggers:
+      - type: alert
+        filters:
+          - key: name
+            value: PodCrashLooping
+          - key: source
+            value: prometheus
+    # get logs and events of the pod
+    steps:
+      - name: get-logs
+        provider:
+          type: kubernetes
+          with:
+            command_type: get_logs
+            namespace: "{{ alert.namespace }}"
+            pod_name: "{{ alert.pod_name }}"
+            container_name: "{{ alert.container_name }}"
+      - name: get-events
+        provider:
+          type: kubernetes
+          with:
+            command_type: get_events
+            namespace: "{{ alert.namespace }}"
+            pod_name: "{{ alert.pod_name }}"
+    # we want to restart the pod only if the pod is in CrashLoopBackOff state
+    actions:
+      - name: restart-pod
+        if: "'{{ steps.get-events.results[0].reason }}' == 'CrashLoopBackOff'"
+        provider:
+          type: kubernetes
+          with:
+            command_type: restart_pod
+            namespace: "{{ alert.namespace }}"
+            pod_name: "{{ alert.pod_name }}"
+            container_name: "{{ alert.container_name }}"
+            message: "Pod {{ alert.pod_name }} in namespace {{ alert.namespace }} is in CrashLoopBackOff state. Restarting the pod"
