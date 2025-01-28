@@ -6,7 +6,7 @@ triggers:
 steps:
   - name: s3-dump
     provider:
-      config: '{{ providers.s3 }}'
+      config: "{{ providers.s3 }}"
       type: s3
       with:
         bucket: "keep-workflows"

@@ -38,10 +38,18 @@ export const useWorkflowExecutionsV2 = (
   limit = limit <= 0 ? 25 : limit;
   offset = offset < 0 ? 0 : offset;
 
+  // Create new URLSearchParams without 'tab' param
+  const filteredParams = new URLSearchParams();
+  searchParams?.forEach((value, key) => {
+    if (key !== "tab") {
+      filteredParams.append(key, value);
+    }
+  });
+
   return useSWR<PaginatedWorkflowExecutionDto>(
     api.isReady()
       ? `/workflows/${workflowId}/runs?v2=true&limit=${limit}&offset=${offset}${
-          searchParams ? `&${searchParams.toString()}` : ""
+          filteredParams.toString() ? `&${filteredParams.toString()}` : ""
         }`
       : null,
     (url: string) => api.get(url),
