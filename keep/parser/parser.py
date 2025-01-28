@@ -233,12 +233,16 @@ class Parser:
         all_providers = ProvidersFactory.get_all_providers()
         # _use_loaded_provider_cache is a flag to control whether to use the loaded providers cache
         if not self._loaded_providers_cache or not self._use_loaded_provider_cache:
+            # this should print once when the providers are loaded for the first time
+            self.logger.info("Loading installed providers to workfloe")
             installed_providers = ProvidersFactory.get_installed_providers(
                 tenant_id=tenant_id, all_providers=all_providers, override_readonly=True
             )
             self._loaded_providers_cache = installed_providers
+            self.logger.info("Installed providers loaded successfully")
         else:
             self.logger.debug("Using cached loaded providers")
+            # before we can use cache, we need to check if new providers are added or deleted
             _installed_providers = get_installed_providers(tenant_id=tenant_id)
             _installed_providers_ids = set([p.id for p in _installed_providers])
             _cached_provider_ids = set([p.id for p in self._loaded_providers_cache])
