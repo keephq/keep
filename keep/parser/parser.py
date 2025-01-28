@@ -7,7 +7,7 @@ import typing
 
 from keep.actions.actions_factory import ActionsCRUD
 from keep.api.core.config import config
-from keep.api.core.db import get_workflow_id
+from keep.api.core.db import get_installed_providers, get_workflow_id
 from keep.contextmanager.contextmanager import ContextManager
 from keep.functions import cyaml
 from keep.providers.providers_factory import ProvidersFactory
@@ -239,7 +239,21 @@ class Parser:
             self._loaded_providers_cache = installed_providers
         else:
             self.logger.debug("Using cached loaded providers")
-            installed_providers = self._loaded_providers_cache
+            _installed_providers = get_installed_providers(tenant_id=tenant_id)
+            _installed_providers_ids = set([p.id for p in _installed_providers])
+            _cached_provider_ids = set([p.id for p in self._loaded_providers_cache])
+            if _installed_providers_ids != _cached_provider_ids:
+                # this should print only when provider deleted/added
+                self.logger.info("Providers cache is outdated, reloading providers")
+                installed_providers = ProvidersFactory.get_installed_providers(
+                    tenant_id=tenant_id,
+                    all_providers=all_providers,
+                    override_readonly=True,
+                )
+                self._loaded_providers_cache = installed_providers
+                self.logger.info("Providers cache reloaded")
+            else:
+                installed_providers = self._loaded_providers_cache
         for provider in installed_providers:
             self.logger.debug("Loading provider", extra={"provider_id": provider.id})
             try:
