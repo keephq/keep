@@ -2224,21 +2224,6 @@ def get_all_deduplication_stats(tenant_id):
     return stats
 
 
-def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint) -> str | None:
-    # get the last alert for a given fingerprint
-    # to check deduplication
-    with Session(engine) as session:
-        query = (
-            select(LastAlert.alert_hash)
-            .where(LastAlert.tenant_id == tenant_id)
-            .where(LastAlert.fingerprint == fingerprint)
-            .limit(1)
-        )
-
-        alert_hash: str | None = session.scalars(query).first()
-    return alert_hash
-
-
 def get_last_alert_hashes_by_fingerprints(
     tenant_id, fingerprints: list[str]
 ) -> dict[str, str | None]:
