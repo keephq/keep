@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { AlertDto } from "@/entities/alerts/model";
 import useSWR, { SWRConfiguration } from "swr";
 import { toDateObjectWithFallback } from "utils/helpers";
@@ -115,9 +115,9 @@ export const useAlerts = () => {
   };
 
   const useLastAlerts = (
-    cel: string,
-    limit: number,
-    offset: number,
+    cel: string | undefined,
+    limit: number | undefined,
+    offset: number | undefined,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     const filtersParams = new URLSearchParams();
@@ -142,7 +142,7 @@ export const useAlerts = () => {
 
     const swrValue = useSWR<any>(
       () =>
-        api.isReady() ? requestUrl : null,
+        api.isReady() && cel !== undefined ? requestUrl : null,
       (url) => api.get(url),
       options
     );

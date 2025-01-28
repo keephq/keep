@@ -24,7 +24,7 @@ from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect 
 logger = logging.getLogger(__name__)
 
 alert_field_configurations = [
-    FieldMappingConfiguration("provider_type", "provider_type"),
+    FieldMappingConfiguration("source", "provider_type"),
     FieldMappingConfiguration("provider_id", "provider_id"),
     FieldMappingConfiguration(map_from_pattern = "incident.name", map_to=['incident_user_generated_name', 'incident_ai_generated_name']),
     FieldMappingConfiguration(map_from_pattern = "*", map_to=["alert_enrichment_json", "event"], is_json=True),
@@ -49,7 +49,7 @@ static_facets = [
     ),
     FacetDto(
         id="461bef05-fc20-4363-b427-9d26fe064e7f",
-        property_path="provider_type",
+        property_path="source",
         name="Source",
         is_static=True,
         type=FacetType.str

@@ -22,6 +22,7 @@ import Loading from "../loading";
 import { Preset } from "@/entities/presets/model/types";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
+import { AlertsQuery } from "./alert-table-server-side";
 
 const defaultPresets: Preset[] = [
   {
@@ -42,7 +43,7 @@ type AlertsProps = {
 
 export default function Alerts({ presetName }: AlertsProps) {
   const api = useApi();
-  const [filterCel, setFilterCel] = useState<string>("");
+  const [alertsQueryState, setAlertsQueryState] = useState<AlertsQuery | undefined>();
   const { useLastAlerts } = useAlerts();
   const { data: providersData = { installed_providers: [] } } = useProviders();
   const router = useRouter();
@@ -83,12 +84,11 @@ export default function Alerts({ presetName }: AlertsProps) {
   const { data: pollAlerts } = useAlertPolling();
   const {
     data: alerts = [],
+    totalCount,
     isLoading: isAsyncLoading,
     mutate: mutateAlerts,
     error: alertsError,
-  } = useLastAlerts(filterCel, 20, 0);
-
-  const isLoading = isAsyncLoading || !api.isReady();
+  } = useLastAlerts(alertsQueryState?.cel, alertsQueryState?.limit , alertsQueryState?.offset);
 
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
@@ -133,14 +133,15 @@ export default function Alerts({ presetName }: AlertsProps) {
         key={selectedPreset.name}
         preset={selectedPreset}
         alerts={alerts}
-        isAsyncLoading={isLoading}
+        alertsTotalCount={totalCount}
+        isAsyncLoading={isAsyncLoading}
         setTicketModalAlert={setTicketModalAlert}
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
         setDismissModalAlert={setDismissModalAlert}
         setChangeStatusAlert={setChangeStatusAlert}
         mutateAlerts={mutateAlerts}
-        onFilterCelChange={(cel) => setFilterCel(cel)}
+        onQueryChange={setAlertsQueryState}
       />
       <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
       <AlertDismissModal

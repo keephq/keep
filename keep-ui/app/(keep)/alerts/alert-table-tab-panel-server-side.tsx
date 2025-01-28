@@ -1,5 +1,4 @@
-import { AlertTable } from "./alert-table";
-import { AlertTableServerSide } from "./alert-table-server-side";
+import { AlertsQuery, AlertTableServerSide } from "./alert-table-server-side";
 import { useAlertTableCols } from "./alert-table-utils";
 import {
   AlertDto,
@@ -10,6 +9,7 @@ import { Preset } from "@/entities/presets/model/types";
 
 interface Props {
   alerts: AlertDto[];
+  alertsTotalCount: number;
   preset: Preset;
   isAsyncLoading: boolean;
   setTicketModalAlert: (alert: AlertDto | null) => void;
@@ -18,11 +18,12 @@ interface Props {
   setDismissModalAlert: (alert: AlertDto[] | null) => void;
   setChangeStatusAlert: (alert: AlertDto | null) => void;
   mutateAlerts: () => void;
-  onFilterCelChange: (filterCel: string) => void;
+  onQueryChange?: (query:AlertsQuery) => void;
 }
 
 export default function AlertTableTabPanelServerSide({
   alerts,
+  alertsTotalCount,
   preset,
   isAsyncLoading,
   setTicketModalAlert,
@@ -31,7 +32,7 @@ export default function AlertTableTabPanelServerSide({
   setDismissModalAlert,
   setChangeStatusAlert,
   mutateAlerts,
-  onFilterCelChange,
+  onQueryChange
 }: Props) {
   const additionalColsToGenerate = [
     ...new Set(
@@ -73,6 +74,7 @@ export default function AlertTableTabPanelServerSide({
   return (
     <AlertTableServerSide
       alerts={alerts}
+      alertsTotalCount={alertsTotalCount}
       columns={alertTableColumns}
       setDismissedModalAlert={setDismissModalAlert}
       isAsyncLoading={isAsyncLoading}
@@ -84,7 +86,8 @@ export default function AlertTableTabPanelServerSide({
       setRunWorkflowModalAlert={setRunWorkflowModalAlert}
       setDismissModalAlert={setDismissModalAlert}
       setChangeStatusAlert={setChangeStatusAlert}
-      onFilterCelChange={onFilterCelChange}
+      onQueryChange={onQueryChange}
+      onRefresh={() => {mutateAlerts}}
     />
   );
 }

@@ -13,6 +13,7 @@ import {
   getFilteredRowModel,
   SortingState,
   getSortedRowModel,
+  PaginationState,
 } from "@tanstack/react-table";
 import AlertPagination from "./alert-pagination";
 import AlertsTableHeaders from "./alert-table-headers";
@@ -41,12 +42,19 @@ import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import { Icon } from "@tremor/react";
 import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
+import AlertPaginationServerSide from "./alert-pagination-server-side";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
 };
 
+export interface AlertsQuery {
+  cel: string;
+  pageIndex: number;
+  offset: number;
+  limit: number;
+}
 
 interface PresetTab {
   name: string;
@@ -55,6 +63,7 @@ interface PresetTab {
 }
 interface Props {
   alerts: AlertDto[];
+  alertsTotalCount: number;
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName: string;
@@ -68,11 +77,13 @@ interface Props {
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
   setChangeStatusAlert?: (alert: AlertDto) => void;
-  onFilterCelChange?: (cel: string) => void;
+  onQueryChange?: (query:AlertsQuery) => void;
+  onRefresh?: () => void;
 }
 
 export function AlertTableServerSide({
   alerts,
+  alertsTotalCount,
   columns,
   isAsyncLoading = false,
   presetName,
@@ -85,7 +96,8 @@ export function AlertTableServerSide({
   setRunWorkflowModalAlert,
   setDismissModalAlert,
   setChangeStatusAlert,
-  onFilterCelChange
+  onQueryChange,
+  onRefresh
 }: Props) {
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(null);
   const [filterRevalidationToken, setFilterRevalidationToken] = useState<string | null>(null);
@@ -159,6 +171,18 @@ export function AlertTableServerSide({
   const [sorting, setSorting] = useState<SortingState>(
     noisyAlertsEnabled ? [{ id: "noise", desc: true }] : []
   );
+  const [paginationState, setPaginationState] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 20,
+  });
+
+  useEffect(function whenQueryChange() {
+    const resultCel = [searchCel, filterCel].filter(Boolean).join(' && ');
+    const limit = paginationState.pageSize;
+    const offset = limit * paginationState.pageIndex;
+    onQueryChange && onQueryChange({ cel: resultCel, pageIndex: paginationState.pageIndex, offset, limit});
+    console.log( {resultCel, offset, limit});
+  }, [filterCel, searchCel, paginationState, sorting, onQueryChange]);
 
   const [tabs, setTabs] = useState([
     { name: "All", filter: (alert: AlertDto) => true },
@@ -192,6 +216,10 @@ export function AlertTableServerSide({
         right: ["alertMenu"],
       },
       sorting: sorting,
+      pagination: {
+        pageIndex: paginationState.pageIndex,
+        pageSize: paginationState.pageSize,
+      }
     },
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
@@ -210,6 +238,9 @@ export function AlertTableServerSide({
     autoResetPageIndex: false,
     enableGlobalFilter: true,
     enableSorting: true,
+    manualPagination: true,
+    pageCount: Math.ceil(alertsTotalCount / paginationState.pageSize),
+    onPaginationChange: setPaginationState
   });
 
   const selectedRowIds = Object.entries(
@@ -310,10 +341,6 @@ export function AlertTableServerSide({
     []
   );
 
-  useEffect(() => {
-    onFilterCelChange && onFilterCelChange([searchCel, filterCel].filter(Boolean).join(' && '));
-  }, [filterCel, searchCel]);
-
   return (
     // Add h-screen to make it full height and remove the default flex-col gap
     <div className="h-screen flex flex-col gap-4">
@@ -406,10 +433,11 @@ export function AlertTableServerSide({
 
       {/* Pagination footer - fixed height */}
       <div className="h-16 px-4 flex-none pl-[14rem]">
-        <AlertPagination
+        <AlertPaginationServerSide
           table={table}
-          presetName={presetName}
+          isRefreshing={isAsyncLoading}
           isRefreshAllowed={isRefreshAllowed}
+          onRefresh={() => onRefresh && onRefresh()}
         />
       </div>
 
