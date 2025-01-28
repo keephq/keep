@@ -321,6 +321,7 @@ class WorkflowManager:
                             }
                         )
                     self.logger.info("Workflow added to run")
+            self.logger.info("All workflows added to run")
 
     def _get_event_value(self, event, filter_key):
         # if the filter key is a nested key, get the value
