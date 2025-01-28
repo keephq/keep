@@ -4,6 +4,7 @@ from typing import Tuple
 
 from sqlalchemy import (
     and_,
+    asc,
     desc,
     func,
     literal_column,
@@ -18,7 +19,7 @@ from keep.api.models.db.alert import Alert, AlertEnrichment, Incident, LastAlert
 from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto
 from keep.api.core.db import engine
-from keep.api.core.cel_to_sql.properties_metadata import FieldMappingConfiguration, PropertiesMetadata
+from keep.api.core.cel_to_sql.properties_metadata import FieldMappingConfiguration, JsonMapping, PropertiesMetadata, SimpleMapping
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import get_cel_to_sql_provider_for_dialect
 
 logger = logging.getLogger(__name__)
@@ -195,7 +196,9 @@ def build_alerts_query(
         upper_timestamp=None,
         lower_timestamp=None,
         fingerprints=None,
-        cel=None
+        cel=None,
+        sort_by=None,
+        sort_dir=None
     ):
     base_query_cte = __build_base_query(tenant_id)
 
@@ -244,6 +247,27 @@ def build_alerts_query(
         sql_filter = instance.convert_to_sql_str(cel)
         stmt = stmt.where(text(sql_filter))
 
+    if sort_by:
+        provider_type = get_cel_to_sql_provider_for_dialect(dialect=dialect_name)
+        instance = provider_type(properties_metadata)
+        metadata = properties_metadata.get_property_metadata(sort_by)
+        group_by_exp = []
+
+        for item in metadata:
+            if isinstance(item, JsonMapping):
+                group_by_exp.append(
+                    instance.json_extract_as_text(item.json_prop, item.prop_in_json)
+                )
+            elif isinstance(metadata[0], SimpleMapping):
+                group_by_exp.append(item.map_to)
+        
+        casted = f"{instance.coalesce([instance.cast(item, str) for item in group_by_exp])}"
+
+        if sort_dir == "desc":
+            stmt = stmt.order_by(desc(text(casted)))
+        else:
+            stmt = stmt.order_by(asc(text(casted)))
+
     return stmt
 
 def get_last_alerts(
@@ -256,7 +280,9 @@ def get_last_alerts(
     lower_timestamp=None,
     with_incidents=False,
     fingerprints=None,
-    cel=None
+    cel=None,
+    sort_by=None,
+    sort_dir=None
 ) -> Tuple[list[Alert], int]:
     with Session(engine) as session:
         dialect_name = session.bind.dialect.name
@@ -269,7 +295,9 @@ def get_last_alerts(
             upper_timestamp,
             lower_timestamp,
             fingerprints,
-            cel
+            cel,
+            sort_by,
+            sort_dir
         )
 
         query = query.group_by(Alert.id)

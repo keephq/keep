@@ -135,8 +135,10 @@ def get_all_alerts(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
     cel = Query(None),
-    limit: int = 1000,
-    offset: int = 0,
+    limit = Query(1000),
+    offset = Query(0),
+    sort_by = Query(None),
+    sort_dir = Query(None),
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -145,7 +147,14 @@ def get_all_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts, total_count = get_last_alerts(tenant_id=tenant_id, limit=limit, offset=offset, cel=cel)
+    db_alerts, total_count = get_last_alerts(
+        tenant_id=tenant_id,
+        limit=limit,
+        offset=offset,
+        cel=cel,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
         "Fetched alerts from DB",

@@ -3,6 +3,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import useSWR, { SWRConfiguration } from "swr";
 import { toDateObjectWithFallback } from "utils/helpers";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 export type AuditEvent = {
   id: string;
@@ -15,6 +16,8 @@ export type AuditEvent = {
 
 export const useAlerts = () => {
   const api = useApi();
+  const revalidateMultiple = useRevalidateMultiple();
+  const alertsMutator = () => revalidateMultiple(["/alert"]);
 
   const useAlertHistory = (
     selectedAlert?: AlertDto,
@@ -77,7 +80,7 @@ export const useAlerts = () => {
     }, [alertsFromEndpoint]);
 
     return {
-      data: alertsValue,
+      data: [],
       mutate: mutate,
       isLoading: isLoading,
       error: alertsError,
@@ -118,7 +121,9 @@ export const useAlerts = () => {
     cel: string | undefined,
     limit: number | undefined,
     offset: number | undefined,
-    options: SWRConfiguration = { revalidateOnFocus: false }
+    sortBy?: string | undefined,
+    sortDirection?: 'ASC' | 'DESC' | undefined,
+    options: SWRConfiguration = { revalidateOnFocus: false },
   ) => {
     const filtersParams = new URLSearchParams();
 
@@ -132,6 +137,18 @@ export const useAlerts = () => {
 
     if (cel) {
       filtersParams.set("cel", cel);
+    }
+
+    if (sortBy) {
+      filtersParams.set("sort_by", sortBy);
+
+      switch (sortDirection) {
+        case 'DESC':
+          filtersParams.set("sort_dir", 'desc');
+          break;
+        default:
+          filtersParams.set("sort_dir", 'asc');
+      }
     }
 
     let requestUrl = `/alerts`;
@@ -162,6 +179,7 @@ export const useAlerts = () => {
     usePresetAlerts,
     useAlertAudit,
     useMultipleFingerprintsAlertAudit,
-    useLastAlerts
+    useLastAlerts,
+    alertsMutator
   };
 };

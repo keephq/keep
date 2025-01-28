@@ -45,7 +45,6 @@ export const AlertPresetLink = ({
   const { useLastAlerts } = useAlerts();
   
   const {
-    isLoading: isAsyncLoading,
     totalCount
   } = useLastAlerts(preset.options.find(option => option.label === 'CEL')?.value || '', 20, 0);
 

@@ -88,7 +88,13 @@ export default function Alerts({ presetName }: AlertsProps) {
     isLoading: isAsyncLoading,
     mutate: mutateAlerts,
     error: alertsError,
-  } = useLastAlerts(alertsQueryState?.cel, alertsQueryState?.limit , alertsQueryState?.offset);
+  } = useLastAlerts(
+    alertsQueryState?.cel,
+    alertsQueryState?.limit,
+    alertsQueryState?.offset,
+    alertsQueryState?.sortBy,
+    alertsQueryState?.sortDirection
+  );
 
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");

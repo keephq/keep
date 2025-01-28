@@ -54,6 +54,8 @@ export interface AlertsQuery {
   pageIndex: number;
   offset: number;
   limit: number;
+  sortBy: string;
+  sortDirection: 'ASC' | 'DESC';
 }
 
 interface PresetTab {
@@ -119,34 +121,6 @@ export function AlertTableServerSide({
     )
   );
 
-  const [facetFilters, setFacetFilters] = useLocalStorage<FacetFilters>(
-    `alertFacetFilters-${presetName}`,
-    {
-      severity: [],
-      status: [],
-      source: [],
-      assignee: [],
-      dismissed: [],
-      incident: [],
-    }
-  );
-
-  const [dynamicFacets, setDynamicFacets] = useLocalStorage<DynamicFacet[]>(
-    `dynamicFacets-${presetName}`,
-    []
-  );
-
-  const handleFacetDelete = (facetKey: string) => {
-    setDynamicFacets((prevFacets) =>
-      prevFacets.filter((df) => df.key !== facetKey)
-    );
-    setFacetFilters((prevFilters) => {
-      const newFilters = { ...prevFilters };
-      delete newFilters[facetKey];
-      return newFilters;
-    });
-  };
-
   const columnsIds = getColumnsIds(columns);
 
   const [columnOrder] = useLocalStorage<ColumnOrderState>(
@@ -180,8 +154,14 @@ export function AlertTableServerSide({
     const resultCel = [searchCel, filterCel].filter(Boolean).join(' && ');
     const limit = paginationState.pageSize;
     const offset = limit * paginationState.pageIndex;
-    onQueryChange && onQueryChange({ cel: resultCel, pageIndex: paginationState.pageIndex, offset, limit});
-    console.log( {resultCel, offset, limit});
+    const alertsQuery: AlertsQuery = {
+      cel: resultCel, pageIndex: paginationState.pageIndex, offset, limit,
+      sortBy: sorting[0]?.id,
+      sortDirection: sorting[0]?.desc ? 'DESC' : 'ASC'
+    }
+
+    onQueryChange && onQueryChange(alertsQuery);
+    console.log(alertsQuery);
   }, [filterCel, searchCel, paginationState, sorting, onQueryChange]);
 
   const [tabs, setTabs] = useState([
@@ -221,6 +201,7 @@ export function AlertTableServerSide({
         pageSize: paginationState.pageSize,
       }
     },
+    manualSorting: true,
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     initialState: {
