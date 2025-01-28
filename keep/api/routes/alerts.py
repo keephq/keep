@@ -611,7 +611,8 @@ def _enrich_alert(
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by API `{authenticated_entity.api_key_name}`"
             should_run_workflow = True
-            should_check_incidents_resolution = True
+            if enrich_data.enrichments["status"] == "resolved":
+                should_check_incidents_resolution = True
         elif "note" in enrich_data.enrichments and enrich_data.enrichments["note"]:
             action_type = ActionType.COMMENT
             action_description = f"Comment added by {authenticated_entity.email} - {enrich_data.enrichments['note']}"
