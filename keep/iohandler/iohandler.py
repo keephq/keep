@@ -406,12 +406,6 @@ class IOHandler:
             )
             safe = False
 
-        # allow {{ const.<key> }} to be rendered
-        const_rendering = False
-        if key.startswith("{{ consts.") and key.endswith("}}"):
-            self.logger.debug("Rendering const key")
-            const_rendering = True
-
         context = self.context_manager.get_full_context()
 
         if additional_context:
@@ -442,10 +436,6 @@ class IOHandler:
         if not rendered:
             return default
 
-        if const_rendering:
-            # https://github.com/keephq/keep/issues/2326
-            rendered = html.unescape(rendered)
-            return self._render(rendered, safe, default)
         return rendered
 
     def _encode_single_quotes_in_double_quotes(self, s):
@@ -613,9 +603,14 @@ class IOHandler:
             rendered = chevron.render(
                 current, context, warn=True if iterations == 0 else False
             )
+
+            # https://github.com/keephq/keep/issues/2326
+            rendered = html.unescape(rendered)
+
             # If no more changes or no more mustache tags, we're done
             if rendered == current or "{{" not in rendered:
                 return rendered
+
             current = rendered
             iterations += 1
 
