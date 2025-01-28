@@ -6,6 +6,7 @@ import re
 import typing
 
 from keep.actions.actions_factory import ActionsCRUD
+from keep.api.core.config import config
 from keep.api.core.db import get_workflow_id
 from keep.contextmanager.contextmanager import ContextManager
 from keep.functions import cyaml
@@ -19,6 +20,9 @@ class Parser:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self._loaded_providers_cache = {}
+        self._use_loaded_provider_cache = config(
+            "KEEP_USE_PROVIDER_CACHE", default=False
+        )
 
     def _get_workflow_id(self, tenant_id, workflow: dict) -> str:
         """Support both CLI and API workflows
@@ -227,12 +231,14 @@ class Parser:
             return
         # Load installed providers
         all_providers = ProvidersFactory.get_all_providers()
-        if not self._loaded_providers_cache:
+        # _use_loaded_provider_cache is a flag to control whether to use the loaded providers cache
+        if not self._loaded_providers_cache or not self._use_loaded_provider_cache:
             installed_providers = ProvidersFactory.get_installed_providers(
                 tenant_id=tenant_id, all_providers=all_providers, override_readonly=True
             )
             self._loaded_providers_cache = installed_providers
         else:
+            self.logger.debug("Using cached loaded providers")
             installed_providers = self._loaded_providers_cache
         for provider in installed_providers:
             self.logger.debug("Loading provider", extra={"provider_id": provider.id})
