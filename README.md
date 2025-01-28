@@ -62,10 +62,16 @@
 
 > Missing a provider? [Submit a new provider request](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=) and we'll add it quickly!
 
-### AI Providers
+### AI backends for Enrichments, Correlations and Incident Context Gathering
 
 <table>
 <tr>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/anthropic-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/anthropic-icon.png" alt="Anthropic"/><br/>
+            Anthropic
+        </a>
+    </td>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/openai-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/openai-icon.png" alt="OpenAI"/><br/>
@@ -102,12 +108,6 @@
         <a href="https://docs.keephq.dev/providers/documentation/gemini-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/gemini-icon.png" alt="Gemini"/><br/>
             Gemini
-        </a>
-    </td>
-    <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/documentation/anthropic-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/anthropic-icon.png" alt="Anthropic"/><br/>
-            Anthropic
         </a>
     </td>
 </tr>
