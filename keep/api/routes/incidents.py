@@ -39,7 +39,11 @@ from keep.api.core.db import (
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.facets import create_facet, delete_facet
-from keep.api.core.incidents import get_incident_facets, get_incident_facets_data, get_last_incidents_by_cel
+from keep.api.core.incidents import (
+    get_incident_facets,
+    get_incident_facets_data,
+    get_last_incidents_by_cel,
+)
 from keep.api.models.alert import (
     AlertDto,
     EnrichAlertRequestBody,
@@ -58,8 +62,8 @@ from keep.api.models.alert import (
     SplitIncidentRequestDto,
     SplitIncidentResponseDto,
 )
-from keep.api.models.facet import CreateFacetDto, FacetDto
 from keep.api.models.db.alert import ActionType, AlertAudit
+from keep.api.models.facet import CreateFacetDto, FacetDto
 from keep.api.models.workflow import WorkflowExecutionDTO
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
@@ -179,7 +183,9 @@ def get_all_incidents(
         )
     except CelToSqlException as e:
         logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
-        raise HTTPException(status_code=400, detail=f'Error parsing CEL expression: {cel}')
+        raise HTTPException(
+            status_code=400, detail=f"Error parsing CEL expression: {cel}"
+        )
 
     incidents_dto = []
     for incident in incidents:
@@ -199,6 +205,7 @@ def get_all_incidents(
     return IncidentsPaginatedResultsDto(
         limit=limit, offset=offset, count=total_count, items=incidents_dto
     )
+
 
 @router.post(
     "/facets/options",
@@ -230,10 +237,10 @@ def fetch_inicident_facet_options(
     )
 
     facet_options = get_incident_facets_data(
-            tenant_id = tenant_id,
-            allowed_incident_ids=allowed_incident_ids,
-            facets_query = facets_query
-        )
+        tenant_id=tenant_id,
+        allowed_incident_ids=allowed_incident_ids,
+        facets_query=facets_query,
+    )
 
     logger.info(
         "Fetched incident facets from DB",
@@ -252,7 +259,7 @@ def fetch_inicident_facet_options(
 def fetch_inicident_facets(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
-    )
+    ),
 ) -> list:
     tenant_id = authenticated_entity.tenant_id
 
@@ -263,9 +270,7 @@ def fetch_inicident_facets(
         },
     )
 
-    facets = get_incident_facets(
-            tenant_id = tenant_id
-        )
+    facets = get_incident_facets(tenant_id=tenant_id)
 
     logger.info(
         "Fetched incident facets from DB",
@@ -285,7 +290,7 @@ async def add_incidents_facet(
     create_facet_dto: CreateFacetDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
-    )
+    ),
 ) -> FacetDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -294,11 +299,9 @@ async def add_incidents_facet(
             "tenant_id": tenant_id,
         },
     )
-    created_facet = create_facet(
-        tenant_id=tenant_id,
-        facet=create_facet_dto
-    )
+    created_facet = create_facet(tenant_id=tenant_id, facet=create_facet_dto)
     return created_facet
+
 
 @router.delete(
     "/facets/{facet_id}",
@@ -308,7 +311,7 @@ async def delete_incidents_facet(
     facet_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
-    )
+    ),
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -318,11 +321,8 @@ async def delete_incidents_facet(
             "facet_id": facet_id,
         },
     )
-    is_deleted = delete_facet(
-        tenant_id=tenant_id,
-        facet_id=facet_id
-    )
-    
+    is_deleted = delete_facet(tenant_id=tenant_id, facet_id=facet_id)
+
     if not is_deleted:
         raise HTTPException(status_code=404, detail="Facet not found")
 
