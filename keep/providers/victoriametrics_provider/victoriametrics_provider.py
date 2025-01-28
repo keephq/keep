@@ -466,7 +466,8 @@ receivers:
             )
             try:
                 response.raise_for_status()
-                return response.json()
+                results = response.json()
+                return results.get("data", {}).get("result", [])
             except Exception as e:
                 self.logger.exception("Failed to perform instant query")
                 raise e
@@ -478,6 +479,8 @@ receivers:
                 auth=auth,
             )
             if response.status_code == 200:
+                results = response.json()
+                # return only the results
                 return response.json()
             else:
                 self.logger.error(
