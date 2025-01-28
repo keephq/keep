@@ -25,9 +25,7 @@ def test_with_basic_context(context_manager):
         "name": "s2",
     }
     s = iohandler.render("hello {{ steps.name }}")
-    s2 = iohandler.render("hello {{ providers.name }}")
     assert s == "hello s"
-    assert s2 == "hello s2"
 
 
 def test_with_function(context_manager):

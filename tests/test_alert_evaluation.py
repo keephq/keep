@@ -663,7 +663,9 @@ def test_state_alerts_multiple_firing_transitions(db_session):
             tenant_id="test", workflow_id="test-workflow-1"
         )
         context_manager1.context = context1
-        context_manager1.get_full_context = lambda exclude_providers: context1
+        context_manager1.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context1
+        )
         provider1 = KeepProvider(context_manager1, "test", {})
 
         context_manager2 = ContextManager(
@@ -807,7 +809,9 @@ def test_state_alerts_staggered_resolution(db_session):
             tenant_id="test", workflow_id="test-workflow-1"
         )
         context_manager1.context = context1
-        context_manager1.get_full_context = lambda exclude_providers: context1
+        context_manager1.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context1
+        )
         provider1 = KeepProvider(context_manager1, "test", {})
 
         result1 = provider1._notify(**kwargs1)
@@ -825,7 +829,9 @@ def test_state_alerts_staggered_resolution(db_session):
             if alert["metric"]["job"] != "vmagentstaggered"
         ]
         context_manager1.context = context1
-        context_manager1.get_full_context = lambda exclude_providers: context1
+        context_manager1.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context1
+        )
         result1 = provider1._notify(**kwargs1)
         assert len(result1) == 3
         for alert in result1:
@@ -865,7 +871,9 @@ def test_state_alerts_flapping(db_session):
             tenant_id="test", workflow_id="test-workflow-1"
         )
         context_manager1.context = context1
-        context_manager1.get_full_context = lambda exclude_providers: context1
+        context_manager1.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context1
+        )
         provider1 = KeepProvider(context_manager1, "test", {})
 
         result1 = provider1._notify(**kwargs1)
@@ -887,7 +895,9 @@ def test_state_alerts_flapping(db_session):
             if alert["metric"]["job"] != "vmagentflapping"
         ]
         context_manager1.context = context1
-        context_manager1.get_full_context = lambda exclude_providers: context1
+        context_manager1.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context1
+        )
         result1 = provider1._notify(**kwargs1)
         # so now we have 2 alerts pending and 1 alert resolved
         assert len(result1) == 3
@@ -901,7 +911,9 @@ def test_state_alerts_flapping(db_session):
         frozen_time.tick(delta=timedelta(minutes=1))
         context1["steps"]["this"]["results"].append(removed_alert)
         context_manager1.context = context1
-        context_manager1.get_full_context = lambda exclude_providers: context1
+        context_manager1.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context1
+        )
         # it should be 2 firing and 1 pending
         result1 = provider1._notify(**kwargs1)
         assert len(result1) == 3
