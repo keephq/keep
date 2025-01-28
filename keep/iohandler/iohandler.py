@@ -609,11 +609,7 @@ class IOHandler:
 
             # If no more changes or no more mustache tags, we're done
             # we don't want to render providers. ever, so this is a hack for it for now
-            if (
-                rendered == current
-                or "{{" not in rendered
-                and "providers." not in rendered
-            ):
+            if rendered == current or "{{" not in rendered or "providers." in rendered:
                 return rendered
 
             current = rendered
