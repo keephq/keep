@@ -45,7 +45,7 @@ class DeepseekProvider(BaseProvider):
     def _query(
         self,
         prompt,
-        model="deepseek-chat",
+        model="deepseek-reasoner",
         max_tokens=1024,
         system_prompt=None,
         structured_output_format=None,
