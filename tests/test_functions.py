@@ -782,6 +782,52 @@ def test_render_without_execution(mocked_context_manager):
     assert rendered == "My yaml is: keep.is_business_hours(2024-03-25T14:00:00Z)!"
 
 
+def test_render_without_execution2(mocked_context_manager):
+    """
+    Test rendering a template without executing it's internal keep functions.
+    """
+    workflow_definition = """workflow:
+id: alert-time-check
+description: Handle alerts based on startedAt timestamp
+triggers:
+- type: alert
+  filters:
+  - key: name
+    value: "server-is-down"
+actions:
+- name: send-slack-message-tier-1
+  if: "keep.get_firing_time('{{ alert }}', 'minutes') > 15  and keep.get_firing_time('{{ alert }}', 'minutes') < 30"
+  provider:
+    type: slack
+    config: {{ providers.slack}}
+    with:
+      message: |
+        "Tier 1 Alert: {{ alert.name }} - {{ alert.description }}
+        Alert details: {{ alert }}"
+"""
+    template = "My yaml is: {{ yaml }}!"
+    context = {
+        "yaml": workflow_definition,
+        "providers": {
+            "slack": {"name": "slack-de-slack", "authentication": "1234567890"}
+        },
+    }
+    mocked_context_manager.get_full_context.return_value = context
+    iohandler = IOHandler(mocked_context_manager)
+    with pytest.raises(Exception):
+        iohandler.render(
+            template,
+            safe=True,
+        )
+
+    template = "raw_render_without_execution(My yaml is: {{ yaml }}!)"
+    rendered = iohandler.render(
+        template,
+        safe=True,
+    )
+    assert "slack-de-slack" in rendered
+
+
 def test_dictget_basic():
     """
     Test basic dictionary get functionality
