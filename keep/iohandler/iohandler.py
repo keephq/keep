@@ -420,7 +420,7 @@ class IOHandler:
         # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
         original_stderr = sys.stderr
         sys.stderr = io.StringIO()
-        rendered = chevron.render(key, context, warn=True)
+        rendered = self.render_recursively(key, context)
         # chevron.render will escape the quotes, we need to unescape them
         rendered = rendered.replace("&quot;", '"')
         stderr_output = sys.stderr.getvalue()
@@ -592,15 +592,46 @@ class IOHandler:
         except Exception:
             self.logger.exception("Failed to request short URLs from API")
 
+    def render_recursively(
+        self, template: str, context: dict, max_iterations: int = 10
+    ) -> str:
+        """
+        Recursively render a template until there are no more mustache tags or max iterations reached.
+
+        Args:
+            template: The template string containing mustache tags
+            context: The context dictionary for rendering
+            max_iterations: Maximum number of rendering iterations to prevent infinite loops
+
+        Returns:
+            The fully rendered string
+        """
+        current = template
+        iterations = 0
+
+        while iterations < max_iterations:
+            rendered = chevron.render(
+                current, context, warn=True if iterations == 0 else False
+            )
+            # If no more changes or no more mustache tags, we're done
+            if rendered == current or "{{" not in rendered:
+                return rendered
+            current = rendered
+            iterations += 1
+
+        # Return the last rendered version even if we hit max iterations
+        return current
+
 
 if __name__ == "__main__":
     # debug & test
     context_manager = ContextManager("keep")
-    context_manager.event_context = {"tags": {"k1": "v1", "k2": "v2"}}
+    context_manager.event_context = {
+        "header": "HTTP API Error {{ alert.labels.statusCode }}",
+        "labels": {"statusCode": "404"},
+    }
     iohandler = IOHandler(context_manager)
-    res = iohandler.render(
-        'https://www.keephq.dev?keep.join("{{alert.tags}}", "&", "prefix_")'
-    )
+    res = iohandler.render("{{ alert.header }}")
     from asteval import Interpreter
 
     aeval = Interpreter()
