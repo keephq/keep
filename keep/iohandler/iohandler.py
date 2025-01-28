@@ -406,7 +406,7 @@ class IOHandler:
             )
             safe = False
 
-        context = self.context_manager.get_full_context()
+        context = self.context_manager.get_full_context(exclude_providers=True)
 
         if additional_context:
             context.update(additional_context)
@@ -608,7 +608,8 @@ class IOHandler:
             rendered = html.unescape(rendered)
 
             # If no more changes or no more mustache tags, we're done
-            if rendered == current or "{{" not in rendered:
+            # we don't want to render providers. ever, so this is a hack for it for now
+            if rendered == current or "{{" not in rendered or "providers." in rendered:
                 return rendered
 
             current = rendered
