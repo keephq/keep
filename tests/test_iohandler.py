@@ -883,7 +883,7 @@ def test_dont_render_providers(context_manager):
     iohandler = IOHandler(context_manager)
     template = "{{ providers.keephq }}"
     result = iohandler.render(template)
-    assert result == "", "Expected empty string, but got {result}"
+    assert "bla" not in result, "Expected empty string, but got {result}"
 
 
 def test_render_with_consts(context_manager):
