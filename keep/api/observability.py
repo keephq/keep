@@ -48,7 +48,7 @@ def setup(app: FastAPI):
     otlp_traces_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", None)
     otlp_logs_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", None)
     otlp_metrics_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT", None)
-    enable_cloud_trace_exporeter = config(
+    enable_cloud_trace_exporter = config(
         "CLOUD_TRACE_ENABLED", default=False, cast=bool
     )
     metrics_enabled = os.environ.get("METRIC_OTEL_ENABLED", "")
@@ -79,7 +79,7 @@ def setup(app: FastAPI):
         if otlp_logs_endpoint:
             logger.info(f"OTLP Logs endpoint set to {otlp_logs_endpoint}")
 
-    if enable_cloud_trace_exporeter:
+    if enable_cloud_trace_exporter:
         logger.info("Cloud Trace exporter enabled.")
         processor = BatchSpanProcessor(CloudTraceSpanExporter())
         provider.add_span_processor(processor)
