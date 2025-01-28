@@ -62,7 +62,7 @@
 
 > Missing a provider? [Submit a new provider request](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=) and we'll add it quickly!
 
-### AI backends for Enrichments, Correlations and Incident Context Gathering
+### AI Backends for Enrichments, Correlations and Incident Context Gathering
 
 <table>
 <tr>
