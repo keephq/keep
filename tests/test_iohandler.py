@@ -876,6 +876,16 @@ def test_recursive_rendering_max_iterations(context_manager):
     ), "Expected no change due to max iterations limit"
 
 
+def test_dont_render_providers(context_manager):
+    context_manager.providers_context = {
+        "keephq": '{"auth": "bla"}',
+    }
+    iohandler = IOHandler(context_manager)
+    template = "{{ providers.keephq }}"
+    result = iohandler.render(template)
+    assert result == "", "Expected empty string, but got {result}"
+
+
 def test_render_with_consts(context_manager):
     iohandler = IOHandler(context_manager)
     context_manager.alert = AlertDto(
