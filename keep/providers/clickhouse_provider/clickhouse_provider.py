@@ -134,6 +134,8 @@ class ClickhouseProvider(BaseProvider):
             raise ProviderException("Invalid Clickhouse protocol")
 
         dsn = f"{protocol}://{user}:{password}@{host}:{port}/{database}"
+        if self.authentication_config.verify is False:
+            dsn += "?verify=false"
 
         return connect(dsn, verify=self.authentication_config.verify)
 
