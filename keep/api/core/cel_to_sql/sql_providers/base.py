@@ -351,17 +351,17 @@ class BaseCelToSqlProvider:
         raise NotImplementedError(f"'{method_name}' method is not supported")
 
     def _visit_contains_method_calling(
-        self, property_path: str, method_args: List[str]
+        self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
         raise NotImplementedError("'contains' method must be implemented in the child class")
 
     def _visit_startwith_method_calling(
-        self, property_path: str, method_args: List[str]
+        self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
         raise NotImplementedError("'startswith' method call must be implemented in the child class")
 
     def _visit_endswith_method_calling(
-        self, property_path: str, method_args: List[str]
+        self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
         raise NotImplementedError("'endswith' method call must be implemented in the child class")
 
