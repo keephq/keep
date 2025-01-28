@@ -193,8 +193,8 @@ class WorkflowManager:
                             },
                         )
                         if event_val is None:
-                            self.logger.warning(
-                                "Failed to run filter, skipping the event. Probably misconfigured workflow.",
+                            self.logger.debug(
+                                "Failed to run filter, skipping the event. This may happen if the event does not have the filter_key as attribute.",
                                 extra={
                                     "tenant_id": tenant_id,
                                     "filter_key": filter_key,
@@ -321,6 +321,7 @@ class WorkflowManager:
                             }
                         )
                     self.logger.info("Workflow added to run")
+            self.logger.info("All workflows added to run")
 
     def _get_event_value(self, event, filter_key):
         # if the filter key is a nested key, get the value

@@ -6,7 +6,8 @@ import re
 import typing
 
 from keep.actions.actions_factory import ActionsCRUD
-from keep.api.core.db import get_workflow_id
+from keep.api.core.config import config
+from keep.api.core.db import get_installed_providers, get_workflow_id
 from keep.contextmanager.contextmanager import ContextManager
 from keep.functions import cyaml
 from keep.providers.providers_factory import ProvidersFactory
@@ -18,6 +19,10 @@ from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 class Parser:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self._loaded_providers_cache = {}
+        self._use_loaded_provider_cache = config(
+            "KEEP_USE_PROVIDER_CACHE", default=False
+        )
 
     def _get_workflow_id(self, tenant_id, workflow: dict) -> str:
         """Support both CLI and API workflows
@@ -221,13 +226,38 @@ class Parser:
             _type_: _description_
         """
         # If there is no tenant id, e.g. running from CLI, no db here
+        self.logger.debug("Loading installed providers to context")
         if not tenant_id:
             return
         # Load installed providers
         all_providers = ProvidersFactory.get_all_providers()
-        installed_providers = ProvidersFactory.get_installed_providers(
-            tenant_id=tenant_id, all_providers=all_providers, override_readonly=True
-        )
+        # _use_loaded_provider_cache is a flag to control whether to use the loaded providers cache
+        if not self._loaded_providers_cache or not self._use_loaded_provider_cache:
+            # this should print once when the providers are loaded for the first time
+            self.logger.info("Loading installed providers to workfloe")
+            installed_providers = ProvidersFactory.get_installed_providers(
+                tenant_id=tenant_id, all_providers=all_providers, override_readonly=True
+            )
+            self._loaded_providers_cache = installed_providers
+            self.logger.info("Installed providers loaded successfully")
+        else:
+            self.logger.debug("Using cached loaded providers")
+            # before we can use cache, we need to check if new providers are added or deleted
+            _installed_providers = get_installed_providers(tenant_id=tenant_id)
+            _installed_providers_ids = set([p.id for p in _installed_providers])
+            _cached_provider_ids = set([p.id for p in self._loaded_providers_cache])
+            if _installed_providers_ids != _cached_provider_ids:
+                # this should print only when provider deleted/added
+                self.logger.info("Providers cache is outdated, reloading providers")
+                installed_providers = ProvidersFactory.get_installed_providers(
+                    tenant_id=tenant_id,
+                    all_providers=all_providers,
+                    override_readonly=True,
+                )
+                self._loaded_providers_cache = installed_providers
+                self.logger.info("Providers cache reloaded")
+            else:
+                installed_providers = self._loaded_providers_cache
         for provider in installed_providers:
             self.logger.debug("Loading provider", extra={"provider_id": provider.id})
             try:
@@ -241,6 +271,7 @@ class Parser:
                 self.logger.error(
                     f"Error loading provider {provider.id}", extra={"exception": e}
                 )
+        self.logger.debug("Installed providers loaded successfully")
         return installed_providers
 
     def _parse_providers_from_env(self, context_manager: ContextManager):
@@ -257,9 +288,7 @@ class Parser:
         if providers_json and re.compile(r"^(\/|\.\/|\.\.\/).*\.json$").match(
             providers_json
         ):
-            with open(
-                file=providers_json, mode="r", encoding="utf8"
-            ) as file:
+            with open(file=providers_json, mode="r", encoding="utf8") as file:
                 providers_json = file.read()
 
         if providers_json:
