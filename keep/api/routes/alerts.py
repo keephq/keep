@@ -49,6 +49,7 @@ from keep.api.utils.time_stamp_helpers import get_time_stamp_filter
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
+from keep.rulesengine.rulesengine import RulesEngine
 from keep.searchengine.searchengine import SearchEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
