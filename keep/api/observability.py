@@ -23,6 +23,8 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+from keep.api.core.config import config
+
 
 def get_protocol_from_endpoint(endpoint):
     parsed_url = urlparse(endpoint)
@@ -46,7 +48,9 @@ def setup(app: FastAPI):
     otlp_traces_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", None)
     otlp_logs_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", None)
     otlp_metrics_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT", None)
-    enable_cloud_trace_exporeter = os.environ.get("CLOUD_TRACE_ENABLED", False)
+    enable_cloud_trace_exporeter = config(
+        "CLOUD_TRACE_ENABLED", default=False, cast=bool
+    )
     metrics_enabled = os.environ.get("METRIC_OTEL_ENABLED", "")
 
     resource = Resource.create({"service.name": service_name})
