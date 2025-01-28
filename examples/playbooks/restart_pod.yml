@@ -1,0 +1,16 @@
+workflow:
+  id: restart-pod
+  description: demonstrates how to automatically restart pod
+  triggers:
+    - type: alert
+      filters:
+        - key: name
+          value: PodCrashLooping
+  actions:
+    - name: dismiss-alert
+      provider:
+        type: mock
+        with:
+          enrich_alert:
+            - key: dismissed
+              value: "true"
