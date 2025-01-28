@@ -140,14 +140,14 @@
             Dynatrace
         </a>
     </td>
+  </tr>
+  <tr>
     <td align="center">
         <a href="https://docs.keephq.dev/providers/documentation/elastic-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/elastic-icon.png" alt="Elastic"/><br/>
             Elastic
         </a>
     </td>
-  </tr>
-  <tr>
     <td align="center">
         <a href="https://docs.keephq.dev/providers/documentation/gcpmonitoring-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/gcpmonitoring-icon.png" alt="GCP Monitoring"/><br/>
@@ -178,14 +178,14 @@
             Netdata
         </a>
     </td>
+  </tr>
+  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/new-relic-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/newrelic-icon.png" alt="New Relic"/><br/>
             New Relic
         </a>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/parseable-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/parseable-icon.png" alt="Parseable"/><br/>
@@ -216,14 +216,14 @@
             Sentry
         </a>
     </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/signalfx-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/signalfx-icon.png" alt="SignalFX"/><br/>
             SignalFX
         </a>
     </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/openobserve-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/openobserve-icon.png" alt="OpenObserve"/><br/>
@@ -254,14 +254,14 @@
           SumoLogic
         </a>
   </td>
+</tr>
+<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/uptimekuma-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/uptimekuma-icon.png" alt="UptimeKuma"/><br/>
           UptimeKuma
         </a>
   </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/victoriametrics-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/victoriametrics-icon.png" alt="VictoriaMetrics"/><br/>
