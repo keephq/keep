@@ -517,7 +517,7 @@ def test_stateful_alerts_multiple_alerts(db_session, context):
         context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
         context_manager.context = context
         context_manager.get_full_context = (
-            lambda exclude_providers, exclude_env: context
+            lambda exclude_providers=False, exclude_env=False: context
         )
         provider = KeepProvider(context_manager, "test", {})
         result = provider._notify(**kwargs)
@@ -589,7 +589,7 @@ def test_stateful_alerts_multiple_alerts_2(db_session, context):
         context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
         context_manager.context = context
         context_manager.get_full_context = (
-            lambda exclude_providers, exclude_env: context
+            lambda exclude_providers=False, exclude_env=False: context
         )
         provider = KeepProvider(context_manager, "test", {})
         result = provider._notify(**kwargs)
@@ -672,7 +672,9 @@ def test_state_alerts_multiple_firing_transitions(db_session):
             tenant_id="test", workflow_id="test-workflow-2"
         )
         context_manager2.context = context2
-        context_manager2.get_full_context = lambda exclude_providers: context2
+        context_manager2.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context2
+        )
         provider2 = KeepProvider(context_manager2, "test", {})
 
         # create 3 alerts
@@ -759,12 +761,16 @@ def test_make_sure_two_different_workflows_have_different_fingerprints(
 
     context_manager1 = ContextManager(tenant_id="test", workflow_id="test-workflow-1")
     context_manager1.context = context
-    context_manager1.get_full_context = lambda exclude_providers: context
+    context_manager1.get_full_context = (
+        lambda exclude_providers=False, exclude_env=False: context
+    )
     provider1 = KeepProvider(context_manager1, "test", {})
 
     context_manager2 = ContextManager(tenant_id="test", workflow_id="test-workflow-2")
     context_manager2.context = context
-    context_manager2.get_full_context = lambda exclude_providers: context
+    context_manager2.get_full_context = (
+        lambda exclude_providers=False, exclude_env=False: context
+    )
     provider2 = KeepProvider(context_manager2, "test", {})
 
     result1 = provider1._notify(**kwargs1)
