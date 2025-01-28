@@ -112,7 +112,9 @@ def test_stateless_alerts_firing(db_session, context, severity, if_condition, va
     context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
     context["steps"]["this"]["results"][0]["value"] = value
     context_manager.context = context
-    context_manager.get_full_context = lambda exclude_providers: context
+    context_manager.get_full_context = (
+        lambda exclude_providers=False, exclude_env=False: context
+    )
     keep_provider = KeepProvider(context_manager, "test", {})
     result = keep_provider._notify(**kwargs)
 
@@ -204,7 +206,9 @@ def test_stateless_alerts_resolved(
     context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
     context["steps"]["this"]["results"][0]["value"] = firing_value
     context_manager.context = context
-    context_manager.get_full_context = lambda exclude_providers: context
+    context_manager.get_full_context = (
+        lambda exclude_providers=False, exclude_env=False: context
+    )
     keep_provider = KeepProvider(context_manager, "test", {})
     # First trigger the alert with firing value
     result = keep_provider._notify(**kwargs)
@@ -221,7 +225,9 @@ def test_stateless_alerts_resolved(
 
     # Now update with resolved value
     context["steps"]["this"]["results"][0]["value"] = resolved_value
-    context_manager.get_full_context = lambda exclude_providers: context
+    context_manager.get_full_context = (
+        lambda exclude_providers=False, exclude_env=False: context
+    )
     result = keep_provider._notify(**kwargs)
     # Verify alert is resolved
     assert len(result) == 1
@@ -255,7 +261,9 @@ def test_statless_alerts_multiple_alerts(db_session, context):
     }
     context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
     context_manager.context = context
-    context_manager.get_full_context = lambda exclude_providers: context
+    context_manager.get_full_context = (
+        lambda exclude_providers=False, exclude_env=False: context
+    )
     provider = KeepProvider(context_manager, "test", {})
     result = provider._notify(**kwargs)
     assert len(result) == 3
@@ -308,7 +316,9 @@ def test_stateless_alerts_multiple_alerts_resolved(db_session, context):
     # First create firing alerts
     context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
     context_manager.context = context
-    context_manager.get_full_context = lambda exclude_providers: context
+    context_manager.get_full_context = (
+        lambda exclude_providers=False, exclude_env=False: context
+    )
     provider = KeepProvider(context_manager, "test", {})
     result = provider._notify(**kwargs)
     assert len(result) == 3
@@ -371,7 +381,9 @@ def test_stateful_alerts_firing(db_session, context):
     # First create pending alerts
     context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
     context_manager.context = context
-    context_manager.get_full_context = lambda exclude_providers: context
+    context_manager.get_full_context = (
+        lambda exclude_providers=False, exclude_env=False: context
+    )
     provider = KeepProvider(context_manager, "test", {})
 
     # Get initial state
@@ -429,7 +441,9 @@ def test_stateful_alerts_resolved(db_session, context):
     # First create pending alerts
     context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
     context_manager.context = context
-    context_manager.get_full_context = lambda exclude_providers: context
+    context_manager.get_full_context = (
+        lambda exclude_providers=False, exclude_env=False: context
+    )
     provider = KeepProvider(context_manager, "test", {})
 
     # Get initial state
@@ -502,7 +516,9 @@ def test_stateful_alerts_multiple_alerts(db_session, context):
     with freeze_time("2024-01-26 10:00:00") as frozen_time:
         context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
         context_manager.context = context
-        context_manager.get_full_context = lambda exclude_providers: context
+        context_manager.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context
+        )
         provider = KeepProvider(context_manager, "test", {})
         result = provider._notify(**kwargs)
         assert len(result) == 3
@@ -514,7 +530,9 @@ def test_stateful_alerts_multiple_alerts(db_session, context):
         # now create few more alerts
         more_alerts = genereate_multi_dict("6")
         context["steps"] = more_alerts
-        context_manager.get_full_context = lambda exclude_providers: context
+        context_manager.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context
+        )
         result = provider._notify(**kwargs)
         assert len(result) == 6
 
@@ -570,7 +588,9 @@ def test_stateful_alerts_multiple_alerts_2(db_session, context):
     with freeze_time("2024-01-26 10:00:00") as frozen_time:
         context_manager = ContextManager(tenant_id="test", workflow_id="test-workflow")
         context_manager.context = context
-        context_manager.get_full_context = lambda exclude_providers: context
+        context_manager.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context
+        )
         provider = KeepProvider(context_manager, "test", {})
         result = provider._notify(**kwargs)
         assert len(result) == 3
@@ -643,14 +663,18 @@ def test_state_alerts_multiple_firing_transitions(db_session):
             tenant_id="test", workflow_id="test-workflow-1"
         )
         context_manager1.context = context1
-        context_manager1.get_full_context = lambda exclude_providers: context1
+        context_manager1.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context1
+        )
         provider1 = KeepProvider(context_manager1, "test", {})
 
         context_manager2 = ContextManager(
             tenant_id="test", workflow_id="test-workflow-2"
         )
         context_manager2.context = context2
-        context_manager2.get_full_context = lambda exclude_providers: context2
+        context_manager2.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context2
+        )
         provider2 = KeepProvider(context_manager2, "test", {})
 
         # create 3 alerts
@@ -737,12 +761,16 @@ def test_make_sure_two_different_workflows_have_different_fingerprints(
 
     context_manager1 = ContextManager(tenant_id="test", workflow_id="test-workflow-1")
     context_manager1.context = context
-    context_manager1.get_full_context = lambda exclude_providers: context
+    context_manager1.get_full_context = (
+        lambda exclude_providers=False, exclude_env=False: context
+    )
     provider1 = KeepProvider(context_manager1, "test", {})
 
     context_manager2 = ContextManager(tenant_id="test", workflow_id="test-workflow-2")
     context_manager2.context = context
-    context_manager2.get_full_context = lambda exclude_providers: context
+    context_manager2.get_full_context = (
+        lambda exclude_providers=False, exclude_env=False: context
+    )
     provider2 = KeepProvider(context_manager2, "test", {})
 
     result1 = provider1._notify(**kwargs1)
@@ -787,7 +815,9 @@ def test_state_alerts_staggered_resolution(db_session):
             tenant_id="test", workflow_id="test-workflow-1"
         )
         context_manager1.context = context1
-        context_manager1.get_full_context = lambda exclude_providers: context1
+        context_manager1.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context1
+        )
         provider1 = KeepProvider(context_manager1, "test", {})
 
         result1 = provider1._notify(**kwargs1)
@@ -805,7 +835,9 @@ def test_state_alerts_staggered_resolution(db_session):
             if alert["metric"]["job"] != "vmagentstaggered"
         ]
         context_manager1.context = context1
-        context_manager1.get_full_context = lambda exclude_providers: context1
+        context_manager1.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context1
+        )
         result1 = provider1._notify(**kwargs1)
         assert len(result1) == 3
         for alert in result1:
@@ -845,7 +877,9 @@ def test_state_alerts_flapping(db_session):
             tenant_id="test", workflow_id="test-workflow-1"
         )
         context_manager1.context = context1
-        context_manager1.get_full_context = lambda exclude_providers: context1
+        context_manager1.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context1
+        )
         provider1 = KeepProvider(context_manager1, "test", {})
 
         result1 = provider1._notify(**kwargs1)
@@ -867,7 +901,9 @@ def test_state_alerts_flapping(db_session):
             if alert["metric"]["job"] != "vmagentflapping"
         ]
         context_manager1.context = context1
-        context_manager1.get_full_context = lambda exclude_providers: context1
+        context_manager1.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context1
+        )
         result1 = provider1._notify(**kwargs1)
         # so now we have 2 alerts pending and 1 alert resolved
         assert len(result1) == 3
@@ -881,7 +917,9 @@ def test_state_alerts_flapping(db_session):
         frozen_time.tick(delta=timedelta(minutes=1))
         context1["steps"]["this"]["results"].append(removed_alert)
         context_manager1.context = context1
-        context_manager1.get_full_context = lambda exclude_providers: context1
+        context_manager1.get_full_context = (
+            lambda exclude_providers=False, exclude_env=False: context1
+        )
         # it should be 2 firing and 1 pending
         result1 = provider1._notify(**kwargs1)
         assert len(result1) == 3
