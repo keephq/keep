@@ -160,7 +160,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         presetName={selectedPreset.name}
         handleClose={() => setChangeStatusAlert(null)}
       />
-      <AlertMethodModal presetName={selectedPreset.name} />
+      <AlertMethodModal alerts={alerts} presetName={selectedPreset.name} />
       <AlertAssignTicketModal
         handleClose={() => setTicketModalAlert(null)}
         ticketingProviders={ticketingProviders}

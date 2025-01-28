@@ -44,7 +44,7 @@ export default function AlertDismissModal({
 
   const revalidateMultiple = useRevalidateMultiple();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
-  const { usePresetAlerts, alertsMutator } = useAlerts();
+  const { alertsMutator } = useAlerts();
 
   const api = useApi();
   // Ensuring that the useEffect hook is called consistently
