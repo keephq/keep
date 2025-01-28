@@ -7,6 +7,7 @@ export const ProvidersCategories = () => {
     useFilterContext();
 
   const categories: TProviderCategory[] = [
+    "AI",
     "Monitoring",
     "Incident Management",
     "Cloud Infrastructure",

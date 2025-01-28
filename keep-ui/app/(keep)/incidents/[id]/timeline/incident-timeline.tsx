@@ -283,9 +283,9 @@ export default function IncidentTimeline({
 
   // TODO: Load data on server side
   // Loading state is true if the data is not loaded and there is no error for smoother loading state on initial load
-  const alertsLoading = _alertsLoading || (!alerts && !alertsError);
-  const auditEventsLoading =
-    _auditEventsLoading || (!auditEvents && !auditEventsError);
+  // const alertsLoading = _alertsLoading || (!alerts && !alertsError);
+  // const auditEventsLoading =
+  //   _auditEventsLoading || (!auditEvents && !auditEventsError);
 
   const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
 
@@ -358,7 +358,7 @@ export default function IncidentTimeline({
     return {};
   }, [auditEvents, alerts]);
 
-  if (auditEventsLoading || alertsLoading) {
+  if (_auditEventsLoading || _alertsLoading) {
     return (
       <Card>
         <Loading />

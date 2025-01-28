@@ -170,7 +170,12 @@ export default function AlertMenu({
       },
       ...(provider?.methods?.map((method) => ({
         icon: (props: any) => (
-          <DynamicImageProviderIcon providerType={provider.type} {...props} />
+          <DynamicImageProviderIcon
+            providerType={provider.type}
+            {...props}
+            height="16"
+            width="16"
+          />
         ),
         label: method.name,
         onClick: () => openMethodModal(method),

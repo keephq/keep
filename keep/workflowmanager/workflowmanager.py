@@ -21,7 +21,7 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 
 class WorkflowManager:
     # List of providers that are not allowed to be used in workflows in multi tenant mode.
-    PREMIUM_PROVIDERS = ["bash", "python"]
+    PREMIUM_PROVIDERS = ["bash", "python", "llamacpp", "ollama"]
 
     @staticmethod
     def get_instance() -> "WorkflowManager":
@@ -193,8 +193,8 @@ class WorkflowManager:
                             },
                         )
                         if event_val is None:
-                            self.logger.warning(
-                                "Failed to run filter, skipping the event. Probably misconfigured workflow.",
+                            self.logger.debug(
+                                "Failed to run filter, skipping the event. This may happen if the event does not have the filter_key as attribute.",
                                 extra={
                                     "tenant_id": tenant_id,
                                     "filter_key": filter_key,
@@ -321,6 +321,7 @@ class WorkflowManager:
                             }
                         )
                     self.logger.info("Workflow added to run")
+            self.logger.info("All workflows added to run")
 
     def _get_event_value(self, event, filter_key):
         # if the filter key is a nested key, get the value
@@ -429,7 +430,7 @@ class WorkflowManager:
             if not test_run:
                 workflow.context_manager.dump()
 
-        if any(errors):
+        if errors is not None and any(errors):
             self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
         else:
             self.logger.info(f"Workflow {workflow.workflow_id} ran successfully")

@@ -669,6 +669,9 @@ const ProviderForm = ({
           </Link>
         </div>
 
+        {installedProvidersMode && provider.id && (
+          <Subtitle>{provider.id}</Subtitle>
+        )}
         {installedProvidersMode && provider.last_pull_time && (
           <Subtitle>
             Provider last pull time:{" "}

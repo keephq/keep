@@ -1,0 +1,46 @@
+---
+title: "Ollama Provider"
+description: "The Ollama Provider allows for integrating locally running Ollama language models into Keep."
+---
+
+<Tip>
+  The Ollama Provider supports querying local Ollama models for prompt-based
+  interactions. Make sure you have Ollama installed and running locally with your desired models.
+</Tip>
+
+### **Cloud Limitation**
+This provider is disabled for cloud environments and can only be used in local or self-hosted environments.
+
+## Inputs
+
+The Ollama Provider supports the following inputs:
+
+- `prompt`: Interact with Ollama models by sending prompts and receiving responses
+- `model`: The model to be used, defaults to `llama2` (must be pulled in Ollama first)
+- `max_tokens`: Limit amount of tokens returned by the model, default 1024.
+- `structured_output_format`: Optional JSON format for the structured output (check examples at the GitHub).
+
+## Outputs
+
+Currently, the Ollama Provider outputs the response from the model based on the prompt provided.
+
+## Authentication Parameters
+
+The Ollama Provider requires the following configuration parameter:
+
+- **host** (required): The Ollama API host URL, defaults to "http://localhost:11434"
+
+## Connecting with the Provider
+
+To use the Ollama Provider:
+
+1. Install Ollama on your system from [Ollama's website](https://ollama.ai).
+2. Start the Ollama service.
+3. Pull your desired model(s) using `ollama pull model-name`.
+4. Configure the host URL in your Keep configuration.
+
+## Prerequisites
+
+- Ollama must be installed and running on your system.
+- The desired models must be pulled and available in your Ollama installation.
+- The Ollama API must be accessible from the host where Keep is running.

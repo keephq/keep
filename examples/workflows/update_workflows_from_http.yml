@@ -1,0 +1,19 @@
+id: update-workflows-from-http
+description: Dump workflows from HTTP and update them in Keep
+triggers:
+  - type: manual
+
+steps:
+  - name: get-workflow
+    provider:
+      type: http
+      with:
+        method: GET
+        url: "https://raw.githubusercontent.com/keephq/keep/refs/heads/main/examples/workflows/new_github_stars.yml"
+
+actions:
+  - name: update
+    provider:
+      type: keep
+      with:
+        workflow_to_update_yaml: "raw_render_without_execution({{ steps.get-workflow.results.body }})"
