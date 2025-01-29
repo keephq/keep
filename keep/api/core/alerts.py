@@ -123,10 +123,10 @@ def build_alerts_query(
         select(
             Alert,
             AlertEnrichment,
-            AlertEnrichment.id.label('alert_enrichment_id'),
-            AlertEnrichment.tenant_id.label('alert_enrichment_tenant_id'),
-            AlertEnrichment.alert_fingerprint.label('alert_enrichment_fingerprint'),
-            AlertEnrichment.enrichments.label('alert_enrichment_json'),
+            # AlertEnrichment.id.label('alert_enrichment_id'),
+            # AlertEnrichment.tenant_id.label('alert_enrichment_tenant_id'),
+            # AlertEnrichment.alert_fingerprint.label('alert_enrichment_fingerprint'),
+            # AlertEnrichment.enrichments.label('alert_enrichment_json'),
             base.c.startedAt,
         )
         .select_from(base)
@@ -240,17 +240,9 @@ def get_last_alerts(
         alerts = []
         for alert_data in alerts_with_start:
             alert: Alert = alert_data[0]
-            startedAt = alert_data.startedAt
-            alert.alert_enrichment = None
-            
-            if alert_data.alert_enrichment_id is not None:
-                alert.alert_enrichment = AlertEnrichment(
-                        id=alert_data.alert_enrichment_id,
-                        tenant_id=alert_data.alert_enrichment_tenant_id,
-                        alert_fingerprint=alert_data.alert_enrichment_fingerprint,
-                        enrichments=alert_data.alert_enrichment_json
-                    )
-            alert.event["startedAt"] = str(startedAt)
+            alert.alert_enrichment = alert_data[1]
+
+            alert.event["startedAt"] = str(alert_data[2])
             alert.event["event_id"] = str(alert.id)
             alerts.append(alert)
 
