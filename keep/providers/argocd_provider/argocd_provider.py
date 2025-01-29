@@ -234,4 +234,4 @@ class ArgocdProvider(BaseTopologyProvider):
                         node["uid"]
                     ] = "unknown"
 
-        return list(service_topology.values())
+        return list(service_topology.values()), {}
