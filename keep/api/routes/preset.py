@@ -542,7 +542,7 @@ def create_preset_tab(
     description="Delete a tab from a preset",
 )
 def delete_tab(
-    preset_id: str,
+    preset_id: uuid.UUID,
     tab_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["delete:presets"])
