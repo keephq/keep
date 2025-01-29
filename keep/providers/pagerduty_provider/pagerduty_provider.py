@@ -381,10 +381,6 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             if self.context_manager.event_context:
                 source = self.context_manager.event_context.service or "custom_event"
 
-        custom_details = kwargs.get("custom_details", {})
-        if isinstance(custom_details, str):
-            custom_details = json.loads(custom_details)
-
         payload = {
             "routing_key": self.authentication_config.routing_key,
             "event_action": event_type,
@@ -395,6 +391,12 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                 "severity": severity,
             },
         }
+
+        custom_details = kwargs.get("custom_details", {})
+        if isinstance(custom_details, str):
+            custom_details = json.loads(custom_details)
+        if not custom_details and kwargs.get("alert_body"):
+            custom_details = {"alert_body": kwargs.get("alert_body")}
 
         if custom_details:
             payload["payload"]["custom_details"] = custom_details
