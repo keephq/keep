@@ -52,7 +52,7 @@ class EksProviderAuthConfig:
 class EksProvider(BaseProvider):
     """Interact with and query AWS EKS clusters."""
 
-    PROVIDER_DISPLAY_NAME = "Amazon EKS"
+    PROVIDER_DISPLAY_NAME = "EKS"
     PROVIDER_CATEGORY = ["Cloud Infrastructure"]
 
     PROVIDER_SCOPES = [
