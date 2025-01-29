@@ -85,7 +85,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     fallbackData: initialFacetsData?.facets,
   });
 
-  const { facetOptions, isLoading } = useFacetOptions(
+  const { facetOptions, mutate: mutateFacetOptions, isLoading } = useFacetOptions(
     entityName,
     initialFacetsData?.facetOptions as any,
     buildFacetOptionsQuery(),
@@ -132,7 +132,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   useEffect(
     function watchRevalidationToken() {
       if (revalidationToken) {
-        setFacetQueriesState(buildFacetsQueriesState());
+        mutateFacetOptions();
       }
     },
     // disabled as it should watch only revalidationToken

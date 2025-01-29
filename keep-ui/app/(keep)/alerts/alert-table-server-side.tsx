@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Table, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "@/entities/alerts/model";
@@ -65,6 +65,7 @@ interface PresetTab {
   id?: string;
 }
 interface Props {
+  refreshToken: string | null;
   alerts: AlertDto[];
   initalFacets: FacetDto[];
   alertsTotalCount: number;
@@ -86,6 +87,7 @@ interface Props {
 }
 
 export function AlertTableServerSide({
+  refreshToken,
   alerts,
   alertsTotalCount,
   columns,
@@ -105,7 +107,6 @@ export function AlertTableServerSide({
   onRefresh
 }: Props) {
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(null);
-  const [filterRevalidationToken, setFilterRevalidationToken] = useState<string | null>(null);
   const [filterCel, setFilterCel] = useState<string>("");
   const [searchCel, setSearchCel] = useState<string>("");
   
@@ -152,6 +153,21 @@ export function AlertTableServerSide({
     pageIndex: 0,
     pageSize: 20,
   });
+
+  const alertsQuery = useMemo(function whenQueryChange() {
+    const resultCel = [searchCel, filterCel].filter(Boolean).join(' && ');
+    const limit = paginationState.pageSize;
+    const offset = limit * paginationState.pageIndex;
+    const alertsQuery: AlertsQuery = {
+      cel: resultCel, pageIndex: paginationState.pageIndex, offset, limit,
+      sortBy: sorting[0]?.id,
+      sortDirection: sorting[0]?.desc ? 'DESC' : 'ASC'
+    }
+
+    return alertsQuery;
+  }, [filterCel, searchCel, paginationState, sorting]);
+
+  useEffect(() => onQueryChange && onQueryChange(alertsQuery), [alertsQuery, onQueryChange])
 
   useEffect(function whenQueryChange() {
     const resultCel = [searchCel, filterCel].filter(Boolean).join(' && ');
@@ -232,10 +248,11 @@ export function AlertTableServerSide({
     return acc.concat(alertId);
   }, []);
 
-  let showSkeleton =
-    table.getFilteredRowModel().rows.length === 0 && isAsyncLoading;
+  let showSkeleton = isAsyncLoading;
   let showEmptyState =
-    table.getFilteredRowModel().rows.length === 0 && !isAsyncLoading;
+    alertsQuery.cel && table.getPageCount() === 0 && !isAsyncLoading;
+
+  useEffect(() => console.log({ isAsyncLoading }), [isAsyncLoading])
 
   const handleRowClick = (alert: AlertDto) => {
     // if presetName is alert-history, do not open sidebar
@@ -369,7 +386,7 @@ export function AlertTableServerSide({
               onCelChange={(cel) => setFilterCel(cel)}
               renderFacetOptionIcon={renderFacetOptionIcon}
               renderFacetOptionLabel={renderFacetOptionLabel}
-              revalidationToken={filterRevalidationToken}
+              revalidationToken={refreshToken}
             />
           </div>
 

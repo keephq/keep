@@ -44,50 +44,52 @@ export const useFacetOptions = (
   const [isLoading, setIsLoading] = useState(false);
   const requestUrl = `/${entityName}/facets/options`;
 
+  async function fetch() {
+    setIsLoading(true);
+    const fetchedData: FacetOptionsDict = await api.post(
+      requestUrl,
+      facetsQuery
+    );
+    const newFacetOptions: FacetOptionsDict = JSON.parse(
+      JSON.stringify(mergedFacetOptions || {})
+    );
+    Object.entries(fetchedData).forEach(([facetId, newOptions]) => {
+      if (newFacetOptions[facetId]) {
+        const currentFacetOptionsMap = newFacetOptions[facetId].reduce(
+          (accumulator, oldOption) => {
+            accumulator[oldOption.display_name] = oldOption;
+            oldOption.matches_count = 0;
+            return accumulator;
+          },
+          {} as Record<string, FacetOptionDto>
+        );
+
+        newOptions.forEach(
+          (newOption) =>
+            (currentFacetOptionsMap[newOption.display_name] = newOption)
+        );
+        newFacetOptions[facetId] = Object.values(currentFacetOptionsMap);
+        return;
+      }
+
+      newFacetOptions[facetId] = newOptions;
+    });
+
+    setMergedFacetOptions(newFacetOptions);
+    setIsLoading(false);
+  }
+
   useEffect(() => {
     if (!api.isReady() || !facetsQuery) {
       return;
     }
-
-    async function fetch() {
-      setIsLoading(true);
-      const fetchedData: FacetOptionsDict = await api.post(
-        requestUrl,
-        facetsQuery
-      );
-      const newFacetOptions: FacetOptionsDict = JSON.parse(
-        JSON.stringify(mergedFacetOptions || {})
-      );
-      Object.entries(fetchedData).forEach(([facetId, newOptions]) => {
-        if (newFacetOptions[facetId]) {
-          const currentFacetOptionsMap = newFacetOptions[facetId].reduce(
-            (accumulator, oldOption) => {
-              accumulator[oldOption.display_name] = oldOption;
-              oldOption.matches_count = 0;
-              return accumulator;
-            },
-            {} as Record<string, FacetOptionDto>
-          );
-
-          newOptions.forEach(
-            (newOption) =>
-              (currentFacetOptionsMap[newOption.display_name] = newOption)
-          );
-          newFacetOptions[facetId] = Object.values(currentFacetOptionsMap);
-          return;
-        }
-
-        newFacetOptions[facetId] = newOptions;
-      });
-
-      setMergedFacetOptions(newFacetOptions);
-      setIsLoading(false);
-    }
+    
     fetch();
   }, [api, api?.isReady(), JSON.stringify(facetsQuery), requestUrl]);
 
   return {
     facetOptions: mergedFacetOptions,
+    mutate: fetch,
     isLoading
   };
 };

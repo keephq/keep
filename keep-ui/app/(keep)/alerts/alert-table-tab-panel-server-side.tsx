@@ -9,6 +9,7 @@ import {
 import { Preset } from "@/entities/presets/model/types";
 
 interface Props {
+  refreshToken: string | null;
   initalFacets: FacetDto[];
   alerts: AlertDto[];
   alertsTotalCount: number;
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export default function AlertTableTabPanelServerSide({
+  refreshToken,
   initalFacets,
   alerts,
   alertsTotalCount,
@@ -76,6 +78,7 @@ export default function AlertTableTabPanelServerSide({
 
   return (
     <AlertTableServerSide
+      refreshToken={refreshToken}
       initalFacets={initalFacets}
       alerts={alerts}
       alertsTotalCount={alertsTotalCount}

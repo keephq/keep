@@ -167,6 +167,7 @@ export const useAlerts = () => {
     return {
       ...swrValue,
       data: swrValue.data?.results as AlertDto[],
+      isLoading: swrValue.isLoading || !swrValue.data,
       totalCount: swrValue.data?.count,
       limit: swrValue.data?.limit,
       offset: swrValue.data?.offset

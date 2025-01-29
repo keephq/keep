@@ -23,6 +23,7 @@ import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
 import { AlertsQuery } from "./alert-table-server-side";
 import { FacetDto } from "@/features/filter";
+import { v4 as uuidV4 } from 'uuid';
 
 const defaultPresets: Preset[] = [
   {
@@ -61,6 +62,7 @@ export default function Alerts({ presetName, initalFacets }: AlertsProps) {
   // hooks for the note and ticket modals
   const [noteModalAlert, setNoteModalAlert] = useState<AlertDto | null>();
   const [ticketModalAlert, setTicketModalAlert] = useState<AlertDto | null>();
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [runWorkflowModalAlert, setRunWorkflowModalAlert] =
     useState<AlertDto | null>();
   const [dismissModalAlert, setDismissModalAlert] = useState<
@@ -114,11 +116,17 @@ export default function Alerts({ presetName, initalFacets }: AlertsProps) {
     }
   }, [searchParams, alerts]);
 
-  useEffect(() => {
+  useEffect(function setNewRefreshToken() {
     if (pollAlerts) {
+      setRefreshToken(uuidV4());
+    }
+  }, [setRefreshToken, pollAlerts]);
+
+  useEffect(function refreshAlerts() {
+    if (refreshToken) {
       mutateAlerts();
     }
-  }, [mutateAlerts, pollAlerts]);
+  }, [mutateAlerts, refreshToken]);
 
   // if we don't have presets data yet, just show loading
   if (!selectedPreset && isPresetsLoading) {
@@ -139,6 +147,7 @@ export default function Alerts({ presetName, initalFacets }: AlertsProps) {
       <AlertTableTabPanelServerSide
         initalFacets={initalFacets}
         key={selectedPreset.name}
+        refreshToken={refreshToken}
         preset={selectedPreset}
         alerts={alerts}
         alertsTotalCount={totalCount}
