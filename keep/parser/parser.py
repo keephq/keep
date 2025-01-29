@@ -635,7 +635,7 @@ class Parser:
             return parsed_action
         self.logger.debug("No on-failure action")
 
-    def _extract_provider_id(self, provider_type: str):
+    def _extract_provider_id(self, context_manager: ContextManager, provider_type: str):
         """
         Translate {{ <provider_id>.<config_id> }} to a provider id
 
@@ -651,9 +651,12 @@ class Parser:
         # TODO FIX THIS SHIT
         provider_type = provider_type.split(".")
         if len(provider_type) != 2:
-            raise ValueError(
-                "Provider config is not valid, should be in the format: {{ <provider_id>.<config_id> }}"
-            )
+            message = "Provider config is not valid, should be in the format: {{ <provider_id>.<config_id> }}."
+            message += f" Current value is {provider_type}"
+            if context_manager.workflow_id:
+                message += f". Workflow id: {context_manager.workflow_id}"
+
+            raise ValueError(message)
 
         provider_id = provider_type[1].replace("}}", "").strip()
         return provider_id
@@ -688,7 +691,7 @@ class Parser:
             return provider_type, {"authentication": {}}
         # extract config when using {{ <provider_id>.<config_id> }}
         elif isinstance(provider_config, str):
-            config_id = self._extract_provider_id(provider_config)
+            config_id = self._extract_provider_id(context_manager, provider_config)
             provider_config = context_manager.providers_context.get(config_id)
             if not provider_config:
                 self.logger.warning(
