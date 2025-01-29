@@ -250,7 +250,7 @@ export function AlertTableServerSide({
 
   let showSkeleton = isAsyncLoading;
   let showEmptyState =
-    alertsQuery.cel && table.getPageCount() === 0 && !isAsyncLoading;
+    !!alertsQuery.cel && table.getPageCount() === 0 && !isAsyncLoading;
 
   useEffect(() => console.log({ isAsyncLoading }), [isAsyncLoading])
 
