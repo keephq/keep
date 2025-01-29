@@ -107,7 +107,7 @@ class CheckmkProvider(BaseProvider):
         logger.info(f"Microtime: {microtime}")
         if microtime:
             ts = int(int(microtime) / 1000000)
-            dt_object = datetime.datetime.fromtimestamp(ts)
+            dt_object = datetime.fromtimestamp(ts)
             last_received = dt_object.isoformat()
         else:
             last_received = CheckmkProvider.convert_to_utc_isoformat(

@@ -53,7 +53,12 @@ def setup(app: FastAPI):
     )
     metrics_enabled = os.environ.get("METRIC_OTEL_ENABLED", "")
 
-    resource = Resource.create({"service.name": service_name})
+    resource = Resource.create(
+        attributes={
+            "SERVICE.NAME": service_name,
+            "SERVICE_INSTANCE_ID": f"worker-{os.getpid()}",
+        }
+    )
     provider = TracerProvider(resource=resource)
 
     if otlp_collector_endpoint:
