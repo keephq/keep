@@ -2,6 +2,7 @@ import copy
 import inspect
 import logging
 import logging.config
+import logging.handlers
 import os
 import uuid
 from datetime import datetime
@@ -9,8 +10,10 @@ from threading import Timer
 
 # tb: small hack to avoid the InsecureRequestWarning logs
 import urllib3
+from pythonjsonlogger import jsonlogger
 from sqlmodel import Session
 
+from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.db import get_session, push_logs_to_db
 from keep.api.models.db.provider import ProviderExecutionLog
 
@@ -222,13 +225,26 @@ class DevTerminalFormatter(logging.Formatter):
         return f"{message} {extra_info}"
 
 
+class CustomJsonFormatter(jsonlogger.JsonFormatter):
+    def __init__(self, *args, rename_fields=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.rename_fields = rename_fields if RUNNING_IN_CLOUD_RUN else {}
+
+
 CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
-            "format": "%(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(otelTraceID)s %(otelSpanID)s %(otelServiceName)s %(threadName)s %(process)s %(module)s",
-            "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "()": CustomJsonFormatter,
+            "fmt": "%(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(otelTraceID)s %(otelSpanID)s %(otelTraceSampled)s %(otelServiceName)s %(threadName)s %(process)s %(module)s",
+            "rename_fields": {
+                "levelname": "severity",
+                "asctime": "timestamp",
+                "otelTraceID": "logging.googleapis.com/trace",
+                "otelSpanID": "logging.googleapis.com/spanId",
+                "otelTraceSampled": "logging.googleapis.com/trace_sampled",
+            },
         },
         "dev_terminal": {
             "()": DevTerminalFormatter,
