@@ -161,7 +161,6 @@ export function AlertTableServerSide({
     }
 
     onQueryChange && onQueryChange(alertsQuery);
-    console.log(alertsQuery);
   }, [filterCel, searchCel, paginationState, sorting, onQueryChange]);
 
   const [tabs, setTabs] = useState([
@@ -359,7 +358,9 @@ export function AlertTableServerSide({
           {/* Facets sidebar */}
           <div className="w-33 min-w-[12rem] overflow-y-auto">
             <FacetsPanelServerSide
+              key={searchCel}
               entityName={"alerts"}
+              facetOptionsCel={searchCel}
               clearFiltersToken={clearFiltersToken}
               // initialFacetsData={initialFacetsData}
               onCelChange={(cel) => setFilterCel(cel)}

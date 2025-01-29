@@ -7,7 +7,6 @@ from sqlalchemy import (
     asc,
     desc,
     func,
-    literal_column,
     select,
 )
 from sqlmodel import Session, select, text
@@ -17,7 +16,7 @@ from sqlmodel import Session, select, text
 from keep.api.core.facets import get_facet_options, get_facets
 from keep.api.models.db.alert import Alert, AlertEnrichment, Incident, LastAlert, LastAlertToIncident
 from keep.api.models.db.facet import FacetType
-from keep.api.models.facet import FacetDto, FacetOptionDto
+from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from keep.api.core.db import engine
 from keep.api.core.cel_to_sql.properties_metadata import FieldMappingConfiguration, JsonMapping, PropertiesMetadata, SimpleMapping
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import get_cel_to_sql_provider_for_dialect
@@ -337,10 +336,10 @@ def get_last_alerts(
 
 def get_alert_facets_data(
     tenant_id: str,
-    facets_query: dict[str, str],
+    facet_options_query: FacetOptionsQueryDto,
 ) -> dict[str, list[FacetOptionDto]]:
-    if facets_query:
-        facets = get_alert_facets(tenant_id, facets_query.keys())
+    if facet_options_query and facet_options_query.facetQueries:
+        facets = get_alert_facets(tenant_id, facet_options_query.facetQueries.keys())
     else:
         facets = static_facets
 
@@ -350,7 +349,7 @@ def get_alert_facets_data(
     return get_facet_options(
         base_query=base_query,
         facets=facets,
-        facets_query=facets_query,
+        facet_options_query=facet_options_query,
         properties_metadata=properties_metadata,
     )
 

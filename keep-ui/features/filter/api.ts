@@ -1,5 +1,5 @@
 import { ApiClient } from "@/shared/api";
-import { FacetDto, FacetOptionDto } from "./models";
+import { FacetDto, FacetOptionDto, FacetOptionsQuery } from "./models";
 
 export interface InitialFacetsData {
   facets: FacetDto[];
@@ -11,8 +11,10 @@ export async function getInitialFacets(
   entityName: string
 ): Promise<InitialFacetsData> {
   const facets = await api.get<FacetDto[]>(`/${entityName}/facets`);
+  const facetOptionsQuery: FacetOptionsQuery = { facetQueries: facets.map((f) => f.id).reduce((acc, id) => ({...acc, [id]: ''}), {}) };
   const facetOptions = await api.post<{ [key: string]: FacetOptionDto[] }>(
-    `/${entityName}/facets/options`, facets.map((f) => f.id).reduce((acc, id) => ({...acc, [id]: ''}), {})
+    `/${entityName}/facets/options`,
+    facetOptionsQuery
   );
 
   return { facets, facetOptions };

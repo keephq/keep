@@ -1,5 +1,5 @@
 import useSWR, { SWRConfiguration, useSWRConfig } from "swr";
-import { CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsDict, FacetOptionsQueries } from "./models";
+import { CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsDict, FacetOptionsQueries, FacetOptionsQuery } from "./models";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -35,7 +35,7 @@ export const useFacets = (
 export const useFacetOptions = (
   entityName: string,
   initialFacetOptions: FacetOptionsDict | undefined,
-  facetsQuery: FacetOptionsQueries | null
+  facetsQuery: FacetOptionsQuery | null
 ) => {
   const api = useApi();
   const [mergedFacetOptions, setMergedFacetOptions] = useState(
@@ -84,7 +84,7 @@ export const useFacetOptions = (
       setIsLoading(false);
     }
     fetch();
-  }, [api, api?.isReady(), facetsQuery, requestUrl]);
+  }, [api, api?.isReady(), JSON.stringify(facetsQuery), requestUrl]);
 
   return {
     facetOptions: mergedFacetOptions,

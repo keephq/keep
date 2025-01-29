@@ -37,6 +37,7 @@ from keep.api.models.alert import (
 )
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import ActionType
+from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.tasks.process_event_task import process_event
@@ -66,7 +67,7 @@ process_event_executor = ThreadPoolExecutor(
     description="Query alert facet options. Accepts dictionary where key is facet id and value is cel to query facet",
 )
 def fetch_alert_facet_options(
-    facets_query: dict[str, str],
+    facet_options_query: FacetOptionsQueryDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
@@ -82,7 +83,7 @@ def fetch_alert_facet_options(
 
     facet_options = get_alert_facets_data(
             tenant_id = tenant_id,
-            facets_query = facets_query
+            facet_options_query = facet_options_query
         )
 
     logger.info(

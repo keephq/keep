@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CreateFacetDto } from "./models";
+import { CreateFacetDto, FacetOptionsQueries, FacetOptionsQuery } from "./models";
 import { useFacetActions, useFacetOptions, useFacets } from "./hooks";
 import { InitialFacetsData } from "./api";
 import { FacetsPanel } from "./facets-panel";
@@ -9,6 +9,10 @@ export interface FacetsPanelProps {
   entityName: string;
   className?: string;
   initialFacetsData?: InitialFacetsData;
+  /**
+   * CEL to be used for fetching facet options.
+   */
+  facetOptionsCel?: string
   /** 
    * Revalidation token to force recalculation of the facets.
    * Will call API to recalculate facet options every revalidationToken value change
@@ -38,6 +42,7 @@ export interface FacetsPanelProps {
 
 export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   entityName,
+  facetOptionsCel,
   className,
   initialFacetsData,
   revalidationToken,
@@ -47,10 +52,32 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   renderFacetOptionIcon,
   renderFacetOptionLabel,
 }) => {
+  function buildFacetOptionsQuery() {
+    if (!facetQueriesState) {
+      return null;
+    }
+
+    let result: FacetOptionsQuery | null = null;
+
+    if (facetOptionsCel) {
+      result = {
+        ...(result || {}),
+        cel: facetOptionsCel,
+      }
+    }
+
+    if (facetQueriesState) {
+      result = {
+        ...(result || {}),
+        facetQueries: facetQueriesState,
+      }
+    }
+
+    return result;
+  }
+  
   const facetActions = useFacetActions(entityName, initialFacetsData);
-  const [facetQueriesState, setFacetQueriesState] = useState<{
-    [key: string]: string;
-  } | null>(null);
+  const [facetQueriesState, setFacetQueriesState] = useState<FacetOptionsQueries | null>(null);
 
   const { data: facetsData } = useFacets(entityName, {
     revalidateOnFocus: false,
@@ -61,7 +88,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   const { facetOptions, isLoading } = useFacetOptions(
     entityName,
     initialFacetsData?.facetOptions,
-    facetQueriesState
+    buildFacetOptionsQuery(),
   );
 
   useEffect(
