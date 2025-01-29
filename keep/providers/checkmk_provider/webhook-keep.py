@@ -47,6 +47,7 @@ def GetNotificationDetails():
     DATE = env_vars.get("NOTIFY_DATE")
     LONGDATETIME = env_vars.get("NOTIFY_LONGDATETIME")
     SHORTDATETIME = env_vars.get("NOTIFY_SHORTDATETIME")
+    MICROTIME = env_vars.get("NOTIFY_MICROTIME")
 
     HOSTNAME = env_vars.get("NOTIFY_HOSTNAME")
     HOSTALIAS = env_vars.get("NOTIFY_HOSTALIAS")
@@ -85,6 +86,7 @@ def GetNotificationDetails():
         "date": DATE,
         "long_date_time": LONGDATETIME,
         "short_date_time": SHORTDATETIME,
+        "micro_time": MICROTIME,
     }
 
     # Host related information
