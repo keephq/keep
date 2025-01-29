@@ -8,11 +8,13 @@ import logging
 import boto3
 import pydantic
 from kubernetes import client, config
+from kubernetes.stream import stream
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.models.provider_method import ProviderMethod
 
 
 @pydantic.dataclasses.dataclass
@@ -116,6 +118,65 @@ class EksProvider(BaseProvider):
         alias="Execute Pod Commands"
     ),
     """
+
+    PROVIDER_METHODS = [
+        ProviderMethod(
+            name="List Pods",
+            func_name="get_pods",
+            scopes=["pods:list", "pods:get"],
+            description="List all pods in a namespace or across all namespaces",
+            type="view",
+        ),
+        ProviderMethod(
+            name="List Persistent Volume Claims",
+            func_name="get_pvc",
+            scopes=["pods:list"],
+            description="List all PVCs in a namespace or across all namespaces",
+            type="view",
+        ),
+        ProviderMethod(
+            name="Get Node Pressure",
+            func_name="get_node_pressure",
+            scopes=["pods:list"],
+            description="Get pressure metrics for all nodes",
+            type="view",
+        ),
+        ProviderMethod(
+            name="Execute Command",
+            func_name="exec_command",
+            scopes=["pods:exec"],
+            description="Execute a command in a pod",
+            type="action",
+        ),
+        ProviderMethod(
+            name="Restart Pod",
+            func_name="restart_pod",
+            scopes=["pods:delete"],
+            description="Restart a pod by deleting it",
+            type="action",
+        ),
+        ProviderMethod(
+            name="Get Deployment",
+            func_name="get_deployment",
+            scopes=["pods:list"],
+            description="Get deployment information",
+            type="view",
+        ),
+        ProviderMethod(
+            name="Scale Deployment",
+            func_name="scale_deployment",
+            scopes=["deployments:scale"],
+            description="Scale a deployment to specified replicas",
+            type="action",
+        ),
+        ProviderMethod(
+            name="Get Pod Logs",
+            func_name="get_pod_logs",
+            scopes=["pods:logs"],
+            description="Get logs from a pod",
+            type="view",
+        ),
+    ]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -262,6 +323,224 @@ class EksProvider(BaseProvider):
             self._client = self.__generate_client()
         return self._client
 
+    def get_pods(self, namespace: str = None) -> list:
+        """List all pods in a namespace or across all namespaces."""
+        if namespace:
+            self.logger.info(f"Listing pods in namespace {namespace}")
+            pods = self.client.list_namespaced_pod(namespace=namespace)
+        else:
+            self.logger.info("Listing pods across all namespaces")
+            pods = self.client.list_pod_for_all_namespaces()
+        return [pod.to_dict() for pod in pods.items]
+
+    def get_pvc(self, namespace: str = None) -> list:
+        """List all PVCs in a namespace or across all namespaces."""
+        if namespace:
+            self.logger.info(f"Listing PVCs in namespace {namespace}")
+            pvcs = self.client.list_namespaced_persistent_volume_claim(
+                namespace=namespace
+            )
+        else:
+            self.logger.info("Listing PVCs across all namespaces")
+            pvcs = self.client.list_persistent_volume_claim_for_all_namespaces()
+        return [pvc.to_dict() for pvc in pvcs.items]
+
+    def get_node_pressure(self) -> list:
+        """Get pressure metrics for all nodes."""
+        self.logger.info("Listing all nodes")
+        nodes = self.client.list_node()
+        node_pressures = []
+        for node in nodes.items:
+            pressures = {
+                "name": node.metadata.name,
+                "conditions": [],
+            }
+            for condition in node.status.conditions:
+                if condition.type in [
+                    "MemoryPressure",
+                    "DiskPressure",
+                    "PIDPressure",
+                ]:
+                    pressures["conditions"].append(condition.to_dict())
+            node_pressures.append(pressures)
+        return node_pressures
+
+    def __check_pod_shell_access(self, pod, container_name: str) -> str:
+        """
+        Check if pod has shell access and return appropriate shell.
+
+        Args:
+            pod: The Kubernetes pod object
+            container_name: Name of the container to check
+
+        Returns:
+            str: Path to available shell (/bin/bash or /bin/sh)
+
+        Raises:
+            ProviderException: If no shell access is available
+        """
+        # Get the container object
+        container = next(
+            (c for c in pod.spec.containers if c.name == container_name),
+            pod.spec.containers[0],
+        )
+
+        # Try different shells in order of preference
+        for shell in ["/bin/bash", "/bin/sh"]:
+            try:
+                result = self.client.connect_get_namespaced_pod_exec(
+                    name=pod.metadata.name,
+                    namespace=pod.metadata.namespace,
+                    container=container.name,
+                    command=[shell, "-c", "exit 0"],
+                    stderr=True,
+                    stdin=False,
+                    stdout=True,
+                    tty=False,
+                    _preload_content=True,
+                )
+                if result == "":  # Success
+                    return shell
+            except Exception:
+                continue
+
+        raise ProviderException(
+            f"No shell access available in pod {pod.metadata.name} container {container_name}"
+        )
+
+    def exec_command(
+        self, namespace: str, pod_name: str, command: str, container: str = None
+    ) -> str:
+        """Execute a command in a pod."""
+        if not all([namespace, pod_name]):
+            raise ProviderException(
+                "namespace and pod_name are required for exec_command"
+            )
+
+        # Get the pod
+        self.logger.info(f"Reading pod {pod_name} in namespace {namespace}")
+        pod = self.client.read_namespaced_pod(name=pod_name, namespace=namespace)
+
+        # If container not specified, use first container
+        if not container:
+            container = pod.spec.containers[0].name
+
+        try:
+            # First try direct command execution
+            if isinstance(command, list):
+                exec_command = command
+            else:
+                # Try to find a shell
+                shell = self.__check_pod_shell_access(pod, container)
+                exec_command = [shell, "-c", command]
+
+            # Execute the command
+            self.logger.info(
+                f"Executing command in pod {pod_name} container {container}"
+            )
+            ws_client = stream(
+                self.client.connect_get_namespaced_pod_exec,
+                pod_name,
+                namespace,
+                container=container,
+                command=exec_command,
+                stderr=True,
+                stdin=False,
+                stdout=True,
+                tty=False,
+                _preload_content=False,
+            )
+
+            # Read output
+            result = ""
+            error = ""
+
+            while ws_client.is_open():
+                ws_client.update(timeout=1)
+                if ws_client.peek_stdout():
+                    result += ws_client.read_stdout()
+                if ws_client.peek_stderr():
+                    error += ws_client.read_stderr()
+
+            ws_client.close()
+
+            if error:
+                raise ProviderException(f"Command execution failed: {error}")
+
+            return result.strip()
+
+        except Exception as e:
+            container_info = next(
+                (c for c in pod.spec.containers if c.name == container), None
+            )
+            image = container_info.image if container_info else "unknown"
+            raise ProviderException(
+                f"Failed to execute command in pod {pod_name} (container: {container}, "
+                f"image: {image}): {str(e)}"
+            )
+
+    def restart_pod(self, namespace: str, pod_name: str):
+        """Restart a pod by deleting it."""
+        if not all([namespace, pod_name]):
+            raise ProviderException(
+                "namespace and pod_name are required for restart_pod"
+            )
+
+        self.logger.info(f"Deleting pod {pod_name} in namespace {namespace}")
+        return self.client.delete_namespaced_pod(name=pod_name, namespace=namespace)
+
+    def get_deployment(self, deployment_name: str, namespace: str = "default"):
+        """Get deployment information."""
+        if not deployment_name:
+            raise ProviderException("deployment_name is required for get_deployment")
+
+        apps_v1 = client.AppsV1Api()
+        try:
+            deployment = apps_v1.read_namespaced_deployment(
+                name=deployment_name, namespace=namespace
+            )
+            return deployment.to_dict()
+        except Exception as e:
+            raise ProviderException(f"Failed to get deployment info: {str(e)}")
+
+    def scale_deployment(self, namespace: str, deployment_name: str, replicas: int):
+        """Scale a deployment to specified replicas."""
+        if not all([namespace, deployment_name, replicas is not None]):
+            raise ProviderException(
+                "namespace, deployment_name and replicas are required for scale_deployment"
+            )
+
+        apps_v1 = client.AppsV1Api()
+        self.logger.info(
+            f"Scaling deployment {deployment_name} in namespace {namespace} to {replicas} replicas"
+        )
+        return apps_v1.patch_namespaced_deployment_scale(
+            name=deployment_name,
+            namespace=namespace,
+            body={"spec": {"replicas": replicas}},
+        )
+
+    def get_pod_logs(
+        self,
+        namespace: str,
+        pod_name: str,
+        container: str = None,
+        tail_lines: int = 100,
+    ):
+        """Get logs from a pod."""
+        if not all([namespace, pod_name]):
+            raise ProviderException(
+                "namespace and pod_name are required for get_pod_logs"
+            )
+
+        self.logger.info(f"Getting logs for pod {pod_name} in namespace {namespace}")
+        return self.client.read_namespaced_pod_log(
+            name=pod_name,
+            namespace=namespace,
+            container=container,
+            tail_lines=tail_lines,
+        )
+
     def __generate_client(self):
         """Generate a Kubernetes client configured for EKS."""
         try:
@@ -346,190 +625,23 @@ class EksProvider(BaseProvider):
         Returns:
             Query results based on command type
         """
-        if command_type == "get_pods":
-            if kwargs.get("namespace"):
-                self.logger.info(f"Listing pods in namespace {kwargs['namespace']}")
-                pods = self.client.list_namespaced_pod(namespace=kwargs["namespace"])
-            else:
-                self.logger.info("Listing pods across all namespaces")
-                pods = self.client.list_pod_for_all_namespaces()
-            return [pod.to_dict() for pod in pods.items]
+        # Map command types to provider methods
+        command_map = {
+            "get_pods": self.get_pods,
+            "get_pvc": self.get_pvc,
+            "get_node_pressure": self.get_node_pressure,
+            "exec_command": self.exec_command,
+            "restart_pod": self.restart_pod,
+            "get_deployment": self.get_deployment,
+            "scale_deployment": self.scale_deployment,
+            "get_pod_logs": self.get_pod_logs,
+        }
 
-        elif command_type == "get_pvc":
-            if kwargs.get("namespace"):
-                self.logger.info(f"Listing PVCs in namespace {kwargs['namespace']}")
-                pvcs = self.client.list_namespaced_persistent_volume_claim(
-                    namespace=kwargs["namespace"]
-                )
-            else:
-                self.logger.info("Listing PVCs across all namespaces")
-                pvcs = self.client.list_persistent_volume_claim_for_all_namespaces()
-            return [pvc.to_dict() for pvc in pvcs.items]
+        if command_type not in command_map:
+            raise NotImplementedError(f"Command type '{command_type}' not implemented")
 
-        elif command_type == "get_node_pressure":
-            self.logger.info("Listing all nodes")
-            nodes = self.client.list_node()
-            node_pressures = []
-            for node in nodes.items:
-                pressures = {
-                    "name": node.metadata.name,
-                    "conditions": [],
-                }
-                for condition in node.status.conditions:
-                    if condition.type in [
-                        "MemoryPressure",
-                        "DiskPressure",
-                        "PIDPressure",
-                    ]:
-                        pressures["conditions"].append(condition.to_dict())
-                node_pressures.append(pressures)
-            return node_pressures
-
-        elif command_type == "exec_command":
-            from kubernetes.stream import stream
-
-            namespace = kwargs.get("namespace")
-            pod_name = kwargs.get("pod_name")
-            command = kwargs.get("command", [])
-            container = kwargs.get("container")
-
-            if not all([namespace, pod_name]):
-                raise ProviderException(
-                    "namespace and pod_name are required for exec_command"
-                )
-
-            # Get the pod
-            self.logger.info(f"Reading pod {pod_name} in namespace {namespace}")
-            pod = self.client.read_namespaced_pod(name=pod_name, namespace=namespace)
-
-            # If container not specified, use first container
-            if not container:
-                container = pod.spec.containers[0].name
-
-            try:
-                # First try direct command execution
-                if isinstance(command, list):
-                    exec_command = command
-                else:
-                    # Try to find a shell
-                    shell = self.__check_pod_shell_access(pod, container)
-                    exec_command = [shell, "-c", command]
-
-                # Execute the command
-                self.logger.info(
-                    f"Executing command in pod {pod_name} container {container}"
-                )
-                ws_client = stream(
-                    self.client.connect_get_namespaced_pod_exec,
-                    pod_name,
-                    namespace,
-                    container=container,
-                    command=exec_command,
-                    stderr=True,
-                    stdin=False,
-                    stdout=True,
-                    tty=False,
-                    _preload_content=False,
-                )
-
-                # Read output
-                result = ""
-                error = ""
-
-                while ws_client.is_open():
-                    ws_client.update(timeout=1)
-                    if ws_client.peek_stdout():
-                        result += ws_client.read_stdout()
-                    if ws_client.peek_stderr():
-                        error += ws_client.read_stderr()
-
-                ws_client.close()
-
-                if error:
-                    raise ProviderException(f"Command execution failed: {error}")
-
-                return result.strip()
-
-            except Exception as e:
-                container_info = next(
-                    (c for c in pod.spec.containers if c.name == container), None
-                )
-                image = container_info.image if container_info else "unknown"
-                raise ProviderException(
-                    f"Failed to execute command in pod {pod_name} (container: {container}, "
-                    f"image: {image}): {str(e)}"
-                )
-
-        elif command_type == "restart_pod":
-            namespace = kwargs.get("namespace")
-            pod_name = kwargs.get("pod_name")
-
-            if not all([namespace, pod_name]):
-                raise ProviderException(
-                    "namespace and pod_name are required for restart_pod"
-                )
-
-            self.logger.info(f"Deleting pod {pod_name} in namespace {namespace}")
-            return self.client.delete_namespaced_pod(name=pod_name, namespace=namespace)
-        elif command_type == "get_deployment":
-            namespace = kwargs.get("namespace", "default")
-            deployment_name = kwargs.get("deployment_name")
-
-            if not deployment_name:
-                raise ProviderException(
-                    "deployment_name is required for get_deployment"
-                )
-
-            apps_v1 = client.AppsV1Api()
-            try:
-                deployment = apps_v1.read_namespaced_deployment(
-                    name=deployment_name, namespace=namespace
-                )
-                return deployment.to_dict()
-            except Exception as e:
-                raise ProviderException(f"Failed to get deployment info: {str(e)}")
-        elif command_type == "scale_deployment":
-            namespace = kwargs.get("namespace")
-            deployment_name = kwargs.get("deployment_name")
-            replicas = kwargs.get("replicas")
-
-            if not all([namespace, deployment_name, replicas is not None]):
-                raise ProviderException(
-                    "namespace, deployment_name and replicas are required for scale_deployment"
-                )
-
-            apps_v1 = client.AppsV1Api()
-            self.logger.info(
-                f"Scaling deployment {deployment_name} in namespace {namespace} to {replicas} replicas"
-            )
-            return apps_v1.patch_namespaced_deployment_scale(
-                name=deployment_name,
-                namespace=namespace,
-                body={"spec": {"replicas": replicas}},
-            )
-
-        elif command_type == "get_pod_logs":
-            namespace = kwargs.get("namespace")
-            pod_name = kwargs.get("pod_name")
-            container = kwargs.get("container")
-            tail_lines = kwargs.get("tail_lines", 100)
-
-            if not all([namespace, pod_name]):
-                raise ProviderException(
-                    "namespace and pod_name are required for get_pod_logs"
-                )
-
-            self.logger.info(
-                f"Getting logs for pod {pod_name} in namespace {namespace}"
-            )
-            return self.client.read_namespaced_pod_log(
-                name=pod_name,
-                namespace=namespace,
-                container=container,
-                tail_lines=tail_lines,
-            )
-
-        raise NotImplementedError(f"Command type '{command_type}' not implemented")
+        method = command_map[command_type]
+        return method(**kwargs)
 
 
 if __name__ == "__main__":
