@@ -188,7 +188,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   }, [clearFiltersToken]);
 
   return (
-    <section id={`${panelId}-facets`} className={"min-w-56 max-w-56 " + className}>
+    <section id={`${panelId}-facets`} className={"min-w-52 max-w-52 " + className}>
       <div className="space-y-2">
         <div className="flex justify-between">
           {/* Facet button */}
