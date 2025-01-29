@@ -10,10 +10,14 @@ interface Props {
 }
 
 const getDateKey = (date: Date, timeUnit: string) => {
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  const seconds = date.getSeconds().toString().padStart(2, "0");
+
   if (timeUnit === "Minutes") {
-    return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+    return `${hours}:${minutes}:${seconds}`;
   } else if (timeUnit === "Hours") {
-    return `${date.getHours()}:${date.getMinutes()}`;
+    return `${hours}:${minutes}`;
   } else {
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
   }
