@@ -11,7 +11,7 @@ export async function getInitialFacets(
   entityName: string
 ): Promise<InitialFacetsData> {
   const facets = await api.get<FacetDto[]>(`/${entityName}/facets`);
-  const facetOptionsQuery: FacetOptionsQuery = { facetQueries: facets.map((f) => f.id).reduce((acc, id) => ({...acc, [id]: ''}), {}) };
+  const facetOptionsQuery: FacetOptionsQuery = { facet_queries: facets.map((f) => f.id).reduce((acc, id) => ({...acc, [id]: ''}), {}) };
   const facetOptions = await api.post<{ [key: string]: FacetOptionDto[] }>(
     `/${entityName}/facets/options`,
     facetOptionsQuery

@@ -25,7 +25,7 @@ from keep.api.models.db.alert import (
     LastAlertToIncident,
 )
 from keep.api.models.db.facet import FacetType
-from keep.api.models.facet import FacetDto, FacetOptionDto
+from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 import logging
 
 logger = logging.getLogger(__name__)
@@ -290,7 +290,7 @@ def get_last_incidents_by_cel(
 def get_incident_facets_data(
     tenant_id: str,
     allowed_incident_ids: list[str],
-    facets_query: dict[str, str],
+    facet_options_query: FacetOptionsQueryDto,
 ) -> dict[str, list[FacetOptionDto]]:
     """
     Retrieves incident facets data for a given tenant.
@@ -302,8 +302,8 @@ def get_incident_facets_data(
     Returns:
         dict[str, list[FacetOptionDto]]: A dictionary where the keys are facet ids and the values are lists of FacetOptionDto objects.
     """
-    if facets_query:
-        facets = get_incident_facets(tenant_id, facets_query.keys())
+    if facet_options_query and facet_options_query.facet_queries:
+        facets = get_incident_facets(tenant_id, facet_options_query.facet_queries.keys())
     else:
         facets = static_facets
 
@@ -331,7 +331,7 @@ def get_incident_facets_data(
     return get_facet_options(
         base_query=base_query,
         facets=facets,
-        facets_query=facets_query,
+        facet_options_query=facet_options_query,
         properties_metadata=properties_metadata,
     )
 

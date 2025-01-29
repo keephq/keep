@@ -6,7 +6,7 @@ from keep.api.models.db.facet import FacetType
 
 class FacetOptionsQueryDto(BaseModel):
     cel: Optional[str]
-    facetQueries: Optional[dict[str, str]]
+    facet_queries: Optional[dict[str, str]]
 
 class FacetOptionDto(BaseModel):
     display_name: str

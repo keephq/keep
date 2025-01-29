@@ -338,8 +338,8 @@ def get_alert_facets_data(
     tenant_id: str,
     facet_options_query: FacetOptionsQueryDto,
 ) -> dict[str, list[FacetOptionDto]]:
-    if facet_options_query and facet_options_query.facetQueries:
-        facets = get_alert_facets(tenant_id, facet_options_query.facetQueries.keys())
+    if facet_options_query and facet_options_query.facet_queries:
+        facets = get_alert_facets(tenant_id, facet_options_query.facet_queries.keys())
     else:
         facets = static_facets
 

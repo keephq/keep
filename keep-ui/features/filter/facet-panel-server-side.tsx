@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CreateFacetDto, FacetOptionsQueries, FacetOptionsQuery } from "./models";
+import { FacetOptionsQueries, FacetOptionsQuery } from "./models";
 import { useFacetActions, useFacetOptions, useFacets } from "./hooks";
 import { InitialFacetsData } from "./api";
 import { FacetsPanel } from "./facets-panel";
@@ -69,7 +69,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     if (facetQueriesState) {
       result = {
         ...(result || {}),
-        facetQueries: facetQueriesState,
+        facet_queries: facetQueriesState,
       }
     }
 

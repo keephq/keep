@@ -64,7 +64,7 @@ def build_facets_data_query(
                 ),
             )
             .select_from(base_query)
-            .filter(text(instance.convert_to_sql_str(facet_options_query.facetQueries[facet.id])))
+            .filter(text(instance.convert_to_sql_str(facet_options_query.facet_queries[facet.id])))
             .group_by(text(instance.coalesce(group_by_exp) if len(group_by_exp) > 1 else group_by_exp[0]))
         )
 
