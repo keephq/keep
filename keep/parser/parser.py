@@ -616,7 +616,7 @@ class Parser:
         workflow_actions_parsed = []
         for _action in workflow_actions:
             parsed_action = self._get_action(
-                context_manager, _action, workflow_id, workflow_description
+                context_manager, _action, None, workflow_id, workflow_description
             )
             workflow_actions_parsed.append(parsed_action)
         self.logger.debug("Actions parsed successfully")
