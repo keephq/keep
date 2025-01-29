@@ -22,6 +22,7 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.semconv.resource import ResourceAttributes
 
 from keep.api.core.config import config
 
@@ -53,7 +54,12 @@ def setup(app: FastAPI):
     )
     metrics_enabled = os.environ.get("METRIC_OTEL_ENABLED", "")
 
-    resource = Resource.create({"service.name": service_name})
+    resource = Resource.create(
+        attributes={
+            ResourceAttributes.SERVICE_NAME: service_name,
+            ResourceAttributes.SERVICE_INSTANCE_ID: f"worker-{os.getpid()}",
+        }
+    )
     provider = TracerProvider(resource=resource)
 
     if otlp_collector_endpoint:
@@ -81,7 +87,9 @@ def setup(app: FastAPI):
 
     if enable_cloud_trace_exporter:
         logger.info("Cloud Trace exporter enabled.")
-        processor = BatchSpanProcessor(CloudTraceSpanExporter())
+        processor = BatchSpanProcessor(
+            CloudTraceSpanExporter(resource_regex="service.*")
+        )
         provider.add_span_processor(processor)
 
     trace.set_tracer_provider(provider)
