@@ -11,7 +11,6 @@ from sqlalchemy import (
 )
 from sqlmodel import Session, select, text
 
-
 # This import is required to create the tables
 from keep.api.core.facets import get_facet_options, get_facets
 from keep.api.models.db.alert import Alert, AlertEnrichment, Incident, LastAlert, LastAlertToIncident
@@ -27,7 +26,7 @@ alert_field_configurations = [
     FieldMappingConfiguration("source", "provider_type"),
     FieldMappingConfiguration("provider_id", "provider_id"),
     FieldMappingConfiguration(map_from_pattern = "incident.name", map_to=['incident_user_generated_name', 'incident_ai_generated_name']),
-    FieldMappingConfiguration(map_from_pattern = "*", map_to=["alert_enrichment_json", "event"], is_json=True),
+    FieldMappingConfiguration(map_from_pattern = "*", map_to=["alert_enrichment_json", "alert_event_json"], is_json=True),
 ]
 properties_metadata = PropertiesMetadata(alert_field_configurations)
 
@@ -64,74 +63,9 @@ static_facets = [
 ]
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
-def __build_base_query_based_on_alert(
-    tenant_id,
-):
-    base_query_cte = (
-        select(
-            # Alert,
-            Alert.id.label('entity_id'),
-            AlertEnrichment.id.label("alert_enrichment_id"),
-            AlertEnrichment.tenant_id.label("alert_enrichment_tenant_id"),
-            AlertEnrichment.alert_fingerprint.label("alert_enrichment_fingerprint"),
-            AlertEnrichment.enrichments.label('alert_enrichment_json'),
-            # LastAlert.alert_id,
-            Alert.tenant_id.label("last_alert_tenant_id"),
-            Alert.timestamp.label("startedAt"),
-            Incident.user_generated_name.label("incident_user_generated_name"),
-            Incident.ai_generated_name.label("incident_ai_generated_name"),
-        )
-        .select_from(Alert)
-        .outerjoin(
-            AlertEnrichment,
-            and_(
-                Alert.tenant_id == AlertEnrichment.tenant_id,
-                Alert.fingerprint == AlertEnrichment.alert_fingerprint,
-            ),
-        )
-        .outerjoin(
-            LastAlertToIncident,
-            and_(
-                Alert.tenant_id == LastAlertToIncident.tenant_id,
-                Alert.fingerprint == LastAlertToIncident.fingerprint,
-            ),
-        )
-        .outerjoin(
-            Incident,
-            and_(
-                LastAlertToIncident.tenant_id == Incident.tenant_id,
-                LastAlertToIncident.incident_id == Incident.id,
-            ),
-        )
-        .where(Alert.tenant_id == tenant_id)
-    ).cte("base_query")
-
+def __build_query_for_filtering(tenant_id: str):
     return (
         select(
-            Alert,
-            Alert.id.label('entity_id'),
-            base_query_cte.c.alert_enrichment_id,
-            base_query_cte.c.alert_enrichment_tenant_id,
-            base_query_cte.c.alert_enrichment_fingerprint,
-            base_query_cte.c.alert_enrichment_json,
-            base_query_cte.c.startedAt,
-            
-        )
-        .select_from(base_query_cte)
-        .join(
-            Alert,
-            and_(
-                base_query_cte.c.last_alert_tenant_id == Alert.tenant_id, base_query_cte.c.entity_id == Alert.id
-            ),
-        )
-    )
-
-def __build_base_query(
-    tenant_id,
-):
-    base_query_cte = (
-        select(
-            AlertEnrichment,
             LastAlert.alert_id,
             AlertEnrichment.id.label("alert_enrichment_id"),
             AlertEnrichment.tenant_id.label("alert_enrichment_tenant_id"),
@@ -141,8 +75,12 @@ def __build_base_query(
             LastAlert.first_timestamp.label("startedAt"),
             Incident.user_generated_name.label("incident_user_generated_name"),
             Incident.ai_generated_name.label("incident_ai_generated_name"),
+            LastAlert.alert_id.label("entity_id"),
+            Alert.event.label("alert_event_json"),
+            Alert.provider_type.label("provider_type"),
         )
         .select_from(LastAlert)
+        .join(Alert, and_(Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id))
         .outerjoin(
             AlertEnrichment,
             and_(
@@ -165,26 +103,6 @@ def __build_base_query(
             ),
         )
         .where(LastAlert.tenant_id == tenant_id)
-    ).cte("base_query")
-
-    return (
-        select(
-            Alert,
-            Alert.id.label('entity_id'),
-            # base_query_cte.c.alert_enrichment_id,
-            # base_query_cte.c.alert_enrichment_tenant_id,
-            # base_query_cte.c.alert_enrichment_fingerprint,
-            # base_query_cte.c.alert_enrichment_json,
-            # base_query_cte.c.startedAt,
-            *base_query_cte.columns
-        )
-        .select_from(base_query_cte)
-        .join(
-            Alert,
-            and_(
-                base_query_cte.c.last_alert_tenant_id == Alert.tenant_id, base_query_cte.c.alert_id == Alert.id
-            ),
-        )
     )
 
 def build_alerts_query(
@@ -199,23 +117,29 @@ def build_alerts_query(
         sort_by=None,
         sort_dir=None
     ):
-    base_query_cte = __build_base_query(tenant_id)
-
-    stmt = base_query_cte
-
-    # db.get_last_alerts(
-    #     tenant_id,
-    #     provider_id=None,
-    #     limit=1000,
-    #     timeframe=None,
-    #     upper_timestamp=None,
-    #     lower_timestamp=None,
-    #     with_incidents=False,
-    #     fingerprints=None
-    # )
+    base = __build_query_for_filtering(tenant_id)
+    query = (
+        select(
+            Alert,
+            AlertEnrichment,
+            AlertEnrichment.id.label('alert_enrichment_id'),
+            AlertEnrichment.tenant_id.label('alert_enrichment_tenant_id'),
+            AlertEnrichment.alert_fingerprint.label('alert_enrichment_fingerprint'),
+            AlertEnrichment.enrichments.label('alert_enrichment_json'),
+            base.c.startedAt,
+        )
+        .select_from(base)
+        .join(
+            Alert,
+            and_(
+                base.c.last_alert_tenant_id == Alert.tenant_id, base.c.alert_id == Alert.id
+            ),
+        )
+        .outerjoin(AlertEnrichment, and_(AlertEnrichment.tenant_id == Alert.tenant_id, AlertEnrichment.alert_fingerprint == Alert.fingerprint))
+    )
 
     if timeframe:
-        stmt = stmt.where(
+        query = query.where(
             LastAlert.timestamp
             >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
         )
@@ -235,16 +159,16 @@ def build_alerts_query(
     logger.info(f"filter_conditions: {filter_conditions}")
 
     if filter_conditions:
-        stmt = stmt.where(*filter_conditions)
+        query = query.where(*filter_conditions)
 
     if provider_id:
-        stmt = stmt.where(Alert.provider_id == provider_id)
+        query = query.where(Alert.provider_id == provider_id)
 
     if cel:
         cel_to_sql_provider_type = get_cel_to_sql_provider_for_dialect(dialect_name)
         instance = cel_to_sql_provider_type(properties_metadata)
         sql_filter = instance.convert_to_sql_str(cel)
-        stmt = stmt.where(text(sql_filter))
+        query = query.where(text(sql_filter))
 
     if sort_by:
         provider_type = get_cel_to_sql_provider_for_dialect(dialect=dialect_name)
@@ -263,11 +187,11 @@ def build_alerts_query(
         casted = f"{instance.coalesce([instance.cast(item, str) for item in group_by_exp])}"
 
         if sort_dir == "desc":
-            stmt = stmt.order_by(desc(text(casted)))
+            query = query.order_by(desc(text(casted)))
         else:
-            stmt = stmt.order_by(asc(text(casted)))
+            query = query.order_by(asc(text(casted)))
 
-    return stmt
+    return query
 
 def get_last_alerts(
     tenant_id,
@@ -299,9 +223,7 @@ def get_last_alerts(
             sort_dir
         )
 
-        query = query.group_by(Alert.id)
-
-        str_q = str(query.compile(compile_kwargs={"literal_binds": True}))
+        query = query.group_by(Alert.id,AlertEnrichment.id)
 
         # Execute the query
         start_time = datetime.now()
@@ -343,7 +265,7 @@ def get_alert_facets_data(
     else:
         facets = static_facets
 
-    base_query_cte = __build_base_query(tenant_id).cte("alerts_query")
+    base_query_cte = __build_query_for_filtering(tenant_id).cte("alerts_query")
     base_query = select(base_query_cte)
 
     return get_facet_options(
