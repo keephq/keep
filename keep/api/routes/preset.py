@@ -491,7 +491,7 @@ class CreatePresetTab(BaseModel):
     description="Create a tab for a preset",
 )
 def create_preset_tab(
-    preset_id: str,
+    preset_id: uuid.UUID,
     body: CreatePresetTab,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:presets"])
