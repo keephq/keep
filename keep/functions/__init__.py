@@ -1,6 +1,7 @@
 import copy
 import datetime
 import json
+import logging
 import re
 import urllib.parse
 from datetime import timedelta
@@ -16,8 +17,9 @@ from keep.api.core.db import get_alerts_by_fingerprint
 from keep.api.models.alert import AlertStatus
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
+logger = logging.getLogger(__name__)
+
 _len = len
-_all = all
 
 
 def all(iterable) -> bool:
@@ -129,7 +131,6 @@ def json_dumps(data: str | dict) -> str:
 
 
 def json_loads(data: str) -> dict:
-
     def parse_bad_json(bad_json):
         # Remove or replace control characters
         control_char_regex = re.compile(r"[\x00-\x1f\x7f-\x9f]")
@@ -150,9 +151,11 @@ def json_loads(data: str) -> dict:
         try:
             d = parse_bad_json(data)
         except json.JSONDecodeError:
+            logger.exception('Failed to parse "bad" JSON')
             d = {}
     # catch any other exceptions
     except Exception:
+        logger.exception("Failed to parse JSON")
         d = {}
 
     return d
@@ -470,3 +473,34 @@ def is_business_hours(
 
     # Check if hour is between start_hour and end_hour
     return start_hour <= hour < end_hour
+
+
+def dictget(data: str | dict, key: str, default: any = None) -> any:
+    """
+    Get a value from a dictionary with a default fallback.
+
+    Args:
+        data (str | dict): The dictionary to search in. Can be a JSON string or dict.
+        key (str): The key to look up
+        default (any): The default value to return if key is not found
+
+    Returns:
+        any: The value found in the dictionary or the default value
+
+    Example:
+        >>> d = {"s1": "critical", "s2": "error"}
+        >>> dictget(d, "s1", "info")
+        'critical'
+        >>> dictget(d, "s3", "info")
+        'info'
+    """
+    if isinstance(data, str):
+        try:
+            data = json_loads(data)
+        except Exception:
+            return default
+
+    if not isinstance(data, dict):
+        return default
+
+    return data.get(key, default)

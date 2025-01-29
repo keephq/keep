@@ -2,6 +2,8 @@
 Checkmk is a monitoring tool for Infrastructure and Application Monitoring.
 """
 
+from datetime import datetime, timezone
+
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -37,6 +39,7 @@ class CheckmkProvider(BaseProvider):
     STATUS_MAP = {
         "UP": AlertStatus.RESOLVED,
         "DOWN": AlertStatus.FIRING,
+        "ACKNOWLEDGED": AlertStatus.ACKNOWLEDGED,
         "UNREACH": AlertStatus.FIRING,
     }
 
@@ -57,6 +60,20 @@ class CheckmkProvider(BaseProvider):
         pass
 
     @staticmethod
+    def convert_to_utc_isoformat(self, short_date_time: str) -> str:
+        try:
+            # Parse the short_date_time string to a datetime object
+            local_dt = datetime.strptime(short_date_time, "%Y-%m-%d %H:%M:%S")
+
+            # Convert to UTC
+            utc_dt = local_dt.replace(tzinfo=timezone.utc)
+
+            # Return the ISO 8601 format
+            return utc_dt.isoformat()
+        except Exception:
+            return short_date_time
+
+    @staticmethod
     def _format_alert(
         event: dict, provider_instance: BaseProvider = None
     ) -> AlertDto | list[AlertDto]:
@@ -69,10 +86,7 @@ class CheckmkProvider(BaseProvider):
                 return None
             return event.get(value)
 
-        """
-    Service alerts don't have a status field, so we are mapping the status based on the severity.
-    """
-
+        # Service alerts don't have a status field, so we are mapping the status based on the severity.
         def _set_severity(status):
             if status == "UP":
                 return AlertSeverity.INFO
@@ -80,6 +94,17 @@ class CheckmkProvider(BaseProvider):
                 return AlertSeverity.CRITICAL
             elif status == "UNREACH":
                 return AlertSeverity.CRITICAL
+
+        # https://forum.checkmk.com/t/convert-notify-shortdatetime-to-utc-timezone/20158/2
+        microtime = _check_values("micro_time")
+        if microtime:
+            ts = int(int(microtime) / 1000000)
+            dt_object = datetime.datetime.fromtimestamp(ts)
+            last_received = dt_object.isoformat()
+        else:
+            last_received = CheckmkProvider.convert_to_utc_isoformat(
+                _check_values("short_date_time")
+            )
 
         alert = AlertDto(
             id=_check_values("id"),
@@ -94,7 +119,7 @@ class CheckmkProvider(BaseProvider):
             host=_check_values("host"),
             alias=_check_values("alias"),
             address=_check_values("address"),
-            service_name=_check_values("service"),
+            service=_check_values("service"),
             source=["checkmk"],
             current_event=_check_values("event"),
             output=_check_values("output"),
@@ -108,7 +133,7 @@ class CheckmkProvider(BaseProvider):
             contact_email=_check_values("contact_email"),
             contact_pager=_check_values("contact_pager"),
             date=_check_values("date"),
-            lastReceived=_check_values("short_date_time"),
+            lastReceived=last_received,
             long_date=_check_values("long_date_time"),
         )
 

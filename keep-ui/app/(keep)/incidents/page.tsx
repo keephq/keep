@@ -11,6 +11,7 @@ const defaultIncidentsParams: GetIncidentsParams = {
   offset: 0,
   sorting: { id: "creation_time", desc: true },
   filters: DefaultIncidentFilters,
+  cel: "!(status in ['resolved', 'deleted'])", // on initial page load, we have to display only active incidents
 };
 
 export default async function Page() {
@@ -21,7 +22,7 @@ export default async function Page() {
     const api = await createServerApiClient();
 
     const tasks = [
-      getIncidents(api, defaultIncidentsParams),
+      getIncidents(api, defaultIncidentsParams, ),
       getInitialFacets(api, "incidents"),
     ]
     const [_incidents, _facetsData] = await Promise.all(tasks);

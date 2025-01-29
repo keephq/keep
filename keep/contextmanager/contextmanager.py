@@ -37,6 +37,7 @@ class ContextManager:
         }
         self.consts_context = {}
         self.current_step_vars = {}
+        self.current_step_aliases = {}
         # cli context
         try:
             self.click_context = click.get_current_context()
@@ -99,8 +100,9 @@ class ContextManager:
             session.close()
         return self._api_key
 
-    def set_execution_context(self, workflow_execution_id):
+    def set_execution_context(self, workflow_id, workflow_execution_id):
         self.workflow_execution_id = workflow_execution_id
+        self.workflow_id = workflow_id
         self.logger_adapter.workflow_execution_id = workflow_execution_id
         for logger in self.__loggers.values():
             logger.workflow_execution_id = workflow_execution_id
@@ -162,6 +164,7 @@ class ContextManager:
             "incident": self.incident_context,  # this is an alias so workflows will be able to use alert.source
             "consts": self.consts_context,
             "vars": self.current_step_vars,
+            "aliases": self.current_step_aliases,
         }
 
         if not exclude_providers:
@@ -248,16 +251,19 @@ class ContextManager:
         self.steps_context["this"] = self.steps_context[step_id]
         self.steps_context_size = asizeof(self.steps_context)
 
-    def set_step_vars(self, step_id, _vars):
+    def set_step_vars(self, step_id, _vars, _aliases):
         if step_id not in self.steps_context:
             self.steps_context[step_id] = {
                 "provider_parameters": {},
                 "results": [],
                 "vars": {},
+                "aliases": {},
             }
 
         self.current_step_vars = _vars
+        self.current_step_aliases = _aliases
         self.steps_context[step_id]["vars"] = _vars
+        self.steps_context[step_id]["aliases"] = _aliases
 
     def get_last_workflow_run(self, workflow_id):
         return get_last_workflow_execution_by_workflow_id(self.tenant_id, workflow_id)

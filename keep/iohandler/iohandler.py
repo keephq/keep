@@ -37,7 +37,7 @@ class IOHandler:
         ):
             self.shorten_urls = True
 
-    def render(self, template, safe=False, default=""):
+    def render(self, template, safe=False, default="", additional_context=None):
         # rendering is only support for strings
         if not isinstance(template, str):
             return template
@@ -51,7 +51,7 @@ class IOHandler:
             raise Exception(
                 f"Invalid template - number of ( and ) does not match {template}"
             )
-        val = self.parse(template, safe, default)
+        val = self.parse(template, safe, default, additional_context)
         return val
 
     def quote(self, template):
@@ -135,7 +135,7 @@ class IOHandler:
         else:
             return token
 
-    def parse(self, string, safe=False, default=""):
+    def parse(self, string, safe=False, default="", additional_context=None):
         """Use AST module to parse 'call stack'-like string and return the result
 
         Example -
@@ -160,9 +160,9 @@ class IOHandler:
 
         # first render everything using chevron
         # inject the context
-        string = self._render(string, safe, default)
+        string = self._render(string, safe, default, additional_context)
 
-        # Now, extract the token if exists -
+        # Now, extract the token if exists
         parsed_string = copy.copy(string)
 
         if string.startswith("raw_render_without_execution(") and string.endswith(")"):
@@ -399,24 +399,22 @@ class IOHandler:
                 tree = ast.parse(token.encode("unicode_escape"))
         return _parse(self, tree)
 
-    def _render(self, key: str, safe=False, default=""):
+    def _render(self, key: str, safe=False, default="", additional_context=None):
         if "{{^" in key or "{{ ^" in key:
             self.logger.debug(
                 "Safe render is not supported when there are inverted sections."
             )
             safe = False
 
-        # allow {{ const.<key> }} to be rendered
-        const_rendering = False
-        if key.startswith("{{ consts.") and key.endswith("}}"):
-            self.logger.debug("Rendering const key")
-            const_rendering = True
+        context = self.context_manager.get_full_context(exclude_providers=True)
 
-        context = self.context_manager.get_full_context()
+        if additional_context:
+            context.update(additional_context)
+
         # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
         original_stderr = sys.stderr
         sys.stderr = io.StringIO()
-        rendered = chevron.render(key, context, warn=True)
+        rendered = self.render_recursively(key, context)
         # chevron.render will escape the quotes, we need to unescape them
         rendered = rendered.replace("&quot;", '"')
         stderr_output = sys.stderr.getvalue()
@@ -438,10 +436,6 @@ class IOHandler:
         if not rendered:
             return default
 
-        if const_rendering:
-            # https://github.com/keephq/keep/issues/2326
-            rendered = html.unescape(rendered)
-            return self._render(rendered, safe, default)
         return rendered
 
     def _encode_single_quotes_in_double_quotes(self, s):
@@ -463,7 +457,7 @@ class IOHandler:
             i += 1
         return "".join(result)
 
-    def render_context(self, context_to_render: dict):
+    def render_context(self, context_to_render: dict, additional_context: dict = None):
         """
         Iterates the provider context and renders it using the workflow context.
         """
@@ -472,20 +466,29 @@ class IOHandler:
         for key, value in context_to_render.items():
             if isinstance(value, str):
                 context_to_render[key] = self._render_template_with_context(
-                    value, safe=True
+                    value, safe=True, additional_context=additional_context
                 )
             elif isinstance(value, list):
-                context_to_render[key] = self._render_list_context(value)
+                context_to_render[key] = self._render_list_context(
+                    value, additional_context=additional_context
+                )
             elif isinstance(value, dict):
-                context_to_render[key] = self.render_context(value)
+                context_to_render[key] = self.render_context(
+                    value, additional_context=additional_context
+                )
             elif isinstance(value, StepProviderParameter):
                 safe = value.safe and value.default is not None
                 context_to_render[key] = self._render_template_with_context(
-                    value.key, safe=safe, default=value.default
+                    value.key,
+                    safe=safe,
+                    default=value.default,
+                    additional_context=additional_context,
                 )
         return context_to_render
 
-    def _render_list_context(self, context_to_render: list):
+    def _render_list_context(
+        self, context_to_render: list, additional_context: dict = None
+    ):
         """
         Iterates the provider context and renders it using the workflow context.
         """
@@ -493,16 +496,24 @@ class IOHandler:
             value = context_to_render[i]
             if isinstance(value, str):
                 context_to_render[i] = self._render_template_with_context(
-                    value, safe=True
+                    value, safe=True, additional_context=additional_context
                 )
             if isinstance(value, list):
-                context_to_render[i] = self._render_list_context(value)
+                context_to_render[i] = self._render_list_context(
+                    value, additional_context=additional_context
+                )
             if isinstance(value, dict):
-                context_to_render[i] = self.render_context(value)
+                context_to_render[i] = self.render_context(
+                    value, additional_context=additional_context
+                )
         return context_to_render
 
     def _render_template_with_context(
-        self, template: str, safe: bool = False, default: str = ""
+        self,
+        template: str,
+        safe: bool = False,
+        default: str = "",
+        additional_context: dict = None,
     ) -> str:
         """
         Renders a template with the given context.
@@ -513,7 +524,9 @@ class IOHandler:
         Returns:
             str: rendered template
         """
-        rendered_template = self.render(template, safe, default)
+        rendered_template = self.render(
+            template, safe, default, additional_context=additional_context
+        )
 
         # shorten urls if enabled
         if self.shorten_urls:
@@ -569,15 +582,52 @@ class IOHandler:
         except Exception:
             self.logger.exception("Failed to request short URLs from API")
 
+    def render_recursively(
+        self, template: str, context: dict, max_iterations: int = 10
+    ) -> str:
+        """
+        Recursively render a template until there are no more mustache tags or max iterations reached.
+
+        Args:
+            template: The template string containing mustache tags
+            context: The context dictionary for rendering
+            max_iterations: Maximum number of rendering iterations to prevent infinite loops
+
+        Returns:
+            The fully rendered string
+        """
+        current = template
+        iterations = 0
+
+        while iterations < max_iterations:
+            rendered = chevron.render(
+                current, context, warn=True if iterations == 0 else False
+            )
+
+            # https://github.com/keephq/keep/issues/2326
+            rendered = html.unescape(rendered)
+
+            # If no more changes or no more mustache tags, we're done
+            # we don't want to render providers. ever, so this is a hack for it for now
+            if rendered == current or "{{" not in rendered or "providers." in rendered:
+                return rendered
+
+            current = rendered
+            iterations += 1
+
+        # Return the last rendered version even if we hit max iterations
+        return current
+
 
 if __name__ == "__main__":
     # debug & test
     context_manager = ContextManager("keep")
-    context_manager.event_context = {"tags": {"k1": "v1", "k2": "v2"}}
+    context_manager.event_context = {
+        "header": "HTTP API Error {{ alert.labels.statusCode }}",
+        "labels": {"statusCode": "404"},
+    }
     iohandler = IOHandler(context_manager)
-    res = iohandler.render(
-        'https://www.keephq.dev?keep.join("{{alert.tags}}", "&", "prefix_")'
-    )
+    res = iohandler.render("{{ alert.header }}")
     from asteval import Interpreter
 
     aeval = Interpreter()

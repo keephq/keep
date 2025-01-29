@@ -110,9 +110,12 @@ class Workflow:
                 )
                 action_stop = True
         except Exception as e:
-            self.logger.error(f"Action {action.name} failed: {e}", extra={
-                "step_id": action.step_id,
-            })
+            self.logger.error(
+                f"Action {action.name} failed: {e}",
+                extra={
+                    "step_id": action.step_id,
+                },
+            )
             action_ran = False
             action_error = f"Failed to run action {action.name}: {str(e)}"
         return action_ran, action_error, action_stop
@@ -138,7 +141,9 @@ class Workflow:
             self.logger.info(f"Skipping disabled workflow {self.workflow_id}")
             return
         self.logger.info(f"Running workflow {self.workflow_id}")
-        self.context_manager.set_execution_context(workflow_execution_id)
+        self.context_manager.set_execution_context(
+            self.workflow_id, workflow_execution_id
+        )
         try:
             self.run_steps()
         except StepError as e:

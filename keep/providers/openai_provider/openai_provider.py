@@ -1,6 +1,7 @@
+import json
 import dataclasses
-
 import pydantic
+
 from openai import OpenAI
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -29,7 +30,7 @@ class OpenaiProviderAuthConfig:
 
 class OpenaiProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "OpenAI"
-    PROVIDER_CATEGORY = ["Developer Tools"]
+    PROVIDER_CATEGORY = ["AI"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -48,20 +49,83 @@ class OpenaiProvider(BaseProvider):
         scopes = {}
         return scopes
 
-    def _query(self, prompt, model="gpt-3.5-turbo"):
-        # gpt3.5 turbo has a limit of 16k characters
-        if len(prompt) > 16000:
-            # let's try another model
-            self.logger.info(
-                "Prompt is too long for gpt-3.5-turbo, trying gpt-4o-2024-08-06"
-            )
-            model = "gpt-4o-2024-08-06"
-
+    def _query(
+        self,
+        prompt,
+        model="gpt-3.5-turbo",
+        max_tokens=1024,
+        structured_output_format=None,
+    ):
         client = OpenAI(
             api_key=self.authentication_config.api_key,
             organization=self.authentication_config.organization_id,
         )
         response = client.chat.completions.create(
-            model=model, messages=[{"role": "user", "content": prompt}]
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            response_format=structured_output_format,
         )
-        return response.choices[0].message.content
+        response = response.choices[0].message.content
+        try:
+            response = json.loads(response)
+        except Exception:
+            pass
+
+        return {
+            "response": response,
+        }
+
+
+if __name__ == "__main__":
+    import os
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+
+    api_key = os.environ.get("API_KEY")
+
+    config = ProviderConfig(
+        description="My Provider",
+        authentication={
+            "api_key": api_key,
+        },
+    )
+
+    provider = OpenaiProvider(
+        context_manager=context_manager,
+        provider_id="my_provider",
+        config=config,
+    )
+
+    print(
+        provider.query(
+            prompt="Here is an alert, define environment for it: Clients are panicking, nothing works.",
+            model="gpt-4o-mini",
+            structured_output_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "environment_restoration",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "environment": {
+                                "type": "string",
+                                "enum": ["production", "debug", "pre-prod"],
+                            },
+                        },
+                        "required": ["environment"],
+                        "additionalProperties": False,
+                    },
+                    "strict": True,
+                },
+            },
+            max_tokens=100,
+        )
+    )
+
+    # https://platform.openai.com/docs/guides/function-calling

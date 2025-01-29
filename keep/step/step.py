@@ -56,10 +56,19 @@ class Step:
     def continue_to_next_step(self):
         return self.__continue_to_next_step
 
+    def _dont_render(self):
+        # special case for Keep provider on _notify with "if" - it should render the parameters itself
+        return self.step_type == StepType.ACTION and "KeepProvider" in str(
+            self.provider.__class__
+        )
+
     def run(self):
         try:
             if self.config.get("foreach"):
                 did_action_run = self._run_foreach()
+            # special case for Keep provider on _notify with "if" - it should render the parameters itself
+            elif self._dont_render():
+                did_action_run = self._run_single(dont_render=True)
             else:
                 did_action_run = self._run_single()
             return did_action_run
@@ -136,10 +145,19 @@ class Step:
                 any_action_run = True
         return any_action_run
 
-    def _run_single(self):
+    def _run_single(self, dont_render=False):
         # Initialize all conditions
         conditions = []
-        self.context_manager.set_step_vars(self.step_id, _vars=self.vars)
+
+        aliases = self.config.get("alias", {})
+
+        # if aliases are defined, set them in the context
+        for alias_key, alias_val in aliases.items():
+            aliases[alias_key] = self.io_handler.render(alias_val)
+
+        self.context_manager.set_step_vars(
+            self.step_id, _vars=self.vars, _aliases=aliases
+        )
 
         for condition in self.conditions:
             condition_name = condition.get("name", None)
@@ -199,8 +217,8 @@ class Step:
 
         # Now check it
         if if_conf:
-            if_conf = self.io_handler.quote(if_conf)
-            if_met = self.io_handler.render(if_conf, safe=False)
+            quoted_if_conf = self.io_handler.quote(if_conf)
+            if_met = self.io_handler.render(quoted_if_conf, safe=False)
             # Evaluate the condition string
             from asteval import Interpreter
 
@@ -210,11 +228,11 @@ class Step:
             if isinstance(evaluated_if_met, str):
                 evaluated_if_met = aeval(evaluated_if_met)
             # if the evaluation failed, raise an exception
-            if aeval.error_msg:
+            if aeval.error_msg and if_conf == quoted_if_conf:
                 self.logger.error(
-                    f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {if_conf}, Rendered: {if_met}, Error: {aeval.error_msg}",
+                    f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {quoted_if_conf}, Rendered: {if_met}, Error: {aeval.error_msg}",
                     extra={
-                        "condition": if_conf,
+                        "condition": quoted_if_conf,
                         "rendered": if_met,
                         "step_id": self.step_id,
                     },
@@ -222,6 +240,19 @@ class Step:
                 raise Exception(
                     f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {if_conf}, Rendered: {if_met}, Error: {aeval.error_msg}"
                 )
+            # maybe its because of quoting, try again without quoting
+            elif aeval.error_msg:
+                # without quoting
+                aeval_without_quote = Interpreter()
+                if_met = self.io_handler.render(if_conf, safe=False)
+                evaluated_if_met = aeval_without_quote(if_met)
+                if isinstance(evaluated_if_met, str):
+                    evaluated_if_met = aeval_without_quote(evaluated_if_met)
+                # if again error, raise an exception
+                if aeval_without_quote.error_msg:
+                    raise Exception(
+                        f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {if_conf}, Rendered: {if_met}, Error: {aeval_without_quote.error_msg}"
+                    )
 
         else:
             evaluated_if_met = True
@@ -285,9 +316,14 @@ class Step:
 
         # Last, run the action
         try:
-            rendered_providers_parameters = self.io_handler.render_context(
-                self.provider_parameters
-            )
+            if not dont_render:
+                rendered_providers_parameters = self.io_handler.render_context(
+                    self.provider_parameters
+                )
+            # special case for Keep provider (alert evaluation engine)
+            # which needs to evaluate the provider parameters by itself
+            else:
+                rendered_providers_parameters = self.provider_parameters
 
             for curr_retry_count in range(self.__retry_count + 1):
                 self.logger.info(
