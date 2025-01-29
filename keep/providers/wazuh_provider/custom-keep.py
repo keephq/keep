@@ -111,10 +111,13 @@ def debug(msg: str) -> None:
 
 def generate_msg(alert: any, options: any) -> any:
     level = alert["rule"]["level"]
-    description = (
+    title = (
         alert["rule"]["description"] if "description" in alert["rule"] else "N/A"
     )
     rule_id = alert["rule"]["id"]
+    agent_id = alert["agent"]["id"]
+    agent_name = alert["agent"]["name"]
+    full_log = alert["full_log"] if "full_log" in alert else "N/A"
 
     severity = "low"
     if level > 14:
@@ -124,18 +127,14 @@ def generate_msg(alert: any, options: any) -> any:
     elif level > 6:
         severity = "info"
 
-    created_at = datetime.now(timezone.utc).astimezone()
-
-    print(json.dumps(alert))
-
-    return json.dumps(
-        {
-            "description": description,
-            "severity": severity,
-            "message": f"Rule ID {rule_id}\nLevel {level}",
-            "created_at": created_at,
-        }
-    )
+    created_at = datetime.now(timezone.utc).astimezone().isoformat()
+    result = {
+        "message": title,
+        "severity": severity,
+        "description": f"Rule ID {rule_id}\nLevel {level}\nAgent ID {agent_id}\nAgent Name {agent_id}\nTitle {title}\n Full Log {full_log}\n",
+        "created_at": created_at,
+    }
+    return result
 
 
 def send_msg(msg: str, url: str, api_key: str) -> None:
