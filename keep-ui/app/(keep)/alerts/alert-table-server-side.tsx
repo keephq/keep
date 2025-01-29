@@ -43,6 +43,7 @@ import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import { Icon } from "@tremor/react";
 import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import AlertPaginationServerSide from "./alert-pagination-server-side";
+import { FacetDto } from "@/features/filter";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -65,6 +66,7 @@ interface PresetTab {
 }
 interface Props {
   alerts: AlertDto[];
+  initalFacets: FacetDto[];
   alertsTotalCount: number;
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
@@ -87,6 +89,7 @@ export function AlertTableServerSide({
   alerts,
   alertsTotalCount,
   columns,
+  initalFacets,
   isAsyncLoading = false,
   presetName,
   presetStatic = false,
@@ -362,7 +365,7 @@ export function AlertTableServerSide({
               entityName={"alerts"}
               facetOptionsCel={searchCel}
               clearFiltersToken={clearFiltersToken}
-              // initialFacetsData={initialFacetsData}
+              initialFacetsData={{ facets: initalFacets, facetOptions: null }}
               onCelChange={(cel) => setFilterCel(cel)}
               renderFacetOptionIcon={renderFacetOptionIcon}
               renderFacetOptionLabel={renderFacetOptionLabel}

@@ -3,7 +3,7 @@ import { getIncidents, GetIncidentsParams } from "@/entities/incidents/api";
 import { PaginatedIncidentsDto } from "@/entities/incidents/model";
 import { createServerApiClient } from "@/shared/api/server";
 import {DefaultIncidentFilters} from "@/entities/incidents/model/models";
-import { getInitialFacets, InitialFacetsData } from "@/features/filter/api";
+import { getInitialFacetsData, InitialFacetsData } from "@/features/filter/api";
 
 const defaultIncidentsParams: GetIncidentsParams = {
   confirmed: true,
@@ -23,7 +23,7 @@ export default async function Page() {
 
     const tasks = [
       getIncidents(api, defaultIncidentsParams, ),
-      getInitialFacets(api, "incidents"),
+      getInitialFacetsData(api, "incidents"),
     ]
     const [_incidents, _facetsData] = await Promise.all(tasks);
     incidents = _incidents as PaginatedIncidentsDto;

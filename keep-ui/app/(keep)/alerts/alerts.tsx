@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "@/entities/presets/model/usePresets";
-import AlertTableTabPanel from "./alert-table-tab-panel";
 import { AlertHistory } from "./alert-history";
 import AlertAssignTicketModal from "./alert-assign-ticket-modal";
 import AlertNoteModal from "./alert-note-modal";
@@ -23,6 +22,7 @@ import { Preset } from "@/entities/presets/model/types";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
 import { AlertsQuery } from "./alert-table-server-side";
+import { FacetDto } from "@/features/filter";
 
 const defaultPresets: Preset[] = [
   {
@@ -38,10 +38,11 @@ const defaultPresets: Preset[] = [
 ];
 
 type AlertsProps = {
+  initalFacets: FacetDto[];
   presetName: string;
 };
 
-export default function Alerts({ presetName }: AlertsProps) {
+export default function Alerts({ presetName, initalFacets }: AlertsProps) {
   const api = useApi();
   const [alertsQueryState, setAlertsQueryState] = useState<AlertsQuery | undefined>();
   const { useLastAlerts } = useAlerts();
@@ -136,6 +137,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   return (
     <>
       <AlertTableTabPanelServerSide
+        initalFacets={initalFacets}
         key={selectedPreset.name}
         preset={selectedPreset}
         alerts={alerts}

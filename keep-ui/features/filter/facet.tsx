@@ -10,8 +10,9 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 
 export interface FacetProps {
   name: string;
+  isOpenByDefault?: boolean;
   isStatic: boolean;
-  options: FacetOptionDto[];
+  options?: FacetOptionDto[];
   optionsLoading: boolean;
   optionsReloading: boolean;
   showIcon?: boolean;
@@ -19,11 +20,11 @@ export interface FacetProps {
   facetState: Set<string>;
   renderOptionLabel?: (optionDisplayName: string) => JSX.Element | string | undefined;
   renderIcon?: (option_display_name: string) => JSX.Element | undefined;
-  onSelectOneOption: (value: string) => void;
-  onSelectAllOptions: () => void;
-  onSelect: (value: string) => void;
-  onLoadOptions: () => void;
-  onDelete: () => void;
+  onSelectOneOption?: (value: string) => void;
+  onSelectAllOptions?: () => void;
+  onSelect?: (value: string) => void;
+  onLoadOptions?: () => void;
+  onDelete?: () => void;
 }
 
 export const Facet: React.FC<FacetProps> = ({
@@ -41,19 +42,19 @@ export const Facet: React.FC<FacetProps> = ({
   onLoadOptions,
   onDelete,
   renderIcon,
-  renderOptionLabel
+  renderOptionLabel,
+  isOpenByDefault
 }) => {
   const pathname = usePathname();
   // Get preset name from URL
   const presetName = pathname?.split("/").pop() || "default";
 
   // Store open/close state in localStorage with a unique key per preset and facet
-  const [isOpen, setIsOpen] = useState<boolean>(!!options?.length);
+  const [isOpen, setIsOpen] = useState<boolean>(true);
   const [isLoaded, setIsLoaded] = useState<boolean>(!!options?.length);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    setIsOpen(!!options); // Sync prop change with state
     setIsLoaded(!!options); // Sync prop change with state
 
     if (isLoading && options) {
@@ -73,7 +74,7 @@ export const Facet: React.FC<FacetProps> = ({
     setIsOpen(!isOpen);
 
     if (!isLoaded && !isLoading) {
-      onLoadOptions();
+      onLoadOptions && onLoadOptions();
       setIsLoading(true);
     }
   };
@@ -84,8 +85,8 @@ export const Facet: React.FC<FacetProps> = ({
     }
 
     const isSelected = !facetState.has(optionValue);
-    const restNotSelected = options
-      .filter((option) => option.display_name !== optionValue)
+    const restNotSelected = !!options
+      ?.filter((option) => option.display_name !== optionValue)
       .every((option) => facetState.has(option.display_name));
 
     return isSelected && restNotSelected;
@@ -118,9 +119,9 @@ export const Facet: React.FC<FacetProps> = ({
         }
         renderLabel={() => renderOptionLabel && renderOptionLabel(facetOption.display_name)}
         renderIcon={() => renderIcon && renderIcon(facetOption.display_name)}
-        onToggleOption={() => onSelect(facetOption.display_name)}
-        onSelectOneOption={(value: string) => selectOneOption(value)}
-        onSelectAllOptions={() => selectAllOptions()}
+        onToggleOption={() => onSelect && onSelect(facetOption.display_name)}
+        onSelectOneOption={(value: string) => selectOneOption && selectOneOption(value)}
+        onSelectAllOptions={() => selectAllOptions && selectAllOptions()}
       />
     );
   }
@@ -132,11 +133,11 @@ export const Facet: React.FC<FacetProps> = ({
       );
     }
 
-    const filteredOptions = options.filter((facetOption) =>
+    const filteredOptions = options?.filter((facetOption) =>
       facetOption.display_name
         .toLocaleLowerCase()
         .includes(filter.toLocaleLowerCase())
-    );
+    ) || [];
 
     if (!filteredOptions.length) {
       return (
@@ -159,14 +160,19 @@ export const Facet: React.FC<FacetProps> = ({
       >
         <div className="flex items-center space-x-2">
           <Icon className="size-5 -m-0.5 text-gray-600" />
-          <Title className="text-sm">{name}</Title>
+          {
+            isLoading && (<Skeleton containerClassName="h-4 w-20" />)
+          }
+          {
+            !isLoading && (<Title className="text-sm">{name}</Title>)
+          }
         </div>
         {!isStatic && (
           <button
             onClick={(mouseEvent) => {
               mouseEvent.preventDefault();
               mouseEvent.stopPropagation();
-              onDelete();
+              onDelete && onDelete();
             }}
             className="absolute right-2 top-2 p-1 text-gray-400 hover:text-gray-600"
           >
@@ -177,7 +183,7 @@ export const Facet: React.FC<FacetProps> = ({
 
       {isOpen && (
         <div>
-          {options.length >= 10 && (
+          {options && options.length >= 10 && (
             <div className="px-2 mb-1">
               <input
                 type="text"

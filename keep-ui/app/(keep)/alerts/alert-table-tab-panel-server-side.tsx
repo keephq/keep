@@ -1,3 +1,4 @@
+import { FacetDto } from "@/features/filter";
 import { AlertsQuery, AlertTableServerSide } from "./alert-table-server-side";
 import { useAlertTableCols } from "./alert-table-utils";
 import {
@@ -8,6 +9,7 @@ import {
 import { Preset } from "@/entities/presets/model/types";
 
 interface Props {
+  initalFacets: FacetDto[];
   alerts: AlertDto[];
   alertsTotalCount: number;
   preset: Preset;
@@ -22,6 +24,7 @@ interface Props {
 }
 
 export default function AlertTableTabPanelServerSide({
+  initalFacets,
   alerts,
   alertsTotalCount,
   preset,
@@ -73,6 +76,7 @@ export default function AlertTableTabPanelServerSide({
 
   return (
     <AlertTableServerSide
+      initalFacets={initalFacets}
       alerts={alerts}
       alertsTotalCount={alertsTotalCount}
       columns={alertTableColumns}

@@ -87,13 +87,13 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
 
   const { facetOptions, isLoading } = useFacetOptions(
     entityName,
-    initialFacetsData?.facetOptions,
+    initialFacetsData?.facetOptions as any,
     buildFacetOptionsQuery(),
   );
 
   useEffect(
     function reloadOptions() {
-      if (facetsData === initialFacetsData?.facets) {
+      if (facetsData === initialFacetsData?.facets && initialFacetsData?.facetOptions) {
         return;
       }
 
@@ -132,7 +132,6 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   useEffect(
     function watchRevalidationToken() {
       if (revalidationToken) {
-        console.log({ revalidationToken, facetQueriesState });
         setFacetQueriesState(buildFacetsQueriesState());
       }
     },
@@ -145,8 +144,8 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     <FacetsPanel
       panelId={entityName}
       className={className || ""}
-      facets={(facetsData as any) || []}
-      facetOptions={(facetOptions as any) || {}}
+      facets={(facetsData as any)}
+      facetOptions={(facetOptions as any)}
       areFacetOptionsLoading={isLoading}
       clearFiltersToken={clearFiltersToken}
       uncheckedByDefaultOptionValues={uncheckedByDefaultOptionValues}

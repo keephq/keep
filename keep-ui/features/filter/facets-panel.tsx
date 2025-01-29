@@ -207,8 +207,23 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             Clear filters
           </button>
         </div>
+
+        {
+          !facets && [undefined, undefined, undefined].map((facet, index) => (
+            <Facet
+              key={index}
+              name={''}
+              isStatic={true}
+              isOpenByDefault={true}
+              optionsLoading={true}
+              optionsReloading={false}
+              facetState={new Set()}
+              facetKey={`${index}`}
+            />
+          ))
+        }
         
-        {facets?.map((facet, index) => (
+        {facets && facets.map((facet, index) => (
           <Facet
             key={facet.id + index}
             name={facet.name}
