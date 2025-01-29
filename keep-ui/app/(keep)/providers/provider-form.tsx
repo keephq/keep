@@ -161,7 +161,7 @@ const ProviderForm = ({
           render({ data }) {
             // When the promise reject, data will contains the error
             return `Webhook installation failed 😢 Error: ${
-              (data as any).message
+              (data as any).data.responseJson.detail
             }`;
           },
         },
@@ -669,6 +669,9 @@ const ProviderForm = ({
           </Link>
         </div>
 
+        {installedProvidersMode && provider.id && (
+          <Subtitle>{provider.id}</Subtitle>
+        )}
         {installedProvidersMode && provider.last_pull_time && (
           <Subtitle>
             Provider last pull time:{" "}

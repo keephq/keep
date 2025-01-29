@@ -1,0 +1,14 @@
+workflow:
+  id: create-alert
+  description: Just creating one more alert in Keep
+  triggers:
+    - type: manual
+
+  actions:
+    - name: create-alert
+      provider:
+        type: keep
+        with:
+          alert:
+            name: "Alert created from the workflow"
+            description: "This alert was created from the create_alert_in_keep.yml example workflow."
