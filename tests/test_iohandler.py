@@ -25,9 +25,7 @@ def test_with_basic_context(context_manager):
         "name": "s2",
     }
     s = iohandler.render("hello {{ steps.name }}")
-    s2 = iohandler.render("hello {{ providers.name }}")
     assert s == "hello s"
-    assert s2 == "hello s2"
 
 
 def test_with_function(context_manager):
@@ -874,6 +872,16 @@ def test_recursive_rendering_max_iterations(context_manager):
     assert (
         result == "{{ steps.loop }}"
     ), "Expected no change due to max iterations limit"
+
+
+def test_dont_render_providers(context_manager):
+    context_manager.providers_context = {
+        "keephq": '{"auth": "bla"}',
+    }
+    iohandler = IOHandler(context_manager)
+    template = "{{ providers.keephq }}"
+    result = iohandler.render(template)
+    assert "bla" not in result, "Expected empty string, but got {result}"
 
 
 def test_render_with_consts(context_manager):
