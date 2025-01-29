@@ -23,10 +23,10 @@ from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect 
 logger = logging.getLogger(__name__)
 
 alert_field_configurations = [
-    FieldMappingConfiguration("source", "provider_type"),
-    FieldMappingConfiguration("provider_id", "provider_id"),
-    FieldMappingConfiguration(map_from_pattern = "incident.name", map_to=['incident_user_generated_name', 'incident_ai_generated_name']),
-    FieldMappingConfiguration(map_from_pattern = "*", map_to=["alert_enrichment_json", "alert_event_json"], is_json=True),
+    FieldMappingConfiguration("source", "filter_provider_type"),
+    FieldMappingConfiguration("provider_id", "filter_provider_id"),
+    FieldMappingConfiguration(map_from_pattern = "incident.name", map_to=['filter_incident_user_generated_name', 'filter_incident_ai_generated_name']),
+    FieldMappingConfiguration(map_from_pattern = "*", map_to=["filter_alert_enrichment_json", "filter_alert_event_json"], is_json=True),
 ]
 properties_metadata = PropertiesMetadata(alert_field_configurations)
 
@@ -70,14 +70,15 @@ def __build_query_for_filtering(tenant_id: str):
             AlertEnrichment.id.label("alert_enrichment_id"),
             AlertEnrichment.tenant_id.label("alert_enrichment_tenant_id"),
             AlertEnrichment.alert_fingerprint.label("alert_enrichment_fingerprint"),
-            AlertEnrichment.enrichments.label('alert_enrichment_json'),
             LastAlert.tenant_id.label("last_alert_tenant_id"),
             LastAlert.first_timestamp.label("startedAt"),
-            Incident.user_generated_name.label("incident_user_generated_name"),
-            Incident.ai_generated_name.label("incident_ai_generated_name"),
             LastAlert.alert_id.label("entity_id"),
-            Alert.event.label("alert_event_json"),
-            Alert.provider_type.label("provider_type"),
+            AlertEnrichment.enrichments.label('filter_alert_enrichment_json'),
+            Incident.user_generated_name.label("filter_incident_user_generated_name"),
+            Incident.ai_generated_name.label("filter_incident_ai_generated_name"),
+            Alert.event.label("filter_alert_event_json"),
+            Alert.provider_type.label("filter_provider_type"),
+            Alert.provider_id.label("filter_provider_id"),
         )
         .select_from(LastAlert)
         .join(Alert, and_(Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id))

@@ -137,7 +137,7 @@ export const Facet: React.FC<FacetProps> = ({
       facetOption.display_name
         .toLocaleLowerCase()
         .includes(filter.toLocaleLowerCase())
-    ) || [];
+    ).sort((fst, scd) => scd.matches_count - fst.matches_count) || [];
 
     if (!filteredOptions.length) {
       return (
