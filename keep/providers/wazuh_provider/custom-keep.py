@@ -115,8 +115,8 @@ def generate_msg(alert: any, options: any) -> any:
         alert["rule"]["description"] if "description" in alert["rule"] else "N/A"
     )
     rule_id = alert["rule"]["id"]
-    agent_id = alert["agent"]["id"]
-    agent_name = alert["agent"]["name"]
+    agent_id = alert["agentless"]["host"] if "agentless" in alert else alert["agent"]["id"]
+    agent_name = "Agentless Host" if "agentless" in alert else alert["agent"]["name"]
     full_log = alert["full_log"] if "full_log" in alert else "N/A"
 
     severity = "low"
@@ -131,7 +131,7 @@ def generate_msg(alert: any, options: any) -> any:
     result = {
         "message": title,
         "severity": severity,
-        "description": f"Rule ID {rule_id}\nLevel {level}\nAgent ID {agent_id}\nAgent Name {agent_id}\nTitle {title}\n Full Log {full_log}\n",
+        "description": f"Rule ID {rule_id}\nLevel {level}\nAgent ID {agent_id}\nAgent Name {agent_name}\nTitle {title}\n Full Log {full_log}\n",
         "created_at": created_at,
     }
     return result
