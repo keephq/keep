@@ -2,12 +2,15 @@
 Checkmk is a monitoring tool for Infrastructure and Application Monitoring.
 """
 
+import logging
 from datetime import datetime, timezone
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+
+logger = logging.getLogger(__name__)
 
 
 class CheckmkProvider(BaseProvider):
@@ -60,18 +63,22 @@ class CheckmkProvider(BaseProvider):
         pass
 
     @staticmethod
-    def convert_to_utc_isoformat(self, short_date_time: str) -> str:
+    def convert_to_utc_isoformat(long_date_time: str, default: str) -> str:
+        logger.info(f"Converting {long_date_time} to UTC ISO format")
         try:
             # Parse the short_date_time string to a datetime object
-            local_dt = datetime.strptime(short_date_time, "%Y-%m-%d %H:%M:%S")
+            local_dt = datetime.strptime(long_date_time, "%a %b %d %H:%M:%S %Z %Y")
 
             # Convert to UTC
-            utc_dt = local_dt.replace(tzinfo=timezone.utc)
+            # Note: The original code assumes the input is in local time, but your input includes a timezone (CEST).
+            # You might need to handle timezone conversion if necessary.
+            utc_dt = local_dt.astimezone(timezone.utc)
 
             # Return the ISO 8601 format
             return utc_dt.isoformat()
         except Exception:
-            return short_date_time
+            logger.exception(f"Error converting {long_date_time} to UTC ISO format")
+            return default
 
     @staticmethod
     def _format_alert(
@@ -97,13 +104,14 @@ class CheckmkProvider(BaseProvider):
 
         # https://forum.checkmk.com/t/convert-notify-shortdatetime-to-utc-timezone/20158/2
         microtime = _check_values("micro_time")
+        logger.info(f"Microtime: {microtime}")
         if microtime:
             ts = int(int(microtime) / 1000000)
-            dt_object = datetime.datetime.fromtimestamp(ts)
+            dt_object = datetime.fromtimestamp(ts)
             last_received = dt_object.isoformat()
         else:
             last_received = CheckmkProvider.convert_to_utc_isoformat(
-                _check_values("short_date_time")
+                _check_values("long_date_time"), _check_values("short_date_time")
             )
 
         alert = AlertDto(
