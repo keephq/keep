@@ -56,3 +56,7 @@ curl -X POST -H "Content-Type: application/json" \
 # and get
 {"id":1,"name":"keep-token","key":"glsa_XXXXXX"}%
 ```
+
+### For Topology Quickstart
+Follow this guide:
+https://grafana.com/docs/tempo/latest/getting-started/docker-example/
