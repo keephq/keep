@@ -285,6 +285,13 @@
             "deployment/ecs"
           ]
         },
+        {
+          "group": "Local LLM",
+          "pages": [
+            "deployment/local-llm/keep-with-hub",
+            "deployment/local-llm/keep-with-litellm"
+          ]
+        },
         "deployment/stress-testing"
       ]
     },

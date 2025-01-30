@@ -1,0 +1,69 @@
+---
+title: "Running Keep with LiteLLM"
+---
+
+## Overview
+
+This guide will help you set up Keep with LiteLLM, a versatile tool that supports over 100 LLM providers. LiteLLM acts as a proxy that adheres to OpenAI standards, allowing seamless integration with Keep. By following this guide, you can easily configure Keep to work with various LLM providers using LiteLLM.
+
+## Prerequisites
+
+- Ensure you have Python and pip installed on your system.
+- Install LiteLLM by running the following command:
+
+```bash
+pip install litellm
+```
+
+## Configuration
+
+1. **Set Environment Variables**
+
+   You need to set the following environment variables to configure LiteLLM with Keep:
+
+   ```bash
+   export OPEN_AI_ORGANIZATION_ID="your-organization-id"
+   export OPEN_AI_API_KEY="your-api-key"
+   export OPENAI_BASE_URL="http://localhost:4000" # LiteLLM proxy URL
+   ```
+
+2. **Start LiteLLM Proxy**
+
+   Run the LiteLLM proxy server with your desired model. For example, to use the HuggingFace model:
+
+   ```bash
+   litellm --model huggingface/bigcode/starcoder
+   ```
+
+   This will start the proxy server on `http://0.0.0.0:4000`.
+
+3. **Configure Keep**
+
+   Update your Keep configuration to use the LiteLLM proxy. Ensure that the `OPENAI_BASE_URL` is set to the LiteLLM proxy URL.
+
+## Running Keep
+
+With the above configuration, you can now run Keep, and it will communicate with the LiteLLM proxy to access various LLM providers.
+
+## Docker Example
+
+To run LiteLLM using Docker, you can use the following command:
+
+```bash
+docker run -p 4000:4000 litellm/litellm --model huggingface/bigcode/starcoder
+```
+
+This command will start the LiteLLM proxy in a Docker container, exposing it on port 4000.
+
+## Suggested Screenshots
+
+1. **Environment Variables Setup**: A screenshot showing the terminal with the environment variables being set.
+2. **LiteLLM Proxy Running**: A screenshot of the terminal output after starting the LiteLLM proxy.
+3. **Keep Configuration**: A screenshot of the Keep configuration file or interface where the `OPENAI_BASE_URL` is set.
+
+## Additional Resources
+
+- [LiteLLM Documentation](https://docs.litellm.ai/)
+- [Keep Documentation](https://your-keep-docs-url)
+
+By following these steps, you can leverage the power of multiple LLM providers with Keep, using LiteLLM as a flexible and powerful proxy.
