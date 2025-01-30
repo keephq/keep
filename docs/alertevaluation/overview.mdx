@@ -1,0 +1,52 @@
+---
+title: "Overview"
+---
+
+The Keep Alert Evaluation Engine is a flexible system that enables you to create alerts based on any data source and define evaluation rules. Unlike traditional monitoring solutions that are tied to specific metrics, Keep's engine allows you to combine data from multiple sources and apply complex logic to determine when and how alerts should be triggered.
+
+## Core Features
+
+### Generic Data Source Support
+- Query any data source (databases, APIs, metrics systems)
+- Combine multiple data sources in a single alert rule
+- Apply custom transformations to the data
+
+### Flexible Alert Evaluation
+- Define custom conditions using templated expressions
+- Support for complex boolean logic and mathematical operations
+- State management for alert transitions (pending->firing->resolved)
+- Deduplication and alert instance tracking
+
+### Customizable Alert Definition
+- Full control over alert metadata (name, description, severity)
+- Dynamic labels based on evaluation context
+- Template support for all alert fields
+- Custom fingerprinting for alert grouping
+
+## Core Components
+
+### Alert States
+- **Pending**: Initial state when alert condition is met (relevant only if `for` supplied)
+- **Firing**: Active alert that has met its duration condition
+- **Resolved**: Alert that is no longer active
+
+### Alert Rule Components
+1. **Data Collection**: Query steps to gather data from any source
+2. **Condition (`if`)**: Expression that determines when to create/update an alert
+3. **Duration (`for`)**: Optional time period the condition must be true before firing
+4. **Alert Definition**: Complete control over how the alert looks and behaves:
+   - Name and description
+   - Severity levels
+   - Labels for routing
+   - Custom fields and annotations
+
+### State Management
+- **Fingerprinting**: Unique identifier for alert deduplication and state tracking
+- **Keep-Firing**: Control how long alerts remain active
+- **State Transitions**: Rules for how alerts move between states
+
+## Examples
+The following examples demonstrate different ways to use the alert evaluation engine:
+
+- [Single Metric Alert](/alertevaluation/examples/victoriametricssingle) - Basic example showing metrics-based alerting
+- [Multiple Metrics Alert](/alertevaluation/examples/victoriametricsmulti) - Advanced example with multiple alert instances
