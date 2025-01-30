@@ -25,5 +25,41 @@
             "postgresql": "NOT (COALESCE(user_generated_name::TEXT, ai_generated_name::TEXT, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
             "sqlite": "NOT (COALESCE(CAST(user_generated_name as TEXT), CAST(ai_generated_name as TEXT), '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))"
         }
+    },
+    {
+        "input_cel": "alert.provider_type == 'grafana'",
+        "description": "Queried field refers to one column",
+        "expected_sql_dialect_based": {
+            "mysql": "CAST(incident_alert_provider_type as CHAR) = 'grafana'",
+            "sqlite": "CAST(incident_alert_provider_type as TEXT) = 'grafana'",
+            "postgresql": "incident_alert_provider_type::TEXT = 'grafana'"
+        }
+    },
+    {
+        "input_cel": "alert.provider_type.contains('graf')",
+        "description": "Contains operator with field refering to one column",
+        "expected_sql_dialect_based": {
+            "sqlite": "incident_alert_provider_type IS NOT NULL AND incident_alert_provider_type GLOB '*graf*'",
+            "mysql": "incident_alert_provider_type IS NOT NULL AND incident_alert_provider_type LIKE '%graf%'",
+            "postgresql": "incident_alert_provider_type IS NOT NULL AND incident_alert_provider_type LIKE '%graf%'"
+        }
+    },
+    {
+        "input_cel": "alert.some_json_prop.contains('lorem')",
+        "description": "Contains operator with field refering to multiple JSON columns",
+        "expected_sql_dialect_based": {
+            "sqlite": "json_extract(alert_enrichments, '$.some_json_prop') IS NOT NULL AND json_extract(alert_enrichments, '$.some_json_prop') GLOB '*lorem*' OR json_extract(alert_event, '$.some_json_prop') IS NOT NULL AND json_extract(alert_event, '$.some_json_prop') GLOB '*lorem*'",
+            "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) LIKE '%lorem%' OR JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) LIKE '%lorem%'",
+            "postgresql": "alert_enrichments ->> 'some_json_prop' IS NOT NULL AND alert_enrichments ->> 'some_json_prop' LIKE '%lorem%' OR alert_event ->> 'some_json_prop' IS NOT NULL AND alert_event ->> 'some_json_prop' LIKE '%lorem%'"
+        }
+    },
+    {
+        "input_cel": "created_at >= '2025-01-30T10:00:09.553Z'",
+        "description": "Comparison operator with dates for a single column",
+        "expected_sql_dialect_based": {
+            "sqlite": "created_at >= datetime('2025-01-30 10:00:09')",
+            "mysql": "created_at >= CAST('2025-01-30 10:00:09' as DATETIME)",
+            "postgresql": "created_at >= CAST('2025-01-30 10:00:09' as TIMESTAMP)"
+        }
     }
 ]
