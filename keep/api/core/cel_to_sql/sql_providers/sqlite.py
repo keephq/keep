@@ -29,13 +29,20 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
 
         return f"CAST({exp} as {to_type_str})"
 
+    def _visit_constant_node(self, value: str) -> str:
+        if isinstance(value, datetime):
+            date_exp = f"datetime('{value.strftime('%Y-%m-%d %H:%M:%S')}')"
+            return date_exp
+        
+        return super()._visit_constant_node(value)
+
     def _visit_contains_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.contains accepts 1 argument but got {len(method_args)}')
 
-        return f'{property_path} LIKE '%{method_args[0].value}%''
+        return f"{property_path} IS NOT NULL AND {property_path} GLOB '*{method_args[0].value}*'"
 
     def _visit_starts_with_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
@@ -43,7 +50,7 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.startsWith accepts 1 argument but got {len(method_args)}')
 
-        return f"{property_path} LIKE '{method_args[0].value}%'"
+        return f"{property_path} IS NOT NULL AND {property_path} GLOB '{method_args[0].value}*'"
 
     def _visit_ends_with_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
@@ -51,7 +58,7 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.endsWith accepts 1 argument but got {len(method_args)}')
 
-        return f"{property_path} LIKE '%{method_args[0].value}'"
+        return f"{property_path} IS NOT NULL AND {property_path} GLOB '*{method_args[0].value}'"
     
     def _get_default_value_for_type(self, type):
         if type is datetime:
