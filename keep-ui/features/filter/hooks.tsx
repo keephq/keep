@@ -32,6 +32,28 @@ export const useFacets = (
   };
 };
 
+
+export const useFacetPotentialFields = (
+  entityName: string,
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  }
+) => {
+  const api = useApi();
+  const requestUrl = `/${entityName}/facets/fields`;
+
+  const swrValue = useSWR<string[]>(
+    () => (api.isReady() ? requestUrl : null),
+    (url) => api.get(url),
+    options
+  );
+
+  return {
+    ...swrValue,
+    isLoading: swrValue.isLoading || (!options.fallbackData && !api.isReady()),
+  };
+};
+
 export const useFacetOptions = (
   entityName: string,
   initialFacetOptions: FacetOptionsDict | undefined,

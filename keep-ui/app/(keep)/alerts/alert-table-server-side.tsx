@@ -383,6 +383,7 @@ export function AlertTableServerSide({
           <div className="w-33 min-w-[12rem] overflow-y-auto">
             <FacetsPanelServerSide
               key={searchCel}
+              usePropertyPathsSuggestions={true}
               entityName={"alerts"}
               facetOptionsCel={mainCelQuery}
               clearFiltersToken={clearFiltersToken}

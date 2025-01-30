@@ -3,27 +3,31 @@ import { FacetOptionsQueries, FacetOptionsQuery } from "./models";
 import { useFacetActions, useFacetOptions, useFacets } from "./hooks";
 import { InitialFacetsData } from "./api";
 import { FacetsPanel } from "./facets-panel";
+import { AddFacetModal } from "./add-facet-modal";
+import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
+import { AddFacetModalWithSuggestions } from "./add-facet-modal-with-suggestions";
 
 export interface FacetsPanelProps {
   /** Entity name to fetch facets, e.g., "incidents" for /incidents/facets and /incidents/facets/options */
   entityName: string;
   className?: string;
+  usePropertyPathsSuggestions?: boolean;
   initialFacetsData?: InitialFacetsData;
   /**
    * CEL to be used for fetching facet options.
    */
-  facetOptionsCel?: string
-  /** 
+  facetOptionsCel?: string;
+  /**
    * Revalidation token to force recalculation of the facets.
    * Will call API to recalculate facet options every revalidationToken value change
-  */
+   */
   revalidationToken?: string | null;
-  /** 
+  /**
    * Token to clear filters related to facets.
    * Filters will be cleared every clearFiltersToken value change.
    **/
   clearFiltersToken?: string | null;
-  /** 
+  /**
    * Object with facets that should be unchecked by default.
    * Key is the facet name, value is the list of option values to uncheck.
    **/
@@ -42,6 +46,7 @@ export interface FacetsPanelProps {
 
 export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   entityName,
+  usePropertyPathsSuggestions,
   facetOptionsCel,
   className,
   initialFacetsData,
@@ -63,21 +68,26 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
       result = {
         ...(result || {}),
         cel: facetOptionsCel,
-      }
+      };
     }
 
     if (facetQueriesState) {
       result = {
         ...(result || {}),
         facet_queries: facetQueriesState,
-      }
+      };
     }
 
     return result;
   }
-  
+
+  const [isModalOpen, setIsModalOpen] = useLocalStorage<boolean>(
+      `addFacetModalOpen-${entityName}`,
+      false
+    );
   const facetActions = useFacetActions(entityName, initialFacetsData);
-  const [facetQueriesState, setFacetQueriesState] = useState<FacetOptionsQueries | null>(null);
+  const [facetQueriesState, setFacetQueriesState] =
+    useState<FacetOptionsQueries | null>(null);
 
   const { data: facetsData } = useFacets(entityName, {
     revalidateOnFocus: false,
@@ -85,15 +95,22 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     fallbackData: initialFacetsData?.facets,
   });
 
-  const { facetOptions, mutate: mutateFacetOptions, isLoading } = useFacetOptions(
+  const {
+    facetOptions,
+    mutate: mutateFacetOptions,
+    isLoading,
+  } = useFacetOptions(
     entityName,
     initialFacetsData?.facetOptions as any,
-    buildFacetOptionsQuery(),
+    buildFacetOptionsQuery()
   );
 
   useEffect(
     function reloadOptions() {
-      if (facetsData === initialFacetsData?.facets && initialFacetsData?.facetOptions) {
+      if (
+        facetsData === initialFacetsData?.facets &&
+        initialFacetsData?.facetOptions
+      ) {
         return;
       }
 
@@ -141,27 +158,44 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   );
 
   return (
-    <FacetsPanel
-      panelId={entityName}
-      className={className || ""}
-      facets={(facetsData as any)}
-      facetOptions={(facetOptions as any)}
-      areFacetOptionsLoading={isLoading}
-      clearFiltersToken={clearFiltersToken}
-      uncheckedByDefaultOptionValues={uncheckedByDefaultOptionValues}
-      renderFacetOptionLabel={renderFacetOptionLabel}
-      renderFacetOptionIcon={renderFacetOptionIcon}
-      onCelChange={(cel: string) => {
-        onCelChange && onCelChange(cel);
-      }}
-      onAddFacet={(createFacet) => facetActions.addFacet(createFacet)}
-      onLoadFacetOptions={(facetId) => {
-        setFacetQueriesState({ ...facetQueriesState, [facetId]: "" });
-      }}
-      onDeleteFacet={(facetId) => facetActions.deleteFacet(facetId)}
-      onReloadFacetOptions={(facetQueries) =>
-        setFacetQueriesState({ ...facetQueries })
-      }
-    ></FacetsPanel>
+    <>
+      <FacetsPanel
+        panelId={entityName}
+        className={className || ""}
+        facets={facetsData as any}
+        facetOptions={facetOptions as any}
+        areFacetOptionsLoading={isLoading}
+        clearFiltersToken={clearFiltersToken}
+        uncheckedByDefaultOptionValues={uncheckedByDefaultOptionValues}
+        renderFacetOptionLabel={renderFacetOptionLabel}
+        renderFacetOptionIcon={renderFacetOptionIcon}
+        onCelChange={(cel: string) => {
+          onCelChange && onCelChange(cel);
+        }}
+        onAddFacet={() => setIsModalOpen(true)}
+        onLoadFacetOptions={(facetId) => {
+          setFacetQueriesState({ ...facetQueriesState, [facetId]: "" });
+        }}
+        onDeleteFacet={(facetId) => facetActions.deleteFacet(facetId)}
+        onReloadFacetOptions={(facetQueries) =>
+          setFacetQueriesState({ ...facetQueries })
+        }
+      ></FacetsPanel>
+      {!usePropertyPathsSuggestions && (
+        <AddFacetModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onAddFacet={(createFacet) => facetActions.addFacet(createFacet)}
+        />
+      )}
+      {usePropertyPathsSuggestions && isModalOpen && (
+        <AddFacetModalWithSuggestions
+          entityName={entityName}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onAddFacet={(createFacet) => facetActions.addFacet(createFacet)}
+        />
+      )}
+    </>
   );
 };

@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from typing import Tuple
 
 from sqlalchemy import (
@@ -13,7 +12,7 @@ from sqlmodel import Session, select, text
 
 # This import is required to create the tables
 from keep.api.core.facets import get_facet_options, get_facets
-from keep.api.models.db.alert import Alert, AlertEnrichment, Incident, LastAlert, LastAlertToIncident
+from keep.api.models.db.alert import Alert, AlertEnrichment, AlertField, Incident, LastAlert, LastAlertToIncident
 from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from keep.api.core.db import engine
@@ -24,7 +23,8 @@ logger = logging.getLogger(__name__)
 
 alert_field_configurations = [
     FieldMappingConfiguration("source", "filter_provider_type"),
-    FieldMappingConfiguration("provider_id", "filter_provider_id"),
+    FieldMappingConfiguration("providerId", "filter_provider_id"),
+    FieldMappingConfiguration("providerType", "filter_provider_type"),
     FieldMappingConfiguration("lastReceived", "filter_last_received"),
     FieldMappingConfiguration("startedAt", "startedAt"),
     FieldMappingConfiguration(map_from_pattern = "incident.name", map_to=['filter_incident_user_generated_name', 'filter_incident_ai_generated_name']),
@@ -250,3 +250,11 @@ def get_alert_facets(tenant_id: str, facet_ids_to_load: list[str] = None) -> lis
         facets += get_facets(tenant_id, "alert", not_static_facet_ids)
 
     return facets
+
+def get_alert_potential_facet_fields(tenant_id: str) -> list[str]:
+    with Session(engine) as session:
+        query = select(
+            AlertField.field_name
+        ).select_from(AlertField).where(AlertField.tenant_id == tenant_id).group_by(AlertField.field_name)
+        result = session.exec(query).all()
+        return result

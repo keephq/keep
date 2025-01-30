@@ -27,7 +27,7 @@ from keep.api.core.db import (
     get_alerts_metrics_by_provider,
     get_enrichment,
 )
-from keep.api.core.alerts import get_alert_facets, get_alert_facets_data, get_last_alerts
+from keep.api.core.alerts import get_alert_facets, get_alert_facets_data, get_alert_potential_facet_fields, get_last_alerts
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
@@ -129,6 +129,37 @@ def fetch_alert_facets(
     )
 
     return facets
+
+
+@router.get(
+    "/facets/fields",
+    description="Get potential fields for alert facets",
+)
+def fetch_alert_facet_fields(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    )
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching alert facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    fields = get_alert_potential_facet_fields(
+            tenant_id = tenant_id
+        )
+
+    logger.info(
+        "Fetched alert facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    return fields
 
 
 @router.get(

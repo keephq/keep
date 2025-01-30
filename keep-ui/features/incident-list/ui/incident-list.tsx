@@ -263,6 +263,7 @@ export function IncidentList({
                 <div className="flex flex-row gap-5">
                   <FacetsPanelServerSide
                     className="mt-14"
+                    usePropertyPathsSuggestions={true}
                     entityName={"incidents"}
                     clearFiltersToken={clearFiltersToken}
                     initialFacetsData={initialFacetsData}

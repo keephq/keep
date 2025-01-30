@@ -46,7 +46,7 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
       <div className="mt-3 max-h-96 overflow-auto space-y-1">
         <div>
           <div className="mb-1">
-            <span className="font-bold">Facet name</span>
+            <span className="font-bold">Facet name (optional):</span>
           </div>
           
           <TextInput
@@ -59,7 +59,7 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
         </div>
         <div>
           <div className="mb-1">
-            <span className="font-bold">Facet property path</span>
+            <span className="font-bold">Facet property path:</span>
           </div>
           
           <TextInput

@@ -42,6 +42,7 @@ from keep.api.core.facets import create_facet, delete_facet
 from keep.api.core.incidents import (
     get_incident_facets,
     get_incident_facets_data,
+    get_incident_potential_facet_fields,
     get_last_incidents_by_cel,
 )
 from keep.api.models.alert import (
@@ -281,6 +282,37 @@ def fetch_inicident_facets(
     )
 
     return facets
+
+@router.get(
+    "/facets/fields",
+    description="Get potential fields for incident facets",
+)
+def fetch_alert_facet_fields(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    )
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching incident facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    fields = get_incident_potential_facet_fields(
+            tenant_id = tenant_id
+        )
+
+    logger.info(
+        "Fetched incident facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    return fields
+
 
 @router.get(
     "/{incident_id}",
