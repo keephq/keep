@@ -145,7 +145,14 @@ class WorkflowScheduler:
                 )
                 continue
             except Exception as e:
-                self.logger.error(f"Error getting workflow: {e}")
+                self.logger.error(
+                    f"Error getting workflow: {e}",
+                    extra={
+                        "workflow_id": workflow_id,
+                        "workflow_execution_id": workflow_execution_id,
+                        "tenant_id": tenant_id,
+                    },
+                )
                 self._finish_workflow_execution(
                     tenant_id=tenant_id,
                     workflow_id=workflow_id,
@@ -424,7 +431,14 @@ class WorkflowScheduler:
                     )
                 # In case the provider are not configured properly
                 except ProviderConfigurationException as e:
-                    self.logger.error(f"Error getting workflow: {e}")
+                    self.logger.error(
+                        f"Error getting workflow: {e}",
+                        extra={
+                            "workflow_id": workflow_id,
+                            "workflow_execution_id": workflow_execution_id,
+                            "tenant_id": tenant_id,
+                        },
+                    )
                     self._finish_workflow_execution(
                         tenant_id=tenant_id,
                         workflow_id=workflow_id,
@@ -434,7 +448,14 @@ class WorkflowScheduler:
                     )
                     continue
                 except Exception as e:
-                    self.logger.error(f"Error getting workflow: {e}")
+                    self.logger.error(
+                        f"Error getting workflow: {e}",
+                        extra={
+                            "workflow_id": workflow_id,
+                            "workflow_execution_id": workflow_execution_id,
+                            "tenant_id": tenant_id,
+                        },
+                    )
                     self._finish_workflow_execution(
                         tenant_id=tenant_id,
                         workflow_id=workflow_id,
