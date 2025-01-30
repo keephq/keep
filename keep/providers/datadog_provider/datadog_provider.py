@@ -8,11 +8,12 @@ import json
 import logging
 import os
 import time
-from collections import defaultdict
+from collections import defaultdict, Counter
 from typing import Literal
 
 import pydantic
 import requests
+
 from datadog_api_client import ApiClient, Configuration
 from datadog_api_client.api_client import Endpoint
 from datadog_api_client.exceptions import (
@@ -36,7 +37,7 @@ from datadog_api_client.v2.api.users_api import UsersApi, UsersResponse
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseTopologyProvider
+from keep.providers.base.base_provider import BaseTopologyProvider, ProviderHealthMixin
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.datadog_provider.datadog_alert_format_description import (
     DatadogAlertFormatDescription,
@@ -105,7 +106,7 @@ class DatadogProviderAuthConfig:
     )
 
 
-class DatadogProvider(BaseTopologyProvider):
+class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
     """Pull/push alerts from Datadog."""
 
     PROVIDER_CATEGORY = ["Monitoring"]

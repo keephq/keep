@@ -422,6 +422,7 @@ class ProvidersFactory:
                         default_fingerprint_fields=default_fingerprint_fields,
                         categories=provider_class.PROVIDER_CATEGORY,
                         coming_soon=provider_class.PROVIDER_COMING_SOON,
+                        health=provider_class.has_health_report(),
                     )
                 )
             except ModuleNotFoundError:

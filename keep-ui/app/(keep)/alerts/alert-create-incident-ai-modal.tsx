@@ -53,7 +53,7 @@ const CreateIncidentWithAIModal = ({
     20,
     0,
     { id: "creation_time", desc: true },
-    '',
+    "",
     {}
   );
 
