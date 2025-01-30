@@ -30,6 +30,16 @@ alert_field_configurations = [
     FieldMappingConfiguration(map_from_pattern = "incident.name", map_to=['filter_incident_user_generated_name', 'filter_incident_ai_generated_name']),
     FieldMappingConfiguration(map_from_pattern = "*", map_to=["filter_alert_enrichment_json", "filter_alert_event_json"], is_json=True),
 ]
+alias_column_mapping = {
+    "filter_last_received": "lastalert.timestamp",
+    "filter_provider_id": "alert.provider_id",
+    "filter_provider_type": "alert.provider_type",
+    "filter_incident_user_generated_name": "incident.user_generated_name",
+    "filter_incident_ai_generated_name": "incident.ai_generated_name",
+    "filter_alert_enrichment_json": "alertenrichment.enrichments",
+    "filter_alert_event_json": "alert.event",
+}
+column_alias_mapping = {value: key for key, value in alias_column_mapping.items()}
 properties_metadata = PropertiesMetadata(alert_field_configurations)
 
 static_facets = [
@@ -74,13 +84,8 @@ def __build_query_for_filtering(tenant_id: str):
             LastAlert.tenant_id.label("last_alert_tenant_id"),
             LastAlert.first_timestamp.label("startedAt"),
             LastAlert.alert_id.label("entity_id"),
-            AlertEnrichment.enrichments.label('filter_alert_enrichment_json'),
-            Incident.user_generated_name.label("filter_incident_user_generated_name"),
-            Incident.ai_generated_name.label("filter_incident_ai_generated_name"),
-            Alert.event.label("filter_alert_event_json"),
-            Alert.provider_type.label("filter_provider_type"),
-            Alert.provider_id.label("filter_provider_id"),
-            LastAlert.timestamp.label("filter_last_received"),
+            # here it creates aliases for table columns that will be used in filtering and faceting
+            text(','.join([f'{value} AS {key}' for key,value in alias_column_mapping.items()]))
         )
         .select_from(LastAlert)
         .join(Alert, and_(Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id))
@@ -115,26 +120,26 @@ def build_alerts_query(
         sort_by=None,
         sort_dir=None
     ):
+    cel_to_sql_provider_type = get_cel_to_sql_provider_for_dialect(dialect_name)
+    cel_to_sql_instance = cel_to_sql_provider_type(properties_metadata)
     base = __build_query_for_filtering(tenant_id)
 
     if not sort_by:
         sort_by = 'lastReceived'
         sort_dir = 'desc'
 
-    provider_type = get_cel_to_sql_provider_for_dialect(dialect=dialect_name)
-    instance = provider_type(properties_metadata)
     metadata = properties_metadata.get_property_metadata(sort_by)
     group_by_exp = []
 
     for item in metadata:
         if isinstance(item, JsonMapping):
             group_by_exp.append(
-                instance.json_extract_as_text(item.json_prop, item.prop_in_json)
+                cel_to_sql_instance.json_extract_as_text(item.json_prop, item.prop_in_json)
             )
         elif isinstance(metadata[0], SimpleMapping):
-            group_by_exp.append(item.map_to)
+            group_by_exp.append(alias_column_mapping[item.map_to])
     
-    casted = f"{instance.coalesce([instance.cast(item, str) for item in group_by_exp])}"
+    casted = f"{cel_to_sql_instance.coalesce([cel_to_sql_instance.cast(item, str) for item in group_by_exp])}"
 
     if sort_dir == "desc":
         base = base.order_by(desc(text(casted)))
@@ -158,9 +163,7 @@ def build_alerts_query(
     )
 
     if cel:
-        cel_to_sql_provider_type = get_cel_to_sql_provider_for_dialect(dialect_name)
-        instance = cel_to_sql_provider_type(properties_metadata)
-        sql_filter = instance.convert_to_sql_str(cel)
+        sql_filter = cel_to_sql_instance.convert_to_sql_str(cel)
         query = query.where(text(sql_filter))
 
     return query
