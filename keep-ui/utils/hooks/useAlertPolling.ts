@@ -8,41 +8,41 @@ export const useAlertPolling = () => {
   const [pollAlerts, setPollAlerts] = useState(0);
   const lastPollTimeRef = useRef(0);
 
-  // console.log("useAlertPolling: Initializing");
+  console.log("useAlertPolling: Initializing");
 
   const handleIncoming = useCallback((incoming: any) => {
-    // console.log("useAlertPolling: Received incoming data:", incoming);
+    console.log("useAlertPolling: Received incoming data:", incoming);
     const currentTime = Date.now();
     const timeSinceLastPoll = currentTime - lastPollTimeRef.current;
 
-    // console.log(
-    //   `useAlertPolling: Time since last poll: ${timeSinceLastPoll}ms`
-    // );
+    console.log(
+      `useAlertPolling: Time since last poll: ${timeSinceLastPoll}ms`
+    );
 
     const newPollValue = Math.floor(Math.random() * 10000);
 
     if (timeSinceLastPoll < ALERT_POLLING_INTERVAL) {
-      // console.log("useAlertPolling: Ignoring poll due to short interval");
+      console.log("useAlertPolling: Ignoring poll due to short interval");
       setPollAlerts(0);
     } else {
-      // console.log("useAlertPolling: Updating poll alerts");
+      console.log("useAlertPolling: Updating poll alerts");
       lastPollTimeRef.current = currentTime;
-      // console.log(`useAlertPolling: New poll value: ${newPollValue}`);
+      console.log(`useAlertPolling: New poll value: ${newPollValue}`);
       setPollAlerts(newPollValue);
     }
   }, []);
 
   useEffect(() => {
-    // console.log("useAlertPolling: Setting up event listener for 'poll-alerts'");
+    console.log("useAlertPolling: Setting up event listener for 'poll-alerts'");
     bind("poll-alerts", handleIncoming);
     return () => {
-      // console.log(
-      //   "useAlertPolling: Cleaning up event listener for 'poll-alerts'"
-      // );
+      console.log(
+        "useAlertPolling: Cleaning up event listener for 'poll-alerts'"
+      );
       unbind("poll-alerts", handleIncoming);
     };
   }, [bind, unbind, handleIncoming]);
 
-  // console.log("useAlertPolling: Current poll alerts value:", pollAlerts);
+  console.log("useAlertPolling: Current poll alerts value:", pollAlerts);
   return { data: pollAlerts };
 };

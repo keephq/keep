@@ -43,10 +43,6 @@ with open(
             dict_key = f"{dialect_}_{description_}"
             testcases_dict[dict_key] = [dialect_, input_cel_, expected_sql_]
 
-        # for dialect_, expected_sql_ in expected_sql_dialect_based.items():
-        #     dict_key = f"{dialect_}_{description_}"
-        #     testcases_dict[dict_key] = [dialect_, input_cel_, expected_sql_]
-
 
 @pytest.mark.parametrize("testcase_key", list(testcases_dict.keys()))
 def test_cel_to_sql(testcase_key):

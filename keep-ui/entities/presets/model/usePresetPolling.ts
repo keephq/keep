@@ -15,11 +15,11 @@ export function usePresetPolling() {
       const timeSinceLastPoll = currentTime - lastPollTimeRef.current;
 
       if (timeSinceLastPoll < PRESET_POLLING_INTERVAL) {
-        // console.log("usePresetPolling: Ignoring poll due to short interval");
+        console.log("usePresetPolling: Ignoring poll due to short interval");
         return;
       }
 
-      // console.log("usePresetPolling: Revalidating preset data");
+      console.log("usePresetPolling: Revalidating preset data");
       lastPollTimeRef.current = currentTime;
       revalidateMultiple(["/preset", "/preset?"], {
         isExact: true,
@@ -29,14 +29,14 @@ export function usePresetPolling() {
   );
 
   useEffect(() => {
-    // console.log(
-    //   "usePresetPolling: Setting up event listener for 'poll-presets'"
-    // );
+    console.log(
+      "usePresetPolling: Setting up event listener for 'poll-presets'"
+    );
     bind("poll-presets", handleIncoming);
     return () => {
-      // console.log(
-      //   "usePresetPolling: Cleaning up event listener for 'poll-presets'"
-      // );
+      console.log(
+        "usePresetPolling: Cleaning up event listener for 'poll-presets'"
+      );
       unbind("poll-presets", handleIncoming);
     };
   }, [bind, unbind, handleIncoming]);
