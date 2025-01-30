@@ -39,7 +39,11 @@ from keep.api.core.db import (
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.facets import create_facet, delete_facet
-from keep.api.core.incidents import get_incident_facets, get_incident_facets_data, get_last_incidents_by_cel
+from keep.api.core.incidents import (
+    get_incident_facets,
+    get_incident_facets_data,
+    get_last_incidents_by_cel,
+)
 from keep.api.models.alert import (
     AlertDto,
     EnrichAlertRequestBody,
@@ -60,6 +64,7 @@ from keep.api.models.alert import (
 )
 from keep.api.models.facet import CreateFacetDto, FacetDto, FacetOptionsQueryDto
 from keep.api.models.db.alert import ActionType, AlertAudit
+from keep.api.models.facet import CreateFacetDto, FacetDto
 from keep.api.models.workflow import WorkflowExecutionDTO
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
@@ -179,7 +184,9 @@ def get_all_incidents(
         )
     except CelToSqlException as e:
         logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
-        raise HTTPException(status_code=400, detail=f'Error parsing CEL expression: {cel}')
+        raise HTTPException(
+            status_code=400, detail=f"Error parsing CEL expression: {cel}"
+        )
 
     incidents_dto = []
     for incident in incidents:
@@ -199,6 +206,7 @@ def get_all_incidents(
     return IncidentsPaginatedResultsDto(
         limit=limit, offset=offset, count=total_count, items=incidents_dto
     )
+
 
 @router.post(
     "/facets/options",
@@ -252,7 +260,7 @@ def fetch_inicident_facet_options(
 def fetch_inicident_facets(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
-    )
+    ),
 ) -> list:
     tenant_id = authenticated_entity.tenant_id
 
@@ -263,9 +271,7 @@ def fetch_inicident_facets(
         },
     )
 
-    facets = get_incident_facets(
-            tenant_id = tenant_id
-        )
+    facets = get_incident_facets(tenant_id=tenant_id)
 
     logger.info(
         "Fetched incident facets from DB",

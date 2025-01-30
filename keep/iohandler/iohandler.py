@@ -162,7 +162,7 @@ class IOHandler:
         # inject the context
         string = self._render(string, safe, default, additional_context)
 
-        # Now, extract the token if exists -תכ
+        # Now, extract the token if exists
         parsed_string = copy.copy(string)
 
         if string.startswith("raw_render_without_execution(") and string.endswith(")"):
@@ -406,7 +406,7 @@ class IOHandler:
             )
             safe = False
 
-        context = self.context_manager.get_full_context()
+        context = self.context_manager.get_full_context(exclude_providers=True)
 
         if additional_context:
             context.update(additional_context)
@@ -608,7 +608,8 @@ class IOHandler:
             rendered = html.unescape(rendered)
 
             # If no more changes or no more mustache tags, we're done
-            if rendered == current or "{{" not in rendered:
+            # we don't want to render providers. ever, so this is a hack for it for now
+            if rendered == current or "{{" not in rendered or "providers." in rendered:
                 return rendered
 
             current = rendered

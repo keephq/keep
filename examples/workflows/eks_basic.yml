@@ -1,0 +1,20 @@
+workflow:
+  id: eks-example
+  description: eks-example
+  triggers:
+    - type: manual
+  steps:
+    # get all pods
+    - name: get-pods
+      provider:
+        type: eks
+        config: "{{ providers.eks }}"
+        with:
+          command_type: get_pods
+  actions:
+    - name: echo-pod-status
+      foreach: "{{ steps.get-pods.results }}"
+      provider:
+        type: console
+        with:
+          message: "Pod name: {{ foreach.value.metadata.name }} || Namespace: {{ foreach.value.metadata.namespace }} || Status: {{ foreach.value.status.phase }}"

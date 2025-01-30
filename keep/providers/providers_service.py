@@ -83,6 +83,57 @@ class ProvidersService:
         return validated_scopes
 
     @staticmethod
+    def prepare_provider(
+        provider_id: str,
+        provider_name: str,
+        provider_type: str,
+        provider_config: Dict[str, Any],
+        validate_scopes: bool = True,
+    ) -> Dict[str, Any]:
+        provider_unique_id = uuid.uuid4().hex
+        logger.info(
+            "Installing provider",
+            extra={
+                "provider_id": provider_id,
+                "provider_type": provider_type,
+            },
+        )
+
+        config = {
+            "authentication": provider_config,
+            "name": provider_name,
+        }
+        tenant_id = None
+        context_manager = ContextManager(tenant_id=tenant_id)
+        try:
+            provider = ProvidersFactory.get_provider(
+                context_manager, provider_id, provider_type, config
+            )
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        if validate_scopes:
+            ProvidersService.validate_scopes(provider)
+
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+        secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
+        secret_manager.write_secret(
+            secret_name=secret_name,
+            secret_value=json.dumps(config),
+        )
+
+        try:
+            secret_manager.delete_secret(
+                secret_name=secret_name,
+            )
+            logger.warning("Secret deleted")
+        except Exception:
+            logger.exception("Failed to delete the secret")
+            pass
+
+        return provider
+
+    @staticmethod
     def install_provider(
         tenant_id: str,
         installed_by: str,

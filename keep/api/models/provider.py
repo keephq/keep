@@ -53,3 +53,4 @@ class Provider(BaseModel):
     alertExample: dict | None = None
     default_fingerprint_fields: list[str] | None = None
     provisioned: bool = False
+    health: bool = False

@@ -28,10 +28,19 @@ export const CorrelationForm = ({
     useFormContext<CorrelationFormType>();
   const { errors } = formState;
 
+  const getNestedKeys = (obj: any, prefix = ""): string[] => {
+    return Object.entries(obj).reduce<string[]>((acc, [key, value]) => {
+      const newKey = prefix ? `${prefix}.${key}` : key;
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        return [...acc, ...getNestedKeys(value, newKey)];
+      }
+      return [...acc, newKey];
+    }, []);
+  };
+
   const keys = [
     ...alertsFound.reduce<Set<string>>((acc, alert) => {
-      const alertKeys: any = Object.keys(alert);
-
+      const alertKeys = getNestedKeys(alert);
       return new Set([...acc, ...alertKeys]);
     }, new Set<string>()),
   ];
@@ -109,7 +118,7 @@ export const CorrelationForm = ({
           <Controller
             control={control}
             name="groupedAttributes"
-            render={({field: {value, onChange}}) => (
+            render={({ field: { value, onChange } }) => (
               <MultiSelect
                 className="mt-2"
                 value={value}
@@ -137,7 +146,7 @@ export const CorrelationForm = ({
           <Controller
             control={control}
             name="resolveOn"
-            render={({field: {value, onChange}}) => (
+            render={({ field: { value, onChange } }) => (
               <Select value={value} onValueChange={onChange} className="mt-2">
                 <SelectItem value="never">No auto-resolution</SelectItem>
                 <SelectItem value="all">All alerts resolved</SelectItem>
@@ -159,7 +168,7 @@ export const CorrelationForm = ({
           <Controller
             control={control}
             name="createOn"
-            render={({field: {value, onChange}}) => (
+            render={({ field: { value, onChange } }) => (
               <Select value={value} onValueChange={onChange} className="mt-2">
                 <SelectItem value="any">Any condition met</SelectItem>
                 <SelectItem value="all">All conditions met</SelectItem>
@@ -173,7 +182,7 @@ export const CorrelationForm = ({
         <Controller
           control={control}
           name="requireApprove"
-          render={({field: {value, onChange}}) => (
+          render={({ field: { value, onChange } }) => (
             <Switch
               color="orange"
               id="requireManualApprove"

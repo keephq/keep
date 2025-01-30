@@ -1,0 +1,39 @@
+---
+title: "DeepSeek Provider"
+description: "The DeepSeek Provider enables integration of DeepSeek's language models into Keep."
+---
+
+<Tip>
+  The DeepSeek Provider supports querying DeepSeek language models for prompt-based
+  interactions.
+</Tip>
+
+## Inputs
+
+The DeepSeek Provider supports the following functions:
+
+- `prompt`: Interact with DeepSeek's models by sending prompts and receiving responses
+- `model`: The model to be used, defaults to `deepseek-reasoner`
+- `max_tokens`: Limit amount of tokens returned by the model, default 1024
+- `system_prompt`: Optional system prompt to guide the model's behavior
+- `structured_output_format`: Optional JSON format for the structured output (check examples at the GitHub)
+
+## Outputs
+
+Currently, the DeepSeek Provider outputs the response from the model based on the prompt provided.
+
+## Authentication Parameters
+
+To use the DeepSeek Provider, you'll need an API Key from DeepSeek. The required parameters for authentication are:
+
+- **api_key** (required): Your DeepSeek API Key.
+
+## Connecting with the Provider
+
+To connect to DeepSeek, you'll need to obtain an API Key:
+
+1. Sign up for an account at [DeepSeek](https://platform.deepseek.com)
+2. Navigate to your account settings
+3. Generate an API key for Keep
+
+Use the generated API key in the `authentication` section of your DeepSeek Provider configuration.
