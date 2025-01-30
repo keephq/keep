@@ -143,7 +143,7 @@ class Parser:
         workflow_db_id: str = None,
     ) -> Workflow:
         self.logger.debug("Parsing workflow")
-        workflow_id = self._get_workflow_id(tenant_id, workflow, workflow_db_id)
+        workflow_id = self._get_workflow_id(tenant_id, workflow)
         context_manager = ContextManager(
             tenant_id=tenant_id, workflow_id=workflow_id, workflow=workflow
         )
