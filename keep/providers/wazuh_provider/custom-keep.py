@@ -143,7 +143,7 @@ def send_msg(msg: str, url: str, api_key: str) -> None:
         "Accept": "application/json",
         "X-API-KEY": api_key,
     }
-    res = requests.post(url, data=msg, headers=headers, timeout=10)
+    res = requests.post(url, json=msg, headers=headers, timeout=10)
     debug("# Response received: %s" % res.json)
 
 
