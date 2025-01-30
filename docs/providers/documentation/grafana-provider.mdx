@@ -1,8 +1,8 @@
 ---
 title: "Grafana Provider"
-description: "Grafana Provider allows either pull/push alerts from Grafana to Keep."
+description: "Grafana Provider allows either pull/push alerts and pull Topology Map from Grafana to Keep."
 ---
-<Tip>Grafana currently supports pulling/pushing alerts. We will add querying and notifying soon.</Tip>
+<Tip>Grafana currently supports pulling/pushing alerts & Topology Map. We will add querying and notifying soon.</Tip>
 
 ## Legacy vs Unified Alerting
 
@@ -113,6 +113,14 @@ If Keep is not accessible externally and the webhook cannot be created, you can 
 
 4. **Network and Connectivity Check:**
    - Use network monitoring tools to ensure Grafana can reach Keep or any alternative endpoint configured for alerts.
+
+<Note>
+**Topology Map** is generated from the traces collect by Tempo.
+To get the Datasource UID, go to:
+1. Connections > Data Sources.
+2. Click the Prometheus instance which is scraping data from Tempo > Your URL is in the format `https://host/connections/datasources/edit/<DATASOURCE_UID>`
+3. Copy that DATASOURCE_UID and use it while installing the provider.
+</Note>
 
 ## Webhook Integration Modifications
 
