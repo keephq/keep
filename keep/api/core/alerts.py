@@ -26,11 +26,11 @@ alert_field_configurations = [
     FieldMappingConfiguration("source", "filter_provider_type"),
     FieldMappingConfiguration("provider_id", "filter_provider_id"),
     FieldMappingConfiguration("lastReceived", "filter_last_received"),
+    FieldMappingConfiguration("startedAt", "filter_first_timestamp"),
     FieldMappingConfiguration(map_from_pattern = "incident.name", map_to=['filter_incident_user_generated_name', 'filter_incident_ai_generated_name']),
     FieldMappingConfiguration(map_from_pattern = "*", map_to=["filter_alert_enrichment_json", "filter_alert_event_json"], is_json=True),
 ]
 properties_metadata = PropertiesMetadata(alert_field_configurations)
-
 
 static_facets = [
     FacetDto(
@@ -81,6 +81,7 @@ def __build_query_for_filtering(tenant_id: str):
             Alert.provider_type.label("filter_provider_type"),
             Alert.provider_id.label("filter_provider_id"),
             LastAlert.timestamp.label("filter_last_received"),
+            LastAlert.first_timestamp.label("filter_first_timestamp"),
         )
         .select_from(LastAlert)
         .join(Alert, and_(Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id))
@@ -122,11 +123,7 @@ def build_alerts_query(
         select(
             Alert,
             AlertEnrichment,
-            # AlertEnrichment.id.label('alert_enrichment_id'),
-            # AlertEnrichment.tenant_id.label('alert_enrichment_tenant_id'),
-            # AlertEnrichment.alert_fingerprint.label('alert_enrichment_fingerprint'),
-            # AlertEnrichment.enrichments.label('alert_enrichment_json'),
-            base.c.startedAt,
+            func.max(base.c.startedAt),
         )
         .select_from(base)
         .join(
@@ -138,20 +135,8 @@ def build_alerts_query(
         .outerjoin(AlertEnrichment, and_(AlertEnrichment.tenant_id == Alert.tenant_id, AlertEnrichment.alert_fingerprint == Alert.fingerprint))
     )
 
-    if timeframe:
-        query = query.where(
-            LastAlert.timestamp
-            >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
-        )
-
     # Apply additional filters
     filter_conditions = []
-
-    if upper_timestamp is not None:
-        filter_conditions.append(LastAlert.timestamp < upper_timestamp)
-
-    if lower_timestamp is not None:
-        filter_conditions.append(LastAlert.timestamp >= lower_timestamp)
 
     if fingerprints:
         filter_conditions.append(LastAlert.fingerprint.in_(tuple(fingerprints)))
@@ -170,26 +155,29 @@ def build_alerts_query(
         sql_filter = instance.convert_to_sql_str(cel)
         query = query.where(text(sql_filter))
 
-    if sort_by:
-        provider_type = get_cel_to_sql_provider_for_dialect(dialect=dialect_name)
-        instance = provider_type(properties_metadata)
-        metadata = properties_metadata.get_property_metadata(sort_by)
-        group_by_exp = []
+    if not sort_by:
+        sort_by = 'lastReceived'
+        sort_dir = 'desc'
 
-        for item in metadata:
-            if isinstance(item, JsonMapping):
-                group_by_exp.append(
-                    instance.json_extract_as_text(item.json_prop, item.prop_in_json)
-                )
-            elif isinstance(metadata[0], SimpleMapping):
-                group_by_exp.append(item.map_to)
-        
-        casted = f"{instance.coalesce([instance.cast(item, str) for item in group_by_exp])}"
+    provider_type = get_cel_to_sql_provider_for_dialect(dialect=dialect_name)
+    instance = provider_type(properties_metadata)
+    metadata = properties_metadata.get_property_metadata(sort_by)
+    group_by_exp = []
 
-        if sort_dir == "desc":
-            query = query.order_by(desc(text(casted)))
-        else:
-            query = query.order_by(asc(text(casted)))
+    for item in metadata:
+        if isinstance(item, JsonMapping):
+            group_by_exp.append(
+                instance.json_extract_as_text(item.json_prop, item.prop_in_json)
+            )
+        elif isinstance(metadata[0], SimpleMapping):
+            group_by_exp.append(item.map_to)
+    
+    casted = f"{instance.coalesce([instance.cast(item, str) for item in group_by_exp])}"
+
+    if sort_dir == "desc":
+        query = query.order_by(desc(text(casted)))
+    else:
+        query = query.order_by(asc(text(casted)))
 
     return query
 
