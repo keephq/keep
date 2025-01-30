@@ -39,14 +39,11 @@ Read more about [Service Topology](/overview/servicetopology).
 
 ### Environment Variables
 
-| Variable                  | Description                           | Default |
-| ------------------------- | ------------------------------------- | ------- |
-| `KEEP_TOPOLOGY_PROCESSOR` | Enable/disable the topology processor | `false` |
-
-### Processing Parameters
-
-- **Process Interval**: 10 seconds
-- **Look Back Window**: 15 minutes
+| Variable                                   | Description                                         | Default |
+| ------------------------------------------ | --------------------------------------------------- | ------- |
+| `KEEP_TOPOLOGY_PROCESSOR`                  | Enable/disable the topology processor               | `false` |
+| `KEEP_TOPOLOGY_PROCESSOR_INTERVAL`         | Interval for processing alerts (in seconds)         | `10`    |
+| `KEEP_TOPOLOGY_PROCESSOR_LOOK_BACK_WINDOW` | Look back window for alert correlation (in minutes) | `15`    |
 
 ## Incident Management
 
