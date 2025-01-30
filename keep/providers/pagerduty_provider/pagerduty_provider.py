@@ -335,11 +335,11 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
     def _build_alert(
         self,
         title: str,
-        alert_body: str,
         dedup: str | None = None,
         severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
         event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
-        source: str = "custom_event",
+        source: str | None = None,
+        **kwargs,
     ) -> typing.Dict[str, typing.Any]:
         """
         Builds the payload for an event alert.
@@ -376,7 +376,12 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             if self.context_manager.event_context:
                 dedup = self.context_manager.event_context.fingerprint
 
-        return {
+        if not source:
+            source = "custom_event"
+            if self.context_manager.event_context:
+                source = self.context_manager.event_context.service or "custom_event"
+
+        payload = {
             "routing_key": self.authentication_config.routing_key,
             "event_action": event_type,
             "dedup_key": dedup,
@@ -384,20 +389,52 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                 "summary": title,
                 "source": source,
                 "severity": severity,
-                "custom_details": {
-                    "alert_body": alert_body,
-                },
             },
         }
+
+        custom_details = kwargs.get("custom_details", {})
+        if isinstance(custom_details, str):
+            custom_details = json.loads(custom_details)
+        if not custom_details and kwargs.get("alert_body"):
+            custom_details = {"alert_body": kwargs.get("alert_body")}
+
+        if custom_details:
+            payload["payload"]["custom_details"] = custom_details
+
+        if kwargs.get("timestamp"):
+            payload["payload"]["timestamp"] = kwargs.get("timestamp")
+
+        if kwargs.get("component"):
+            payload["payload"]["component"] = kwargs.get("component")
+
+        if kwargs.get("group"):
+            payload["payload"]["group"] = kwargs.get("group")
+
+        if kwargs.get("class"):
+            payload["payload"]["class"] = kwargs.get("class")
+
+        if kwargs.get("images"):
+            images = kwargs.get("images", [])
+            if isinstance(images, str):
+                images = json.loads(images)
+            payload["payload"]["images"] = images
+
+        if kwargs.get("links"):
+            links = kwargs.get("links", [])
+            if isinstance(links, str):
+                links = json.loads(links)
+            payload["payload"]["links"] = links
+
+        return payload
 
     def _send_alert(
         self,
         title: str,
-        body: str,
         dedup: str | None = None,
         severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
         event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
-        source: str = "custom_event",
+        source: str | None = None,
+        **kwargs,
     ):
         """
         Sends PagerDuty Alert
@@ -410,7 +447,9 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         """
         url = "https://events.pagerduty.com/v2/enqueue"
 
-        payload = self._build_alert(title, body, dedup, severity, event_type, source)
+        payload = self._build_alert(
+            title, dedup, severity, event_type, source, **kwargs
+        )
         result = requests.post(url, json=payload)
         result.raise_for_status()
 
@@ -604,7 +643,6 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
     def _notify(
         self,
         title: str = "",
-        alert_body: str = "",
         dedup: str = "",
         service_id: str = "",
         requester: str = "",
@@ -626,15 +664,20 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         if self.authentication_config.routing_key:
             return self._send_alert(
                 title,
-                alert_body,
                 dedup=dedup,
                 event_type=event_type,
                 source=source,
                 severity=severity,
+                **kwargs,
             )
         else:
             return self._trigger_incident(
-                service_id, title, alert_body, requester, incident_id, priority
+                service_id,
+                title,
+                kwargs.get("alert_body"),
+                requester,
+                incident_id,
+                priority,
             )
 
     def _query(self, incident_id: str = None):

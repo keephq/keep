@@ -165,7 +165,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     ?.filters?.find((f) => f.key === "source")?.value;
   const [fallBackIcon, setFallBackIcon] = useState(false);
 
-  const { providers } = useFetchProviders();
+  const { providers, mutate} = useFetchProviders();
   const { deleteWorkflow } = useWorkflowActions();
   const {
     isRunning,
@@ -537,6 +537,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                 closeModal={handleCloseModal}
                 installedProvidersMode={selectedProvider.installed}
                 isProviderNameDisabled={true}
+                mutate={mutate}
               />
             )}
           </SlidingPanel>

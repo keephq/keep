@@ -1,0 +1,132 @@
+---
+title: "EKS Provider"
+description: "EKS provider integrates with AWS EKS and let you interatct with kubernetes clusters hosted on EKS."
+---
+
+## Inputs
+- **command_type** (required): The command type to operate on the k8s cluster:
+  - `get_pods`: List all pods across namespaces or in a specific namespace
+  - `get_pvc`: List all persistent volume claims
+  - `get_node_pressure`: Get node pressure metrics
+  - `get_deployment`: Get deployment information
+  - `scale_deployment`: Scale a deployment's replicas
+  - `exec_command`: Execute a command in a pod
+  - `restart_pod`: Restart a specific pod
+  - `get_pod_logs`: Get logs from a pod
+
+### Command-specific Parameters
+
+#### For get_pods, get_pvc
+- **namespace** (optional): Target specific namespace. If not provided, queries all namespaces
+
+#### For get_deployment, scale_deployment
+- **namespace** (optional): Target namespace (defaults to "default")
+- **deployment_name** (required): Name of the deployment
+- **replicas** (required for scale_deployment): Number of desired replicas
+
+#### For exec_command
+- **namespace** (required): Pod's namespace
+- **pod_name** (required): Name of the pod
+- **command** (required): Command to execute (string or array)
+- **container** (optional): Container name (defaults to first container)
+- **use_shell** (optional): Whether to wrap command in shell (defaults to true)
+
+#### For restart_pod
+- **namespace** (required): Pod's namespace
+- **pod_name** (required): Name of the pod
+
+#### For get_pod_logs
+- **namespace** (required): Pod's namespace
+- **pod_name** (required): Name of the pod
+- **container** (optional): Container name (defaults to first container)
+- **tail_lines** (optional): Number of lines to get from the end (defaults to 100)
+
+## Outputs
+The Amazon EKS Provider supports the `query` function with different outputs based on command type:
+- `get_pods`: Returns list of pod details
+- `get_pvc`: Returns list of PVC details
+- `get_node_pressure`: Returns node pressure metrics
+- `get_deployment`: Returns deployment details
+- `scale_deployment`: Returns scaling operation result
+- `exec_command`: Returns command output as string
+- `restart_pod`: Returns restart operation status
+- `get_pod_logs`: Returns pod logs as string
+
+## Authentication Parameters
+The Amazon EKS Provider uses AWS credentials to allow you to query your cluster resources. You need to provide the following authentication parameters:
+
+- **access_key** (required): AWS access key ID with EKS permissions
+- **secret_access_key** (required): AWS secret access key
+- **region** (required): AWS region where the EKS cluster is located (e.g., us-east-1)
+- **cluster_name** (required): The name of your EKS cluster
+
+## Connecting with the Provider
+To connect to Amazon EKS, follow these steps:
+
+1. Log in to your [AWS Console](https://aws.amazon.com/)
+
+2. Create an IAM user with EKS permissions:
+   ```bash
+   aws iam create-user --user-name eks-user
+  ```
+
+3. Attach required policies:
+
+```bash
+aws iam attach-user-policy --user-name eks-user --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+aws iam attach-user-policy --user-name eks-user --policy-arn arn:aws:iam::aws:policy/AmazonEKSServicePolicy
+```
+
+4. Create access keys
+
+```bash
+aws iam create-access-key --user-name eks-user
+```
+
+You should get:
+
+```
+{
+  "AccessKey": {
+    "AccessKeyId": "AKIAXXXXXXXXXXXXXXXX",
+    "SecretAccessKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "Status": "Active"
+  }
+}
+```
+
+The `AccessKeyId` is your `access_key` and `SecretAccessKey` is your `secret_access_key`.
+
+5. Note your cluster name and region from the EKS console or using:
+
+```bash
+aws eks list-clusters --region <your-region>
+```
+
+## Required Permissions
+The AWS IAM user needs these permissions:
+
+1. eks:DescribeCluster
+2. eks:ListClusters
+
+Additional permissions for specific operations:
+
+3. eks:AccessKubernetesApi for pod/deployment operations
+4. eks:UpdateCluster for scaling operations
+
+| Command | AWS IAM Permissions |
+|---------|-------------------|
+| `get_pods` | `eks:DescribeCluster` <br/> `eks:AccessKubernetesApi` |
+| `get_pvc` | `eks:DescribeCluster` <br/> `eks:AccessKubernetesApi` |
+| `get_node_pressure` | `eks:DescribeCluster` <br/> `eks:AccessKubernetesApi` |
+| `get_deployment` | `eks:DescribeCluster` <br/> `eks:AccessKubernetesApi` |
+| `scale_deployment` | `eks:DescribeCluster` <br/> `eks:AccessKubernetesApi` |
+| `exec_command` | `eks:DescribeCluster` <br/> `eks:AccessKubernetesApi` |
+| `restart_pod` | `eks:DescribeCluster` <br/> `eks:AccessKubernetesApi` |
+| `get_pod_logs` | `eks:DescribeCluster` <br/> `eks:AccessKubernetesApi` |
+
+
+## Usage Examples
+
+1. Basic - https://github.com/keephq/keep/blob/main/examples/workflows/eks_basic.yml
+2. Advanced - https://github.com/keephq/keep/blob/main/examples/workflows/aks_advanced.yml

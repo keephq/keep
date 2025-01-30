@@ -2,7 +2,7 @@
 
 import * as Frigade from "@frigade/react";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import {useConfig} from "@/utils/hooks/useConfig";
+import { useConfig } from "@/utils/hooks/useConfig";
 export const FrigadeProvider = ({
   children,
 }: {
@@ -12,9 +12,7 @@ export const FrigadeProvider = ({
   const { data: config } = useConfig();
 
   if (!config || config.FRIGADE_DISABLED === "true") {
-    return <>
-      {children}
-    </>;
+    return <>{children}</>;
   }
   return (
     <Frigade.Provider

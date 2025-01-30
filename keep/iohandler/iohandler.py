@@ -162,7 +162,7 @@ class IOHandler:
         # inject the context
         string = self._render(string, safe, default, additional_context)
 
-        # Now, extract the token if exists -תכ
+        # Now, extract the token if exists
         parsed_string = copy.copy(string)
 
         if string.startswith("raw_render_without_execution(") and string.endswith(")"):

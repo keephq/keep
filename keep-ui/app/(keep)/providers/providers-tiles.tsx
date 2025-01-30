@@ -10,20 +10,27 @@ import "react-sliding-side-panel/lib/index.css";
 import { useSearchParams } from "next/navigation";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { Tooltip } from "@/shared/ui";
+import ProviderHealthResultsModal from "@/app/(health)/health/modal";
 
 const ProvidersTiles = ({
   providers,
   installedProvidersMode = false,
   linkedProvidersMode = false,
   isLocalhost = false,
+  isHealthCheck = false,
+  mutate,
 }: {
   providers: Providers;
   installedProvidersMode?: boolean;
   linkedProvidersMode?: boolean;
   isLocalhost?: boolean;
+  isHealthCheck?: boolean;
+  mutate: () => void;
 }) => {
   const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState(false);
+  const [openHealthModal, setOpenHealthModal] = useState(false);
+  const [healthResults, setHealthResults] = useState({});
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null
   );
@@ -57,8 +64,24 @@ const ProvidersTiles = ({
     setSelectedProvider(null);
   };
 
-  const handleConnecting = (isConnecting: boolean, isConnected: boolean) => {
+  const handleShowHealthModal = () => {
+    setOpenHealthModal(true);
+  };
+
+  const handleCloseHealthModal = () => {
+    setOpenHealthModal(false);
+  };
+
+  const handleConnecting = (
+    isConnecting: boolean,
+    isConnected: boolean,
+    healthResults: any
+  ) => {
     if (isConnected) handleCloseModal();
+    if (isConnected && isHealthCheck) {
+      setHealthResults(healthResults);
+      handleShowHealthModal();
+    }
   };
 
   const getSectionTitle = () => {
@@ -134,9 +157,17 @@ const ProvidersTiles = ({
             installedProvidersMode={installedProvidersMode}
             isProviderNameDisabled={installedProvidersMode}
             isLocalhost={isLocalhost}
+            isHealthCheck={isHealthCheck}
+            mutate={mutate}
           />
         )}
       </SlidingPanel>
+
+      <ProviderHealthResultsModal
+        handleClose={handleCloseHealthModal}
+        isOpen={openHealthModal}
+        healthResults={healthResults}
+      />
     </div>
   );
 };

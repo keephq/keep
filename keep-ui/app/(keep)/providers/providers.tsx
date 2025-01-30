@@ -129,6 +129,7 @@ export interface Provider {
   provisioned?: boolean;
   categories: TProviderCategory[];
   coming_soon: boolean;
+  health: boolean;
 }
 
 export type Providers = Provider[];
@@ -149,6 +150,7 @@ export const defaultProvider: Provider = {
   pulling_enabled: true,
   categories: ["Others"],
   coming_soon: false,
+  health: false,
 };
 
 export type ProviderFormKVData = Record<string, string>[];
