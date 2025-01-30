@@ -2224,19 +2224,27 @@ def get_all_deduplication_stats(tenant_id):
     return stats
 
 
-def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint) -> str | None:
-    # get the last alert for a given fingerprint
+def get_last_alert_hashes_by_fingerprints(
+    tenant_id, fingerprints: list[str]
+) -> dict[str, str | None]:
+    # get the last alert hashes for a list of fingerprints
     # to check deduplication
     with Session(engine) as session:
         query = (
-            select(LastAlert.alert_hash)
+            select(LastAlert.fingerprint, LastAlert.alert_hash)
             .where(LastAlert.tenant_id == tenant_id)
-            .where(LastAlert.fingerprint == fingerprint)
-            .limit(1)
+            .where(LastAlert.fingerprint.in_(fingerprints))
         )
 
-        alert_hash: str | None = session.scalars(query).first()
-    return alert_hash
+        results = session.execute(query).all()
+
+    # Create a dictionary from the results
+    alert_hash_dict = {
+        fingerprint: alert_hash
+        for fingerprint, alert_hash in results
+        if alert_hash is not None
+    }
+    return alert_hash_dict
 
 
 def update_key_last_used(
@@ -3314,7 +3322,7 @@ def get_last_incidents(
     with_alerts: bool = False,
     is_predicted: bool = None,
     filters: Optional[dict] = None,
-    allowed_incident_ids: Optional[List[str]] = None
+    allowed_incident_ids: Optional[List[str]] = None,
 ) -> Tuple[list[Incident], int]:
     """
     Get the last incidents and total amount of incidents.
@@ -3380,6 +3388,7 @@ def get_last_incidents(
         enrich_incidents_with_enrichments(tenant_id, incidents, session)
 
     return incidents, total_count
+
 
 def get_incident_by_id(
     tenant_id: str,
