@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Tuple
 
 from sqlalchemy import (
@@ -39,7 +39,7 @@ alias_column_mapping = {
     "filter_alert_enrichment_json": "alertenrichment.enrichments",
     "filter_alert_event_json": "alert.event",
 }
-column_alias_mapping = {value: key for key, value in alias_column_mapping.items()}
+
 properties_metadata = PropertiesMetadata(alert_field_configurations)
 
 static_facets = [
@@ -78,9 +78,6 @@ def __build_query_for_filtering(tenant_id: str):
     return (
         select(
             LastAlert.alert_id,
-            AlertEnrichment.id.label("alert_enrichment_id"),
-            AlertEnrichment.tenant_id.label("alert_enrichment_tenant_id"),
-            AlertEnrichment.alert_fingerprint.label("alert_enrichment_fingerprint"),
             LastAlert.tenant_id.label("last_alert_tenant_id"),
             LastAlert.first_timestamp.label("startedAt"),
             LastAlert.alert_id.label("entity_id"),
@@ -170,10 +167,8 @@ def build_alerts_query(
 
 def get_last_alerts(
     tenant_id,
-    provider_id=None,
     limit=1000,
     offset=0,
-    fingerprints=None,
     cel=None,
     sort_by=None,
     sort_dir=None
@@ -192,15 +187,10 @@ def get_last_alerts(
         query = query.group_by(Alert.id,AlertEnrichment.id)
 
         # Execute the query
-        start_time = datetime.now()
-        str_q = str(query.compile(compile_kwargs={"literal_binds": True}))
         total_count = session.exec(select(func.count()).select_from(query)).one()
         alerts_with_start = session.execute(
             query.order_by(desc(Alert.timestamp)).limit(limit).offset(offset)
         ).all()
-        end_time = datetime.now()
-        execution_time = (end_time - start_time).total_seconds()
-        logger.info(f"Query execution time: {execution_time} seconds")
 
         # Process results based on dialect
         alerts = []
@@ -223,8 +213,16 @@ def get_alert_facets_data(
     else:
         facets = static_facets
 
-    base_query_cte = __build_query_for_filtering(tenant_id).cte("alerts_query")
-    base_query = select(base_query_cte)
+    base_query = select(
+        # here it creates aliases for table columns that will be used in filtering and faceting
+        text(
+            ",".join(
+                ['entity_id'] + [key for key in alias_column_mapping.keys()]
+            )
+        )
+    ).select_from(
+        __build_query_for_filtering(tenant_id).cte("alerts_query")
+    )
 
     return get_facet_options(
         base_query=base_query,

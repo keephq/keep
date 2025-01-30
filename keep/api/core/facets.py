@@ -105,6 +105,7 @@ def get_facet_options(
             properties_metadata=properties_metadata,
             facet_options_query=facet_options_query,
         )
+
         data = session.exec(db_query).all()
         grouped_by_id_dict = {}
 
