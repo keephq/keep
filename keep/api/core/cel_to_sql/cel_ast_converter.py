@@ -5,7 +5,17 @@ import celpy
 from typing import List, cast
 from dateutil.parser import parse
 
-from keep.api.core.cel_to_sql.ast_nodes import ComparisonNode, ConstantNode, IndexAccessNode, LogicalNode, MethodAccessNode, Node, ParenthesisNode, PropertyAccessNode, UnaryNode
+from keep.api.core.cel_to_sql.ast_nodes import (
+    ComparisonNode,
+    ConstantNode,
+    IndexAccessNode,
+    LogicalNode,
+    MethodAccessNode,
+    Node,
+    ParenthesisNode,
+    PropertyAccessNode,
+    UnaryNode,
+)
 
 class CelToAstConverter(lark.visitors.Visitor_Recursive):
     """Dump a CEL AST creating a close approximation to the original source."""

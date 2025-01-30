@@ -38,7 +38,6 @@ from keep.api.core.db import (
     merge_incidents_to_id,
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
-from keep.api.core.facets import create_facet, delete_facet
 from keep.api.core.incidents import (
     get_incident_facets,
     get_incident_facets_data,
@@ -63,9 +62,8 @@ from keep.api.models.alert import (
     SplitIncidentRequestDto,
     SplitIncidentResponseDto,
 )
-from keep.api.models.facet import CreateFacetDto, FacetDto, FacetOptionsQueryDto
+from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.db.alert import ActionType, AlertAudit
-from keep.api.models.facet import CreateFacetDto, FacetDto
 from keep.api.models.workflow import WorkflowExecutionDTO
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
