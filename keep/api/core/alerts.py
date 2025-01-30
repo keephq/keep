@@ -26,7 +26,7 @@ alert_field_configurations = [
     FieldMappingConfiguration("source", "filter_provider_type"),
     FieldMappingConfiguration("provider_id", "filter_provider_id"),
     FieldMappingConfiguration("lastReceived", "filter_last_received"),
-    FieldMappingConfiguration("startedAt", "filter_first_timestamp"),
+    FieldMappingConfiguration("startedAt", "startedAt"),
     FieldMappingConfiguration(map_from_pattern = "incident.name", map_to=['filter_incident_user_generated_name', 'filter_incident_ai_generated_name']),
     FieldMappingConfiguration(map_from_pattern = "*", map_to=["filter_alert_enrichment_json", "filter_alert_event_json"], is_json=True),
 ]
@@ -81,7 +81,6 @@ def __build_query_for_filtering(tenant_id: str):
             Alert.provider_type.label("filter_provider_type"),
             Alert.provider_id.label("filter_provider_id"),
             LastAlert.timestamp.label("filter_last_received"),
-            LastAlert.first_timestamp.label("filter_first_timestamp"),
         )
         .select_from(LastAlert)
         .join(Alert, and_(Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id))
@@ -112,48 +111,11 @@ def __build_query_for_filtering(tenant_id: str):
 def build_alerts_query(
         dialect_name: str,
         tenant_id,
-        provider_id=None,
-        fingerprints=None,
         cel=None,
         sort_by=None,
         sort_dir=None
     ):
     base = __build_query_for_filtering(tenant_id)
-    query = (
-        select(
-            Alert,
-            AlertEnrichment,
-            func.max(base.c.startedAt),
-        )
-        .select_from(base)
-        .join(
-            Alert,
-            and_(
-                base.c.last_alert_tenant_id == Alert.tenant_id, base.c.alert_id == Alert.id
-            ),
-        )
-        .outerjoin(AlertEnrichment, and_(AlertEnrichment.tenant_id == Alert.tenant_id, AlertEnrichment.alert_fingerprint == Alert.fingerprint))
-    )
-
-    # Apply additional filters
-    filter_conditions = []
-
-    if fingerprints:
-        filter_conditions.append(LastAlert.fingerprint.in_(tuple(fingerprints)))
-
-    logger.info(f"filter_conditions: {filter_conditions}")
-
-    if filter_conditions:
-        query = query.where(*filter_conditions)
-
-    if provider_id:
-        query = query.where(Alert.provider_id == provider_id)
-
-    if cel:
-        cel_to_sql_provider_type = get_cel_to_sql_provider_for_dialect(dialect_name)
-        instance = cel_to_sql_provider_type(properties_metadata)
-        sql_filter = instance.convert_to_sql_str(cel)
-        query = query.where(text(sql_filter))
 
     if not sort_by:
         sort_by = 'lastReceived'
@@ -175,9 +137,31 @@ def build_alerts_query(
     casted = f"{instance.coalesce([instance.cast(item, str) for item in group_by_exp])}"
 
     if sort_dir == "desc":
-        query = query.order_by(desc(text(casted)))
+        base = base.order_by(desc(text(casted)))
     else:
-        query = query.order_by(asc(text(casted)))
+        base = base.order_by(asc(text(casted)))
+
+    query = (
+        select(
+            Alert,
+            AlertEnrichment,
+            func.max(base.c.startedAt),
+        )
+        .select_from(base)
+        .join(
+            Alert,
+            and_(
+                base.c.last_alert_tenant_id == Alert.tenant_id, base.c.alert_id == Alert.id
+            ),
+        )
+        .outerjoin(AlertEnrichment, and_(AlertEnrichment.tenant_id == Alert.tenant_id, AlertEnrichment.alert_fingerprint == Alert.fingerprint))
+    )
+
+    if cel:
+        cel_to_sql_provider_type = get_cel_to_sql_provider_for_dialect(dialect_name)
+        instance = cel_to_sql_provider_type(properties_metadata)
+        sql_filter = instance.convert_to_sql_str(cel)
+        query = query.where(text(sql_filter))
 
     return query
 
@@ -197,8 +181,6 @@ def get_last_alerts(
         query = build_alerts_query(
             dialect_name,
             tenant_id,
-            provider_id,
-            fingerprints,
             cel,
             sort_by,
             sort_dir
