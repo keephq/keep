@@ -573,7 +573,7 @@ class KibanaProvider(BaseProvider):
                     "status": alert_info.get("actionGroupName"),
                     "actionSubgroup": alert_info.get("actionSubgroup"),
                     "isFlapping": alert_info.get("flapping"),
-                    "id": alert_info.get("id"),
+                    "kibana_alert_id": alert_info.get("id"),
                     "fingerprint": alert_info.get("uuid"),
                     "url": context_info.get("alertDetailsUrl"),
                     "context.message": context_info.get("message"),
