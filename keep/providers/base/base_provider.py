@@ -15,7 +15,7 @@ import re
 import uuid
 from collections import Counter
 from operator import attrgetter
-from typing import Literal, Optional, List
+from typing import Literal, Optional
 
 import opentelemetry.trace as trace
 import requests

@@ -113,9 +113,7 @@ class ProvidersService:
             raise HTTPException(status_code=400, detail=str(e))
 
         if validate_scopes:
-            validated_scopes = ProvidersService.validate_scopes(provider)
-        else:
-            pass
+            ProvidersService.validate_scopes(provider)
 
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"

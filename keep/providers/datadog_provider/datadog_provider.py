@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import time
-from collections import defaultdict, Counter
+from collections import defaultdict
 from typing import Literal
 
 import pydantic
