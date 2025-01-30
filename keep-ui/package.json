@@ -31,7 +31,7 @@
     "@radix-ui/react-label": "^1.0.0",
     "@radix-ui/react-popover": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.4",
-    "@sentry/nextjs": "^8.38.0",
+    "@sentry/nextjs": "^8.52.0",
     "@svgr/webpack": "^8.0.1",
     "@tanstack/react-table": "^8.11.0",
     "@tanstack/table-core": "^8.20.5",
