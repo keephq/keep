@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 alert_field_configurations = [
     FieldMappingConfiguration("source", "filter_provider_type"),
     FieldMappingConfiguration("provider_id", "filter_provider_id"),
+    FieldMappingConfiguration("lastReceived", "filter_last_received"),
     FieldMappingConfiguration(map_from_pattern = "incident.name", map_to=['filter_incident_user_generated_name', 'filter_incident_ai_generated_name']),
     FieldMappingConfiguration(map_from_pattern = "*", map_to=["filter_alert_enrichment_json", "filter_alert_event_json"], is_json=True),
 ]
@@ -79,6 +80,7 @@ def __build_query_for_filtering(tenant_id: str):
             Alert.event.label("filter_alert_event_json"),
             Alert.provider_type.label("filter_provider_type"),
             Alert.provider_id.label("filter_provider_id"),
+            LastAlert.timestamp.label("filter_last_received"),
         )
         .select_from(LastAlert)
         .join(Alert, and_(Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id))
@@ -110,9 +112,6 @@ def build_alerts_query(
         dialect_name: str,
         tenant_id,
         provider_id=None,
-        timeframe=None,
-        upper_timestamp=None,
-        lower_timestamp=None,
         fingerprints=None,
         cel=None,
         sort_by=None,
@@ -199,10 +198,6 @@ def get_last_alerts(
     provider_id=None,
     limit=1000,
     offset=0,
-    timeframe=None,
-    upper_timestamp=None,
-    lower_timestamp=None,
-    with_incidents=False,
     fingerprints=None,
     cel=None,
     sort_by=None,
@@ -215,9 +210,6 @@ def get_last_alerts(
             dialect_name,
             tenant_id,
             provider_id,
-            timeframe,
-            upper_timestamp,
-            lower_timestamp,
             fingerprints,
             cel,
             sort_by,
@@ -228,6 +220,7 @@ def get_last_alerts(
 
         # Execute the query
         start_time = datetime.now()
+        str_q = str(query.compile(compile_kwargs={"literal_binds": True}))
         total_count = session.exec(select(func.count()).select_from(query)).one()
         alerts_with_start = session.execute(
             query.order_by(desc(Alert.timestamp)).limit(limit).offset(offset)

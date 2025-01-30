@@ -27,7 +27,7 @@ import {
 import AlertActions from "./alert-actions";
 import { AlertPresetManager } from "./alert-preset-manager";
 import { evalWithContext } from "./alerts-rules-builder";
-import { TitleAndFilters } from "./TitleAndFilters";
+import { TitleAndFilters, DateRange } from "./TitleAndFilters";
 import { severityMapping } from "@/entities/alerts/model";
 import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
@@ -109,6 +109,7 @@ export function AlertTableServerSide({
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(null);
   const [filterCel, setFilterCel] = useState<string>("");
   const [searchCel, setSearchCel] = useState<string>("");
+  const [dateRange, setDateRange] = useState<DateRange | null>(null)
   
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
@@ -154,8 +155,25 @@ export function AlertTableServerSide({
     pageSize: 20,
   });
 
+  const mainCelQuery = useMemo(() => {
+    const filterArray = [];
+
+    if (dateRange?.start) {
+      filterArray.push(`lastReceived >= '${dateRange.start.toISOString()}'`);
+    }
+
+    if (dateRange?.end) {
+      filterArray.push(`lastReceived <= '${dateRange.end.toISOString()}'`);
+    }
+
+    filterArray.push(searchCel);
+
+    return filterArray.filter(Boolean).join(' && '); 
+  }, [searchCel, dateRange]);
+
   const alertsQuery = useMemo(function whenQueryChange() {
-    const resultCel = [searchCel, filterCel].filter(Boolean).join(' && ');
+    let resultCel = [mainCelQuery, filterCel].filter(Boolean).join(' && ');
+
     const limit = paginationState.pageSize;
     const offset = limit * paginationState.pageIndex;
     const alertsQuery: AlertsQuery = {
@@ -165,22 +183,9 @@ export function AlertTableServerSide({
     }
 
     return alertsQuery;
-  }, [filterCel, searchCel, paginationState, sorting]);
+  }, [filterCel, mainCelQuery, paginationState, sorting]);
 
   useEffect(() => onQueryChange && onQueryChange(alertsQuery), [alertsQuery, onQueryChange])
-
-  useEffect(function whenQueryChange() {
-    const resultCel = [searchCel, filterCel].filter(Boolean).join(' && ');
-    const limit = paginationState.pageSize;
-    const offset = limit * paginationState.pageIndex;
-    const alertsQuery: AlertsQuery = {
-      cel: resultCel, pageIndex: paginationState.pageIndex, offset, limit,
-      sortBy: sorting[0]?.id,
-      sortDirection: sorting[0]?.desc ? 'DESC' : 'ASC'
-    }
-
-    onQueryChange && onQueryChange(alertsQuery);
-  }, [filterCel, searchCel, paginationState, sorting, onQueryChange]);
 
   const [tabs, setTabs] = useState([
     { name: "All", filter: (alert: AlertDto) => true },
@@ -251,8 +256,6 @@ export function AlertTableServerSide({
   let showSkeleton = isAsyncLoading;
   let showEmptyState =
     !!alertsQuery.cel && table.getPageCount() === 0 && !isAsyncLoading;
-
-  useEffect(() => console.log({ isAsyncLoading }), [isAsyncLoading])
 
   const handleRowClick = (alert: AlertDto) => {
     // if presetName is alert-history, do not open sidebar
@@ -351,6 +354,7 @@ export function AlertTableServerSide({
           alerts={alerts}
           presetName={presetName}
           onThemeChange={handleThemeChange}
+          onDateRangeChange={setDateRange}
         />
       </div>
 
@@ -380,7 +384,7 @@ export function AlertTableServerSide({
             <FacetsPanelServerSide
               key={searchCel}
               entityName={"alerts"}
-              facetOptionsCel={searchCel}
+              facetOptionsCel={mainCelQuery}
               clearFiltersToken={clearFiltersToken}
               initialFacetsData={{ facets: initalFacets, facetOptions: null }}
               onCelChange={(cel) => setFilterCel(cel)}

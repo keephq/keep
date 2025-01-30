@@ -1,3 +1,4 @@
+from datetime import datetime
 from types import NoneType
 from typing import List
 from keep.api.core.cel_to_sql.ast_nodes import ConstantNode
@@ -20,6 +21,8 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         if to_type is str:
             to_type_str = "TEXT"
         elif to_type is NoneType:
+            return exp
+        elif to_type is datetime:
             return exp
         else:
             raise ValueError(f"Unsupported type: {type}")
@@ -49,3 +52,9 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
             raise ValueError(f'{property_path}.endsWith accepts 1 argument but got {len(method_args)}')
 
         return f"{property_path} LIKE '%{method_args[0].value}'"
+    
+    def _get_default_value_for_type(self, type):
+        if type is datetime:
+            return "'0000-00-00 00:00:00'"
+
+        return super()._get_default_value_for_type(type)
