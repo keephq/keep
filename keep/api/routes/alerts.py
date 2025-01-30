@@ -602,6 +602,8 @@ def _enrich_alert(
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by {authenticated_entity.email}"
             should_run_workflow = True
+            if enrich_data.enrichments["status"] == "resolved":
+                should_check_incidents_resolution = True
         elif "status" in enrich_data.enrichments and authenticated_entity.api_key_name:
             action_type = (
                 ActionType.API_AUTOMATIC_RESOLVE
