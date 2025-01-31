@@ -385,18 +385,18 @@ def test_provider_deletion(browser):
     try:
 
         # Checking deletion after Creation 
-        browser.goto("https://3000-35c4n0r-keep-j5ok1nvq1vv.ws-us117.gitpod.io/signin")
+        browser.goto("http://localhost:3000/signin")
         browser.get_by_role("link", name="Providers").hover()
         browser.get_by_role("link", name="Providers").click()
         browser.wait_for_timeout(10000)
-        install_webhook_provider(browser=browser, provider_name=provider_name, webhook_url="https://8080-35c4n0r-keep-j5ok1nvq1vv.ws-us117.gitpod.io", webhook_action="GET")
+        install_webhook_provider(browser=browser, provider_name=provider_name, webhook_url="http://keep-backend:8080", webhook_action="GET")
         browser.wait_for_timeout(2000)
         assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=1)
         delete_provider(browser=browser, provider_type="Webhook", provider_name=provider_name)
         assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=0)
 
         # Checking deletion after Creation + Updation
-        install_webhook_provider(browser=browser, provider_name=provider_name, webhook_url="https://8080-35c4n0r-keep-j5ok1nvq1vv.ws-us117.gitpod.io", webhook_action="GET")
+        install_webhook_provider(browser=browser, provider_name=provider_name, webhook_url="http://keep-backend:8080", webhook_action="GET")
         browser.wait_for_timeout(2000)
         assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=1)
         # Updating provider
