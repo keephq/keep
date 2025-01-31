@@ -151,7 +151,7 @@ export const useAlerts = () => {
       }
     }
 
-    let requestUrl = `/alerts`;
+    let requestUrl = `/alerts/query`;
 
     if (filtersParams.toString()) {
       requestUrl += `?${filtersParams.toString()}`;

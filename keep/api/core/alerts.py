@@ -165,7 +165,7 @@ def build_alerts_query(
 
     return query
 
-def get_last_alerts(
+def query_last_alerts(
     tenant_id,
     limit=1000,
     offset=0,

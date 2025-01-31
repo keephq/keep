@@ -26,8 +26,9 @@ from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_metrics_by_provider,
     get_enrichment,
+    get_last_alerts
 )
-from keep.api.core.alerts import get_alert_facets, get_alert_facets_data, get_alert_potential_facet_fields, get_last_alerts
+from keep.api.core.alerts import get_alert_facets, get_alert_facets_data, get_alert_potential_facet_fields, query_last_alerts
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
@@ -163,10 +164,10 @@ def fetch_alert_facet_fields(
 
 
 @router.get(
-    "",
+    "/query",
     description="Get last alerts occurrence",
 )
-def get_all_alerts(
+def query_alerts(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
@@ -183,7 +184,7 @@ def get_all_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts, total_count = get_last_alerts(
+    db_alerts, total_count = query_last_alerts(
         tenant_id=tenant_id,
         limit=limit,
         offset=offset,
@@ -205,6 +206,35 @@ def get_all_alerts(
         "count": total_count,
         "results": enriched_alerts_dto,
     }
+
+
+@router.get(
+    "",
+    description="Get last alerts occurrence",
+)
+def get_all_alerts(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+    limit: int = 1000,
+) -> list[AlertDto]:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching alerts from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    db_alerts = get_last_alerts(tenant_id=tenant_id, limit=limit)
+    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
+    logger.info(
+        "Fetched alerts from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return enriched_alerts_dto
 
 
 @router.get("/{fingerprint}/history", description="Get alert history")
