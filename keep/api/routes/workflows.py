@@ -119,6 +119,7 @@ def get_workflows(
         # create the workflow DTO
         try:
             workflow_raw = cyaml.safe_load(workflow.workflow_raw)
+            is_alert_rule_worfklow = WorkflowStore.is_alert_rule_workflow(workflow_raw)
             # very big width to avoid line breaks
             workflow_raw = cyaml.dump(workflow_raw, width=99999)
             workflow_dto = WorkflowDTO(
@@ -140,6 +141,7 @@ def get_workflows(
                 last_execution_started=last_execution_started,
                 disabled=workflow.is_disabled,
                 provisioned=workflow.provisioned,
+                alertRule=is_alert_rule_worfklow,
             )
         except Exception as e:
             logger.error(f"Error creating workflow DTO: {e}")
@@ -461,7 +463,7 @@ def get_random_workflow_templates(
                 f"Neither {default_directory} nor {fallback_directory} exist"
             )
     workflows = workflowstore.get_random_workflow_templates(
-        tenant_id=tenant_id, workflows_dir=default_directory, limit=6
+        tenant_id=tenant_id, workflows_dir=default_directory, limit=8
     )
     return workflows
 

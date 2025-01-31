@@ -1,39 +1,45 @@
+# This workflow queries VictoriaMetrics metrics and creates alerts based on CPU usage
 workflow:
+  # Unique identifier for this workflow
   id: query-victoriametrics
+  # Display name shown in the UI
   name: victoriametrics-alert-example
-  description: victoriametrics
+  # Brief description of what this workflow does
+  description: Monitors CPU usage metrics from VictoriaMetrics and creates alerts when thresholds are exceeded
+
+  # Define how the workflow is triggered
   triggers:
-    - type: manual
+    - type: manual # Can be triggered manually from the UI
+
+  # Steps to execute in order
   steps:
     - name: victoriametrics-step
       provider:
+        # Use VictoriaMetrics provider config defined in providers.vm
         config: "{{ providers.vm }}"
         type: victoriametrics
         with:
+          # Query average CPU usage rate
           query: avg(rate(process_cpu_seconds_total))
           queryType: query
 
+  # Actions to take based on the query results
   actions:
     - name: create-alert
-      # only create an alert if the CPU usage is greater than 0.005
-      if: "{{ steps.victoriametrics-step.results.data.result.0.value.1 }} > 0.001 "
       provider:
         type: keep
-        # create an alert with the following details
         with:
-          name: "High CPU Usage"
-          description: "CPU usage is high on the VM (created from VM metric)"
-          severity: '{{ steps.victoriametrics-step.results.data.result.0.value.1 }} > 0.9 ? "critical" : {{ steps.victoriametrics-step.results.data.result.0.value.1 }} > 0.7 ? "warning" : "info"'
-          labels:
-            environment: production
-            app: myapp
-            service: api
-            team: devops
-            owner: alice
-          # optional: customize the fingerprint based on these fields
-          fingerprint_fields:
-            - environment
-            - app
-            - service
-            - team
-            - owner
+          # Create alert if CPU usage exceeds threshold
+          if: "{{ value.1 }} > 0.0040"
+          alert:
+            name: "High CPU Usage"
+            description: "[Single] CPU usage is high on the VM (created from VM metric)"
+            # Set severity based on CPU usage thresholds
+            severity: '{{ value.1 }} > 0.9 ? "critical" : {{ value.1 }} > 0.7 ? "warning" : "info"'
+            # Alert labels for filtering and routing
+            labels:
+              environment: production
+              app: myapp
+              service: api
+              team: devops
+              owner: alice

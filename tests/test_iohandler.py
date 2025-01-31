@@ -25,9 +25,7 @@ def test_with_basic_context(context_manager):
         "name": "s2",
     }
     s = iohandler.render("hello {{ steps.name }}")
-    s2 = iohandler.render("hello {{ providers.name }}")
     assert s == "hello s"
-    assert s2 == "hello s2"
 
 
 def test_with_function(context_manager):
@@ -827,3 +825,98 @@ def test_add_time_to_date_function(context_manager):
 #     s = iohandler.render(template)
 #     # the alert is not really added to the DB so the firing time is 0.00
 #     assert s == "0.00 >= 30 and 0.00 < 90"
+
+
+def test_recursive_rendering_basic(context_manager):
+    iohandler = IOHandler(context_manager)
+
+    context_manager.steps_context = {
+        "name": "World",
+        "greeting": "Hello {{ steps.name }}",
+    }
+    template = "{{ steps.greeting }}!"
+    result = iohandler.render(template)
+    assert result == "Hello World!", f"Expected 'Hello World!', but got {result}"
+
+
+def test_recursive_rendering_nested(context_manager):
+    iohandler = IOHandler(context_manager)
+    context_manager.steps_context = {
+        "name": "World",
+        "greeting": "Hello {{ steps.name }}",
+        "message": "{{ steps.greeting }}! How are you?",
+    }
+    template = "{{ steps.message }}"
+    result = iohandler.render(template)
+    assert (
+        result == "Hello World! How are you?"
+    ), f"Expected 'Hello World! How are you?', but got {result}"
+
+
+def test_recursive_rendering_with_functions(context_manager):
+    iohandler = IOHandler(context_manager)
+    context_manager.steps_context = {
+        "name": "world",
+        "greeting": "Hello keep.uppercase({{ steps.name }})",
+    }
+    template = "{{ steps.greeting }}!"
+    result = iohandler.render(template)
+    assert result == "Hello WORLD!", f"Expected 'Hello WORLD!', but got {result}"
+
+
+def test_recursive_rendering_max_iterations(context_manager):
+    iohandler = IOHandler(context_manager)
+    context_manager.steps_context = {"loop": "{{ steps.loop }}"}
+    template = "{{ steps.loop }}"
+    result = iohandler.render(template)
+    assert (
+        result == "{{ steps.loop }}"
+    ), "Expected no change due to max iterations limit"
+
+
+def test_dont_render_providers(context_manager):
+    context_manager.providers_context = {
+        "keephq": '{"auth": "bla"}',
+    }
+    iohandler = IOHandler(context_manager)
+    template = "{{ providers.keephq }}"
+    result = iohandler.render(template)
+    assert "bla" not in result, "Expected empty string, but got {result}"
+
+
+def test_render_with_consts(context_manager):
+    iohandler = IOHandler(context_manager)
+    context_manager.alert = AlertDto(
+        **{
+            "id": "test",
+            "name": "test",
+            "lastReceived": "2024-03-20T00:00:00.000Z",
+            "source": ["sentry"],
+            "date": "2024-08-16T14:21:00.000-0500",
+            "host": "example.com",
+        }
+    )
+    context_manager.event_context = context_manager.alert
+    context_manager.current_step_vars = {"alert_tier": "critical"}
+    consts = {
+        "email_template": (
+            "<strong>Hi,<br>"
+            "This {{ vars.alert_tier }} is triggered because the pipelines for {{ alert.host }} are down for more than 0 minutes.<br>"
+            "Please visit monitoring.keeohq.dev for more!<br>"
+            "Regards,<br>"
+            "KeepHQ dev Monitoring</strong>"
+        )
+    }
+    context_manager.consts_context = consts
+    template = "{{ consts.email_template }}"
+    result = iohandler.render(template)
+    expected_result = (
+        "<strong>Hi,<br>"
+        "This critical is triggered because the pipelines for example.com are down for more than 0 minutes.<br>"
+        "Please visit monitoring.keeohq.dev for more!<br>"
+        "Regards,<br>"
+        "KeepHQ dev Monitoring</strong>"
+    )
+    assert (
+        result == expected_result
+    ), f"Expected '{expected_result}', but got '{result}'"

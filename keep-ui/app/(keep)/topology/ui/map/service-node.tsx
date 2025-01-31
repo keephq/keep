@@ -100,9 +100,7 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
   }, [showDetails]);
 
   const handleClick = () => {
-    router.push(
-      `/incidents?services=${encodeURIComponent(data.display_name)}`
-    );
+    router.push(`/incidents?services=${encodeURIComponent(data.display_name)}`);
   };
 
   const incidentsCount = data.incidents ?? 0;

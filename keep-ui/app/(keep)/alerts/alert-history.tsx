@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { AlertDto } from "@/entities/alerts/model";
+import { AlertDto, AlertKnownKeys } from "@/entities/alerts/model";
 import { AlertTable } from "./alert-table";
 import { useAlertTableCols } from "./alert-table-utils";
 import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";
@@ -23,7 +23,31 @@ const AlertHistoryPanel = ({
 }: AlertHistoryPanelProps) => {
   const router = useRouter();
 
-  const alertTableColumns = useAlertTableCols();
+  const additionalColsToGenerate = [
+    ...new Set(
+      alertsHistoryWithDate.flatMap((alert) => {
+        const keys = Object.keys(alert).filter(
+          (key) => !AlertKnownKeys.includes(key)
+        );
+        return keys.flatMap((key) => {
+          if (
+            typeof alert[key as keyof AlertDto] === "object" &&
+            alert[key as keyof AlertDto] !== null
+          ) {
+            return Object.keys(alert[key as keyof AlertDto] as object).map(
+              (subKey) => `${key}.${subKey}`
+            );
+          }
+          return key;
+        });
+      })
+    ),
+  ];
+
+  const alertTableColumns = useAlertTableCols({
+    additionalColsToGenerate: additionalColsToGenerate,
+    presetName: alertsHistoryWithDate.at(0)?.fingerprint ?? "",
+  });
 
   const sortedHistoryAlert = alertsHistoryWithDate.map((alert) =>
     alert.lastReceived.getTime()

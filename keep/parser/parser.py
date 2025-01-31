@@ -6,7 +6,8 @@ import re
 import typing
 
 from keep.actions.actions_factory import ActionsCRUD
-from keep.api.core.db import get_workflow_id
+from keep.api.core.config import config
+from keep.api.core.db import get_installed_providers, get_workflow_id
 from keep.contextmanager.contextmanager import ContextManager
 from keep.functions import cyaml
 from keep.providers.providers_factory import ProvidersFactory
@@ -18,6 +19,10 @@ from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 class Parser:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self._loaded_providers_cache = {}
+        self._use_loaded_provider_cache = config(
+            "KEEP_USE_PROVIDER_CACHE", default=False
+        )
 
     def _get_workflow_id(self, tenant_id, workflow: dict) -> str:
         """Support both CLI and API workflows
@@ -53,6 +58,7 @@ class Parser:
         parsed_workflow_yaml: dict,
         providers_file: str = None,
         actions_file: str = None,
+        workflow_db_id: str = None,
     ) -> typing.List[Workflow]:
         """_summary_
 
@@ -78,6 +84,7 @@ class Parser:
                     workflow_providers,
                     actions_file,
                     workflow_actions,
+                    workflow_db_id,
                 )
                 for workflow in raw_workflows
             ]
@@ -133,6 +140,7 @@ class Parser:
         workflow_providers: dict = None,
         actions_file: str = None,
         workflow_actions: dict = None,
+        workflow_db_id: str = None,
     ) -> Workflow:
         self.logger.debug("Parsing workflow")
         workflow_id = self._get_workflow_id(tenant_id, workflow)
@@ -148,11 +156,16 @@ class Parser:
             tenant_id, context_manager, workflow, actions_file, workflow_actions
         )
         workflow_id = self._parse_id(workflow)
+        workflow_description = workflow.get("description")
         workflow_disabled = self.__class__.parse_disabled(workflow)
         workflow_owners = self._parse_owners(workflow)
         workflow_tags = self._parse_tags(workflow)
-        workflow_steps = self._parse_steps(context_manager, workflow)
-        workflow_actions = self._parse_actions(context_manager, workflow)
+        workflow_steps = self._parse_steps(
+            context_manager, workflow, workflow_id, workflow_description, workflow_db_id
+        )
+        workflow_actions = self._parse_actions(
+            context_manager, workflow, workflow_id, workflow_description, workflow_db_id
+        )
         workflow_interval = self.parse_interval(workflow)
         on_failure_action = self._get_on_failure_action(context_manager, workflow)
         workflow_triggers = self.get_triggers_from_workflow(workflow)
@@ -168,7 +181,7 @@ class Parser:
 
         workflow = Workflow(
             workflow_id=workflow_id,
-            workflow_description=workflow.get("description"),
+            workflow_description=workflow_description,
             workflow_disabled=workflow_disabled,
             workflow_owners=workflow_owners,
             workflow_tags=workflow_tags,
@@ -221,13 +234,38 @@ class Parser:
             _type_: _description_
         """
         # If there is no tenant id, e.g. running from CLI, no db here
+        self.logger.debug("Loading installed providers to context")
         if not tenant_id:
             return
         # Load installed providers
         all_providers = ProvidersFactory.get_all_providers()
-        installed_providers = ProvidersFactory.get_installed_providers(
-            tenant_id=tenant_id, all_providers=all_providers, override_readonly=True
-        )
+        # _use_loaded_provider_cache is a flag to control whether to use the loaded providers cache
+        if not self._loaded_providers_cache or not self._use_loaded_provider_cache:
+            # this should print once when the providers are loaded for the first time
+            self.logger.info("Loading installed providers to workfloe")
+            installed_providers = ProvidersFactory.get_installed_providers(
+                tenant_id=tenant_id, all_providers=all_providers, override_readonly=True
+            )
+            self._loaded_providers_cache = installed_providers
+            self.logger.info("Installed providers loaded successfully")
+        else:
+            self.logger.debug("Using cached loaded providers")
+            # before we can use cache, we need to check if new providers are added or deleted
+            _installed_providers = get_installed_providers(tenant_id=tenant_id)
+            _installed_providers_ids = set([p.id for p in _installed_providers])
+            _cached_provider_ids = set([p.id for p in self._loaded_providers_cache])
+            if _installed_providers_ids != _cached_provider_ids:
+                # this should print only when provider deleted/added
+                self.logger.info("Providers cache is outdated, reloading providers")
+                installed_providers = ProvidersFactory.get_installed_providers(
+                    tenant_id=tenant_id,
+                    all_providers=all_providers,
+                    override_readonly=True,
+                )
+                self._loaded_providers_cache = installed_providers
+                self.logger.info("Providers cache reloaded")
+            else:
+                installed_providers = self._loaded_providers_cache
         for provider in installed_providers:
             self.logger.debug("Loading provider", extra={"provider_id": provider.id})
             try:
@@ -241,6 +279,7 @@ class Parser:
                 self.logger.error(
                     f"Error loading provider {provider.id}", extra={"exception": e}
                 )
+        self.logger.debug("Installed providers loaded successfully")
         return installed_providers
 
     def _parse_providers_from_env(self, context_manager: ContextManager):
@@ -257,9 +296,7 @@ class Parser:
         if providers_json and re.compile(r"^(\/|\.\/|\.\.\/).*\.json$").match(
             providers_json
         ):
-            with open(
-                file=providers_json, mode="r", encoding="utf8"
-            ) as file:
+            with open(file=providers_json, mode="r", encoding="utf8") as file:
                 providers_json = file.read()
 
         if providers_json:
@@ -392,13 +429,24 @@ class Parser:
         return parsed_provider_parameters
 
     def _parse_steps(
-        self, context_manager: ContextManager, workflow
+        self,
+        context_manager: ContextManager,
+        workflow: dict,
+        workflow_id: str | None = None,
+        workflow_description: str | None = None,
+        workflow_db_id: str | None = None,
     ) -> typing.List[Step]:
         self.logger.debug("Parsing steps")
         workflow_steps = workflow.get("steps", [])
         workflow_steps_parsed = []
         for _step in workflow_steps:
-            provider = self._get_step_provider(context_manager, _step)
+            provider = self._get_step_provider(
+                context_manager,
+                _step,
+                workflow_id,
+                workflow_description,
+                workflow_db_id,
+            )
             provider_parameters = _step.get("provider", {}).get("with")
             parsed_provider_parameters = Parser.parse_provider_parameters(
                 provider_parameters
@@ -416,7 +464,14 @@ class Parser:
         self.logger.debug("Steps parsed successfully")
         return workflow_steps_parsed
 
-    def _get_step_provider(self, context_manager: ContextManager, _step: dict) -> dict:
+    def _get_step_provider(
+        self,
+        context_manager: ContextManager,
+        _step: dict,
+        workflow_id: str | None = None,
+        workflow_description: str | None = None,
+        workflow_db_id: str | None = None,
+    ) -> dict:
         step_provider = _step.get("provider")
         try:
             step_provider_type = step_provider.pop("type")
@@ -429,9 +484,24 @@ class Parser:
         provider_id, provider_config = self._parse_provider_config(
             context_manager, step_provider_type, step_provider_config
         )
-        provider = ProvidersFactory.get_provider(
-            context_manager, provider_id, step_provider_type, provider_config
-        )
+        try:
+            provider = ProvidersFactory.get_provider(
+                context_manager, provider_id, step_provider_type, provider_config
+            )
+        except Exception:
+            self.logger.exception(
+                f"Error getting provider {provider_id} for step {_step.get('name')}",
+                extra={
+                    "workflow_name": workflow_id,
+                    "workflow_description": workflow_description,
+                    "provider_id": provider_id,
+                    "provider_type": step_provider_type,
+                    "provider_config_name": step_provider_config,
+                    "workflow_db_id": workflow_db_id,
+                    "tenant_id": context_manager.tenant_id,
+                },
+            )
+            raise
         return provider
 
     def _load_actions_config(
@@ -497,25 +567,43 @@ class Parser:
         context_manager: ContextManager,
         action: dict,
         action_name: str | None = None,
+        workflow_id: str | None = None,
+        workflow_description: str | None = None,
+        workflow_db_id: str | None = None,
     ) -> Step:
         name = action_name or action.get("name")
         provider = action.get("provider", {})
-        provider_config = provider.get("config")
+        provider_config_name = provider.get("config")
         provider_parameters = provider.get("with", {})
         parsed_provider_parameters = Parser.parse_provider_parameters(
             provider_parameters
         )
         provider_type = provider.get("type")
         provider_id, provider_config = self._parse_provider_config(
-            context_manager, provider_type, provider_config
+            context_manager, provider_type, provider_config_name
         )
-        provider = ProvidersFactory.get_provider(
-            context_manager,
-            provider_id,
-            provider_type,
-            provider_config,
-            **parsed_provider_parameters,
-        )
+        try:
+            provider = ProvidersFactory.get_provider(
+                context_manager,
+                provider_id,
+                provider_type,
+                provider_config,
+                **parsed_provider_parameters,
+            )
+        except Exception:
+            self.logger.exception(
+                f"Error getting provider {provider_id} for action {name}",
+                extra={
+                    "workflow_name": workflow_id,
+                    "workflow_description": workflow_description,
+                    "provider_id": provider_id,
+                    "provider_type": provider_type,
+                    "provider_config_name": provider_config_name,
+                    "workflow_db_id": workflow_db_id,
+                    "tenant_id": context_manager.tenant_id,
+                },
+            )
+            raise
         action = Step(
             context_manager=context_manager,
             step_id=name,
@@ -527,7 +615,12 @@ class Parser:
         return action
 
     def _parse_actions(
-        self, context_manager: ContextManager, workflow: dict
+        self,
+        context_manager: ContextManager,
+        workflow: dict,
+        workflow_id: str | None = None,
+        workflow_description: str | None = None,
+        workflow_db_id: str | None = None,
     ) -> typing.List[Step]:
         self.logger.debug("Parsing actions")
         workflow_actions_raw = workflow.get("actions", [])
@@ -537,7 +630,14 @@ class Parser:
         )
         workflow_actions_parsed = []
         for _action in workflow_actions:
-            parsed_action = self._get_action(context_manager, _action)
+            parsed_action = self._get_action(
+                context_manager,
+                _action,
+                None,
+                workflow_id,
+                workflow_description,
+                workflow_db_id,
+            )
             workflow_actions_parsed.append(parsed_action)
         self.logger.debug("Actions parsed successfully")
         return workflow_actions_parsed
@@ -606,7 +706,7 @@ class Parser:
             return parsed_action
         self.logger.debug("No on-failure action")
 
-    def _extract_provider_id(self, provider_type: str):
+    def _extract_provider_id(self, context_manager: ContextManager, provider_type: str):
         """
         Translate {{ <provider_id>.<config_id> }} to a provider id
 
@@ -623,7 +723,7 @@ class Parser:
         provider_type = provider_type.split(".")
         if len(provider_type) != 2:
             raise ValueError(
-                "Provider config is not valid, should be in the format: {{ <provider_id>.<config_id> }}"
+                f"Provider config ({provider_type}) is not valid, should be in the format: {{{{ <provider_id>.<config_id> }}}} (workflow_id: {context_manager.workflow_id})"
             )
 
         provider_id = provider_type[1].replace("}}", "").strip()
@@ -659,7 +759,7 @@ class Parser:
             return provider_type, {"authentication": {}}
         # extract config when using {{ <provider_id>.<config_id> }}
         elif isinstance(provider_config, str):
-            config_id = self._extract_provider_id(provider_config)
+            config_id = self._extract_provider_id(context_manager, provider_config)
             provider_config = context_manager.providers_context.get(config_id)
             if not provider_config:
                 self.logger.warning(
@@ -720,7 +820,6 @@ class Parser:
 
 
 class ParserUtils:
-
     @staticmethod
     def deep_merge(source: dict, dest: dict) -> dict:
         """Perform deep merge on two objects.

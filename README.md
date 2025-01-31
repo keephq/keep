@@ -62,6 +62,57 @@
 
 > Missing a provider? [Submit a new provider request](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=) and we'll add it quickly!
 
+### AI Backends for Enrichments, Correlations and Incident Context Gathering
+
+<table>
+<tr>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/anthropic-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/anthropic-icon.png" alt="Anthropic"/><br/>
+            Anthropic
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/openai-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/openai-icon.png" alt="OpenAI"/><br/>
+            OpenAI
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/deepseek-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/deepseek-icon.png" alt="DeepSeek"/><br/>
+            DeepSeek
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/ollama-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/ollama-icon.png" alt="Ollama"/><br/>
+            Ollama
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/llamacpp-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/llamacpp-icon.png" alt="LlamaCPP"/><br/>
+            LlamaCPP
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/grok-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/grok-icon.png" alt="Grok"/><br/>
+            Grok
+        </a>
+    </td>
+</tr>
+<tr>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/gemini-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/gemini-icon.png" alt="Gemini"/><br/>
+            Gemini
+        </a>
+    </td>
+</tr>
+</table>
+
 ### Observability Tools
 
 <table>
@@ -111,6 +162,12 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/checkly-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/checkly-icon.png" alt="Checkly"/><br/>
+            Checkly
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/cloudwatch-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/cloudwatch-icon.png" alt="CloudWatch"/><br/>
             CloudWatch
@@ -134,14 +191,14 @@
             Dynatrace
         </a>
     </td>
+  </tr>
+  <tr>
     <td align="center">
         <a href="https://docs.keephq.dev/providers/documentation/elastic-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/elastic-icon.png" alt="Elastic"/><br/>
             Elastic
         </a>
     </td>
-  </tr>
-  <tr>
     <td align="center">
         <a href="https://docs.keephq.dev/providers/documentation/gcpmonitoring-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/gcpmonitoring-icon.png" alt="GCP Monitoring"/><br/>
@@ -172,14 +229,14 @@
             Netdata
         </a>
     </td>
+  </tr>
+  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/new-relic-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/newrelic-icon.png" alt="New Relic"/><br/>
             New Relic
         </a>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/parseable-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/parseable-icon.png" alt="Parseable"/><br/>
@@ -210,14 +267,14 @@
             Sentry
         </a>
     </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/signalfx-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/signalfx-icon.png" alt="SignalFX"/><br/>
             SignalFX
         </a>
     </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/openobserve-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/openobserve-icon.png" alt="OpenObserve"/><br/>
@@ -248,14 +305,14 @@
           SumoLogic
         </a>
   </td>
+</tr>
+<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/uptimekuma-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/uptimekuma-icon.png" alt="UptimeKuma"/><br/>
           UptimeKuma
         </a>
   </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/victoriametrics-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/victoriametrics-icon.png" alt="VictoriaMetrics"/><br/>

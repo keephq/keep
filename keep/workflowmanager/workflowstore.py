@@ -112,7 +112,9 @@ class WorkflowStore:
                 detail=f"Workflow {workflow_id} not found",
             )
         workflow_yaml = cyaml.safe_load(workflow)
-        workflow = self.parser.parse(tenant_id, workflow_yaml)
+        workflow = self.parser.parse(
+            tenant_id, workflow_yaml, workflow_db_id=workflow_id
+        )
         if len(workflow) > 1:
             raise HTTPException(
                 status_code=500,
@@ -526,3 +528,17 @@ class WorkflowStore:
         triggers = self.parser.get_triggers_from_workflow(workflow_yaml)
 
         return providers_dto, triggers
+
+    @staticmethod
+    def is_alert_rule_workflow(workflow_raw: dict):
+        # checks if the workflow is an alert rule
+        actions = workflow_raw.get("actions", [])
+        for action in actions:
+            # check if the action is a keep action
+            is_keep_action = action.get("provider", {}).get("type") == "keep"
+            if is_keep_action:
+                # check if the keep action is an alert
+                if "alert" in action.get("provider", {}).get("with", {}):
+                    return True
+        # if no keep action is found, return False
+        return False

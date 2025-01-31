@@ -15,7 +15,12 @@ export const DeduplicationPlaceholder = () => {
         <div className="text-center space-y-3">
           <Title className="text-2xl">No Deduplications Yet</Title>
           <Subtitle className="text-gray-400">
-            Alert deduplication is the first layer of denoising. It groups similar alerts from one source.<br /> To connect alerts across sources into incidents, check <a href="/rules" className="underline text-orange-500">Correlations</a>
+            Alert deduplication is the first layer of denoising. It groups
+            similar alerts from one source.
+            <br /> To connect alerts across sources into incidents, check{" "}
+            <a href="/rules" className="underline text-orange-500">
+              Correlations
+            </a>
           </Subtitle>
           <Subtitle className="text-gray-400">
             This page will become active once the first alerts are registered.

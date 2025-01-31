@@ -23,6 +23,7 @@ from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_all_presets_dtos,
     get_enrichment_with_session,
+    get_last_alert_hashes_by_fingerprints,
     get_session_sync,
     set_last_alert,
 )
@@ -328,10 +329,17 @@ def __handle_formatted_events(
     with tracer.start_as_current_span("process_event_deduplication"):
         # second, filter out any deduplicated events
         alert_deduplicator = AlertDeduplicator(tenant_id)
-
+        deduplication_rules = alert_deduplicator.get_deduplication_rules(
+            tenant_id=tenant_id, provider_id=provider_id, provider_type=provider_type
+        )
+        last_alerts_fingerprint_to_hash = get_last_alert_hashes_by_fingerprints(
+            tenant_id, [event.fingerprint for event in formatted_events]
+        )
         for event in formatted_events:
             # apply_deduplication set alert_hash and isDuplicate on event
-            event = alert_deduplicator.apply_deduplication(event)
+            event = alert_deduplicator.apply_deduplication(
+                event, deduplication_rules, last_alerts_fingerprint_to_hash
+            )
 
         # filter out the deduplicated events
         deduplicated_events = list(

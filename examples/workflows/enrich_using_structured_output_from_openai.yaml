@@ -1,7 +1,10 @@
 id: enrich-using-ai
 description: Enrich alerts using structured output from LLMs
 triggers:
-  - type: manual
+  - type: alert
+    filters:
+      - key: source
+        value: prometheus
 
 steps:
   - name: get-enrichments
