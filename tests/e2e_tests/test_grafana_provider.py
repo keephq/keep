@@ -7,7 +7,7 @@ from datetime import datetime
 import requests
 from playwright.sync_api import expect
 
-from tests.e2e_tests.utils import trigger_alert
+from tests.e2e_tests.utils import trigger_alert, assert_scope_text_count, open_connected_provider, delete_provider, assert_connected_provider_count
 
 
 os.environ["PLAYWRIGHT_HEADLESS"] = "false"
@@ -54,7 +54,7 @@ def open_grafana_card(browser):
     browser.get_by_placeholder("Filter providers...").press("Enter")
     browser.get_by_text("Available Providers").hover()
     grafana_tile = browser.locator(
-        "button:has-text('Grafana'):has-text('alert'):not(:has-text('Linked'))"
+        "button:has-text('Grafana'):not(:has-text('Connected')):not(:has-text('Linked'))"
     )
     grafana_tile.first.hover()
     grafana_tile.first.click()
@@ -78,9 +78,7 @@ def test_grafana_provider(browser):
         browser.get_by_placeholder("Enter token").fill("random_token_UwU")
         browser.get_by_placeholder("Enter host").fill(GRAFANA_HOST)
         browser.get_by_role("button", name="Connect", exact=True).click()
-        expect(
-            browser.locator("span.tremor-Badge-text:has-text('Missing Scope')")
-        ).to_have_count(3)
+        assert_scope_text_count(browser=browser, contains_text="Missing Scope", count=3)
         browser.get_by_role("button", name="Cancel", exact=True).click()
 
         # Then trying to install with read scope, webhook installation should fail
@@ -93,15 +91,9 @@ def test_grafana_provider(browser):
         browser.get_by_role("button", name="Connect", exact=True).click()
         browser.wait_for_timeout(5000)
         # browser.reload()
-        browser.locator(
-            f"button:has-text('Grafana'):has-text('Connected'):has-text('{provider_name_readonly}')"
-        ).click()
-        expect(
-            browser.locator("span.tremor-Badge-text:has-text('Missing Scope')")
-        ).to_have_count(2)
-        expect(
-            browser.locator("span.tremor-Badge-text:has-text('Valid')")
-        ).to_have_count(1)
+        open_connected_provider(browser=browser, provider_type="Grafana", provider_name=provider_name_readonly)
+        assert_scope_text_count(browser=browser, contains_text="Missing Scope", count=2)
+        assert_scope_text_count(browser=browser, contains_text="Valid", count=1)
         browser.get_by_role("button", name="Cancel", exact=True).click()
 
         # Then trying to install with admin scope, webhook installation should pass
@@ -112,16 +104,11 @@ def test_grafana_provider(browser):
         )
         browser.get_by_placeholder("Enter host").fill(GRAFANA_HOST)
         browser.get_by_role("button", name="Connect", exact=True).click()
-
-        browser.locator(
-            f"button:has-text('Grafana'):has-text('Connected'):has-text('{provider_name_success}')"
-        ).click()
+        open_connected_provider(browser=browser, provider_type="Grafana", provider_name=provider_name_success)
         toast_div = browser.locator("div.Toastify")
         browser.get_by_role("button", name="Install/Update Webhook", exact=True).click()
         expect(toast_div).to_contain_text("grafana webhook installed", timeout=10000)
-        expect(
-            browser.locator("span.tremor-Badge-text:has-text('Valid')")
-        ).to_have_count(3)
+        assert_scope_text_count(browser=browser, contains_text="Valid", count=3)
         browser.get_by_role("button", name="Cancel", exact=True).click()
 
         trigger_alert("grafana")
@@ -160,18 +147,9 @@ def test_grafana_provider(browser):
 
         for provider_to_delete in providers_to_delete:
             # Perform actions on each matching element
-            browser.locator(
-                f"button:has-text('Grafana'):has-text('Connected'):has-text('{provider_to_delete}')"
-            ).click()
-            browser.once("dialog", lambda dialog: dialog.accept())
-            browser.get_by_role("button", name="Delete").click()
-
+            delete_provider(browser=browser, provider_type="Grafana", provider_name=provider_to_delete)
             # Assert provider was deleted
-            expect(
-                browser.locator(
-                    f"button:has-text('Grafana'):has-text('Connected'):has-text('{provider_to_delete}')"
-                )
-            ).to_have_count(0)
+            assert_connected_provider_count(browser=browser, provider_type="Grafana", provider_name=provider_to_delete, provider_count=0)
 
     except Exception:
         # Current file + test name for unique html and png dump.
