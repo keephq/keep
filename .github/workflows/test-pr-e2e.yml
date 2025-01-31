@@ -110,7 +110,7 @@ jobs:
           if [ "${{ matrix.db_type }}" == "mysql" ]; then
             until docker exec $(docker ps -qf "name=keep-database-db-auth-1") mysqladmin ping -h "localhost" --silent; do
               echo "Waiting for MySQL (DB AUTH) to be ready..."
-              sleep 2
+              sleep 3
             done
           elif [ "${{ matrix.db_type }}" == "postgres" ]; then
             until docker exec $(docker ps -qf "name=keep-database-db-auth-1") pg_isready -h localhost -U keepuser; do
@@ -130,7 +130,7 @@ jobs:
             fi
             echo "Waiting for Keep backend (DB AUTH) to be ready... (Attempt: $((attempt+1)))"
             attempt=$((attempt+1))
-            sleep 2
+            sleep 4
           done
           echo "Keep backend (DB AUTH) is ready!"
           # wait to the backend
@@ -148,7 +148,7 @@ jobs:
             fi
             echo "Waiting for Keep backend to be ready... (Attempt: $((attempt+1)))"
             attempt=$((attempt+1))
-            sleep 2
+            sleep 4
           done
           echo "Keep backend is ready!"
           
