@@ -691,7 +691,7 @@ def _enrich_alert(
                 ):
                     incident.status = IncidentStatus.RESOLVED.value
                     session.add(incident)
-            session.commit()
+                session.commit()
 
         return {"status": "ok"}
 
