@@ -574,19 +574,23 @@ class KibanaProvider(BaseProvider):
                 event.get("kibana", {})
                 .get("alert", {})
                 .get("rule", {})
-                .get("description", "could not find description")
+                .get("description", "")
             )
+            if not description:
+                logger.warning("Could not find description in SIEM Kibana alert")
+
             name = (
-                event.get("kibana", {})
-                .get("alert", {})
-                .get("rule", {})
-                .get("name", "could not find name")
+                event.get("kibana", {}).get("alert", {}).get("rule", {}).get("name", "")
             )
-            status = (
-                event.get("kibana", {})
-                .get("alert", {})
-                .get("status", "could not find status")
-            )
+            if not name:
+                logger.warning("Could not find name in SIEM Kibana alert")
+                name = "SIEM Kibana Alert"
+
+            status = event.get("kibana", {}).get("alert", {}).get("status", "")
+            if not status:
+                logger.warning("Could not find status in SIEM Kibana alert")
+                name = "active"
+
             # use map
             status = KibanaProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
             severity = (
