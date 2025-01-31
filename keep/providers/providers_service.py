@@ -301,10 +301,9 @@ class ProvidersService:
 
         context_manager = ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-        config = secret_manager.read_secret(provider_model.configuration_key, is_json=True)
-        provider = ProvidersFactory.get_provider(
-                context_manager, provider_model.id, provider_model.type, config
-            )
+        config = secret_manager.read_secret(
+            provider_model.configuration_key, is_json=True
+        )
 
         try:
             secret_manager.delete_secret(provider_model.configuration_key)
@@ -319,14 +318,17 @@ class ProvidersService:
                 logger.exception("Failed to unregister provider as a consumer")
 
         try:
+            provider = ProvidersFactory.get_provider(
+                context_manager, provider_model.id, provider_model.type, config
+            )
             provider.clean_up()
         except NotImplementedError:
             logger.info(
                 "Being deleted provider of type %s does not have a clean_up method",
-                provider_model.type
+                provider_model.type,
             )
         except Exception:
-            logger.exception(msg="Failed to clean up provider")
+            logger.exception(msg="Provider deleted but failed to clean up provider")
 
         session.delete(provider_model)
         session.commit()

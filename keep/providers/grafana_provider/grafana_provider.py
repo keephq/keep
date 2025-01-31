@@ -54,6 +54,7 @@ class GrafanaProviderAuthConfig:
             "description": "Datasource UID",
             "hint": "Provide if you want to pull topology data",
         },
+        default="",
     )
 
 
@@ -866,7 +867,10 @@ class GrafanaProvider(BaseTopologyProvider):
 
     def query_datasource_for_topology(self):
         self.logger.info("Attempting to query datasource for topology data.")
-        headers = {"Authorization": f"Bearer {self.authentication_config.token}", "Content-Type": "application/json",}
+        headers = {
+            "Authorization": f"Bearer {self.authentication_config.token}",
+            "Content-Type": "application/json",
+        }
         json_data = {
             "queries": [
                 {
@@ -918,7 +922,10 @@ class GrafanaProvider(BaseTopologyProvider):
                 raise Exception(response.text)
             return response.json()
         except Exception as e:
-            self.logger.error("Error while querying datasource for topology map", extra={"exception": str(e)})
+            self.logger.error(
+                "Error while querying datasource for topology map",
+                extra={"exception": str(e)},
+            )
 
     @staticmethod
     def __extract_schema_value_pair(results, query: str):
@@ -940,16 +947,23 @@ class GrafanaProvider(BaseTopologyProvider):
 
     def pull_topology(self):
         self.logger.info("Pulling Topology data from Grafana...")
+        if not self.authentication_config.datasource_uid:
+            self.logger.debug("No datasource uid found, skipping topology pull")
+            return [], {}
         try:
             service_topology = {}
             results = self.query_datasource_for_topology().get("results", {})
 
-            self.logger.info("Scraping traces_service_graph_request_total data from the response")
+            self.logger.info(
+                "Scraping traces_service_graph_request_total data from the response"
+            )
             requests_per_second_data = GrafanaProvider.__extract_schema_value_pair(
                 results=results, query="traces_service_graph_request_total"
             )
 
-            self.logger.info("Scraping traces_service_graph_request_server_seconds_sum data from the response")
+            self.logger.info(
+                "Scraping traces_service_graph_request_server_seconds_sum data from the response"
+            )
             total_response_times_data = GrafanaProvider.__extract_schema_value_pair(
                 results=results, query="traces_service_graph_request_server_seconds_sum"
             )
@@ -981,7 +995,10 @@ class GrafanaProvider(BaseTopologyProvider):
             self.logger.info("Successfully pulled Topology data from Grafana...")
             return list(service_topology.values()), {}
         except Exception as e:
-            self.logger.error("Error while pulling topology data from Grafana", extra={"exception": str(e)})
+            self.logger.error(
+                "Error while pulling topology data from Grafana",
+                extra={"exception": str(e)},
+            )
             raise e
 
 
