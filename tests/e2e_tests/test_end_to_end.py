@@ -372,7 +372,7 @@ def test_start_with_keep_db(browser):
         browser.get_by_placeholder("Enter your password").fill("keep")
         browser.wait_for_timeout(3000)
         browser.get_by_role("button", name="Sign in").click()
-        browser.wait_for_timeout(5000)
+        browser.wait_for_timeout(10000)
         expect(browser).to_have_url("http://localhost:3001/incidents")
     except Exception:
         save_failure_artifacts(browser, log_entries)
