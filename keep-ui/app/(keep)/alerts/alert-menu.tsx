@@ -56,8 +56,7 @@ export default function AlertMenu({
     },
   } = useProviders({ revalidateOnFocus: false, revalidateOnMount: false });
 
-  const { usePresetAlerts } = useAlerts();
-  const { mutate } = usePresetAlerts(presetName, { revalidateOnMount: false });
+  const { alertsMutator: mutate } = useAlerts();
 
   const fingerprint = alert.fingerprint;
 

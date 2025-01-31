@@ -1,3 +1,4 @@
+import { ShortNumber } from "@/components/ui";
 import { Text } from "@tremor/react";
 import clsx from "clsx";
 
@@ -81,7 +82,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
         </button>
         {
           <Text className="text-xs text-gray-500 group-hover:hidden">
-            {count}
+            <ShortNumber value={count}></ShortNumber>
           </Text>
         }
       </div>

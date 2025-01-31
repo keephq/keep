@@ -26,8 +26,9 @@ from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_metrics_by_provider,
     get_enrichment,
-    get_last_alerts,
+    get_last_alerts
 )
+from keep.api.core.alerts import get_alert_facets, get_alert_facets_data, get_alert_potential_facet_fields, query_last_alerts
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
@@ -39,6 +40,7 @@ from keep.api.models.alert import (
 )
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import ActionType
+from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.db.rule import ResolveOn
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.models.time_stamp import TimeStampFilter
@@ -62,6 +64,148 @@ EVENT_WORKERS = int(config("KEEP_EVENT_WORKERS", default=5, cast=int))
 process_event_executor = ThreadPoolExecutor(
     max_workers=EVENT_WORKERS, thread_name_prefix="process_event_worker"
 )
+
+
+@router.post(
+    "/facets/options",
+    description="Query alert facet options. Accepts dictionary where key is facet id and value is cel to query facet",
+)
+def fetch_alert_facet_options(
+    facet_options_query: FacetOptionsQueryDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching alert facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    facet_options = get_alert_facets_data(
+            tenant_id = tenant_id,
+            facet_options_query = facet_options_query
+        )
+
+    logger.info(
+        "Fetched alert facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facet_options
+
+
+@router.get(
+    "/facets",
+    description="Get alert facets",
+)
+def fetch_alert_facets(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    )
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching alert facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    facets = get_alert_facets(
+            tenant_id = tenant_id
+        )
+
+    logger.info(
+        "Fetched alert facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facets
+
+
+@router.get(
+    "/facets/fields",
+    description="Get potential fields for alert facets",
+)
+def fetch_alert_facet_fields(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    )
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching alert facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    fields = get_alert_potential_facet_fields(
+            tenant_id = tenant_id
+        )
+
+    logger.info(
+        "Fetched alert facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    return fields
+
+
+@router.get(
+    "/query",
+    description="Get last alerts occurrence",
+)
+def query_alerts(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+    cel = Query(None),
+    limit = Query(1000),
+    offset = Query(0),
+    sort_by = Query(None),
+    sort_dir = Query(None),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching alerts from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    db_alerts, total_count = query_last_alerts(
+        tenant_id=tenant_id,
+        limit=limit,
+        offset=offset,
+        cel=cel,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
+    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
+    logger.info(
+        "Fetched alerts from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return {
+        "limit": limit,
+        "offset": offset,
+        "count": total_count,
+        "results": enriched_alerts_dto,
+    }
 
 
 @router.get(

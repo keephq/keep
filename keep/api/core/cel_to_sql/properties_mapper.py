@@ -145,16 +145,7 @@ class PropertiesMapper:
                 current_node_result = self._create_property_access_node(
                     mapping, method_access_node
                 )
-                current_node_result = LogicalNode(
-                    left=ComparisonNode(
-                        first_operand = self._create_property_access_node(mapping, None),
-                        operator = ComparisonNode.NE,
-                        second_operand = ConstantNode(None),
-                    ),
-                    operator=LogicalNode.AND,
-                    right=current_node_result,
-                )
-
+                
                 if result is None:
                     result = current_node_result
                     continue

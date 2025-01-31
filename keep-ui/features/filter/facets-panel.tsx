@@ -60,7 +60,7 @@ export interface FacetsPanelProps {
   renderFacetOptionLabel?: (facetName: string, optionDisplayName: string) => JSX.Element | string | undefined;
   renderFacetOptionIcon?: (facetName: string, optionDisplayName: string) => JSX.Element | undefined;
   onCelChange: (cel: string) => void;
-  onAddFacet: (createFacet: CreateFacetDto) => void;
+  onAddFacet: () => void;
   onDeleteFacet: (facetId: string) => void;
   onLoadFacetOptions: (facetId: string) => void;
   onReloadFacetOptions: (facetsQuery: FacetOptionsQueries) => void;
@@ -85,11 +85,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   const defaultStateHandledForFacetIds = useMemo(() => new Set<string>(), []);
   const [facetsState, setFacetsState] = useState<FacetState>({});
   const [clickedFacetId, setClickedFacetId] = useState<string | null>(null);
-
-  const [isModalOpen, setIsModalOpen] = useLocalStorage<boolean>(
-    `addFacetModalOpen-${panelId}`,
-    false
-  );
   const [celState, setCelState] = useState("");
 
   function getFacetState(facetId: string): Set<string> {
@@ -188,12 +183,12 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   }, [clearFiltersToken]);
 
   return (
-    <section id={`${panelId}-facets`} className={"min-w-56 max-w-56 " + className}>
+    <section id={`${panelId}-facets`} className={"min-w-52 max-w-52 " + className}>
       <div className="space-y-2">
         <div className="flex justify-between">
           {/* Facet button */}
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => onAddFacet && onAddFacet()}
             className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-1"
           >
             <PlusIcon className="h-4 w-4" />
@@ -207,8 +202,23 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             Clear filters
           </button>
         </div>
+
+        {
+          !facets && [undefined, undefined, undefined].map((facet, index) => (
+            <Facet
+              key={index}
+              name={''}
+              isStatic={true}
+              isOpenByDefault={true}
+              optionsLoading={true}
+              optionsReloading={false}
+              facetState={new Set()}
+              facetKey={`${index}`}
+            />
+          ))
+        }
         
-        {facets?.map((facet, index) => (
+        {facets && facets.map((facet, index) => (
           <Facet
             key={facet.id + index}
             name={facet.name}
@@ -227,13 +237,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             onDelete={() => onDeleteFacet && onDeleteFacet(facet.id)}
           />
         ))}
-
-        {/* Facet Modal */}
-        <AddFacetModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onAddFacet={(createFacet) => onAddFacet ? onAddFacet(createFacet) : null}
-        />
       </div>
     </section>
   );

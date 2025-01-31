@@ -274,6 +274,7 @@ type AlertsRulesBuilderProps = {
   setIsModalOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   setPresetCEL?: React.Dispatch<React.SetStateAction<string>>;
   updateOutputCEL?: React.Dispatch<React.SetStateAction<string>>;
+  onCelChanges?: (cel: string) => void;
   showSqlImport?: boolean;
   customFields?: Field[];
   showSave?: boolean;
@@ -299,6 +300,7 @@ export const AlertsRulesBuilder = ({
   minimal = false,
   showToast = false,
   shouldSetQueryParam = true,
+  onCelChanges
 }: AlertsRulesBuilderProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -414,7 +416,6 @@ export const AlertsRulesBuilder = ({
     // Use the constructCELRules function to set the initial value of celRules
     const initialCELRules = constructCELRules(selectedPreset);
     if (
-      (!selectedPreset || selectedPreset.name === "feed") && // Only applies if no preset is selected or the preset is "feed"
       searchParams?.get("cel") // Check if the cel query is present in the URL and set it as the initial value
     ) {
       setCELRules(searchParams.get("cel") || "");
@@ -486,7 +487,8 @@ export const AlertsRulesBuilder = ({
       return table?.resetGlobalFilter();
     }
 
-    return table?.setGlobalFilter(celRules);
+    onCelChanges && onCelChanges(celRules);
+    table?.setGlobalFilter(celRules);
   };
 
   const onGenerateQuery = () => {
