@@ -5,13 +5,16 @@ Kibana provider.
 import dataclasses
 import datetime
 import json
+import logging
 import uuid
-from typing import Literal
+from typing import Literal, Union
 from urllib.parse import urlparse
 
 import pydantic
 import requests
 from fastapi import HTTPException
+from packaging.version import Version
+from starlette.datastructures import FormData
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -37,14 +40,14 @@ class KibanaProviderAuthConfig:
             "required": True,
             "description": "Kibana Host",
             "hint": "https://keep.kb.us-central1.gcp.cloud.es.io",
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         }
     )
     kibana_port: UrlPort = dataclasses.field(
         metadata={
             "required": False,
             "description": "Kibana Port (defaults to 9243)",
-            "validation": "port"
+            "validation": "port",
         },
         default=9243,
     )
@@ -57,32 +60,14 @@ class KibanaProvider(BaseProvider):
     DEFAULT_TIMEOUT = 10
     WEBHOOK_PAYLOAD = json.dumps(
         {
-            "actionGroup": "{{alert.actionGroup}}",
-            "status": "{{alert.actionGroupName}}",
-            "actionSubgroup": "{{alert.actionSubgroup}}",
-            "isFlapping": "{{alert.flapping}}",
-            "id": "{{alert.id}}",
-            "fingerprint": "{{alert.id}}",
-            "url": "{{context.alertDetailsUrl}}",
-            "context.cloud": "{{context.cloud}}",
-            "context.container": "{{context.container}}",
-            "context.group": "{{context.group}}",
-            "context.host": "{{context.host}}",
-            "context.labels": "{{context.labels}}",
-            "context.orchestrator": "{{context.orchestrator}}",
-            "description": "{{context.reason}}",
-            "contextTags": "{{context.tags}}",
-            "context.timestamp": "{{context.timestamp}}",
-            "context.value": "{{context.value}}",
-            "lastReceived": "{{date}}",
-            "ruleId": "{{rule.id}}",
-            "rule.spaceId": "{{rule.spaceId}}",
-            "ruleUrl": "{{rule.url}}",
-            "ruleTags": "{{rule.tags}}",
-            "name": "{{rule.name}}",
-            "rule.type": "{{rule.type}}",
+            "webhook_body": {
+                "context_info": "{{#context}}{{.}}{{/context}}",
+                "alert_info": "{{#alert}}{{.}}{{/alert}}",
+                "rule_info": "{{#rule}}{{.}}{{/rule}}",
+            }
         }
     )
+    SIEM_WEBHOOK_PAYLOAD = """{{#context.alerts}}{{{.}}}{{/context.alerts}}"""
 
     # Mock payloads for validating scopes
     MOCK_ALERT_PAYLOAD = {
@@ -153,12 +138,58 @@ class KibanaProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
 
     @staticmethod
-    def parse_event_raw_body(raw_body: bytes | dict) -> dict:
-        # tb: this is a f**king stupid hack because Kibana doesn't escape {{#toJson}} :(
-        if b'"payload": "{' in raw_body:
-            raw_body = raw_body.replace(b'"payload": "{', b'"payload": {')
-            raw_body = raw_body.replace(b'}",', b"},")
-        return json.loads(raw_body)
+    def parse_event_raw_body(raw_body: Union[bytes, dict, FormData]) -> dict:
+        """
+        Parse the raw body from various input types into a dictionary.
+
+        Args:
+            raw_body: Can be bytes, dict, or FormData
+
+        Returns:
+            dict: Parsed event data
+
+        Raises:
+            ValueError: If the input type is not supported or parsing fails
+        """
+        # Handle FormData
+        if hasattr(raw_body, "_list") and hasattr(
+            raw_body, "getlist"
+        ):  # Check if it's FormData
+            # Convert FormData to dict
+            form_dict = {}
+            for key, value in raw_body.items():
+                # Handle multiple values for the same key
+                existing_value = form_dict.get(key)
+                if existing_value is not None:
+                    if isinstance(existing_value, list):
+                        existing_value.append(value)
+                    else:
+                        form_dict[key] = [existing_value, value]
+                else:
+                    form_dict[key] = value
+
+            # If there's a 'payload' field that's a string, try to parse it as JSON
+            if "payload" in form_dict and isinstance(form_dict["payload"], str):
+                try:
+                    form_dict["payload"] = json.loads(form_dict["payload"])
+                except json.JSONDecodeError:
+                    pass  # Keep the original string if it's not valid JSON
+
+            return form_dict
+
+        # Handle bytes
+        if isinstance(raw_body, bytes):
+            # Handle the Kibana escape issue
+            if b'"payload": "{' in raw_body:
+                raw_body = raw_body.replace(b'"payload": "{', b'"payload": {')
+                raw_body = raw_body.replace(b'}",', b"},")
+            return json.loads(raw_body)
+
+        # Handle dict
+        if isinstance(raw_body, dict):
+            return raw_body
+
+        raise ValueError(f"Unsupported raw_body type: {type(raw_body)}")
 
     def validate_scopes(self) -> dict[str, bool | str]:
         """
@@ -244,6 +275,17 @@ class KibanaProvider(BaseProvider):
             keep_api_url (str): The URL of the Keep API
             api_key (str): The API key of the Keep API
         """
+        # Check kibana version
+        kibana_version = (
+            self.request("GET", "api/status").get("version", {}).get("number")
+        )
+        rule_types = self.request("GET", "api/alerting/rule_types")
+
+        rule_types = {rule_type["id"]: rule_type for rule_type in rule_types}
+        # if not version, assume < 8 for backwards compatibility
+        if not kibana_version:
+            kibana_version = "7.0.0"
+
         # First get all existing connectors and check if we're already installed:
         connectors = self.request("GET", "api/actions/connectors")
         connector_name = f"keep-{tenant_id}"
@@ -265,7 +307,10 @@ class KibanaProvider(BaseProvider):
             # this means we already have a connector installed, so we just need to update it
             config: dict = connector["config"]
             config["url"] = keep_api_url
-            config["headers"] = {"X-API-KEY": api_key}
+            config["headers"] = {
+                "X-API-KEY": api_key,
+                "Content-Type": "application/json",
+            }
             self.request(
                 "PUT",
                 f"api/actions/connector/{connector['id']}",
@@ -284,7 +329,10 @@ class KibanaProvider(BaseProvider):
                     "method": "post",
                     "url": keep_api_url,
                     "authType": None,
-                    "headers": {"X-API-KEY": api_key},
+                    "headers": {
+                        "X-API-KEY": api_key,
+                        "Content-Type": "application/json",
+                    },
                 },
                 "secrets": {},
                 "connector_type_id": ".webhook",
@@ -305,6 +353,13 @@ class KibanaProvider(BaseProvider):
         for alert_rule in alert_rules.get("data", []):
             self.logger.info(f"Updating alert {alert_rule['id']}")
             alert_actions = alert_rule.get("actions") or []
+
+            # kibana 8:
+            # pop any connector_type_id
+            if Version(kibana_version) > Version("8.0.0"):
+                for action in alert_actions:
+                    action.pop("connector_type_id", None)
+
             keep_action_exists = any(
                 iter(
                     [
@@ -318,20 +373,24 @@ class KibanaProvider(BaseProvider):
                 # This alert was already modified by us / manually added
                 self.logger.info(f"Alert {alert_rule['id']} already updated, skipping")
                 continue
-            for status in ["Alert", "Recovered", "No Data"]:
+
+            rule_type_id = alert_rule.get("rule_type_id")
+            action_groups = rule_types.get(alert_rule["rule_type_id"], {}).get(
+                "action_groups", []
+            )
+            for action_group in action_groups:
                 alert_actions.append(
                     {
-                        "group": (
-                            "custom_threshold.fired"
-                            if status == "Alert"
-                            else (
-                                "recovered"
-                                if status == "Recovered"
-                                else "custom_threshold.nodata"
-                            )
-                        ),
+                        "group": action_group.get("id"),
                         "id": connector_id,
-                        "params": {"body": KibanaProvider.WEBHOOK_PAYLOAD},
+                        "params": {
+                            # SIEM can use a different payload for more context
+                            "body": (
+                                KibanaProvider.WEBHOOK_PAYLOAD
+                                if "siem" not in rule_type_id
+                                else KibanaProvider.SIEM_WEBHOOK_PAYLOAD
+                            )
+                        },
                         "frequency": {
                             "notify_when": "onActionGroupChange",
                             "throttle": None,
@@ -340,6 +399,7 @@ class KibanaProvider(BaseProvider):
                         "uuid": str(uuid.uuid4()),
                     }
                 )
+
             try:
                 self.request(
                     "PUT",
@@ -443,10 +503,14 @@ class KibanaProvider(BaseProvider):
 
     def validate_config(self):
         if self.is_installed or self.is_provisioned:
-            host = self.config.authentication['kibana_host']
+            host = self.config.authentication["kibana_host"]
             if not (host.startswith("http://") or host.startswith("https://")):
-                scheme = "http://" if ("localhost" in host or "127.0.0.1" in host) else "https://"
-                self.config.authentication['kibana_host'] = scheme + host
+                scheme = (
+                    "http://"
+                    if ("localhost" in host or "127.0.0.1" in host)
+                    else "https://"
+                )
+                self.config.authentication["kibana_host"] = scheme + host
 
         self.authentication_config = KibanaProviderAuthConfig(
             **self.config.authentication
@@ -489,49 +553,138 @@ class KibanaProvider(BaseProvider):
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto | list[AlertDto]:
         """
-        Formats an alert from Kibana to a standard format.
+        Formats an alert from Kibana to a standard format, supporting both old and new webhook formats.
 
         Args:
-            event (dict): The event from Kibana
+            event (dict): The event from Kibana, either in legacy or new webhook format
+            provider_instance: The provider instance (optional)
 
         Returns:
             AlertDto | list[AlertDto]: The alert in a standard format
         """
-
         # If this is coming from Kibana Watcher
+        logger = logging.getLogger(__name__)
         if "payload" in event:
             return KibanaProvider.format_alert_from_watcher(event)
-        try:
-            labels = {
-                v.split("=", 1)[0]: v.split("=", 1)[1]
-                for v in event.get("ruleTags", "").split(",")
-            }
-        except Exception:
-            # Failed to extract labels from ruleTags
-            labels = {}
 
-        try:
-            labels.update(
-                {
-                    v.split("=", 1)[0]: v.split("=", 1)[1]
-                    for v in event.get("contextTags", "").split(",")
-                }
+        # SIEM alert
+        if "kibana" in event:
+            logger.info("Parsing SIEM Kibana alert")
+            description = (
+                event.get("kibana", {})
+                .get("alert", {})
+                .get("rule", {})
+                .get("description", "")
             )
-        except Exception:
-            # Failed to enrich labels with contextTags
-            pass
+            if not description:
+                logger.warning("Could not find description in SIEM Kibana alert")
+
+            name = (
+                event.get("kibana", {}).get("alert", {}).get("rule", {}).get("name", "")
+            )
+            if not name:
+                logger.warning("Could not find name in SIEM Kibana alert")
+                name = "SIEM Kibana Alert"
+
+            status = event.get("kibana", {}).get("alert", {}).get("status", "")
+            if not status:
+                logger.warning("Could not find status in SIEM Kibana alert")
+                name = "active"
+
+            # use map
+            status = KibanaProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
+            severity = (
+                event.get("kibana", {})
+                .get("alert", {})
+                .get("severity", "could not find severity")
+            )
+            # use map
+            severity = KibanaProvider.SEVERITIES_MAP.get(severity, AlertSeverity.INFO)
+            alert_dto = AlertDto(
+                name=name,
+                description=description,
+                status=status,
+                severity=severity,
+                source=["kibana"],
+                **event,
+            )
+            logger.info("Finished to parse SIEM Kibana alert")
+            return alert_dto
+        # Check if this is the new webhook format
+        # New Kibana webhook format
+        if "webhook_body" in event:
+            # Parse the JSON strings from the new format
+            try:
+                context_info = json.loads(event["webhook_body"]["context_info"])
+                alert_info = json.loads(event["webhook_body"]["alert_info"])
+                rule_info = json.loads(event["webhook_body"]["rule_info"])
+
+                # Construct event dict in old format for compatibility
+                event = {
+                    "actionGroup": alert_info.get("actionGroup"),
+                    "status": alert_info.get("actionGroupName"),
+                    "actionSubgroup": alert_info.get("actionSubgroup"),
+                    "isFlapping": alert_info.get("flapping"),
+                    "kibana_alert_id": alert_info.get("id"),
+                    "fingerprint": alert_info.get("uuid"),
+                    "url": context_info.get("alertDetailsUrl"),
+                    "context.message": context_info.get("message"),
+                    "context.hits": context_info.get("matchingDocuments"),
+                    "context.link": context_info.get("viewInAppUrl"),
+                    "context.query": rule_info.get("params", {}).get("criteria"),
+                    "context.title": rule_info.get("name"),
+                    "description": context_info.get("reason"),
+                    "lastReceived": context_info.get("timestamp"),
+                    "ruleId": rule_info.get("id"),
+                    "rule.spaceId": rule_info.get("spaceId"),
+                    "ruleUrl": rule_info.get("url"),
+                    "ruleTags": rule_info.get("tags", []),
+                    "name": rule_info.get("name"),
+                    "rule.type": rule_info.get("type"),
+                }
+            except json.JSONDecodeError as e:
+                logger.error(f"Error parsing new webhook format: {e}")
+                # Fall through to process as old format
+
+        # Process tags and labels (works for both old and new formats)
+        labels = {}
+        tags = event.get("ruleTags", [])
+        for tag in tags:
+            if "=" in tag:
+                key, value = tag.split("=", 1)
+                labels[key] = value
+
+        context_tags = event.get("contextTags", [])
+        for tag in context_tags:
+            if "=" in tag:
+                key, value = tag.split("=", 1)
+                labels[key] = value
 
         environment = labels.get("environment", "undefined")
 
-        # format status and severity to Keep format
+        # Format status and severity
         event["status"] = KibanaProvider.STATUS_MAP.get(
             event.get("status"), AlertStatus.FIRING
         )
         event["severity"] = KibanaProvider.SEVERITIES_MAP.get(
             event.get("severity"), AlertSeverity.INFO
         )
+
+        # Handle URL fallback
+        if not event.get("url"):
+            event["url"] = event.get("ruleUrl")
+            if not event.get("url"):
+                event.pop("url", None)
+
+        if "name" not in event:
+            event["name"] = event.get("rule.name")
+
         return AlertDto(
-            environment=environment, labels=labels, source=["kibana"], **event
+            environment=environment,
+            labels=labels,
+            tags=tags,
+            source=["kibana"],
+            **event,
         )
 
 

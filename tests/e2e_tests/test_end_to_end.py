@@ -42,6 +42,8 @@ from tests.e2e_tests.utils import trigger_alert
 
 from playwright.sync_api import expect
 
+from tests.e2e_tests.utils import install_webhook_provider, delete_provider, assert_connected_provider_count, assert_scope_text_count
+
 # Running the tests in GitHub Actions:
 # - Look at the test-pr-e2e.yml file in the .github/workflows directory.
 
@@ -372,6 +374,48 @@ def test_start_with_keep_db(browser):
         browser.get_by_role("button", name="Sign in").click()
         browser.wait_for_timeout(5000)
         expect(browser).to_have_url("http://localhost:3001/incidents")
+    except Exception:
+        save_failure_artifacts(browser, log_entries)
+        raise
+
+def test_provider_deletion(browser):
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
+    try:
+
+        # Checking deletion after Creation 
+        browser.goto("http://localhost:3000/signin")
+        browser.get_by_role("link", name="Providers").hover()
+        browser.get_by_role("link", name="Providers").click()
+        browser.wait_for_timeout(10000)
+        install_webhook_provider(browser=browser, provider_name=provider_name, webhook_url="http://keep-backend:8080", webhook_action="GET")
+        browser.wait_for_timeout(2000)
+        assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=1)
+        delete_provider(browser=browser, provider_type="Webhook", provider_name=provider_name)
+        assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=0)
+
+        # Checking deletion after Creation + Updation
+        install_webhook_provider(browser=browser, provider_name=provider_name, webhook_url="http://keep-backend:8080", webhook_action="GET")
+        browser.wait_for_timeout(2000)
+        assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=1)
+        # Updating provider
+        browser.locator(
+            f"button:has-text('Webhook'):has-text('Connected'):has-text('{provider_name}')"
+        ).click()
+        browser.get_by_placeholder("Enter url").clear()
+        browser.get_by_placeholder("Enter url").fill("https://this_is_UwU")
+
+        browser.get_by_role("button", name="Update", exact=True).click()
+        browser.wait_for_timeout(3000)
+        # Refreshing the scope
+        browser.get_by_role("button", name="Refresh", exact=True).click()
+        browser.wait_for_timeout(3000)
+        assert_scope_text_count(browser=browser, contains_text="HTTPSConnectionPool", count=1)
+        browser.mouse.click(10, 10)
+        delete_provider(browser=browser, provider_type="Webhook", provider_name=provider_name)
+        assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=0)
+
     except Exception:
         save_failure_artifacts(browser, log_entries)
         raise

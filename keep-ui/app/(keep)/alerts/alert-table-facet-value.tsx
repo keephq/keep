@@ -31,7 +31,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
     100,
     undefined,
     undefined,
-    '',
+    "",
     {
       revalidateOnFocus: false,
     }

@@ -47,7 +47,6 @@ services:
     depends_on:
       - keep-database
 
-
   ## Keep Services with DB
   # Database Service (5433)
   keep-database-db-auth:
@@ -73,7 +72,7 @@ services:
     environment:
       - NEXTAUTH_SECRET=secret
       - NEXTAUTH_URL=http://localhost:3001
-      - NEXT_PUBLIC_API_URL=http://localhost:8081
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
       - POSTHOG_DISABLED=true
       - AUTH_TYPE=DB
       - API_URL=http://keep-backend-db-auth:8080
@@ -111,7 +110,6 @@ services:
     depends_on:
       - keep-database-db-auth
 
-
   # Other Services (Common)
   keep-websocket-server:
     extends:
@@ -133,7 +131,7 @@ services:
       - "3002:3000"
     volumes:
       - ./keep/providers/grafana_provider/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./keep/providers/grafana_provider/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./tests/e2e_tests/grafana.ini:/etc/grafana/grafana.ini:ro
       - grafana-storage:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin

@@ -104,6 +104,19 @@
       ]
     },
     {
+      "group": "Alert Evaluation Engine",
+      "pages": [
+        "alertevaluation/overview",
+        {
+          "group": "Examples",
+          "pages": [
+            "alertevaluation/examples/victoriametricssingle",
+            "alertevaluation/examples/victoriametricsmulti"
+          ]
+        }
+      ]
+    },
+    {
       "group": "Providers",
       "pages": [
         "providers/overview",
@@ -124,14 +137,17 @@
             "providers/documentation/bigquery-provider",
             "providers/documentation/centreon-provider",
             "providers/documentation/checkmk-provider",
+            "providers/documentation/checkly-provider",
             "providers/documentation/cilium-provider",
             "providers/documentation/clickhouse-provider",
             "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
             "providers/documentation/coralogix-provider",
             "providers/documentation/datadog-provider",
+            "providers/documentation/deepseek-provider",
             "providers/documentation/discord-provider",
             "providers/documentation/dynatrace-provider",
+            "providers/documentation/eks-provider",
             "providers/documentation/elastic-provider",
             "providers/documentation/gcpmonitoring-provider",
             "providers/documentation/gemini-provider",

@@ -138,12 +138,9 @@ export function IncidentChat({
     useIncidentActions();
   const providersWithGetTrace = useMemo(
     () =>
-      providers?.installed_providers
-        .filter(
-          (provider) =>
-            provider.methods?.some((method) => method.func_name === "get_trace")
-        )
-        .map((provider) => provider.id),
+      providers?.installed_providers.filter((provider) =>
+        provider.methods?.some((method) => method.func_name === "get_trace")
+      ).map((provider) => provider.id),
     [providers]
   );
 
@@ -568,8 +565,7 @@ export function IncidentChat({
     return (
       <EmptyStateCard
         title="Chat not available"
-        description="No alerts found for this incident. Go to the alerts feed and assign alerts to interact with the incident."
-        buttonText="Assign alerts to this incident"
+        description="Incident assitant will become available as alerts are assigned to this incident."
         onClick={() => router.push("/alerts/feed")}
       />
     );

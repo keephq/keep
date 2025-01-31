@@ -13,7 +13,7 @@ type UseWorkflowActionsReturn = {
   ) => Promise<CreateOrUpdateWorkflowResponse | null>;
   updateWorkflow: (
     workflowId: string,
-    definition: Definition
+    definition: Definition | Record<string, unknown>
   ) => Promise<CreateOrUpdateWorkflowResponse | null>;
   deleteWorkflow: (workflowId: string) => void;
 };
@@ -56,10 +56,16 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
   );
 
   const updateWorkflow = useCallback(
-    async (workflowId: string, definition: Definition) => {
+    async (
+      workflowId: string,
+      definition: Definition | Record<string, unknown>
+    ) => {
       try {
-        const workflow = getWorkflowFromDefinition(definition);
-        const body = stringify(workflow);
+        const body = stringify(
+          "workflow" in definition
+            ? definition
+            : getWorkflowFromDefinition(definition as Definition)
+        );
         const response = await api.request<CreateOrUpdateWorkflowResponse>(
           `/workflows/${workflowId}`,
           {

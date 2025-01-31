@@ -15,7 +15,7 @@ export const useFetchProviders = () => {
   const [installedProviders, setInstalledProviders] = useState<Provider[]>([]);
   const [linkedProviders, setLinkedProviders] = useState<Provider[]>([]); // Added state for linkedProviders
   const { data: config } = useConfig();
-  const { data, error } = useProviders();
+  const { data, error, mutate } = useProviders();
 
   if (error) {
     throw error;
@@ -100,6 +100,7 @@ export const useFetchProviders = () => {
     setInstalledProviders,
     error,
     isLocalhost,
+    mutate,
   };
 };
 
@@ -114,6 +115,7 @@ export default function ProvidersPage({
     linkedProviders,
     setInstalledProviders,
     isLocalhost,
+    mutate,
   } = useFetchProviders();
 
   const {
@@ -173,6 +175,7 @@ export default function ProvidersPage({
         <ProvidersTiles
           providers={installedProviders}
           installedProvidersMode={true}
+          mutate={mutate}
         />
       )}
       {linkedProviders?.length > 0 && (
@@ -180,6 +183,7 @@ export default function ProvidersPage({
           providers={linkedProviders}
           linkedProvidersMode={true}
           isLocalhost={isLocalhost}
+          mutate={mutate}
         />
       )}
       <ProvidersTiles
@@ -190,6 +194,7 @@ export default function ProvidersPage({
             searchCategories(provider)
         )}
         isLocalhost={isLocalhost}
+        mutate={mutate}
       />
     </>
   );

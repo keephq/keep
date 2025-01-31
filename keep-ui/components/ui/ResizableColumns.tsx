@@ -62,7 +62,7 @@ const ResizableColumns = ({
         onMouseDown={startDragging}
       />
 
-      <div className="flex-1 bg-white p-4 overflow-auto">{rightChild}</div>
+      <div className="flex-1 p-4 overflow-auto">{rightChild}</div>
     </div>
   );
 };
