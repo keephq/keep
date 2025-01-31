@@ -71,8 +71,8 @@ services:
       - "3001:3000"
     environment:
       - NEXTAUTH_SECRET=secret
-      - NEXTAUTH_URL=https://3001-35c4n0r-keep-j5ok1nvq1vv.ws-us117.gitpod.io
-      - NEXT_PUBLIC_API_URL=https://8081-35c4n0r-keep-j5ok1nvq1vv.ws-us117.gitpod.io
+      - NEXTAUTH_URL=http://localhost:3001
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
       - POSTHOG_DISABLED=true
       - AUTH_TYPE=DB
       - API_URL=http://keep-backend-db-auth:8080
