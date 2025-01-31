@@ -1,0 +1,57 @@
+version: "3"
+
+services:
+  keep-frontend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-frontend-common
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - API_URL=http://keep-backend:8080
+    volumes:
+      - ./state:/state
+    depends_on:
+      - keep-backend
+
+  keep-backend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-backend-common
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-api
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - DATABASE_CONNECTION_STRING=sqlite:////shared-db/db.sqlite3?check_same_thread=False
+    volumes:
+      - ./state:/state
+      - shared-db:/shared-db
+    user: "${UID}:${GID}"
+
+  keep-websocket-server:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-websocket-server-common
+
+  superset:
+    image: apache/superset
+    container_name: superset
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./superset/superset_config.py:/app/pythonpath/superset_config.py
+      - shared-db:/shared-db
+      - ./superset/entrypoint.sh:/app/docker-entrypoint.sh
+    environment:
+      # Add environment variables if needed
+      - SUPERSET_ENV=production
+    depends_on:
+      - keep-backend
+    entrypoint: /app/docker-entrypoint.sh
+
+volumes:
+  shared-db:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/shared-db
+      o: bind

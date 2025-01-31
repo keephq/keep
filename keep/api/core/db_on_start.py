@@ -176,6 +176,7 @@ def migrate_db():
         logger.info("Skipping running migrations...")
         return None
 
+    return
     logger.info("Running migrations...")
     config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
     config = alembic.config.Config(file_=config_path)
