@@ -67,6 +67,7 @@ class KibanaProvider(BaseProvider):
             }
         }
     )
+    SIEM_WEBHOOK_PAYLOAD = """{{#context.alerts}}{{{.}}}{{/context.alerts}}"""
 
     # Mock payloads for validating scopes
     MOCK_ALERT_PAYLOAD = {
@@ -373,6 +374,7 @@ class KibanaProvider(BaseProvider):
                 self.logger.info(f"Alert {alert_rule['id']} already updated, skipping")
                 continue
 
+            rule_type_id = alert_rule.get("rule_type_id")
             action_groups = rule_types.get(alert_rule["rule_type_id"], {}).get(
                 "action_groups", []
             )
@@ -381,7 +383,14 @@ class KibanaProvider(BaseProvider):
                     {
                         "group": action_group.get("id"),
                         "id": connector_id,
-                        "params": {"body": KibanaProvider.WEBHOOK_PAYLOAD},
+                        "params": {
+                            # SIEM can use a different payload for more context
+                            "body": (
+                                KibanaProvider.WEBHOOK_PAYLOAD
+                                if "siem" not in rule_type_id
+                                else KibanaProvider.SIEM_WEBHOOK_PAYLOAD
+                            )
+                        },
                         "frequency": {
                             "notify_when": "onActionGroupChange",
                             "throttle": None,
@@ -558,6 +567,45 @@ class KibanaProvider(BaseProvider):
         if "payload" in event:
             return KibanaProvider.format_alert_from_watcher(event)
 
+        # SIEM alert
+        if "kibana" in event:
+            logger.info("Parsing SIEM Kibana alert")
+            description = (
+                event.get("kibana", {})
+                .get("alert", {})
+                .get("rule", {})
+                .get("description", "could not find description")
+            )
+            name = (
+                event.get("kibana", {})
+                .get("alert", {})
+                .get("rule", {})
+                .get("name", "could not find name")
+            )
+            status = (
+                event.get("kibana", {})
+                .get("alert", {})
+                .get("status", "could not find status")
+            )
+            # use map
+            status = KibanaProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
+            severity = (
+                event.get("kibana", {})
+                .get("alert", {})
+                .get("severity", "could not find severity")
+            )
+            # use map
+            severity = KibanaProvider.SEVERITIES_MAP.get(severity, AlertSeverity.INFO)
+            alert_dto = AlertDto(
+                name=name,
+                description=description,
+                status=status,
+                severity=severity,
+                source=["kibana"],
+                **event,
+            )
+            logger.info("Finished to parse SIEM Kibana alert")
+            return alert_dto
         # Check if this is the new webhook format
         # New Kibana webhook format
         if "webhook_body" in event:
@@ -623,6 +671,9 @@ class KibanaProvider(BaseProvider):
             event["url"] = event.get("ruleUrl")
             if not event.get("url"):
                 event.pop("url", None)
+
+        if "name" not in event:
+            event["name"] = event.get("rule.name")
 
         return AlertDto(
             environment=environment,
