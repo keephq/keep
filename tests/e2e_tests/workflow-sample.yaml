@@ -1,0 +1,22 @@
+workflow:
+  actions:
+    - name: echo
+      provider:
+        config: "{{ providers.default-console }}"
+        type: console
+        with:
+          logger: true
+          message: "{{alert.payload.summary}}"
+  consts: {}
+  description: playwright_test_add_upload_workflow_with_alert_trigger
+  disabled: false
+  id: 9b3664f4-b248-4eda-8cc7-e69bc5a8bd92
+  name: 9b3664f4-b248-4eda-8cc7-e69bc5a8bd92
+  owners: []
+  services: []
+  steps: []
+  triggers:
+    - filters:
+        - key: source
+          value: prometheus
+      type: alert
