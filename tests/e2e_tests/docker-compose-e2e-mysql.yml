@@ -52,7 +52,7 @@ services:
 
 
   ## Keep Services with DB
-  # Database Service (5433)
+  # Database Service (5433) 
   keep-database-db-auth:
     image: mysql:latest
     environment:
