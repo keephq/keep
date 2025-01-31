@@ -73,7 +73,7 @@ class Step:
                 did_action_run = self._run_single()
             return did_action_run
         except Exception as e:
-            self.logger.error(
+            self.logger.warning(
                 "Failed to run step %s with error %s",
                 self.step_id,
                 e,
@@ -132,11 +132,14 @@ class Step:
             try:
                 did_action_run = self._run_single()
             except Exception as e:
-                self.logger.error(
-                    f"Failed to run action with error {e}",
+                self.logger.warning(
+                    "Failed to run step %s with error %s",
+                    self.step_id,
+                    e,
                     extra={
                         "step_id": self.step_id,
                     },
+                    exc_info=True,
                 )
                 continue
             # If at least one item triggered an action, return True

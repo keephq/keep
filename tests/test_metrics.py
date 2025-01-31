@@ -18,13 +18,15 @@ def test_add_remove_alert_to_incidents(
     valid_api_key = "valid_api_key"
     setup_api_key(db_session, valid_api_key)
 
-    add_alerts_to_incident_by_incident_id("keep", incident.id, [a.fingerprint for a in alerts])
+    add_alerts_to_incident_by_incident_id(
+        "keep", incident.id, [a.fingerprint for a in alerts]
+    )
 
     response = client.get("/metrics?labels=a.b", headers={"X-API-KEY": "valid_api_key"})
 
     # Checking for alert_total metric
     assert (
-        f'alerts_total{{incident_name="test" incident_id="{incident.id}" a_b=""}} 14'
+        f'alerts_total{{incident_name="test",incident_id="{incident.id}",a_b=""}} 14'
         in response.text.split("\n")
     )
 
