@@ -4,38 +4,84 @@ title: "Service Topology"
 
 The Service Topology feature in Keep provides a visual representation of your service dependencies, allowing you to quickly understand the relationships between various components in your system. By mapping services and their interactions, you can gain insights into how issues in one service may impact others, enabling faster root-cause analysis and more effective incident resolution.
 
-
 <Frame width="100" height="200">
   <img height="10" src="/images/servicetopology.png" />
 </Frame>
-
 
 ## Key Concepts
 
 - **Nodes**: Represent individual services, applications, or infrastructure components.
 - **Edges**: Show the dependencies and interactions between nodes.
 
+## Supported Providers
+
+<CardGroup cols={3}>
+  <Card
+    title="Datadog"
+    href="/providers/documentation/datadog-provider"
+    icon={
+      <img src="https://img.logo.dev/datadoghq.com?token=pk_dfXfZBoKQMGDTIgqu7LvYg" />
+    }
+  ></Card>
+  <Card
+    title="Pagerduty"
+    href="/providers/documentation/pagerduty-provider"
+    icon={
+      <img src="https://img.logo.dev/pagerduty.com?token=pk_dfXfZBoKQMGDTIgqu7LvYg" />
+    }
+  ></Card>
+  <Card
+    title="ArgoCD"
+    href="/providers/documentation/argocd-provider"
+    icon={
+      <img src="https://img.logo.dev/argoproj.github.io?token=pk_dfXfZBoKQMGDTIgqu7LvYg" />
+    }
+  ></Card>
+  <Card
+    title="Cilium"
+    href="/providers/documentation/cilium-provider"
+    icon={
+      <img src="https://img.logo.dev/cilium.io?token=pk_dfXfZBoKQMGDTIgqu7LvYg" />
+    }
+  ></Card>
+  <Card
+    title="Service Now"
+    href="/providers/documentation/service-now-provider"
+    icon={
+      <img src="https://img.logo.dev/servicenow.com?token=pk_dfXfZBoKQMGDTIgqu7LvYg" />
+    }
+  ></Card>
+</CardGroup>
+
 ## Features
 
 ### Visualizing Dependencies
+
 The service topology graph helps you:
+
 - Identify critical dependencies between services.
 - Understand how failures in one service propagate through the system.
 - Highlight single points of failure or bottlenecks.
 
 ### Real-Time Health Indicators
+
 Nodes and edges are enriched with health indicators derived from alerts and metrics. This allows you to:
+
 - Quickly spot issues in your architecture.
 - Prioritize incident resolution based on affected dependencies.
 
 ### Filter and Focus
+
 Use filters to focus on specific parts of the topology, such as:
+
 - A particular environment (e.g., production, staging).
 - A service group (e.g., all database-related services).
 - Alerts of a specific severity or type.
 
 ### Incident Integration
+
 Service topology integrates seamlessly with Keep’s incident management features. When an incident is triggered, you can:
+
 - View the affected nodes and their dependencies directly on the topology graph.
 - Analyze how alerts related to the incident are propagating through the system.
 - Use this information to guide remediation efforts.

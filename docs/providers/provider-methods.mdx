@@ -1,0 +1,178 @@
+Provider methods are additional capabilities that providers expose beyond the basic `query` and `notify` functionality ([read more here](/providers/adding-a-new-provider#basics)). These methods allow you to interact with the provider's API in more specific ways, enabling richer integrations and automation capabilities.
+
+## What are Provider Methods?
+
+Provider methods are defined using the `PROVIDER_METHODS` list in each provider class. They represent specific actions or queries that can be performed through the provider's API.
+
+<Frame>
+  <img src="/images/provider-methods-menu.png" />
+</Frame>
+
+For example, a monitoring service provider might expose methods to:
+
+- Mute/unmute alerts
+- Get detailed traces
+- Search for specific metrics
+- Modify monitoring configurations
+
+## Using Provider Methods
+
+Provider methods can be accessed through:
+
+- Keep's platform interface via the alert action menu
+- Keep's smart AI assistant (e.g., "get traces for this alert")
+- Keep's API
+- Keep's workflows
+
+### Via UI
+
+Methods appear in the alert action menu when available for the alert's source provider:
+
+<Frame>
+  <img src="/images/provider-methods-modal.png" />
+</Frame>
+
+<Note>
+  The form is automatically populated with the parameters required by the
+  method, if they are available in the alert.
+</Note>
+
+### Via AI Assistant
+
+Keep's AI assistant can automatically discover and invoke provider methods based on natural language requests by understanding multiple contexts:
+
+<Frame>
+  <img src="/images/provider-methods-assistant.png" />
+</Frame>
+
+1. **Alert Context**: The AI understands:
+
+   - The alert's source provider
+   - Alert metadata and attributes
+   - Related services and applications
+   - Current alert status and severity
+
+2. **Provider Context**: The AI knows:
+
+   - Which providers are connected to your account
+   - Available methods for each provider
+   - Required parameters and their types
+   - Method descriptions and capabilities
+
+3. **Historical Context**: The AI learns from:
+   - Similar past incidents
+   - Previously successful method invocations
+   - Common patterns in alert resolution
+
+For example:
+
+```
+User: Can you get the traces for this alert?
+Assistant: I see this alert came from Datadog. I'll use the Datadog provider's
+get_traces method to fetch the traces. I'll use the trace_id from the alert's
+metadata: abc-123...
+
+User: This alert seems related to high latency. Can you help investigate?
+Assistant: I'll help investigate the latency issue. Since this is a Datadog alert,
+I can:
+1. Get recent traces using search_traces() to look for slow requests
+2. Fetch metrics using get_metrics() to check system performance
+3. Look for related logs using search_logs()
+
+Would you like me to start with any of these?
+```
+
+The AI assistant automatically:
+
+1. Identifies relevant provider methods
+2. Extracts required parameters from context
+3. Suggests appropriate actions based on the alert type
+4. Chains multiple methods for comprehensive investigation
+
+### Via API
+
+```python
+# Example using a Datadog provider method to mute a monitor
+response = await api.post(
+    f"/providers/{provider_id}/invoke/mute_monitor",
+    {"monitor_id": "abc123", "duration": 3600}
+)
+```
+
+## Adding New Provider Methods
+
+To add a new method to your provider:
+
+1. Define the method in your provider class:
+
+```python
+def get_traces(self, trace_id: str) -> dict:
+    """Get trace details from the provider.
+
+    Args:
+        trace_id (str): The ID of the trace to retrieve
+
+    Returns:
+        dict: The trace details
+    """
+    # Implementation
+    pass
+```
+
+2. Add method metadata to `PROVIDER_METHODS`:
+
+```python
+PROVIDER_METHODS = [
+    {
+        "name": "Get Traces",
+        "description": "Retrieve trace details",
+        "func_name": "get_traces",
+        "type": "view",  # 'view' or 'action'
+        "scopes": ["traces:read"],  # Required provider scopes
+        "func_params": [
+            {
+                "name": "trace_id",
+                "type": "str",
+                "mandatory": True,
+                "description": "The trace ID to retrieve"
+            }
+        ]
+    }
+]
+```
+
+### Method Types
+
+- **view**: Returns data to be displayed (e.g., getting traces, metrics)
+- **action**: Performs an action (e.g., muting an alert, creating a ticket)
+
+### Parameter Types
+
+- `str`: String input
+- `datetime`: Date/time picker
+- `literal`: Dropdown with predefined values
+- `int`: Numeric input
+- `bool`: Boolean input
+
+### Auto-Discovery
+
+Keep automatically inspects provider classes to:
+
+1. Discover available methods
+2. Extract parameter information
+3. Generate UI components
+4. Enable AI understanding of method capabilities
+
+## Best Practices
+
+1. **Clear Documentation**: Provide detailed docstrings for methods
+2. **Type Hints**: Use Python type hints for parameters
+3. **Error Handling**: Return clear error messages
+4. **Scopes**: Define minimum required scopes
+5. **Validation**: Validate parameters before execution
+
+## Limitations
+
+- Currently supports only synchronous methods
+- Parameter types are limited to basic types
+- Methods must be instance methods of the provider class

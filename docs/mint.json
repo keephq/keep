@@ -65,12 +65,18 @@
     {
       "group": "AIOps",
       "pages": [
-        "overview/correlation",
+        {
+          "group": "Correlation",
+          "pages": [
+            "overview/correlation-rules",
+            "overview/correlation-topology"
+          ]
+        },
         "overview/deduplication",
         "overview/enrichment/extraction",
         "overview/enrichment/mapping",
-        "overview/servicetopology",
         "overview/maintenance-windows",
+        "overview/servicetopology",
         "overview/workflow-automation"
       ]
     },
@@ -121,6 +127,7 @@
       "pages": [
         "providers/overview",
         "providers/adding-a-new-provider",
+        "providers/provider-methods",
         {
           "group": "Supported Providers",
           "pages": [
