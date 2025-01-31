@@ -72,10 +72,19 @@ class MaintenanceWindowsBl:
             try:
                 cel_result = prgm.evaluate(activation)
             except celpy.evaluation.CELEvalError as e:
-                if "no such member" in str(e):
+                error_msg = str(e).lower()
+                if "no such member" in error_msg or "undeclared reference" in error_msg:
+                    self.logger.debug(
+                        f"Skipping maintenance window rule due to missing field: {str(e)}",
+                        extra={**extra, "maintenance_rule_id": maintenance_rule.id},
+                    )
                     continue
-                # wtf
-                raise
+                # Log unexpected CEL errors but don't fail the entire event processing
+                self.logger.error(
+                    f"Unexpected CEL evaluation error: {str(e)}",
+                    extra={**extra, "maintenance_rule_id": maintenance_rule.id},
+                )
+                continue
             if cel_result:
                 self.logger.info(
                     "Alert is in maintenance window",
