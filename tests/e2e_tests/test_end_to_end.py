@@ -407,9 +407,10 @@ def test_provider_deletion(browser):
         browser.get_by_placeholder("Enter url").fill("https://this_is_UwU")
 
         browser.get_by_role("button", name="Update", exact=True).click()
+        browser.wait_for_timeout(3000)
         # Refreshing the scope
         browser.get_by_role("button", name="Refresh", exact=True).click()
-        browser.wait_for_timeout(10000)
+        browser.wait_for_timeout(3000)
         assert_scope_text_count(browser=browser, contains_text="HTTPSConnectionPool", count=1)
         browser.mouse.click(10, 10)
         delete_provider(browser=browser, provider_type="Webhook", provider_name=provider_name)
