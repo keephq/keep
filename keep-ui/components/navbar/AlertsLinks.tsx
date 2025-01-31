@@ -1,22 +1,21 @@
 "use client";
-
+import { useState } from "react";
 import { Button, Subtitle, Callout } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { CustomPresetAlertLinks } from "components/navbar/CustomPresetAlertLinks";
-import { SilencedDoorbellNotification } from "components/icons";
-import { IoChevronUp } from "react-icons/io5";
-import { AiOutlineGroup, AiOutlineSwap } from "react-icons/ai";
+import { AiOutlineSwap } from "react-icons/ai";
 import { FiFilter } from "react-icons/fi";
 import { Disclosure } from "@headlessui/react";
-import classNames from "classnames";
+import { IoChevronUp } from "react-icons/io5";
 import { Session } from "next-auth";
-import { usePresets } from "utils/hooks/usePresets";
-import { useEffect, useState } from "react";
-import { useTags } from "utils/hooks/useTags";
 import Modal from "@/components/ui/Modal";
 import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { ActionMeta, MultiValue } from "react-select";
+import { useTags } from "utils/hooks/useTags";
+import { usePresets } from "@/entities/presets/model/usePresets";
+import { useMounted } from "@/shared/lib/hooks/useMounted";
+import clsx from "clsx";
 
 type AlertsLinksProps = {
   session: Session | null;
@@ -24,37 +23,21 @@ type AlertsLinksProps = {
 
 export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [tempSelectedTags, setTempSelectedTags] = useState<string[]>([]);
-  const { data: tags = [] } = useTags();
-  const { useStaticPresets, staticPresetsOrderFromLS } = usePresets();
-  const { data: fetchedPresets = [] } = useStaticPresets({
-    revalidateIfStale: false,
-  });
+  const isMounted = useMounted();
 
-  const [staticPresets, setStaticPresets] = useState(staticPresetsOrderFromLS);
-
-  const [storedTags, setStoredTags] = useLocalStorage<string[]>("selectedTags", []);
-
-  useEffect(() => {
-    if (
-      fetchedPresets.length > 0 &&
-      JSON.stringify(staticPresets) !== JSON.stringify(staticPresetsOrderFromLS)
-    ) {
-      setStaticPresets(staticPresetsOrderFromLS);
-    }
-  }, [fetchedPresets, staticPresetsOrderFromLS]);
-
-  useEffect(() => {
-    if (JSON.stringify(selectedTags) !== JSON.stringify(storedTags)) {
-      setSelectedTags(storedTags);
-    }
-  }, []);
-
-  const mainPreset = staticPresets.find((preset) => preset.name === "feed");
-  const dismissedPreset = staticPresets.find(
-    (preset) => preset.name === "dismissed"
+  const [storedTags, setStoredTags] = useLocalStorage<string[]>(
+    "selectedTags",
+    []
   );
+  const [tempSelectedTags, setTempSelectedTags] =
+    useState<string[]>(storedTags);
+
+  const { data: tags = [] } = useTags();
+
+  const { staticPresets, error: staticPresetsError } = usePresets({
+    revalidateIfStale: true,
+    revalidateOnFocus: true,
+  });
 
   const handleTagSelect = (
     newValue: MultiValue<{ value: string; label: string }>,
@@ -64,15 +47,34 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   };
 
   const handleApplyTags = () => {
-    setSelectedTags(tempSelectedTags);
     setStoredTags(tempSelectedTags);
     setIsTagModalOpen(false);
   };
 
   const handleOpenModal = () => {
-    setTempSelectedTags(selectedTags);
+    setTempSelectedTags(storedTags);
     setIsTagModalOpen(true);
   };
+
+  // Determine if we should show the feed link
+  const shouldShowFeed = (() => {
+    // For the initial render on the server, always show feed
+    if (!isMounted || (!staticPresets && !staticPresetsError)) {
+      return true;
+    }
+
+    return staticPresets?.some((preset) => preset.name === "feed");
+  })();
+
+  // Get the current alerts count only if we should show feed
+  const currentAlertsCount = (() => {
+    if (!shouldShowFeed) {
+      return 0;
+    }
+
+    const feedPreset = staticPresets?.find((preset) => preset.name === "feed");
+    return feedPreset?.alerts_count ?? undefined;
+  })();
 
   return (
     <>
@@ -85,11 +87,12 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                   ALERTS
                 </Subtitle>
                 <FiFilter
-                  className={classNames(
+                  className={clsx(
                     "absolute left-full ml-2 cursor-pointer text-gray-400 transition-opacity",
                     {
-                      "opacity-100 text-orange-500": selectedTags.length > 0,
-                      "opacity-0 group-hover:opacity-100 group-hover:text-orange-500": selectedTags.length === 0
+                      "opacity-100 text-orange-500": storedTags.length > 0,
+                      "opacity-0 group-hover:opacity-100 group-hover:text-orange-500":
+                        storedTags.length === 0,
                     }
                   )}
                   size={16}
@@ -100,44 +103,34 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                 />
               </div>
               <IoChevronUp
-                className={classNames(
-                  { "rotate-180": open },
-                  "mr-2 text-slate-400"
-                )}
+                className={clsx("mr-2 text-slate-400", {
+                  "rotate-180": open,
+                })}
               />
             </Disclosure.Button>
+
             <Disclosure.Panel
               as="ul"
               className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4"
             >
-              <li>
-                <LinkWithIcon
-                  href="/alerts/feed"
-                  icon={AiOutlineSwap}
-                  count={mainPreset?.alerts_count}
-                >
-                  <Subtitle>Feed</Subtitle>
-                </LinkWithIcon>
-              </li>
-              {session && (
-                <CustomPresetAlertLinks
-                  session={session}
-                  selectedTags={selectedTags}
-                />
+              {shouldShowFeed && (
+                <li>
+                  <LinkWithIcon
+                    href="/alerts/feed"
+                    icon={AiOutlineSwap}
+                    count={currentAlertsCount}
+                    testId="menu-alerts-feed"
+                  >
+                    <Subtitle>Feed</Subtitle>
+                  </LinkWithIcon>
+                </li>
               )}
-              <li>
-                <LinkWithIcon
-                  href="/alerts/dismissed"
-                  icon={SilencedDoorbellNotification}
-                  count={dismissedPreset?.alerts_count}
-                >
-                  <Subtitle>Dismissed</Subtitle>
-                </LinkWithIcon>
-              </li>
+              <CustomPresetAlertLinks selectedTags={storedTags} />
             </Disclosure.Panel>
           </>
         )}
       </Disclosure>
+
       <Modal
         isOpen={isTagModalOpen}
         onClose={() => setIsTagModalOpen(false)}
@@ -145,7 +138,9 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
       >
         <div className="space-y-2">
           <Subtitle>Select tags to watch</Subtitle>
-          <Callout title="" color="orange">Customize your presets list by watching specific tags.</Callout>
+          <Callout title="" color="orange">
+            Customize your presets list by watching specific tags.
+          </Callout>
           <CreatableMultiSelect
             value={tempSelectedTags.map((tag) => ({
               value: tag,

@@ -22,7 +22,15 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/components/*": ["./components/*"]
+      "@/components/*": ["./components/*"],
+      "@/app/*": ["./app/*"],
+      "@/pages/*": ["./pages/*"],
+      "@/utils/*": ["./utils/*"],
+      "@/entities/*": ["./entities/*"],
+      "@/features/*": ["./features/*"],
+      "@/shared/*": ["./shared/*"],
+      "@/types/*": ["./types/*"],
+      "@/*": ["./*"]
     }
   },
   "include": [
@@ -31,7 +39,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "pages/signin.tsx",
-    "./.next/types/**/*.ts"
+    "./.next/types/**/*.ts",
+    "types/auth.d.ts"
   ],
   "exclude": ["node_modules"]
 }

@@ -1,0 +1,61 @@
+---
+title: "Graylog Provider"
+sidebarTitle: "Graylog Provider"
+description: "The Graylog provider enables webhook installations for receiving alerts in Keep"
+---
+
+## Overview
+
+The **Graylog Provider** facilitates receiving alerts from Graylog by setting up Webhook connections. It allows seamless integration with Graylog to receive notifications about events and alerts through Keep.
+
+## Authentication Parameters
+
+- **Username** (required): Username for authenticating with Graylog's API.
+- **Graylog Access Token** (required): Access token for authenticating with Graylog's API.
+- **Deployment Url** (required): Deployment URL for connecting to the Graylog instance (e.g., `http://localhost:9000`).
+
+## Scopes
+
+- **authenticated**: Mandatory for all operations, ensures the user is authenticated.
+- **authorized**: Mandatory for querying incidents and managing resources, ensures the user has `Admin` privileges.
+
+## Connecting with the Provider
+
+1. Obtain the **username** and **access token** from your Graylog instance by following [Graylog's API Access Documentation](https://go2docs.graylog.org/current/setting_up_graylog/rest_api_access_tokens.htm?tocpath=Set%20up%20Graylog%7CGet%20Started%20with%20Graylog%7CREST%C2%A0API%7C_____3#CreateanAccessToken).
+2. Set the **deployment URL** to your Graylog instance's base URL (e.g., `http://127.0.0.1:9000`).
+3. Ensure the user has the **Admin** role in Graylog.
+
+## Features
+
+The **Graylog Provider** supports the following key features:
+
+- **Webhook Setup**: Configures webhooks to send alerts to Keep.
+- **Alerts Retrieval**: Fetches and formats alerts from Graylog based on specified search parameters (only a maximum of 10000 most recent alerts)
+
+## Inputs for Query
+- **events_search_parameters**: Takes in a python dict
+Example:
+```
+{
+    "filter": {"alerts": "only"},
+    "page": 1,
+    "per_page": 1000,
+    "query": "",
+    "timerange": {"range": 86400, "type": "relative"},
+}
+```
+- You can modify this to fetch either alerts, events or both.
+
+<Note>
+Ensure that the product of `page` and `per_page` does not exceed 10,000.
+</Note>
+
+<Note>
+The notification URL for Graylog v4.x has the api_key as a query param, this is the default behaviour.
+</Note>
+
+## Useful Links
+
+- [Graylog API Documentation](https://go2docs.graylog.org/current/what_is_graylog/what_is_graylog.htm?tocpath=What%20Is%20Graylog%253F%7C_____0)
+- [Graylog Access Token](https://go2docs.graylog.org/current/setting_up_graylog/rest_api_access_tokens.htm?tocpath=Set%20up%20Graylog%7CGet%20Started%20with%20Graylog%7CREST%C2%A0API%7C_____3#CreateanAccessToken)
+- [Quick Setup for Graylog & Integration with Keep](https://github.com/keephq/keep/keep/providers/graylog_provider/README.md)

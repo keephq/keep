@@ -1,0 +1,48 @@
+---
+title: "Python"
+sidebarTitle: "Python Provider"
+description: "Python provider allows executing Python code snippets."
+---
+
+## Inputs
+
+- `script`: str: Python script to execute
+
+## Outputs
+
+- `result`: The output of the Python script
+
+## Authentication Parameters
+
+_None required for local execution._
+
+## Limitations
+
+- The Python provider is currently disabled for cloud execution. This means that Python scripts cannot be executed in a cloud environment.
+- Users must ensure that the scripts are compatible with the local execution environment.
+
+## Connecting with the Provider
+
+The Python provider allows you to run small Python scripts. 
+
+## Example of usage
+
+```yaml
+workflow:
+  id: python-example
+  description: Python example
+  triggers:
+    - type: manual
+  actions:
+    - name: python
+      provider:
+        type: python
+        config: "{{ providers.pythontest }}"
+        with:
+          script: |
+            print("Hello, world!")
+
+
+## Usefull Links
+
+-[Python Documentation](https://docs.python.org/3/)

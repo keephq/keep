@@ -8,6 +8,7 @@ from keep.api.core.db import delete_rule as delete_rule_db
 from keep.api.core.db import get_rule_distribution as get_rule_distribution_db
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import update_rule as update_rule_db
+from keep.api.models.db.rule import ResolveOn, CreateIncidentOn
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
@@ -25,6 +26,8 @@ class RuleCreateDto(BaseModel):
     groupingCriteria: list = []
     groupDescription: str = None
     requireApprove: bool = False
+    resolveOn: str = ResolveOn.NEVER.value
+    createOn: str = CreateIncidentOn.ANY.value
 
 
 @router.get(
@@ -72,6 +75,8 @@ async def create_rule(
     grouping_criteria = rule_create_request.groupingCriteria
     group_description = rule_create_request.groupDescription
     require_approve = rule_create_request.requireApprove
+    resolve_on = rule_create_request.resolveOn
+    create_on = rule_create_request.createOn
     sql = rule_create_request.sqlQuery.get("sql")
     params = rule_create_request.sqlQuery.get("params")
 
@@ -93,6 +98,12 @@ async def create_rule(
     if not timeunit:
         raise HTTPException(status_code=400, detail="Timeunit is required")
 
+    if not resolve_on:
+        raise HTTPException(status_code=400, detail="resolveOn is required")
+
+    if not create_on:
+        raise HTTPException(status_code=400, detail="createOn is required")
+
     rule = create_rule_db(
         tenant_id=tenant_id,
         name=rule_name,
@@ -107,6 +118,8 @@ async def create_rule(
         grouping_criteria=grouping_criteria,
         group_description=group_description,
         require_approve=require_approve,
+        resolve_on=resolve_on,
+        create_on=create_on,
     )
     logger.info("Rule created")
     return rule
@@ -154,6 +167,8 @@ async def update_rule(
         cel_query = body["celQuery"]
         timeframe = body["timeframeInSeconds"]
         timeunit = body["timeUnit"]
+        resolve_on = body["resolveOn"]
+        create_on = body["createOn"]
         grouping_criteria = body.get("groupingCriteria", [])
         require_approve = body.get("requireApprove", [])
     except Exception:
@@ -180,6 +195,12 @@ async def update_rule(
     if not timeunit:
         raise HTTPException(status_code=400, detail="Timeunit is required")
 
+    if not resolve_on:
+        raise HTTPException(status_code=400, detail="resolveOn is required")
+
+    if not create_on:
+        raise HTTPException(status_code=400, detail="createOn is required")
+
     rule = update_rule_db(
         tenant_id=tenant_id,
         rule_id=rule_id,
@@ -194,6 +215,8 @@ async def update_rule(
         updated_by=updated_by,
         grouping_criteria=grouping_criteria,
         require_approve=require_approve,
+        resolve_on=resolve_on,
+        create_on=create_on,
     )
 
     if rule:

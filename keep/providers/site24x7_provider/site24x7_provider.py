@@ -29,7 +29,7 @@ class Site24X7ProviderAuthConfig:
     zohoRefreshToken: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "ZohoRefreshToken",
+            "description": "Zoho Refresh Token",
             "hint": "Refresh token for Zoho authentication",
             "sensitive": True,
         },
@@ -37,7 +37,7 @@ class Site24X7ProviderAuthConfig:
     zohoClientId: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "ZohoClientId",
+            "description": "Zoho Client Id",
             "hint": "Client Secret for Zoho authentication.",
             "sensitive": True,
         },
@@ -45,7 +45,7 @@ class Site24X7ProviderAuthConfig:
     zohoClientSecret: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "ZohoClientSecret",
+            "description": "Zoho Client Secret",
             "hint": "Password associated with yur account",
             "sensitive": True,
         },
@@ -55,6 +55,7 @@ class Site24X7ProviderAuthConfig:
             "required": True,
             "description": "Zoho Account's TLD (.com | .eu | .com.cn | .in | .au | .jp)",
             "hint": "Possible: .com | .eu | .com.cn | .in | .com.au | .jp",
+            "validation": "tld"
         },
     )
 
@@ -78,7 +79,7 @@ class Site24X7Provider(BaseProvider):
             alias="Valid TLD",
         ),
     ]
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     SEVERITIES_MAP = {
         "DOWN": AlertSeverity.WARNING,
         "TROUBLE": AlertSeverity.HIGH,
@@ -212,7 +213,9 @@ class Site24X7Provider(BaseProvider):
             self.logger.info("Webhook created successfully")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         return AlertDto(
             url=event.get("MONITORURL", ""),
             lastReceived=event.get("INCIDENT_TIME", ""),

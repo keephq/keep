@@ -9,7 +9,6 @@ from uptime_kuma_api import UptimeKumaApi
 
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
-from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
@@ -20,13 +19,13 @@ class UptimekumaProviderAuthConfig:
     UptimekumaProviderAuthConfig is a class that holds the authentication information for the UptimekumaProvider.
     """
 
-    host_url: str = dataclasses.field(
+    host_url: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "UptimeKuma Host URL",
             "sensitive": False,
+            "validation": "any_http_url"
         },
-        default=None,
     )
 
     username: str = dataclasses.field(
@@ -35,7 +34,6 @@ class UptimekumaProviderAuthConfig:
             "description": "UptimeKuma Username",
             "sensitive": False,
         },
-        default=None,
     )
 
     password: str = dataclasses.field(
@@ -44,13 +42,13 @@ class UptimekumaProviderAuthConfig:
             "description": "UptimeKuma Password",
             "sensitive": True,
         },
-        default=None,
     )
 
 
 class UptimekumaProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "UptimeKuma"
     PROVIDER_TAGS = ["alert"]
+    PROVIDER_CATEGORY = ["Monitoring"]
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -89,12 +87,6 @@ class UptimekumaProvider(BaseProvider):
         self.authentication_config = UptimekumaProviderAuthConfig(
             **self.config.authentication
         )
-        if self.authentication_config.host_url is None:
-            raise ProviderException("UptimeKuma Host URL is required")
-        if self.authentication_config.username is None:
-            raise ProviderException("UptimeKuma Username is required")
-        if self.authentication_config.password is None:
-            raise ProviderException("UptimeKuma Password is required")
 
     def _get_heartbeats(self):
         try:
@@ -139,7 +131,9 @@ class UptimekumaProvider(BaseProvider):
             raise Exception(f"Error getting alerts from UptimeKuma: {e}")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
 
         alert = AlertDto(
             id=event["monitor"]["id"],

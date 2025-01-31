@@ -1,0 +1,147 @@
+workflow:
+  id: sa_pipeline_status_alert
+  description: gpu_test
+  triggers:
+    - type: alert
+      filters:
+        - key: source
+          value: "openobserve"
+  name: gpu_test
+
+  # consts block for email_template and slack_message
+  consts:
+    email_template: |
+      <strong>Hi,<br>
+      This {{ vars.alert_tier }} is triggered because the pipelines for {{ alert.host }} are down for more than keep.get_firing_time('{{ alert }}', 'minutes') minutes.<br>
+      Please visit monitoring.keeohq.dev for more!<br>
+      Regards,<br>
+      KeepHQ dev Monitoring</strong>
+
+    slack_message: |
+      {{ vars.alert_tier }} Alert: SA Pipelines are down
+
+      Hi,
+      This {{ vars.alert_tier }} alert is triggered because the pipelines for {{ alert.host }} are down for more than keep.get_firing_time('{{ alert }}', 'minutes') minutes.
+      Please visit monitoring.keeohq.dev for more!
+
+  actions:
+    # Sendgrid Tier 0 Alert
+    - if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 0 and keep.get_firing_time('{{ alert }}', 'minutes') < 10"
+      name: Sendgrid_Tier_0_alert
+      vars:
+        alert_tier: "Alert 0"
+      provider:
+        config: "{{ providers.Sendgrid }}"
+        type: sendgrid
+        with:
+          to:
+            - "shahar@keephq.dev"
+          subject: '"Tier 0 Alert: SA Pipelines are down"'
+          html: "{{ consts.email_template }}"
+
+    # Sendgrid Tier 1 Alert
+    - if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 10 and keep.get_firing_time('{{ alert }}', 'minutes') < 15"
+      name: Sendgrid_Tier_1_alert
+      vars:
+        alert_tier: "Alert 1"
+      provider:
+        config: "{{ providers.Sendgrid }}"
+        type: sendgrid
+        with:
+          to:
+            - "shahar@keephq.dev"
+          subject: '"Tier 1 Alert: SA Pipelines are down"'
+          html: "{{ consts.email_template }}"
+
+    # Sendgrid Tier 2 Alert
+    - if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 60 and keep.get_firing_time('{{ alert }}', 'minutes') < 70"
+      name: Sendgrid_Tier_2_alert
+      vars:
+        alert_tier: "Alert 2"
+      provider:
+        config: "{{ providers.Sendgrid }}"
+        type: sendgrid
+        with:
+          to:
+            - "shahar@keephq.dev"
+          subject: '"Tier 2 Alert: SA Pipelines are down"'
+          html: "{{ consts.email_template }}"
+
+    # Sendgrid Tier 3 Alert
+    - if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 120 and keep.get_firing_time('{{ alert }}', 'minutes') < 130"
+      name: Sendgrid_Tier_3_alert
+      vars:
+        alert_tier: "Alert 3"
+      provider:
+        config: "{{ providers.Sendgrid }}"
+        type: sendgrid
+        with:
+          to:
+            - "shahar@keephq.dev"
+          subject: '"Tier 3 Alert: SA Pipelines are down"'
+          html: "{{ consts.email_template }}"
+
+    # Sendgrid Tier 4 Alert
+    - if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 1440 and keep.get_firing_time('{{ alert }}', 'minutes') < 1450"
+      name: Sendgrid_Tier_4_alert
+      vars:
+        alert_tier: "Alert 4"
+      provider:
+        config: "{{ providers.Sendgrid }}"
+        type: sendgrid
+        with:
+          to:
+            - "shahar@keephq.dev"
+          subject: '"Tier 4 Alert: SA Pipelines are down"'
+          html: "{{ consts.email_template }}"
+
+    # Slack Alerts
+    - if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 0 and keep.get_firing_time('{{ alert }}', 'minutes') < 10"
+      name: Slack_Tier_0_alert
+      vars:
+        alert_tier: "Alert 0"
+      provider:
+        config: "{{ providers.dev_slack }}"
+        type: slack
+        with:
+          message: "{{ consts.slack_message }}"
+
+    - if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 10 and keep.get_firing_time('{{ alert }}', 'minutes') < 15"
+      name: Slack_Tier_1_alert
+      vars:
+        alert_tier: "Alert 1"
+      provider:
+        config: "{{ providers.dev_slack }}"
+        type: slack
+        with:
+          message: "{{ consts.slack_message }}"
+
+    - if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 60 and keep.get_firing_time('{{ alert }}', 'minutes') < 70"
+      name: Slack_Tier_2_alert
+      vars:
+        alert_tier: "Alert 2"
+      provider:
+        config: "{{ providers.dev_slack }}"
+        type: slack
+        with:
+          message: "{{ consts.slack_message }}"
+
+    - if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 120 and keep.get_firing_time('{{ alert }}', 'minutes') < 130"
+      name: Slack_Tier_3_alert
+      vars:
+        alert_tier: "Alert 3"
+      provider:
+        config: "{{ providers.dev_slack }}"
+        type: slack
+        with:
+          message: "{{ consts.slack_message }}"
+
+    - if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 1440 and keep.get_firing_time('{{ alert }}', 'minutes') < 1450"
+      name: Slack_Tier_4_alert
+      vars:
+        alert_tier: "Alert 4"
+      provider:
+        config: "{{ providers.dev_slack }}"
+        type: slack
+        with:
+          message: "{{ consts.slack_message }}"

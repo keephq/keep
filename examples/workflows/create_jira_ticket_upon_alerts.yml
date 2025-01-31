@@ -20,8 +20,8 @@ workflow:
         config: " {{ providers.team-payments-slack }} "
         with:
           message: |
-           "A new alert from Sentry: Alert: {{ alert.name }} - {{ alert.description }}
-           {{ alert}}"
+            "A new alert from Sentry: Alert: {{ alert.name }} - {{ alert.description }}
+            {{ alert}}"
     - name: create-jira-ticket-oncall-board
       if: "'{{ alert.service }}' == 'ftp' and not '{{ alert.ticket_id }}'"
       provider:
@@ -29,6 +29,8 @@ workflow:
         config: " {{ providers.jira }} "
         with:
           board_name: "Oncall Board"
+          custom_fields:
+            customfield_10201: "Critical"
           issuetype: "Task"
           summary: "{{ alert.name }} - {{ alert.description }} (created by Keep)"
           description: |

@@ -1,0 +1,56 @@
+---
+title: "Auth0"
+sidebarTitle: "Auth0 Provider"
+description: "Auth0 provider allows interaction with Auth0 APIs for authentication and user management."
+---
+
+## Inputs
+
+- `client_id`: str : The client ID for the Auth0 application.
+- `client_secret`: str : The client secret for the Auth0 application.
+- `audience`: str : The audience for the API authorization request.
+- `grant_type`: str : The type of authorization grant requested (e.g., `client_credentials`).
+
+## Outputs
+
+- `access_token`: The access token issued by Auth0 for authenticated requests.
+- `expires_in`: The time in seconds before the access token expires.
+- `token_type`: The type of token, typically `Bearer`.
+
+## Authentication Parameters
+
+To authenticate with Auth0, the following parameters are needed:
+- **client_id**: The unique identifier for your Auth0 application.
+- **client_secret**: A secret associated with your application, used for secure communication.
+- **audience**: Defines the API resources you're trying to access.
+
+These parameters can be retrieved from your Auth0 dashboard under the application's settings.
+
+## Connecting with the Provider
+
+The Auth0 provider connects to both the **Authentication API** and the **Management API**, enabling functionality such as token-based authentication and user management. Depending on your needs, you can:
+- Use the **Authentication API** to obtain access tokens, manage user profiles, or handle multi-factor authentication.
+- Use the **Management API** to automate the configuration of your Auth0 environment, register applications, manage users, and more.
+
+## Example of usage
+
+```yaml
+workflow:
+  id: auth0-example
+  description: Auth0 example
+  triggers:
+    - type: manual
+  actions:
+    - name: auth0
+      provider:
+        type: auth0
+        config: "{{ providers.auth0config }}"
+        with:
+          client_id: "{{ secrets.auth0_client_id }}"
+          client_secret: "{{ secrets.auth0_client_secret }}"
+          audience: "https://api.example.com"
+          grant_type: "client_credentials"
+
+## Useful Links
+-[Auth0 API Documentation](https://auth0.com/docs/api)
+-[Auth0 as an authentication method for keep](https://docs.keephq.dev/deployment/authentication/auth0-auth)

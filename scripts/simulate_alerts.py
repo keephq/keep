@@ -1,12 +1,10 @@
+import argparse
+import asyncio
 import logging
-import random
-import time
+import os
 
-import requests
+from keep.api.core.demo_mode import simulate_alerts_async, simulate_alerts_worker
 
-from keep.providers.providers_factory import ProvidersFactory
-
-# configure logging
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
@@ -16,53 +14,61 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def main():
-    GENERATE_DEDUPLICATIONS = True
-    keep_api_key = (
-        "2c9e3c53-f0fd-473e-85de-85a30b2ccc7f"  # os.environ.get("KEEP_API_KEY")
+async def main():
+    parser = argparse.ArgumentParser(description="Simulate alerts for Keep API.")
+    parser.add_argument(
+        "--num",
+        action="store",
+        dest="num",
+        type=int,
+        help="Number of alerts to simulate.",
     )
-    keep_api_url = "https://keep-api-442666953093.us-central1.run.app"  # os.environ.get("KEEP_API_URL") or "http://localhost:8080"
-    if keep_api_key is None or keep_api_url is None:
-        raise Exception("KEEP_API_KEY and KEEP_API_URL must be set")
+    parser.add_argument(
+        "--full-demo",
+        action="store_true",
+        help="Run the full demo including correlation rules and topology.",
+    )
+    parser.add_argument("--rps", type=int, help="Base requests per second")
+    parser.add_argument(
+        "--workers",
+        "-w",
+        type=int,
+        default=1,
+        help="Amount of background workers to send alerts",
+    )
 
-    providers = ["prometheus", "grafana"]
-    provider_classes = {
-        provider: ProvidersFactory.get_provider_class(provider)
-        for provider in providers
-    }
-    while True:
-        # choose provider
-        provider_type = random.choice(providers)
-        send_alert_url = "{}/alerts/event/{}".format(keep_api_url, provider_type)
-        provider = provider_classes[provider_type]
-        alert = provider.simulate_alert()
+    args = parser.parse_args()
+    rps = args.rps
 
-        # Determine number of times to send the same alert
-        num_iterations = 1
-        if GENERATE_DEDUPLICATIONS:
-            num_iterations = random.randint(1, 3)
+    default_sleep_interval = 0.2
+    if args.full_demo:
+        default_sleep_interval = 5
+        rps = 0
 
-        for _ in range(num_iterations):
-            logger.info("Sending alert: {}".format(alert))
-            try:
-                env = random.choice(["production", "staging", "development"])
-                response = requests.post(
-                    send_alert_url + f"?provider_id={provider_type}-{env}",
-                    headers={"x-api-key": keep_api_key},
-                    json=alert,
-                )
-            except Exception as e:
-                logger.error("Failed to send alert: {}".format(e))
-                time.sleep(0.2)
-                continue
+    SLEEP_INTERVAL = float(os.environ.get("SLEEP_INTERVAL", default_sleep_interval))
+    keep_api_key = os.environ.get("KEEP_API_KEY") or "keepappkey"
+    keep_api_url = os.environ.get("KEEP_API_URL") or "http://localhost:8080"
 
-            if response.status_code != 202:
-                logger.error("Failed to send alert: {}".format(response.text))
-            else:
-                logger.info("Alert sent successfully")
+    for i in range(args.workers):
+        asyncio.create_task(simulate_alerts_worker(i, keep_api_key, rps))
 
-            time.sleep(0.2)  # Wait for 0.2 seconds before sending the next alert
+    await simulate_alerts_async(
+        keep_api_key=keep_api_key,
+        keep_api_url=keep_api_url,
+        sleep_interval=SLEEP_INTERVAL,
+        demo_correlation_rules=args.full_demo,
+        demo_topology=args.full_demo,
+        clean_old_incidents=args.full_demo,
+        demo_ai=args.full_demo,
+        count=args.num,
+        target_rps=rps,
+    )
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+    finally:
+        print("Closing Loop")

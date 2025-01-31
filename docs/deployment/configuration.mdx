@@ -1,0 +1,280 @@
+---
+title: "Configuration"
+sidebarTitle: "Configuration"
+---
+
+## Background
+
+Keep is highly configurable through environment variables. This allows you to customize various aspects of both the backend and frontend components without modifying the code. Environment variables can be set in your deployment environment, such as in your Kubernetes configuration, Docker Compose file, or directly on your host system.
+
+
+## Backend Environment Variables
+
+### General
+<Info>
+General configuration variables control the core behavior of the Keep server. These settings determine fundamental aspects such as the server's host, port, and whether certain components like the scheduler and consumer are enabled.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **KEEP_HOST** | Specifies the host for the Keep server | No | "0.0.0.0" | Valid hostname or IP address |
+| **PORT** | Specifies the port on which the backend server runs | No | 8080 | Any valid port number |
+| **SCHEDULER** | Enables or disables the workflow scheduler | No | "true" | "true" or "false" |
+| **CONSUMER** | Enables or disables the consumer | No | "true" | "true" or "false" |
+| **KEEP_VERSION** | Specifies the Keep version | No | "unknown" | Valid version string |
+| **KEEP_API_URL** | Specifies the Keep API URL | No | Constructed from HOST and PORT | Valid URL |
+| **KEEP_STORE_RAW_ALERTS** | Enables storing of raw alerts | No | "false" | "true" or "false" |
+| **TENANT_CONFIGURATION_RELOAD_TIME** | Time in minutes to reload tenant configurations | No | 5 | Positive integer |
+| **KEEP_LIVE_DEMO_MODE** | Keep will simulate incoming alerts and other activity | No | "false" | "true" or "false" |
+
+### Logging and Environment
+<Info>
+Logging and environment configuration determines how Keep generates and formats log output. These settings are crucial for debugging, monitoring, and understanding the behavior of your Keep instance in different environments.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **LOG_LEVEL** | Sets the logging level for the application | No | "INFO" | "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL" |
+| **ENVIRONMENT** | Specifies the environment the application is running in | No | "production" | "development", "staging", "production" |
+| **LOG_FORMAT** | Specifies the log format | No | "open_telemetry" | "open_telemetry", "dev_terminal" |
+| **LOG_AUTH_PAYLOAD** | Enables logging of authentication payload | No | "false" | "true" or "false" |
+
+
+### Database
+<Info>
+Database configuration is crucial for Keep's data persistence. Keep supports various database backends through SQLAlchemy, allowing flexibility in choosing and configuring your preferred database system.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **DATABASE_CONNECTION_STRING** | Specifies the database connection URL | Yes | None | Valid SQLAlchemy connection string |
+| **DATABASE_POOL_SIZE** | Sets the database connection pool size | No | 5 | Positive integer |
+| **DATABASE_MAX_OVERFLOW** | Sets the maximum overflow for the connection pool | No | 10 | Positive integer |
+| **DATABASE_ECHO** | Enables SQLAlchemy echo mode for debugging | No | False | Boolean (True/False) |
+| **DB_CONNECTION_NAME** | Specifies the Cloud SQL connection name | No | "keephq-sandbox:us-central1:keep" | Valid Cloud SQL connection string |
+| **DB_SERVICE_ACCOUNT** | Service account for database impersonation | No | None | Valid service account email |
+| **SKIP_DB_CREATION** | Skips database creation and migrations | No | "false" | "true" or "false" |
+
+### Resource Provisioning
+<Info>
+Resource provisioning settings control how Keep sets up initial resources. This configuration is particularly important for automating the setup process and ensuring that necessary resources are available when Keep starts.
+</Info>
+<Tip>To elaborate on resource provisioning and its configuration, please see [provisioning docs](/deployment/provision/overview).</Tip>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **PROVISION_RESOURCES** | Enables or disables resource provisioning | No | "true" | "true" or "false" |
+
+
+### Authentication
+<Info>
+Authentication configuration determines how Keep verifies user identities and manages access control. These settings are essential for securing your Keep instance and integrating with various authentication providers.
+</Info>
+<Tip>For specific authentication type configuration, please see [authentication docs](/deployment/authentication/overview).</Tip>
+
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **AUTH_TYPE** | Specifies the authentication type | No | "noauth" | "auth0", "keycloak", "db", "noauth", "oauth2proxy" |
+| **KEEP_JWT_SECRET** | Secret key for JWT token generation and validation (DB auth only) | Yes | None | Any strong secret string |
+| **KEEP_DEFAULT_USERNAME** | Default username for the admin user (DB auth only) | No | "keep" | Any valid username string |
+| **KEEP_DEFAULT_PASSWORD** | Default password for the admin user (DB auth only)| No | "keep" | Any strong password string |
+| **KEEP_FORCE_RESET_DEFAULT_PASSWORD** | Forces reset of default user password | No | "false" | "true" or "false" |
+| **KEEP_DEFAULT_API_KEYS** | Comma-separated list of default API keys to provision | No | "" | Format: "name:role:secret,name:role:secret" |
+
+### Secrets Management
+<Info>
+Secrets Management configuration specifies how Keep handles sensitive information. This is crucial for securely storing and accessing confidential data such as API keys and integrations credentials.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **SECRET_MANAGER_TYPE** | Defines the type of secret manager to use | Yes | "FILE" | "FILE", "GCP", "K8S", "VAULT" |
+| **SECRET_MANAGER_DIRECTORY** | Directory for storing secrets when using file-based secret management | No | "/state" | Any valid directory path |
+
+### OpenTelemetry
+<Info>
+OpenTelemetry configuration enables comprehensive observability for Keep. These settings allow you to integrate Keep with various monitoring and tracing systems, enhancing your ability to debug and optimize performance.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **OTEL_SERVICE_NAME** | OpenTelemetry service name | No | "keep-api" | Valid service name string |
+| **SERVICE_NAME** | Alternative for OTEL_SERVICE_NAME | No | "keep-api" | Valid service name string |
+| **OTEL_EXPORTER_OTLP_ENDPOINT** | OpenTelemetry collector endpoint | No | None | Valid URL |
+| **OTLP_ENDPOINT** | Alternative for OTEL_EXPORTER_OTLP_ENDPOINT | No | None | Valid URL |
+| **OTEL_EXPORTER_OTLP_TRACES_ENDPOINT** | OpenTelemetry traces endpoint | No | None | Valid URL |
+| **OTEL_EXPORTER_OTLP_LOGS_ENDPOINT** | OpenTelemetry logs endpoint | No | None | Valid URL |
+| **OTEL_EXPORTER_OTLP_METRICS_ENDPOINT** | OpenTelemetry metrics endpoint | No | None | Valid URL |
+| **CLOUD_TRACE_ENABLED** | Enables Google Cloud Trace exporter | No | "false" | "true" or "false" |
+| **METRIC_OTEL_ENABLED** | Enables OpenTelemetry metrics | No | "" | "true" or "false" |
+
+### WebSocket Server (Pusher/Soketi)
+<Info>
+WebSocket server configuration controls real-time communication capabilities in Keep. These settings are important for enabling features that require instant updates and notifications.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **PUSHER_DISABLED** | Disables Pusher integration | No | "false" | "true" or "false" |
+| **PUSHER_HOST** | Hostname of the Pusher server | No | None | Valid hostname or IP address |
+| **PUSHER_PORT** | Port of the Pusher server | No | None | Any valid port number |
+| **PUSHER_APP_ID** | Pusher application ID | Yes (if using Pusher) | None | Valid Pusher App ID |
+| **PUSHER_APP_KEY** | Pusher application key | Yes (if using Pusher) | None | Valid Pusher App Key |
+| **PUSHER_APP_SECRET** | Pusher application secret | Yes (if using Pusher) | None | Valid Pusher App Secret |
+| **PUSHER_USE_SSL** | Enables SSL for Pusher connection | No | False | Boolean (True/False) |
+| **PUSHER_CLUSTER** | Pusher cluster | No | None | Valid Pusher cluster name |
+
+
+### OpenAPI
+<Info>
+OpenAPI configuration is used for integrating with OpenAI services. These settings are important if you're utilizing OpenAI capabilities within Keep for tasks such as natural language processing or AI-assisted operations.
+</Info>
+
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **OPENAI_API_KEY** | API key for OpenAI services | No | None | Valid OpenAI API key |
+
+
+### Posthog
+<Info>
+Posthog configuration controls Keep's integration with the Posthog analytics platform. These settings are useful for tracking usage patterns and gathering insights about how your Keep instance is being used.
+</Info>
+
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **POSTHOG_API_KEY** | API key for PostHog analytics | No | "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ" | Valid PostHog API key |
+| **POSTHOG_DISABLED** | Disables PostHog integration | No | "false" | "true" or "false" |
+
+### Sentry
+<Info>
+Sentry configuration controls Keep's integration with Sentry for error monitoring and reporting. These settings are important for maintaining the stability and reliability of your Keep instance.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **SENTRY_DISABLED** | Disables Sentry integration | No | "false" | "true" or "false" |
+
+
+### Frigade
+
+<Info>
+Frigade configuration controls Keep's integration with the Frigade onboarding platform.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **FRIGADE_DISABLED** | Disables Frigade integration | No | "false" | "true" or "false" |
+
+
+### Ngrok
+<Info>
+Ngrok configuration enables secure tunneling to your Keep instance. These settings are particularly useful for development or when you need to expose your local Keep instance to the internet securely.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **USE_NGROK** | Enables ngrok for tunneling | No | "false" | "true" or "false" |
+| **NGROK_AUTH_TOKEN** | Authentication token for ngrok | No | None | Valid ngrok auth token |
+| **NGROK_DOMAIN** | Custom domain for ngrok | No | None | Valid domain name |
+
+
+### Elasticsearch
+<Info>
+Elasticsearch configuration controls Keep's integration with Elasticsearch for advanced search capabilities. These settings are important if you're using Elasticsearch to enhance Keep's search functionality and performance.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **ELASTIC_ENABLED** | Enables Elasticsearch integration | No | "false" | "true" or "false" |
+| **ELASTIC_API_KEY** | API key for Elasticsearch | Yes (if using Elasticsearch) | None | Valid Elasticsearch API key |
+| **ELASTIC_HOSTS** | Comma-separated list of Elasticsearch hosts | Yes (if using Elasticsearch) | None | Valid Elasticsearch host URLs |
+| **ELASTIC_USER** | Username for Elasticsearch basic auth | No | None | Valid username |
+| **ELASTIC_PASSWORD** | Password for Elasticsearch basic auth | No | None | Valid password |
+| **ELASTIC_INDEX_SUFFIX** | Suffix for Elasticsearch index names | Yes (for single tenant) | None | Any valid string |
+
+### Redis
+<Info>
+Redis configuration specifies the connection details for Keep's Redis instance. Redis is used for various caching and queueing purposes, making these settings important for optimizing Keep's performance and scalability.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **REDIS_HOST** | Redis server hostname | No | "localhost" | Valid hostname or IP address |
+| **REDIS_PORT** | Redis server port | No | 6379 | Valid port number |
+| **REDIS_USERNAME** | Redis username | No | None | Valid username string |
+| **REDIS_PASSWORD** | Redis password | No | None | Valid password string |
+
+### ARQ
+<Info>
+ARQ (Asynchronous Task Queue) configuration controls Keep's background task processing. These settings are crucial for managing how Keep handles long-running or scheduled tasks, ensuring efficient resource utilization and responsiveness.
+</Info>
+
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **ARQ_BACKGROUND_FUNCTIONS** | Comma-separated list of background functions to run | No | None | Valid function names |
+| **ARQ_KEEP_RESULT** | Duration to keep job results (in seconds) | No | 3600 | Positive integer |
+| **ARQ_EXPIRES** | Default job expiration time (in seconds) | No | 3600 | Positive integer |
+| **ARQ_EXPIRES_AI** | AI job expiration time (in seconds) | No | 3600000 | Positive integer |
+
+### Rate Limiting
+<Info>
+Rate limiting configuration controls how many requests can be made to Keep's API endpoints within a specified time period. This helps prevent abuse and ensures system stability.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **KEEP_USE_LIMITER** | Enables or disables rate limiting | No | "false" | "true" or "false" |
+| **KEEP_LIMIT_CONCURRENCY** | Sets the rate limit for API endpoints | No | "100/minute" | Format: "{number}/{interval}" where interval can be "second", "minute", "hour", "day" |
+
+<Note>
+Currently, rate limiting is applied to the following endpoints:
+- POST `/alerts/event` - Generic event ingestion endpoint
+- POST `/alerts/{provider_type}` - Provider-specific event ingestion endpoints
+
+These endpoints are rate-limited according to the `KEEP_LIMIT_CONCURRENCY` setting when `KEEP_USE_LIMITER` is enabled.
+</Note>
+
+## Frontend Environment Variables
+<Info>
+Frontend configuration variables control the behavior and features of Keep's user interface. These settings are crucial for customizing the frontend's appearance, functionality, and integration with the backend services.
+</Info>
+
+### General
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **API_URL** | Specifies the URL of the Keep backend API | Yes | None | Valid URL |
+
+### Authentication
+<Info>
+Authentication configuration determines how Keep verifies user identities and manages access control. These settings are essential for securing your Keep instance and integrating with various authentication providers.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **AUTH_TYPE** | Specifies the authentication type | No | "noauth" | "auth0", "keycloak", "db", "noauth", "oauth2proxy" |
+| **NEXTAUTH_URL** | URL for NextAuth authentication | Yes | None | Valid URL |
+| **NEXTAUTH_SECRET** | Secret key for NextAuth | Yes | None | Strong secret string
+
+### Posthog
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **POSTHOG_KEY** | PostHog API key for frontend analytics | No | None | Valid PostHog API key |
+| **POSTHOG_HOST** | PostHog Host for frontend analytics | No | None | Valid PostHog Host |
+
+### Pusher
+<Info>
+Pusher configuration is essential for enabling real-time updates and communication in Keep's frontend. These settings allow the frontend to establish a WebSocket connection with the Pusher server, facilitating instant updates and notifications.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **PUSHER_DISABLED** | Disables Pusher integration | No | "false" | "true" or "false" |
+| **PUSHER_HOST** | Hostname of the Pusher server | No | "localhost" | Valid hostname or IP address |
+| **PUSHER_PORT** | Port of the Pusher server | No | 6001 | Valid port number |
+| **PUSHER_APP_KEY** | Pusher application key | Yes (if Pusher enabled) | "keepappkey" | Valid Pusher App Key |
+| **PUSHER_CLUSTER** | Pusher cluster | No | None | Valid Pusher cluster name |

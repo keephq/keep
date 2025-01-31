@@ -2,7 +2,7 @@
 title: "Adding a new Provider"
 sidebarTitle: "Adding a New Provider"
 ---
-<Info>Under contstruction</Info>
+<Info>Under construction</Info>
 
 ### Basics
 
@@ -192,7 +192,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             )
         # else, if we are in an event context, use the event fingerprint
         elif self.context_manager.event_context:
-            # TODO: map all casses event_context is dict and update them to the DTO
+            # TODO: map all cases event_context is dict and update them to the DTO
             #       and remove this if statement
             if isinstance(self.context_manager.event_context, dict):
                 fingerprint = self.context_manager.event_context.get("fingerprint")
@@ -277,7 +277,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
         return results
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto | list[AlertDto]:
         raise NotImplementedError("format_alert() method not implemented")
 
     @classmethod
@@ -444,7 +446,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
     @staticmethod
     def parse_event_raw_body(raw_body: bytes) -> bytes:
         """
-        Parse the raw body of an event and create an ingestable dict from it.
+        Parse the raw body of an event and create an ingestible dict from it.
 
         For instance, in parseable, the "event" is just a string
         > b'Alert: Server side error triggered on teststream1\nMessage: server reporting status as 500\nFailing Condition: status column equal to abcd, 2 times'
@@ -457,7 +459,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             raw_body (bytes): The raw body of the incoming event (/event endpoint in alerts.py)
 
         Returns:
-            dict: Ingestable event
+            dict: Ingestible event
         """
         return raw_body
 

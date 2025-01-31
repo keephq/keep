@@ -1,10 +1,8 @@
-import { useState, useEffect } from "react";
-import { AlertDto } from "app/alerts/models";
-import { useSession } from "next-auth/react";
+import { useMemo } from "react";
+import { AlertDto } from "@/entities/alerts/model";
 import useSWR, { SWRConfiguration } from "swr";
-import { getApiURL } from "utils/apiUrl";
-import { fetcher } from "utils/fetcher";
 import { toDateObjectWithFallback } from "utils/helpers";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export type AuditEvent = {
   id: string;
@@ -16,8 +14,7 @@ export type AuditEvent = {
 };
 
 export const useAlerts = () => {
-  const apiUrl = getApiURL();
-  const { data: session } = useSession();
+  const api = useApi();
 
   const useAlertHistory = (
     selectedAlert?: AlertDto,
@@ -25,14 +22,14 @@ export const useAlerts = () => {
   ) => {
     return useSWR<AlertDto[]>(
       () =>
-        selectedAlert && session
-          ? `${apiUrl}/alerts/${
+        api.isReady() && selectedAlert
+          ? `/alerts/${
               selectedAlert.fingerprint
-            }/history/?provider_id=${selectedAlert.providerId}&provider_type=${
+            }/history?provider_id=${selectedAlert.providerId}&provider_type=${
               selectedAlert.source ? selectedAlert.source[0] : ""
             }`
           : null,
-      (url) => fetcher(url, session?.accessToken),
+      (url) => api.get(url),
       options
     );
   };
@@ -43,8 +40,8 @@ export const useAlerts = () => {
   ) => {
     return useSWR<AlertDto[]>(
       () =>
-        session && presetName ? `${apiUrl}/preset/${presetName}/alerts` : null,
-      (url) => fetcher(url, session?.accessToken),
+        api.isReady() && presetName ? `/preset/${presetName}/alerts` : null,
+      (url) => api.get(url),
       options
     );
   };
@@ -53,71 +50,66 @@ export const useAlerts = () => {
     presetName: string,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
-    const [alertsMap, setAlertsMap] = useState<Map<string, AlertDto>>(
-      new Map()
-    );
-
     const {
       data: alertsFromEndpoint = [],
       mutate,
       isLoading,
+      error: alertsError,
     } = useAllAlerts(presetName, options);
 
-    useEffect(() => {
-      if (alertsFromEndpoint.length) {
-        const newAlertsMap = new Map<string, AlertDto>(
-          alertsFromEndpoint.map((alertFromEndpoint) => [
-            alertFromEndpoint.fingerprint,
-            {
-              ...alertFromEndpoint,
-              lastReceived: toDateObjectWithFallback(
-                alertFromEndpoint.lastReceived
-              ),
-            },
-          ])
-        );
-
-        setAlertsMap(newAlertsMap);
+    const alertsValue = useMemo(() => {
+      if (!alertsFromEndpoint.length) {
+        return [];
       }
+
+      const alertsMap = new Map<string, AlertDto>(
+        alertsFromEndpoint.map((alertFromEndpoint) => [
+          alertFromEndpoint.fingerprint,
+          {
+            ...alertFromEndpoint,
+            lastReceived: toDateObjectWithFallback(
+              alertFromEndpoint.lastReceived
+            ),
+          },
+        ])
+      );
+      return Array.from(alertsMap.values());
     }, [alertsFromEndpoint]);
 
     return {
-      data: Array.from(alertsMap.values()),
+      data: alertsValue,
       mutate: mutate,
       isLoading: isLoading,
+      error: alertsError,
     };
   };
 
   const useMultipleFingerprintsAlertAudit = (
     fingerprints: string[] | undefined,
-    options: SWRConfiguration = { revalidateOnFocus: true }
+    options: SWRConfiguration = {
+      revalidateOnFocus: false,
+    }
   ) => {
     return useSWR<AuditEvent[]>(
       () =>
-        session && fingerprints && fingerprints?.length > 0
-          ? `${apiUrl}/alerts/audit`
+        api.isReady() && fingerprints && fingerprints?.length > 0
+          ? `/alerts/audit`
           : null,
-      (url) =>
-        fetcher(url, session?.accessToken, {
-          method: "POST",
-          body: JSON.stringify(fingerprints),
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-        }),
+      (url) => api.post(url, fingerprints),
       options
     );
   };
 
   const useAlertAudit = (
     fingerprint: string,
-    options: SWRConfiguration = { revalidateOnFocus: false }
+    options: SWRConfiguration = {
+      revalidateOnFocus: false,
+    }
   ) => {
     return useSWR<AuditEvent[]>(
       () =>
-        session && fingerprint ? `${apiUrl}/alerts/${fingerprint}/audit` : null,
-      (url) => fetcher(url, session?.accessToken),
+        api.isReady() && fingerprint ? `/alerts/${fingerprint}/audit` : null,
+      (url) => api.get(url),
       options
     );
   };

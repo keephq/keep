@@ -1,0 +1,57 @@
+/* Override styles for the MultiSelect component */
+.custom-multiselect .h-6 {
+  height: auto !important;
+}
+
+.custom-multiselect .flex-nowrap {
+  flex-wrap: wrap !important;
+}
+
+.custom-multiselect .overflow-x-scroll {
+  overflow-x: hidden !important;
+  overflow-y: visible !important; /* Allow vertical overflow to be visible */
+}
+
+.custom-multiselect .max-w-[300px],
+.custom-multiselect .lg:max-w-[300px] {
+  max-width: none !important;
+}
+
+.custom-multiselect .flex-nowrap > div {
+  max-width: 240px !important; /* Adjust max-width */
+  margin: 3.2px 0 !important; /* Adjust margin */
+  background-color: rgba(
+    234,
+    88,
+    12,
+    0.1
+  ) !important; /* Set background color with opacity */
+  color: rgb(234, 88, 12) !important; /* Set text color */
+  border-radius: 0.15rem !important; /* Adjust border radius */
+  display: inline-flex !important; /* Set display to inline-flex */
+  justify-content: center !important; /* Center content horizontally */
+  align-items: center !important; /* Center content vertically */
+  cursor: default !important; /* Set cursor to default */
+  padding: 0.2rem 0.5rem !important; /* Adjust padding */
+  font-size: 0.3rem !important; /* Adjust font size */
+  margin-left: 0.1rem !important; /* Adjust margin to the left */
+  border: 0.8px solid rgba(234, 88, 12, 0.2) !important; /* Adjust border color and opacity */
+  box-sizing: border-box !important; /* Set box-sizing to border-box */
+  box-shadow: 0 1.6px 3.2px rgba(0, 0, 0, 0.1) !important; /* Adjust shadow */
+}
+/* Apply styles only if the element is disabled */
+button.bg-tremor-background-subtle:disabled,
+button[disabled].bg-tremor-background-subtle {
+  background-color: rgba(
+    176,
+    176,
+    176,
+    0.212
+  ) !important; /* Set background color to gray */
+}
+
+.custom-multiselect .text-xs {
+  white-space: normal !important;
+  word-break: break-word !important;
+  padding: 2px 0 !important; /* Add padding to create space between lines */
+}

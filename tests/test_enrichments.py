@@ -1,4 +1,5 @@
 # test_enrichments.py
+import time
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -6,7 +7,7 @@ import pytest
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto
-from keep.api.models.db.alert import AlertActionType
+from keep.api.models.db.alert import ActionType
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.topology import TopologyService
@@ -46,6 +47,7 @@ def mock_alert_dto():
         severity="high",
         lastReceived="2021-01-01T00:00:00Z",
         source=["test_source"],
+        fingerprint="mock_fingerprint",
         labels={},
     )
 
@@ -194,9 +196,9 @@ def test_run_extraction_rules_handle_source_special_case(mock_session):
 
     # We'll mock chevron to return the exact content of 'source' to simulate the template rendering
     with patch("chevron.render", return_value="incorrect_format"):
-        # We need to mock 're.match' to return a match object with a groupdict that includes 'source'
+        # We need to mock 're.search' to return a match object with a groupdict that includes 'source'
         with patch(
-            "re.match",
+            "re.search",
             return_value=Mock(groupdict=lambda: {"source": "incorrect_format"}),
         ):
             enriched_event = enrichment_bl.run_extraction_rules(event)
@@ -519,6 +521,15 @@ def test_disposable_enrichment(db_session, client, test_app, mock_alert_dto):
         json=mock_alert_dto.dict(),
     )
 
+    while (
+        client.get(
+            f"/alerts/{mock_alert_dto.fingerprint}",
+            headers={"x-api-key": "some-key"},
+        ).status_code
+        != 200
+    ):
+        time.sleep(0.1)
+
     # 2. enrich with disposable alert
     response = client.post(
         "/alerts/enrich?dispose_on_new_alert=true",
@@ -537,6 +548,13 @@ def test_disposable_enrichment(db_session, client, test_app, mock_alert_dto):
         headers={"x-api-key": "some-key"},
     )
     alerts = response.json()
+    while alerts[0]["status"] != "acknowledged":
+        response = client.get(
+            "/preset/feed/alerts",
+            headers={"x-api-key": "some-key"},
+        )
+        alerts = response.json()
+
     assert len(alerts) == 1
     alert = alerts[0]
     assert alert["status"] == "acknowledged"
@@ -555,6 +573,13 @@ def test_disposable_enrichment(db_session, client, test_app, mock_alert_dto):
         headers={"x-api-key": "some-key"},
     )
     alerts = response.json()
+    while alerts[0]["status"] != "firing":
+        time.sleep(0.1)
+        response = client.get(
+            "/preset/feed/alerts",
+            headers={"x-api-key": "some-key"},
+        )
+        alerts = response.json()
     assert len(alerts) == 1
     alert = alerts[0]
     assert alert["status"] == "firing"
@@ -611,9 +636,102 @@ def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
                     "display_name": "Test Service",
                 },
                 action_callee="system",
-                action_type=AlertActionType.MAPPING_RULE_ENRICH,
+                action_type=ActionType.MAPPING_RULE_ENRICH,
                 action_description="Alert enriched with mapping from rule `topology_rule`",
                 session=mock_session,
                 force=False,
                 audit_enabled=True,
             )
+
+
+def test_run_mapping_rules_with_complex_matchers(mock_session, mock_alert_dto):
+    # Setup a mapping rule with complex matchers
+    rule = MappingRule(
+        id=1,
+        tenant_id="test_tenant",
+        priority=1,
+        matchers=["name && severity", "source"],
+        rows=[
+            {
+                "name": "Test Alert",
+                "severity": "high",
+                "service": "high_priority_service",
+            },
+            {
+                "name": "Test Alert",
+                "severity": "low",
+                "service": "low_priority_service",
+            },
+            {"source": "test_source", "service": "source_specific_service"},
+        ],
+        disabled=False,
+        type="csv",
+    )
+    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
+        rule
+    ]
+
+    enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
+
+    # Test case 1: Matches "name && severity"
+    mock_alert_dto.name = "Test Alert"
+    mock_alert_dto.severity = "high"
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert mock_alert_dto.service == "high_priority_service"
+
+    # Test case 2: Matches "name && severity" (different severity)
+    mock_alert_dto.severity = "low"
+    del mock_alert_dto.service
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert mock_alert_dto.service == "low_priority_service"
+
+    # Test case 3: Matches "source"
+    mock_alert_dto.name = "Different Alert"
+    mock_alert_dto.severity = "medium"
+    mock_alert_dto.source = ["test_source"]
+    del mock_alert_dto.service
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert mock_alert_dto.service == "source_specific_service"
+
+    # Test case 4: No match
+    mock_alert_dto.name = "Unmatched Alert"
+    mock_alert_dto.severity = "medium"
+    mock_alert_dto.source = ["different_source"]
+    del mock_alert_dto.service
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert not hasattr(mock_alert_dto, "service")
+
+
+def test_run_mapping_rules_enrichments_filtering(mock_session, mock_alert_dto):
+    # Setup a mapping rule with complex matchers and multiple enrichment fields
+    rule = MappingRule(
+        id=1,
+        tenant_id="test_tenant",
+        priority=1,
+        matchers=["name && severity"],
+        rows=[
+            {
+                "name": "Test Alert",
+                "severity": "high",
+                "service": "high_priority_service",
+                "team": "on-call",
+                "priority": "P1",
+            },
+        ],
+        disabled=False,
+        type="csv",
+    )
+    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
+        rule
+    ]
+
+    enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
+
+    # Test case: Matches "name && severity" and applies multiple enrichments
+    mock_alert_dto.name = "Test Alert"
+    mock_alert_dto.severity = "high"
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+
+    assert mock_alert_dto.service == "high_priority_service"
+    assert mock_alert_dto.team == "on-call"
+    assert mock_alert_dto.priority == "P1"

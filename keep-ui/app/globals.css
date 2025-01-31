@@ -2,17 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* TODO: use proper tailwind/css-variables solution */
+/**
+ * Taken from https://dev.to/jochemstoel/re-add-dark-mode-to-any-website-with-just-a-few-lines-of-code-phl
+ */
+html.workaround-dark {
+  filter: invert(100%) hue-rotate(180deg) contrast(80%) !important;
+  background: #fff;
+
+  & .line-content {
+    background-color: #fefefe;
+  }
+
+  & .workaround-dark-hidden {
+    display: none;
+  }
+
+  & .workaround-dark-visible {
+    display: block !important;
+  }
+}
 /* https://github.com/vercel/next.js/discussions/13387
  nextjs-portal {
     display: none;
 }
 */
 .rules-tooltip [role="tooltip"] {
-    @apply w-72; /* This sets the width to 16rem. Adjust the number as needed. */
-    @apply break-words; /* This will wrap long words if needed. */
-  }
+  @apply w-72; /* This sets the width to 16rem. Adjust the number as needed. */
+  @apply break-words; /* This will wrap long words if needed. */
+}
 
-  /* styles/globals.css */
+/* styles/globals.css */
 .loader {
   border: 4px solid #f3f3f3; /* Light grey */
   border-top: 4px solid #838885; /* Green */
@@ -25,7 +45,7 @@
 .page-container {
   @apply p-4 mx-auto w-full;
   @screen xl {
-    @apply p-10;
+    @apply p-6;
   }
 }
 
@@ -45,3 +65,51 @@
   }
 }
 
+.sliding-panel-container.active {
+  /* original value is ridiculous 15.000, overflowing toasts*/
+  @apply z-[1000] !important;
+}
+
+@keyframes scroll-shadow-left {
+  0% {
+    filter: none;
+  }
+  25%,
+  100% {
+    filter: drop-shadow(rgba(0, 0, 0, 0.07) -2px 9px 5px);
+  }
+}
+
+@keyframes scroll-shadow-right {
+  0%,
+  75% {
+    filter: drop-shadow(rgba(0, 0, 0, 0.07) 2px 9px 5px);
+  }
+  99% {
+    filter: none;
+  }
+}
+
+.pagination-button {
+  @apply shadow-tremor-input border-tremor-border bg-tremor-background;
+
+  &:not(:first-child) {
+    @apply -ml-px;
+  }
+
+  &:first-child:not(:last-child) {
+    @apply rounded-r-none;
+  }
+
+  &:last-child:not(:first-child) {
+    @apply rounded-l-none;
+  }
+
+  &:not(:first-child):not(:last-child) {
+    @apply rounded-l-none rounded-r-none;
+  }
+
+  &:not(:disabled):hover {
+    @apply bg-slate-100;
+  }
+}

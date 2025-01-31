@@ -3,22 +3,26 @@
 import { usePathname } from "next/navigation";
 import { Subtitle } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
-import { DoorbellNotification } from "components/icons";
 import { Session } from "next-auth";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
-import classNames from "classnames";
 import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
-import { MdNearbyError } from "react-icons/md";
+import { MdFlashOn } from "react-icons/md";
+import clsx from "clsx";
 
 type IncidentsLinksProps = { session: Session | null };
-const SHOW_N_INCIDENTS = 3;
 
 export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
   const isNOCRole = session?.userRole === "noc";
-  const { data: incidents, mutate } = useIncidents();
+  const { data: incidents, mutate } = useIncidents(
+    true,
+    25,
+    0,
+    { id: "creation_time", desc: false },
+    '',
+    {}
+  );
   usePollIncidents(mutate);
-  const currentPath = usePathname();
 
   if (isNOCRole) {
     return null;
@@ -33,10 +37,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
               INCIDENTS
             </Subtitle>
             <IoChevronUp
-              className={classNames(
-                { "rotate-180": open },
-                "mr-2 text-slate-400"
-              )}
+              className={clsx({ "rotate-180": open }, "mr-2 text-slate-400")}
             />
           </>
         )}
@@ -46,7 +47,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
         <li className="relative">
           <LinkWithIcon
             href="/incidents"
-            icon={DoorbellNotification}
+            icon={MdFlashOn}
             count={incidents?.count}
           >
             <Subtitle>Incidents</Subtitle>

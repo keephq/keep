@@ -1,10 +1,13 @@
 ---
-title: "Alert Deduplication"
+title: "Deduplication"
 ---
 
-## Overview
-
 Alert deduplication is a crucial feature in Keep that helps reduce noise and streamline incident management by grouping similar alerts together. This process ensures that your team isn't overwhelmed by a flood of notifications for what is essentially the same issue, allowing for more efficient and focused incident response.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/deduplication.png" />
+</Frame>
+
 
 ## Glossary
 
@@ -20,7 +23,7 @@ Alert deduplication is a crucial feature in Keep that helps reduce noise and str
 Partial deduplication allows you to specify certain fields (fingerprint fields) that are used to identify similar alerts. Alerts with matching values in these specified fields are considered duplicates and are grouped together. This method is flexible and allows for fine-tuned control over how alerts are deduplicated.
 
 Every provider integrated with Keep comes with pre-built partial deduplication rule tailored to that provider's specific alert format and common use cases.
-The default fingerprint fields defined using `FINGERPRINT_FIELDS` attributes in the provider code (e.g. [datadog provider](https://github.com/keephq/keep/blob/main/keep/providers/datadog_provider/datadog_provider.py#L188) or [gcp monitoring provder](https://github.com/keephq/keep/blob/main/keep/providers/gcpmonitoring_provider/gcpmonitoring_provider.py#L52)).
+The default fingerprint fields defined using `FINGERPRINT_FIELDS` attributes in the provider code (e.g. [datadog provider](https://github.com/keephq/keep/blob/main/keep/providers/datadog_provider/datadog_provider.py#L188) or [gcp monitoring provider](https://github.com/keephq/keep/blob/main/keep/providers/gcpmonitoring_provider/gcpmonitoring_provider.py#L52)).
 
 ### Full Deduplication
 When full deduplication is enabled, Keep will also discard exact same events (excluding ignore fields). This mode considers all fields of an alert when determining duplicates, except for explicitly ignored fields.

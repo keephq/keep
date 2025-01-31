@@ -5,6 +5,7 @@ SentryProvider is a class that provides a way to read data from Sentry.
 import dataclasses
 import datetime
 import logging
+from urllib.parse import urlparse
 
 import pydantic
 import requests
@@ -15,6 +16,7 @@ from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
@@ -32,12 +34,13 @@ class SentryProviderAuthConfig:
     organization_slug: str = dataclasses.field(
         metadata={"required": True, "description": "Sentry organization slug"}
     )
-    api_url: str = dataclasses.field(
+    api_url: HttpsUrl = dataclasses.field(
         metadata={
             "required": False,
             "description": "Sentry API URL",
             "hint": "https://sentry.io/api/0 (see https://docs.sentry.io/api/)",
             "sensitive": False,
+            "validation": "https_url"
         },
         default="https://sentry.io/api/0",
     )
@@ -76,7 +79,7 @@ class SentryProvider(BaseProvider):
         ),
     ]
     DEFAULT_TIMEOUT = 600
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     SEVERITIES_MAP = {
         "fatal": AlertSeverity.CRITICAL,
         "error": AlertSeverity.HIGH,
@@ -201,9 +204,11 @@ class SentryProvider(BaseProvider):
         return validated_scopes
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
-        logger.info(
+        logger.debug(
             "Formatting Sentry alert",
             extra={
                 "event": event,
@@ -247,10 +252,27 @@ class SentryProvider(BaseProvider):
             if isinstance(exception, dict) and "stacktrace" not in exception:
                 exception["stacktrace"] = False
 
-        logger.info("Formatted Sentry alert", extra={"event": event})
+        logger.debug("Formatted Sentry alert", extra={"event": event})
+        name = event_data.get("title", "").replace("'", "").replace('"', "")
+        message = (
+            event_data.get("metadata", {})
+            .get("value", "")
+            .replace("'", "")
+            .replace('"', "")
+        )
+
+        # Validate URL
+        if url:
+            try:
+                result = urlparse(url)
+                if not all([result.scheme, result.netloc]):
+                    url = None
+            except Exception:
+                url = None
+
         return AlertDto(
             id=event_data.pop("event_id"),
-            name=event_data.get("title"),
+            name=name,
             status=status,
             lastReceived=str(last_received),
             service=tags_as_dict.get("server_name"),
@@ -258,7 +280,7 @@ class SentryProvider(BaseProvider):
             environment=event_data.pop(
                 "environment", tags_as_dict.pop("environment", "unknown")
             ),
-            message=event_data.get("metadata", {}).get("value"),
+            message=message,
             description=event.get("culprit", ""),
             pushed=True,
             severity=severity,

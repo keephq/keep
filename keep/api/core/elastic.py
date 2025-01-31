@@ -52,6 +52,9 @@ class ElasticClient:
 
         self.api_key = api_key or os.environ.get("ELASTIC_API_KEY")
         self.hosts = hosts or os.environ.get("ELASTIC_HOSTS").split(",")
+        self.verify_certs = (
+            os.environ.get("ELASTIC_VERIFY_CERTS", "true").lower() == "true"
+        )
 
         basic_auth = basic_auth or (
             os.environ.get("ELASTIC_USER"),
@@ -73,12 +76,18 @@ class ElasticClient:
         if any(basic_auth):
             self.logger.debug("Using basic auth for Elastic")
             self._client = Elasticsearch(
-                basic_auth=basic_auth, hosts=self.hosts, **kwargs
+                basic_auth=basic_auth,
+                hosts=self.hosts,
+                verify_certs=self.verify_certs,
+                **kwargs,
             )
         else:
             self.logger.debug("Using API key for Elastic")
             self._client = Elasticsearch(
-                api_key=self.api_key, hosts=self.hosts, **kwargs
+                api_key=self.api_key,
+                hosts=self.hosts,
+                verify_certs=self.verify_certs,
+                **kwargs,
             )
 
     @property
@@ -195,11 +204,11 @@ class ElasticClient:
             return
 
         try:
-            # change severity to number so we can sort by it
-            alert.severity = AlertSeverity(alert.severity.lower()).order
             # query
             alert_dict = alert.dict()
             alert_dict["dismissed"] = bool(alert_dict["dismissed"])
+            # change severity to number so we can sort by it
+            alert_dict["severity"] = AlertSeverity(alert.severity.lower()).order
             self._client.index(
                 index=self.alerts_index,
                 body=alert_dict,

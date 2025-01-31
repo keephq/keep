@@ -1,17 +1,14 @@
-import { Group } from "app/settings/models";
-import { useSession } from "next-auth/react";
+import { Group } from "@/app/(keep)/settings/models";
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";
-import { getApiURL } from "utils/apiUrl";
-import { fetcher } from "utils/fetcher";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export const useGroups = (options: SWRConfiguration = {}) => {
-  const apiUrl = getApiURL();
-  const { data: session } = useSession();
+  const api = useApi();
 
   return useSWRImmutable<Group[]>(
-    () => (session ? `${apiUrl}/auth/groups` : null),
-    (url) => fetcher(url, session?.accessToken),
+    api.isReady() ? "/auth/groups" : null,
+    (url) => api.get(url),
     options
   );
 };

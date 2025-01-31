@@ -1,4 +1,5 @@
 "use client";
+
 import {
   DndContext,
   useSensor,
@@ -7,27 +8,22 @@ import {
   TouchSensor,
   rectIntersection,
 } from "@dnd-kit/core";
-import { SortableContext, arrayMove } from "@dnd-kit/sortable";
+import { arrayMove, SortableContext } from "@dnd-kit/sortable";
 import { usePathname, useRouter } from "next/navigation";
-import { DashboardLink } from "./DashboardLink";
 import { Subtitle, Button, Badge, Text } from "@tremor/react";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
-import classNames from "classnames";
+import clsx from "clsx";
 import { useDashboards } from "utils/hooks/useDashboards";
-import { getApiURL } from "utils/apiUrl";
-
-import { Session } from "next-auth";
+import { useApi } from "@/shared/lib/hooks/useApi";
 import { PlusIcon } from "@radix-ui/react-icons";
+import { DashboardLink } from "./DashboardLink";
 
-type DashboardProps = {
-  session: Session | null;
-};
-
-export const DashboardLinks = ({ session }: DashboardProps) => {
+export const DashboardLinks = () => {
   const { dashboards = [], isLoading, error, mutate } = useDashboards();
-  const pathname = usePathname();
+  const api = useApi();
   const router = useRouter();
+  const pathname = usePathname();
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(TouchSensor));
 
@@ -51,13 +47,7 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
     );
     if (isDeleteConfirmed) {
       try {
-        const apiUrl = getApiURL();
-        await fetch(`${apiUrl}/dashboard/${id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${session!.accessToken}`,
-          },
-        });
+        await api.delete(`/dashboard/${id}`);
         mutate(
           dashboards.filter((dashboard) => dashboard.id !== id),
           false
@@ -105,7 +95,7 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
                   Beta
                 </Badge>
                 <IoChevronUp
-                  className={classNames(
+                  className={clsx(
                     { "rotate-180": open },
                     "mr-2 text-slate-400"
                   )}
@@ -125,26 +115,34 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
           onDragEnd={onDragEnd}
         >
           <SortableContext items={dashboards.map((dashboard) => dashboard.id)}>
-            {dashboards && dashboards.length ?
+            {dashboards && dashboards.length ? (
               dashboards.map((dashboard) => (
                 <DashboardLink
                   key={dashboard.id}
                   dashboard={dashboard}
                   pathname={pathname}
                   deleteDashboard={deleteDashboard}
+                  titleClassName="max-w-[150px] overflow-hidden overflow-ellipsis"
                 />
-              )): <Text className="text-xs">Dashboards will appear here when saved.</Text> }
+              ))
+            ) : (
+              <Text className="text-xs max-w-[200px] px-2">
+                Dashboards will appear here when saved.
+              </Text>
+            )}
           </SortableContext>
         </DndContext>
-        <div className="flex flex-col justify-center items-center">
+        {/* TODO: use link instead of button */}
         <Button
           size="xs"
           color="orange"
           variant="secondary"
-          className="h-5"
+          className="h-5 mx-2"
           onClick={handleCreateDashboard}
           icon={PlusIcon}
-        /></div>
+        >
+          Add Dashboard
+        </Button>
       </Disclosure.Panel>
     </Disclosure>
   );

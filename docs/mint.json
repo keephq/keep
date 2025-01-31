@@ -32,134 +32,186 @@
       "group": "Overview",
       "pages": [
         "overview/introduction",
+        "overview/playground",
         "overview/usecases",
-        "overview/comparisons",
-        "overview/keyconcepts",
-        "overview/ruleengine",
-        "overview/presets",
         {
-          "group": "Enrichments",
+          "group": "Key Concepts",
           "pages": [
-            "overview/enrichment/extraction",
-            "overview/enrichment/mapping"
+            "overview/glossary",
+            "overview/cel",
+            "overview/fingerprints",
+            "overview/alertseverityandstatus",
+            "overview/howdoeskeepgetmyalerts",
+            "overview/comparisons"
           ]
-        },
-        "overview/maintenance-windows",
+        }
+      ]
+    },
+    {
+      "group": "Alerts",
+      "pages": [
+        "alerts/overview",
+        "alerts/table",
+        "alerts/actionmenu",
+        "alerts/sidebar",
+        "alerts/presets",
+        "alerts/sound"
+      ]
+    },
+    {
+      "group": "Incidents",
+      "pages": ["incidents/overview", "incidents/facets"]
+    },
+    {
+      "group": "AIOps",
+      "pages": [
+        "overview/correlation",
         "overview/deduplication",
-        "overview/examples"
+        "overview/enrichment/extraction",
+        "overview/enrichment/mapping",
+        "overview/servicetopology",
+        "overview/maintenance-windows",
+        "overview/workflow-automation"
       ]
     },
     {
-      "group": "Development",
-      "pages": ["development/getting-started", "development/external-url"]
-    },
-    {
-      "group": "Deployment",
+      "group": "Workflow Automation",
       "pages": [
+        "workflows/overview",
         {
-          "group": "Authentication",
+          "group": "Syntax",
           "pages": [
-            "deployment/authentication/overview",
-            "deployment/authentication/no-auth",
-            "deployment/authentication/db-auth",
-            "deployment/authentication/auth0-auth",
-            "deployment/authentication/keycloak-auth"
+            "workflows/syntax/triggers",
+            "workflows/syntax/steps-and-actions",
+            "workflows/syntax/conditions",
+            "workflows/syntax/functions",
+            "workflows/syntax/context",
+            "workflows/syntax/providers",
+            "workflows/syntax/foreach",
+            "workflows/syntax/enrichment"
           ]
         },
         {
-          "group": "Provision",
+          "group": "Examples",
           "pages": [
-            "deployment/provision/overview",
-            "deployment/provision/provider",
-            "deployment/provision/workflow"
+            "workflows/examples/autosupress",
+            "workflows/examples/buisnesshours",
+            "workflows/examples/create-servicenow-tickets",
+            "workflows/examples/highsev",
+            "workflows/examples/update-servicenow-tickets"
           ]
-        },
-        "deployment/secret-manager",
-        "deployment/docker",
-        "deployment/kubernetes",
-        "deployment/openshift",
-        "deployment/ecs",
-        "deployment/stress-testing"
+        }
       ]
     },
     {
-      "group": "Platform",
+      "group": "Alert Evaluation Engine",
       "pages": [
-        "platform/overview",
-        "platform/alerts",
-        "platform/alertseverityandstatus",
-        "platform/settings",
-        "platform/support"
+        "alertevaluation/overview",
+        {
+          "group": "Examples",
+          "pages": [
+            "alertevaluation/examples/victoriametricssingle",
+            "alertevaluation/examples/victoriametricsmulti"
+          ]
+        }
       ]
     },
     {
       "group": "Providers",
       "pages": [
         "providers/overview",
-        "providers/fingerprints",
         "providers/adding-a-new-provider",
-        "providers/getting-started",
-        "providers/what-is-a-provider",
         {
           "group": "Supported Providers",
           "pages": [
             "providers/documentation/aks-provider",
+            "providers/documentation/amazonsqs-provider",
+            "providers/documentation/anthropic-provider",
             "providers/documentation/appdynamics-provider",
+            "providers/documentation/s3-provider",
+            "providers/documentation/argocd-provider",
+            "providers/documentation/auth0-provider",
             "providers/documentation/axiom-provider",
             "providers/documentation/azuremonitoring-provider",
+            "providers/documentation/bash-provider",
+            "providers/documentation/bigquery-provider",
             "providers/documentation/centreon-provider",
+            "providers/documentation/checkmk-provider",
+            "providers/documentation/checkly-provider",
+            "providers/documentation/cilium-provider",
             "providers/documentation/clickhouse-provider",
             "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
             "providers/documentation/coralogix-provider",
             "providers/documentation/datadog-provider",
+            "providers/documentation/deepseek-provider",
             "providers/documentation/discord-provider",
+            "providers/documentation/dynatrace-provider",
+            "providers/documentation/eks-provider",
             "providers/documentation/elastic-provider",
             "providers/documentation/gcpmonitoring-provider",
+            "providers/documentation/gemini-provider",
+            "providers/documentation/github-provider",
             "providers/documentation/github_workflows_provider",
             "providers/documentation/gitlab-provider",
             "providers/documentation/gitlabpipelines-provider",
+            "providers/documentation/gke-provider",
             "providers/documentation/google_chat-provider",
             "providers/documentation/grafana-provider",
             "providers/documentation/grafana_incident-provider",
             "providers/documentation/grafana_oncall-provider",
+            "providers/documentation/graylog-provider",
+            "providers/documentation/grok-provider",
             "providers/documentation/http-provider",
             "providers/documentation/ilert-provider",
             "providers/documentation/incidentio-provider",
             "providers/documentation/incidentmanager-provider",
+            "providers/documentation/jira-on-prem-provider",
             "providers/documentation/jira-provider",
+            "providers/documentation/kafka-provider",
+            "providers/documentation/keep-provider",
             "providers/documentation/kibana-provider",
             "providers/documentation/kubernetes-provider",
             "providers/documentation/linear_provider",
             "providers/documentation/linearb-provider",
+            "providers/documentation/llamacpp-provider",
             "providers/documentation/mailchimp-provider",
+            "providers/documentation/mailgun-provider",
             "providers/documentation/mattermost-provider",
             "providers/documentation/microsoft-planner-provider",
             "providers/documentation/mock-provider",
+            "providers/documentation/monday-provider",
             "providers/documentation/mongodb-provider",
             "providers/documentation/mysql-provider",
             "providers/documentation/netdata-provider",
             "providers/documentation/new-relic-provider",
             "providers/documentation/ntfy-provider",
+            "providers/documentation/ollama-provider",
+            "providers/documentation/openai-provider",
             "providers/documentation/openobserve-provider",
             "providers/documentation/openshift-provider",
             "providers/documentation/opsgenie-provider",
             "providers/documentation/pagerduty-provider",
             "providers/documentation/pagertree-provider",
+            "providers/documentation/parseable-provider",
             "providers/documentation/pingdom-provider",
             "providers/documentation/planner-provider",
             "providers/documentation/postgresql-provider",
+            "providers/documentation/prometheus-provider",
             "providers/documentation/pushover-provider",
+            "providers/documentation/python-provider",
             "providers/documentation/quickchart-provider",
             "providers/documentation/redmine-provider",
             "providers/documentation/resend-provider",
             "providers/documentation/rollbar-provider",
             "providers/documentation/sendgrid-provider",
             "providers/documentation/sentry-provider",
+            "providers/documentation/service-now-provider",
             "providers/documentation/signalfx-provider",
             "providers/documentation/signl4-provider",
             "providers/documentation/site24x7-provider",
             "providers/documentation/slack-provider",
+            "providers/documentation/smtp-provider",
             "providers/documentation/snowflake-provider",
             "providers/documentation/splunk-provider",
             "providers/documentation/squadcast-provider",
@@ -182,61 +234,55 @@
       ]
     },
     {
-      "group": "Workflows",
+      "group": "Deployment",
       "pages": [
-        "workflows/overview",
+        "deployment/configuration",
+        "deployment/monitoring",
         {
-          "group": "Syntax",
+          "group": "Authentication",
           "pages": [
-            "workflows/syntax/basic-syntax",
-            "workflows/syntax/foreach-syntax",
-            "workflows/syntax/context-syntax"
+            "deployment/authentication/overview",
+            "deployment/authentication/no-auth",
+            "deployment/authentication/db-auth",
+            "deployment/authentication/auth0-auth",
+            "deployment/authentication/azuread-auth",
+            "deployment/authentication/keycloak-auth",
+            "deployment/authentication/oauth2proxy-auth"
           ]
         },
         {
-          "group": "Conditions",
+          "group": "Provision",
           "pages": [
-            "workflows/conditions/what-is-a-condition",
-            "workflows/conditions/threshold",
-            "workflows/conditions/assert",
-            "workflows/conditions/stddev"
+            "deployment/provision/overview",
+            "deployment/provision/provider",
+            "deployment/provision/workflow",
+            "deployment/provision/dashboard"
           ]
         },
+        "deployment/secret-store",
         {
-          "group": "Functions",
+          "group": "Deploy On",
           "pages": [
-            "workflows/functions/what-is-a-function",
-            "workflows/functions/all",
-            "workflows/functions/add-time-to-date",
-            "workflows/functions/diff",
-            "workflows/functions/len",
-            "workflows/functions/split",
-            "workflows/functions/first",
-            "workflows/functions/utcnow",
-            "workflows/functions/to-utc",
-            "workflows/functions/datetime-compare",
-            "workflows/functions/encode",
-            "workflows/functions/last",
-            "workflows/functions/lowercase",
-            "workflows/functions/uppercase"
+            "deployment/docker",
+            {
+              "group": "Kubernetes",
+              "pages": [
+                "deployment/kubernetes/overview",
+                "deployment/kubernetes/installation",
+                "deployment/kubernetes/architecture",
+                "deployment/kubernetes/openshift"
+              ]
+            },
+            "deployment/openshift",
+            "deployment/ecs"
           ]
         },
-        {
-          "group": "Throttles",
-          "pages": [
-            "workflows/throttles/what-is-a-throttle",
-            "workflows/throttles/one-until-resolved"
-          ]
-        },
-        {
-          "group": "Examples",
-          "pages": [
-            "workflows/examples/multi-step-alert",
-            "workflows/examples/reusable-action-alert"
-          ]
-        },
-        "workflows/state"
+        "deployment/stress-testing"
       ]
+    },
+    {
+      "group": "Development",
+      "pages": ["development/getting-started", "development/external-url"]
     },
     {
       "group": "Keep API",
@@ -280,7 +326,13 @@
         },
         {
           "group": "topology",
-          "pages": ["api-ref/topology/get-topology-data"]
+          "pages": [
+            "api-ref/topology/get-topology-data",
+            "api-ref/topology/create-application",
+            "api-ref/topology/delete-application",
+            "api-ref/topology/get-applications",
+            "api-ref/topology/update-application"
+          ]
         },
         {
           "group": "alerts",
@@ -293,18 +345,40 @@
             "api-ref/alerts/webhook-challenge",
             "api-ref/alerts/receive-event",
             "api-ref/alerts/get-alert",
+            "api-ref/alerts/get-multiple-fingerprint-alert-audit",
             "api-ref/alerts/enrich-alert",
             "api-ref/alerts/unenrich-alert",
             "api-ref/alerts/search-alerts",
             "api-ref/alerts/get-alert-audit",
-            "api-ref/alerts/get-alerts"
+            "api-ref/alerts/get-alerts",
+            "api-ref/alerts/get-alert-quality"
+          ]
+        },
+        {
+          "group": "deduplications",
+          "pages": [
+            "api-ref/deduplications/create-deduplication-rule",
+            "api-ref/deduplications/delete-deduplication-rule",
+            "api-ref/deduplications/get-deduplication-fields",
+            "api-ref/deduplications/get-deduplications",
+            "api-ref/deduplications/update-deduplication-rule"
+          ]
+        },
+        {
+          "group": "maintenance",
+          "pages": [
+            "api-ref/maintenance/create-maintenance-rule",
+            "api-ref/maintenance/delete-maintenance-rule",
+            "api-ref/maintenance/get-maintenance-rules",
+            "api-ref/maintenance/update-maintenance-rule"
           ]
         },
         {
           "group": "incidents",
           "pages": [
-            "api-ref/incidents/get-all-incidents",
+            "api-ref/incidents/change-incident-status",
             "api-ref/incidents/create-incident-endpoint",
+            "api-ref/incidents/get-all-incidents",
             "api-ref/incidents/get-incident",
             "api-ref/incidents/update-incident",
             "api-ref/incidents/delete-incident",
@@ -312,7 +386,16 @@
             "api-ref/incidents/get-incident-alerts",
             "api-ref/incidents/add-alerts-to-incident",
             "api-ref/incidents/delete-alerts-from-incident",
-            "api-ref/incidents/confirm-incident"
+            "api-ref/incidents/confirm-incident",
+            "api-ref/incidents/add-comment",
+            "api-ref/incidents/get-future-incidents-for-an-incident",
+            "api-ref/incidents/get-incident-workflows",
+            "api-ref/incidents/get-incidents-meta",
+            "api-ref/incidents/merge-incidents",
+            "api-ref/incidents/commit-with-ai",
+            "api-ref/incidents/create-incident",
+            "api-ref/incidents/create-with-ai",
+            "api-ref/incidents/receive-event"
           ]
         },
         {
@@ -344,6 +427,7 @@
             "api-ref/workflows/create-workflow-from-body",
             "api-ref/workflows/get-random-workflow-templates",
             "api-ref/workflows/get-workflow-by-id",
+            "api-ref/workflows/get-workflow-by-id-1",
             "api-ref/workflows/update-workflow-by-id",
             "api-ref/workflows/delete-workflow-by-id",
             "api-ref/workflows/get-raw-workflow-by-id",
@@ -449,7 +533,8 @@
             "api-ref/dashboard/read-dashboards",
             "api-ref/dashboard/create-dashboard",
             "api-ref/dashboard/update-dashboard",
-            "api-ref/dashboard/delete-dashboard"
+            "api-ref/dashboard/delete-dashboard",
+            "api-ref/dashboard/get-metric-widgets"
           ]
         },
         {

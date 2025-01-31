@@ -14,6 +14,7 @@ import typing
 from dataclasses import fields
 from typing import get_args
 
+from keep.api.core.config import config
 from keep.api.core.db import (
     get_consumer_providers,
     get_installed_providers,
@@ -22,10 +23,17 @@ from keep.api.core.db import (
 from keep.api.models.alert import DeduplicationRuleDto
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider
+from keep.providers.base.base_provider import (
+    BaseIncidentProvider,
+    BaseProvider,
+    BaseTopologyProvider,
+)
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.models.provider_method import ProviderMethodDTO, ProviderMethodParam
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
+
+PROVIDERS_CACHE_FILE = os.environ.get("PROVIDERS_CACHE_FILE", "providers_cache.json")
+READ_ONLY_MODE = config("KEEP_READ_ONLY", default="false") == "true"
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +44,12 @@ class ProviderConfigurationException(Exception):
 
 class ProvidersFactory:
     _loaded_providers_cache = None
+    _loaded_deduplication_rules_cache = None
 
     @staticmethod
-    def get_provider_class(provider_type: str) -> BaseProvider:
+    def get_provider_class(
+        provider_type: str,
+    ) -> BaseProvider | BaseTopologyProvider | BaseIncidentProvider:
         provider_type_split = provider_type.split(
             "."
         )  # e.g. "cloudwatch.logs" or "cloudwatch.metrics"
@@ -72,7 +83,7 @@ class ProvidersFactory:
         provider_type: str,
         provider_config: dict,
         **kwargs,
-    ) -> BaseProvider:
+    ) -> BaseProvider | BaseTopologyProvider | BaseIncidentProvider:
         """
         Get the instantiated provider class according to the provider type.
 
@@ -211,11 +222,21 @@ class ProvidersFactory:
                         expected_values=expected_values,
                     )
                 )
+            if "func_params" in method.dict():
+                if method.func_params:
+                    # this should not happen
+                    logging.getLogger(__name__).warning(
+                        f"Provider {provider_class.__name__} method {method.func_name} already has func_params"
+                    )
+                # remove it, we already adding it via func_params=func_params
+                else:
+                    delattr(method, "func_params")
+
             methods.append(ProviderMethodDTO(**method.dict(), func_params=func_params))
         return methods
 
     @staticmethod
-    def get_all_providers() -> list[Provider]:
+    def get_all_providers(ignore_cache_file: bool = False) -> list[Provider]:
         """
         Get all the providers.
 
@@ -226,6 +247,22 @@ class ProvidersFactory:
         # use the cache if exists
         if ProvidersFactory._loaded_providers_cache:
             logger.debug("Using cached providers")
+            return ProvidersFactory._loaded_providers_cache
+
+        if os.path.exists(PROVIDERS_CACHE_FILE) and not ignore_cache_file:
+            logger.info(
+                "Loading providers from cache file",
+                extra={"file": PROVIDERS_CACHE_FILE},
+            )
+            with open(PROVIDERS_CACHE_FILE, "r") as f:
+                providers_cache = json.load(f)
+                ProvidersFactory._loaded_providers_cache = [
+                    Provider(**provider) for provider in providers_cache
+                ]
+            logger.info(
+                "Providers loaded from cache file",
+                extra={"file": PROVIDERS_CACHE_FILE},
+            )
             return ProvidersFactory._loaded_providers_cache
 
         logger.info("Loading providers")
@@ -265,7 +302,12 @@ class ProvidersFactory:
                 can_setup_webhook = (
                     issubclass(provider_class, BaseProvider)
                     and provider_class.__dict__.get("setup_webhook") is not None
+                ) or (
+                    issubclass(provider_class, BaseIncidentProvider)
+                    and provider_class.__dict__.get("setup_incident_webhook")
+                    is not None
                 )
+                webhook_required = provider_class.WEBHOOK_INSTALLATION_REQUIRED
                 supports_webhook = (
                     issubclass(provider_class, BaseProvider)
                     and provider_class.__dict__.get("webhook_template") is not None
@@ -312,6 +354,7 @@ class ProvidersFactory:
                 oauth2_url = provider_class.__dict__.get("OAUTH2_URL")
                 docs = provider_class.__doc__
                 can_fetch_topology = issubclass(provider_class, BaseTopologyProvider)
+                can_fetch_incidents = issubclass(provider_class, BaseIncidentProvider)
 
                 provider_tags = set(provider_class.PROVIDER_TAGS)
                 if can_fetch_topology:
@@ -326,9 +369,17 @@ class ProvidersFactory:
                     provider_tags.add("alert")
                 if can_notify and "ticketing" not in provider_tags:
                     provider_tags.add("messaging")
+                if can_fetch_incidents and "incident" not in provider_tags:
+                    provider_tags.add("incident")
                 provider_tags = list(provider_tags)
 
-                provider_methods = ProvidersFactory.__get_methods(provider_class)
+                try:
+                    provider_methods = ProvidersFactory.__get_methods(provider_class)
+                except Exception as e:
+                    logger.warning(
+                        f"Could not get provider {provider_directory} methods. ({str(e)})"
+                    )
+                    provider_methods = []
                 # if the provider has a PROVIDER_DISPLAY_NAME, use it, otherwise use the provider type
                 provider_display_name = getattr(
                     provider_class,
@@ -359,6 +410,7 @@ class ProvidersFactory:
                         notify_params=notify_params,
                         query_params=query_params,
                         can_setup_webhook=can_setup_webhook,
+                        webhook_required=webhook_required,
                         supports_webhook=supports_webhook,
                         provider_description=provider_description,
                         oauth2_url=oauth2_url,
@@ -368,11 +420,20 @@ class ProvidersFactory:
                         tags=provider_tags,
                         alertExample=alert_example,
                         default_fingerprint_fields=default_fingerprint_fields,
+                        categories=provider_class.PROVIDER_CATEGORY,
+                        coming_soon=provider_class.PROVIDER_COMING_SOON,
+                        health=provider_class.has_health_report(),
                     )
                 )
             except ModuleNotFoundError:
                 logger.error(
                     f"Cannot import provider {provider_directory}, module not found."
+                )
+                continue
+            # for some providers that depends on grpc like cilium provider, this might fail on imports not from Keep (such as the docs script)
+            except TypeError as e:
+                logger.warning(
+                    f"Cannot import provider {provider_directory}, unexpected error. ({str(e)})"
                 )
                 continue
 
@@ -384,6 +445,7 @@ class ProvidersFactory:
         tenant_id: str,
         all_providers: list[Provider] | None = None,
         include_details: bool = True,
+        override_readonly: bool = False,
     ) -> list[Provider]:
         if all_providers is None:
             all_providers = ProvidersFactory.get_all_providers()
@@ -393,14 +455,14 @@ class ProvidersFactory:
         context_manager = ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         for p in installed_providers:
-            provider: Provider = next(
+            provider: Provider | None = next(
                 filter(
                     lambda provider: provider.type == p.type,
                     all_providers,
                 ),
                 None,
             )
-            if not provider:
+            if provider is None:
                 logger.warning(f"Installed provider {p.type} does not exist anymore?")
                 continue
             provider_copy = provider.copy()
@@ -409,6 +471,8 @@ class ProvidersFactory:
             provider_copy.installation_time = p.installation_time
             provider_copy.last_pull_time = p.last_pull_time
             provider_copy.provisioned = p.provisioned
+            provider_copy.pulling_enabled = p.pulling_enabled
+            provider_copy.installed = True
             try:
                 provider_auth = {"name": p.name}
                 if include_details:
@@ -417,6 +481,13 @@ class ProvidersFactory:
                             secret_name=f"{tenant_id}_{p.type}_{p.id}", is_json=True
                         )
                     )
+                if READ_ONLY_MODE and not override_readonly:
+                    if "authentication" in provider_auth:
+                        provider_auth["authentication"] = {
+                            key: "demo"
+                            for key in provider_auth["authentication"]
+                            if isinstance(provider_auth["authentication"][key], str)
+                        }
             # Somehow the provider is installed but the secret is missing, probably bug in deletion
             # TODO: solve its root cause
             except Exception:
@@ -450,6 +521,20 @@ class ProvidersFactory:
         return initialized_consumer_providers
 
     @staticmethod
+    def get_provider_config(
+        tenant_id: str,
+        provider_id: str,
+        provider_type: str,
+        context_manager: ContextManager | None = None,
+    ) -> dict:
+        context_manager = context_manager or ContextManager(tenant_id=tenant_id)
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+        return secret_manager.read_secret(
+            secret_name=f"{tenant_id}_{provider_type}_{provider_id}",
+            is_json=True,
+        )
+
+    @staticmethod
     def get_installed_provider(
         tenant_id: str, provider_id: str, provider_type: str
     ) -> BaseProvider:
@@ -465,10 +550,11 @@ class ProvidersFactory:
             BaseProvider: The instantiated provider class.
         """
         context_manager = ContextManager(tenant_id=tenant_id)
-        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-        provider_config = secret_manager.read_secret(
-            secret_name=f"{tenant_id}_{provider_type}_{provider_id}",
-            is_json=True,
+        provider_config = ProvidersFactory.get_provider_config(
+            tenant_id=tenant_id,
+            provider_id=provider_id,
+            provider_type=provider_type,
+            context_manager=context_manager,
         )
         provider_class = ProvidersFactory.get_provider(
             context_manager=context_manager,
@@ -530,6 +616,9 @@ class ProvidersFactory:
         Returns:
             list: The default deduplications for each provider.
         """
+        if ProvidersFactory._loaded_deduplication_rules_cache:
+            return ProvidersFactory._loaded_deduplication_rules_cache
+
         default_deduplications = []
         all_providers = ProvidersFactory.get_all_providers()
 
@@ -553,7 +642,9 @@ class ProvidersFactory:
                     full_deduplication=False,
                     # not relevant for default deduplication rules
                     ignore_fields=[],
+                    is_provisioned=False,
                 )
                 default_deduplications.append(deduplication_dto)
 
+        ProvidersFactory._loaded_deduplication_rules_cache = default_deduplications
         return default_deduplications

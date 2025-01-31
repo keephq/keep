@@ -1,94 +1,85 @@
-import {
-  useEffect,
-  useState,
-  useCallback,
-} from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Edge, useReactFlow } from "@xyflow/react";
-import useStore, { Definition, ReactFlowDefinition, V2Step } from "../../app/workflows/builder/builder-store";
-import { FlowNode } from "../../app/workflows/builder/builder-store";
-import { Provider } from "app/providers/providers";
-import ELK from 'elkjs/lib/elk.bundled.js';
+import useStore from "@/app/(keep)/workflows/builder/builder-store";
+import dagre, { graphlib } from "@dagrejs/dagre";
 import { processWorkflowV2, getTriggerStep } from "utils/reactFlow";
+import {
+  Definition,
+  FlowNode,
+  ReactFlowDefinition,
+  V2Step,
+} from "@/app/(keep)/workflows/builder/types";
 
-const layoutOptions = {
-  "elk.nodeLabels.placement": "INSIDE V_CENTER H_BOTTOM",
-  "elk.algorithm": "layered",
-  "elk.direction": "BOTTOM",
-  "org.eclipse.elk.layered.layering.strategy": "INTERACTIVE",
-  "elk.edgeRouting": "ORTHOGONAL",
-  "elk.layered.unnecessaryBendpoints": false,
-  "elk.layered.spacing.edgeNodeBetweenLayers": "70",
-  "org.eclipse.elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED",
-  "org.eclipse.elk.layered.cycleBreaking.strategy": "DEPTH_FIRST",
-  "elk.insideSelfLoops.activate": true,
-  "separateConnectedComponents": "false",
-  "spacing.componentComponent": "80",
-  "spacing": "80",
-  "elk.spacing.nodeNodeBetweenLayers": "80",
-  "elk.spacing.nodeNode": "120",
-  "elk.layered.spacing.nodeNodeBetweenLayers": "80",
-  "portConstraints": "FIXED_ORDER",
-  "nodeSize.constraints": "[MINIMUM_SIZE]",
-  "elk.alignment": "CENTER",
-  "elk.spacing.edgeNodeBetweenLayers": "70.0",
-  "org.eclipse.elk.layoutAncestors": "true",
-  "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
-  "elk.layered.nodePlacement.outerSpacing": "30",
-  "elk.layered.nodePlacement.outerPadding": "30",
-  "elk.layered.edgeRouting.orthogonal": true,
-
-  // Avoid bending towards nodes
-  "elk.layered.allowEdgeLabelOverlap": false,
-  "elk.layered.edgeRouting.avoidNodes": true,
-  "elk.layered.edgeRouting.avoidEdges": true,
-  "elk.layered.nodePlacement.nodeNodeOverlapAllowed": false,
-  "elk.layered.consistentLevelSpacing": true
-}
-
-
-const getLayoutedElements = (nodes: FlowNode[], edges: Edge[], options = {}) => {
+const getLayoutedElements = (
+  nodes: FlowNode[],
+  edges: Edge[],
+  options = {}
+) => {
   // @ts-ignore
-  const isHorizontal = options?.['elk.direction'] === 'RIGHT';
-  const elk = new ELK();
+  const isHorizontal = options?.["elk.direction"] === "RIGHT";
+  const dagreGraph = new graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-  const graph = {
-    id: 'root',
-    layoutOptions: options,
-    children: nodes.map((node) => {
-      const type = node?.data?.type
-        ?.replace("step-", "")
-        ?.replace("action-", "")
-        ?.replace("condition-", "")
-        ?.replace("__end", "");
-      return ({
-        ...node,
-        // Adjust the target and source handle positions based on the layout
-        // direction.
-        targetPosition: isHorizontal ? 'left' : 'top',
-        sourcePosition: isHorizontal ? 'right' : 'bottom',
+  // Set graph direction and spacing
+  dagreGraph.setGraph({
+    rankdir: isHorizontal ? "LR" : "TB",
+    nodesep: 80,
+    ranksep: 80,
+    edgesep: 80,
+  });
 
-        // Hardcode a width and height for elk to use when layouting.
-        width: ['start', 'end'].includes(type) ? 80 : 280,
-        height: 80,
-      })
-    }),
-    edges: edges,
+  // Add nodes to dagre graph
+  nodes.forEach((node) => {
+    const type = node?.data?.type
+      ?.replace("step-", "")
+      ?.replace("action-", "")
+      ?.replace("condition-", "")
+      ?.replace("__end", "");
+
+    let width = ["start", "end"].includes(type) ? 80 : 280;
+    let height = 80;
+
+    // Special case for trigger start and end nodes, which act as section headers
+    if (node.id === "trigger_start" || node.id === "trigger_end") {
+      width = 150;
+      height = 40;
+    }
+
+    dagreGraph.setNode(node.id, { width, height });
+  });
+
+  // Add edges to dagre graph
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  // Run the layout
+  dagre.layout(dagreGraph);
+
+  // Get the positioned nodes and edges
+  const layoutedNodes = nodes.map((node) => {
+    const dagreNode = dagreGraph.node(node.id);
+    return {
+      ...node,
+      targetPosition: isHorizontal ? "left" : "top",
+      sourcePosition: isHorizontal ? "right" : "bottom",
+      style: {
+        ...node.style,
+        width: dagreNode.width as number,
+        height: dagreNode.height as number,
+      },
+      // Dagre provides positions with the center of the node as origin
+      position: {
+        x: dagreNode.x - dagreNode.width / 2,
+        y: dagreNode.y - dagreNode.height / 2,
+      },
+    };
+  });
+
+  return {
+    nodes: layoutedNodes,
+    edges,
   };
-
-  return elk
-    // @ts-ignore
-    .layout(graph)
-    .then((layoutedGraph) => ({
-      nodes: layoutedGraph?.children?.map((node) => ({
-        ...node,
-        // React Flow expects a position property on the node instead of `x`
-        // and `y` fields.
-        position: { x: node.x, y: node.y },
-      })),
-
-      edges: layoutedGraph.edges,
-    }))
-    .catch(console.error);
 };
 
 const useWorkflowInitialization = (
@@ -113,7 +104,7 @@ const useWorkflowInitialization = (
     setIsLayouted,
     setChanges,
     setSelectedNode,
-    setFirstInitilisationDone
+    setFirstInitilisationDone,
   } = useStore();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -129,53 +120,59 @@ const useWorkflowInitialization = (
   );
 
   const onLayout = useCallback(
-    ({ direction, useInitialNodes = false, initialNodes, initialEdges }: {
+    ({
+      direction,
+      useInitialNodes = false,
+      initialNodes,
+      initialEdges,
+    }: {
       direction: string;
       useInitialNodes?: boolean;
-      initialNodes?: FlowNode[],
-      initialEdges?: Edge[]
+      initialNodes?: FlowNode[];
+      initialEdges?: Edge[];
     }) => {
-      const opts = { ...layoutOptions, 'elk.direction': direction };
+      const opts = { "elk.direction": direction };
       const ns = useInitialNodes ? initialNodes : nodes;
       const es = useInitialNodes ? initialEdges : edges;
 
-      // @ts-ignore
-      getLayoutedElements(ns, es, opts).then(
+      const { nodes: _layoutedNodes, edges: _layoutedEdges } =
         // @ts-ignore
-        ({ nodes: layoutedNodes, edges: layoutedEdges }) => {
-          layoutedEdges = layoutedEdges.map((edge: Edge) => {
-            return {
-              ...edge,
-              animated: !!edge?.target?.includes('empty'),
-              data: { ...edge.data, isLayouted: true }
-            };
-          })
-          layoutedNodes.forEach((node: FlowNode) => {
-            node.data = { ...node.data, isLayouted: true }
-          })
-          setNodes(layoutedNodes);
-          setEdges(layoutedEdges);
-          setIsLayouted(true);
-          setFinalEdges(layoutedEdges);
-          setFinalNodes(layoutedNodes);
-
-        },
-      );
+        getLayoutedElements(ns, es, opts);
+      const layoutedEdges = _layoutedEdges.map((edge: Edge) => {
+        return {
+          ...edge,
+          animated: !!edge?.target?.includes("empty"),
+          data: { ...edge.data, isLayouted: true },
+        };
+      });
+      // @ts-ignore
+      const layoutedNodes = _layoutedNodes.map((node: FlowNode) => {
+        return {
+          ...node,
+          data: { ...node.data, isLayouted: true },
+        };
+      });
+      setNodes(layoutedNodes);
+      setEdges(layoutedEdges);
+      setIsLayouted(true);
+      setFinalEdges(layoutedEdges);
+      setFinalNodes(layoutedNodes);
     },
-    [nodes, edges],
+    [nodes, edges]
   );
 
   useEffect(() => {
     if (!isLayouted && nodes.length > 0) {
-      onLayout({ direction: 'DOWN' })
+      onLayout({ direction: "DOWN" });
     }
-  }, [nodes, edges])
+  }, [nodes, edges]);
 
   useEffect(() => {
     const initializeWorkflow = async () => {
       setIsLoading(true);
       let parsedWorkflow = definition?.value;
-      const name = parsedWorkflow?.properties?.name || parsedWorkflow?.properties?.id;
+      const name =
+        parsedWorkflow?.properties?.name || parsedWorkflow?.properties?.id;
 
       const sequences = [
         {
@@ -184,9 +181,9 @@ const useWorkflowInitialization = (
           componentType: "start",
           properties: {},
           isLayouted: false,
-          name: "start"
+          name: "start",
         } as V2Step,
-        ...(getTriggerStep(parsedWorkflow?.properties)),
+        ...getTriggerStep(parsedWorkflow?.properties),
         ...(parsedWorkflow?.sequence || []),
         {
           id: "end",
@@ -194,24 +191,23 @@ const useWorkflowInitialization = (
           componentType: "end",
           properties: {},
           isLayouted: false,
-          name: "end"
+          name: "end",
         } as V2Step,
       ];
       const intialPositon = { x: 0, y: 50 };
       let { nodes, edges } = processWorkflowV2(sequences, intialPositon, true);
       setSelectedNode(null);
-      setFirstInitilisationDone(false)
+      setFirstInitilisationDone(false);
       setIsLayouted(false);
       setNodes(nodes);
       setEdges(edges);
-      setV2Properties({...(parsedWorkflow?.properties ?? {}),name});
+      setV2Properties({ ...(parsedWorkflow?.properties ?? {}), name });
       setChanges(1);
       setToolBoxConfig(toolboxConfiguration);
       setIsLoading(false);
     };
     initializeWorkflow();
   }, []);
-
 
   return {
     nodes: finalNodes,

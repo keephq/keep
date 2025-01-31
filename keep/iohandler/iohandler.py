@@ -1,5 +1,6 @@
 import ast
 import copy
+import html
 
 # TODO: fix this! It screws up the eval statement if these are not imported
 import inspect
@@ -36,7 +37,7 @@ class IOHandler:
         ):
             self.shorten_urls = True
 
-    def render(self, template, safe=False, default=""):
+    def render(self, template, safe=False, default="", additional_context=None):
         # rendering is only support for strings
         if not isinstance(template, str):
             return template
@@ -50,7 +51,7 @@ class IOHandler:
             raise Exception(
                 f"Invalid template - number of ( and ) does not match {template}"
             )
-        val = self.parse(template, safe, default)
+        val = self.parse(template, safe, default, additional_context)
         return val
 
     def quote(self, template):
@@ -134,7 +135,7 @@ class IOHandler:
         else:
             return token
 
-    def parse(self, string, safe=False, default=""):
+    def parse(self, string, safe=False, default="", additional_context=None):
         """Use AST module to parse 'call stack'-like string and return the result
 
         Example -
@@ -159,11 +160,19 @@ class IOHandler:
 
         # first render everything using chevron
         # inject the context
-        string = self._render(string, safe, default)
+        string = self._render(string, safe, default, additional_context)
 
-        # Now, extract the token if exists -
+        # Now, extract the token if exists
         parsed_string = copy.copy(string)
-        tokens = self.extract_keep_functions(parsed_string)
+
+        if string.startswith("raw_render_without_execution(") and string.endswith(")"):
+            tokens = []
+            string = string.replace("raw_render_without_execution(", "", 1)
+            string = string[::-1].replace(")", "", 1)[::-1]  # Remove the last ')'
+            parsed_string = copy.copy(string)
+        else:
+            tokens = self.extract_keep_functions(parsed_string)
+
         if len(tokens) == 0:
             return parsed_string
         elif len(tokens) == 1:
@@ -205,14 +214,20 @@ class IOHandler:
             parsed_string = parsed_string.replace(token_to_replace, val)
             return parsed_string
         # this basically for complex expressions with functions and operators
+        tokens_handled = set()
         for token in tokens:
             token, escapes = token
+            # imagine " keep.f(..) > 1 and keep.f(..) <2"
+            # so keep.f already handled, we don't want to handle it again
+            if token in tokens_handled:
+                continue
             token_to_replace = token
             try:
                 if escapes:
                     for escape in escapes:
                         token = token[:escape] + "\\" + token[escape:]
                 val = self._parse_token(token)
+
             except Exception as e:
                 trimmed_token = self._trim_token_error(token)
                 err_message = str(e).splitlines()[-1]
@@ -220,6 +235,7 @@ class IOHandler:
                     f"Got {e.__class__.__name__} while parsing token '{trimmed_token}': {err_message}"
                 )
             parsed_string = parsed_string.replace(token_to_replace, str(val))
+            tokens_handled.add(token_to_replace)
 
         return parsed_string
 
@@ -232,7 +248,9 @@ class IOHandler:
             if isinstance(tree, ast.Call):
                 func = tree.func
                 args = tree.args
-                # if its another function
+                keywords = tree.keywords  # Get keyword arguments
+
+                # Parse positional args
                 _args = []
                 for arg in args:
                     _arg = None
@@ -242,7 +260,6 @@ class IOHandler:
                         _arg = str(arg.s)
                     elif isinstance(arg, ast.Dict):
                         _arg = ast.literal_eval(arg)
-                    # set is basically {{ value }}
                     elif isinstance(arg, ast.Set) or isinstance(arg, ast.List):
                         _arg = astunparse.unparse(arg).strip()
                         if (
@@ -251,10 +268,6 @@ class IOHandler:
                             or (_arg.startswith("(") and _arg.endswith(")"))
                         ):
                             try:
-                                # TODO(shahargl): when Keep gonna be self hosted, this will be a security issue!!!
-                                # because the user can run any python code need to find a way to limit the functions that can be used
-
-                                # https://github.com/keephq/keep/issues/138
                                 import datetime
 
                                 from dateutil.tz import tzutc
@@ -264,26 +277,85 @@ class IOHandler:
                                 for dependency in self.context_manager.dependencies:
                                     g[dependency.__name__] = dependency
 
-                                # TODO: this is a hack to tzutc in the eval, should be more robust
                                 g["tzutc"] = tzutc
                                 g["datetime"] = datetime
-                                # finally, eval the expression
                                 _arg = eval(_arg, g)
                             except ValueError:
                                 pass
                     else:
                         _arg = arg.id
-                    if _arg:
+                    # if the value is empty '', we still need to pass it to the function
+                    if _arg or _arg == "":
                         _args.append(_arg)
-                # check if we need to inject tenant_id
+
+                # Parse keyword args
+                _kwargs = {}
+                for keyword in keywords:
+                    key = keyword.arg
+                    value = keyword.value
+
+                    if isinstance(value, ast.Call):
+                        _kwargs[key] = _parse(self, value)
+                    elif isinstance(value, ast.Str) or isinstance(value, ast.Constant):
+                        _kwargs[key] = str(value.s)
+                    elif isinstance(value, ast.Dict):
+                        _kwargs[key] = ast.literal_eval(value)
+                    elif isinstance(value, ast.Set) or isinstance(value, ast.List):
+                        parsed_value = astunparse.unparse(value).strip()
+                        if (
+                            (
+                                parsed_value.startswith("[")
+                                and parsed_value.endswith("]")
+                            )
+                            or (
+                                parsed_value.startswith("{")
+                                and parsed_value.endswith("}")
+                            )
+                            or (
+                                parsed_value.startswith("(")
+                                and parsed_value.endswith(")")
+                            )
+                        ):
+                            try:
+                                import datetime
+
+                                from dateutil.tz import tzutc
+
+                                g = globals()
+                                for dependency in self.context_manager.dependencies:
+                                    g[dependency.__name__] = dependency
+
+                                g["tzutc"] = tzutc
+                                g["datetime"] = datetime
+                                _kwargs[key] = eval(parsed_value, g)
+                            except ValueError:
+                                pass
+                    else:
+                        _kwargs[key] = value.id
+
+                # Get the function and its signature
                 keep_func = getattr(keep_functions, func.attr)
                 func_signature = inspect.signature(keep_func)
 
-                kwargs = {}
+                # Add tenant_id if needed
                 if "kwargs" in func_signature.parameters:
-                    kwargs["tenant_id"] = self.context_manager.tenant_id
+                    _kwargs["tenant_id"] = self.context_manager.tenant_id
 
-                val = keep_func(*_args) if not kwargs else keep_func(*_args, **kwargs)
+                try:
+                    # Call function with both positional and keyword arguments
+                    val = keep_func(*_args, **_kwargs)
+                except ValueError:
+                    # Handle newline escaping if needed
+                    _args = [
+                        arg.replace("\n", "\\n") if isinstance(arg, str) else arg
+                        for arg in _args
+                    ]
+                    _kwargs = {
+                        k: v.replace("\n", "\\n") if isinstance(v, str) else v
+                        for k, v in _kwargs.items()
+                    }
+                    val = keep_func(*_args, **_kwargs)
+
                 return val
 
         try:
@@ -294,28 +366,55 @@ class IOHandler:
                 # this is happens when libraries such as datadog api client
                 # HTML escapes the string and then ast.parse fails ()
                 # https://github.com/keephq/keep/issues/137
-                import html
-
-                tree = ast.parse(
-                    html.unescape(token.replace("\r\n", "").replace("\n", ""))
-                )
+                try:
+                    unescaped_token = html.unescape(
+                        token.replace("\r\n", "").replace("\n", "")
+                    )
+                    tree = ast.parse(unescaped_token)
+                # try best effort to parse the string
+                # this is some nasty bug. see test test_openobserve_rows_bug on test_iohandler
+                # and this ticket -
+                except Exception as e:
+                    # for strings such as "45%\n", we need to escape
+                    t = (
+                        html.unescape(token.replace("\r\n", "").replace("\n", ""))
+                        .replace("\\n", "\n")
+                        .replace("\\", "")
+                        .replace("\n", "\\n")
+                    )
+                    t = self._encode_single_quotes_in_double_quotes(t)
+                    try:
+                        tree = ast.parse(t)
+                    except Exception:
+                        # For strings where ' is used as the delimeter and we failed to escape all ' in the string
+                        # @tb: again, this is not ideal but it's best effort...
+                        t = (
+                            t.replace("('", '("')
+                            .replace("')", '")')
+                            .replace("',", '",')
+                        )
+                        tree = ast.parse(t)
             else:
                 # for strings such as "45%\n", we need to escape
                 tree = ast.parse(token.encode("unicode_escape"))
         return _parse(self, tree)
 
-    def _render(self, key: str, safe=False, default=""):
+    def _render(self, key: str, safe=False, default="", additional_context=None):
         if "{{^" in key or "{{ ^" in key:
             self.logger.debug(
                 "Safe render is not supported when there are inverted sections."
             )
             safe = False
 
-        context = self.context_manager.get_full_context()
+        context = self.context_manager.get_full_context(exclude_providers=True)
+
+        if additional_context:
+            context.update(additional_context)
+
         # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
         original_stderr = sys.stderr
         sys.stderr = io.StringIO()
-        rendered = chevron.render(key, context, warn=True)
+        rendered = self.render_recursively(key, context)
         # chevron.render will escape the quotes, we need to unescape them
         rendered = rendered.replace("&quot;", '"')
         stderr_output = sys.stderr.getvalue()
@@ -336,9 +435,29 @@ class IOHandler:
             raise RenderException(f"{err} in the context.")
         if not rendered:
             return default
+
         return rendered
 
-    def render_context(self, context_to_render: dict):
+    def _encode_single_quotes_in_double_quotes(self, s):
+        result = []
+        in_double_quotes = False
+        i = 0
+        while i < len(s):
+            if s[i] == '"':
+                in_double_quotes = not in_double_quotes
+            elif s[i] == "'" and in_double_quotes:
+                if i > 0 and s[i - 1] == "\\":
+                    # If the single quote is already escaped, don't add another backslash
+                    result.append(s[i])
+                else:
+                    result.append("\\" + s[i])
+                i += 1
+                continue
+            result.append(s[i])
+            i += 1
+        return "".join(result)
+
+    def render_context(self, context_to_render: dict, additional_context: dict = None):
         """
         Iterates the provider context and renders it using the workflow context.
         """
@@ -347,20 +466,29 @@ class IOHandler:
         for key, value in context_to_render.items():
             if isinstance(value, str):
                 context_to_render[key] = self._render_template_with_context(
-                    value, safe=True
+                    value, safe=True, additional_context=additional_context
                 )
             elif isinstance(value, list):
-                context_to_render[key] = self._render_list_context(value)
+                context_to_render[key] = self._render_list_context(
+                    value, additional_context=additional_context
+                )
             elif isinstance(value, dict):
-                context_to_render[key] = self.render_context(value)
+                context_to_render[key] = self.render_context(
+                    value, additional_context=additional_context
+                )
             elif isinstance(value, StepProviderParameter):
                 safe = value.safe and value.default is not None
                 context_to_render[key] = self._render_template_with_context(
-                    value.key, safe=safe, default=value.default
+                    value.key,
+                    safe=safe,
+                    default=value.default,
+                    additional_context=additional_context,
                 )
         return context_to_render
 
-    def _render_list_context(self, context_to_render: list):
+    def _render_list_context(
+        self, context_to_render: list, additional_context: dict = None
+    ):
         """
         Iterates the provider context and renders it using the workflow context.
         """
@@ -368,16 +496,24 @@ class IOHandler:
             value = context_to_render[i]
             if isinstance(value, str):
                 context_to_render[i] = self._render_template_with_context(
-                    value, safe=True
+                    value, safe=True, additional_context=additional_context
                 )
             if isinstance(value, list):
-                context_to_render[i] = self._render_list_context(value)
+                context_to_render[i] = self._render_list_context(
+                    value, additional_context=additional_context
+                )
             if isinstance(value, dict):
-                context_to_render[i] = self.render_context(value)
+                context_to_render[i] = self.render_context(
+                    value, additional_context=additional_context
+                )
         return context_to_render
 
     def _render_template_with_context(
-        self, template: str, safe: bool = False, default: str = ""
+        self,
+        template: str,
+        safe: bool = False,
+        default: str = "",
+        additional_context: dict = None,
     ) -> str:
         """
         Renders a template with the given context.
@@ -388,7 +524,9 @@ class IOHandler:
         Returns:
             str: rendered template
         """
-        rendered_template = self.render(template, safe, default)
+        rendered_template = self.render(
+            template, safe, default, additional_context=additional_context
+        )
 
         # shorten urls if enabled
         if self.shorten_urls:
@@ -444,22 +582,52 @@ class IOHandler:
         except Exception:
             self.logger.exception("Failed to request short URLs from API")
 
+    def render_recursively(
+        self, template: str, context: dict, max_iterations: int = 10
+    ) -> str:
+        """
+        Recursively render a template until there are no more mustache tags or max iterations reached.
+
+        Args:
+            template: The template string containing mustache tags
+            context: The context dictionary for rendering
+            max_iterations: Maximum number of rendering iterations to prevent infinite loops
+
+        Returns:
+            The fully rendered string
+        """
+        current = template
+        iterations = 0
+
+        while iterations < max_iterations:
+            rendered = chevron.render(
+                current, context, warn=True if iterations == 0 else False
+            )
+
+            # https://github.com/keephq/keep/issues/2326
+            rendered = html.unescape(rendered)
+
+            # If no more changes or no more mustache tags, we're done
+            # we don't want to render providers. ever, so this is a hack for it for now
+            if rendered == current or "{{" not in rendered or "providers." in rendered:
+                return rendered
+
+            current = rendered
+            iterations += 1
+
+        # Return the last rendered version even if we hit max iterations
+        return current
+
 
 if __name__ == "__main__":
     # debug & test
     context_manager = ContextManager("keep")
     context_manager.event_context = {
-        "ticket_id": "1234",
-        "severity": "high",
-        "ticket_created_at": "2021-09-01T00:00:00Z",
+        "header": "HTTP API Error {{ alert.labels.statusCode }}",
+        "labels": {"statusCode": "404"},
     }
     iohandler = IOHandler(context_manager)
-    res = iohandler.render(
-        iohandler.quote(
-            "not '{{ alert.ticket_id }}' or (('{{ alert.ticket_status }}' in ['Resolved', 'Closed', 'Canceled']) and ('{{ alert.severity }}' == 'critical' or keep.datetime_compare(keep.utcnow(), keep.to_utc('{{ alert.ticket_created_at }}')) > 168))"
-        ),
-        safe=False,
-    )
+    res = iohandler.render("{{ alert.header }}")
     from asteval import Interpreter
 
     aeval = Interpreter()

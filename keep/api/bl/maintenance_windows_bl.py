@@ -7,7 +7,7 @@ from sqlmodel import Session
 
 from keep.api.core.db import get_session_sync
 from keep.api.models.alert import AlertDto, AlertStatus
-from keep.api.models.db.alert import AlertActionType, AlertAudit
+from keep.api.models.db.alert import ActionType, AlertAudit
 from keep.api.models.db.maintenance_window import MaintenanceWindowRule
 from keep.api.utils.cel_utils import preprocess_cel_expression
 
@@ -72,10 +72,19 @@ class MaintenanceWindowsBl:
             try:
                 cel_result = prgm.evaluate(activation)
             except celpy.evaluation.CELEvalError as e:
-                if "no such member" in str(e):
+                error_msg = str(e).lower()
+                if "no such member" in error_msg or "undeclared reference" in error_msg:
+                    self.logger.debug(
+                        f"Skipping maintenance window rule due to missing field: {str(e)}",
+                        extra={**extra, "maintenance_rule_id": maintenance_rule.id},
+                    )
                     continue
-                # wtf
-                raise
+                # Log unexpected CEL errors but don't fail the entire event processing
+                self.logger.error(
+                    f"Unexpected CEL evaluation error: {str(e)}",
+                    extra={**extra, "maintenance_rule_id": maintenance_rule.id},
+                )
+                continue
             if cel_result:
                 self.logger.info(
                     "Alert is in maintenance window",
@@ -87,7 +96,7 @@ class MaintenanceWindowsBl:
                         tenant_id=self.tenant_id,
                         fingerprint=alert.fingerprint,
                         user_id="Keep",
-                        action=AlertActionType.MAINTENANCE.value,
+                        action=ActionType.MAINTENANCE.value,
                         description=(
                             f"Alert in maintenance due to rule `{maintenance_rule.name}`"
                             if not maintenance_rule.suppress

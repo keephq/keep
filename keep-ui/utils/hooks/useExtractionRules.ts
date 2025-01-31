@@ -1,20 +1,17 @@
-import { ExtractionRule } from "app/extraction/model";
-import { useSession } from "next-auth/react";
+import { ExtractionRule } from "@/app/(keep)/extraction/model";
 import useSWR, { SWRConfiguration } from "swr";
-import { getApiURL } from "utils/apiUrl";
-import { fetcher } from "utils/fetcher";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export const useExtractions = (
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
-  const { data: session } = useSession();
+  const api = useApi();
 
   return useSWR<ExtractionRule[]>(
-    () => (session ? `${apiUrl}/extraction` : null),
-    (url) => fetcher(url, session?.accessToken),
+    api.isReady() ? "/extraction" : null,
+    (url) => api.get(url),
     options
   );
 };

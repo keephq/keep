@@ -2,8 +2,9 @@ from collections import OrderedDict
 from datetime import datetime
 from typing import List, Literal, Optional
 
-import yaml
 from pydantic import BaseModel, validator
+
+from keep.functions import cyaml
 
 
 def represent_ordered_dict(dumper, data):
@@ -11,7 +12,7 @@ def represent_ordered_dict(dumper, data):
     return dumper.represent_mapping("tag:yaml.org,2002:map", filtered_data.items())
 
 
-yaml.add_representer(OrderedDict, represent_ordered_dict)
+cyaml.add_representer(OrderedDict, represent_ordered_dict)
 
 
 class ProviderDTO(BaseModel):
@@ -41,10 +42,11 @@ class WorkflowDTO(BaseModel):
     last_execution_started: datetime = None
     provisioned: bool = False
     provisioned_file: str = None
+    alertRule: bool = False
 
     @property
     def workflow_raw_id(self):
-        id = yaml.safe_load(self.workflow_raw).get("id")
+        id = cyaml.safe_load(self.workflow_raw).get("id")
         return id
 
     @validator("workflow_raw", pre=False, always=True)
@@ -64,7 +66,7 @@ class WorkflowDTO(BaseModel):
             _type_: _description_
         """
         ordered_raw = OrderedDict()
-        d = yaml.safe_load(raw)
+        d = cyaml.safe_load(raw)
         # id desc and triggers
         ordered_raw["id"] = d.get("id")
         values["workflow_raw_id"] = d.get("id")
@@ -85,7 +87,7 @@ class WorkflowDTO(BaseModel):
         ordered_raw["steps"] = d.get("steps")
         # last, actions
         ordered_raw["actions"] = d.get("actions")
-        return yaml.dump(ordered_raw)
+        return cyaml.dump(ordered_raw, width=99999)
 
 
 class WorkflowExecutionLogsDTO(BaseModel):
@@ -101,6 +103,7 @@ class WorkflowToAlertExecutionDTO(BaseModel):
     alert_fingerprint: str
     workflow_status: str
     workflow_started: datetime
+    event_id: str | None
 
 
 class WorkflowExecutionDTO(BaseModel):
@@ -109,10 +112,13 @@ class WorkflowExecutionDTO(BaseModel):
     started: datetime
     triggered_by: str
     status: str
+    workflow_name: Optional[str]  # for UI purposes
     logs: Optional[List[WorkflowExecutionLogsDTO]]
     error: Optional[str]
     execution_time: Optional[float]
     results: Optional[dict]
+    event_id: Optional[str]
+    event_type: Optional[str]
 
 
 class WorkflowCreateOrUpdateDTO(BaseModel):

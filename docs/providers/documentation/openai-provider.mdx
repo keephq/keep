@@ -1,0 +1,40 @@
+---
+title: "OpenAI Provider"
+description: "The OpenAI Provider allows for integrating OpenAI's language models into Keep."
+---
+
+<Tip>
+  The OpenAI Provider supports querying GPT language models for prompt-based
+  interactions.
+</Tip>
+
+## Inputs
+
+The OpenAI Provider supports the following functions:
+
+- `prompt`: Interact with OpenAI's models by sending prompts and receiving responses
+- `model`: The model to be used, defaults to `gpt-3.5-turbo`
+- `max_tokens`: Limit amount of tokens returned by the model, default 1024.
+- `structured_output_format`: Optional JSON format for the structured output (check examples at the GitHub).
+
+## Outputs
+
+Currently, the OpenAI Provider outputs the response from the model based on the prompt provided.
+
+## Authentication Parameters
+
+To use the OpenAI Provider, you'll need an API Key, and optionally, an Organization ID from OpenAI. The required parameters for authentication are:
+
+- **api_key** (required): Your OpenAI Platform API Key.
+- **organization_id** (optional): Your OpenAI Platform Organization ID.
+
+## Connecting with the Provider
+
+To connect to OpenAI, you'll need to obtain an API Key and (optionally) an Organization ID:
+
+1. Log in to your OpenAI account at [OpenAI Platform](https://platform.openai.com).
+2. Go to the **API Keys** section.
+3. Click on **Create new secret key** to generate a key for Keep.
+4. (Optional) Retrieve your **Organization ID** under **Organization settings** if you’re part of multiple organizations.
+
+Use the generated API key in the `authentication` section of your OpenAI Provider configuration.

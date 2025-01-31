@@ -13,15 +13,24 @@ import operator
 import os
 import re
 import uuid
+from collections import Counter
+from operator import attrgetter
 from typing import Literal, Optional
 
 import opentelemetry.trace as trace
 import requests
+from dateutil.parser import parse
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.core.db import get_custom_deduplication_rule, get_enrichments
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
-from keep.api.models.db.alert import AlertActionType
+from keep.api.core.db import (
+    get_custom_deduplication_rule,
+    get_enrichments,
+    get_provider_by_name,
+    is_linked_provider,
+)
+from keep.api.logging import ProviderLoggerAdapter
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentDto
+from keep.api.models.db.alert import ActionType
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
@@ -30,15 +39,40 @@ from keep.providers.models.provider_method import ProviderMethod
 
 tracer = trace.get_tracer(__name__)
 
+SPAMMY_ALERTS_THRESHOLD_HOURS = 1
+SPAMMY_ALERTS_THRESHOLD = datetime.timedelta(hours=SPAMMY_ALERTS_THRESHOLD_HOURS)
 
 class BaseProvider(metaclass=abc.ABCMeta):
     OAUTH2_URL = None
     PROVIDER_SCOPES: list[ProviderScope] = []
     PROVIDER_METHODS: list[ProviderMethod] = []
     FINGERPRINT_FIELDS: list[str] = []
+    PROVIDER_COMING_SOON = False  # tb: if the provider is coming soon, we show it in the UI but don't allow it to be added
+    PROVIDER_CATEGORY: list[
+        Literal[
+            "AI",
+            "Monitoring",
+            "Incident Management",
+            "Cloud Infrastructure",
+            "Ticketing",
+            "Identity",
+            "Developer Tools",
+            "Database",
+            "Identity and Access Management",
+            "Security",
+            "Collaboration",
+            "Organizational Tools",
+            "CRM",
+            "Queues",
+            "Others",
+        ]
+    ] = [
+        "Others"
+    ]  # tb: Default category for providers that don't declare a category
     PROVIDER_TAGS: list[
         Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
     ] = []
+    WEBHOOK_INSTALLATION_REQUIRED = False  # webhook installation is required for this provider, making it required in the UI
 
     def __init__(
         self,
@@ -65,10 +99,27 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.webhook_markdown = webhook_markdown
         self.provider_description = provider_description
         self.context_manager = context_manager
-        self.logger = context_manager.get_logger()
+
+        # Initialize the logger with our custom adapter
+        base_logger = logging.getLogger(self.provider_id)
+        # If logs should be stored on the DB, use the custom adapter
+        if os.environ.get("KEEP_STORE_PROVIDER_LOGS", "false").lower() == "true":
+            self.logger = ProviderLoggerAdapter(
+                base_logger, self, context_manager.tenant_id, provider_id
+            )
+        else:
+            self.logger = base_logger
+
+        self.logger.setLevel(
+            os.environ.get(
+                "KEEP_{}_PROVIDER_LOG_LEVEL".format(self.provider_id.upper()),
+                os.environ.get("LOG_LEVEL", "INFO"),
+            )
+        )
+
         self.validate_config()
         self.logger.debug(
-            "Base provider initalized", extra={"provider": self.__class__.__name__}
+            "Base provider initialized", extra={"provider": self.__class__.__name__}
         )
         self.provider_type = self._extract_type()
         self.results = []
@@ -97,7 +148,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         raise NotImplementedError("dispose() method not implemented")
 
     @abc.abstractmethod
-    def validate_config():
+    def validate_config(self):
         """
         Validate provider configuration.
         """
@@ -213,10 +264,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
             # remove the last comma
             enrichment_string = enrichment_string[:-2]
             # enrich the alert with _enrichments
-            enrichments_bl.enrich_alert(
+            enrichments_bl.enrich_entity(
                 fingerprint,
                 _enrichments,
-                action_type=AlertActionType.WORKFLOW_ENRICH,  # shahar: todo: should be specific, good enough for now
+                action_type=ActionType.WORKFLOW_ENRICH,  # shahar: todo: should be specific, good enough for now
                 action_callee="system",
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
                 audit_enabled=audit_enabled,
@@ -227,10 +278,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 enrichment_string += f"{key}={value}, "
             # remove the last comma
             enrichment_string = enrichment_string[:-2]
-            enrichments_bl.enrich_alert(
+            enrichments_bl.enrich_entity(
                 fingerprint,
                 disposable_enrichments,
-                action_type=AlertActionType.WORKFLOW_ENRICH,
+                action_type=ActionType.WORKFLOW_ENRICH,
                 action_callee="system",
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
                 dispose_on_new_alert=True,
@@ -285,14 +336,13 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: Optional["BaseProvider"] = None
+        event: dict | list[dict], provider_instance: "BaseProvider" = None
     ) -> AlertDto | list[AlertDto]:
         """
         Format an incoming alert.
 
         Args:
             event (dict): The raw provider event payload.
-            provider_instance (Optional[&quot;BaseProvider&quot;]): The tenant provider instance if it was successfully loaded.
 
         Raises:
             NotImplementedError: For providers who does not implement this method.
@@ -305,14 +355,46 @@ class BaseProvider(metaclass=abc.ABCMeta):
     @classmethod
     def format_alert(
         cls,
-        event: dict,
-        tenant_id: str,
-        provider_type: str,
-        provider_id: str,
-    ) -> AlertDto | list[AlertDto]:
+        event: dict | list[dict],
+        tenant_id: str | None,
+        provider_type: str | None,
+        provider_id: str | None,
+    ) -> AlertDto | list[AlertDto] | None:
         logger = logging.getLogger(__name__)
+
+        provider_instance: BaseProvider | None = None
+        if provider_id and provider_type and tenant_id:
+            try:
+                if is_linked_provider(tenant_id, provider_id):
+                    logger.debug(
+                        "Provider is linked, skipping loading provider instance"
+                    )
+                    provider_instance = None
+                else:
+                    # To prevent circular imports
+                    from keep.providers.providers_factory import ProvidersFactory
+
+                    provider_instance: BaseProvider = (
+                        ProvidersFactory.get_installed_provider(
+                            tenant_id, provider_id, provider_type
+                        )
+                    )
+            except Exception:
+                logger.exception(
+                    "Failed loading provider instance although all parameters were given",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "provider_id": provider_id,
+                        "provider_type": provider_type,
+                    },
+                )
         logger.debug("Formatting alert")
-        formatted_alert = cls._format_alert(event)
+        formatted_alert = cls._format_alert(event, provider_instance)
+        if formatted_alert is None:
+            logger.debug(
+                "Provider returned None, which means it decided not to format the alert"
+            )
+            return None
         logger.debug("Alert formatted")
         # after the provider calculated the default fingerprint
         #   check if there is a custom deduplication rule and apply
@@ -368,10 +450,17 @@ class BaseProvider(metaclass=abc.ABCMeta):
         fingerprint = hashlib.sha256()
         event_dict = alert.dict()
         for fingerprint_field in fingerprint_fields:
-            fingerprint_field_value = event_dict.get(fingerprint_field, None)
+            keys = fingerprint_field.split(".")
+            fingerprint_field_value = event_dict
+            for key in keys:
+                if isinstance(fingerprint_field_value, dict):
+                    fingerprint_field_value = fingerprint_field_value.get(key, None)
+                else:
+                    fingerprint_field_value = None
+                    break
             if isinstance(fingerprint_field_value, (list, dict)):
                 fingerprint_field_value = json.dumps(fingerprint_field_value)
-            if fingerprint_field_value:
+            if fingerprint_field_value is not None:
                 fingerprint.update(str(fingerprint_field_value).encode())
         return fingerprint.hexdigest()
 
@@ -469,7 +558,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
-    ):
+    ) -> dict | None:
         """
         Setup a webhook for the provider.
 
@@ -479,10 +568,22 @@ class BaseProvider(metaclass=abc.ABCMeta):
             api_key (str): _description_
             setup_alerts (bool, optional): _description_. Defaults to True.
 
+        Returns:
+            dict | None: If some secrets needs to be saved, return them in a dict.
+
         Raises:
             NotImplementedError: _description_
         """
         raise NotImplementedError("setup_webhook() method not implemented")
+
+    def clean_up(self):
+        """
+        Clean up the provider.
+
+        Raises:s
+            NotImplementedError: for providers who does not implement this method.
+        """
+        raise NotImplementedError("clean_up() method not implemented")
 
     @staticmethod
     def get_alert_schema() -> dict:
@@ -610,7 +711,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
             id=alert_data.get("id", str(uuid.uuid4())),
             name=alert_data.get("name", "alert-from-event-queue"),
             status=alert_data.get("status", AlertStatus.FIRING),
-            lastReceived=alert_data.get("lastReceived", datetime.datetime.now()),
+            lastReceived=alert_data.get(
+                "lastReceived",
+                datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+            ),
             environment=alert_data.get("environment", "alert-from-event-queue"),
             isDuplicate=alert_data.get("isDuplicate", False),
             duplicateReason=alert_data.get("duplicateReason", None),
@@ -623,6 +727,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             event_id=alert_data.get("event_id", str(uuid.uuid4())),
             url=alert_data.get("url", None),
             fingerprint=alert_data.get("fingerprint", None),
+            providerId=self.provider_id,
         )
         # push the alert to the provider
         url = f'{os.environ["KEEP_API_URL"]}/alerts/event'
@@ -631,7 +736,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
             "Accept": "application/json",
             "X-API-KEY": self.context_manager.api_key,
         }
-        response = requests.post(url, json=alert_model.dict(), headers=headers)
+        response = requests.post(
+            url,
+            json=alert_model.dict(),
+            headers=headers,
+            params={"provider_id": self.provider_id},
+        )
         try:
             response.raise_for_status()
             self.logger.info("Alert pushed successfully")
@@ -659,7 +769,183 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
         return simulated_alert
 
+    @property
+    def is_installed(self) -> bool:
+        """
+        Check if provider has been recorded in the database.
+        """
+        provider = get_provider_by_name(
+            self.context_manager.tenant_id, self.config.name
+        )
+        return provider is not None
+
+    @property
+    def is_provisioned(self) -> bool:
+        """
+        Check if provider exist in env provisioning.
+        """
+        from keep.parser.parser import Parser
+
+        parser = Parser()
+        parser._parse_providers_from_env(self.context_manager)
+        return self.config.name in self.context_manager.providers_context
+
+    @classmethod
+    def has_health_report(cls) -> bool:
+        return getattr(cls, "HAS_HEALTH_CHECK", False)
+
 
 class BaseTopologyProvider(BaseProvider):
-    def pull_topology(self) -> list[TopologyServiceInDto]:
+    def pull_topology(self) -> tuple[list[TopologyServiceInDto], dict]:
         raise NotImplementedError("get_topology() method not implemented")
+
+
+class BaseIncidentProvider(BaseProvider):
+    def _get_incidents(self) -> list[IncidentDto]:
+        raise NotImplementedError("_get_incidents() in not implemented")
+
+    def get_incidents(self) -> list[IncidentDto]:
+        return self._get_incidents()
+
+    @staticmethod
+    def _format_incident(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> IncidentDto | list[IncidentDto]:
+        raise NotImplementedError("_format_incidents() not implemented")
+
+    @classmethod
+    def format_incident(
+        cls,
+        event: dict,
+        tenant_id: str | None,
+        provider_type: str | None,
+        provider_id: str | None,
+    ) -> IncidentDto | list[IncidentDto]:
+        logger = logging.getLogger(__name__)
+
+        provider_instance: BaseProvider | None = None
+        if provider_id and provider_type and tenant_id:
+            try:
+                # To prevent circular imports
+                from keep.providers.providers_factory import ProvidersFactory
+
+                provider_instance: BaseProvider = (
+                    ProvidersFactory.get_installed_provider(
+                        tenant_id, provider_id, provider_type
+                    )
+                )
+            except Exception:
+                logger.exception(
+                    "Failed loading provider instance although all parameters were given",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "provider_id": provider_id,
+                        "provider_type": provider_type,
+                    },
+                )
+        logger.debug("Formatting Incident")
+        return cls._format_incident(event, provider_instance)
+
+    def setup_incident_webhook(
+        self,
+        tenant_id: str,
+        keep_api_url: str,
+        api_key: str,
+        setup_alerts: bool = True,
+    ) -> dict | None:
+        """
+        Setup a webhook for the provider.
+
+        Args:
+            tenant_id (str): _description_
+            keep_api_url (str): _description_
+            api_key (str): _description_
+            setup_alerts (bool, optional): _description_. Defaults to True.
+
+        Returns:
+            dict | None: If some secrets needs to be saved, return them in a dict.
+
+        Raises:
+            NotImplementedError: _description_
+        """
+        raise NotImplementedError("setup_webhook() method not implemented")
+
+
+class ProviderHealthMixin:
+
+    HAS_HEALTH_CHECK = True
+
+    def get_health_report(self):
+        health = {}
+
+        alerts = self.get_alerts()
+
+        self.check_topology_coverage(alerts, health)
+        self.check_spammy_alerts(alerts, health)
+        self.check_alerting_rules(alerts, health)
+
+        return health
+
+    def check_topology_coverage(self, alerts, health):
+        if hasattr(self, "pull_topology"):
+            topology, _ = self.pull_topology()
+            uncovered_topology = copy.deepcopy(topology)
+            for alert in alerts:
+                uncovered_topology = list(filter(lambda t: not alert.service == t.service, uncovered_topology))
+
+            health["topology"] = {
+                "covered": [t for t in topology if t not in uncovered_topology],
+                "uncovered": uncovered_topology
+            }
+
+    def check_alerting_rules(self, alerts, health):
+        if hasattr(self, "get_alerts_configuration"):
+            rules = self.get_alerts_configuration()
+            try:
+                rules = list(map(json.loads, rules))
+            except json.JSONDecodeError:
+                pass
+            unused_rules = []
+            compiled_patterns = [re.compile(rule['message']) for rule in rules]
+            matched_patterns = set()
+
+            for alert in alerts:
+                for idx, pattern in enumerate(compiled_patterns):
+                    if idx in matched_patterns:
+                        continue
+                    if pattern.search(alert.message):
+                        matched_patterns.add(idx)
+
+            health["rules"] = {
+                "total": len(rules),
+                "used": len(rules) - len(unused_rules),
+                "unused": len(unused_rules),
+            }
+
+    def check_spammy_alerts(self, alerts, health):
+        sorter = sorted(alerts, key=attrgetter("fingerprint"))
+        alerts_per_fingerprint = itertools.groupby(sorter, key=attrgetter("fingerprint"))
+        spammy_alerts = []
+        for fingerprint, fingerprint_alerts in alerts_per_fingerprint:
+            close_alerts = []
+
+            fingerprint_alerts = list(fingerprint_alerts)
+
+            fingerprint_alerts.sort(key=attrgetter("lastReceived"))
+            # Iterate through alerts to check if some of them are too close
+            for i in range(len(fingerprint_alerts)):
+                for j in range(i + 1, len(fingerprint_alerts)):
+                    if parse(fingerprint_alerts[j].lastReceived) - parse(
+                            fingerprint_alerts[i].lastReceived) <= SPAMMY_ALERTS_THRESHOLD:
+                        close_alerts.append((fingerprint_alerts[i], fingerprint_alerts[j]))
+                    else:
+                        break
+
+            if len(close_alerts) > 2:
+                spammy_alerts.extend(fingerprint_alerts)
+
+        timestamps = [parse(alert.lastReceived) for alert in spammy_alerts]
+        hours = [ts.strftime("%Y-%m-%d %H:00") for ts in timestamps]
+        hourly_alerts = Counter(hours)
+        health["spammy"] = [{"date": date, "value": value} for date, value in hourly_alerts.items()]
+

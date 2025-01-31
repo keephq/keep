@@ -2,7 +2,7 @@ import logging
 import os
 import uuid
 from datetime import datetime
-from typing import Optional
+
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -10,13 +10,12 @@ from fastapi import (
     HTTPException,
     Request,
     Response,
-    Query
 )
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from keep.api.consts import PROVIDER_PULL_INTERVAL_DAYS, STATIC_PRESETS
-from keep.api.core.db import get_preset_by_name as get_preset_by_name_db
+from keep.api.consts import PROVIDER_PULL_INTERVAL_MINUTE, STATIC_PRESETS
+from keep.api.core.db import get_db_preset_by_name
 from keep.api.core.db import get_presets as get_presets_db
 from keep.api.core.db import (
     get_session,
@@ -24,7 +23,6 @@ from keep.api.core.db import (
     update_provider_last_pull_time,
 )
 from keep.api.models.alert import AlertDto
-from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.models.db.preset import (
     Preset,
     PresetDto,
@@ -33,15 +31,15 @@ from keep.api.models.db.preset import (
     Tag,
     TagDto,
 )
+from keep.api.models.time_stamp import TimeStampFilter, _get_time_stamp_filter
 from keep.api.tasks.process_event_task import process_event
+from keep.api.tasks.process_incident_task import process_incident
 from keep.api.tasks.process_topology_task import process_topology
-from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
-from keep.providers.base.base_provider import BaseTopologyProvider
+from keep.providers.base.base_provider import BaseIncidentProvider, BaseTopologyProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
-import json
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -62,12 +60,9 @@ def pull_data_from_providers(
         logger.debug("Pull data from providers is disabled")
         return
 
-    context_manager = ContextManager(
-        tenant_id=tenant_id,
-        workflow_id=None,
+    providers = ProvidersFactory.get_installed_providers(
+        tenant_id=tenant_id, include_details=False
     )
-
-    providers = ProvidersFactory.get_installed_providers(tenant_id=tenant_id)
 
     logger.info(
         "Pulling data from providers",
@@ -86,15 +81,19 @@ def pull_data_from_providers(
             "trace_id": trace_id,
         }
 
+        if not provider.pulling_enabled:
+            logger.debug("Pulling is disabled for this provider", extra=extra)
+            continue
+
         if provider.last_pull_time is not None:
             now = datetime.now()
-            days_passed = (now - provider.last_pull_time).days
-            if days_passed <= PROVIDER_PULL_INTERVAL_DAYS:
+            minutes_passed = (now - provider.last_pull_time).total_seconds() / 60
+            if minutes_passed <= PROVIDER_PULL_INTERVAL_MINUTE:
                 logger.info(
                     "Skipping provider data pulling since not enough time has passed",
                     extra={
                         **extra,
-                        "days_passed": days_passed,
+                        "minutes_passed": minutes_passed,
                         "provider_last_pull_time": str(provider.last_pull_time),
                     },
                 )
@@ -108,11 +107,10 @@ def pull_data_from_providers(
             # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
             update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
 
-            provider_class = ProvidersFactory.get_provider(
-                context_manager=context_manager,
+            provider_class = ProvidersFactory.get_installed_provider(
+                tenant_id=tenant_id,
                 provider_id=provider.id,
                 provider_type=provider.type,
-                provider_config=provider.details,
             )
             sorted_provider_alerts_by_fingerprint = (
                 provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
@@ -122,10 +120,38 @@ def pull_data_from_providers(
                 extra=extra,
             )
 
+            # TODO: this should be moved somewhere else (@tb: too much logic in this function, wil handle it another time.)
+            if isinstance(provider_class, BaseIncidentProvider):
+                try:
+                    incidents = provider_class.get_incidents()
+                    process_incident(
+                        {},
+                        tenant_id=tenant_id,
+                        provider_id=provider.id,
+                        provider_type=provider.type,
+                        incidents=incidents,
+                        trace_id=trace_id,
+                    )
+                except NotImplementedError:
+                    logger.debug(
+                        f"Provider {provider.type} ({provider.id}) does not implement pulling incidents",
+                        extra=extra,
+                    )
+                except Exception:
+                    logger.exception(
+                        f"Unknown error pulling incidents from provider {provider.type} ({provider.id})",
+                        extra={**extra, "trace_id": trace_id},
+                    )
+            else:
+                logger.debug(
+                    f"Provider {provider.type} ({provider.id}) does not implement pulling incidents",
+                    extra=extra,
+                )
+
             try:
                 if isinstance(provider_class, BaseTopologyProvider):
                     logger.info("Pulling topology data", extra=extra)
-                    topology_data = provider_class.pull_topology()
+                    topology_data, _ = provider_class.pull_topology()
                     logger.info(
                         "Pulling topology data finished, processing",
                         extra={**extra, "topology_length": len(topology_data)},
@@ -136,13 +162,13 @@ def pull_data_from_providers(
                     logger.info("Finished processing topology data", extra=extra)
             except NotImplementedError:
                 logger.debug(
-                    f"Provider {provider.type} ({provider.id}) does not implement puliing topology data",
+                    f"Provider {provider.type} ({provider.id}) does not implement pulling topology data",
                     extra=extra,
                 )
             except Exception as e:
-                logger.error(
+                logger.exception(
                     f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
-                    extra={**extra, "error": str(e)},
+                    extra={**extra, "exception": str(e)},
                 )
 
             for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
@@ -157,10 +183,10 @@ def pull_data_from_providers(
                     alert,
                     notify_client=False,
                 )
-        except Exception:
+        except Exception as e:
             logger.exception(
                 f"Unknown error pulling from provider {provider.type} ({provider.id})",
-                extra=extra,
+                extra={**extra, "exception": str(e)},
             )
     logger.info(
         "Pulling data from providers completed",
@@ -172,20 +198,6 @@ def pull_data_from_providers(
     )
 
 
-# Function to handle the time_stamp query parameter and parse it
-def _get_time_stamp_filter(
-    time_stamp: Optional[str] = Query(None)
-) -> TimeStampFilter:
-    if time_stamp:
-        try:
-            # Parse the JSON string
-            time_stamp_dict = json.loads(time_stamp)
-            # Return the TimeStampFilter object, Pydantic will map 'from' -> lower_timestamp and 'to' -> upper_timestamp
-            return TimeStampFilter(**time_stamp_dict)
-        except (json.JSONDecodeError, TypeError):
-            raise HTTPException(status_code=400, detail="Invalid time_stamp format")
-    return TimeStampFilter()
-
 @router.get(
     "",
     description="Get all presets for tenant",
@@ -195,7 +207,7 @@ def get_presets(
         IdentityManagerFactory.get_auth_verifier(["read:preset"])
     ),
     session: Session = Depends(get_session),
-    time_stamp: TimeStampFilter = Depends(_get_time_stamp_filter)
+    time_stamp: TimeStampFilter = Depends(_get_time_stamp_filter),
 ) -> list[PresetDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(f"Getting all presets {time_stamp}")
@@ -204,6 +216,7 @@ def get_presets(
     identity_manager = IdentityManagerFactory.get_identity_manager(
         authenticated_entity.tenant_id
     )
+    # Note: if no limitations (allowed_preset_ids is []), then all presets are allowed
     allowed_preset_ids = identity_manager.get_user_permission_on_resource_type(
         resource_type="preset",
         authenticated_entity=authenticated_entity,
@@ -215,15 +228,17 @@ def get_presets(
         preset_ids=allowed_preset_ids,
     )
     presets_dto = [PresetDto(**preset.to_dict()) for preset in presets]
-    # add static presets
-    presets_dto.append(STATIC_PRESETS["feed"])
-    presets_dto.append(STATIC_PRESETS["dismissed"])
+    # add static presets (unless allowed_preset_ids is set)
+    if not allowed_preset_ids:
+        presets_dto.append(STATIC_PRESETS["feed"])
     logger.info("Got all presets")
 
     # get the number of alerts + noisy alerts for each preset
     search_engine = SearchEngine(tenant_id=tenant_id)
     # get the preset metatada
-    presets_dto = search_engine.search_preset_alerts(presets=presets_dto, time_stamp=time_stamp)
+    presets_dto = search_engine.search_preset_alerts(
+        presets=presets_dto, time_stamp=time_stamp
+    )
 
     return presets_dto
 
@@ -303,39 +318,41 @@ def create_preset(
 
 
 @router.delete(
-    "/{uuid}",
+    "/{preset_id}",
     description="Delete a preset for tenant",
 )
 def delete_preset(
-    uuid: str,
+    preset_id: uuid.UUID,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["delete:presets"])
     ),
     session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
-    logger.info("Deleting preset", extra={"uuid": uuid})
+    logger.info("Deleting preset", extra={"uuid": preset_id})
     # Delete links
-    session.query(PresetTagLink).filter(PresetTagLink.preset_id == uuid).delete()
+    session.query(PresetTagLink).filter(PresetTagLink.preset_id == preset_id).delete()
 
     statement = (
-        select(Preset).where(Preset.tenant_id == tenant_id).where(Preset.id == uuid)
+        select(Preset)
+        .where(Preset.tenant_id == tenant_id)
+        .where(Preset.id == preset_id)
     )
     preset = session.exec(statement).first()
     if not preset:
         raise HTTPException(404, "Preset not found")
     session.delete(preset)
     session.commit()
-    logger.info("Deleted preset", extra={"uuid": uuid})
+    logger.info("Deleted preset", extra={"uuid": preset_id})
     return {}
 
 
 @router.put(
-    "/{uuid}",
+    "/{preset_id}",
     description="Update a preset for tenant",
 )
 def update_preset(
-    uuid: str,
+    preset_id: uuid.UUID,
     body: CreateOrUpdatePresetDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:presets"])
@@ -343,9 +360,11 @@ def update_preset(
     session: Session = Depends(get_session),
 ) -> PresetDto:
     tenant_id = authenticated_entity.tenant_id
-    logger.info("Updating preset", extra={"uuid": uuid})
+    logger.info("Updating preset", extra={"uuid": preset_id})
     statement = (
-        select(Preset).where(Preset.tenant_id == tenant_id).where(Preset.id == uuid)
+        select(Preset)
+        .where(Preset.tenant_id == tenant_id)
+        .where(Preset.id == preset_id)
     )
     preset = session.exec(statement).first()
     if not preset:
@@ -397,13 +416,13 @@ def update_preset(
 
     session.commit()
     session.refresh(preset)
-    logger.info("Updated preset", extra={"uuid": uuid})
+    logger.info("Updated preset", extra={"uuid": preset_id})
     return PresetDto(**preset.to_dict())
 
 
 @router.get(
     "/{preset_name}/alerts",
-    description="Get a preset for tenant",
+    description="Get the alerts of a preset",
 )
 def get_preset_alerts(
     request: Request,
@@ -433,7 +452,7 @@ def get_preset_alerts(
     if preset_name in STATIC_PRESETS:
         preset = STATIC_PRESETS[preset_name]
     else:
-        preset = get_preset_by_name_db(tenant_id, preset_name)
+        preset = get_db_preset_by_name(tenant_id, preset_name)
     # if preset does not exist
     if not preset:
         raise HTTPException(404, "Preset not found")
@@ -441,6 +460,19 @@ def get_preset_alerts(
         preset_dto = PresetDto(**preset.to_dict())
     else:
         preset_dto = PresetDto(**preset.dict())
+
+    # get all preset ids that the user has access to
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        authenticated_entity.tenant_id
+    )
+    # Note: if no limitations (allowed_preset_ids is []), then all presets are allowed
+    allowed_preset_ids = identity_manager.get_user_permission_on_resource_type(
+        resource_type="preset",
+        authenticated_entity=authenticated_entity,
+    )
+    if allowed_preset_ids and str(preset_dto.id) not in allowed_preset_ids:
+        raise HTTPException(403, "Not authorized to access this preset")
+
     search_engine = SearchEngine(tenant_id=tenant_id)
     preset_alerts = search_engine.search_alerts(preset_dto.query)
     logger.info("Got preset alerts", extra={"preset_name": preset_name})
@@ -459,7 +491,7 @@ class CreatePresetTab(BaseModel):
     description="Create a tab for a preset",
 )
 def create_preset_tab(
-    preset_id: str,
+    preset_id: uuid.UUID,
     body: CreatePresetTab,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:presets"])
@@ -510,7 +542,7 @@ def create_preset_tab(
     description="Delete a tab from a preset",
 )
 def delete_tab(
-    preset_id: str,
+    preset_id: uuid.UUID,
     tab_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["delete:presets"])

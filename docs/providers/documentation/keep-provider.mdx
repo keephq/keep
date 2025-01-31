@@ -1,0 +1,46 @@
+---
+title: "Keep"
+sidebarTitle: "Keep Provider"
+description: "Keep provider allows you to query and manage alerts in Keep."
+---
+
+## Inputs
+
+- `query`: str : The query to retrieve alerts based on specific criteria.
+- `filter`: dict : Optional filters to narrow down the query results.
+
+### Optional
+
+- `workflow_to_update_yaml`: str : The YAML of a workflow to update in Keep. You may find [functions -> raw_render_without_execution](/workflows/syntax/functions#raw-render-without-execution) useful.
+
+## Outputs
+
+- `alerts`: list : A list of alerts that match the query criteria.
+
+## Authentication Parameters
+
+To use the Keep provider, you must authenticate with an API token associated with your Keep account. This token can be generated from your Keep dashboard.
+
+## Connecting with the Provider
+
+1. Log in to your Keep account.
+2. Navigate to the API section of your account dashboard and generate an API token.
+3. Use this token to authenticate when querying alerts via the Keep provider.
+
+## Example of usage
+
+```yaml
+workflow:
+  id: keep-example
+  description: Keep example
+  triggers:
+    - type: manual
+  actions:
+    - name: keep-query
+      provider:
+        type: keep
+        config: "{{ providers.keeptest }}"
+        with:
+          query: "severity:critical"
+          filter:
+            status: "open"

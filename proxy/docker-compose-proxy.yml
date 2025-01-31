@@ -1,0 +1,83 @@
+services:
+  proxy:
+    image: ubuntu/squid:latest
+    ports:
+      - "3128:3128"
+    environment:
+      - DNS_NAMESERVERS=8.8.8.8 8.8.4.4
+    volumes:
+      - ./squid.conf:/etc/squid/squid.conf
+    networks:
+      - proxy-net
+      - internal
+
+  tunnel:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    networks:
+      - internal
+      - proxy-net
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+
+  keep-frontend:
+    # platform: linux/amd64
+    ports:
+      - "3000:3000"
+    extends:
+      file: ../docker-compose.common.yml
+      service: keep-frontend-common
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-ui:feature_proxy
+    environment:
+      - HOSTNAME=0.0.0.0
+      - AUTH_TYPE=NO_AUTH
+      - API_URL=http://keep-backend:8080
+      - http_proxy=http://proxy:3128
+      - https_proxy=http://proxy:3128
+      - HTTP_PROXY=http://proxy:3128
+      - HTTPS_PROXY=http://proxy:3128
+      - npm_config_proxy=http://proxy:3128
+      - npm_config_https_proxy=http://proxy:3128
+      - npm_config_strict_ssl=false
+      - AUTH_TYPE=AZUREAD
+
+    # volumes:
+    # - ./keep-ui:/app
+    # - /app/node_modules
+    # - /app/.next
+    depends_on:
+      - keep-backend
+      - proxy
+    networks:
+      # - proxy-net
+      - internal
+
+  keep-backend:
+    ports:
+      - "8080:8080"
+    extends:
+      file: ../docker-compose.common.yml
+      service: keep-backend-common
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-api
+    environment:
+      - AUTH_TYPE=NO_AUTH
+    volumes:
+      - ./state:/state
+    networks:
+      - proxy-net
+      - internal
+
+  keep-websocket-server:
+    extends:
+      file: ../docker-compose.common.yml
+      service: keep-websocket-server-common
+    networks:
+      - internal
+
+networks:
+  proxy-net:
+    driver: bridge
+  internal:
+    driver: bridge
+    internal: true

@@ -26,9 +26,19 @@ if [ -z "$KEEP_REALM" ]; then
     KEEP_REALM="keep"
 fi
 
+# Enabled debug if $KEYCLOAK_DEBUG is set to true
+if [ "$KEYCLOAK_DEBUG" = "true" ]; then
+    echo "Enabling debug mode"
+    KEYCLOAK_LOG_LEVEL="DEBUG"
+else
+    KEYCLOAK_LOG_LEVEL="INFO"
+fi
+
 # Start Keycloak in the background
 echo "Starting Keycloak"
-/opt/keycloak/bin/kc.sh start-dev --features=preview --import-realm -Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.migration.strategy=OVERWRITE_EXISTIN &
+command="/opt/keycloak/bin/kc.sh start-dev --verbose --log-level=${KEYCLOAK_LOG_LEVEL} --features=preview --import-realm -Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.migration.strategy=OVERWRITE_EXISTING"
+echo "Running command: ${command}"
+/opt/keycloak/bin/kc.sh start-dev  --log-level=${KEYCLOAK_LOG_LEVEL} --features=preview --features-disabled=dpop --import-realm -Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.migration.strategy=OVERWRITE_EXISTING &
 echo "Keycloak started"
 # Try to connect to Keycloak - wait until Keycloak is ready or timeout
 echo "Waiting for Keycloak to be ready"
@@ -62,7 +72,7 @@ echo "Event listener 'last_login' configured"
 # Configure Content-Security-Policy and X-Frame-Options
 # So that the SSO connect works with the Keep UI
 echo "Configuring Content-Security-Policy and X-Frame-Options"
-/opt/keycloak/bin/kcadm.sh update realms/${KEEP_REALM} -s 'browserSecurityHeaders.contentSecurityPolicy="frame-src '\''self'\'' '"$KEEP_URL"'; frame-ancestors '\''self'\'' '"$KEEP_URL"'; object-src '\''none'\'';"'
+/opt/keycloak/bin/kcadm.sh update realms/${KEEP_REALM} -s 'browserSecurityHeaders.contentSecurityPolicy="frame-src '\''self'\'' '${KEEP_URL}'; frame-ancestors '\''self'\'' '${KEEP_URL}'; object-src '\''none'\'';"'
 /opt/keycloak/bin/kcadm.sh update realms/${KEEP_REALM} -s 'browserSecurityHeaders.xFrameOptions="ALLOW"'
 echo "Content-Security-Policy and X-Frame-Options configured"
 

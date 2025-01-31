@@ -34,7 +34,7 @@ class PingdomProvider(BaseProvider):
     4. Click Save Integration.
 """
     webhook_template = """"""
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="read",
@@ -143,7 +143,9 @@ class PingdomProvider(BaseProvider):
         return alerts_dtos
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         # https://pingdom.com/resources/webhooks/#Examples-of-webhook-JSON-output-for-uptime-checks
 
         # map severity and status to keep's format

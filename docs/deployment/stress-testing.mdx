@@ -27,7 +27,7 @@ The primary parameters that affect the specification requirements for Keep are:
 3. **Number of Workflows**: How many automation run as a result of alert.
 
 ### Main Components:
-- **Keep Backend** - API and buisness logic. A container that serves FastAPI on top of gunicorn.
+- **Keep Backend** - API and business logic. A container that serves FastAPI on top of gunicorn.
 - **Keep Frontend** - Web app. A container that serves the react app.
 - **Database** - Stores the alerts and any other operational data.
 - **Elasticsearch** (opt out by default) - Stores alerts as document for better search performance.
@@ -35,18 +35,18 @@ The primary parameters that affect the specification requirements for Keep are:
 
 ### Testing Scenarios:
 
-- **Low Volume (< 10,000 total alerts, 100's of alerts per day)**:
+- **Low Volume (< 10,000 total alerts, hundreds of alerts per day)**:
    - **Setup**: Use a standard relational database (e.g., MySQL, PostgreSQL) with default configurations.
    - **Expectations**: Keep should handle queries and alert ingestion with minimal resource usage.
 
-- **Medium Volume (10,000 - 100,000 total alerts, 1000's of alerts per day)**:
+- **Medium Volume (10,000 - 100,000 total alerts, thousands of alerts per day)**:
    - **Setup**: Scale the database to larger instances or clusters. Adjust best practices to the DB (e.g. increasing innodb_buffer_pool_size)
    - **Expectations**: CPU and RAM usage should increase proportionally but remain within acceptable limits.
 
-3. **High Volume (100,000 - 1,000,000 total alerts, 5000's of alerts per day)**:
+3. **High Volume (100,000 - 1,000,000 total alerts, >five thousands of alerts per day)**:
    - **Setup**: Deploy Keep with Elasticsearch for storing alerts as documents.
    - **Expectations**: The system should maintain performance levels despite the large alert volume, with increased resource usage managed through scaling strategies.
-4. **Very High Volume (> 1,000,000 total alerts, 10k's of alerts per day)**:
+4. **Very High Volume (> 1,000,000 total alerts, tens of thousands of alerts per day)**:
     - **Setup**: Deploy Keep with Elasticsearch for storing alerts as documents.
     - **Setup #2**: Deploy Keep with Redis and with ARQ to use Redis as a queue.
 

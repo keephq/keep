@@ -1,3 +1,4 @@
+import datetime
 import logging
 from typing import Optional
 
@@ -76,6 +77,19 @@ class AuthVerifierBase:
         self.impersonation_auto_provision = (
             config("KEEP_IMPERSONATION_AUTO_PROVISION", default="false") == "true"
         )
+        # hold a cache of the last time an API key was used
+        # the key is the f{tenant_id}:{reference_id} and the value is the last time it was updated
+        self.update_key_interval = config("KEEP_UPDATE_KEY_INTERVAL", default=60)
+        self.key_last_used_updates = {}
+        # check if read only instance
+        self.read_only = config("KEEP_READ_ONLY", default="false") == "true"
+        self.read_only_bypass_keys = config("KEEP_READ_ONLY_BYPASS_KEY", default="")
+        self.read_only_bypass_keys = self.read_only_bypass_keys.split(",")
+        # if read_only is enabled, read_only_bypass_key must be set
+        if self.read_only and not self.read_only_bypass_keys:
+            raise ValueError(
+                "KEEP_READ_ONLY_BYPASS_KEY must be set if KEEP_READ_ONLY is enabled"
+            )
 
     def __call__(
         self,
@@ -100,6 +114,15 @@ class AuthVerifierBase:
             HTTPException: If authentication or authorization fails.
         """
         self.logger.debug("Starting authentication process")
+        if self.read_only and api_key not in self.read_only_bypass_keys:
+            # check if the scopes have scopes other than only read
+            if any([scope.split(":")[0] != "read" for scope in self.scopes]):
+                self.logger.error("Read only instance, but non-read scopes requested")
+                raise HTTPException(
+                    status_code=403,
+                    detail="Read only instance, but non-read scopes requested",
+                )
+
         authenticated_entity = self.authenticate(request, api_key, authorization, token)
         self.logger.debug(
             f"Authentication successful for entity: {authenticated_entity}"
@@ -175,7 +198,6 @@ class AuthVerifierBase:
         """
         self.logger.debug(f"Authorizing entity: {authenticated_entity}")
         self._authorize(authenticated_entity)
-        self.logger.debug("Authorization successful")
 
     def _authorize(self, authenticated_entity: AuthenticatedEntity) -> None:
         """
@@ -195,7 +217,6 @@ class AuthVerifierBase:
                 status_code=403,
                 detail=f"You don't have the required scopes to access this resource [required scopes: {self.scopes}]",
             )
-        self.logger.debug("Authorization successful")
 
     def _extract_api_key(
         self,
@@ -223,7 +244,7 @@ class AuthVerifierBase:
             if (
                 not authorization
                 and "Amazon Simple Notification Service Agent"
-                in request.headers.get("user-agent")
+                in request.headers.get("user-agent", "")
             ):
                 self.logger.warning("Got an SNS request without any auth")
                 raise HTTPException(
@@ -282,9 +303,29 @@ class AuthVerifierBase:
 
         try:
             self.logger.debug("Updating API Key last used")
-            update_key_last_used(
-                tenant_api_key.tenant_id, reference_id=tenant_api_key.reference_id
-            )
+            # if the key was updated in the last update_key_interval seconds, skip the update
+            if (
+                f"{tenant_api_key.tenant_id}:{tenant_api_key.reference_id}"
+                in self.key_last_used_updates
+            ):
+                # if the key was updated in the last update_key_interval seconds, skip the update
+                if self.key_last_used_updates[
+                    f"{tenant_api_key.tenant_id}:{tenant_api_key.reference_id}"
+                ] > (
+                    datetime.datetime.now()
+                    - datetime.timedelta(seconds=self.update_key_interval)
+                ):
+                    self.logger.debug(
+                        f"API Key last used updated in the last {self.update_key_interval} seconds"
+                    )
+            # else, update the key
+            else:
+                update_key_last_used(
+                    tenant_api_key.tenant_id, reference_id=tenant_api_key.reference_id
+                )
+                self.key_last_used_updates[
+                    f"{tenant_api_key.tenant_id}:{tenant_api_key.reference_id}"
+                ] = datetime.datetime.now()
             self.logger.debug("Successfully updated API Key last used")
         except Exception:
             self.logger.exception("Failed to update API Key last used")

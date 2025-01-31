@@ -50,6 +50,7 @@ class ParseableProviderAuthConfig:
 class ParseableProvider(BaseProvider):
     """Parseable provider to ingest data from Parseable."""
 
+    PROVIDER_CATEGORY = ["Monitoring"]
     webhook_description = "This is an example of how to configure an alert to be sent to Keep using Parseable's webhook feature. Post this to https://YOUR_PARSEABLE_SERVER/api/v1/logstream/YOUR_STREAM_NAME/alert"
     webhook_template = """{{
     "version": "v1",
@@ -118,7 +119,9 @@ class ParseableProvider(BaseProvider):
         )
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         environment = "unknown"
         id = event.pop("id", str(uuid4()))
         name = event.pop("alert", "")

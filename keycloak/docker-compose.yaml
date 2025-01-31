@@ -1,4 +1,4 @@
-version: '3.9'
+version: "3.9"
 
 services:
   mysql:
@@ -20,7 +20,7 @@ services:
       - keycloak-and-mysql-network
 
   keycloak:
-    image: quay.io/phasetwo/phasetwo-keycloak:latest
+    image: keep-keycloak
     ports:
       - 8181:8080
     restart: unless-stopped
@@ -41,11 +41,13 @@ services:
       KEEP_AUTH_REDICERT_URL: http://localhost:3000/*
       KEEP_CLIENT_ID: keep
       KEEP_KEYCLOAK_SECRET: keep-keycloak-secret
+      KEYCLOAK_DEBUG: false # used in entrypoint
     entrypoint: ["/opt/keycloak/keycloak_entrypoint.sh"]
     volumes:
       - ./keep-realm.json:/opt/keycloak/data/import/keep-realm.json
       - ./themes/keep.jar:/opt/keycloak/providers/keep.jar
       - ./event_listeners/last-login-event-listener-0.0.1-SNAPSHOT.jar:/opt/keycloak/providers/keycloak-event-listener.jar
+      # - ./javascript_providers/keep-js-policies.jar:/opt/keycloak/providers/keep-js-policies.jar
       - ./keycloak_entrypoint.sh:/opt/keycloak/keycloak_entrypoint.sh
     depends_on:
       - mysql

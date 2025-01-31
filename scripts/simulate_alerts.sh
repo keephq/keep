@@ -9,10 +9,12 @@ fi
 # Number of processes to run
 NUM_PROCESSES=$1
 
+ROOT="$(dirname $0)/.."
+
 # Function to start the processes
 start_processes() {
   for ((i=0; i<NUM_PROCESSES; i++)); do
-    ../.venv/bin/python simulate_alerts.py &
+    "${ROOT}/.venv/bin/python" "${ROOT}/scripts/simulate_alerts.py" &
     PIDS[$i]=$!
   done
 }

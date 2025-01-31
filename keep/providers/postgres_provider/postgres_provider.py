@@ -11,6 +11,8 @@ import pydantic
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.models.provider_method import ProviderMethod
+from keep.validation.fields import NoSchemeUrl, UrlPort
 
 
 @pydantic.dataclasses.dataclass
@@ -25,15 +27,24 @@ class PostgresProviderAuthConfig:
             "sensitive": True,
         }
     )
-    host: str = dataclasses.field(
-        metadata={"required": True, "description": "Postgres hostname"}
+    host: NoSchemeUrl = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Postgres hostname",
+            "validation": "no_scheme_url",
+        }
     )
     database: str | None = dataclasses.field(
         metadata={"required": False, "description": "Postgres database name"},
         default=None,
     )
-    port: str | None = dataclasses.field(
-        default="5432", metadata={"required": False, "description": "Postgres port"}
+    port: UrlPort | None = dataclasses.field(
+        default=5432,
+        metadata={
+            "required": False,
+            "description": "Postgres port",
+            "validation": "port",
+        },
     )
 
 
@@ -41,12 +52,21 @@ class PostgresProvider(BaseProvider):
     """Enrich alerts with data from Postgres."""
 
     PROVIDER_DISPLAY_NAME = "PostgreSQL"
+    PROVIDER_CATEGORY = ["Database"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="connect_to_server",
             description="The user can connect to the server",
             mandatory=True,
             alias="Connect to the server",
+        )
+    ]
+    PROVIDER_METHODS = [
+        ProviderMethod(
+            name="query",
+            func_name="execute_query",
+            description="Query the Postgres database",
+            type="view",
         )
     ]
 
@@ -72,6 +92,9 @@ class PostgresProvider(BaseProvider):
                 "connect_to_server": str(e),
             }
         return scopes
+
+    def execute_query(self, query: str):
+        return self._query(query)
 
     def __init_connection(self):
         """
@@ -104,11 +127,7 @@ class PostgresProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def _query(
-            self,
-            query: str,
-            **kwargs: dict
-            ) -> list | tuple:
+    def _query(self, query: str, **kwargs: dict) -> list | tuple:
         """
         Executes a query against the Postgres database.
 
@@ -135,11 +154,7 @@ class PostgresProvider(BaseProvider):
             # Close the database connection
             conn.close()
 
-    def _notify(
-            self,
-            query: str,
-            **kwargs
-            ):
+    def _notify(self, query: str, **kwargs):
         """
         Notifies the Postgres database.
         """

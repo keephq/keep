@@ -10,8 +10,8 @@ export function EmptyStateCard({
 }: {
   title: string;
   description: string;
-  buttonText: string;
-  onClick: () => void;
+  buttonText?: string;
+  onClick: (e: React.MouseEvent) => void;
   className?: string;
 }) {
   return (
@@ -29,9 +29,11 @@ export function EmptyStateCard({
         <p className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
           {description}
         </p>
-        <Button className="mt-4" color="orange" onClick={onClick}>
-          {buttonText}
-        </Button>
+        {buttonText && (
+          <Button className="mt-4" color="orange" onClick={onClick}>
+            {buttonText}
+          </Button>
+        )}
       </div>
     </Card>
   );

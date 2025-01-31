@@ -1,0 +1,89 @@
+---
+title: 'Checkmk'
+sidebarTitle: 'Checkmk Provider'
+description: 'Checkmk provider allows you to get alerts from Checkmk via webhooks.'
+---
+
+## Overview
+
+The Checkmk provider enables seamless integration between Keep and Checkmk. It allows you to get alerts from Checkmk to Keep via webhooks making it easier to manage your infrastructure and applications in one place.
+
+## Connecting Checkmk to Keep
+
+To connect Checkmk to Keep, you need to configure it as a webhook from Checkmk. Follow the steps below to set up the integration:
+
+1. Keep webhook script need to installed on the Checkmk server.
+
+2. You can download the Keep webhook script using the following command:
+
+```bash
+wget -O webhook-keep.py https://github.com/keephq/keep/blob/main/keep/providers/checkmk_provider/webhook-keep.py?raw=true
+```
+
+3. Copy the downloaded script to the following path on the Checkmk server:
+
+If you are using Checkmk Docker container, then copy it to the following path according to your docker volume mapping:
+
+```bash
+cp webhook-keep.py /omd/sites/<site_name>/local/share/check_mk/notifications/webhook-keep.py
+cd /omd/sites/<site_name>/local/share/check_mk/notifications
+```
+
+If you are using Checkmk installed on the server, then copy it to the following path:
+
+```bash
+cp webhook-keep.py ~/local/share/check_mk/notifications/webhook-keep.py
+cd ~/local/share/check_mk/notifications
+```
+
+4. Make the script executable:
+
+```bash
+chmod +x webhook-keep.py
+```
+
+5. Now go to the Checkmk web interface and navigate to Setup
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/checkmk-provider_1.png" />
+</Frame>
+
+6. Click on Notifications under Events
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/checkmk-provider_2.png" />
+</Frame>
+
+6. Click on Add rule
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/checkmk-provider_3.png" />
+</Frame>
+
+7. In the Notifications method method, select "webhook-keep" as the notification method.
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/checkmk-provider_4.png" />
+</Frame>
+
+8. Configure the Rule properties, Contact selections, and Conditions according to your requirements.
+
+9. The first parameter is the Webhook URL of Keep which is `https://api.keephq.dev/alerts/event/checkmk`.
+
+10. The second parameter is the API Key of Keep which you can generate in the [Keep settings](https://platform.keephq.dev/settings?selectedTab=users&userSubTab=api-keys).
+
+11. Click on Save to save the configuration.
+
+12. Now you will start receiving alerts from Checkmk to Keep via webhooks when the configured conditions are met.
+
+## Useful Links
+
+- [Checkmk](https://checkmk.com/)

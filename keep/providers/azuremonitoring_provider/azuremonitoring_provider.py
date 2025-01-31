@@ -47,6 +47,7 @@ To send alerts from Azure Monitor to Keep, Use the following webhook url to conf
     }
 
     PROVIDER_DISPLAY_NAME = "Azure Monitor"
+    PROVIDER_CATEGORY = ["Monitoring", "Cloud Infrastructure"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -61,7 +62,9 @@ To send alerts from Azure Monitor to Keep, Use the following webhook url to conf
         pass
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         essentials = event.get("data", {}).get("essentials", {})
         alert_context = event.get("data", {}).get("alertContext", {})
 
@@ -92,7 +95,7 @@ To send alerts from Azure Monitor to Keep, Use the following webhook url to conf
         # Construct the alert object
         alert = AlertDto(
             id=alert_id,
-            name=essentials.get("alertRule", ""),
+            name=essentials.get("alertRule") or "",
             status=status,
             lastReceived=str(event_time),
             source=["azuremonitoring"],

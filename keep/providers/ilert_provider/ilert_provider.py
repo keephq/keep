@@ -1,5 +1,5 @@
 """
-Ilert Provider is a class that allows to create/close incidents in Ilert.
+ilert Provider is a class that allows to create/close incidents in ilert.
 """
 
 import dataclasses
@@ -16,11 +16,12 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import HttpsUrl
 
 
 class IlertIncidentStatus(str, enum.Enum):
     """
-    Ilert incident status.
+    ilert incident status.
     """
 
     INVESTIGATING = "INVESTIGATING"
@@ -32,7 +33,7 @@ class IlertIncidentStatus(str, enum.Enum):
 @pydantic.dataclasses.dataclass
 class IlertProviderAuthConfig:
     """
-    Ilert authentication configuration.
+    ilert authentication configuration.
     """
 
     ilert_token: str = dataclasses.field(
@@ -43,23 +44,26 @@ class IlertProviderAuthConfig:
             "sensitive": True,
         }
     )
-    ilert_host: str = dataclasses.field(
+    ilert_host: HttpsUrl = dataclasses.field(
         metadata={
             "required": False,
             "description": "ILert API host",
             "hint": "https://api.ilert.com/api",
+            "validation": "https_url"
         },
         default="https://api.ilert.com/api",
     )
 
 
 class IlertProvider(BaseProvider):
-    """Create/Resolve incidents in Ilert."""
+    """Create/Resolve incidents in ilert."""
 
+    PROVIDER_DISPLAY_NAME = "ilert"
     PROVIDER_SCOPES = [
         ProviderScope("read_permission", "Read permission", mandatory=True),
         ProviderScope("write_permission", "Write permission", mandatory=False),
     ]
+    PROVIDER_CATEGORY = ["Incident Management"]
 
     SEVERITIES_MAP = {
         "MAJOR_OUTAGE": AlertSeverity.CRITICAL,
@@ -89,7 +93,7 @@ class IlertProvider(BaseProvider):
 
     def validate_config(self):
         """
-        Validates required configuration for Ilert provider.
+        Validates required configuration for ilert provider.
 
         """
         self.authentication_config = IlertProviderAuthConfig(
@@ -102,16 +106,31 @@ class IlertProvider(BaseProvider):
         for scope in self.PROVIDER_SCOPES:
             try:
                 if scope.name == "read_permission":
-                    requests.get(
+                    res = requests.get(
                         f"{self.authentication_config.ilert_host}/incidents",
                         headers={
                             "Authorization": self.authentication_config.ilert_token
                         },
                     )
+                    res.raise_for_status()
                     scopes[scope.name] = True
                 elif scope.name == "write_permission":
-                    # TODO: find a way to validate write_permissions, for now it is always "validated" sucessfully.
-                    scopes[scope.name] = True
+                    res = requests.get(
+                        f"{self.authentication_config.ilert_host}/users/current",
+                        headers={
+                            "Authorization": self.authentication_config.ilert_token
+                        },
+                        timeout=10
+                    )
+                    res.raise_for_status()
+                    data = res.json()
+                    if data['role'] not in ["USER", "ADMIN"]:
+                        warning_msg = f"User role '{data['role']}' has limited permissions"
+                        self.logger.warning(warning_msg)
+                        scopes[scope.name] = warning_msg
+                    else:
+                        self.logger.debug(f"Write permission validated successfully for role: {data['role']}")
+                        scopes[scope.name] = True
             except Exception as e:
                 self.logger.warning(
                     "Failed to validate scope",
@@ -123,10 +142,10 @@ class IlertProvider(BaseProvider):
 
     def _query(self, incident_id: str, **kwargs):
         """
-        Query Ilert incident.
+        Query ilert incident.
         """
         self.logger.info(
-            "Querying Ilert incident",
+            "Querying ilert incident",
             extra={
                 "incident_id": incident_id,
                 **kwargs,
@@ -139,24 +158,24 @@ class IlertProvider(BaseProvider):
         )
         if not response.ok:
             self.logger.error(
-                "Failed to query Ilert incident",
+                "Failed to query ilert incident",
                 extra={
                     "status_code": response.status_code,
                     "response": response.text,
                 },
             )
             raise Exception(
-                f"Failed to query Ilert incident: {response.status_code} {response.text}"
+                f"Failed to query ilert incident: {response.status_code} {response.text}"
             )
         self.logger.info(
-            "Ilert incident queried",
+            "ilert incident queried",
             extra={"status_code": response.status_code},
         )
         return response.json()
 
     def _get_alerts(self) -> list[AlertDto]:
         """
-        Get incidents from Ilert.
+        Get incidents from ilert.
         """
         if not self.authentication_config.ilert_host.endswith("/api"):
             self.authentication_config.ilert_host = (
@@ -217,7 +236,7 @@ class IlertProvider(BaseProvider):
         self, summary, status, message, affectedServices, id
     ):
         self.logger.info(
-            "Creating/updating Ilert incident",
+            "Creating/updating ilert incident",
             extra={
                 "summary": summary,
                 "status": status,
@@ -271,17 +290,17 @@ class IlertProvider(BaseProvider):
 
         if not response.ok:
             self.logger.error(
-                "Failed to create/update Ilert incident",
+                "Failed to create/update ilert incident",
                 extra={
                     "status_code": response.status_code,
                     "response": response.text,
                 },
             )
             raise Exception(
-                f"Failed to create/update Ilert incident: {response.status_code} {response.text}"
+                f"Failed to create/update ilert incident: {response.status_code} {response.text}"
             )
         self.logger.info(
-            "Ilert incident created/updated",
+            "ilert incident created/updated",
             extra={"status_code": response.status_code},
         )
         return response.json()
@@ -308,13 +327,13 @@ class IlertProvider(BaseProvider):
             "links": links,
             "customDetails": custom_details,
         }
-        self.logger.info("Posting Ilert event", extra=payload)
+        self.logger.info("Posting ilert event", extra=payload)
         response = requests.post(
             f"{self.authentication_config.ilert_host}/events/keep/{self.authentication_config.ilert_token} ",
             json=payload,
         )
         self.logger.info(
-            "Ilert event posted", extra={"status_code": response.status_code}
+            "ilert event posted", extra={"status_code": response.status_code}
         )
         return response.json()
 
@@ -335,7 +354,7 @@ class IlertProvider(BaseProvider):
         custom_details: dict = {},
         **kwargs: dict,
     ):
-        self.logger.info("Notifying Ilert", extra=locals())
+        self.logger.info("Notifying ilert", extra=locals())
         if _type == "incident":
             return self.__create_or_update_incident(
                 summary, status, message, affectedServices, id

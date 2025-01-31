@@ -8,15 +8,33 @@ Provider provisioning in Keep allows you to set up and manage data providers dyn
 
 ### Configuring Providers
 
-To provision providers, set the `KEEP_PROVIDERS` environment variable with a JSON string containing the provider configurations. Here's an example:
+To provision providers and deduplication rules for them, set the `KEEP_PROVIDERS` environment variable. This can be done in two ways:
+1. Directly with a JSON string containing the providers configurations.
+2. With the path to a JSON file that contains the providers configurations.
 
+<Tip>Please note: Deduplication rules are not mandatory for provider distribution. See the Clickhouse example.</Tip>
+
+Providers provisioning JSON example:
 ```json
 {
   "keepVictoriaMetrics": {
     "type": "victoriametrics",
     "authentication": {
       "VMAlertHost": "http://localhost",
-      "VMAlertPort": 1234
+      "VMAlertPort": 1234,
+      "deduplication_rules": {
+        "deduplication rule name example 1": {
+          "description": "deduplication rule name example 1",
+          "fingerprint_fields": ["fingerprint", "source", "service"],
+          "full_deduplication": true,
+          "ignore_fields": ["name", "lastReceived"]
+        },
+        "deduplication rule name example 2": {
+          "description": "deduplication rule name example 2",
+          "fingerprint_fields": ["fingerprint", "source", "service"],
+          "full_deduplication": false,
+        }
+      }
     }
   },
   "keepClickhouse1": {

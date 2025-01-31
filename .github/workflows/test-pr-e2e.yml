@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - 'keep/**'
-      - 'keep-ui/**'
-      - 'tests/**'
+      - "keep/**"
+      - "keep-ui/**"
+      - "tests/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref }}
@@ -26,7 +26,7 @@ env:
   EE_ENABLED: true
 
 jobs:
-  tests:
+  tests-e2e:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -60,11 +60,25 @@ jobs:
       - name: Install dependencies using poetry
         run: poetry install --no-interaction --no-root --with dev
 
-      - name: Install Playwright dependencies
-        run: npx playwright install --with-deps
+      - name: Get Playwright version from poetry.lock
+        id: playwright-version
+        run: |
+          PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
+          echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.version }}
 
-      - name: Install playwright
-        run: poetry run playwright install
+      - name: Install Playwright and dependencies
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            poetry run playwright install --with-deps
+          else
+            poetry run playwright install-deps
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -123,7 +137,7 @@ jobs:
 
           # create the state directory
           # mkdir -p ./state && chown -R root:root ./state && chmod -R 777 ./state
-    
+
       - name: Run e2e tests and report coverage
         run: |
           poetry run coverage run --branch -m pytest -s tests/e2e_tests/
@@ -147,9 +161,9 @@ jobs:
 
       - name: Upload test artifacts on failure
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.4.3
         with:
-          name: test-artifacts
+          name: test-artifacts-my-artifacts-${{ matrix.db_type }}
           path: |
             playwright_dump_*.html
             playwright_dump_*.png

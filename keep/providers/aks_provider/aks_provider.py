@@ -2,13 +2,13 @@ import dataclasses
 import logging
 
 import pydantic
-import yaml
 from azure.identity import ClientSecretCredential
 from azure.mgmt.containerservice import ContainerServiceClient
 from kubernetes import client, config
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
+from keep.functions import cyaml
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
@@ -71,7 +71,8 @@ class AksProviderAuthConfig:
 class AksProvider(BaseProvider):
     """Enrich alerts using data from AKS."""
 
-    PROVIDER_DISPLAY_NAME = "AKS"
+    PROVIDER_DISPLAY_NAME = "Azure AKS"
+    PROVIDER_CATEGORY = ["Cloud Infrastructure"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -113,7 +114,7 @@ class AksProvider(BaseProvider):
             )
 
             # parse the kubeconfig (parsed as yml string)
-            kubeconfig = yaml.safe_load(
+            kubeconfig = cyaml.safe_load(
                 cluster_creds.kubeconfigs[0].value.decode("utf-8")
             )
 

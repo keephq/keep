@@ -1,6 +1,7 @@
 """
 Simple Console Output Provider
 """
+
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -25,11 +26,7 @@ class ConsoleProvider(BaseProvider):
         # No need to dispose of anything, so just do nothing.
         pass
 
-    def _notify(
-            self,
-            message: str = "",
-            **kwargs: dict
-            ):
+    def _notify(self, message: str = "", **kwargs: dict):
         """
         Output alert message simply using the print method.
 
@@ -37,8 +34,17 @@ class ConsoleProvider(BaseProvider):
             alert_message (str): The alert message to be printed in to the console
         """
         self.logger.debug("Outputting alert message to console")
-        # message = kwargs.get("alert_message")
-        print(message)
+        if kwargs.get("logger", False):
+            severity = kwargs.get("severity", "info")
+            try:
+                getattr(self.logger, severity)(message)
+            except AttributeError:
+                self.logger.error(f"Invalid log level {severity}")
+                # default to print
+                print(message)
+        # use print
+        else:
+            print(message)
         self.logger.debug("Alert message outputted to console")
         return message
 
@@ -63,4 +69,8 @@ if __name__ == "__main__":
         provider_type="console",
         provider_config=config,
     )
-    provider.notify(alert_message="Simple alert showing context with name: John Doe")
+    provider.notify(
+        alert_message="Simple alert showing context with name: John Doe",
+        logger=True,
+        severity="critical",
+    )

@@ -8,6 +8,7 @@ from sqlmodel import SQLModel
 import keep.api.logging
 from keep.api.core.db_utils import create_db_engine
 from keep.api.models.db.action import *
+from keep.api.models.db.ai_suggestion import *
 from keep.api.models.db.alert import *
 from keep.api.models.db.dashboard import *
 from keep.api.models.db.extraction import *
@@ -21,6 +22,7 @@ from keep.api.models.db.tenant import *
 from keep.api.models.db.topology import *
 from keep.api.models.db.user import *
 from keep.api.models.db.workflow import *
+from keep.api.models.db.facet import *
 
 target_metadata = SQLModel.metadata
 

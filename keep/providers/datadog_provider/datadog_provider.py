@@ -8,9 +8,12 @@ import json
 import logging
 import os
 import time
+from collections import defaultdict
+from typing import Literal
 
 import pydantic
 import requests
+
 from datadog_api_client import ApiClient, Configuration
 from datadog_api_client.api_client import Endpoint
 from datadog_api_client.exceptions import (
@@ -27,12 +30,14 @@ from datadog_api_client.v1.model.monitor import Monitor
 from datadog_api_client.v1.model.monitor_options import MonitorOptions
 from datadog_api_client.v1.model.monitor_thresholds import MonitorThresholds
 from datadog_api_client.v1.model.monitor_type import MonitorType
+from datadog_api_client.v2.api.incidents_api import IncidentsApi
 from datadog_api_client.v2.api.service_definition_api import ServiceDefinitionApi
+from datadog_api_client.v2.api.users_api import UsersApi, UsersResponse
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseTopologyProvider
+from keep.providers.base.base_provider import BaseTopologyProvider, ProviderHealthMixin
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.datadog_provider.datadog_alert_format_description import (
     DatadogAlertFormatDescription,
@@ -40,6 +45,7 @@ from keep.providers.datadog_provider.datadog_alert_format_description import (
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import HttpsUrl
 
 logger = logging.getLogger(__name__)
 
@@ -70,12 +76,13 @@ class DatadogProviderAuthConfig:
         },
         default="",
     )
-    domain: str = dataclasses.field(
+    domain: HttpsUrl = dataclasses.field(
         metadata={
             "required": False,
             "description": "Datadog API domain",
             "sensitive": False,
             "hint": "https://api.datadoghq.com",
+            "validation": "https_url",
         },
         default="https://api.datadoghq.com",
     )
@@ -99,9 +106,10 @@ class DatadogProviderAuthConfig:
     )
 
 
-class DatadogProvider(BaseTopologyProvider):
+class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
     """Pull/push alerts from Datadog."""
 
+    PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_DISPLAY_NAME = "Datadog"
     OAUTH2_URL = os.environ.get("DATADOG_OAUTH2_URL")
     DATADOG_CLIENT_ID = os.environ.get("DATADOG_CLIENT_ID")
@@ -182,6 +190,34 @@ class DatadogProvider(BaseTopologyProvider):
             scopes=["events_read"],
             description="Get all events related to this monitor",
             type="view",
+        ),
+        ProviderMethod(
+            name="Get a Trace",
+            func_name="get_trace",
+            scopes=["apm_read"],
+            description="Get trace by id",
+            type="view",
+        ),
+        ProviderMethod(
+            name="Create Incident",
+            func_name="create_incident",
+            scopes=["incidents_write"],
+            description="Create an incident",
+            type="action",
+        ),
+        ProviderMethod(
+            name="Resolve Incident",
+            func_name="resolve_incident",
+            scopes=["incidents_write"],
+            description="resolve an active incident",
+            type="action",
+        ),
+        ProviderMethod(
+            name="Add Incident Timeline Note",
+            func_name="add_incident_timeline_note",
+            scopes=["incidents_write"],
+            description="Add a note to an incident timeline",
+            type="action",
         ),
     ]
     FINGERPRINT_FIELDS = ["groups", "monitor_id"]
@@ -315,6 +351,119 @@ class DatadogProvider(BaseTopologyProvider):
             }
         }
 
+    def get_users(self) -> UsersResponse:
+        with ApiClient(self.configuration) as api_client:
+            api = UsersApi(api_client)
+            return api.list_users()
+
+    def add_incident_timeline_note(self, incident_id: str, note: str):
+        headers = {}
+        if self.authentication_config.api_key and self.authentication_config.app_key:
+            headers["DD-API-KEY"] = self.authentication_config.api_key
+            headers["DD-APPLICATION-KEY"] = self.authentication_config.app_key
+        else:
+            headers["Authorization"] = (
+                f"Bearer {self.authentication_config.oauth_token.get('access_token')}"
+            )
+        endpoint = f"api/v2/incidents/{incident_id}/timeline"
+        url = f"{self.configuration.host}/{endpoint}"
+        response = requests.post(
+            url,
+            headers=headers,
+            json={
+                "data": {
+                    "attributes": {
+                        "cell_type": "markdown",
+                        "content": {"content": note},
+                    },
+                    "type": "incident_timeline_cells",
+                }
+            },
+        )
+        if response.ok:
+            return response.json()
+        else:
+            raise Exception(
+                f"Failed to add incident timeline note: {response.status_code} {response.text}"
+            )
+
+    def resolve_incident(self, incident_id: str):
+        self.configuration.unstable_operations["update_incident"] = True
+        with ApiClient(self.configuration) as api_client:
+            api = IncidentsApi(api_client)
+            response = api.update_incident(
+                incident_id,
+                {
+                    "data": {
+                        "id": incident_id,
+                        "type": "incidents",
+                        "attributes": {"fields": {"state": {"value": "resolved"}}},
+                    }
+                },
+            )
+            return response.data.to_dict()
+
+    def create_incident(
+        self,
+        incident_name: str,
+        incident_message: str,
+        commander_user: str,
+        customer_impacted: bool = False,
+        important: bool = True,
+        severity: Literal["SEV-1", "SEV-2", "SEV-3", "SEV-4", "UNKNOWN"] = "SEV-4",
+        fields: dict = {"state": {"value": "active"}},
+    ):
+        users = self.get_users()
+        commander_user_obj = next(
+            (
+                user
+                for user in users.data
+                if user.attributes.name == commander_user
+                or user.attributes.handle == commander_user
+            ),
+            users.data[0],  # select the first user as the commander if not found
+        )
+
+        fields["severity"] = {"value": severity}
+        body = {
+            "data": {
+                "type": "incidents",
+                "attributes": {
+                    "title": incident_name,
+                    "fields": fields,
+                    "initial_cells": [
+                        {
+                            "cell_type": "markdown",
+                            "content": {
+                                "content": incident_message,
+                                "important": important,
+                            },
+                        }
+                    ],
+                    "customer_impacted": customer_impacted,
+                },
+                "relationships": {
+                    "commander_user": {
+                        "data": {
+                            "type": "users",
+                            "id": commander_user_obj.id,
+                        },
+                    },
+                },
+            }
+        }
+        self.configuration.unstable_operations["create_incident"] = True
+        with ApiClient(self.configuration) as api_client:
+            api = IncidentsApi(api_client)
+            result = api.create_incident(body)
+            host_app = self.configuration.host.replace("api", "app")
+            return {
+                "id": result.data.id,
+                "url": f"{host_app}/incidents/{result.data.attributes.public_id}",
+                "title": incident_name,
+                "incident": result.data.attributes.to_dict(),
+            }
+
     def mute_monitor(
         self,
         monitor_id: str,
@@ -413,6 +562,110 @@ class DatadogProvider(BaseTopologyProvider):
                 scope=groups,
             )
         self.logger.info("Monitor unmuted", extra={"monitor_id": monitor_id})
+
+    # @tb: we need to standardize the way we get traces
+    # e.g., create a trace model and use it across providers
+    def get_trace(self, trace_id: str):
+        self.logger.info("Getting trace", extra={"trace_id": trace_id})
+        headers = {}
+        if self.authentication_config.api_key and self.authentication_config.app_key:
+            headers["DD-API-KEY"] = self.authentication_config.api_key
+            headers["DD-APPLICATION-KEY"] = self.authentication_config.app_key
+        else:
+            headers["Authorization"] = (
+                f"Bearer {self.authentication_config.oauth_token.get('access_token')}"
+            )
+        endpoint = f"api/unstable/ui/trace/{trace_id}"
+        url = f"{self.configuration.host}/{endpoint}"
+        response = requests.get(url, headers=headers)
+        if response.ok:
+            self.logger.info("Trace retrieved", extra={"trace_id": trace_id})
+            trace_data = response.json()
+            return trace_data.get("data", {}).get("attributes", {}).get("trace", {})
+        else:
+            self.logger.error(
+                "Failed to get trace",
+                extra={
+                    "trace_id": trace_id,
+                    "status_code": response.status_code,
+                    "response": response.text,
+                },
+            )
+            raise Exception(
+                f"Failed to get traces: {response.status_code} {response.text}"
+            )
+
+    def search_traces(self, queries: list[str], **kwargs):
+        if not queries:
+            raise Exception("No services provided")
+
+        self.logger.info("Searching traces", extra={"queries": queries})
+
+        headers = {}
+        if self.authentication_config.api_key and self.authentication_config.app_key:
+            headers["DD-API-KEY"] = self.authentication_config.api_key
+            headers["DD-APPLICATION-KEY"] = self.authentication_config.app_key
+        else:
+            headers["Authorization"] = (
+                f"Bearer {self.authentication_config.oauth_token.get('access_token')}"
+            )
+
+        alltraces = defaultdict(list)
+        for query in queries:
+            self.logger.info("Searching traces", extra={"query": query})
+            try:
+                traces = self._search_traces(query, headers)
+                traces_ids = [
+                    t.get("attributes").get("trace_id") for t in traces["data"]
+                ]
+                alltraces[query] = traces_ids
+            except Exception:
+                self.logger.exception(
+                    "Failed to get traces",
+                    extra={
+                        "query": query,
+                    },
+                )
+                continue
+
+        return alltraces
+
+    def _search_traces(self, query: str, headers: dict):
+        span_query = self._translate_metric_query_to_span_query(query)
+        data = {
+            "data": {
+                "attributes": {
+                    "filter": {
+                        "from": "now-1800s",
+                        "to": "now",
+                        "query": span_query,
+                    },
+                    "options": {"timezone": "UTC"},
+                    "page": {"limit": 5},
+                    "sort": "-timestamp",
+                },
+                "type": "search_request",
+            }
+        }
+        endpoint = "/api/v2/spans/events/search"
+        url = f"{self.configuration.host}/{endpoint}"
+        response = requests.post(url, headers=headers, json=data)
+        if response.ok:
+            self.logger.info("Traces retrieved", extra={"query": query})
+            traces = response.json()
+            return traces
+        else:
+            self.logger.error(
+                "Failed to get traces",
+                extra={
+                    "query": query,
+                    "status_code": response.status_code,
+                    "response": response.text,
+                },
+            )
+            raise Exception(
+                f"Failed to get traces: {response.status_code} {response.text}"
+            )
 
     def get_monitor_events(self, monitor_id: str):
         self.logger.info("Getting monitor events", extra={"monitor_id": monitor_id})
@@ -788,17 +1041,32 @@ class DatadogProvider(BaseTopologyProvider):
                 self.logger.info("Monitors updated")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
-        tags_list = event.get("tags", "").split(",")
-        tags_list.remove("monitor")
-
-        try:
-            tags = {k: v for k, v in map(lambda tag: tag.split(":"), tags_list)}
-        except Exception as e:
-            logger.error(
-                "Failed to parse tags", extra={"error": str(e), "tags": tags_list}
-            )
+    def _format_alert(
+        event: dict, provider_instance: "BaseTopologyProvider" = None
+    ) -> AlertDto:
+        tags = event.get("tags", "")
+        if isinstance(tags, str):
+            tags_list = tags.split(",")
+            tags_list.remove("monitor")
             tags = {}
+
+            try:
+                for tag in tags_list:
+                    parts = tag.split(":", 1)  # Split only on first ':'
+                    if len(parts) == 2:
+                        key, value = parts
+                        tags[key] = value
+            except Exception as e:
+                logger.error(
+                    "Failed to parse tags", extra={"error": str(e), "tags": tags_list}
+                )
+                tags = {}
+
+        service = None
+        # Always remove monitor tag
+        if isinstance(tags, dict):
+            tags.pop("monitor", None)
+            service = tags.get("service")
 
         event_time = datetime.datetime.fromtimestamp(
             int(event.get("last_updated")) / 1000, tz=datetime.timezone.utc
@@ -811,7 +1079,6 @@ class DatadogProvider(BaseTopologyProvider):
         severity = DatadogProvider.SEVERITIES_MAP.get(
             event.get("severity"), AlertSeverity.INFO
         )
-        service = tags.get("service")
 
         url = event.pop("url", None)
 
@@ -822,6 +1089,9 @@ class DatadogProvider(BaseTopologyProvider):
         else:
             groups = groups.split(",")
 
+        description = event.get("message") or event.get("body")
+        alert_query = event.get("alert_query")
+
         alert = AlertDto(
             id=event.get("id"),
             name=title,
@@ -829,12 +1099,14 @@ class DatadogProvider(BaseTopologyProvider):
             lastReceived=str(event_time),
             source=["datadog"],
             message=event.get("body"),
+            description=description,
             groups=groups,
             severity=severity,
             service=service,
             url=url,
             tags=tags,
             monitor_id=event.get("monitor_id"),
+            alert_query=alert_query,
         )
         alert.fingerprint = DatadogProvider.get_alert_fingerprint(
             alert, DatadogProvider.FINGERPRINT_FIELDS
@@ -933,6 +1205,16 @@ class DatadogProvider(BaseTopologyProvider):
             # Choose a random value for the parameter
             target[param_parts[-1]] = random.choice(choices)
 
+        # Apply renders
+        for param, choices in alert_data.get("renders", {}).items():
+            target = simulated_alert
+            for key, val in target.items():
+                # try to replace
+                param_to_replace = "{{" + param + "}}"
+                choice = random.choice(choices)
+                target[key] = val.replace(param_to_replace, choice)
+            target[param] = choice
+
         simulated_alert["last_updated"] = int(time.time() * 1000)
         simulated_alert["alert_transition"] = random.choice(
             list(DatadogProvider.STATUS_MAP.keys())
@@ -942,7 +1224,7 @@ class DatadogProvider(BaseTopologyProvider):
         ).hexdigest()
         return simulated_alert
 
-    def pull_topology(self) -> list[TopologyServiceInDto]:
+    def pull_topology(self) -> tuple[list[TopologyServiceInDto], dict]:
         services = {}
         with ApiClient(self.configuration) as api_client:
             api_instance = ServiceDefinitionApi(api_client)
@@ -989,7 +1271,51 @@ class DatadogProvider(BaseTopologyProvider):
                 dependency: "unknown" for dependency in dependencies
             }
             services[service_dep] = service
-        return list(services.values())
+        return list(services.values()), {}
+
+    def _translate_metric_query_to_span_query(
+        self, metric_query: str
+    ) -> tuple[str, int]:
+        """
+        Translates a Datadog metric query into a span search query.
+        Returns tuple of (query_string, threshold_seconds)
+        """
+        import re
+
+        # Extract tags from the curly braces
+        tags_pattern = r"\{(.*?)\}"
+        tags_match = re.search(tags_pattern, metric_query)
+        if not tags_match:
+            raise ValueError("No tags found in metric query")
+
+        tags_str = tags_match.group(1)
+        tags_dict = dict(tag.split(":") for tag in tags_str.split(","))
+
+        # Extract threshold value (the number after '>')
+        threshold_pattern = r">\s*(\d+)"
+        threshold_match = re.search(threshold_pattern, metric_query)
+        if not threshold_match:
+            raise ValueError("No threshold found in metric query")
+
+        threshold_seconds = int(threshold_match.group(1))
+
+        # Extract operation name dynamically - look for the string between "trace." and ".duration"
+        operation_pattern = r"trace\.(.*?)\.duration"
+        operation_match = re.search(operation_pattern, metric_query)
+        if not operation_match:
+            raise ValueError("Could not find operation name in metric query")
+
+        operation_name = operation_match.group(1)
+
+        # Construct the span search query
+        query_parts = [
+            f'service:{tags_dict["service"]}',
+            f'env:{tags_dict["env"]}',
+            f"operation_name:{operation_name}",
+            f"@duration:>{threshold_seconds}s",  # @ is used to indicate a span attribute
+        ]
+
+        return " ".join(query_parts)
 
 
 if __name__ == "__main__":
@@ -1010,11 +1336,13 @@ if __name__ == "__main__":
     provider_config = {
         "authentication": {"api_key": api_key, "app_key": app_key},
     }
-    provider: BaseTopologyProvider = ProvidersFactory.get_provider(
+    provider: DatadogProvider = ProvidersFactory.get_provider(
         context_manager=context_manager,
         provider_id="datadog-keephq",
         provider_type="datadog",
         provider_config=provider_config,
     )
-    result = provider.pull_topology()
+    result = provider.create_incident(
+        "tal test from provider", "what will I tell you?", "Tal Borenstein"
+    )
     print(result)

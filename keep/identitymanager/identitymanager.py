@@ -206,7 +206,7 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
         Returns:
             list: A list of permission objects.
         """
-        pass
+        return []
 
     def get_user_permission_on_resource_type(
         self, resource_type: str, authenticated_entity: AuthenticatedEntity

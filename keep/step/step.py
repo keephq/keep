@@ -36,11 +36,13 @@ class Step:
         self.context_manager: ContextManager = context_manager
         self.io_handler = IOHandler(context_manager)
         self.conditions = self.config.get("condition", [])
+        self.vars = self.config.get("vars", {})
         self.conditions_results = {}
         self.logger = context_manager.get_logger()
         self.__retry = self.on_failure.get("retry", {})
         self.__retry_count = self.__retry.get("count", 0)
         self.__retry_interval = self.__retry.get("interval", 0)
+        self.__continue_to_next_step = self.config.get("continue", True)
 
     @property
     def foreach(self):
@@ -50,16 +52,35 @@ class Step:
     def name(self):
         return self.step_id
 
+    @property
+    def continue_to_next_step(self):
+        return self.__continue_to_next_step
+
+    def _dont_render(self):
+        # special case for Keep provider on _notify with "if" - it should render the parameters itself
+        return self.step_type == StepType.ACTION and "KeepProvider" in str(
+            self.provider.__class__
+        )
+
     def run(self):
         try:
             if self.config.get("foreach"):
                 did_action_run = self._run_foreach()
+            # special case for Keep provider on _notify with "if" - it should render the parameters itself
+            elif self._dont_render():
+                did_action_run = self._run_single(dont_render=True)
             else:
                 did_action_run = self._run_single()
             return did_action_run
         except Exception as e:
             self.logger.error(
-                "Failed to run step %s with error %s", self.step_id, e, exc_info=True
+                "Failed to run step %s with error %s",
+                self.step_id,
+                e,
+                extra={
+                    "step_id": self.step_id,
+                },
+                exc_info=True,
             )
             raise ActionError(e)
 
@@ -111,7 +132,12 @@ class Step:
             try:
                 did_action_run = self._run_single()
             except Exception as e:
-                self.logger.error(f"Failed to run action with error {e}")
+                self.logger.error(
+                    f"Failed to run action with error {e}",
+                    extra={
+                        "step_id": self.step_id,
+                    },
+                )
                 continue
             # If at least one item triggered an action, return True
             # TODO - do it per item
@@ -119,9 +145,19 @@ class Step:
                 any_action_run = True
         return any_action_run
 
-    def _run_single(self):
+    def _run_single(self, dont_render=False):
         # Initialize all conditions
         conditions = []
+
+        aliases = self.config.get("alias", {})
+
+        # if aliases are defined, set them in the context
+        for alias_key, alias_val in aliases.items():
+            aliases[alias_key] = self.io_handler.render(alias_val)
+
+        self.context_manager.set_step_vars(
+            self.step_id, _vars=self.vars, _aliases=aliases
+        )
 
         for condition in self.conditions:
             condition_name = condition.get("name", None)
@@ -150,6 +186,9 @@ class Step:
                     "Failed to apply condition %s with error %s",
                     condition.condition_name,
                     e,
+                    extra={
+                        "step_id": self.step_id,
+                    },
                 )
                 raise
             self.context_manager.set_condition_results(
@@ -178,8 +217,8 @@ class Step:
 
         # Now check it
         if if_conf:
-            if_conf = self.io_handler.quote(if_conf)
-            if_met = self.io_handler.render(if_conf, safe=False)
+            quoted_if_conf = self.io_handler.quote(if_conf)
+            if_met = self.io_handler.render(quoted_if_conf, safe=False)
             # Evaluate the condition string
             from asteval import Interpreter
 
@@ -189,17 +228,31 @@ class Step:
             if isinstance(evaluated_if_met, str):
                 evaluated_if_met = aeval(evaluated_if_met)
             # if the evaluation failed, raise an exception
-            if aeval.error_msg:
+            if aeval.error_msg and if_conf == quoted_if_conf:
                 self.logger.error(
-                    f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {if_conf}, Rendered: {if_met}, Error: {aeval.error_msg}",
+                    f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {quoted_if_conf}, Rendered: {if_met}, Error: {aeval.error_msg}",
                     extra={
-                        "condition": if_conf,
+                        "condition": quoted_if_conf,
                         "rendered": if_met,
+                        "step_id": self.step_id,
                     },
                 )
                 raise Exception(
                     f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {if_conf}, Rendered: {if_met}, Error: {aeval.error_msg}"
                 )
+            # maybe its because of quoting, try again without quoting
+            elif aeval.error_msg:
+                # without quoting
+                aeval_without_quote = Interpreter()
+                if_met = self.io_handler.render(if_conf, safe=False)
+                evaluated_if_met = aeval_without_quote(if_met)
+                if isinstance(evaluated_if_met, str):
+                    evaluated_if_met = aeval_without_quote(evaluated_if_met)
+                # if again error, raise an exception
+                if aeval_without_quote.error_msg:
+                    raise Exception(
+                        f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {if_conf}, Rendered: {if_met}, Error: {aeval_without_quote.error_msg}"
+                    )
 
         else:
             evaluated_if_met = True
@@ -211,6 +264,7 @@ class Step:
                 extra={
                     "condition": if_conf,
                     "rendered": if_met,
+                    "step_id": self.step_id,
                 },
             )
             return
@@ -221,32 +275,62 @@ class Step:
                 extra={
                     "condition": if_conf,
                     "rendered": if_met,
+                    "step_id": self.step_id,
                 },
             )
         else:
             self.logger.info(
                 "Action %s evaluated to run! Reason: no condition, hence true.",
                 self.config.get("name"),
+                extra={
+                    "step_id": self.step_id,
+                },
             )
 
         # Third, check throttling
         # Now check if throttling is enabled
-        self.logger.info("Checking throttling for action %s", self.config.get("name"))
+        self.logger.info(
+            "Checking throttling for action %s",
+            self.config.get("name"),
+            extra={
+                "step_id": self.step_id,
+            },
+        )
         throttled = self._check_throttling(self.config.get("name"))
         if throttled:
-            self.logger.info("Action %s is throttled", self.config.get("name"))
+            self.logger.info(
+                "Action %s is throttled",
+                self.config.get("name"),
+                extra={
+                    "step_id": self.step_id,
+                },
+            )
             return
-        self.logger.info("Action %s is not throttled", self.config.get("name"))
+        self.logger.info(
+            "Action %s is not throttled",
+            self.config.get("name"),
+            extra={
+                "step_id": self.step_id,
+            },
+        )
 
         # Last, run the action
         try:
-            rendered_providers_parameters = self.io_handler.render_context(
-                self.provider_parameters
-            )
+            if not dont_render:
+                rendered_providers_parameters = self.io_handler.render_context(
+                    self.provider_parameters
+                )
+            # special case for Keep provider (alert evaluation engine)
+            # which needs to evaluate the provider parameters by itself
+            else:
+                rendered_providers_parameters = self.provider_parameters
 
             for curr_retry_count in range(self.__retry_count + 1):
                 self.logger.info(
-                    f"Running {self.step_id} {self.step_type}, current retry: {curr_retry_count}"
+                    f"Running {self.step_id} {self.step_type}, current retry: {curr_retry_count}",
+                    extra={
+                        "step_id": self.step_id,
+                    },
                 )
                 try:
                     if self.step_type == StepType.STEP:
@@ -270,6 +354,9 @@ class Step:
                             "Retrying running %s step after %s second(s)...",
                             self.step_id,
                             self.__retry_interval,
+                            extra={
+                                "step_id": self.step_id,
+                            },
                         )
 
                         time.sleep(self.__retry_interval)

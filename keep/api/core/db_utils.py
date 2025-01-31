@@ -12,7 +12,10 @@ import pymysql
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from sqlalchemy import func
-from sqlmodel import create_engine
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.ddl import CreateColumn
+from sqlalchemy.sql.functions import GenericFunction
+from sqlmodel import Session, create_engine
 
 # This import is required to create the tables
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
@@ -98,6 +101,12 @@ DB_MAX_OVERFLOW = config(
 DB_ECHO = config(
     "DATABASE_ECHO", default=False, cast=bool
 )  # pylint: disable=invalid-name
+KEEP_FORCE_CONNECTION_STRING = config(
+    "KEEP_FORCE_CONNECTION_STRING", default=False, cast=bool
+)  # pylint: disable=invalid-name
+KEEP_DB_PRE_PING_ENABLED = config(
+    "KEEP_DB_PRE_PING_ENABLED", default=False, cast=bool
+)  # pylint: disable=invalid-name
 
 
 def dumps(_json) -> str:
@@ -119,7 +128,7 @@ def create_db_engine():
     """
     Creates a database engine based on the environment variables.
     """
-    if RUNNING_IN_CLOUD_RUN:
+    if RUNNING_IN_CLOUD_RUN and not KEEP_FORCE_CONNECTION_STRING:
         engine = create_engine(
             "mysql+pymysql://",
             creator=__get_conn,
@@ -144,6 +153,7 @@ def create_db_engine():
                 max_overflow=DB_MAX_OVERFLOW,
                 json_serializer=dumps,
                 echo=DB_ECHO,
+                pool_pre_ping=True if KEEP_DB_PRE_PING_ENABLED else False,
             )
         # SQLite does not support pool_size
         except TypeError:
@@ -161,10 +171,39 @@ def create_db_engine():
 
 
 def get_json_extract_field(session, base_field, key):
-
     if session.bind.dialect.name == "postgresql":
         return func.json_extract_path_text(base_field, key)
     elif session.bind.dialect.name == "mysql":
         return func.json_unquote(func.json_extract(base_field, "$.{}".format(key)))
     else:
         return func.json_extract(base_field, "$.{}".format(key))
+
+
+def get_aggreated_field(session: Session, column_name: str, alias: str):
+    if session.bind is None:
+        raise ValueError("Session is not bound to a database")
+
+    if session.bind.dialect.name == "postgresql":
+        return func.array_agg(column_name).label(alias)
+    elif session.bind.dialect.name == "mysql":
+        return func.json_arrayagg(column_name).label(alias)
+    elif session.bind.dialect.name == "sqlite":
+        return func.group_concat(column_name).label(alias)
+    else:
+        return func.array_agg(column_name).label(alias)
+
+
+class json_table(GenericFunction):
+    inherit_cache = True
+
+
+@compiles(json_table, "mysql")
+def _compile_json_table(element, compiler, **kw):
+    ddl_compiler = compiler.dialect.ddl_compiler(compiler.dialect, None)
+    return "JSON_TABLE({}, '$[*]' COLUMNS({} PATH '$'))".format(
+        compiler.process(element.clauses.clauses[0], **kw),
+        ",".join(
+            ddl_compiler.process(CreateColumn(clause), **kw)
+            for clause in element.clauses.clauses[1:]
+        ),
+    )

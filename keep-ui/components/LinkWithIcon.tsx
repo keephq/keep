@@ -3,8 +3,8 @@ import Link, { LinkProps } from "next/link";
 import { IconType } from "react-icons/lib";
 import { Badge, Icon } from "@tremor/react";
 import { usePathname } from "next/navigation";
-import classNames from "classnames";
-import { Trashcan } from "components/icons";
+import { Trashcan } from "@/components/icons";
+import clsx from "clsx";
 
 type LinkWithIconProps = {
   children: ReactNode;
@@ -14,7 +14,11 @@ type LinkWithIconProps = {
   isDeletable?: boolean;
   onDelete?: () => void;
   className?: string;
-} & LinkProps & AnchorHTMLAttributes<HTMLAnchorElement>;
+  testId?: string;
+  isExact?: boolean;
+  iconClassName?: string;
+} & LinkProps &
+  AnchorHTMLAttributes<HTMLAnchorElement>;
 
 export const LinkWithIcon = ({
   icon,
@@ -25,19 +29,29 @@ export const LinkWithIcon = ({
   isDeletable = false,
   onDelete,
   className,
+  testId,
+  isExact = false,
+  iconClassName,
   ...restOfLinkProps
 }: LinkWithIconProps) => {
   const pathname = usePathname();
   const [isHovered, setIsHovered] = useState(false);
-  const isActive = decodeURIComponent(pathname || "") === restOfLinkProps.href?.toString();
+  const isActive = isExact
+    ? decodeURIComponent(pathname || "") === restOfLinkProps.href?.toString()
+    : decodeURIComponent(pathname || "").startsWith(
+        restOfLinkProps.href?.toString() || ""
+      );
 
-  const iconClasses = classNames("group-hover:text-orange-400", {
-    "text-orange-400": isActive,
-    "text-black": !isActive,
+  const iconClasses = clsx(
+    "group-hover:text-orange-400",
+    {
+      "text-orange-400": isActive,
+      "text-black": !isActive,
+    },
+    iconClassName
+  );
 
-  });
-
-  const textClasses = classNames("truncate", {
+  const textClasses = clsx("truncate", {
     "text-orange-400": isActive,
     "text-black": !isActive,
   });
@@ -49,11 +63,11 @@ export const LinkWithIcon = ({
     if (restOfLinkProps.onClick) {
       restOfLinkProps.onClick(e);
     }
-  }
+  };
 
   return (
     <div
-      className={classNames(
+      className={clsx(
         "flex items-center justify-between text-sm p-1 font-medium rounded-lg focus:ring focus:ring-orange-300 group w-full",
         {
           "bg-stone-200/50": isActive,
@@ -69,16 +83,14 @@ export const LinkWithIcon = ({
         {...restOfLinkProps}
         className="flex items-center space-x-2 flex-1"
         onClick={onClick}
+        data-testid={`${testId}-link`}
       >
         <Icon className={iconClasses} icon={icon} />
         <span className={textClasses}>{children}</span>
       </Link>
       <div className="flex items-center">
         {count !== undefined && count !== null && (
-          <Badge
-            size="xs"
-            color="orange"
-          >
+          <Badge size="xs" color="orange" data-testid={`${testId}-badge`}>
             {count}
           </Badge>
         )}
@@ -91,7 +103,7 @@ export const LinkWithIcon = ({
           <button
             onClick={onDelete}
             className={`flex items-center text-slate-400 hover:text-red-500 p-0 ${
-              isHovered ? 'ml-2' : ''
+              isHovered ? "ml-2" : ""
             }`}
           >
             <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block hidden h-4 w-4" />

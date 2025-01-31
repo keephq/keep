@@ -30,6 +30,12 @@ Install Keep CLI
 poetry install
 ```
 
+To access the Keep CLI activate the environment, and access from shell.
+
+```shell
+poetry shell
+```
+
 From now on, Keep should be installed locally and accessible from your CLI, test it by executing:
 
 ```
@@ -179,14 +185,14 @@ code .
 {
     "version": "2.0.0",
     "tasks": [
-        # The API and UI containers needs to be in the same docker network
+        // The API and UI containers needs to be in the same docker network
         {
             "label": "docker-create-network",
             "type": "shell",
             "command": "docker network create keep-network || true",
             "problemMatcher": []
         },
-        # Build the api container
+        // Build the api container
         {
             "label": "docker-build-api-dev",
             "type": "docker-build",
@@ -196,7 +202,7 @@ code .
                 "tag": "keep-api-dev:latest"
             }
         },
-        # Run the api container
+        // Run the api container
         {
             "label": "docker-run-api-dev",
             "type": "docker-run",
@@ -223,7 +229,7 @@ code .
                     "DEBUG": "1",
                     "SECRET_MANAGER_TYPE": "FILE",
                     "USE_NGROK": "false",
-                    "AUTH_TYPE": "SINGLE_TENANT"
+                    "AUTH_TYPE": "DB"
                 },
                 "volumes": [
                     {
@@ -233,7 +239,7 @@ code .
                 ]
             }
         },
-        # Build the UI container
+        // Build the UI container
         {
             "label": "docker-build-ui",
             "type": "docker-build",
@@ -243,7 +249,7 @@ code .
                 "tag": "keep-ui-dev:latest"
             }
         },
-        # Run the UI container
+        // Run the UI container
         {
             "type": "docker-run",
             "label": "docker-run-ui",
@@ -258,8 +264,8 @@ code .
                     // Uncomment for fully debug
                     // "DEBUG": "*",
                     "NODE_ENV": "development",
-                    "API_URL": "http://keep-api:8080"
-                    "AUTH_TYPE": "SINGLE_TENANT",
+                    "API_URL": "http://keep-api:8080",
+                    "AUTH_TYPE": "DB",
                 },
                 "volumes": [
                     {
@@ -330,7 +336,7 @@ code .
                     "DEBUG": "1",
                     "SECRET_MANAGER_TYPE": "FILE",
                     "USE_NGROK": "false",
-                    "AUTH_TYPE": "SINGLE_TENANT"
+                    "AUTH_TYPE": "DB"
                 },
                 "volumes": [
                     {
@@ -356,7 +362,7 @@ code .
                     // "DEBUG": "*",
                     "NODE_ENV": "development",
                     "API_URL": "http://keep-api:8080",
-                    "AUTH_TYPE": "SINGLE_TENANT"
+                    "AUTH_TYPE": "DB"
                 },
                 "volumes": [
                     {

@@ -3,64 +3,50 @@
 import { Menu } from "@headlessui/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { Session } from "next-auth";
-import { signOut } from "next-auth/react";
 import { useConfig } from "utils/hooks/useConfig";
-import { AuthenticationType } from "utils/authenticationType";
-import Image from "next/image";
+import { AuthType } from "@/utils/authenticationType";
 import Link from "next/link";
-import { LuSlack } from "react-icons/lu";
-import { AiOutlineRight } from "react-icons/ai";
 import { VscDebugDisconnect } from "react-icons/vsc";
-import DarkModeToggle from "app/dark-mode-toggle";
 import { useFloating } from "@floating-ui/react";
-import { Icon, Subtitle } from "@tremor/react";
+import { Subtitle } from "@tremor/react";
+import UserAvatar from "./UserAvatar";
+import * as Frigade from "@frigade/react";
+import { useState } from "react";
+import Onboarding from "./Onboarding";
+import { useSignOut } from "@/shared/lib/hooks/useSignOut";
+import { FaSlack } from "react-icons/fa";
+import { ThemeControl } from "@/shared/ui";
+import { HiOutlineDocumentText } from "react-icons/hi2";
+import { useMounted } from "@/shared/lib/hooks/useMounted";
 
-export const getInitials = (name: string) =>
-  ((name.match(/(^\S\S?|\b\S)?/g) ?? []).join("").match(/(^\S|\S$)?/g) ?? [])
-    .join("")
-    .toUpperCase();
+const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 
 type UserDropdownProps = {
   session: Session;
 };
 
 const UserDropdown = ({ session }: UserDropdownProps) => {
-  const { userRole, user } = session;
-  const { name, image, email } = user;
-
   const { data: configData } = useConfig();
+  const signOut = useSignOut();
   const { refs, floatingStyles } = useFloating({
     placement: "right-end",
     strategy: "fixed",
   });
 
+  if (!session || !session.user) {
+    return null;
+  }
+  const { userRole, user } = session;
+  const { name, image, email } = user;
+
+  const isNoAuth = configData?.AUTH_TYPE === AuthType.NOAUTH;
   return (
-    <Menu as="li" ref={refs.setReference}>
+    <Menu as="li" ref={refs.setReference} className="w-full">
       <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300 group capitalize">
         <span className="space-x-3 flex items-center w-full">
-          {image ? (
-            <Image
-              className="rounded-full w-7 h-7 inline"
-              src={image}
-              alt="user avatar"
-              width={28}
-              height={28}
-            />
-          ) : (
-            <span className="relative inline-flex items-center justify-center w-7 h-7 overflow-hidden bg-orange-400 rounded-full dark:bg-gray-600">
-              <span className="font-medium text-white text-xs">
-                {getInitials(name ?? email)}
-              </span>
-            </span>
-          )}{" "}
+          <UserAvatar image={image} name={name ?? email} />{" "}
           <Subtitle className="truncate">{name ?? email}</Subtitle>
         </span>
-
-        <Icon
-          className="text-gray-700 font-medium px-0"
-          size="xs"
-          icon={AiOutlineRight}
-        />
       </Menu.Button>
 
       <Menu.Items
@@ -81,12 +67,12 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
               </Menu.Item>
             </li>
           )}
-          {configData?.AUTH_TYPE !== AuthenticationType.NOAUTH && (
+          {!isNoAuth && (
             <li>
               <Menu.Item
                 as="button"
                 className="ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
-                onClick={() => signOut()}
+                onClick={signOut}
               >
                 Sign out
               </Menu.Item>
@@ -103,28 +89,62 @@ type UserInfoProps = {
 };
 
 export const UserInfo = ({ session }: UserInfoProps) => {
-  return (
-    <ul className="space-y-2 p-2">
-      <li>
-        <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
-          Providers
-        </LinkWithIcon>
-      </li>
-      <li>
-        {/* TODO: slows everything down. needs to be replaced */}
-        <DarkModeToggle />
-      </li>
-      <li>
-        <LinkWithIcon
-          icon={LuSlack}
-          href="https://slack.keephq.dev/"
-          target="_blank"
-        >
-          Join our Slack
-        </LinkWithIcon>
-      </li>
+  const { data: config } = useConfig();
 
-      {session && <UserDropdown session={session} />}
-    </ul>
+  const docsUrl = config?.KEEP_DOCS_URL || "https://docs.keephq.dev";
+  const { flow } = Frigade.useFlow(ONBOARDING_FLOW_ID);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const isMounted = useMounted();
+
+  return (
+    <>
+      <ul className="space-y-2 p-2">
+        {isMounted &&
+          !config?.FRIGADE_DISABLED &&
+          flow?.isCompleted === false && (
+            <li>
+              <Frigade.ProgressBadge
+                flowId={ONBOARDING_FLOW_ID}
+                onClick={() => setIsOnboardingOpen(true)}
+              />
+              <Onboarding
+                isOpen={isOnboardingOpen}
+                toggle={() => setIsOnboardingOpen(false)}
+                variables={{
+                  name: session?.user?.name ?? session?.user?.email,
+                }}
+              />
+            </li>
+          )}
+        <li>
+          <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
+            Providers
+          </LinkWithIcon>
+        </li>
+        <li className="flex items-center gap-2">
+          <LinkWithIcon
+            icon={FaSlack}
+            href="https://slack.keephq.dev/"
+            className="w-auto pr-3.5"
+            target="_blank"
+          >
+            Join Slack
+          </LinkWithIcon>
+          <LinkWithIcon
+            icon={HiOutlineDocumentText}
+            iconClassName="w-4"
+            href={docsUrl}
+            className="w-auto px-3.5"
+            target="_blank"
+          >
+            Docs
+          </LinkWithIcon>
+        </li>
+        <div className="flex items-center justify-between">
+          {session && <UserDropdown session={session} />}
+          <ThemeControl className="text-sm size-10 flex items-center justify-center font-medium rounded-lg focus:ring focus:ring-orange-300 hover:!bg-stone-200/50" />
+        </div>
+      </ul>
+    </>
   );
 };

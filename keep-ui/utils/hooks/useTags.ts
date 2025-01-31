@@ -1,18 +1,15 @@
-import { useSession } from "next-auth/react";
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";
-import { getApiURL } from "utils/apiUrl";
-import { fetcher } from "utils/fetcher";
-import { Tag } from "app/alerts/models";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
+import { Tag } from "@/entities/presets/model/types";
 
 export const useTags = (options: SWRConfiguration = {}) => {
-  const apiUrl = getApiURL();
-  const { data: session } = useSession();
+  const api = useApi();
 
   return useSWRImmutable<Tag[]>(
-    () => (session ? `${apiUrl}/tags` : null),
-    (url) => fetcher(url, session?.accessToken),
+    api.isReady() ? "/tags" : null,
+    (url) => api.get(url),
     options
   );
 };

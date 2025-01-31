@@ -4,12 +4,14 @@ from datetime import timedelta
 
 import pytest
 import pytz
+from freezegun import freeze_time
 
 import keep.functions as functions
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertStatus
-from keep.api.models.db.alert import AlertActionType
+from keep.api.models.db.alert import ActionType
+from keep.iohandler.iohandler import IOHandler
 
 
 @pytest.mark.parametrize(
@@ -492,11 +494,11 @@ def test_firing_time_with_manual_resolve(create_alert):
     create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=60))
     # It was manually resolved
     enrichment_bl = EnrichmentsBl(tenant_id=SINGLE_TENANT_UUID)
-    enrichment_bl.enrich_alert(
+    enrichment_bl.enrich_entity(
         fingerprint=fingerprint,
         enrichments={"status": "resolved"},
         dispose_on_new_alert=True,
-        action_type=AlertActionType.GENERIC_ENRICH,
+        action_type=ActionType.GENERIC_ENRICH,
         action_callee="tests",
         action_description="tests",
     )
@@ -509,3 +511,368 @@ def test_firing_time_with_manual_resolve(create_alert):
     # It should override the dispoable status, but show only the time since the last firing
     result = functions.get_firing_time(alert, "m", tenant_id=SINGLE_TENANT_UUID)
     assert abs(float(result) - 30) < 1  # Allow for small time differences
+
+
+def test_is_business_hours():
+    """
+    Test the default business hours (8-20) with different times
+    """
+    # Test during business hours
+    business_time = datetime.datetime(
+        2024, 3, 27, 14, 30, tzinfo=datetime.timezone.utc
+    )  # 14:30
+    assert functions.is_business_hours(business_time) == True
+
+    # Test before business hours
+    early_time = datetime.datetime(
+        2024, 3, 27, 7, 30, tzinfo=datetime.timezone.utc
+    )  # 7:30
+    assert functions.is_business_hours(early_time) == False
+
+    # Test after business hours
+    late_time = datetime.datetime(
+        2024, 3, 27, 20, 30, tzinfo=datetime.timezone.utc
+    )  # 20:30
+    assert functions.is_business_hours(late_time) == False
+
+    # Test exactly at start hour
+    start_time = datetime.datetime(
+        2024, 3, 27, 8, 0, tzinfo=datetime.timezone.utc
+    )  # 8:00
+    assert functions.is_business_hours(start_time) == True
+
+    # Test exactly at end hour
+    end_time = datetime.datetime(
+        2024, 3, 27, 20, 0, tzinfo=datetime.timezone.utc
+    )  # 20:00
+    assert functions.is_business_hours(end_time) == False
+
+
+def test_is_business_hours_custom_hours():
+    """
+    Test custom business hours (9-17)
+    """
+    test_time = datetime.datetime(
+        2024, 3, 27, 8, 30, tzinfo=datetime.timezone.utc
+    )  # 8:30
+    assert functions.is_business_hours(test_time, start_hour=9, end_hour=17) == False
+
+    test_time = datetime.datetime(
+        2024, 3, 27, 12, 30, tzinfo=datetime.timezone.utc
+    )  # 12:30
+    assert functions.is_business_hours(test_time, start_hour=9, end_hour=17) == True
+
+
+def test_is_business_hours_invalid_hours():
+    """
+    Test with invalid hour inputs
+    """
+    test_time = datetime.datetime(2024, 3, 27, 12, 30, tzinfo=datetime.timezone.utc)
+
+    with pytest.raises(ValueError):
+        functions.is_business_hours(test_time, start_hour=24, end_hour=17)
+
+    with pytest.raises(ValueError):
+        functions.is_business_hours(test_time, start_hour=8, end_hour=-1)
+
+
+def test_is_business_hours_string_input():
+    """
+    Test with string datetime input
+    """
+    assert functions.is_business_hours("2024-03-27T14:30:00Z") == True
+    assert functions.is_business_hours("2024-03-27T06:30:00Z") == False
+
+
+def test_is_business_hours_invalid_string():
+    """
+    Test with invalid string datetime input
+    """
+    assert functions.is_business_hours("invalid datetime") == False
+
+
+def test_is_business_hours_no_params():
+    """
+    Test with no parameters by mocking the current time
+    """
+    # Test during business hours
+    with freeze_time("2024-03-27 10:00:00"):
+        assert functions.is_business_hours() == True
+
+    # Test before business hours
+    with freeze_time("2024-03-27 06:00:00"):
+        assert functions.is_business_hours() == False
+
+    # Test after business hours
+    with freeze_time("2024-03-27 22:00:00"):
+        assert functions.is_business_hours() == False
+
+    # Test at the boundaries
+    with freeze_time("2024-03-27 08:00:00"):
+        assert functions.is_business_hours() == True
+
+    with freeze_time("2024-03-27 19:59:59"):
+        assert functions.is_business_hours() == True
+
+
+def test_is_business_hours_weekdays():
+    """
+    Test business days with default Mon-Fri
+    """
+    # Monday 10 AM (should be True)
+    with freeze_time("2024-03-25 10:00:00"):  # Monday
+        assert functions.is_business_hours() == True
+
+    # Saturday 10 AM (should be False)
+    with freeze_time("2024-03-23 10:00:00"):  # Saturday
+        assert functions.is_business_hours() == False
+
+    # Sunday 10 AM (should be False)
+    with freeze_time("2024-03-24 10:00:00"):  # Sunday
+        assert functions.is_business_hours() == False
+
+
+def test_is_business_hours_custom_days():
+    """
+    Test with custom business days (Tue-Sat)
+    """
+    test_time = datetime.datetime(
+        2024, 3, 25, 10, 0, tzinfo=datetime.timezone.utc
+    )  # Monday
+    assert (
+        functions.is_business_hours(test_time, business_days=(1, 2, 3, 4, 5)) == False
+    )
+
+    test_time = datetime.datetime(
+        2024, 3, 23, 10, 0, tzinfo=datetime.timezone.utc
+    )  # Saturday
+    assert functions.is_business_hours(test_time, business_days=(1, 2, 3, 4, 5)) == True
+
+
+def test_is_business_hours_timezone():
+    """
+    Test with different timezones
+    """
+    # 10 AM UTC = 6 AM EDT (before business hours in EDT)
+    est_tz = "America/New_York"
+    with freeze_time("2024-03-25 10:00:00"):
+        assert functions.is_business_hours(timezone=est_tz) == False
+
+    # 2 PM UTC = 10 AM EDT (during business hours in EDT)
+    with freeze_time("2024-03-25 14:00:00"):
+        assert functions.is_business_hours(timezone=est_tz) == True
+
+
+def test_is_business_hours_invalid_days():
+    """
+    Test with invalid business days
+    """
+    test_time = datetime.datetime(2024, 3, 25, 10, 0, tzinfo=datetime.timezone.utc)
+
+    # Test with days outside valid range
+    with pytest.raises(ValueError) as exc_info:
+        functions.is_business_hours(test_time, business_days=(7, 8, 9))
+    assert "Invalid business days" in str(exc_info.value)
+
+    # Test with negative days
+    with pytest.raises(ValueError) as exc_info:
+        functions.is_business_hours(test_time, business_days=(-1, 0, 1))
+    assert "Invalid business days" in str(exc_info.value)
+
+    # Test with non-iterable
+    with pytest.raises(ValueError) as exc_info:
+        functions.is_business_hours(test_time, business_days=42)
+    assert "business_days must be an iterable" in str(exc_info.value)
+
+    # Test with invalid types in iterable
+    with pytest.raises(ValueError) as exc_info:
+        functions.is_business_hours(test_time, business_days=(1, "tuesday", 3))
+    assert "business_days must be an iterable of integers" in str(exc_info.value)
+
+
+def test_is_business_hours_all_combinations():
+    """
+    Test various combinations of parameters
+    """
+    tokyo_tz = "Asia/Tokyo"
+    test_time = datetime.datetime(2024, 3, 25, 10, 0, tzinfo=datetime.timezone.utc)
+
+    # Custom hours, days, and timezone
+    assert (
+        functions.is_business_hours(
+            test_time,
+            start_hour=9,
+            end_hour=17,
+            business_days=(0, 1, 2, 3),  # Mon-Thu
+            timezone=tokyo_tz,
+        )
+        == False
+    )  # 10 UTC = 19 JST (after business hours)
+
+    # Weekend with extended hours
+    assert (
+        functions.is_business_hours(
+            test_time,
+            start_hour=0,
+            end_hour=23,
+            business_days=(5, 6),  # Sat-Sun only
+            timezone="UTC",
+        )
+        == False
+    )  # It's a Monday
+
+
+def test_is_business_hours_edge_cases():
+    """
+    Test edge cases with timezones and day boundaries
+    """
+    ny_tz = "America/New_York"
+
+    # Test exactly at timezone day boundary
+    edge_time = datetime.datetime(
+        2024, 3, 25, 4, 0, tzinfo=datetime.timezone.utc
+    )  # Midnight EDT
+    assert functions.is_business_hours(edge_time, timezone=ny_tz) == False
+
+    # Test exactly at business hours start
+    with freeze_time("2024-03-25 12:00:00"):  # 8 AM EDT
+        assert functions.is_business_hours(timezone=ny_tz) == True
+
+    # Test exactly at business hours end
+    with freeze_time("2024-03-26 00:00:00"):  # 8 PM EDT previous day
+        assert functions.is_business_hours(timezone=ny_tz) == False
+
+
+def test_is_business_hours_string_input_with_timezone():
+    """
+    Test string datetime input with timezone handling
+    """
+    paris_tz = "Europe/Paris"
+
+    # 2 PM UTC = 4 PM Paris
+    assert (
+        functions.is_business_hours("2024-03-25T14:00:00Z", timezone=paris_tz) == True
+    )
+
+    # 8 PM UTC = 10 PM Paris
+    assert (
+        functions.is_business_hours("2024-03-25T20:00:00Z", timezone=paris_tz) == False
+    )
+
+
+def test_render_without_execution(mocked_context_manager):
+    """
+    Test rendering a template without executing it's internal keep functions.
+    """
+    template = "My yaml is: {{ yaml }}!"
+    context = {"yaml": "keep.is_business_hours(2024-03-25T14:00:00Z)"}
+    mocked_context_manager.get_full_context.return_value = context
+    iohandler = IOHandler(mocked_context_manager)
+    with pytest.raises(Exception):
+        iohandler.render(
+            template,
+            safe=True,
+        )
+
+    template = "raw_render_without_execution(My yaml is: {{ yaml }}!)"
+    rendered = iohandler.render(
+        template,
+        safe=True,
+    )
+    assert rendered == "My yaml is: keep.is_business_hours(2024-03-25T14:00:00Z)!"
+
+
+def test_dictget_basic():
+    """
+    Test basic dictionary get functionality
+    """
+    data = {"a": 1, "b": 2, "c": 3}
+    assert functions.dictget(data, "a", 0) == 1
+    assert functions.dictget(data, "b", 0) == 2
+    assert functions.dictget(data, "c", 0) == 3
+
+
+def test_dictget_missing_key():
+    """
+    Test getting a missing key returns default value
+    """
+    data = {"a": 1, "b": 2}
+    assert functions.dictget(data, "z", "default") == "default"
+    assert functions.dictget(data, "missing", None) is None
+
+
+def test_dictget_json_string():
+    """
+    Test getting values from JSON string input
+    """
+    data = '{"name": "test", "value": 42}'
+    assert functions.dictget(data, "name", "") == "test"
+    assert functions.dictget(data, "value", 0) == 42
+
+
+def test_dictget_invalid_json():
+    """
+    Test behavior with invalid JSON string
+    """
+    data = "not a json string"
+    assert functions.dictget(data, "key", "default") == "default"
+
+
+def test_dictget_none_input():
+    """
+    Test behavior with None input
+    """
+    assert functions.dictget(None, "key", "default") == "default"
+
+
+def test_dictget_empty_dict():
+    """
+    Test behavior with empty dictionary
+    """
+    data = {}
+    assert functions.dictget(data, "any_key", "default") == "default"
+
+
+def test_dictget_nested_dict():
+    """
+    Test behavior with nested dictionary structure
+    """
+    data = {"outer": {"inner": "value"}}
+    assert functions.dictget(data, "outer", {}) == {"inner": "value"}
+
+
+def test_dictget_different_value_types():
+    """
+    Test getting different value types
+    """
+    data = {
+        "string": "text",
+        "number": 42,
+        "boolean": True,
+        "list": [1, 2, 3],
+        "dict": {"key": "value"},
+    }
+    assert functions.dictget(data, "string", "") == "text"
+    assert functions.dictget(data, "number", 0) == 42
+    assert functions.dictget(data, "boolean", False) is True
+    assert functions.dictget(data, "list", []) == [1, 2, 3]
+    assert functions.dictget(data, "dict", {}) == {"key": "value"}
+
+
+def test_dictget_with_severities():
+    """
+    Test the specific use case shown in the workflow example
+    """
+    severities = {
+        "s1": "critical",
+        "s2": "error",
+        "s3": "warning",
+        "s4": "info",
+        "critical": "critical",
+        "error": "error",
+        "warning": "warning",
+        "info": "info",
+    }
+    assert functions.dictget(severities, "s1", "info") == "critical"
+    assert functions.dictget(severities, "s2", "info") == "error"
+    assert functions.dictget(severities, "unknown", "info") == "info"

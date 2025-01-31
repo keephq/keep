@@ -1,0 +1,83 @@
+---
+title: "Dashboard Provisioning"
+---
+
+Provisioning dashboards in Keep allows you to configure and manage visual representations of your data. This section will guide you through the steps required to set up and provision dashboards.
+
+### Dashboard Provisioning Overview
+
+Dashboards in Keep are configured using JSON strings that define the layout, data sources, and visual components. These configurations can be managed through environment variables or configuration files.
+
+### Environment Variables
+
+To provision dashboards, you need to set the following environment variable:
+
+| Environment Variable | Purpose                                         |
+| -------------------- | ----------------------------------------------- |
+| `KEEP_DASHBOARDS`    | JSON string containing dashboard configurations |
+
+### Example Configuration
+
+Here is an example of how to set the `KEEP_DASHBOARDS` environment variable (dumped from the database):
+
+```json
+[
+  {
+    "dashboard_name": "My Dashboard",
+    "dashboard_config": {
+      "layout": [
+        {
+          "i": "w-1728223503577",
+          "x": 0,
+          "y": 0,
+          "w": 3,
+          "h": 3,
+          "minW": 2,
+          "minH": 2,
+          "static": false
+        }
+      ],
+      "widget_data": [
+        {
+          "i": "w-1728223503577",
+          "x": 0,
+          "y": 0,
+          "w": 3,
+          "h": 3,
+          "minW": 2,
+          "minH": 2,
+          "static": false,
+          "thresholds": [
+            { "value": 0, "color": "#22c55e" },
+            { "value": 20, "color": "#ef4444" }
+          ],
+          "preset": {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "name": "feed",
+            "options": [
+              { "label": "CEL", "value": "(!deleted && !dismissed)" },
+              {
+                "label": "SQL",
+                "value": {
+                  "sql": "(deleted=false AND dismissed=false)",
+                  "params": {}
+                }
+              }
+            ],
+            "created_by": null,
+            "is_private": false,
+            "is_noisy": false,
+            "should_do_noise_now": false,
+            "alerts_count": 98,
+            "static": true,
+            "tags": []
+          },
+          "name": "Test"
+        }
+      ]
+    }
+  }
+]
+```
+
+Please read more at https://github.com/react-grid-layout/react-grid-layout for more information on the layout configuration options.

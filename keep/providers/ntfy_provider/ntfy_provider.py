@@ -30,12 +30,13 @@ class NtfyProviderAuthConfig:
         default=None,
     )
 
-    host: str = dataclasses.field(
+    host: pydantic.AnyHttpUrl | None = dataclasses.field(
         metadata={
             "required": False,
             "description": "Ntfy Host URL (For self-hosted Ntfy only)",
             "sensitive": False,
             "hint": "http://localhost:80",
+            "validation": "any_http_url",
         },
         default=None,
     )
@@ -61,6 +62,7 @@ class NtfyProviderAuthConfig:
 
 class NtfyProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Ntfy.sh"
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     PROVIDER_SCOPES = [
         ProviderScope(

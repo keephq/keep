@@ -51,9 +51,9 @@ const Rules = () => (
   </svg>
 );
 
-const Workflows = () => (
+const Workflows = (props: any) => (
   <svg
-    className="tremor-Icon-icon shrink-0 h-5 w-5"
+    className={`tremor-Icon-icon shrink-0 h-5 w-5 ${props.className}`}
     width="16"
     height="16"
     viewBox="0 0 16 16"

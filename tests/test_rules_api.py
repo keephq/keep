@@ -162,6 +162,8 @@ def test_update_rule_api(db_session, client, test_app):
         "timeframeInSeconds": 300,
         "timeUnit": "seconds",
         "requireApprove": False,
+        "resolveOn": "all",
+        "createOn": "any",
     }
 
     response = client.put(

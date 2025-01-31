@@ -22,6 +22,7 @@ import alembic.config
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
+from keep.api.core.config import config
 from keep.api.core.db_utils import create_db_engine
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
@@ -41,20 +42,20 @@ logger = logging.getLogger(__name__)
 
 engine = create_db_engine()
 
+KEEP_FORCE_RESET_DEFAULT_PASSWORD = config(
+    "KEEP_FORCE_RESET_DEFAULT_PASSWORD", default="false", cast=bool
+)
+DEFAULT_USERNAME = config("KEEP_DEFAULT_USERNAME", default="keep")
+DEFAULT_PASSWORD = config("KEEP_DEFAULT_PASSWORD", default="keep")
 
-def try_create_single_tenant(tenant_id: str) -> None:
+
+def try_create_single_tenant(tenant_id: str, create_default_user=True) -> None:
     """
     Creates the single tenant and the default user if they don't exist.
     """
-    try:
-        # if Keep is not multitenant, let's import the User table too:
-        from keep.api.models.db.user import (  # pylint: disable=import-outside-toplevel
-            User,
-        )
+    # if Keep is not multitenant, let's import the User table too:
+    from keep.api.models.db.user import User  # pylint: disable=import-outside-toplevel
 
-        migrate_db()
-    except Exception:
-        pass
     with Session(engine) as session:
         try:
             # check if the tenant exist:
@@ -69,31 +70,35 @@ def try_create_single_tenant(tenant_id: str) -> None:
             # now let's create the default user
 
             # check if at least one user exists:
-            user = session.exec(select(User)).first()
+            user: User | None = session.exec(select(User)).first()
             # if no users exist, let's create the default user
-            if not user:
+            if not user and create_default_user:
                 logger.info("Creating default user")
-                default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
-                default_password = hashlib.sha256(
-                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
-                ).hexdigest()
+
+                default_password = hashlib.sha256(DEFAULT_PASSWORD.encode()).hexdigest()
                 default_user = User(
-                    username=default_username,
+                    username=DEFAULT_USERNAME,
                     password_hash=default_password,
                     role=AdminRole.get_name(),
                 )
                 session.add(default_user)
                 logger.info("Default user created")
             # else, if the user want to force the refresh of the default user password
-            elif os.environ.get("KEEP_FORCE_RESET_DEFAULT_PASSWORD", "false") == "true":
+            elif KEEP_FORCE_RESET_DEFAULT_PASSWORD and user:
                 # update the password of the default user
                 logger.info("Forcing reset of default user password")
-                default_password = hashlib.sha256(
-                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
-                ).hexdigest()
+                default_password = hashlib.sha256(DEFAULT_PASSWORD.encode()).hexdigest()
                 user.password_hash = default_password
+                if user.username != DEFAULT_USERNAME:
+                    logger.info(
+                        "Default user username updated",
+                        extra={
+                            "username": user.username,
+                            "new_username": DEFAULT_USERNAME,
+                        },
+                    )
+                    user.username = DEFAULT_USERNAME
                 logger.info("Default user password updated")
-
             # provision default api keys
             if os.environ.get("KEEP_DEFAULT_API_KEYS", ""):
                 logger.info("Provisioning default api keys")

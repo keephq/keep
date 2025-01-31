@@ -22,30 +22,46 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.semconv.resource import ResourceAttributes
+
+from keep.api.core.config import config
+
 
 def get_protocol_from_endpoint(endpoint):
-        parsed_url = urlparse(endpoint)
-        if parsed_url.scheme == "http":
-            return HTTPOTLPSpanExporter
-        elif parsed_url.scheme == "grpc":
-            return GRPCOTLPSpanExporter
-        else:
-            raise ValueError(f"Unsupported protocol: {parsed_url.scheme}")
+    parsed_url = urlparse(endpoint)
+    if parsed_url.scheme == "http":
+        return HTTPOTLPSpanExporter
+    elif parsed_url.scheme == "grpc":
+        return GRPCOTLPSpanExporter
+    else:
+        raise ValueError(f"Unsupported protocol: {parsed_url.scheme}")
+
 
 def setup(app: FastAPI):
     logger = logging.getLogger(__name__)
     # Configure the OpenTelemetry SDK
-    service_name = os.environ.get("OTEL_SERVICE_NAME", os.environ.get("SERVICE_NAME", "keep-api"))
-    otlp_collector_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", os.environ.get("OTLP_ENDPOINT", False))
+    service_name = os.environ.get(
+        "OTEL_SERVICE_NAME", os.environ.get("SERVICE_NAME", "keep-api")
+    )
+    otlp_collector_endpoint = os.environ.get(
+        "OTEL_EXPORTER_OTLP_ENDPOINT", os.environ.get("OTLP_ENDPOINT", False)
+    )
     otlp_traces_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", None)
     otlp_logs_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", None)
     otlp_metrics_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT", None)
-    enable_cloud_trace_exporeter = os.environ.get("CLOUD_TRACE_ENABLED", False)
+    enable_cloud_trace_exporter = config(
+        "CLOUD_TRACE_ENABLED", default=False, cast=bool
+    )
     metrics_enabled = os.environ.get("METRIC_OTEL_ENABLED", "")
 
-    resource = Resource.create({"service.name": service_name})
+    resource = Resource.create(
+        attributes={
+            ResourceAttributes.SERVICE_NAME: service_name,
+            ResourceAttributes.SERVICE_INSTANCE_ID: f"worker-{os.getpid()}",
+        }
+    )
     provider = TracerProvider(resource=resource)
-    
+
     if otlp_collector_endpoint:
 
         logger.info(f"OTLP endpoint set to {otlp_collector_endpoint}")
@@ -53,13 +69,13 @@ def setup(app: FastAPI):
         if otlp_traces_endpoint:
             logger.info(f"OTLP Traces endpoint set to {otlp_traces_endpoint}")
             SpanExporter = get_protocol_from_endpoint(otlp_traces_endpoint)
-            processor = BatchSpanProcessor(
-                SpanExporter(endpoint=otlp_traces_endpoint)
-            )
+            processor = BatchSpanProcessor(SpanExporter(endpoint=otlp_traces_endpoint))
             provider.add_span_processor(processor)
 
         if metrics_enabled.lower() == "true" and otlp_metrics_endpoint:
-            logger.info(f"Metrics enabled. OTLP Metrics endpoint set to {otlp_metrics_endpoint}")
+            logger.info(
+                f"Metrics enabled. OTLP Metrics endpoint set to {otlp_metrics_endpoint}"
+            )
             reader = PeriodicExportingMetricReader(
                 OTLPMetricExporter(endpoint=otlp_metrics_endpoint)
             )
@@ -69,9 +85,11 @@ def setup(app: FastAPI):
         if otlp_logs_endpoint:
             logger.info(f"OTLP Logs endpoint set to {otlp_logs_endpoint}")
 
-    if enable_cloud_trace_exporeter:
+    if enable_cloud_trace_exporter:
         logger.info("Cloud Trace exporter enabled.")
-        processor = BatchSpanProcessor(CloudTraceSpanExporter())
+        processor = BatchSpanProcessor(
+            CloudTraceSpanExporter(resource_regex="service.*")
+        )
         provider.add_span_processor(processor)
 
     trace.set_tracer_provider(provider)

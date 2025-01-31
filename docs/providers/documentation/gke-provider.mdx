@@ -1,0 +1,48 @@
+---
+title: "Google Kubernetes Engine"
+sidebarTitle: "Google Kubernetes Engine Provider"
+description: "Google Kubernetes Engine provider allows managing Google Kubernetes Engine clusters and related resources."
+---
+
+## Inputs
+
+- `cluster_name`: str : The name of the GKE cluster to manage
+- `action`: str : The action to perform on the cluster (e.g., `create`, `delete`, `scale`)
+- `node_count`: int (optional) : The number of nodes (used in scaling the cluster)
+
+## Outputs
+
+- `status`: The status of the action performed on the GKE cluster, returned as a response message.
+
+## Authentication Parameters
+
+- `gcp_credentials`: JSON containing Google Cloud credentials with the necessary permissions to manage GKE clusters.
+- `project_id`: Google Cloud project ID where the GKE cluster is deployed.
+- `zone`: The zone where the GKE cluster is hosted.
+
+## Connecting with the Provider
+
+1. Obtain Google Cloud credentials by following the steps in [Google Cloud's service account guide](https://cloud.google.com/iam/docs/creating-managing-service-account-keys).
+2. Ensure your service account has the necessary permissions to manage GKE clusters (`roles/container.admin`).
+3. Provide the `gcp_credentials`, `project_id`, and `zone` in your provider configuration.
+
+## Example of usage
+
+```yaml
+workflow:
+  id: gke-example
+  description: GKE example
+  triggers:
+    - type: manual
+  actions:
+    - name: gke
+      provider:
+        type: gke
+        config: "{{ providers.gketest }}"
+        with:
+          cluster_name: "my-cluster"
+          action: "create"
+          node_count: 3
+ 
+## Usefull Links
+-[Google Kubernetes Engine Documentation](https://cloud.google.com/kubernetes-engine/docs)

@@ -1,7 +1,5 @@
-import { toast } from "react-toastify";
-import { getApiURL } from "./apiUrl";
-import { Provider } from "../app/providers/providers";
-import moment from "moment";
+import { twMerge } from "tailwind-merge";
+import { clsx, type ClassValue } from "clsx";
 
 export function onlyUnique(value: string, index: number, array: string[]) {
   return array.indexOf(value) === index;
@@ -9,6 +7,10 @@ export function onlyUnique(value: string, index: number, array: string[]) {
 
 function isValidDate(d: Date) {
   return d instanceof Date && !isNaN(d.getTime());
+}
+
+export function capitalize(string: string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 export function toDateObjectWithFallback(date: string | Date) {
@@ -33,43 +35,20 @@ export function toDateObjectWithFallback(date: string | Date) {
   return new Date();
 }
 
-export async function installWebhook(provider: Provider, accessToken: string) {
-  toast.promise(
-    fetch(
-      `${getApiURL()}/providers/install/webhook/${provider.type}/${
-        provider.id
-      }`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    ).then((res) => {
-      return res.json().then((data) => {
-        if (!res.ok) {
-          return Promise.reject(data);
-        }
-      });
-    }),
-    {
-      pending: "Webhook installing 🤞",
-      success: `${provider.type} webhook installed 👌`,
-      error: {
-        render({ data }) {
-          // When the promise reject, data will contains the error
-          return `Webhook installation failed 😢 Error: ${
-            (data as any).detail
-          }`;
-        },
-      },
-    },
-    {
-      position: toast.POSITION.TOP_LEFT,
-    }
-  );
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 
-export function getAlertLastReceieved(lastRecievedFromAlert: Date) {
-  return moment(lastRecievedFromAlert).fromNow();
+export function areSetsEqual<T>(set1: Set<T>, set2: Set<T>): boolean {
+  if (set1.size !== set2.size) {
+    return false;
+  }
+
+  for (const item of set1) {
+    if (!set2.has(item)) {
+      return false;
+    }
+  }
+
+  return true;
 }

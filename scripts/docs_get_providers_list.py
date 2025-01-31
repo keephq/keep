@@ -2,19 +2,23 @@
 To execute the script and copy to clipboard:
 `
 cd scripts
-python get_providers_list.py | pbcopy
-python get_providers_list.py --validate # To check docs/providers/overview.mdx
+python docs_get_providers_list.py | pbcopy
+python docs_get_providers_list.py --validate # To check docs/providers/overview.mdx and if all providers are documented.
 """
 
 import argparse
 import glob
 import os
 import re
+import sys
 
 LOGO_DEV_PUBLISHABLE_KEY = "pk_dfXfZBoKQMGDTIgqu7LvYg"
 
+NON_DOCUMENTED_PROVIDERS = [
+]
 
-def validate(providers_to_validate):
+
+def validate_overview_is_complete(documented_providers):
     """
     This function validates the providers to be added to the overview.md file.
     """
@@ -22,13 +26,41 @@ def validate(providers_to_validate):
     with open(overview_file, "r") as file:
         overview_content = file.read()
 
-        for provider in providers_to_validate:
+        for provider in documented_providers:
             if provider not in overview_content:
                 print(
                     f"""Provider {provider} is not in the docs/providers/overview.md file,
-use scripts/get_providers_list.py to generate recent providers list and update the file."""
+use scripts/docs_get_providers_list.py to generate recent providers list and update the file."""
                 )
                 exit(1)
+
+
+def validate_all_providers_are_documented(documented_providers):
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(current_dir)
+    sys.path.insert(0, parent_dir)
+
+    documented_providers = [provider.lower() for provider in documented_providers]
+    from keep.providers.providers_factory import ProvidersFactory
+
+    for provider in ProvidersFactory.get_all_providers():
+        provider_name = provider.display_name.lower()
+        if (
+            provider_name not in documented_providers
+            and provider_name not in NON_DOCUMENTED_PROVIDERS
+            and not provider.coming_soon
+        ):
+            raise Exception(
+                f"""Provider "{provider_name}" is not documented in the docs/providers/documentation folder,
+please document it and run the scripts/docs_get_providers_list.py --validate script again.
+
+Provider's PROVIDER_DISPLAY_NAME should match the title in the documentation file: {{PROVIDER_DISPLAY_NAME}}-provider.mdx.
+
+{provider_name}-provider.mdx not found.
+
+Documented providers: {documented_providers}
+Excluded list: {NON_DOCUMENTED_PROVIDERS}"""
+            )
 
 
 def main():
@@ -66,7 +98,7 @@ def main():
     }
 
     mintlify_cards = "<CardGroup cols={3}>\n"
-    providers_to_validate = []
+    documented_providers = []
     for provider_name, url in files_to_docs_urls.items():
         # For logo dev we need to remove spaces and get the first part of the name
         # e.g., grafana-on-call -> grafana
@@ -100,7 +132,7 @@ def main():
 ></Card>
 """
             mintlify_cards += new_card
-            providers_to_validate.append(provider_name)
+            documented_providers.append(provider_name)
     mintlify_cards += "</CardGroup>"
 
     # Checking --validate flag
@@ -110,7 +142,8 @@ def main():
 
     # If --validate flag is set, print the list of providers to validate
     if args.validate:
-        validate(providers_to_validate=providers_to_validate)
+        validate_all_providers_are_documented(documented_providers)
+        validate_overview_is_complete(documented_providers)
     else:
         print(mintlify_cards)
 

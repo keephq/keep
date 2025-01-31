@@ -35,7 +35,7 @@ class RollbarProviderAuthConfig:
 class RollbarProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Rollbar"
     PROVIDER_TAGS = ["alert"]
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",
@@ -154,7 +154,9 @@ class RollbarProvider(BaseProvider):
         return alerts
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         item_data = event["data"]["item"]
         occurrence_data = event["data"]["occurrence"]
         return AlertDto(

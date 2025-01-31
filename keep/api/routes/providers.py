@@ -1,25 +1,28 @@
 import datetime
 import json
 import logging
+import random
 import time
 import uuid
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict, Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
 from keep.api.core.db import count_alerts, get_provider_distribution, get_session
+from keep.api.core.limiter import limiter
 from keep.api.models.db.provider import Provider
+from keep.api.models.provider import Provider as ProviderDTO
 from keep.api.models.provider import ProviderAlertsCountResponseDTO
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
-from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import (
     GetAlertException,
     ProviderMethodException,
@@ -31,8 +34,9 @@ from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+READ_ONLY = config("KEEP_READ_ONLY", default="false") == "true"
 PROVIDER_DISTRIBUTION_ENABLED = config(
-    "PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
+    "KEEP_PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
 )
 
 
@@ -66,21 +70,30 @@ def get_providers(
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
     providers = ProvidersService.get_all_providers()
     installed_providers = ProvidersService.get_installed_providers(tenant_id)
+    linked_providers = ProvidersService.get_linked_providers(tenant_id)
     if PROVIDER_DISTRIBUTION_ENABLED:
-        linked_providers = ProvidersService.get_linked_providers(tenant_id)
-        providers_distribution = get_provider_distribution(tenant_id)
-
-        for provider in linked_providers + installed_providers:
-            provider.alertsDistribution = providers_distribution.get(
-                f"{provider.id}_{provider.type}", {}
-            ).get("alert_last_24_hours", [])
-            last_alert_received = providers_distribution.get(
-                f"{provider.id}_{provider.type}", {}
-            ).get("last_alert_received", None)
-            if last_alert_received and not provider.last_alert_received:
-                provider.last_alert_received = last_alert_received.replace(
-                    tzinfo=datetime.timezone.utc
-                ).isoformat()
+        # generate distribution only if not in read only mode
+        if READ_ONLY:
+            for provider in linked_providers + installed_providers:
+                if "alert" not in provider.tags:
+                    continue
+                provider.alertsDistribution = [
+                    {"hour": i, "number": random.randint(0, 100)} for i in range(0, 24)
+                ]
+                provider.last_alert_received = datetime.datetime.now().isoformat()
+        else:
+            providers_distribution = get_provider_distribution(tenant_id)
+            for provider in linked_providers + installed_providers:
+                provider.alertsDistribution = providers_distribution.get(
+                    f"{provider.id}_{provider.type}", {}
+                ).get("alert_last_24_hours", [])
+                last_alert_received = providers_distribution.get(
+                    f"{provider.id}_{provider.type}", {}
+                ).get("last_alert_received", None)
+                if last_alert_received and not provider.last_alert_received:
+                    provider.last_alert_received = last_alert_received.replace(
+                        tzinfo=datetime.timezone.utc
+                    ).isoformat()
 
     is_localhost = _is_localhost()
 
@@ -92,7 +105,36 @@ def get_providers(
     }
 
 
-@router.get("/export", description="export all installed providers")
+@router.get("/{provider_id}/logs")
+def get_provider_logs(
+    provider_id: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:providers"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Getting provider logs",
+        extra={"tenant_id": tenant_id, "provider_id": provider_id},
+    )
+
+    try:
+        logs = ProvidersService.get_provider_logs(tenant_id, provider_id)
+        return JSONResponse(content=jsonable_encoder(logs), status_code=200)
+    except Exception as e:
+        logger.error(
+            f"Error getting provider logs: {str(e)}",
+            extra={"tenant_id": tenant_id, "provider_id": provider_id},
+        )
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/export",
+    description="export all installed providers",
+    response_model=list[ProviderDTO],
+)
+@limiter.exempt
 def get_installed_providers(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:providers"])
@@ -104,18 +146,7 @@ def get_installed_providers(
     installed_providers = ProvidersFactory.get_installed_providers(
         tenant_id, providers, include_details=True
     )
-
-    is_localhost = _is_localhost()
-
-    try:
-        return {
-            "installed_providers": installed_providers,
-            "is_localhost": is_localhost,
-        }
-    except Exception as e:
-        logger.info(f"execption in {e}")
-        logger.exception("Failed to get providers")
-        return {"installed_providers": [], "is_localhost": is_localhost}
+    return JSONResponse(content=jsonable_encoder(installed_providers), status_code=200)
 
 
 @router.get(
@@ -345,45 +376,6 @@ def delete_provider(
         return JSONResponse(status_code=400, content={"message": str(e)})
 
 
-def validate_scopes(
-    provider: BaseProvider, validate_mandatory=True
-) -> dict[str, bool | str]:
-    logger.info("Validating provider scopes")
-    try:
-        validated_scopes = provider.validate_scopes()
-    except Exception as e:
-        logger.exception("Failed to validate provider scopes")
-        raise HTTPException(
-            status_code=412,
-            detail=str(e),
-        )
-    if validate_mandatory:
-        mandatory_scopes_validated = True
-        if provider.PROVIDER_SCOPES and validated_scopes:
-            # All of the mandatory scopes must be validated
-            for scope in provider.PROVIDER_SCOPES:
-                if scope.mandatory and (
-                    scope.name not in validated_scopes
-                    or validated_scopes[scope.name] is not True
-                ):
-                    mandatory_scopes_validated = False
-                    break
-        # Otherwise we fail the installation
-        if not mandatory_scopes_validated:
-            logger.warning(
-                "Failed to validate mandatory provider scopes",
-                extra={"validated_scopes": validated_scopes},
-            )
-            raise HTTPException(
-                status_code=412,
-                detail=validated_scopes,
-            )
-    logger.info(
-        "Validated provider scopes", extra={"validated_scopes": validated_scopes}
-    )
-    return validated_scopes
-
-
 @router.post(
     "/{provider_id}/scopes",
     description="Validate provider scopes",
@@ -422,7 +414,7 @@ def validate_provider_scopes(
         session.commit()
     logger.info(
         "Validated provider scopes",
-        extra={"provider_id": provider_id, "validated_scopes": validate_scopes},
+        extra={"provider_id": provider_id, "validated_scopes": validated_scopes},
     )
     return validated_scopes
 
@@ -453,7 +445,7 @@ async def update_provider(
 
     for key, value in provider_info.items():
         if isinstance(value, UploadFile):
-            provider_info[key] = await value.file.read().decode()
+            provider_info[key] = value.file.read().decode()
 
     try:
         result = ProvidersService.update_provider(
@@ -490,6 +482,7 @@ async def install_provider(
         provider_id = provider_info.pop("provider_id")
         provider_name = provider_info.pop("provider_name")
         provider_type = provider_info.pop("provider_type", None) or provider_id
+        pulling_enabled = provider_info.pop("pulling_enabled", True)
     except KeyError as e:
         raise HTTPException(
             status_code=400, detail=f"Missing required field: {e.args[0]}"
@@ -507,10 +500,11 @@ async def install_provider(
             provider_name,
             provider_type,
             provider_info,
+            pulling_enabled=pulling_enabled,
         )
         return JSONResponse(status_code=200, content=result)
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"message": e.detail})
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to install provider")
         return JSONResponse(status_code=400, content={"message": str(e)})
@@ -538,6 +532,8 @@ async def install_provider_oauth2(
     )
     try:
         provider_class = ProvidersFactory.get_provider_class(provider_type)
+        install_webhook = provider_info.pop("install_webhook", "true") == "true"
+        pulling_enabled = provider_info.pop("pulling_enabled", "true") == "true"
         provider_info = provider_class.oauth2_logic(**provider_info)
         provider_name = provider_info.pop(
             "provider_name", f"{provider_unique_id}-oauth2"
@@ -553,7 +549,7 @@ async def install_provider_oauth2(
             context_manager, provider_unique_id, provider_type, provider_config
         )
 
-        validated_scopes = validate_scopes(provider)
+        validated_scopes = ProvidersService.validate_scopes(provider)
 
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
@@ -571,9 +567,16 @@ async def install_provider_oauth2(
             installation_time=time.time(),
             configuration_key=secret_name,
             validatedScopes=validated_scopes,
+            pulling_enabled=pulling_enabled,
         )
         session.add(provider)
         session.commit()
+
+        if install_webhook:
+            install_provider_webhook(
+                provider_type, provider.id, authenticated_entity, session
+            )
+
         return JSONResponse(
             status_code=200,
             content={
@@ -657,15 +660,18 @@ def install_provider_webhook(
         tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
     )
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    provider_config = secret_manager.read_secret(
-        f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
-    )
+    provider_secret_name = f"{tenant_id}_{provider_type}_{provider_id}"
+    provider_config = secret_manager.read_secret(provider_secret_name, is_json=True)
+    provider_class = ProvidersFactory.get_provider_class(provider_type)
     provider = ProvidersFactory.get_provider(
         context_manager, provider_id, provider_type, provider_config
     )
     api_url = config("KEEP_API_URL")
     keep_webhook_api_url = (
         f"{api_url}/alerts/event/{provider_type}?provider_id={provider_id}"
+    )
+    keep_webhook_incidents_api_url = (
+        f"{api_url}/incidents/event/{provider_type}?provider_id={provider_id}"
     )
     webhook_api_key = get_or_create_api_key(
         session=session,
@@ -674,14 +680,29 @@ def install_provider_webhook(
         unique_api_key_id="webhook",
         system_description="Webhooks API key",
     )
-
-    try:
-        provider.setup_webhook(tenant_id, keep_webhook_api_url, webhook_api_key, True)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
+    if (
+        provider_class.__dict__.get("setup_incident_webhook") is not None
+        or provider_class.__dict__.get("setup_webhook") is not None
+    ):
+        try:
+            if provider_class.__dict__.get("setup_incident_webhook") is not None:
+                extra_config = provider.setup_incident_webhook(
+                    tenant_id, keep_webhook_incidents_api_url, webhook_api_key, True
+                )
+            if provider_class.__dict__.get("setup_webhook") is not None:
+                extra_config = provider.setup_webhook(
+                    tenant_id, keep_webhook_api_url, webhook_api_key, True
+                )
+            if extra_config:
+                provider_config["authentication"].update(extra_config)
+                secret_manager.write_secret(
+                    secret_name=provider_secret_name,
+                    secret_value=json.dumps(provider_config),
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
     return JSONResponse(status_code=200, content={"message": "webhook installed"})
 
 
@@ -733,3 +754,54 @@ def get_webhook_settings(
         ),
         webhookMarkdown=webhookMarkdown,
     )
+
+@router.post("/healthcheck")
+async def healthcheck_provider(
+    request: Request,
+) -> Dict[str, Any]:
+    try:
+        provider_info = await request.json()
+    except Exception:
+        form_data = await request.form()
+        provider_info = dict(form_data)
+
+    if not provider_info:
+        raise HTTPException(status_code=400, detail="No valid data provided")
+
+    try:
+        provider_id = provider_info.pop("provider_id")
+        provider_type = provider_info.pop("provider_type", None) or provider_id
+        provider_name = f"{provider_type} healthcheck"
+    except KeyError as e:
+        raise HTTPException(
+            status_code=400, detail=f"Missing required field: {e.args[0]}"
+        )
+
+    for key, value in provider_info.items():
+        if isinstance(value, UploadFile):
+            provider_info[key] = value.file.read().decode()
+
+    provider = ProvidersService.prepare_provider(
+        provider_id,
+        provider_name,
+        provider_type,
+        provider_info,
+    )
+
+    result = provider.get_health_report()
+    return result
+
+
+@router.get("/healthcheck")
+def get_healthcheck_providers():
+    logger.info("Getting all providers for healthcheck")
+    providers = ProvidersService.get_all_providers()
+
+    healthcheck_providers = [provider for provider in providers if provider.health]
+
+    is_localhost = _is_localhost()
+
+    return {
+        "providers": healthcheck_providers,
+        "is_localhost": is_localhost,
+    }

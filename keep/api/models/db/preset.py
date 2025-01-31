@@ -12,6 +12,7 @@ class StaticPresetsId(enum.Enum):
     FEED_PRESET_ID = "11111111-1111-1111-1111-111111111111"
     DISMISSED_PRESET_ID = "11111111-1111-1111-1111-111111111113"
     GROUPS_PRESET_ID = "11111111-1111-1111-1111-111111111114"
+    WITHOUT_INCIDENT_PRESET_ID = "11111111-1111-1111-1111-111111111115"
 
 
 def generate_uuid():
@@ -62,7 +63,7 @@ class Preset(SQLModel, table=True):
 
 # datatype represents a query with CEL (str) and SQL (dict)
 class PresetSearchQuery(BaseModel):
-    cel_query: constr(min_length=1)
+    cel_query: constr(min_length=0)
     sql_query: Dict[str, Any]
     limit: conint(ge=0) = 1000
     timeframe: conint(ge=0) = 0

@@ -1,7 +1,6 @@
 import io
 import json
 import logging
-import os
 import smtplib
 from email.mime.text import MIMEText
 from typing import Optional, Tuple
@@ -11,11 +10,10 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
-from keep.api.core.config import AuthenticationType, config
+from keep.api.core.config import config
 from keep.api.core.db import get_session
 from keep.api.models.alert import AlertDto
 from keep.api.models.smtp import SMTPSettings
-from keep.api.models.user import User
 from keep.api.models.webhook import WebhookSettings
 from keep.api.utils.tenant_utils import (
     create_api_key,
@@ -34,8 +32,6 @@ from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 router = APIRouter()
 
 logger = logging.getLogger(__name__)
-
-auth_type = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 
 
 class CreateUserRequest(BaseModel):
@@ -81,63 +77,6 @@ def webhook_settings(
         apiKey=webhook_api_key,
         modelSchema=AlertDto.schema(),
     )
-
-
-@router.get("/users", description="Get all users")
-def get_users(
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:settings"])
-    ),
-) -> list[User]:
-    tenant_id = authenticated_entity.tenant_id
-    identity_manager = IdentityManagerFactory.get_identity_manager(
-        tenant_id=tenant_id,
-        identity_manager_type=auth_type,
-        context_manager=ContextManager(tenant_id=tenant_id),
-    )
-    users = identity_manager.get_users()
-    return users
-
-
-@router.delete("/users/{user_email}", description="Delete a user")
-def delete_user(
-    user_email: str,
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["delete:settings"])
-    ),
-):
-    tenant_id = authenticated_entity.tenant_id
-    identity_manager = IdentityManagerFactory.get_identity_manager(
-        tenant_id=tenant_id,
-        identity_manager_type=auth_type,
-        context_manager=ContextManager(tenant_id=tenant_id),
-    )
-
-    return identity_manager.delete_user(user_email)
-
-
-@router.post("/users", description="Create a user")
-async def create_user(
-    request_data: CreateUserRequest,
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:settings"])
-    ),
-):
-    tenant_id = authenticated_entity.tenant_id
-    user_email = request_data.email
-    password = request_data.password
-    role = request_data.role
-
-    if not user_email:
-        raise HTTPException(status_code=400, detail="Email is required")
-
-    identity_manager = IdentityManagerFactory.get_identity_manager(
-        tenant_id=tenant_id,
-        identity_manager_type=auth_type,
-        context_manager=ContextManager(tenant_id=tenant_id),
-    )
-    user = identity_manager.create_user(user_email, password, role)
-    return user
 
 
 @router.post("/smtp", description="Install or update SMTP settings")
@@ -430,7 +369,6 @@ async def get_sso_settings(
 ):
     identity_manager = IdentityManagerFactory.get_identity_manager(
         tenant_id=authenticated_entity.tenant_id,
-        identity_manager_type=auth_type,
         context_manager=ContextManager(tenant_id=authenticated_entity.tenant_id),
     )
 

@@ -25,9 +25,7 @@ def test_with_basic_context(context_manager):
         "name": "s2",
     }
     s = iohandler.render("hello {{ steps.name }}")
-    s2 = iohandler.render("hello {{ providers.name }}")
     assert s == "hello s"
-    assert s2 == "hello s2"
 
 
 def test_with_function(context_manager):
@@ -681,6 +679,18 @@ def test_escaped_quotes_inside_function_arguments(context_manager):
     ), "Expected one function to be extracted with escaped quotes inside arguments."
 
 
+def test_double_function_call(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = """{ vars.alert_tier }} Alert: Pipelines are down
+      Hi,
+      This {{ vars.alert_tier }} alert is triggered keep.get_firing_time('{{ alert }}', 'minutes') because the pipelines for {{ alert.host }} are down for more than keep.get_firing_time('{{ alert }}', 'minutes') minutes.
+      Please visit monitoring.keeohq.dev for more!"""
+    extracted_functions = iohandler.extract_keep_functions(template)
+    assert (
+        len(extracted_functions) == 2
+    ), "Should handle nested function calls correctly."
+
+
 def test_if_else_in_template_existing(mocked_context_manager):
     mocked_context_manager.get_full_context.return_value = {
         "alert": {"notexist": "it actually exists", "name": "this is a test"}
@@ -753,3 +763,160 @@ def test_add_time_to_date_function(context_manager):
         2024, 8, 17, 14, 21, tzinfo=datetime.timezone(datetime.timedelta(hours=-5))
     )
     assert s == str(expected_date), f"Expected {expected_date}, but got {s}"
+
+
+# def test_openobserve_rows_bug(db_session, context_manager):
+#     template = "keep.get_firing_time('{{ alert }}', 'minutes') >= 30 and keep.get_firing_time('{{ alert }}', 'minutes') < 90"
+#     # from 1 hour ago
+#     lastReceived = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
+#     alert = AlertDto(
+#         **{
+#             "id": "dfbc23f1-9a71-475c-8fc6-8bf051cc2336",
+#             "name": "camera_reachability_23",
+#             "status": "firing",
+#             "severity": "warning",
+#             "lastReceived": str(lastReceived),
+#             "environment": "camera_reachability",
+#             "isFullDuplicate": False,
+#             "isPartialDuplicate": True,
+#             "duplicateReason": None,
+#             "service": None,
+#             "source": ["openobserve"],
+#             "apiKeyRef": "webhook",
+#             "message": None,
+#             "description": "scheduled",
+#             "pushed": True,
+#             "event_id": "42172953-9f5d-4b65-80a0-d1a29d205934",
+#             "url": None,
+#             "labels": {
+#                 "url": "",
+#                 "alert_period": "5",
+#                 "alert_operator": "&gt;=",
+#                 "alert_threshold": "1",
+#                 "alert_count": "2",
+#                 "alert_agg_value": "0.00",
+#                 "alert_end_time": "2024-10-18T13:34:35",
+#             },
+#             "fingerprint": "d135867d811043414f60f8b6d7b5e9f69464389650e50f476848a64faec2c9b5",
+#             "deleted": False,
+#             "dismissUntil": None,
+#             "dismissed": False,
+#             "assignee": None,
+#             "providerId": "e3ac6f75cda04397b09099af62d35329",
+#             "providerType": "openobserve",
+#             "note": None,
+#             "startedAt": "2024-10-18T13:28:42",
+#             "isNoisy": False,
+#             "enriched_fields": [],
+#             "incident": None,
+#             "trigger": "manual",
+#             "rows": "{\\'host': 'somedevice-va1.data.city.keephq.dev'}\\n{'host': 'somedevice2-va1.data.city.keephq.dev'}",
+#             "alert_url": "/web/logs?stream_type=metrics&amp;stream=camera_reachability&amp;stream_value=camera_reachability&amp;from=1729258122035000&amp;to=1729258475705000&amp;sql_mode=true&amp;query=123&amp;org_identifier=somecity",
+#             "alert_hash": "6530fb046247d056996d3ce7b0f25083ffff9700393f27c21e979e150bf049db",
+#             "org_name": "somecity",
+#             "stream_type": "metrics",
+#         }
+#     )
+#     context_manager.alert = alert
+#     context_manager.event_context = context_manager.alert
+#     iohandler = IOHandler(context_manager)
+
+#     # it should be greater than 60 minutes and less than 90 minutes
+#     s = iohandler.render(template)
+#     # the alert is not really added to the DB so the firing time is 0.00
+#     assert s == "0.00 >= 30 and 0.00 < 90"
+
+
+def test_recursive_rendering_basic(context_manager):
+    iohandler = IOHandler(context_manager)
+
+    context_manager.steps_context = {
+        "name": "World",
+        "greeting": "Hello {{ steps.name }}",
+    }
+    template = "{{ steps.greeting }}!"
+    result = iohandler.render(template)
+    assert result == "Hello World!", f"Expected 'Hello World!', but got {result}"
+
+
+def test_recursive_rendering_nested(context_manager):
+    iohandler = IOHandler(context_manager)
+    context_manager.steps_context = {
+        "name": "World",
+        "greeting": "Hello {{ steps.name }}",
+        "message": "{{ steps.greeting }}! How are you?",
+    }
+    template = "{{ steps.message }}"
+    result = iohandler.render(template)
+    assert (
+        result == "Hello World! How are you?"
+    ), f"Expected 'Hello World! How are you?', but got {result}"
+
+
+def test_recursive_rendering_with_functions(context_manager):
+    iohandler = IOHandler(context_manager)
+    context_manager.steps_context = {
+        "name": "world",
+        "greeting": "Hello keep.uppercase({{ steps.name }})",
+    }
+    template = "{{ steps.greeting }}!"
+    result = iohandler.render(template)
+    assert result == "Hello WORLD!", f"Expected 'Hello WORLD!', but got {result}"
+
+
+def test_recursive_rendering_max_iterations(context_manager):
+    iohandler = IOHandler(context_manager)
+    context_manager.steps_context = {"loop": "{{ steps.loop }}"}
+    template = "{{ steps.loop }}"
+    result = iohandler.render(template)
+    assert (
+        result == "{{ steps.loop }}"
+    ), "Expected no change due to max iterations limit"
+
+
+def test_dont_render_providers(context_manager):
+    context_manager.providers_context = {
+        "keephq": '{"auth": "bla"}',
+    }
+    iohandler = IOHandler(context_manager)
+    template = "{{ providers.keephq }}"
+    result = iohandler.render(template)
+    assert "bla" not in result, "Expected empty string, but got {result}"
+
+
+def test_render_with_consts(context_manager):
+    iohandler = IOHandler(context_manager)
+    context_manager.alert = AlertDto(
+        **{
+            "id": "test",
+            "name": "test",
+            "lastReceived": "2024-03-20T00:00:00.000Z",
+            "source": ["sentry"],
+            "date": "2024-08-16T14:21:00.000-0500",
+            "host": "example.com",
+        }
+    )
+    context_manager.event_context = context_manager.alert
+    context_manager.current_step_vars = {"alert_tier": "critical"}
+    consts = {
+        "email_template": (
+            "<strong>Hi,<br>"
+            "This {{ vars.alert_tier }} is triggered because the pipelines for {{ alert.host }} are down for more than 0 minutes.<br>"
+            "Please visit monitoring.keeohq.dev for more!<br>"
+            "Regards,<br>"
+            "KeepHQ dev Monitoring</strong>"
+        )
+    }
+    context_manager.consts_context = consts
+    template = "{{ consts.email_template }}"
+    result = iohandler.render(template)
+    expected_result = (
+        "<strong>Hi,<br>"
+        "This critical is triggered because the pipelines for example.com are down for more than 0 minutes.<br>"
+        "Please visit monitoring.keeohq.dev for more!<br>"
+        "Regards,<br>"
+        "KeepHQ dev Monitoring</strong>"
+    )
+    assert (
+        result == expected_result
+    ), f"Expected '{expected_result}', but got '{result}'"

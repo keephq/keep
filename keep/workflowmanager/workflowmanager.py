@@ -4,24 +4,24 @@ import re
 import typing
 import uuid
 
-from pandas.core.common import flatten
-
-from keep.api.core.config import AuthenticationType, config
+from keep.api.core.config import config
 from keep.api.core.db import (
     get_enrichment,
     get_previous_alert_by_fingerprint,
     save_workflow_results,
 )
+from keep.api.core.metrics import workflow_execution_duration
 from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto
+from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
-from keep.workflowmanager.workflowscheduler import WorkflowScheduler
+from keep.workflowmanager.workflowscheduler import WorkflowScheduler, timing_histogram
 from keep.workflowmanager.workflowstore import WorkflowStore
 
 
 class WorkflowManager:
     # List of providers that are not allowed to be used in workflows in multi tenant mode.
-    PREMIUM_PROVIDERS = ["bash", "python"]
+    PREMIUM_PROVIDERS = ["bash", "python", "llamacpp", "ollama"]
 
     @staticmethod
     def get_instance() -> "WorkflowManager":
@@ -34,6 +34,7 @@ class WorkflowManager:
         self.debug = config("WORKFLOW_MANAGER_DEBUG", default=False, cast=bool)
         if self.debug:
             self.logger.setLevel(logging.DEBUG)
+
         self.scheduler = WorkflowScheduler(self)
         self.workflow_store = WorkflowStore()
         self.started = False
@@ -43,13 +44,18 @@ class WorkflowManager:
         if self.started:
             self.logger.info("Workflow manager already started")
             return
+
         await self.scheduler.start()
         self.started = True
 
     def stop(self):
         """Stops the workflow manager"""
+        if not self.started:
+            return
         self.scheduler.stop()
         self.started = False
+        # Clear the scheduler reference
+        self.scheduler = None
 
     def _apply_filter(self, filter_val, value):
         # if it's a regex, apply it
@@ -74,9 +80,7 @@ class WorkflowManager:
         try:
             # get the actual workflow that can be triggered
             self.logger.info("Getting workflow from store")
-            workflow = self.workflow_store.get_workflow(
-                tenant_id, workflow_model.id
-            )
+            workflow = self.workflow_store.get_workflow(tenant_id, workflow_model.id)
             self.logger.info("Got workflow from store")
             return workflow
         except ProviderConfigurationException:
@@ -116,12 +120,20 @@ class WorkflowManager:
             if workflow is None:
                 continue
 
-            incident_triggers = flatten(
-                [t.get("events", []) for t in workflow.workflow_triggers if t["type"] == "incident"]
-            )
+            # Using list comprehension instead of pandas flatten() for better performance
+            # and to avoid pandas dependency
+            # @tb: I removed pandas so if we'll have performance issues we can revert to pandas
+            incident_triggers = [
+                event
+                for trigger in workflow.workflow_triggers
+                if trigger["type"] == "incident"
+                for event in trigger.get("events", [])
+            ]
 
             if trigger not in incident_triggers:
-                self.logger.debug("workflow does not contain trigger %s, skipping", trigger)
+                self.logger.debug(
+                    "workflow does not contain trigger %s, skipping", trigger
+                )
                 continue
 
             self.logger.info("Adding workflow to run")
@@ -171,6 +183,7 @@ class WorkflowManager:
                         self.logger.debug(f"Running filter {filter}")
                         filter_key = filter.get("key")
                         filter_val = filter.get("value")
+                        filter_exclude = filter.get("exclude", False)
                         event_val = self._get_event_value(event, filter_key)
                         self.logger.debug(
                             "Filtering",
@@ -181,8 +194,8 @@ class WorkflowManager:
                             },
                         )
                         if event_val is None:
-                            self.logger.warning(
-                                "Failed to run filter, skipping the event. Probably misconfigured workflow.",
+                            self.logger.debug(
+                                "Failed to run filter, skipping the event. This may happen if the event does not have the filter_key as attribute.",
                                 extra={
                                     "tenant_id": tenant_id,
                                     "filter_key": filter_key,
@@ -205,7 +218,11 @@ class WorkflowManager:
                                             "event": event,
                                         },
                                     )
-                                    should_run = True
+                                    # depends on the exclude flag
+                                    if filter_exclude:
+                                        should_run = False
+                                    else:
+                                        should_run = True
                                     break
                                 self.logger.debug(
                                     "Filter didn't match, skipping",
@@ -215,10 +232,12 @@ class WorkflowManager:
                                         "event": event,
                                     },
                                 )
-                                should_run = False
+                                if not filter_exclude:
+                                    should_run = False
                         # elif the filter is string/int/float, compare them:
                         elif type(event_val) in [int, str, float, bool]:
-                            if not self._apply_filter(filter_val, event_val):
+                            filter_applied = self._apply_filter(filter_val, event_val)
+                            if not filter_applied and not filter_exclude:
                                 self.logger.debug(
                                     "Filter didn't match, skipping",
                                     extra={
@@ -229,6 +248,17 @@ class WorkflowManager:
                                 )
                                 should_run = False
                                 break
+                            # if the filter applies but its exclusion filter, don't run
+                            elif filter_applied and filter_exclude:
+                                self.logger.debug(
+                                    "Filter matched but it's exclusion filter, skipping",
+                                    extra={
+                                        "filter_key": filter_key,
+                                        "filter_val": filter_val,
+                                        "event": event,
+                                    },
+                                )
+                                should_run = False
                         # other types currently does not supported
                         else:
                             self.logger.warning(
@@ -309,6 +339,7 @@ class WorkflowManager:
                             }
                         )
                     self.logger.info("Workflow added to run")
+            self.logger.info("All workflows added to run")
 
     def _get_event_value(self, event, filter_key):
         # if the filter key is a nested key, get the value
@@ -328,37 +359,6 @@ class WorkflowManager:
         else:
             return getattr(event, filter_key, None)
 
-    # TODO should be fixed to support the usual CLI
-    def run(self, workflows: list[Workflow]):
-        """
-        Run list of workflows.
-
-        Args:
-            workflow (str): Either an workflow yaml or a directory containing workflow yamls or a list of URLs to get the workflows from.
-            providers_file (str, optional): The path to the providers yaml. Defaults to None.
-        """
-        self.logger.info("Running workflow(s)")
-        workflows_errors = []
-        # If at least one workflow has an interval, run workflows using the scheduler,
-        #   otherwise, just run it
-        if any([Workflow.workflow_interval for Workflow in workflows]):
-            # running workflows in scheduler mode
-            self.logger.info(
-                "Found at least one workflow with an interval, running in scheduler mode"
-            )
-            self.scheduler_mode = True
-            # if the workflows doesn't have an interval, set the default interval
-            for workflow in workflows:
-                workflow.workflow_interval = workflow.workflow_interval
-            # This will halt until KeyboardInterrupt
-            self.scheduler.run_workflows(workflows)
-            self.logger.info("Workflow(s) scheduled")
-        else:
-            # running workflows in the regular mode
-            workflows_errors = self._run_workflows_from_cli(workflows)
-
-        return workflows_errors
-
     def _check_premium_providers(self, workflow: Workflow):
         """
         Check if the workflow uses premium providers in multi tenant mode.
@@ -369,16 +369,61 @@ class WorkflowManager:
         Raises:
             Exception: If the workflow uses premium providers in multi tenant mode.
         """
-        if (
-            os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
-            == AuthenticationType.MULTI_TENANT.value
-        ):
+        if os.environ.get("AUTH_TYPE", IdentityManagerTypes.NOAUTH.value) in (
+            IdentityManagerTypes.AUTH0.value,
+            "MULTI_TENANT",
+        ):  # backward compatibility
             for provider in workflow.workflow_providers_type:
                 if provider in self.PREMIUM_PROVIDERS:
                     raise Exception(
                         f"Provider {provider} is a premium provider. You can self-host or contact us to get access to it."
                     )
 
+    def _run_workflow_on_failure(
+        self, workflow: Workflow, workflow_execution_id: str, error_message: str
+    ):
+        """
+        Runs the workflow on_failure action.
+
+        Args:
+            workflow (Workflow): The workflow that fails
+            workflow_execution_id (str): Workflow execution id
+            error_message (str): The error message(s)
+        """
+        if workflow.on_failure:
+            self.logger.info(
+                f"Running on_failure action for workflow {workflow.workflow_id}",
+                extra={
+                    "workflow_execution_id": workflow_execution_id,
+                    "workflow_id": workflow.workflow_id,
+                    "tenant_id": workflow.context_manager.tenant_id,
+                },
+            )
+            # Adding the exception message to the provider context, so it'll be available for the action
+            message = (
+                f"Workflow {workflow.workflow_id} failed with errors: {error_message}"
+            )
+            workflow.on_failure.provider_parameters = {"message": message}
+            workflow.on_failure.run()
+            self.logger.info(
+                "Ran on_failure action for workflow",
+                extra={
+                    "workflow_execution_id": workflow_execution_id,
+                    "workflow_id": workflow.workflow_id,
+                    "tenant_id": workflow.context_manager.tenant_id,
+                },
+            )
+        else:
+            self.logger.debug(
+                "No on_failure configured for workflow",
+                extra={
+                    "workflow_execution_id": workflow_execution_id,
+                    "workflow_id": workflow.workflow_id,
+                    "tenant_id": workflow.context_manager.tenant_id,
+                },
+            )
+
+    @timing_histogram(workflow_execution_duration)
     def _run_workflow(
         self, workflow: Workflow, workflow_execution_id: str, test_run=False
     ):
@@ -388,27 +433,22 @@ class WorkflowManager:
         try:
             self._check_premium_providers(workflow)
             errors = workflow.run(workflow_execution_id)
+            if errors:
+                self._run_workflow_on_failure(
+                    workflow, workflow_execution_id, ", ".join(errors)
+                )
         except Exception as e:
             self.logger.error(
                 f"Error running workflow {workflow.workflow_id}",
                 extra={"exception": e, "workflow_execution_id": workflow_execution_id},
             )
-            if workflow.on_failure:
-                self.logger.info(
-                    f"Running on_failure action for workflow {workflow.workflow_id}"
-                )
-                # Adding the exception message to the provider context, so it'll be available for the action
-                message = (
-                    f"Workflow {workflow.workflow_id} failed with exception: {str(e)}å"
-                )
-                workflow.on_failure.provider_parameters = {"message": message}
-                workflow.on_failure.run()
+            self._run_workflow_on_failure(workflow, workflow_execution_id, str(e))
             raise
         finally:
             if not test_run:
                 workflow.context_manager.dump()
 
-        if any(errors):
+        if errors is not None and any(errors):
             self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
         else:
             self.logger.info(f"Workflow {workflow.workflow_id} ran successfully")

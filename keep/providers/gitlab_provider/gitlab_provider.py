@@ -18,12 +18,13 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 class GitlabProviderAuthConfig:
     """GitLab authentication configuration."""
 
-    host: str = dataclasses.field(
+    host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "GitLab Host",
             "sensitive": False,
-            "hint": "example.gitlab.com",
+            "hint": "http://example.gitlab.com",
+            "validation": "any_http_url"
         }
     )
 
@@ -50,9 +51,10 @@ class GitlabProvider(BaseProvider):
     ]
     PROVIDER_TAGS = ["ticketing"]
     PROVIDER_DISPLAY_NAME = "GitLab"
+    PROVIDER_CATEGORY = ["Developer Tools"]
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         self._host = None
         super().__init__(context_manager, provider_id, config)
@@ -76,12 +78,10 @@ class GitlabProvider(BaseProvider):
         try:
             resp.raise_for_status()
             scopes = {
-                "api": ("Missing api scope", True)['api' in resp.json()['scopes']]
+                "api": ("Missing api scope", True)["api" in resp.json()["scopes"]]
             }
         except HTTPError as e:
-            scopes = {
-                "api": str(e)
-            }
+            scopes = {"api": str(e)}
         return scopes
 
     def validate_config(self):
@@ -97,7 +97,7 @@ class GitlabProvider(BaseProvider):
 
         # if the user explicitly supplied a host with http/https, use it
         if self.authentication_config.host.startswith(
-                "http://"
+            "http://"
         ) or self.authentication_config.host.startswith("https://"):
             self._host = self.authentication_config.host
             return self.authentication_config.host.rstrip("/")
@@ -143,15 +143,32 @@ class GitlabProvider(BaseProvider):
                 params[param] = kwargs[param]
         return params
 
-    def _notify(self, id: str, title: str, description: str = "", labels: str = "", issue_type: str = "issue",
-                **kwargs: dict):
-        id = urllib.parse.quote(id, safe='')
+    def _notify(
+        self,
+        id: str,
+        title: str,
+        description: str = "",
+        labels: str = "",
+        issue_type: str = "issue",
+        **kwargs: dict,
+    ):
+        id = urllib.parse.quote(id, safe="")
         print(id)
         params = self.__build_params_from_kwargs(
-            kwargs={**kwargs, 'title': title, 'description': description, 'labels': labels, 'issue_type': issue_type})
+            kwargs={
+                **kwargs,
+                "title": title,
+                "description": description,
+                "labels": labels,
+                "issue_type": issue_type,
+            }
+        )
         print(self.gitlab_host)
-        resp = requests.post(f"{self.gitlab_host}/api/v4/projects/{id}/issues", headers=self.__get_auth_header(),
-                             params=params)
+        resp = requests.post(
+            f"{self.gitlab_host}/api/v4/projects/{id}/issues",
+            headers=self.__get_auth_header(),
+            params=params,
+        )
         try:
             resp.raise_for_status()
         except HTTPError as e:

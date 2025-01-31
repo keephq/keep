@@ -1,26 +1,30 @@
-import os
-import pydantic
 import dataclasses
+import http
+import os
+import time
+
+import pydantic
 import requests
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
 class GoogleChatProviderAuthConfig:
     """Google Chat authentication configuration."""
 
-    webhook_url: str = dataclasses.field(
+    webhook_url: HttpsUrl = dataclasses.field(
         metadata={
             "name": "webhook_url",
             "description": "Google Chat Webhook Url",
             "required": True,
             "sensitive": True,
+            "validation": "https_url",
         },
-        default="",
     )
 
 
@@ -29,9 +33,10 @@ class GoogleChatProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "Google Chat"
     PROVIDER_TAGS = ["messaging"]
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -39,9 +44,6 @@ class GoogleChatProvider(BaseProvider):
         self.authentication_config = GoogleChatProviderAuthConfig(
             **self.config.authentication
         )
-
-        if not self.authentication_config.webhook_url:
-            raise ProviderException("Google Chat webhook URL is required")
 
     def dispose(self):
         """
@@ -65,15 +67,35 @@ class GoogleChatProvider(BaseProvider):
         if not message:
             raise ProviderException("Message is required")
 
+        def __send_message(url, body, headers, retries=3):
+            for attempt in range(retries):
+                try:
+                    resp = requests.post(url, json=body, headers=headers)
+                    if resp.status_code == http.HTTPStatus.OK:
+                        return resp
+
+                    self.logger.warning(
+                        f"Attempt {attempt + 1} failed with status code {resp.status_code}"
+                    )
+
+                except requests.exceptions.RequestException as e:
+                    self.logger.error(f"Attempt {attempt + 1} failed: {e}")
+
+                if attempt < retries - 1:
+                    time.sleep(1)
+
+            raise requests.exceptions.RequestException(
+                f"Failed to notify message after {retries} attempts"
+            )
+
         payload = {
             "text": message,
         }
 
-        requestHeaders = {"Content-Type": "application/json; charset=UTF-8"}
+        request_headers = {"Content-Type": "application/json; charset=UTF-8"}
 
-        response = requests.post(webhook_url, json=payload, headers=requestHeaders)
-
-        if not response.ok:
+        response = __send_message(webhook_url, body=payload, headers=request_headers)
+        if response.status_code != http.HTTPStatus.OK:
             raise ProviderException(
                 f"Failed to notify message to Google Chat: {response.text}"
             )

@@ -10,4 +10,4 @@ workflow:
         type: console
         with:
           # "The severity has changed from warning to info (it has decreased from last alert)"
-          alert_message: "The severity has changed from {{ alert.previous_severity }} to {{ alert.severity }} (it has {{ alert.severity_change }} since last alert)"
+          message: "The severity has changed from {{ alert.previous_severity }} to {{ alert.severity }} (it has {{ alert.severity_change }} since last alert)"

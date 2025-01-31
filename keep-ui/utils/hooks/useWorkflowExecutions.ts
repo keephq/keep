@@ -1,44 +1,75 @@
-import { AlertToWorkflowExecution } from "app/alerts/models";
-import { PaginatedWorkflowExecutionDto, WorkflowExecution } from "app/workflows/builder/types";
-import { useSession } from "next-auth/react";
+import { AlertToWorkflowExecution } from "@/entities/alerts/model";
+import {
+  PaginatedWorkflowExecutionDto,
+  WorkflowExecutionDetail,
+} from "@/shared/api/workflow-executions";
 import { useSearchParams } from "next/navigation";
 import useSWR, { SWRConfiguration } from "swr";
-import { getApiURL } from "utils/apiUrl";
-import { fetcher } from "utils/fetcher";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
-export const useWorkflowExecutions = (options?: SWRConfiguration) => {
-  const apiUrl = getApiURL();
-  const { data: session } = useSession();
+export const useWorkflowExecutions = (
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  }
+) => {
+  const api = useApi();
 
   return useSWR<AlertToWorkflowExecution[]>(
-    () => (session ? `${apiUrl}/workflows/executions` : null),
-    async (url) => fetcher(url, session?.accessToken),
+    api.isReady() ? "/workflows/executions" : null,
+    (url) => api.get(url),
     options
   );
 };
 
-
-
 export const useWorkflowExecutionsV2 = (
   workflowId: string,
-  tab: number = 0,
   limit: number = 25,
-  offset: number = 0,
+  offset: number = 0
 ) => {
-  const apiUrl = getApiURL();
-  const { data: session } = useSession();
+  const api = useApi();
   const searchParams = useSearchParams();
-  limit = searchParams?.get("limit") ? Number(searchParams?.get("limit")) : limit;
-  offset = searchParams?.get("offset") ? Number(searchParams?.get("offset")) : offset;
-  tab = searchParams?.get("tab") ? Number(searchParams?.get("tab")) : tab;
+  limit = searchParams?.get("limit")
+    ? Number(searchParams?.get("limit"))
+    : limit;
+  offset = searchParams?.get("offset")
+    ? Number(searchParams?.get("offset"))
+    : offset;
   limit = limit > 100 ? 50 : limit;
   limit = limit <= 0 ? 25 : limit;
   offset = offset < 0 ? 0 : offset;
-  tab = tab < 0 ? 0 : tab;
-  tab = tab > 3 ? 3 : tab;
+
+  // Create new URLSearchParams without 'tab' param
+  const filteredParams = new URLSearchParams();
+  searchParams?.forEach((value, key) => {
+    if (key !== "tab") {
+      filteredParams.append(key, value);
+    }
+  });
 
   return useSWR<PaginatedWorkflowExecutionDto>(
-    () => (session ? `${apiUrl}/workflows/${workflowId}?v2=true&tab=${tab}&limit=${limit}&offset=${offset}${searchParams ? `&${searchParams.toString()}` : ""}` : null),
-    (url: string) => fetcher(url, session?.accessToken)
+    api.isReady()
+      ? `/workflows/${workflowId}/runs?v2=true&limit=${limit}&offset=${offset}${
+          filteredParams.toString() ? `&${filteredParams.toString()}` : ""
+        }`
+      : null,
+    (url: string) => api.get(url),
+    {
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
+    }
+  );
+};
+
+export const useWorkflowExecution = (
+  workflowId: string,
+  workflowExecutionId: string
+) => {
+  const api = useApi();
+
+  return useSWR<WorkflowExecutionDetail>(
+    api.isReady()
+      ? `/workflows/${workflowId}/runs/${workflowExecutionId}`
+      : null,
+    (url: string) => api.get(url)
   );
 };

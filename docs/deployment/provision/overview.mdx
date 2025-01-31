@@ -6,24 +6,29 @@ Keep supports various deployment and provisioning strategies to accommodate diff
 
 ### Provisioning Options
 
-Keep offers two main provisioning options:
+Keep offers three main provisioning options:
 
-1. [**Provider Provisioning**](/deployment/provision/provider) - Set up and manage data providers for Keep.
+1. [**Provider Provisioning**](/deployment/provision/provider) - Set up and manage data providers with their deduplication rules for Keep.
 2. [**Workflow Provisioning**](/deployment/provision/workflow) - Configure and manage workflows within Keep.
+3. [**Dashboard Provisioning**](/deployment/provision/dashboard) - Configure and manage dashboards within Keep.
+
 
 Choosing the right provisioning strategy depends on your specific use case, deployment environment, and scalability requirements. You can read more about each provisioning option in their respective sections.
 
 ### How To Configure Provisioning
 
 <Tip>
-Some provisioning options require additional environment variables. These will be covered in detail on the specific provisioning pages.
+  Some provisioning options require additional environment variables. These will
+  be covered in detail on the specific provisioning pages.
 </Tip>
 
 Provisioning in Keep is controlled through environment variables and configuration files. The main environment variables for provisioning are:
 
-| Provisioning Type | Environment Variable | Purpose |
-|-------------------|----------------------|---------|
-| **Provider** | `KEEP_PROVIDERS` | JSON string containing provider configurations |
-| **Workflow** | `KEEP_WORKFLOWS_DIRECTORY` | Directory path containing workflow configuration files |
+| Provisioning Type      | Environment Variable           | Purpose                                                                 |
+| ---------------------- | ------------------------------ | ----------------------------------------------------------------------- |
+| **Provider**           | `KEEP_PROVIDERS`               | JSON string containing provider configurations with deduplication rules |
+| **Workflow**           | `KEEP_WORKFLOWS_DIRECTORY`     | Directory path containing workflow configuration files                  |
+| **Dashboard**          | `KEEP_DASHBOARDS`              | JSON string containing dashboard configurations                         |
+
 
 For more details on each provisioning strategy, including setup instructions and implications, refer to the respective sections.

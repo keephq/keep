@@ -1,0 +1,72 @@
+---
+title: "Cilium"
+sidebarTitle: "Cilium Provider"
+description: "Cilium provider enables topology discovery by analyzing network flows between services in your Kubernetes cluster using Hubble."
+---
+
+## Overview
+
+<Tip>
+
+Cilium provider is in Beta and is not working with authentication yet.
+
+The current way to pull topology data from your kubernetes cluster, is to run:
+```bash
+# hubble-relay usually installed at kube-system, but it depends on your cluster.
+kubectl port-forward -n kube-system svc/hubble-relay 4245:80
+```
+
+and then use `localhost:4245` to pull topology data.
+
+If you need help with connecting Cilium provider, [reach out](https://slack.keephq.dev).
+
+</Tip>
+
+The Cilium provider leverages Hubble's network flow data to automatically discover service dependencies and build a topology map of your Kubernetes applications.
+
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/cilium_topology_map.png" />
+</Frame>
+
+
+## Authentication Parameters
+
+| Parameter | Description | Example |
+|-----------|-------------|----------|
+| `cilium_base_endpoint` | The base endpoint of the Cilium Hubble relay | `localhost:4245` |
+
+## Outputs
+
+The provider returns topology information including:
+- Service names and their dependencies
+- Namespace information
+- Pod labels and cluster metadata
+- Network-based relationships between services
+
+## Service Discovery Logic
+
+The provider identifies services using the following hierarchy:
+1. Workload name (if available)
+2. Kubernetes labels (`k8s:app=` or `k8s:app.kubernetes.io/name=`)
+3. Pod name (stripped of deployment suffixes)
+
+## Requirements
+
+- A running Kubernetes cluster with Cilium installed
+- Hubble enabled and accessible via gRPC
+- Network visibility (flow logs) enabled in Cilium
+
+## Limitations
+
+- Only captures active network flows between pods
+- Service discovery is limited to pods with proper Kubernetes labels
+- Requires direct access to the Hubble relay endpoint
+
+## Useful Links
+
+- [Cilium Documentation](https://docs.cilium.io/)
+- [Hubble Documentation](https://docs.cilium.io/en/stable/hubble/)
+- [Kubernetes Network Policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/)

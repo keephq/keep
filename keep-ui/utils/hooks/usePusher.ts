@@ -1,66 +1,150 @@
-import Pusher from "pusher-js";
-import { useConfig } from "./useConfig";
-import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import Pusher, { Options as PusherOptions } from "pusher-js";
+import { useApiUrl, useConfig } from "./useConfig";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useCallback } from "react";
 
 let PUSHER: Pusher | null = null;
-const POLLING_INTERVAL = 3000;
 
 export const useWebsocket = () => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: configData } = useConfig();
   const { data: session } = useSession();
   let channelName = `private-${session?.tenantId}`;
 
+  console.log("useWebsocket: Initializing with config:", configData);
+  console.log("useWebsocket: Session:", session);
+
+  // TODO: should be in useMemo?
   if (
     PUSHER === null &&
-    configData !== undefined &&
+    configData !== null &&
     session !== undefined &&
+    configData.PUSHER_APP_KEY &&
     configData.PUSHER_DISABLED === false
   ) {
     channelName = `private-${session?.tenantId}`;
-    PUSHER = new Pusher(configData.PUSHER_APP_KEY, {
-      wsHost: configData.PUSHER_HOST,
-      wsPort: configData.PUSHER_PORT,
-      forceTLS: false,
-      disableStats: true,
-      enabledTransports: ["ws", "wss"],
-      cluster: configData.PUSHER_CLUSTER || "local",
-      channelAuthorization: {
-        transport: "ajax",
-        endpoint: `${apiUrl}/pusher/auth`,
-        headers: {
-          Authorization: `Bearer ${session?.accessToken!}`,
+    console.log("useWebsocket: Creating new Pusher instance");
+    try {
+      // check if the pusher host is relative (e.g. /websocket)
+      const isRelative =
+        configData.PUSHER_HOST && configData.PUSHER_HOST.startsWith("/");
+
+      // if relative, get the relative port:
+      let port = configData.PUSHER_PORT;
+      if (isRelative) {
+        // Handle case where port is empty string (default ports 80/443)
+        if (window.location.port) {
+          port = parseInt(window.location.port, 10);
+        } else {
+          // Use default ports based on protocol
+          port = window.location.protocol === "https:" ? 443 : 80;
+        }
+      }
+
+      console.log("useWebsocket: isRelativeHostAndNotLocal:", isRelative);
+
+      var pusherOptions: PusherOptions = {
+        wsHost: isRelative ? window.location.hostname : configData.PUSHER_HOST,
+        // in case its relative, use path e.g. "/websocket"
+        wsPath: isRelative ? configData.PUSHER_HOST : "",
+        wsPort: isRelative ? port : configData.PUSHER_PORT,
+        forceTLS: window.location.protocol === "https:",
+        disableStats: true,
+        enabledTransports: ["ws", "wss"],
+        cluster: configData.PUSHER_CLUSTER || "local",
+        channelAuthorization: {
+          transport: "ajax",
+          endpoint: `${apiUrl}/pusher/auth`,
+          headers: {
+            Authorization: `Bearer ${session?.accessToken!}`,
+          },
         },
-      },
-    });
-    PUSHER.subscribe(channelName);
+      };
+      PUSHER = new Pusher(configData.PUSHER_APP_KEY, pusherOptions);
+
+      console.log(
+        "useWebsocket: Pusher instance created successfully. Options:",
+        pusherOptions
+      );
+
+      PUSHER.connection.bind("connected", () => {
+        console.log("useWebsocket: Pusher connected successfully");
+      });
+
+      PUSHER.connection.bind("error", (err: any) => {
+        void err; // No-op line for debugger target
+        console.error("useWebsocket: Pusher connection error:", err);
+      });
+
+      PUSHER.connection.bind("state_change", function (states: any) {
+        console.log(
+          "useWebsocket: Connection state changed from",
+          states.previous,
+          "to",
+          states.current
+        );
+      });
+
+      PUSHER.subscribe(channelName)
+        .bind("pusher:subscription_succeeded", () => {
+          console.log(
+            `useWebsocket: Successfully subscribed to ${channelName}`
+          );
+        })
+        .bind("pusher:subscription_error", (err: any) => {
+          console.error(
+            `useWebsocket: Subscription error for ${channelName}:`,
+            err
+          );
+        });
+    } catch (error) {
+      console.error("useWebsocket: Error creating Pusher instance:", error);
+    }
   }
 
-  const subscribe = () => {
+  const subscribe = useCallback(() => {
+    console.log(`useWebsocket: Subscribing to ${channelName}`);
     return PUSHER?.subscribe(channelName);
-  };
+  }, [channelName]);
 
-  const unsubscribe = () => {
+  const unsubscribe = useCallback(() => {
+    console.log(`useWebsocket: Unsubscribing from ${channelName}`);
     return PUSHER?.unsubscribe(channelName);
-  };
+  }, [channelName]);
 
-  const bind = (event: any, callback: any) => {
-    return PUSHER?.channel(channelName)?.bind(event, callback);
-  };
+  const bind = useCallback(
+    (event: any, callback: any) => {
+      console.log(`useWebsocket: Binding to event ${event} on ${channelName}`);
+      return PUSHER?.channel(channelName)?.bind(event, callback);
+    },
+    [channelName]
+  );
 
-  const unbind = (event: any, callback: any) => {
-    return PUSHER?.channel(channelName)?.unbind(event, callback);
-  };
+  const unbind = useCallback(
+    (event: any, callback: any) => {
+      console.log(
+        `useWebsocket: Unbinding from event ${event} on ${channelName}`
+      );
+      return PUSHER?.channel(channelName)?.unbind(event, callback);
+    },
+    [channelName]
+  );
 
-  const trigger = (event: any, data: any) => {
-    return PUSHER?.channel(channelName).trigger(event, data);
-  };
+  const trigger = useCallback(
+    (event: any, data: any) => {
+      console.log(
+        `useWebsocket: Triggering event ${event} on ${channelName} with data:`,
+        data
+      );
+      return PUSHER?.channel(channelName).trigger(event, data);
+    },
+    [channelName]
+  );
 
-  const channel = () => {
+  const channel = useCallback(() => {
+    console.log(`useWebsocket: Getting channel ${channelName}`);
     return PUSHER?.channel(channelName);
-  };
+  }, [channelName]);
 
   return {
     subscribe,
@@ -70,31 +154,4 @@ export const useWebsocket = () => {
     trigger,
     channel,
   };
-};
-
-export const useAlertPolling = () => {
-  const { bind, unbind } = useWebsocket();
-  const [pollAlerts, setPollAlerts] = useState(0);
-  const lastPollTimeRef = useRef(0);
-
-  const handleIncoming = useCallback((incoming: any) => {
-    const currentTime = Date.now();
-    const timeSinceLastPoll = currentTime - lastPollTimeRef.current;
-
-    if (timeSinceLastPoll < POLLING_INTERVAL) {
-      setPollAlerts(0);
-    } else {
-      lastPollTimeRef.current = currentTime;
-      setPollAlerts(Math.floor(Math.random() * 10000));
-    }
-  }, []);
-
-  useEffect(() => {
-    bind("poll-alerts", handleIncoming);
-    return () => {
-      unbind("poll-alerts", handleIncoming);
-    };
-  }, [bind, unbind, handleIncoming]);
-
-  return { data: pollAlerts };
 };

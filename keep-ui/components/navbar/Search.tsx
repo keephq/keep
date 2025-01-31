@@ -19,8 +19,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { VscDebugDisconnect } from "react-icons/vsc";
 import { LuWorkflow } from "react-icons/lu";
-import { AiOutlineAlert } from "react-icons/ai";
+import { AiOutlineAlert, AiOutlineGroup } from "react-icons/ai";
 import { MdOutlineEngineering, MdOutlineSearchOff } from "react-icons/md";
+import { useConfig } from "utils/hooks/useConfig";
 import KeepPng from "../../keep.png";
 
 const NAVIGATION_OPTIONS = [
@@ -35,6 +36,12 @@ const NAVIGATION_OPTIONS = [
     label: "Go to alert console",
     shortcut: ["g"],
     navigate: "/alerts/feed",
+  },
+  {
+    icon: AiOutlineGroup,
+    label: "Go to alert quality",
+    shortcut: ["q"],
+    navigate: "/alerts/quality",
   },
   {
     icon: MdOutlineEngineering,
@@ -70,38 +77,40 @@ const NAVIGATION_OPTIONS = [
     icon: KeyIcon,
     label: "Go to API key",
     shortcut: ["a"],
-    navigate: "/settings?selectedTab=api-key",
+    navigate: "/settings?selectedTab=users&userSubTab=api-keys",
   },
 ];
-
-const EXTERNAL_OPTIONS = [
-  {
-    icon: FileTextIcon,
-    label: "Keep Docs",
-    shortcut: ["⇧", "D"],
-    navigate: "https://docs.keephq.dev",
-  },
-  {
-    icon: GitHubLogoIcon,
-    label: "Keep Source code",
-    shortcut: ["⇧", "C"],
-    navigate: "https://github.com/keephq/keep",
-  },
-  {
-    icon: TwitterLogoIcon,
-    label: "Keep Twitter",
-    shortcut: ["⇧", "T"],
-    navigate: "https://twitter.com/keepalerting",
-  },
-];
-
-const OPTIONS = [...NAVIGATION_OPTIONS, ...EXTERNAL_OPTIONS];
 
 export const Search = () => {
   const [query, setQuery] = useState<string>("");
   const router = useRouter();
   const comboboxBtnRef = useRef<ElementRef<"button">>(null);
   const comboboxInputRef = useRef<ElementRef<"input">>(null);
+  const { data: configData } = useConfig();
+  const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
+
+  const EXTERNAL_OPTIONS = [
+    {
+      icon: FileTextIcon,
+      label: "Keep Docs",
+      shortcut: ["⇧", "D"],
+      navigate: docsUrl,
+    },
+    {
+      icon: GitHubLogoIcon,
+      label: "Keep Source code",
+      shortcut: ["⇧", "C"],
+      navigate: "https://github.com/keephq/keep",
+    },
+    {
+      icon: TwitterLogoIcon,
+      label: "Keep Twitter",
+      shortcut: ["⇧", "T"],
+      navigate: "https://twitter.com/keepalerting",
+    },
+  ];
+
+  const OPTIONS = [...NAVIGATION_OPTIONS, ...EXTERNAL_OPTIONS];
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -250,8 +259,8 @@ export const Search = () => {
     const platform = navigator.platform.toLowerCase();
     const userAgent = navigator.userAgent.toLowerCase();
     return (
-      platform.includes('mac') ||
-      (platform.includes('iphone') && !userAgent.includes('windows'))
+      platform.includes("mac") ||
+      (platform.includes("iphone") && !userAgent.includes("windows"))
     );
   };
 

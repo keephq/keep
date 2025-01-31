@@ -5,12 +5,14 @@ Revises: dcbd2873dcfd
 Create Date: 2024-07-25 17:13:04.428633
 
 """
-
+import warnings
 import sqlalchemy as sa
 from alembic import op
 from pydantic import BaseModel
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Session
+from sqlalchemy import exc as sa_exc
+
 
 # revision identifiers, used by Alembic.
 revision = "67f1efb93c99"
@@ -29,15 +31,18 @@ alert_to_incident_table = sa.Table(
     sa.Column('incident_id', UUID(as_uuid=False), sa.ForeignKey('incident.id', ondelete='CASCADE'), primary_key=True)
 )
 
-# Direct table definition for Incident
-incident_table = sa.Table(
-    'incident',
-    migration_metadata,
-    sa.Column('id', UUID(as_uuid=False), primary_key=True),
-    sa.Column('alerts_count', sa.Integer, default=0),
-    sa.Column('affected_services', sa.JSON, default_factory=list),
-    sa.Column('sources', sa.JSON, default_factory=list)
-)
+# The following code will shoow SA warning about dialect, so we suppress it.
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=sa_exc.SAWarning)
+    # Direct table definition for Incident
+    incident_table = sa.Table(
+        'incident',
+        migration_metadata,
+        sa.Column('id', UUID(as_uuid=False), primary_key=True),
+        sa.Column('alerts_count', sa.Integer, default=0),
+        sa.Column('affected_services', sa.JSON, default_factory=list),
+        sa.Column('sources', sa.JSON, default_factory=list)
+    )
 
 # Direct table definition for Alert
 alert_table = sa.Table(

@@ -1,53 +1,115 @@
 ---
 title: "Pagerduty Provider"
-description: "Pagerduty Provider is a provider that allows to create incidents or post events to Pagerduty."
+description: "Pagerduty Provider allows integration with PagerDuty to create, manage, and synchronize incidents and alerts within Keep."
 ---
+
+## Description
+
+The Pagerduty Provider enables integration with PagerDuty to create, manage, and synchronize incidents and alerts within Keep. It supports both direct API key authentication and OAuth2, allowing greater flexibility for secure integration.
 
 ## Inputs
 
 - `title`: str: Title of the alert or incident.
-- `alert_body`: str: UTF-8 string of custom message for alert. Shown in incident body for events, and in the body for incidents.
+- `alert_body`: dict: https://developer.pagerduty.com/api-reference/a7d81b0e9200f-create-an-incident#request-body
 - `dedup`: str | None: Any string, max 255 characters, used to deduplicate alerts for events.
 - `service_id`: str: ID of the service for incidents.
 - `body`: dict: Body of the incident.
 - `requester`: str: Requester of the incident.
 - `incident_key`: str | None: Key to identify the incident. If not given, a UUID will be generated.
+- `priority`: str | None: Priority of the incident. Only used when creating an incident and when the priority is set. This should be the priority reference ID.
 
 ## Authentication Parameters
 
-The `api_key` or `routing_key` are required for connecting to the Pagerduty provider. You can obtain them as described in the "Connecting with the Provider" section.
+PagerDuty supports two authentication methods:
 
-Routing key, which is an integration or ruleset key. API key, which is a user or team API key.
+1. **API Key** - A user or team key, accessible through **Configuration > API Access** in PagerDuty.
+2. **OAuth2** - Supports installation with OAuth2, with access and refresh tokens managed within Keep.
 
 ## Connecting with the Provider
 
-To use the PagerdutyProvider, you'll need to provide either a routing_key or an api_key.
+To connect Keep to PagerDuty:
 
-You can find your integration key or routing key in the PagerDuty web app under **Configuration** > **Integrations**, and select the integration you want to use.
+- **Routing Key**: Use for event posting via the PagerDuty Events API. In the PagerDuty UI, this is displayed as the integration key.
+- **API Key**: Use for incident creation and management through the PagerDuty Incidents API.
+- **Service Id** (Optional): If provided, keep operates within the service's scope.
+- **OAuth2**: Token management handled automatically by Keep.
+
+<Frame>
+  <img src="/images/connect-to-pagerduty.png" />
+</Frame>
+
+<Note>
+You can find your routing key in the PagerDuty (integration key in PagerDuty UI) web app under **Services** > **Service Directory** > **Your service** > **Integrations** > **Expand Events API**, and select the integration you want to use.
 You can find your API key in the PagerDuty web app under **Configuration** > **API Access**.
 
-The routing_key is used to post events to Pagerduty using the events API.
+The routing_key is used to post events to PagerDuty using the events API.
 The api_key is used to create incidents using the incidents API.
+
+</Note>
+
+### Enabling OAuth in the open-source version
+
+If you would like to use OAuth in the open-source, where you self-host Keep, you can do so by following these step:
+
+1. Create a PagerDuty account
+2. In the account page, go to **Integrations** > **App Registration**
+   <Frame>
+     <img src="/images/pagerduty-app-registration.png" />
+   </Frame>
+3. Click on **New App** blue button on the top right
+4. Fill in the required fields
+5. Select "OAuth 2.0" in the Functionality section and click **Next**
+6. In the Redirect URL, you need to add Keep's PagerDuty OAuth2 redirect URL, which is based on your deployments URL. For example, if Keep is deployed at http://localhost:3000, the redirect URL is http://localhost:3000/providers/oauth2/pagerduty
+   <Frame>
+     <img src="/images/pagerduty-redirect-url.png" />
+   </Frame>
+7. In the Authorization section, select **Scoped OAuth** and select the following scopes:
+
+- Abilities: Read Access
+- Incidents: Read/Write Access
+- Services: Read/Write Access
+- Webhook Subscriptions: Read/Write Access
+
+8. Click on **Register App** blue button on the bottom right
+9. Copy the **Client ID** and **Client Secret** from the OAuth 2.0 Client Information modal and set the `PAGERDUTY_CLIENT_ID` and `PAGERDUTY_CLIENT_SECRET` environment variables in your Keep backend deployment.
+   <Frame>
+     <img src="/images/pagerduty-oauth2-credentials.png" />
+   </Frame>
+
+## PagerDuty Webhook Integration
+
+By default, when Keep installs itself as a webhook integration, it subscribes to all incident events ("Account Scope").
+
+<Frame>
+  <img src="/images/pagerduty-account-scope.png" />
+</Frame>
+
+If you wish to limit Keep to some specific services, you can do so by selecting the **Service** scope and selecting the services you want to subscribe to.
+
+<Frame>
+  <img src="/images/pagerduty-service-scope.png" />
+</Frame>
+
+Find this page under **Integrations** > **Generic Webhooks (v3)**
 
 ## Scopes
 
 Certain scopes may be required to perform specific actions or queries via the Pagerduty Provider. Below is a summary of relevant scopes and their use cases:
 
 - incidents_read (Incidents Read)
-    Required: True
-    Description: View incidents.
+  Required: True
+  Description: View incidents.
 - incidents_write (Incidents Write)
-    Required: False
-    Description: Write incidents.
+  Required: False
+  Description: Write incidents.
 - webhook_subscriptions_read (Webhook Subscriptions Read)
-    Required: False
-    Description: View webhook subscriptions.
-    (*Required for auto-webhook integration)
+  Required: False
+  Description: View webhook subscriptions.
+  (\*Required for auto-webhook integration)
 - webhook_subscriptions_write (Webhook Subscriptions Write)
-    Required: False
-    Description: Write webhook subscriptions.
-    (*Required for auto-webhook integration)
-
+  Required: False
+  Description: Write webhook subscriptions.
+  (\*Required for auto-webhook integration)
 
 ## Notes
 
@@ -59,6 +121,7 @@ An expired trial while using the free version of PagerDuty may result in the "pa
 
 The webhook integration adds Keep as a destination within the "Integrations" API within Pagerduty.
 This grants Keep access to the following scopes within Pagerduty:
+
 - `webhook_subscriptions_read`
 - `webhook_subscriptions_write`
 

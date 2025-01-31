@@ -15,9 +15,12 @@ class DbAuthVerifier(AuthVerifierBase):
 
     def _verify_bearer_token(self, token: str) -> AuthenticatedEntity:
         # validate the token
-        jwt_secret = os.environ.get("KEEP_JWT_SECRET")
-        if not jwt_secret:
-            raise HTTPException(status_code=401, detail="Missing JWT secret")
+        jwt_secret = os.environ.get("KEEP_JWT_SECRET", "jwtsecret")
+        # if default
+        if jwt_secret == "jwtsecret":
+            self.logger.warning(
+                "KEEP_JWT_SECRET environment variable is not set, using default value. Should be set in production."
+            )
 
         try:
             payload = jwt.decode(

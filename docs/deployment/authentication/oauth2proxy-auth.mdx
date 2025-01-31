@@ -1,0 +1,32 @@
+---
+title: "OAuth2Proxy Authentication"
+---
+
+Delegate authentication to Oauth2Proxy.
+
+
+### When to Use
+
+- **oauth2-proxy user:** Use this authentication method if you want to delegate authentication to an external Oauth2Proxy service.
+
+### Setup Instructions
+
+To start Keep with Oauth2Proxy authentication, set the following environment variables:
+
+#### Frontend Environment Variables
+
+| Environment Variable | Description | Required | Default Value |
+|--------------------|-----------|:--------:|:-------------:|
+| AUTH_TYPE | Set to 'OAUTH2PROXY' for OAUTH2PROXY authentication | Yes | - |
+
+#### Backend Environment Variables
+
+| Environment Variable | Description | Required | Default Value |
+|--------------------|-----------|:--------:|:-------------:|
+| AUTH_TYPE | Set to 'OAUTH2PROXY' for OAUTH2PROXY authentication | Yes | - |
+| KEEP_OAUTH2_PROXY_USER_HEADER | Header for the authenticated user's email | Yes | x-forwarded-email |
+| KEEP_OAUTH2_PROXY_ROLE_HEADER | Header for the authenticated user's role | Yes | x-forwarded-groups |
+| KEEP_OAUTH2_PROXY_AUTO_CREATE_USER | Automatically create user if not exists | No | true |
+| KEEP_OAUTH2_PROXY_ADMIN_ROLE | Role name for admin users | No | admin |
+| KEEP_OAUTH2_PROXY_NOC_ROLE | Role name for NOC (Network Operations Center) users | No | noc |
+| KEEP_OAUTH2_PROXY_WEBHOOK_ROLE | Role name for webhook users | No | webhook |

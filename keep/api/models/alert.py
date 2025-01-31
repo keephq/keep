@@ -4,7 +4,7 @@ import json
 import logging
 import uuid
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import UUID
 
 import pytz
@@ -12,10 +12,18 @@ from pydantic import (
     AnyHttpUrl,
     BaseModel,
     Extra,
+    Field,
     PrivateAttr,
     root_validator,
     validator,
 )
+from sqlalchemy import desc
+from sqlmodel import col
+
+from keep.api.models.db.rule import ResolveOn, Rule
+
+if TYPE_CHECKING:
+    from keep.api.models.db.alert import Incident
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +44,6 @@ def get_fingerprint(fingerprint, values):
 
 
 class SeverityBaseInterface(Enum):
-
     def __new__(cls, severity_name, severity_order):
         obj = object.__new__(cls)
         obj._value_ = severity_name
@@ -106,6 +113,10 @@ class IncidentStatus(Enum):
     RESOLVED = "resolved"
     # Incident has been acknowledged but not resolved
     ACKNOWLEDGED = "acknowledged"
+    # Incident was merged with another incident
+    MERGED = "merged"
+    # Incident was removed
+    DELETED = "deleted"
 
 
 class IncidentSeverity(SeverityBaseInterface):
@@ -114,6 +125,12 @@ class IncidentSeverity(SeverityBaseInterface):
     WARNING = ("warning", 3)
     INFO = ("info", 2)
     LOW = ("low", 1)
+
+    def from_number(n):
+        for severity in IncidentSeverity:
+            if severity.order == n:
+                return severity
+        raise ValueError(f"No IncidentSeverity with order {n}")
 
 
 class AlertDto(BaseModel):
@@ -155,6 +172,7 @@ class AlertDto(BaseModel):
     isNoisy: bool = False  # Whether the alert is noisy
 
     enriched_fields: list = []
+    incident: str | None = None
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -193,6 +211,14 @@ class AlertDto(BaseModel):
             return deleted
         if isinstance(deleted, list):
             return values.get("lastReceived") in deleted
+
+    @validator("url", pre=True)
+    def prepend_https(cls, url):
+        if isinstance(url, str) and not url.startswith("http"):
+            # @tb: in some cases we drop the event because of invalid url with no scheme
+            # invalid or missing URL scheme (type=value_error.url.scheme)
+            return f"https://{url}"
+        return url
 
     @validator("lastReceived", pre=True, always=True)
     def validate_last_received(cls, last_received):
@@ -278,7 +304,8 @@ class AlertDto(BaseModel):
             values["lastReceived"] = lastReceived
 
         assignees = values.pop("assignees", None)
-        if assignees:
+        # In some cases (for example PagerDuty) the assignees is list of dicts and we don't handle it atm.
+        if assignees and isinstance(assignees, dict):
             dt = datetime.datetime.fromisoformat(lastReceived)
             dt.isoformat(timespec="milliseconds").replace("+00:00", "Z")
             assignee = assignees.get(lastReceived) or assignees.get(dt)
@@ -302,20 +329,24 @@ class AlertDto(BaseModel):
             "examples": [
                 {
                     "id": "1234",
-                    "name": "Alert name",
+                    "name": "Pod 'api-service-production' lacks memory",
                     "status": "firing",
                     "lastReceived": "2021-01-01T00:00:00.000Z",
                     "environment": "production",
                     "duplicateReason": None,
                     "service": "backend",
-                    "source": ["keep"],
-                    "message": "Keep: Alert message",
-                    "description": "Keep: Alert description",
+                    "source": ["prometheus"],
+                    "message": "The pod 'api-service-production' lacks memory causing high error rate",
+                    "description": "Due to the lack of memory, the pod 'api-service-production' is experiencing high error rate",
                     "severity": "critical",
                     "pushed": True,
-                    "event_id": "1234",
                     "url": "https://www.keephq.dev?alertId=1234",
-                    "labels": {"key": "value"},
+                    "labels": {
+                        "pod": "api-service-production",
+                        "region": "us-east-1",
+                        "cpu": "88",
+                        "memory": "100Mi",
+                    },
                     "ticket_url": "https://www.keephq.dev?enrichedTicketId=456",
                     "fingerprint": "1234",
                 }
@@ -326,6 +357,17 @@ class AlertDto(BaseModel):
             # Converts enums to their values for JSON serialization
             Enum: lambda v: v.value,
         }
+
+
+class AlertWithIncidentLinkMetadataDto(AlertDto):
+    is_created_by_ai: bool = False
+
+    @classmethod
+    def from_db_instance(cls, db_alert, db_alert_to_incident):
+        return cls(
+            is_created_by_ai=db_alert_to_incident.is_created_by_ai,
+            **db_alert.event,
+        )
 
 
 class DeleteRequestBody(BaseModel):
@@ -355,6 +397,7 @@ class IncidentDtoIn(BaseModel):
     user_generated_name: str | None
     assignee: str | None
     user_summary: str | None
+    same_incident_in_the_past_id: UUID | None
 
     class Config:
         extra = Extra.allow
@@ -376,6 +419,7 @@ class IncidentDto(IncidentDtoIn):
     start_time: datetime.datetime | None
     last_seen_time: datetime.datetime | None
     end_time: datetime.datetime | None
+    creation_time: datetime.datetime | None
 
     alerts_count: int
     alert_sources: list[str]
@@ -391,8 +435,36 @@ class IncidentDto(IncidentDtoIn):
     ai_generated_name: str | None
 
     rule_fingerprint: str | None
+    fingerprint: (
+        str | None
+    )  # This is the fingerprint of the incident generated by the underlying tool
+
+    same_incident_in_the_past_id: UUID | None
+
+    merged_into_incident_id: UUID | None
+    merged_by: str | None
+    merged_at: datetime.datetime | None
+
+    enrichments: dict | None = {}
+    incident_type: str | None
+    incident_application: str | None
+
+    resolve_on: str = Field(
+        default=ResolveOn.ALL.value,
+        description="Resolution strategy for the incident",
+    )
+
+    rule_id: UUID | None
+    rule_name: str | None
+    rule_is_deleted: bool | None
 
     _tenant_id: str = PrivateAttr()
+    _alerts: Optional[List[AlertDto]] = PrivateAttr(default=None)
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if "alerts" in data:
+            self._alerts = data["alerts"]
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -415,6 +487,9 @@ class IncidentDto(IncidentDtoIn):
 
     @property
     def alerts(self) -> List["AlertDto"]:
+        if self._alerts is not None:
+            return self._alerts
+
         from keep.api.core.db import get_incident_alerts_by_incident_id
         from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
@@ -438,13 +513,17 @@ class IncidentDto(IncidentDtoIn):
         return values
 
     @classmethod
-    def from_db_incident(cls, db_incident):
+    def from_db_incident(cls, db_incident: "Incident", rule: "Rule" = None):
 
         severity = (
             IncidentSeverity.from_number(db_incident.severity)
             if isinstance(db_incident.severity, int)
             else db_incident.severity
         )
+
+        # some default value for resolve_on
+        if not db_incident.resolve_on:
+            db_incident.resolve_on = ResolveOn.ALL.value
 
         dto = cls(
             id=db_incident.id,
@@ -459,17 +538,84 @@ class IncidentDto(IncidentDtoIn):
             last_seen_time=db_incident.last_seen_time,
             end_time=db_incident.end_time,
             alerts_count=db_incident.alerts_count,
-            alert_sources=db_incident.sources,
+            alert_sources=db_incident.sources or [],
             severity=severity,
             status=db_incident.status,
             assignee=db_incident.assignee,
-            services=db_incident.affected_services,
+            services=db_incident.affected_services or [],
             rule_fingerprint=db_incident.rule_fingerprint,
+            fingerprint=db_incident.fingerprint,
+            same_incident_in_the_past_id=db_incident.same_incident_in_the_past_id,
+            merged_into_incident_id=db_incident.merged_into_incident_id,
+            merged_by=db_incident.merged_by,
+            merged_at=db_incident.merged_at,
+            incident_type=db_incident.incident_type,
+            incident_application=str(db_incident.incident_application),
+            enrichments=db_incident.enrichments,
+            resolve_on=db_incident.resolve_on,
+            rule_id=rule.id if rule else None,
+            rule_name=rule.name if rule else None,
+            rule_is_deleted=rule.is_deleted if rule else None,
         )
 
         # This field is required for getting alerts when required
         dto._tenant_id = db_incident.tenant_id
         return dto
+
+    def to_db_incident(self) -> "Incident":
+        """Converts an IncidentDto instance to an Incident database model."""
+        from keep.api.models.db.alert import Incident
+
+        db_incident = Incident(
+            id=self.id,
+            user_generated_name=self.user_generated_name,
+            ai_generated_name=self.ai_generated_name,
+            user_summary=self.user_summary,
+            generated_summary=self.generated_summary,
+            assignee=self.assignee,
+            severity=self.severity.order,
+            status=self.status.value,
+            creation_time=self.creation_time or datetime.datetime.utcnow(),
+            start_time=self.start_time,
+            end_time=self.end_time,
+            last_seen_time=self.last_seen_time,
+            alerts_count=self.alerts_count,
+            affected_services=self.services,
+            sources=self.alert_sources,
+            is_predicted=self.is_predicted,
+            is_confirmed=self.is_confirmed,
+            rule_fingerprint=self.rule_fingerprint,
+            fingerprint=self.fingerprint,
+            same_incident_in_the_past_id=self.same_incident_in_the_past_id,
+            merged_into_incident_id=self.merged_into_incident_id,
+            merged_by=self.merged_by,
+            merged_at=self.merged_at,
+        )
+
+        return db_incident
+
+
+class SplitIncidentRequestDto(BaseModel):
+    alert_fingerprints: list[str]
+    destination_incident_id: UUID
+
+
+class SplitIncidentResponseDto(BaseModel):
+    destination_incident_id: UUID
+    moved_alert_fingerprints: list[str]
+
+
+class MergeIncidentsRequestDto(BaseModel):
+    source_incident_ids: list[UUID]
+    destination_incident_id: UUID
+
+
+class MergeIncidentsResponseDto(BaseModel):
+    merged_incident_ids: list[UUID]
+    skipped_incident_ids: list[UUID]
+    failed_incident_ids: list[UUID]
+    destination_incident_id: UUID
+    message: str
 
 
 class DeduplicationRuleDto(BaseModel):
@@ -490,6 +636,7 @@ class DeduplicationRuleDto(BaseModel):
     fingerprint_fields: list[str]
     full_deduplication: bool
     ignore_fields: list[str]
+    is_provisioned: bool
 
 
 class DeduplicationRuleRequestDto(BaseModel):
@@ -505,3 +652,73 @@ class DeduplicationRuleRequestDto(BaseModel):
 class IncidentStatusChangeDto(BaseModel):
     status: IncidentStatus
     comment: str | None
+
+
+class IncidentSorting(Enum):
+    creation_time = "creation_time"
+    start_time = "start_time"
+    last_seen_time = "last_seen_time"
+    severity = "severity"
+    status = "status"
+    alerts_count = "alerts_count"
+
+    creation_time_desc = "-creation_time"
+    start_time_desc = "-start_time"
+    last_seen_time_desc = "-last_seen_time"
+    severity_desc = "-severity"
+    status_desc = "-status"
+    alerts_count_desc = "-alerts_count"
+
+    def get_order_by(self, model):
+        if self.value.startswith("-"):
+            return desc(col(getattr(model, self.value[1:])))
+
+        return col(getattr(model, self.value))
+
+
+class IncidentListFilterParamsDto(BaseModel):
+    statuses: List[IncidentStatus] = [s.value for s in IncidentStatus]
+    severities: List[IncidentSeverity] = [s.value for s in IncidentSeverity]
+    assignees: List[str]
+    services: List[str]
+    sources: List[str]
+
+
+class IncidentCandidate(BaseModel):
+    incident_name: str
+    alerts: List[int] = Field(
+        description="List of alert numbers (1-based index) included in this incident"
+    )
+    reasoning: str
+    severity: str = Field(
+        description="Assessed severity level",
+        enum=["Low", "Medium", "High", "Critical"],
+    )
+    recommended_actions: List[str]
+    confidence_score: float = Field(
+        description="Confidence score of the incident clustering (0.0 to 1.0)"
+    )
+    confidence_explanation: str = Field(
+        description="Explanation of how the confidence score was calculated"
+    )
+
+
+class IncidentClustering(BaseModel):
+    incidents: List[IncidentCandidate]
+
+
+class IncidentCommit(BaseModel):
+    accepted: bool
+    original_suggestion: dict
+    changes: dict = Field(default_factory=dict)
+    incident: IncidentDto
+
+
+class IncidentsClusteringSuggestion(BaseModel):
+    incident_suggestion: list[IncidentDto]
+    suggestion_id: str
+
+
+class EnrichIncidentRequestBody(BaseModel):
+    enrichments: Dict[str, Any]
+    force: bool = False

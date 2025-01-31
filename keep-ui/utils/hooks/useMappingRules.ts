@@ -1,20 +1,18 @@
-import { MappingRule } from "app/mapping/models";
-import { useSession } from "next-auth/react";
+import { MappingRule } from "@/app/(keep)/mapping/models";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWR, { SWRConfiguration } from "swr";
-import { getApiURL } from "utils/apiUrl";
-import { fetcher } from "utils/fetcher";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export const useMappings = (
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
-  const { data: session } = useSession();
+  const api = useApi();
 
   return useSWR<MappingRule[]>(
-    () => (session ? `${apiUrl}/mapping` : null),
-    (url) => fetcher(url, session?.accessToken),
+    api.isReady() ? "/mapping" : null,
+    (url) => api.get(url),
     options
   );
 };

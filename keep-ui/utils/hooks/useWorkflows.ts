@@ -1,17 +1,14 @@
-import { Workflow } from "app/workflows/models";
-import { useSession } from "next-auth/react";
+import { Workflow } from "@/shared/api/workflows";
+import { useApi } from "@/shared/lib/hooks/useApi";
 import { SWRConfiguration } from "swr";
-import { getApiURL } from "../apiUrl";
-import { fetcher } from "../fetcher";
 import useSWRImmutable from "swr/immutable";
 
 export const useWorkflows = (options: SWRConfiguration = {}) => {
-  const { data: session } = useSession();
-  const apiUrl = getApiURL();
+  const api = useApi();
 
   return useSWRImmutable<Workflow[]>(
-    () => (session ? `${apiUrl}/workflows` : null),
-    (url) => fetcher(url, session?.accessToken),
+    api.isReady() ? "/workflows" : null,
+    (url) => api.get(url),
     options
   );
 };

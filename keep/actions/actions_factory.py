@@ -1,6 +1,5 @@
 import time
 import logging
-import yaml
 from io import StringIO
 from uuid import uuid4
 from typing import List, Union
@@ -9,6 +8,7 @@ from keep.api.models.action import ActionDTO
 from keep.api.models.db.action import Action
 from keep.api.core.db import get_all_actions, create_actions, delete_action, get_action, update_action
 from keep.actions.actions_exception import ActionsCRUDException
+from keep.functions import cyaml
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class ActionsCRUD:
         results: List[ActionDTO] = []
         for model in models:
             try:
-                dto = ActionDTO(id=model.id, use=model.use, name=model.name, details=yaml.safe_load(StringIO(model.action_raw)))
+                dto = ActionDTO(id=model.id, use=model.use, name=model.name, details=cyaml.safe_load(StringIO(model.action_raw)))
                 results.append(dto)
             except ValidationError:
                 logger.warning("Unmatched Action model and the coresponding DTO", exc_info=True, extra={
@@ -45,7 +45,7 @@ class ActionsCRUD:
                     installation_time=time.time(),
                     name=action_dto.get("name"),
                     use=action_dto.get("use") or action_dto.get("name"), # if there is no `use` tag, use `name` instead
-                    action_raw=yaml.dump(action_dto)
+                    action_raw=cyaml.dump(action_dto)
                 )
                 actions.append(action)
             create_actions(actions)
@@ -76,7 +76,7 @@ class ActionsCRUD:
             action_payload = Action(
                 name=payload.get("name"),
                 use=payload.get("use") or payload.get("name"),
-                action_raw=yaml.dump(payload)
+                action_raw=cyaml.dump(payload)
             )
             updated_action = update_action(tenant_id, action_id, action_payload)
             if updated_action:

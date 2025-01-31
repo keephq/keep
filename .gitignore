@@ -189,6 +189,7 @@ keep-ui/node_modules/*
 
 cov.xml
 keep.db
+keepdd.db
 RANDOM_USER_ID
 storage
 
@@ -197,6 +198,8 @@ tempo-data/
 
 # docs
 docs/node_modules/
+
+oauth2.cfg
 
 
 scripts/automatic_extraction_rules.py
@@ -209,4 +212,14 @@ ee/experimental/ai_temp/*
 
 oauth2.cfg
 scripts/keep_slack_bot.py
+<<<<<<< HEAD
 keepsupserset.db
+=======
+*.db
+providers_cache.json
+
+tests/provision/*
+grafana/*
+!grafana/provisioning/
+!grafana/dashboards/
+>>>>>>> main

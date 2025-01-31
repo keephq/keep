@@ -42,6 +42,7 @@ class QuickchartProviderAuthConfig:
 
 class QuickchartProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "QuickChart"
+    PROVIDER_CATEGORY = ["Developer Tools"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

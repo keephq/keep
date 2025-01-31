@@ -21,6 +21,9 @@ RUN . /venv/bin/activate && poetry install --no-root
 ENV PYTHONPATH="/app:${PYTHONPATH}"
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
+ENV POSTHOG_DISABLED="true"
+ENV FRIGADE_DISABLED="true"
 
+ENTRYPOINT ["/app/keep/entrypoint.sh"]
 
 CMD ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "1" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "./keep/api/config.py", "--reload"]

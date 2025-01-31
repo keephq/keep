@@ -1,54 +1,67 @@
 import base64
+import concurrent.futures
 import hashlib
 import hmac
 import json
 import logging
 import os
-from typing import Optional
+import time
+from concurrent.futures import Future, ThreadPoolExecutor
+from typing import List, Optional
 
 import celpy
 from arq import ArqRedis
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Depends,
-    HTTPException,
-    Query,
-    Request,
-    Response,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pusher import Pusher
+from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.config import config
-from keep.api.core.db import get_alert_audit as get_alert_audit_db
-from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment, get_last_alerts
-from keep.api.core.dependencies import get_pusher_client
+from keep.api.core.db import get_alert_audit as get_alert_audit_db, enrich_alerts_with_incidents, \
+    is_all_alerts_resolved, get_session
+from keep.api.core.db import (
+    get_alerts_by_fingerprint,
+    get_alerts_metrics_by_provider,
+    get_enrichment,
+    get_last_alerts,
+)
+from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
+from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
 from keep.api.models.alert import (
     AlertDto,
     DeleteRequestBody,
     EnrichAlertRequestBody,
-    UnEnrichAlertRequestBody,
+    UnEnrichAlertRequestBody, IncidentStatus,
 )
 from keep.api.models.alert_audit import AlertAuditDto
-from keep.api.models.db.alert import AlertActionType
+from keep.api.models.db.alert import ActionType
+from keep.api.models.db.rule import ResolveOn
 from keep.api.models.search_alert import SearchAlertsRequest
+from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.api.utils.time_stamp_helpers import get_time_stamp_filter
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
+from keep.workflowmanager.workflowmanager import WorkflowManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 REDIS = os.environ.get("REDIS", "false") == "true"
+EVENT_WORKERS = int(config("KEEP_EVENT_WORKERS", default=5, cast=int))
+
+# Create dedicated threadpool
+process_event_executor = ThreadPoolExecutor(
+    max_workers=EVENT_WORKERS, thread_name_prefix="process_event_worker"
+)
 
 
 @router.get(
@@ -157,13 +170,13 @@ def delete_alert(
 
     # overwrite the enrichment
     enrichment_bl = EnrichmentsBl(tenant_id)
-    enrichment_bl.enrich_alert(
+    enrichment_bl.enrich_entity(
         fingerprint=delete_alert.fingerprint,
         enrichments={
             "deletedAt": deleted_last_received,
             "assignees": assignees_last_receievd,
         },
-        action_type=AlertActionType.DELETE_ALERT,
+        action_type=ActionType.DELETE_ALERT,
         action_description=f"Alert deleted by {user_email}",
         action_callee=user_email,
     )
@@ -211,10 +224,10 @@ def assign_alert(
         assignees_last_receievd[last_received] = user_email
 
     enrichment_bl = EnrichmentsBl(tenant_id)
-    enrichment_bl.enrich_alert(
+    enrichment_bl.enrich_entity(
         fingerprint=fingerprint,
         enrichments={"assignees": assignees_last_receievd},
-        action_type=AlertActionType.ACKNOWLEDGE,
+        action_type=ActionType.ACKNOWLEDGE,
         action_description=f"Alert assigned to {user_email}",
         action_callee=user_email,
     )
@@ -253,6 +266,94 @@ def assign_alert(
     return {"status": "ok"}
 
 
+def discard_future(
+    trace_id: str,
+    future: Future,
+    running_tasks: set,
+    started_time: float,
+):
+    try:
+        running_tasks.discard(future)
+        running_tasks_gauge.dec()
+        running_tasks_by_process_gauge.labels(pid=os.getpid()).dec()
+
+        # Log any exception that occurred in the future
+        try:
+            exception = future.exception()
+            if exception:
+                logger.error(
+                    "Task failed with exception",
+                    extra={
+                        "trace_id": trace_id,
+                        "error": str(exception),
+                        "processing_time": time.time() - started_time,
+                    },
+                )
+            else:
+                logger.info(
+                    "Task completed",
+                    extra={
+                        "processing_time": time.time() - started_time,
+                        "trace_id": trace_id,
+                    },
+                )
+        except concurrent.futures.CancelledError:
+            logger.error(
+                "Task was cancelled",
+                extra={
+                    "trace_id": trace_id,
+                    "processing_time": time.time() - started_time,
+                },
+            )
+
+    except Exception:
+        # Make sure we always decrement both counters even if something goes wrong
+        running_tasks_gauge.dec()
+        running_tasks_by_process_gauge.labels(pid=os.getpid()).dec()
+        logger.exception(
+            "Error in discard_future callback",
+            extra={
+                "trace_id": trace_id,
+            },
+        )
+
+
+def create_process_event_task(
+    tenant_id: str,
+    provider_type: str | None,
+    provider_id: str | None,
+    fingerprint: str,
+    api_key_name: str | None,
+    trace_id: str,
+    event: AlertDto | list[AlertDto] | dict,
+    running_tasks: set,
+) -> str:
+    logger.info("Adding task", extra={"trace_id": trace_id})
+    started_time = time.time()
+    running_tasks_gauge.inc()  # Increase total counter
+    running_tasks_by_process_gauge.labels(
+        pid=os.getpid()
+    ).inc()  # Increase process counter
+    future = process_event_executor.submit(
+        process_event,
+        {},  # ctx
+        tenant_id,
+        provider_type,
+        provider_id,
+        fingerprint,
+        api_key_name,
+        trace_id,
+        event,
+    )
+    running_tasks.add(future)
+    future.add_done_callback(
+        lambda task: discard_future(trace_id, task, running_tasks, started_time)
+    )
+
+    logger.info("Task added", extra={"trace_id": trace_id})
+    return str(id(future))
+
+
 @router.post(
     "/event",
     description="Receive a generic alert event",
@@ -261,13 +362,12 @@ def assign_alert(
 )
 async def receive_generic_event(
     event: AlertDto | list[AlertDto] | dict,
-    bg_tasks: BackgroundTasks,
     request: Request,
+    provider_id: str | None = None,
     fingerprint: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
-    pusher_client: Pusher = Depends(get_pusher_client),
 ):
     """
     A generic webhook endpoint that can be used by any provider to send alerts to Keep.
@@ -277,13 +377,14 @@ async def receive_generic_event(
         bg_tasks (BackgroundTasks): Background tasks handler.
         tenant_id (str, optional): Defaults to Depends(verify_api_key).
     """
+    running_tasks: set = request.state.background_tasks
     if REDIS:
         redis: ArqRedis = await get_pool()
         job = await redis.enqueue_job(
             "async_process_event",
             authenticated_entity.tenant_id,
             None,
-            None,
+            provider_id,
             fingerprint,
             authenticated_entity.api_key_name,
             request.state.trace_id,
@@ -298,19 +399,19 @@ async def receive_generic_event(
                 "queue": KEEP_ARQ_QUEUE_BASIC,
             },
         )
+        task_name = job.job_id
     else:
-        bg_tasks.add_task(
-            process_event,
-            {},
+        task_name = create_process_event_task(
             authenticated_entity.tenant_id,
             None,
-            None,
+            provider_id,
             fingerprint,
             authenticated_entity.api_key_name,
             request.state.trace_id,
             event,
+            running_tasks,
         )
-    return Response(status_code=202)
+    return JSONResponse(content={"task_name": task_name}, status_code=202)
 
 
 # https://learn.netdata.cloud/docs/alerts-&-notifications/notifications/centralized-cloud-notifications/webhook#challenge-secret
@@ -347,21 +448,42 @@ async def webhook_challenge():
 )
 async def receive_event(
     provider_type: str,
-    event: dict | bytes,
-    bg_tasks: BackgroundTasks,
     request: Request,
     provider_id: str | None = None,
     fingerprint: str | None = None,
+    event=Depends(extract_generic_body),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
-    pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     trace_id = request.state.trace_id
-    provider_class = ProvidersFactory.get_provider_class(provider_type)
-    # Parse the raw body
-    event = provider_class.parse_event_raw_body(event)
+    running_tasks: set = request.state.background_tasks
+    provider_class = None
+    try:
+        t = time.time()
+        logger.debug(f"Getting provider class for {provider_type}")
+        provider_class = ProvidersFactory.get_provider_class(provider_type)
+        logger.debug(
+            "Got provider class",
+            extra={
+                "provider_type": provider_type,
+                "time": time.time() - t,
+            },
+        )
+    except ModuleNotFoundError:
+        raise HTTPException(
+            status_code=400, detail=f"Provider {provider_type} not found"
+        )
+    if not provider_class:
+        raise HTTPException(
+            status_code=400, detail=f"Provider {provider_type} not found"
+        )
 
+    # Parse the raw body
+    t = time.time()
+    logger.debug("Parsing event raw body")
+    event = provider_class.parse_event_raw_body(event)
+    logger.debug("Parsed event raw body", extra={"time": time.time() - t})
     if REDIS:
         redis: ArqRedis = await get_pool()
         job = await redis.enqueue_job(
@@ -383,10 +505,9 @@ async def receive_event(
                 "queue": KEEP_ARQ_QUEUE_BASIC,
             },
         )
+        task_name = job.job_id
     else:
-        bg_tasks.add_task(
-            process_event,
-            {},
+        task_name = create_process_event_task(
             authenticated_entity.tenant_id,
             provider_type,
             provider_id,
@@ -394,8 +515,9 @@ async def receive_event(
             authenticated_entity.api_key_name,
             trace_id,
             event,
+            running_tasks,
         )
-    return Response(status_code=202)
+    return JSONResponse(content={"task_name": task_name}, status_code=202)
 
 
 @router.get(
@@ -433,19 +555,26 @@ def enrich_alert(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
+    dispose_on_new_alert: Optional[bool] = Query(
+        False, description="Dispose on new alert"
+    ),
+    session: Session = Depends(get_session),
 ) -> dict[str, str]:
-    return _enrich_alert(enrich_data, authenticated_entity=authenticated_entity)
+    return _enrich_alert(
+        enrich_data,
+        authenticated_entity=authenticated_entity,
+        dispose_on_new_alert=dispose_on_new_alert,
+        session=session
+    )
 
 
 def _enrich_alert(
     enrich_data: EnrichAlertRequestBody,
-    pusher_client: Pusher = Depends(get_pusher_client),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
-    dispose_on_new_alert: Optional[bool] = Query(
-        False, description="Dispose on new alert"
-    ),
+    dispose_on_new_alert: Optional[bool] = False,
+    session: Optional[Session] = None
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -456,36 +585,45 @@ def _enrich_alert(
         },
     )
 
+    should_run_workflow = False
+    should_check_incidents_resolution = False
+
     try:
-        enrichement_bl = EnrichmentsBl(tenant_id)
+        enrichement_bl = EnrichmentsBl(tenant_id, db=session)
         # Shahar: TODO, change to the specific action type, good enough for now
         if (
             "status" in enrich_data.enrichments
             and authenticated_entity.api_key_name is None
         ):
             action_type = (
-                AlertActionType.MANUAL_RESOLVE
+                ActionType.MANUAL_RESOLVE
                 if enrich_data.enrichments["status"] == "resolved"
-                else AlertActionType.MANUAL_STATUS_CHANGE
+                else ActionType.MANUAL_STATUS_CHANGE
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by {authenticated_entity.email}"
+            should_run_workflow = True
+            if enrich_data.enrichments["status"] == "resolved":
+                should_check_incidents_resolution = True
         elif "status" in enrich_data.enrichments and authenticated_entity.api_key_name:
             action_type = (
-                AlertActionType.API_AUTOMATIC_RESOLVE
+                ActionType.API_AUTOMATIC_RESOLVE
                 if enrich_data.enrichments["status"] == "resolved"
-                else AlertActionType.API_STATUS_CHANGE
+                else ActionType.API_STATUS_CHANGE
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by API `{authenticated_entity.api_key_name}`"
+            should_run_workflow = True
+            if enrich_data.enrichments["status"] == "resolved":
+                should_check_incidents_resolution = True
         elif "note" in enrich_data.enrichments and enrich_data.enrichments["note"]:
-            action_type = AlertActionType.COMMENT
+            action_type = ActionType.COMMENT
             action_description = f"Comment added by {authenticated_entity.email} - {enrich_data.enrichments['note']}"
         elif "ticket_url" in enrich_data.enrichments:
-            action_type = AlertActionType.TICKET_ASSIGNED
+            action_type = ActionType.TICKET_ASSIGNED
             action_description = f"Ticket assigned by {authenticated_entity.email} - {enrich_data.enrichments['ticket_url']}"
         else:
-            action_type = AlertActionType.GENERIC_ENRICH
+            action_type = ActionType.GENERIC_ENRICH
             action_description = f"Alert enriched by {authenticated_entity.email} - {enrich_data.enrichments}"
-        enrichement_bl.enrich_alert(
+        enrichement_bl.enrich_entity(
             fingerprint=enrich_data.fingerprint,
             enrichments=enrich_data.enrichments,
             action_type=action_type,
@@ -503,7 +641,7 @@ def _enrich_alert(
             )
             return {"status": "failed"}
 
-        enriched_alerts_dto = convert_db_alerts_to_dto_alerts(alert)
+        enriched_alerts_dto = convert_db_alerts_to_dto_alerts(alert, session=session)
         # push the enriched alert to the elasticsearch
         try:
             logger.info("Pushing enriched alert to elasticsearch")
@@ -516,6 +654,7 @@ def _enrich_alert(
             logger.exception("Failed to push alert to elasticsearch")
             pass
         # use pusher to push the enriched alert to the client
+        pusher_client = get_pusher_client()
         if pusher_client:
             logger.info("Telling client to poll alerts")
             try:
@@ -532,6 +671,24 @@ def _enrich_alert(
             "Alert enriched successfully",
             extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},
         )
+
+        if should_run_workflow:
+            workflow_manager = WorkflowManager.get_instance()
+            workflow_manager.insert_events(
+                tenant_id=tenant_id, events=[enriched_alerts_dto[0]]
+            )
+
+        if should_check_incidents_resolution:
+            enrich_alerts_with_incidents(tenant_id=tenant_id, alerts=alert)
+            for incident in alert[0]._incidents:
+                if incident.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
+                    incident=incident,
+                    session=session
+                ):
+                    incident.status = IncidentStatus.RESOLVED.value
+                    session.add(incident)
+                session.commit()
+
         return {"status": "ok"}
 
     except Exception as e:
@@ -574,18 +731,18 @@ def unenrich_alert(
     try:
         enrichement_bl = EnrichmentsBl(tenant_id)
         if "status" in enrich_data.enrichments:
-            action_type = AlertActionType.STATUS_UNENRICH
+            action_type = ActionType.STATUS_UNENRICH
             action_description = (
                 f"Alert status was un-enriched by {authenticated_entity.email}"
             )
         elif "note" in enrich_data.enrichments:
-            action_type = AlertActionType.UNCOMMENT
+            action_type = ActionType.UNCOMMENT
             action_description = f"Comment removed by {authenticated_entity.email}"
         elif "ticket_url" in enrich_data.enrichments:
-            action_type = AlertActionType.TICKET_UNASSIGNED
+            action_type = ActionType.TICKET_UNASSIGNED
             action_description = f"Ticket unassigned by {authenticated_entity.email}"
         else:
-            action_type = AlertActionType.GENERIC_UNENRICH
+            action_type = ActionType.GENERIC_UNENRICH
             action_description = f"Alert en-enriched by {authenticated_entity.email}"
 
         enrichments_object = get_enrichment(tenant_id, enrich_data.fingerprint)
@@ -597,7 +754,7 @@ def unenrich_alert(
             if key not in enrich_data.enrichments
         }
 
-        enrichement_bl.enrich_alert(
+        enrichement_bl.enrich_entity(
             fingerprint=enrich_data.fingerprint,
             enrichments=new_enrichments,
             action_type=action_type,
@@ -744,3 +901,27 @@ def get_alert_audit(
 
     grouped_events = AlertAuditDto.from_orm_list(alert_audit)
     return grouped_events
+
+
+@router.get("/quality/metrics", description="Get alert quality")
+def get_alert_quality(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+    time_stamp: TimeStampFilter = Depends(get_time_stamp_filter),
+    fields: Optional[List[str]] = Query([]),
+):
+    logger.info(
+        "Fetching alert quality metrics per provider",
+        extra={"tenant_id": authenticated_entity.tenant_id, "fields": fields},
+    )
+    start_date = time_stamp.lower_timestamp if time_stamp else None
+    end_date = time_stamp.upper_timestamp if time_stamp else None
+    db_alerts_quality = get_alerts_metrics_by_provider(
+        tenant_id=authenticated_entity.tenant_id,
+        start_date=start_date,
+        end_date=end_date,
+        fields=fields,
+    )
+
+    return db_alerts_quality

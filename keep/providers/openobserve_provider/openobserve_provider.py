@@ -17,6 +17,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import UrlPort
 
 
 class ResourceAlreadyExists(Exception):
@@ -45,19 +46,21 @@ class OpenobserveProviderAuthConfig:
             "sensitive": True,
         },
     )
-    openObserveHost: str = dataclasses.field(
+    openObserveHost: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
-            "description": "OpenObserve host url || default: localhost",
-            "hint": "Eg. localhost",
+            "description": "OpenObserve host url",
+            "hint": "e.g. http://localhost",
+            "validation": "any_http_url"
         },
     )
 
-    openObservePort: str = dataclasses.field(
+    openObservePort: UrlPort = dataclasses.field(
         metadata={
             "required": True,
-            "description": "OpenObserve Host|| default: 5080",
-            "hint": "Eg. 5080",
+            "description": "OpenObserve Port",
+            "hint": "e.g. 5080",
+            "validation": "port"
         },
     )
     organisationID: str = dataclasses.field(
@@ -73,7 +76,7 @@ class OpenobserveProvider(BaseProvider):
     """Install Webhooks and receive alerts from OpenObserve."""
 
     PROVIDER_DISPLAY_NAME = "OpenObserve"
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",
@@ -104,17 +107,16 @@ class OpenobserveProvider(BaseProvider):
     def validate_config(self):
         """
         Validates required configuration for OpenObserve provider.
-
         """
+        if self.is_installed or self.is_provisioned:
+            host = self.config.authentication['openObserveHost']
+            if not (host.startswith("http://") or host.startswith("https://")):
+                scheme = "http://" if ("localhost" in host or "127.0.0.1" in host) else "https://"
+                self.config.authentication['openObserveHost'] = scheme + host
+
         self.authentication_config = OpenobserveProviderAuthConfig(
             **self.config.authentication
         )
-        if not self.authentication_config.openObserveHost.startswith(
-            "https://"
-        ) and not self.authentication_config.openObserveHost.startswith("http://"):
-            self.authentication_config.openObserveHost = (
-                f"https://{self.authentication_config.openObserveHost}"
-            )
 
     def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
         """
@@ -369,7 +371,9 @@ class OpenobserveProvider(BaseProvider):
         self.logger.info("Webhook created")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         logger = logging.getLogger(__name__)
         name = event.pop("alert_name", "")
         # openoboserve does not provide severity
@@ -387,9 +391,11 @@ class OpenobserveProvider(BaseProvider):
 
         org_name = event.pop("org_name", "")
         # Our only way to distinguish between non aggregated alert and aggregated alerts is the alert_agg_value
-        if "alert_agg_value" in event and len(
-            event["alert_agg_value"].split(",")
-        ) == int(event.get("alert_count", -1)):
+        if "alert_agg_value" in event and (
+            len(event["alert_agg_value"].split(","))
+            == int(event.get("alert_count", -1))
+            or len(event["alert_agg_value"].split(",")) == 1
+        ):
             logger.info("Formatting openobserve aggregated alert")
             rows = event.pop("rows", "")
             if not rows:
@@ -402,6 +408,10 @@ class OpenobserveProvider(BaseProvider):
             number_of_rows = event.pop("alert_count", "")
             rows = rows.split("\n")
             agg_values = event.pop("alert_agg_value", "").split(",")
+            # if there is only one value, repeat it for all rows
+            if len(agg_values) == 1:
+                logger.info("Only one value found, repeating it for all rows")
+                agg_values = [agg_values[0]] * int(number_of_rows)
             # trim
             agg_values = [agg_value.strip() for agg_value in agg_values]
             for i in range(int(number_of_rows)):

@@ -1,0 +1,46 @@
+---
+title: "Update ServiceNow Tickets"
+---
+
+<Info>
+
+Link to the [workflow](https://github.com/keephq/keep/blob/main/examples/workflows/update_service_now_tickets_status.yml).
+
+</Info>
+
+This example demonstrates how to periodically update the status of ServiceNow tickets associated with alerts.
+
+Explanation:
+- Trigger: The workflow can be triggered manually, simulating the scheduled execution.
+- Step 1: Fetch all alerts with a `ticket_type` of `servicenow` using the Keep provider.
+- Action: Iterate over the fetched alerts and update their associated ServiceNow tickets with the latest status.
+
+
+```yaml
+workflow:
+  id: servicenow
+  description: update the ticket status every minute
+  triggers:
+    - type: manual
+  steps:
+    - name: get-alerts
+      provider:
+        type: keep
+        with:
+          filters:
+          - key: ticket_type
+            value: servicenow
+  actions:
+    - name: update-ticket
+      foreach: "{{ steps.get-alerts.results }}"
+      provider:
+        type: servicenow
+        config: "{{ providers.servicenow }}"
+        with:
+          ticket_id: "{{ foreach.value.alert_enrichment.enrichments.ticket_id }}"
+          table_name: "{{ foreach.value.alert_enrichment.enrichments.table_name }}"
+          fingerprint: "{{ foreach.value.alert_fingerprint }}"
+          enrich_alert:
+            - key: ticket_status
+              value: results.state
+```

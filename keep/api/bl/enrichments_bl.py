@@ -7,15 +7,17 @@ import celpy
 import chevron
 from sqlmodel import Session
 
-from keep.api.core.db import enrich_alert as enrich_alert_db
+from keep.api.core.config import config
+from keep.api.core.db import enrich_entity as enrich_alert_db
 from keep.api.core.db import (
     get_enrichment_with_session,
     get_mapping_rule_by_id,
+    get_session_sync,
     get_topology_data_by_dynamic_matcher,
 )
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto
-from keep.api.models.db.alert import AlertActionType
+from keep.api.models.db.alert import ActionType
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 
@@ -42,18 +44,26 @@ def get_nested_attribute(obj: AlertDto, attr_path: str):
         # We can access it by using "results.some@@attribute" so we won't think its a nested attribute
         if attr is not None and "@@" in attr:
             attr = attr.replace("@@", ".")
-        obj = getattr(obj, attr, obj.get(attr, None) if isinstance(obj, dict) else None)
+        obj = getattr(
+            obj,
+            attr,
+            obj.get(attr, None) if isinstance(obj, dict) else None,
+        )
         if obj is None:
             return None
     return obj
 
 
 class EnrichmentsBl:
+
+    ENRICHMENT_DISABLED = config("KEEP_ENRICHMENT_DISABLED", default="false", cast=bool)
+
     def __init__(self, tenant_id: str, db: Session | None = None):
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
-        self.db_session = db
-        self.elastic_client = ElasticClient(tenant_id=tenant_id)
+        if not EnrichmentsBl.ENRICHMENT_DISABLED:
+            self.db_session = db or get_session_sync()
+            self.elastic_client = ElasticClient(tenant_id=tenant_id)
 
     def run_extraction_rules(
         self, event: AlertDto | dict, pre=False
@@ -61,6 +71,10 @@ class EnrichmentsBl:
         """
         Run the extraction rules for the event
         """
+        if EnrichmentsBl.ENRICHMENT_DISABLED:
+            self.logger.debug("Enrichment is disabled, skipping extraction rules")
+            return event
+
         fingerprint = (
             event.get("fingerprint")
             if isinstance(event, dict)
@@ -126,7 +140,7 @@ class EnrichmentsBl:
                         extra={"rule_id": rule.id},
                     )
                     continue
-            match_result = re.match(rule.regex, attribute_value)
+            match_result = re.search(rule.regex, attribute_value)
             if match_result:
                 match_dict = match_result.groupdict()
 
@@ -145,8 +159,6 @@ class EnrichmentsBl:
                         "fingerprint": fingerprint,
                     },
                 )
-                # Stop after the first match
-                break
             else:
                 self.logger.info(
                     "Regex did not match, skipping extraction",
@@ -191,7 +203,7 @@ class EnrichmentsBl:
         )
         return result
 
-    def run_mapping_rules(self, alert: AlertDto):
+    def run_mapping_rules(self, alert: AlertDto) -> AlertDto:
         """
         Run the mapping rules for the alert.
 
@@ -201,6 +213,10 @@ class EnrichmentsBl:
         Returns:
         - AlertDto: The enriched alert after applying mapping rules.
         """
+        if EnrichmentsBl.ENRICHMENT_DISABLED:
+            self.logger.debug("Enrichment is disabled, skipping mapping rules")
+            return alert
+
         self.logger.info(
             "Running mapping rules for incoming alert",
             extra={"fingerprint": alert.fingerprint, "tenant_id": self.tenant_id},
@@ -284,6 +300,11 @@ class EnrichmentsBl:
                 )
             else:
                 enrichments = topology_service.dict(exclude_none=True)
+                # repository could be taken from application too
+                if not topology_service.repository and topology_service.applications:
+                    for application in topology_service.applications:
+                        if application.repository:
+                            enrichments["repository"] = application.repository
                 # Remove redundant fields
                 enrichments.pop("tenant_id", None)
                 enrichments.pop("id", None)
@@ -294,11 +315,18 @@ class EnrichmentsBl:
                     for matcher in rule.matchers
                 ):
                     # Extract enrichments from the matched row
-                    enrichments = {
-                        key: value
-                        for key, value in row.items()
-                        if key not in rule.matchers and value is not None
-                    }
+                    enrichments = {}
+                    for key, value in row.items():
+                        if value is not None:
+                            is_matcher = False
+                            for matcher in rule.matchers:
+                                if key in matcher.replace(" ", "").split("&&"):
+                                    is_matcher = True
+                                    break
+                            if not is_matcher:
+                                # If the key has . (dot) in it, it'll be added as is while it needs to be nested.
+                                # @tb: fix when somebody will be complaining about this.
+                                enrichments[key] = value
                     break
 
         if enrichments:
@@ -312,10 +340,10 @@ class EnrichmentsBl:
             # SHAHAR: since when running this enrich_alert, the alert is not in elastic yet (its indexed after),
             #         enrich alert will fail to update the alert in elastic.
             #         hence should_exist = False
-            self.enrich_alert(
+            self.enrich_entity(
                 alert.fingerprint,
                 enrichments,
-                action_type=AlertActionType.MAPPING_RULE_ENRICH,
+                action_type=ActionType.MAPPING_RULE_ENRICH,
                 action_callee="system",
                 action_description=f"Alert enriched with mapping from rule `{rule.name}`",
                 should_exist=False,
@@ -338,7 +366,7 @@ class EnrichmentsBl:
     def _is_match(value, pattern):
         if value is None or pattern is None:
             return False
-        return re.match(pattern, value) is not None
+        return re.search(pattern, value) is not None
 
     def _check_matcher(self, alert: AlertDto, row: dict, matcher: str) -> bool:
         """
@@ -353,15 +381,17 @@ class EnrichmentsBl:
         - bool: True if alert matches the matcher, False otherwise.
         """
         try:
-            if " && " in matcher:
-                # Split by " && " for AND condition
-                conditions = matcher.split(" && ")
+            if "&&" in matcher:
+                # Split by "&&" for AND condition
+                conditions = matcher.split("&&")
                 return all(
                     self._is_match(
-                        get_nested_attribute(alert, attribute), row.get(attribute)
+                        get_nested_attribute(alert, attribute.strip()),
+                        row.get(attribute.strip()),
                     )
-                    or get_nested_attribute(alert, attribute) == row.get(attribute)
-                    or row.get(attribute) == "*"  # Wildcard match
+                    or get_nested_attribute(alert, attribute.strip())
+                    == row.get(attribute.strip())
+                    or row.get(attribute.strip()) == "*"  # Wildcard match
                     for attribute in conditions
                 )
             else:
@@ -377,11 +407,11 @@ class EnrichmentsBl:
             self.logger.exception("Error while checking matcher")
             return False
 
-    def enrich_alert(
+    def enrich_entity(
         self,
         fingerprint: str,
         enrichments: dict,
-        action_type: AlertActionType,
+        action_type: ActionType,
         action_callee: str,
         action_description: str,
         should_exist=True,
@@ -449,6 +479,10 @@ class EnrichmentsBl:
         """
         Dispose of enrichments from the alert
         """
+        if EnrichmentsBl.ENRICHMENT_DISABLED:
+            self.logger.debug("Enrichment is disabled, skipping dispose enrichments")
+            return
+
         self.logger.debug("disposing enrichments", extra={"fingerprint": fingerprint})
         enrichments = get_enrichment_with_session(
             self.db_session, self.tenant_id, fingerprint
@@ -478,7 +512,7 @@ class EnrichmentsBl:
                 new_enrichments,
                 session=self.db_session,
                 action_callee="system",
-                action_type=AlertActionType.DISPOSE_ENRICHED_ALERT,
+                action_type=ActionType.DISPOSE_ENRICHED_ALERT,
                 action_description=f"Disposing enrichments from alert - {disposed_keys}",
                 force=True,
             )

@@ -11,17 +11,19 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
 class DiscordProviderAuthConfig:
     """Discord authentication configuration."""
 
-    webhook_url: str = dataclasses.field(
+    webhook_url: HttpsUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Discord Webhook Url",
             "sensitive": True,
+            "validation": "https_url",
         }
     )
 
@@ -30,6 +32,7 @@ class DiscordProvider(BaseProvider):
     """Send alert message to Discord."""
 
     PROVIDER_DISPLAY_NAME = "Discord"
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

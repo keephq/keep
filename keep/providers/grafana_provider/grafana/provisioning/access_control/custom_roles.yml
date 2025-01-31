@@ -1,0 +1,15 @@
+apiVersion: 1
+roles:
+  - version: 1
+    uid: keep_service_role
+    name: Keep Service Role
+    description: Role for Keep integration
+    orgId: 1
+    global: false
+    permissions:
+      - action: "alert.rules:read"
+        scope: "alerts:*"
+      - action: "alert.provisioning:read"
+        scope: "alerts:*"
+      - action: "alert.provisioning:write"
+        scope: "alerts:*"

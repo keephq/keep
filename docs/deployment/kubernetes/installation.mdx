@@ -1,0 +1,221 @@
+---
+title: "Installation"
+sidebarTitle: "Installation"
+---
+
+<Tip>
+The recommended way to install Keep on Kubernetes is via Helm Chart. <br></br>
+Follow these steps to set it up.
+</Tip>
+
+# Prerequisites
+
+## Helm CLI
+See the [Helm documentation](https://helm.sh/docs/intro/install/) for instructions about installing helm.
+
+## Ingress Controller (Optional)
+<Info>
+You can skip this step if:
+1. You already have **ingress-nginx** installed.
+2. You don't need to expose Keep to the internet/network.
+</Info>
+
+### Overview
+An ingress controller is essential for managing external access to services in your Kubernetes cluster. It acts as a smart router and load balancer, allowing you to expose multiple services through a single entry point while handling SSL termination and routing rules.
+
+
+
+**Keep works best with both** [ingress-nginx](https://github.com/kubernetes/ingress-nginx) **and** [HAProxy Ingress](https://haproxy-ingress.github.io/) **controllers, but you can customize the helm chart for other ingress controllers too.**
+
+
+### Nginx Ingress Controller
+
+#### Check ingress-nginx Installed
+You check if you already have ingress-nginx installed:
+```bash
+# By default, the ingress-nginx will be installed under the ingress-nginx namespace
+kubectl -n ingress-nginx get pods
+NAME                                       READY   STATUS    RESTARTS   AGE
+ingress-nginx-controller-d49697d5f-hjhbj   1/1     Running   0          4h19m
+
+# Or check for the ingress class
+kubectl get ingressclass
+NAME    CONTROLLER             PARAMETERS   AGE
+nginx   k8s.io/ingress-nginx   <none>       4h19m
+
+```
+
+#### Install ingress-nginx
+<Info>
+To read about more installation options, see [ingress-nginx installation docs](https://kubernetes.github.io/ingress-nginx/deploy/).
+</Info>
+<Tip>
+Since ingress-nginx 4.12, you'll need to add
+```
+--set controller.config.annotations-risk-level=Critical
+```
+See https://github.com/kubernetes/ingress-nginx/issues/12618#issuecomment-2566084202
+</Tip>
+```bash
+# simplest way to install
+# we set snippet-annotations to true to allow rewrites
+#   see https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#allow-snippet-annotations
+helm upgrade --install ingress-nginx ingress-nginx \
+  --repo https://kubernetes.github.io/ingress-nginx \
+  --set controller.config.allow-snippet-annotations=true \
+  --set controller.config.annotations-risk-level=Critical \
+  --namespace ingress-nginx --create-namespace
+```
+
+Verify installation:
+```bash
+kubectl get ingressclass
+NAME    CONTROLLER             PARAMETERS   AGE
+nginx   k8s.io/ingress-nginx   <none>       4h19m
+```
+
+Verify if snippet annotations are enabled:
+```bash
+kubectl get configmap -n ingress-nginx ingress-nginx-controller -o yaml | grep allow-snippet-annotations
+allow-snippet-annotations: "true"
+```
+
+### HAProxy Ingress Controller
+
+#### Install ingress-haproxy
+<Info>
+To read about more installation options, see [haproxy-ingress installation docs](https://haproxy-ingress.github.io/docs/getting-started/).
+</Info>
+
+```bash
+# simplest way to install
+helm upgrade --install haproxy-ingress haproxy-ingress \
+  --repo https://haproxy-ingress.github.io/charts \
+  --namespace ingress-haproxy --create-namespace
+```
+
+Verify installation:
+```bash
+kubectl get ingressclass
+NAME      CONTROLLER                      PARAMETERS   AGE
+haproxy   haproxy-ingress.github.io/controller        <none>        4h19m
+```
+
+Verify if controller is running:
+```bash
+kubectl get pods -n ingress-haproxy -l app.kubernetes.io/instance=haproxy-ingress
+NAME                                READY   STATUS    RESTARTS   AGE
+haproxy-ingress-controller-x4n2z   1/1     Running   0          4h19m
+```
+
+## Installation
+
+### With Ingress-NGINX (Recommended)
+
+```bash
+# Add the Helm repository
+helm repo add keephq https://keephq.github.io/helm-charts
+
+# Install Keep with ingress enabled
+helm install keep keephq/keep -n keep --create-namespace
+```
+
+### With Ingress-HAProxy (Recommended)
+
+```bash
+# Add the Helm repository
+helm repo add keephq https://keephq.github.io/helm-charts
+
+# Install Keep with ingress enabled
+helm install keep keephq/keep -n keep --create-namespace --set global.ingress.className=haproxy
+```
+
+### Without Ingress (Not Recommended)
+
+```bash
+# Add the Helm repository
+helm repo add keephq https://keephq.github.io/helm-charts
+
+# Install Keep without ingress enabled.
+# You won't be able to access Keep from the network.
+helm install keep keephq/keep -n keep --create-namespace \
+  --set global.ingress.enabled=false
+```
+
+## Accessing Keep
+
+### Ingress
+If you installed Keep with ingress, you should be able to access Keep.
+
+```bash
+kubectl -n keep get ingress
+NAME           CLASS   HOSTS   ADDRESS        PORTS   AGE
+keep-ingress   nginx   *       X.X.X.X        80      4h16m
+```
+
+Keep is available at http://X.X.X.X :)
+
+### Without Ingress (Port-Forwarding)
+
+Use the following commands to access Keep locally without ingress:
+```bash
+# Forward the UI
+kubectl port-forward svc/keep-frontend 3000:3000 -n keep &
+
+# Forward the Backend
+kubectl port-forward svc/keep-backend 8080:8080 -n keep &
+
+# Forward WebSocket server (optional)
+kubectl port-forward svc/keep-websocket 6001:6001 -n keep &
+```
+
+Keep is available at http://localhost:3000 :)
+
+## Configuring HTTPS
+
+### Prerequisites
+1. Domain Name: Example - keep.yourcompany.com
+2. TLS Certificate: Private key (tls.key) and certificate (tls.crt)
+
+### Create the TLS Secret
+
+Assuming:
+- `tls.crt` contains the certificate.
+- `tls.key` contains the private key.
+
+```bash
+# create the secret with kubectl
+kubectl create secret tls keep-tls --cert=./tls.crt --key=./tls.key -n keep
+```
+
+### Update Helm Values for TLS
+```bash
+helm upgrade -n keep keep keephq/keep \
+  --set "global.ingress.hosts[0]=keep.example.com" \
+  --set "global.ingress.tls[0].hosts[0]=keep.example.com" \
+  --set "global.ingress.tls[0].secretName=keep-tls"
+```
+
+
+
+Alternatively, update your `values.yaml`:
+```bash
+...
+global:
+  ingress:
+    hosts:
+      - host: keep.example.com
+    tls:
+      - hosts:
+          - keep.example.com
+        secretName: keep-tls
+...
+```
+
+
+## Uninstallation
+To remove Keep and clean up:
+```bash
+helm uninstall keep -n keep
+kubectl delete namespace keep
+```

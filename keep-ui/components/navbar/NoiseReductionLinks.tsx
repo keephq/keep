@@ -6,12 +6,12 @@ import { Mapping, Rules, Workflows, ExportIcon } from "components/icons";
 import { Session } from "next-auth";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
-import classNames from "classnames";
-import { AILink } from "./AILink";
 import { TbTopologyRing } from "react-icons/tb";
 import { FaVolumeMute } from "react-icons/fa";
 import { IoMdGitMerge } from "react-icons/io";
-import { useTopology } from "utils/hooks/useTopology";
+import { useTopology } from "@/app/(keep)/topology/model/useTopology";
+import clsx from "clsx";
+import { AILink } from "./AILink";
 
 type NoiseReductionLinksProps = { session: Session | null };
 
@@ -32,10 +32,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
               NOISE REDUCTION
             </Subtitle>
             <IoChevronUp
-              className={classNames(
-                { "rotate-180": open },
-                "mr-2 text-slate-400"
-              )}
+              className={clsx({ "rotate-180": open }, "mr-2 text-slate-400")}
             />
           </>
         )}
@@ -87,7 +84,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
         <li>
           <AILink></AILink>
         </li>
-      </Disclosure.Panel>
+    </Disclosure.Panel>
     </Disclosure>
   );
 };

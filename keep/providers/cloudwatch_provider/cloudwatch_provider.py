@@ -63,7 +63,8 @@ class CloudwatchProviderAuthConfig:
 class CloudwatchProvider(BaseProvider):
     """Push alarms from AWS Cloudwatch to Keep."""
 
-    PROVIDER_DISPLAY_NAME = "Cloudwatch"
+    PROVIDER_DISPLAY_NAME = "CloudWatch"
+    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Monitoring"]
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -257,6 +258,7 @@ class CloudwatchProvider(BaseProvider):
 
         # 4. validate start query
         logs_client = self.__generate_client("logs")
+        query = False
         try:
             query = logs_client.start_query(
                 logGroupName="keepTest",
@@ -277,6 +279,8 @@ class CloudwatchProvider(BaseProvider):
             else:
                 self.logger.info("Error validating AWS logs:StartQuery scope")
                 scopes["logs:StartQuery"] = str(e)
+
+        query_id = False
         if query:
             try:
                 query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
@@ -502,7 +506,9 @@ class CloudwatchProvider(BaseProvider):
         return json.loads(raw_body)
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         logger = logging.getLogger(__name__)
         # if its confirmation event, we need to confirm the subscription
         if event.get("Type") == "SubscriptionConfirmation":
@@ -554,16 +560,25 @@ class CloudwatchProvider(BaseProvider):
 
         # Start with the base payload
         simulated_alert = alert_data["payload"].copy()
-        # Apply variability based on parameters
-        for param, choices in alert_data.get("parameters", {}).items():
-            # Split param on '.' for nested parameters (if any)
-            param_parts = param.split(".")
-            target = simulated_alert
-            for part in param_parts[:-1]:
-                target = target.setdefault(part, {})
 
-            # Choose a random value for the parameter
-            target[param_parts[-1]] = random.choice(choices)
+        # Choose a consistent index for all parameters
+        if "parameters" in alert_data:
+            # Get the minimum length of all parameter choices to avoid index errors
+            min_choices_len = min(
+                len(choices) for choices in alert_data["parameters"].values()
+            )
+            param_index = random.randrange(min_choices_len)
+
+            # Apply variability based on parameters
+            for param, choices in alert_data["parameters"].items():
+                # Split param on '.' for nested parameters (if any)
+                param_parts = param.split(".")
+                target = simulated_alert
+                for part in param_parts[:-1]:
+                    target = target.setdefault(part, {})
+
+                # Use consistent index for all parameters
+                target[param_parts[-1]] = choices[param_index]
 
         # Set StateChangeTime to current time
         simulated_alert["Message"][

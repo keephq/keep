@@ -1,6 +1,7 @@
 import dataclasses
 import typing
 
+import requests
 import opsgenie_sdk
 import pydantic
 from opsgenie_sdk.rest import ApiException
@@ -16,11 +17,20 @@ class OpsgenieProviderAuthConfig:
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Ops genie api key (https://support.atlassian.com/opsgenie/docs/api-key-management/)",
+            "description": "OpsGenie api key",
+            "hint": "https://support.atlassian.com/opsgenie/docs/create-a-default-api-integration/",
             "sensitive": True,
         },
     )
 
+    # Integration Name is only used for validating scopes
+    integration_name: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "OpsGenie integration name",
+            "hint": "https://support.atlassian.com/opsgenie/docs/create-a-default-api-integration/",
+        },
+    )
 
 class OpsGenieRecipient(pydantic.BaseModel):
     # https://github.com/opsgenie/opsgenie-python-sdk/blob/master/docs/Recipient.md
@@ -32,6 +42,7 @@ class OpsgenieProvider(BaseProvider):
     """Create incidents in OpsGenie."""
 
     PROVIDER_DISPLAY_NAME = "OpsGenie"
+    PROVIDER_CATEGORY = ["Incident Management"]
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -64,21 +75,49 @@ class OpsgenieProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
         self.configuration = opsgenie_sdk.Configuration()
+        self.configuration.retry_http_response = ["429", "500", "502-599", "404"]
+        self.configuration.short_polling_max_retries = 3
         self.configuration.api_key["Authorization"] = self.authentication_config.api_key
 
     def validate_scopes(self):
         scopes = {}
         self.logger.info("Validating scopes")
         try:
-            self._create_alert(
-                user="John Doe",
-                note="Simple alert",
-                message="Simple alert showing context with name: John Doe",
+            api_key = "GenieKey " + self.authentication_config.api_key
+            url = "https://api.opsgenie.com/v2/"
+
+            # Get the list of integrations
+            response = requests.get(
+                url + "integrations/",
+                headers={"Authorization": api_key},
             )
-            scopes["opsgenie:create"] = True
-        except ApiException as e:
-            self.logger.exception("Failed to create OpsGenie alert")
-            scopes["opsgenie:create"] = str(e)
+
+            if response.status_code != 200:
+                response.raise_for_status()
+
+            # Find the OpsGenie integration
+            for integration in response.json()["data"]:
+                if integration["name"] == self.authentication_config.integration_name:
+                    api_key_id = integration["id"]
+                    break
+            else:
+                self.logger.error("Failed to find OpsGenie integration")
+                return {"opsgenie:create": f"Failed to find Integration name {self.authentication_config.integration_name}"}
+
+            # Get the integration details and check if it has write access
+            response = requests.get(
+                url + "integrations/" + api_key_id,
+                headers={"Authorization": api_key},
+            )
+
+            if response.status_code != 200:
+                response.raise_for_status()
+
+            if response.json()["data"]["allowWriteAccess"]:
+                scopes["opsgenie:create"] = True
+            else:
+                scopes["opsgenie:create"] = "OpsGenie integration does not have write access"
+            
         except Exception as e:
             self.logger.exception("Failed to create OpsGenie alert")
             scopes["opsgenie:create"] = str(e)
@@ -88,6 +127,17 @@ class OpsgenieProvider(BaseProvider):
         self.authentication_config = OpsgenieProviderAuthConfig(
             **self.config.authentication
         )
+
+    def _delete_alert(self, alert_id: str) -> bool:
+        api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))
+        request = api_instance.delete_alert(alert_id)
+        response = request.retrieve_result()
+        if not response.data.is_success:
+            self.logger.error(
+                "Failed to delete OpsGenie alert",
+                extra={"alert_id": alert_id, "response": response.data.to_dict()},
+            )
+        return response.data.is_success
 
     # https://github.com/opsgenie/opsgenie-python-sdk/blob/master/docs/CreateAlertPayload.md
     def _create_alert(
@@ -127,7 +177,13 @@ class OpsgenieProvider(BaseProvider):
             priority=priority,
         )
         try:
-            api_instance.create_alert(create_alert_payload)
+            alert = api_instance.create_alert(create_alert_payload)
+            response = alert.retrieve_result()
+            if not response.data.is_success:
+                raise Exception(
+                    f"Failed to create OpsGenie alert: {response.data.status}"
+                )
+            return response.data.to_dict()
         except ApiException:
             self.logger.exception("Failed to create OpsGenie alert")
             raise
@@ -204,7 +260,7 @@ class OpsgenieProvider(BaseProvider):
         Args:
             kwargs (dict): The providers with context
         """
-        self._create_alert(
+        return self._create_alert(
             user,
             note,
             source,

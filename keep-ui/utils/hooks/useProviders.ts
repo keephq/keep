@@ -1,17 +1,30 @@
-import { useSession } from "next-auth/react";
-import { getApiURL } from "../apiUrl";
 import { SWRConfiguration } from "swr";
-import { ProvidersResponse } from "app/providers/providers";
-import { fetcher } from "../fetcher";
+import { ProvidersResponse } from "@/app/(keep)/providers/providers";
 import useSWRImmutable from "swr/immutable";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import {ApiClient} from "@/shared/api";
 
-export const useProviders = (options: SWRConfiguration = {}) => {
-  const { data: session } = useSession();
-  const apiUrl = getApiURL();
+export const useProviders = (
+  options: SWRConfiguration = { revalidateOnFocus: false }
+) => {
+  const api = useApi();
 
   return useSWRImmutable<ProvidersResponse>(
-    () => (session ? `${apiUrl}/providers` : null),
-    (url) => fetcher(url, session?.accessToken),
+    api.isReady() ? "/providers" : null,
+    (url) => api.get(url),
     options
   );
 };
+
+export const useProvidersWithHealthCheck = (
+  options: SWRConfiguration = { revalidateOnFocus: false }
+) => {
+  const api = useApi();
+
+  return useSWRImmutable<ProvidersResponse>(
+    api.isReady() ? "/providers/healthcheck" : null,
+    (url) => api.get(url),
+    options
+  );
+};
+

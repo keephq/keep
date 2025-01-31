@@ -18,11 +18,12 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 @pydantic.dataclasses.dataclass
 class PrometheusProviderAuthConfig:
-    url: str = dataclasses.field(
+    url: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Prometheus server URL",
             "hint": "https://prometheus-us-central1.grafana.net/api/prom",
+            "validation": "any_http_url"
         }
     )
     username: str = dataclasses.field(
@@ -70,6 +71,7 @@ receivers:
         "info": AlertSeverity.INFO,
         "low": AlertSeverity.LOW,
     }
+    PROVIDER_CATEGORY = ["Monitoring"]
 
     STATUS_MAP = {
         "firing": AlertStatus.FIRING,
@@ -154,7 +156,9 @@ receivers:
         return alert_dtos
 
     @staticmethod
-    def _format_alert(event: dict | list[AlertDto]) -> list[AlertDto]:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> list[AlertDto]:
         # TODO: need to support more than 1 alert per event
         alert_dtos = []
         if isinstance(event, list):
@@ -229,6 +233,8 @@ receivers:
         if not alert_type:
             alert_type = random.choice(list(ALERTS.keys()))
 
+        to_wrap_with_provider_type = kwargs.get("to_wrap_with_provider_type")
+
         alert_payload = ALERTS[alert_type]["payload"]
         alert_parameters = ALERTS[alert_type].get("parameters", [])
         # now generate some random data
@@ -263,6 +269,9 @@ receivers:
         fingerprint_src = json.dumps(alert_payload["labels"], sort_keys=True)
         fingerprint = hashlib.md5(fingerprint_src.encode()).hexdigest()
         alert_payload["fingerprint"] = fingerprint
+        if to_wrap_with_provider_type:
+            return {"keep_source_type": "prometheus", "event": alert_payload}
+
         return alert_payload
 
 

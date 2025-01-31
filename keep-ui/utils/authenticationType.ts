@@ -1,10 +1,12 @@
 // AuthenticationType.ts
 
-export enum AuthenticationType {
-    AUTH0 = "AUTH0",
-    DB = "DB",
-    KEYCLOAK = "KEYCLOAK",
-    NOAUTH = "NOAUTH"  // Default
+export enum AuthType {
+  AUTH0 = "AUTH0",
+  DB = "DB",
+  KEYCLOAK = "KEYCLOAK",
+  OAUTH2PROXY = "OAUTH2PROXY",
+  AZUREAD = "AZUREAD",
+  NOAUTH = "NOAUTH", // Default
 }
 
 // Backward compatibility

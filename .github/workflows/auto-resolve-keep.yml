@@ -1,0 +1,75 @@
+name: Auto resolve Keep incident/alert
+
+on:
+  workflow_dispatch:
+    inputs:
+      incident_id:
+        description: "Keep incident ID to resolve"
+        required: false
+        type: string
+      alert_fingerprint:
+        description: "Keep alert fingerprint to resolve"
+        required: false
+        type: string
+      status:
+        description: "Status to set"
+        required: false
+        type: string
+        default: "resolved"
+  pull_request:
+    types: [opened, edited, closed]
+
+jobs:
+  auto-resolve-keep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract Keep ID from PR description
+        if: github.event_name == 'pull_request'
+        id: extract_id
+        run: |
+          PR_DESC="${{ github.event.pull_request.body }}"
+          INCIDENT_ID=$(echo "$PR_DESC" | grep -ioP 'close keep incident:\s*\K[a-f0-9-]+' || true)
+          ALERT_FINGERPRINT=$(echo "$PR_DESC" | grep -ioP 'close keep alert:\s*\K[a-f0-9-]+' || true)
+          echo "incident_id=$INCIDENT_ID" >> $GITHUB_OUTPUT
+          echo "alert_fingerprint=$ALERT_FINGERPRINT" >> $GITHUB_OUTPUT
+
+      - name: Set final IDs
+        id: set_ids
+        run: |
+          FINAL_INCIDENT_ID="${{ inputs.incident_id || steps.extract_id.outputs.incident_id }}"
+          FINAL_ALERT_FINGERPRINT="${{ inputs.alert_fingerprint || steps.extract_id.outputs.alert_fingerprint }}"
+          echo "final_incident_id=$FINAL_INCIDENT_ID" >> $GITHUB_OUTPUT
+          echo "final_alert_fingerprint=$FINAL_ALERT_FINGERPRINT" >> $GITHUB_OUTPUT
+
+      - name: Auto resolve Keep incident
+        if: |
+          (github.event_name == 'pull_request' && github.event.pull_request.merged == true && steps.set_ids.outputs.final_incident_id != '') ||
+          (github.event_name == 'workflow_dispatch' && inputs.incident_id != '')
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: "https://api.keephq.dev/incidents/${{ steps.set_ids.outputs.final_incident_id }}/status"
+          method: "POST"
+          customHeaders: '{"X-API-KEY": "${{ secrets.KEEP_API_KEY }}", "Content-Type": "application/json"}'
+          data: '{"status": "${{ inputs.status || ''resolved'' }}"}'
+
+      - name: Auto enrich Keep incident
+        if: |
+          (github.event_name == 'pull_request' && github.event.pull_request.merged == true && steps.set_ids.outputs.final_incident_id != '') ||
+          (github.event_name == 'workflow_dispatch' && inputs.incident_id != '')
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: "https://api.keephq.dev/incidents/${{ steps.set_ids.outputs.final_incident_id }}/enrich"
+          method: "POST"
+          customHeaders: '{"X-API-KEY": "${{ secrets.KEEP_API_KEY }}", "Content-Type": "application/json"}'
+          data: '{"enrichments":{"incident_title":"${{ github.event.pull_request.title || ''Manual resolution'' }}","incident_url":"${{ github.event.pull_request.html_url || format(''{0}/{1}/actions/runs/{2}'', github.server_url, github.repository, github.run_id) }}", "incident_id": "${{ github.run_id }}", "incident_provider": "github"}}'
+
+      - name: Auto resolve Keep alert
+        if: |
+          (github.event_name == 'pull_request' && github.event.pull_request.merged == true && steps.set_ids.outputs.final_alert_fingerprint != '') ||
+          (github.event_name == 'workflow_dispatch' && inputs.alert_fingerprint != '')
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: "https://api.keephq.dev/alerts/enrich?dispose_on_new_alert=true"
+          method: "POST"
+          customHeaders: '{"Content-Type": "application/json", "X-API-KEY": "${{ secrets.KEEP_API_KEY }}"}'
+          data: '{"enrichments":{"status":"${{ inputs.status || ''resolved'' }}","dismissed":false,"dismissUntil":"","note":"${{ github.event.pull_request.title || ''Manual resolution'' }}","ticket_url":"${{ github.event.pull_request.html_url || format(''{0}/{1}/actions/runs/{2}'', github.server_url, github.repository, github.run_id) }}"},"fingerprint":"${{ steps.set_ids.outputs.final_alert_fingerprint }}"}'
