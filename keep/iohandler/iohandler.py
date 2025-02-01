@@ -304,7 +304,11 @@ class IOHandler:
                         _kwargs[key] = str(value.s)
                     elif isinstance(value, ast.Dict):
                         _kwargs[key] = ast.literal_eval(value)
-                    elif isinstance(value, ast.Set) or isinstance(value, ast.List):
+                    elif (
+                        isinstance(value, ast.Set)
+                        or isinstance(value, ast.List)
+                        or isinstance(value, ast.Tuple)
+                    ):
                         parsed_value = astunparse.unparse(value).strip()
                         if (
                             (
