@@ -223,7 +223,7 @@ class AmazonsqsProvider(BaseProvider):
         return scopes
 
     def __read_from_queue(self):
-        self.logger.info("Getting messages from SQS Queue")
+        self.logger.debug("Getting messages from SQS Queue")
         try:
             return self.__get_sqs_client.receive_message(
                 QueueUrl=self.authentication_config.sqs_queue_url,
@@ -316,7 +316,7 @@ class AmazonsqsProvider(BaseProvider):
             response = self.__read_from_queue()
             messages = response.get("Messages", [])
             if not messages:
-                self.logger.info("No messages found. Queue is empty!")
+                self.logger.debug("No messages found. Queue is empty!")
 
             for message in messages:
                 try:
