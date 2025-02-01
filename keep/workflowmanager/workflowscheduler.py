@@ -227,7 +227,14 @@ class WorkflowScheduler:
                 tenant_id=tenant_id, workflow_id=workflow_id, status="error"
             ).inc()
 
-            self.logger.exception(f"Failed to run workflow {workflow.workflow_id}...")
+            self.logger.exception(
+                f"Failed to run workflow {workflow.workflow_id}...",
+                extra={
+                    "workflow_id": workflow_id,
+                    "workflow_execution_id": workflow_execution_id,
+                    "tenant_id": tenant_id,
+                },
+            )
             self._finish_workflow_execution(
                 tenant_id=tenant_id,
                 workflow_id=workflow_id,
