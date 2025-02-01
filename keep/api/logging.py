@@ -35,60 +35,48 @@ class WorkflowContextFilter(logging.Filter):
     """
 
     def filter(self, record):
-        # Get workflow_id from thread context if it exists
-        workflow_id = getattr(threading.current_thread(), "workflow_id", None)
+        # Get workflow_id and debug flag from thread context
+        thread = threading.current_thread()
+        workflow_id = getattr(thread, "workflow_id", None)
+
+        # Early return if no workflow_id
         if not workflow_id:
             return False
 
-        debug = getattr(threading.current_thread(), "workflow_debug", False)
+        # Skip DEBUG logs unless debug mode is enabled
+        if not getattr(thread, "workflow_debug", False) and record.levelname == "DEBUG":
+            return False
 
-        if not debug:
-            level = record.levelname
-            if level == "DEBUG":
-                return False
+        # Initialize record.extra if needed
+        if not hasattr(record, "extra"):
+            record.extra = {}
 
-        workflow_execution_id = getattr(
-            threading.current_thread(), "workflow_execution_id", None
-        )
-        step_id = getattr(threading.current_thread(), "step_id", None)
-        tenant_id = getattr(threading.current_thread(), "tenant_id", None)
-        provider_type = getattr(threading.current_thread(), "provider_type", None)
+        # Get thread context attributes
+        thread_attrs = {
+            "workflow_id": workflow_id,
+            "workflow_execution_id": getattr(thread, "workflow_execution_id", None),
+            "tenant_id": getattr(thread, "tenant_id", None),
+            "provider_type": getattr(thread, "provider_type", None),
+        }
 
-        # Add it to the record's extra dict if found
-        if workflow_id is not None:
-            if not hasattr(record, "extra"):
-                record.extra = {}
-            record.wokrlow_id = workflow_id
+        # Set record attributes from thread context
+        for attr, value in thread_attrs.items():
+            if value is not None:
+                setattr(record, attr.replace("workflow_", "wokrlow_"), value)
 
-        if workflow_execution_id is not None:
-            if not hasattr(record, "extra"):
-                record.extra = {}
-            record.workflow_execution_id = workflow_execution_id
-
+        # Handle step_id
+        step_id = getattr(thread, "step_id", None)
         if step_id is not None:
-            if not hasattr(record, "extra"):
-                record.extra = {}
             record.context = {"step_id": step_id}
 
-        if tenant_id is not None:
-            if not hasattr(record, "extra"):
-                record.extra = {}
-            record.tenant_id = tenant_id
-
-        if provider_type is not None:
-            if not hasattr(record, "extra"):
-                record.extra = {}
-            record.provider_type = provider_type
-
-        # if there is alert in extra, put it in context
+        # Handle event if present
         if "event" in record.__dict__:
             if hasattr(record, "context"):
                 record.context["event"] = record.event
             else:
                 record.context = {"event": record.event}
 
-        # we should record only workflow logs
-        return workflow_id is not None
+        return True
 
 
 class WorkflowDBHandler(logging.Handler):
