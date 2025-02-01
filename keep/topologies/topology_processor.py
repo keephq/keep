@@ -6,6 +6,7 @@ from typing import Dict, Optional, Set
 
 from sqlmodel import select
 
+from keep.api.core.config import config
 from keep.api.core.db import (
     add_alerts_to_incident,
     assign_alert_to_incident,
@@ -52,8 +53,12 @@ class TopologyProcessor:
         # for the single tenant, use the global configuration
         self.enabled_tenants[SINGLE_TENANT_UUID] = self.enabled
         # Configuration
-        self.process_interval = 10  # seconds
-        self.look_back_window = 15  # minutes
+        self.process_interval = config(
+            "KEEP_TOPOLOGY_PROCESSOR_INTERVAL", cast=int, default=10
+        )  # seconds
+        self.look_back_window = config(
+            "KEEP_TOPOLOGY_PROCESSOR_LOOK_BACK_WINDOW", cast=int, default=15
+        )  # minutes
 
     async def start(self):
         """Runs the topology processor in server mode"""
