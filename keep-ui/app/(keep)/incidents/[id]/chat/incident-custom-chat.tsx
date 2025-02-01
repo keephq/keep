@@ -20,15 +20,6 @@ interface CustomIncidentChatProps {
   mutateIncident: () => void;
   alerts: any;
   user?: User | null;
-  handleFeedback: (
-    type: "thumbsUp" | "thumbsDown",
-    message: Element
-  ) => Promise<void>;
-  rcaTask: CopilotTask;
-  loadingStates: { [key: string]: boolean };
-  setLoadingStates: React.Dispatch<
-    React.SetStateAction<{ [key: string]: boolean }>
-  >;
   initialMessage?: string; // Add this prop for the initial message
 }
 
@@ -36,8 +27,6 @@ export function CustomIncidentChat({
   incident,
   alerts,
   user,
-  handleFeedback,
-  loadingStates,
   initialMessage = "How can I help you with this incident? 🕵️",
 }: CustomIncidentChatProps) {
   const [inputValue, setInputValue] = useState("");
@@ -129,8 +118,6 @@ export function CustomIncidentChat({
           messages={visibleMessages}
           user={user}
           isLoading={isLoading}
-          loadingStates={loadingStates}
-          handleFeedback={handleFeedback}
           clearChat={clearChat}
         />
 

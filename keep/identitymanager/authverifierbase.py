@@ -328,7 +328,7 @@ class AuthVerifierBase:
                 ] = datetime.datetime.now()
             self.logger.debug("Successfully updated API Key last used")
         except Exception:
-            self.logger.exception("Failed to update API Key last used")
+            self.logger.warning("Failed to update API Key last used", exc_info=True)
 
         request.state.tenant_id = tenant_api_key.tenant_id
         self.logger.debug(f"API key verified for tenant: {tenant_api_key.tenant_id}")

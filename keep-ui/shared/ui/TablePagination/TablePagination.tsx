@@ -15,6 +15,7 @@ import { Select } from "@/shared/ui";
 
 type Props = {
   table: Table<any>;
+  pageSizeEnabled?: boolean;
   // TODO: Add refresh button
   // allowRefresh?: boolean;
 };
@@ -34,7 +35,7 @@ const SingleValue = ({
   </components.SingleValue>
 );
 
-export function TablePagination({ table }: Props) {
+export function TablePagination({ table, pageSizeEnabled = true }: Props) {
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
 
@@ -44,23 +45,25 @@ export function TablePagination({ table }: Props) {
         Showing {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
       </Text>
       <div className="flex gap-1">
-        <Select
-          components={{ SingleValue }}
-          value={{
-            value: table.getState().pagination.pageSize.toString(),
-            label: table.getState().pagination.pageSize.toString(),
-          }}
-          onChange={(selectedOption) =>
-            table.setPageSize(Number(selectedOption!.value))
-          }
-          options={[
-            { value: "10", label: "10" },
-            { value: "20", label: "20" },
-            { value: "50", label: "50" },
-            { value: "100", label: "100" },
-          ]}
-          menuPlacement="top"
-        />
+        {pageSizeEnabled && (
+          <Select
+            components={{ SingleValue }}
+            value={{
+              value: table.getState().pagination.pageSize.toString(),
+              label: table.getState().pagination.pageSize.toString(),
+            }}
+            onChange={(selectedOption) =>
+              table.setPageSize(Number(selectedOption!.value))
+            }
+            options={[
+              { value: "10", label: "10" },
+              { value: "20", label: "20" },
+              { value: "50", label: "50" },
+              { value: "100", label: "100" },
+            ]}
+            menuPlacement="top"
+          />
+        )}
         <div className="flex">
           <Button
             className="pagination-button"

@@ -434,7 +434,7 @@ export default function IncidentAlerts({ incident }: Props) {
 
       {/* Pagination at the bottom */}
       <div className="mt-4">
-        <TablePagination table={table} />
+        <TablePagination table={table} pageSizeEnabled={false} />
       </div>
     </div>
   );

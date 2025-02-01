@@ -99,33 +99,20 @@ class ProvidersFactory:
         provider_config_copy = copy.deepcopy(provider_config)
         provider_config: ProviderConfig = ProviderConfig(**provider_config)
 
-        try:
-            provider = provider_class(
-                context_manager=context_manager,
-                provider_id=provider_id,
-                config=provider_config,
+        provider = provider_class(
+            context_manager=context_manager,
+            provider_id=provider_id,
+            config=provider_config,
+        )
+        # if the provider has changed the auth config, we need to update it, even if the provider failed to initialize
+        if provider_config_copy.get("authentication") != provider_config.authentication:
+            provider_config_copy["authentication"] = provider_config.authentication
+            secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+            secret_manager.write_secret(
+                secret_name=f"{context_manager.tenant_id}_{provider_type}_{provider_id}",
+                secret_value=json.dumps(provider_config_copy),
             )
-            return provider
-        except TypeError as exc:
-            error_message = f"Configuration problem while trying to initialize the provider {provider_id}. Probably missing provider config, please check the provider configuration."
-            logging.getLogger(__name__).error(error_message)
-            raise ProviderConfigurationException(exc)
-        except Exception as exc:
-            raise exc
-        finally:
-            # if the provider has changed the auth config, we need to update it, even if the provider failed to initialize
-            if (
-                provider_config_copy.get("authentication")
-                != provider_config.authentication
-            ):
-                provider_config_copy["authentication"] = provider_config.authentication
-                secret_manager = SecretManagerFactory.get_secret_manager(
-                    context_manager
-                )
-                secret_manager.write_secret(
-                    secret_name=f"{context_manager.tenant_id}_{provider_type}_{provider_id}",
-                    secret_value=json.dumps(provider_config_copy),
-                )
+        return provider
 
     @staticmethod
     def get_provider_required_config(provider_type: str) -> dict:

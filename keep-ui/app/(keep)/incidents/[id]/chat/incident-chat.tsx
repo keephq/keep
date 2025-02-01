@@ -1,5 +1,4 @@
 import {
-  CopilotChat,
   ResponseButtonProps,
   // useCopilotChatSuggestions,
 } from "@copilotkit/react-ui";
@@ -29,7 +28,6 @@ import "@copilotkit/react-ui/styles.css";
 import "./incident-chat.css";
 import { useSession } from "next-auth/react";
 import { StopIcon, TrashIcon } from "@radix-ui/react-icons";
-import { toast } from "react-toastify";
 import { CustomIncidentChat } from "./incident-custom-chat";
 
 export function IncidentChat({
@@ -457,107 +455,6 @@ export function IncidentChat({
       );
     },
   });
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      const messages = document.querySelectorAll(
-        '[data-message-role="assistant"]'
-      );
-
-      messages.forEach((message) => {
-        if (!message.querySelector(".message-feedback")) {
-          const feedbackDiv = document.createElement("div");
-          feedbackDiv.className =
-            "message-feedback absolute bottom-2 right-2 flex gap-2";
-
-          const button = document.createElement("button");
-          button.className =
-            "p-1 hover:bg-tremor-background-muted rounded-full transition-colors group relative";
-
-          const tooltip = document.createElement("span");
-          tooltip.className =
-            "invisible group-hover:visible absolute bottom-full right-0 whitespace-nowrap rounded bg-tremor-background-emphasis px-2 py-1 text-xs text-tremor-background";
-          tooltip.textContent = "Add to RCA";
-
-          const svg = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "svg"
-          );
-          svg.setAttribute("width", "15");
-          svg.setAttribute("height", "15");
-          svg.setAttribute("viewBox", "0 0 15 15");
-          svg.setAttribute("fill", "none");
-
-          const path1 = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "path"
-          );
-          path1.setAttribute(
-            "d",
-            "M7.5.8c-3.7 0-6.7 3-6.7 6.7s3 6.7 6.7 6.7 6.7-3 6.7-6.7-3-6.7-6.7-6.7zm0 12.4c-3.1 0-5.7-2.5-5.7-5.7s2.5-5.7 5.7-5.7 5.7 2.5 5.7 5.7-2.6 5.7-5.7 5.7z"
-          );
-          path1.setAttribute("fill", "currentColor");
-
-          const path2 = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "path"
-          );
-          path2.setAttribute(
-            "d",
-            "M4.8 7c.4 0 .8-.4.8-.8s-.4-.8-.8-.8-.8.4-.8.8.4.8.8.8zm5.4 0c.4 0 .8-.4.8-.8s-.4-.8-.8-.8-.8.4-.8.8.4.8.8.8zm-5.1 1.9h5.8c.2.8-.5 2.3-2.9 2.3s-3.1-1.5-2.9-2.3z"
-          );
-          path2.setAttribute("fill", "currentColor");
-
-          svg.appendChild(path1);
-          svg.appendChild(path2);
-          button.appendChild(tooltip);
-          button.appendChild(svg);
-          feedbackDiv.appendChild(button);
-
-          // Add click handler with loading state
-          button.onclick = async () => {
-            const messageId =
-              message.getAttribute("data-message-id") ||
-              Math.random().toString();
-            setLoadingStates((prev) => ({ ...prev, [messageId]: true }));
-            button.classList.add("opacity-50", "cursor-not-allowed");
-            svg.setAttribute("class", "animate-spin");
-
-            try {
-              await handleFeedback("thumbsUp", message);
-            } finally {
-              setLoadingStates((prev) => ({ ...prev, [messageId]: false }));
-              button.classList.remove("opacity-50", "cursor-not-allowed");
-              svg.setAttribute("class", "");
-              toast.info("Added to RCA", {
-                position: "top-right",
-              });
-            }
-          };
-
-          (message as any).style.position = "relative";
-          message.appendChild(feedbackDiv);
-        }
-      });
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
-
-    return () => observer.disconnect();
-  }, [context]);
-
-  const handleFeedback = async (
-    type: "thumbsUp" | "thumbsDown",
-    message: Element
-  ) => {
-    const messageContent = message.textContent
-      ?.replace("Add to RCA", "")
-      .trim();
-    await rcaTask.run(context, messageContent);
-  };
 
   if (!alerts?.items || alerts.items.length === 0)
     return (
