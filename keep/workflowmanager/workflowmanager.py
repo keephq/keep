@@ -85,7 +85,7 @@ class WorkflowManager:
             self.logger.info("Got workflow from store")
             return workflow
         except ProviderConfigurationException:
-            self.logger.exception(
+            self.logger.warning(
                 "Workflow have a provider that is not configured",
                 extra={
                     "workflow_id": workflow_model.id,
