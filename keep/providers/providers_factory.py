@@ -491,7 +491,7 @@ class ProvidersFactory:
             # Somehow the provider is installed but the secret is missing, probably bug in deletion
             # TODO: solve its root cause
             except Exception:
-                logger.exception(
+                logger.warning(
                     f"Could not get provider {provider_copy.id} auth config from secret manager"
                 )
                 continue
@@ -514,7 +514,7 @@ class ProvidersFactory:
                 )
                 initialized_consumer_providers.append(provider_class)
             except Exception:
-                logger.exception(
+                logger.warning(
                     f"Could not get provider {provider.id} auth config from secret manager"
                 )
                 continue

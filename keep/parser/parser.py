@@ -58,6 +58,7 @@ class Parser:
         parsed_workflow_yaml: dict,
         providers_file: str = None,
         actions_file: str = None,
+        workflow_db_id: str = None,
     ) -> typing.List[Workflow]:
         """_summary_
 
@@ -83,6 +84,7 @@ class Parser:
                     workflow_providers,
                     actions_file,
                     workflow_actions,
+                    workflow_db_id,
                 )
                 for workflow in raw_workflows
             ]
@@ -138,6 +140,7 @@ class Parser:
         workflow_providers: dict = None,
         actions_file: str = None,
         workflow_actions: dict = None,
+        workflow_db_id: str = None,
     ) -> Workflow:
         self.logger.debug("Parsing workflow")
         workflow_id = self._get_workflow_id(tenant_id, workflow)
@@ -158,10 +161,10 @@ class Parser:
         workflow_owners = self._parse_owners(workflow)
         workflow_tags = self._parse_tags(workflow)
         workflow_steps = self._parse_steps(
-            context_manager, workflow, workflow_id, workflow_description
+            context_manager, workflow, workflow_id, workflow_description, workflow_db_id
         )
         workflow_actions = self._parse_actions(
-            context_manager, workflow, workflow_id, workflow_description
+            context_manager, workflow, workflow_id, workflow_description, workflow_db_id
         )
         workflow_interval = self.parse_interval(workflow)
         on_failure_action = self._get_on_failure_action(context_manager, workflow)
@@ -431,13 +434,18 @@ class Parser:
         workflow: dict,
         workflow_id: str | None = None,
         workflow_description: str | None = None,
+        workflow_db_id: str | None = None,
     ) -> typing.List[Step]:
         self.logger.debug("Parsing steps")
         workflow_steps = workflow.get("steps", [])
         workflow_steps_parsed = []
         for _step in workflow_steps:
             provider = self._get_step_provider(
-                context_manager, _step, workflow_id, workflow_description
+                context_manager,
+                _step,
+                workflow_id,
+                workflow_description,
+                workflow_db_id,
             )
             provider_parameters = _step.get("provider", {}).get("with")
             parsed_provider_parameters = Parser.parse_provider_parameters(
@@ -462,6 +470,7 @@ class Parser:
         _step: dict,
         workflow_id: str | None = None,
         workflow_description: str | None = None,
+        workflow_db_id: str | None = None,
     ) -> dict:
         step_provider = _step.get("provider")
         try:
@@ -483,11 +492,13 @@ class Parser:
             self.logger.exception(
                 f"Error getting provider {provider_id} for step {_step.get('name')}",
                 extra={
-                    "workflow_id": workflow_id,
+                    "workflow_name": workflow_id,
                     "workflow_description": workflow_description,
                     "provider_id": provider_id,
                     "provider_type": step_provider_type,
                     "provider_config_name": step_provider_config,
+                    "workflow_db_id": workflow_db_id,
+                    "tenant_id": context_manager.tenant_id,
                 },
             )
             raise
@@ -558,6 +569,7 @@ class Parser:
         action_name: str | None = None,
         workflow_id: str | None = None,
         workflow_description: str | None = None,
+        workflow_db_id: str | None = None,
     ) -> Step:
         name = action_name or action.get("name")
         provider = action.get("provider", {})
@@ -582,11 +594,13 @@ class Parser:
             self.logger.exception(
                 f"Error getting provider {provider_id} for action {name}",
                 extra={
-                    "workflow_id": workflow_id,
+                    "workflow_name": workflow_id,
                     "workflow_description": workflow_description,
                     "provider_id": provider_id,
                     "provider_type": provider_type,
                     "provider_config_name": provider_config_name,
+                    "workflow_db_id": workflow_db_id,
+                    "tenant_id": context_manager.tenant_id,
                 },
             )
             raise
@@ -606,6 +620,7 @@ class Parser:
         workflow: dict,
         workflow_id: str | None = None,
         workflow_description: str | None = None,
+        workflow_db_id: str | None = None,
     ) -> typing.List[Step]:
         self.logger.debug("Parsing actions")
         workflow_actions_raw = workflow.get("actions", [])
@@ -616,7 +631,12 @@ class Parser:
         workflow_actions_parsed = []
         for _action in workflow_actions:
             parsed_action = self._get_action(
-                context_manager, _action, None, workflow_id, workflow_description
+                context_manager,
+                _action,
+                None,
+                workflow_id,
+                workflow_description,
+                workflow_db_id,
             )
             workflow_actions_parsed.append(parsed_action)
         self.logger.debug("Actions parsed successfully")

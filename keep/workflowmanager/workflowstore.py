@@ -112,7 +112,9 @@ class WorkflowStore:
                 detail=f"Workflow {workflow_id} not found",
             )
         workflow_yaml = cyaml.safe_load(workflow)
-        workflow = self.parser.parse(tenant_id, workflow_yaml)
+        workflow = self.parser.parse(
+            tenant_id, workflow_yaml, workflow_db_id=workflow_id
+        )
         if len(workflow) > 1:
             raise HTTPException(
                 status_code=500,
