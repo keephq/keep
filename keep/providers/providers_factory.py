@@ -151,7 +151,7 @@ class ProvidersFactory:
             )
             return provider_auth_config_class
         except (ImportError, AttributeError):
-            logging.getLogger(__name__).warning(
+            logging.getLogger(__name__).debug(
                 f"Provider {provider_type} does not have a provider auth config class"
             )
             return {}
