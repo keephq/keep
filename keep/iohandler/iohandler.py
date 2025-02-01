@@ -260,7 +260,11 @@ class IOHandler:
                         _arg = str(arg.s)
                     elif isinstance(arg, ast.Dict):
                         _arg = ast.literal_eval(arg)
-                    elif isinstance(arg, ast.Set) or isinstance(arg, ast.List):
+                    elif (
+                        isinstance(arg, ast.Set)
+                        or isinstance(arg, ast.List)
+                        or isinstance(arg, ast.Tuple)
+                    ):
                         _arg = astunparse.unparse(arg).strip()
                         if (
                             (_arg.startswith("[") and _arg.endswith("]"))
