@@ -941,6 +941,7 @@ def test_workflow_execution_logs(
     )
 
     # Since we're using a filter now, verify that all logs have workflow_execution_id
+    time.sleep(2)
     assert len(logs) > 0  # We should have some logs
     for log in logs:
         assert log.workflow_execution_id == workflow_execution.id
