@@ -1,17 +1,13 @@
 import asyncio
 import json
-import logging
 import time
-from collections import defaultdict
 from datetime import datetime, timedelta
-from unittest.mock import patch
 
 import pytest
 import pytz
 
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.logging import WorkflowLoggerAdapter
 from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
 from keep.api.models.db.workflow import Workflow, WorkflowExecutionLog
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -876,41 +872,6 @@ def test_workflow_incident_triggers(
     ]
 
 
-logs_counter = {}
-
-
-def count_logs(instance, original_method):
-    log_levels = logging.getLevelNamesMapping()
-
-    def wrapper(*args, **kwargs):
-        level_name = original_method.__name__.upper()
-        max_level = instance.getEffectiveLevel()
-        current_level = log_levels[level_name]
-        if current_level >= max_level:
-            logs_counter.setdefault(instance.workflow_execution_id, defaultdict(int))
-            logs_counter[instance.workflow_execution_id]["all"] += 1
-            logs_counter[instance.workflow_execution_id][level_name] += 1
-
-        return original_method(*args, **kwargs)
-
-    return wrapper
-
-
-def fake_workflow_adapter(
-    logger, context_manager, tenant_id, workflow_id, workflow_execution_id
-):
-    adapter = WorkflowLoggerAdapter(
-        logger, context_manager, tenant_id, workflow_id, workflow_execution_id
-    )
-
-    adapter.info = count_logs(adapter, adapter.info)
-    adapter.debug = count_logs(adapter, adapter.debug)
-    adapter.warning = count_logs(adapter, adapter.warning)
-    adapter.error = count_logs(adapter, adapter.error)
-    adapter.critical = count_logs(adapter, adapter.critical)
-    return adapter
-
-
 @pytest.mark.parametrize(
     "test_app, test_case, alert_statuses, expected_tier, db_session",
     [
@@ -928,59 +889,61 @@ def test_workflow_execution_logs(
     alert_statuses,
     expected_tier,
 ):
-    with patch(
-        "keep.contextmanager.contextmanager.WorkflowLoggerAdapter",
-        side_effect=fake_workflow_adapter,
+    """Test that workflow execution logs are properly stored using WorkflowDBHandler"""
+    base_time = datetime.now(tz=pytz.utc)
+
+    # Create alerts with specified statuses and timestamps
+    alert_statuses.reverse()
+    for time_diff, status in alert_statuses:
+        alert_status = (
+            AlertStatus.FIRING if status == "firing" else AlertStatus.RESOLVED
+        )
+        create_alert("fp1", alert_status, base_time - timedelta(minutes=time_diff))
+
+    time.sleep(1)
+
+    # Create the current alert
+    current_alert = AlertDto(
+        id="grafana-1",
+        source=["grafana"],
+        name="server-is-hamburger",
+        status=AlertStatus.FIRING,
+        severity="critical",
+        fingerprint="fp1",
+    )
+
+    # Insert the current alert into the workflow manager
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+
+    # Wait for the workflow execution to complete
+    workflow_execution = None
+    count = 0
+    while (
+        workflow_execution is None
+        or workflow_execution.status == "in_progress"
+        and count < 30
     ):
-        base_time = datetime.now(tz=pytz.utc)
-
-        # Create alerts with specified statuses and timestamps
-        alert_statuses.reverse()
-        for time_diff, status in alert_statuses:
-            alert_status = (
-                AlertStatus.FIRING if status == "firing" else AlertStatus.RESOLVED
-            )
-            create_alert("fp1", alert_status, base_time - timedelta(minutes=time_diff))
-
+        workflow_execution = get_last_workflow_execution_by_workflow_id(
+            SINGLE_TENANT_UUID, "susu-and-sons"
+        )
         time.sleep(1)
-        # Create the current alert
-        current_alert = AlertDto(
-            id="grafana-1",
-            source=["grafana"],
-            name="server-is-hamburger",
-            status=AlertStatus.FIRING,
-            severity="critical",
-            fingerprint="fp1",
-        )
+        count += 1
 
-        # Insert the current alert into the workflow manager
-        workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+    # Check if the workflow execution was successful
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
 
-        # Wait for the workflow execution to complete
-        workflow_execution = None
-        count = 0
-        while (
-            workflow_execution is None
-            or workflow_execution.status == "in_progress"
-            and count < 30
-        ):
-            workflow_execution = get_last_workflow_execution_by_workflow_id(
-                SINGLE_TENANT_UUID, "susu-and-sons"
-            )
-            time.sleep(1)
-            count += 1
+    # Get logs from DB
+    logs = (
+        db_session.query(WorkflowExecutionLog)
+        .filter(WorkflowExecutionLog.workflow_execution_id == workflow_execution.id)
+        .all()
+    )
 
-        # Check if the workflow execution was successful
-        assert workflow_execution is not None
-        assert workflow_execution.status == "success"
-
-        logs = (
-            db_session.query(WorkflowExecutionLog)
-            .filter(WorkflowExecutionLog.workflow_execution_id == workflow_execution.id)
-            .all()
-        )
-
-        assert len(logs) == logs_counter[workflow_execution.id]["all"]
+    # Since we're using a filter now, verify that all logs have workflow_execution_id
+    assert len(logs) > 0  # We should have some logs
+    for log in logs:
+        assert log.workflow_execution_id == workflow_execution.id
 
 
 @pytest.mark.parametrize(
@@ -1001,75 +964,63 @@ def test_workflow_execution_logs_log_level_debug_console_provider(
     expected_tier,
     monkeypatch,
 ):
+    logs_by_level = {}
 
-    logs_counts = {}
-    logs_level_counts = {}
     for level in ["INFO", "DEBUG"]:
         monkeypatch.setenv("KEEP_CONSOLE_PROVIDER_LOG_LEVEL", level)
-        with patch(
-            "keep.contextmanager.contextmanager.WorkflowLoggerAdapter",
-            side_effect=fake_workflow_adapter,
-        ):
-            base_time = datetime.now(tz=pytz.utc)
 
-            # Create alerts with specified statuses and timestamps
-            alert_statuses.reverse()
-            for time_diff, status in alert_statuses:
-                alert_status = (
-                    AlertStatus.FIRING if status == "firing" else AlertStatus.RESOLVED
-                )
-                create_alert(
-                    "fp1", alert_status, base_time - timedelta(minutes=time_diff)
-                )
+        base_time = datetime.now(tz=pytz.utc)
 
-            time.sleep(1)
-            # Create the current alert
-            current_alert = AlertDto(
-                id="grafana-1-{}".format(level),
-                source=["grafana"],
-                name="server-is-hamburger",
-                status=AlertStatus.FIRING,
-                severity="critical",
-                fingerprint="fp1-{}".format(level),
+        # Create alerts with specified statuses and timestamps
+        for time_diff, status in alert_statuses:
+            alert_status = (
+                AlertStatus.FIRING if status == "firing" else AlertStatus.RESOLVED
+            )
+            create_alert(
+                f"fp1-{level}", alert_status, base_time - timedelta(minutes=time_diff)
             )
 
-            # Insert the current alert into the workflow manager
-            workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+        # Create the current alert
+        current_alert = AlertDto(
+            id=f"grafana-1-{level}",
+            source=["grafana"],
+            name="server-is-hamburger",
+            status=AlertStatus.FIRING,
+            severity="critical",
+            fingerprint=f"fp1-{level}",
+        )
 
-            # Wait for the workflow execution to complete
-            workflow_execution = None
-            count = 0
+        # Insert the current alert into the workflow manager
+        workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+
+        # Wait for the workflow execution to complete
+        workflow_execution = None
+        count = 0
+        while (
+            workflow_execution is None
+            or workflow_execution.status == "in_progress"
+            and count < 30
+        ):
+            workflow_execution = get_last_workflow_execution_by_workflow_id(
+                SINGLE_TENANT_UUID, "susu-and-sons"
+            )
             time.sleep(1)
-            while (
-                workflow_execution is None
-                or workflow_execution.status == "in_progress"
-                and count < 30
-            ):
-                workflow_execution = get_last_workflow_execution_by_workflow_id(
-                    SINGLE_TENANT_UUID, "susu-and-sons"
-                )
-                time.sleep(1)
-                count += 1
+            count += 1
 
-            # Check if the workflow execution was successful
-            assert workflow_execution is not None
-            assert workflow_execution.status == "success"
+        assert workflow_execution is not None
+        assert workflow_execution.status == "success"
 
-            logs_counts[workflow_execution.id] = logs_counter[workflow_execution.id][
-                "all"
-            ]
-            logs_level_counts[level] = logs_counter[workflow_execution.id]["all"]
-
-    for workflow_execution_id in logs_counts:
+        # Get logs for this execution
         logs = (
             db_session.query(WorkflowExecutionLog)
-            .filter(WorkflowExecutionLog.workflow_execution_id == workflow_execution_id)
+            .filter(WorkflowExecutionLog.workflow_execution_id == workflow_execution.id)
             .all()
         )
-        assert logs_counts[workflow_execution_id] == len(logs)
 
-    # SHAHAR: What does it even do?
-    # assert logs_level_counts["DEBUG"] > logs_level_counts["INFO"]
+        logs_by_level[level] = len(logs)
+
+    # Verify we get more logs in DEBUG level than INFO
+    assert logs_by_level["DEBUG"] > logs_by_level["INFO"]
 
 
 # test if/else in workflow definition

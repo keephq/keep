@@ -62,7 +62,7 @@ class WorkflowContextFilter(logging.Filter):
         # Set record attributes from thread context
         for attr, value in thread_attrs.items():
             if value is not None:
-                setattr(record, attr.replace("workflow_", "wokrlow_"), value)
+                setattr(record, attr, value)
 
         # Handle step_id
         step_id = getattr(thread, "step_id", None)
