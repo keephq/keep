@@ -7,7 +7,6 @@ from pympler.asizeof import asizeof
 
 from keep.api.core.config import config
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session
-from keep.api.logging import WorkflowLoggerAdapter
 from keep.api.models.alert import AlertDto
 
 
@@ -20,9 +19,6 @@ class ContextManager:
         workflow: dict | None = None,
     ):
         self.logger = logging.getLogger(__name__)
-        self.logger_adapter = WorkflowLoggerAdapter(
-            self.logger, self, tenant_id, workflow_id, workflow_execution_id
-        )
         self.workflow_id = workflow_id
         self.workflow_execution_id = workflow_execution_id
         self.tenant_id = tenant_id
@@ -103,27 +99,8 @@ class ContextManager:
     def set_execution_context(self, workflow_id, workflow_execution_id):
         self.workflow_execution_id = workflow_execution_id
         self.workflow_id = workflow_id
-        self.logger_adapter.workflow_execution_id = workflow_execution_id
         for logger in self.__loggers.values():
             logger.workflow_execution_id = workflow_execution_id
-
-    def get_logger(self, name=None):
-        if not name:
-            return self.logger_adapter
-
-        if name in self.__loggers:
-            return self.__loggers[name]
-
-        logger = logging.getLogger(name)
-        logger_adapter = WorkflowLoggerAdapter(
-            logger,
-            self,
-            self.tenant_id,
-            self.workflow_id,
-            self.workflow_execution_id,
-        )
-        self.__loggers[name] = logger_adapter
-        return logger_adapter
 
     def set_event_context(self, event):
         self.event_context = event
@@ -267,19 +244,6 @@ class ContextManager:
 
     def get_last_workflow_run(self, workflow_id):
         return get_last_workflow_execution_by_workflow_id(self.tenant_id, workflow_id)
-
-    def dump(self):
-        self.logger.info("Dumping logs to db")
-        # dump the workflow logs to the db
-        try:
-            self.logger_adapter.dump()
-        except Exception as e:
-            # TODO - should be handled
-            self.logger.error(
-                "Failed to dump workflow logs",
-                extra={"exception": e},
-            )
-        self.logger.info("Logs dumped")
 
     def set_last_workflow_run(self, workflow_id, workflow_context, workflow_status):
         # TODO: move to DB

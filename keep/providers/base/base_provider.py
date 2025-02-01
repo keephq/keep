@@ -42,6 +42,7 @@ tracer = trace.get_tracer(__name__)
 SPAMMY_ALERTS_THRESHOLD_HOURS = 1
 SPAMMY_ALERTS_THRESHOLD = datetime.timedelta(hours=SPAMMY_ALERTS_THRESHOLD_HOURS)
 
+
 class BaseProvider(metaclass=abc.ABCMeta):
     OAUTH2_URL = None
     PROVIDER_SCOPES: list[ProviderScope] = []
@@ -125,6 +126,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.results = []
         # tb: we can have this overriden by customer configuration, when initializing the provider
         self.fingerprint_fields = self.FINGERPRINT_FIELDS
+        self.step_id = None
 
     def _extract_type(self):
         """
@@ -891,11 +893,13 @@ class ProviderHealthMixin:
             topology, _ = self.pull_topology()
             uncovered_topology = copy.deepcopy(topology)
             for alert in alerts:
-                uncovered_topology = list(filter(lambda t: not alert.service == t.service, uncovered_topology))
+                uncovered_topology = list(
+                    filter(lambda t: not alert.service == t.service, uncovered_topology)
+                )
 
             health["topology"] = {
                 "covered": [t for t in topology if t not in uncovered_topology],
-                "uncovered": uncovered_topology
+                "uncovered": uncovered_topology,
             }
 
     def check_alerting_rules(self, alerts, health):
@@ -906,7 +910,7 @@ class ProviderHealthMixin:
             except json.JSONDecodeError:
                 pass
             unused_rules = []
-            compiled_patterns = [re.compile(rule['message']) for rule in rules]
+            compiled_patterns = [re.compile(rule["message"]) for rule in rules]
             matched_patterns = set()
 
             for alert in alerts:
@@ -924,7 +928,9 @@ class ProviderHealthMixin:
 
     def check_spammy_alerts(self, alerts, health):
         sorter = sorted(alerts, key=attrgetter("fingerprint"))
-        alerts_per_fingerprint = itertools.groupby(sorter, key=attrgetter("fingerprint"))
+        alerts_per_fingerprint = itertools.groupby(
+            sorter, key=attrgetter("fingerprint")
+        )
         spammy_alerts = []
         for fingerprint, fingerprint_alerts in alerts_per_fingerprint:
             close_alerts = []
@@ -935,9 +941,14 @@ class ProviderHealthMixin:
             # Iterate through alerts to check if some of them are too close
             for i in range(len(fingerprint_alerts)):
                 for j in range(i + 1, len(fingerprint_alerts)):
-                    if parse(fingerprint_alerts[j].lastReceived) - parse(
-                            fingerprint_alerts[i].lastReceived) <= SPAMMY_ALERTS_THRESHOLD:
-                        close_alerts.append((fingerprint_alerts[i], fingerprint_alerts[j]))
+                    if (
+                        parse(fingerprint_alerts[j].lastReceived)
+                        - parse(fingerprint_alerts[i].lastReceived)
+                        <= SPAMMY_ALERTS_THRESHOLD
+                    ):
+                        close_alerts.append(
+                            (fingerprint_alerts[i], fingerprint_alerts[j])
+                        )
                     else:
                         break
 
@@ -947,5 +958,6 @@ class ProviderHealthMixin:
         timestamps = [parse(alert.lastReceived) for alert in spammy_alerts]
         hours = [ts.strftime("%Y-%m-%d %H:00") for ts in timestamps]
         hourly_alerts = Counter(hours)
-        health["spammy"] = [{"date": date, "value": value} for date, value in hourly_alerts.items()]
-
+        health["spammy"] = [
+            {"date": date, "value": value} for date, value in hourly_alerts.items()
+        ]

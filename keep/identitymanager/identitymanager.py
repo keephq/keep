@@ -31,10 +31,7 @@ for name, obj in inspect.getmembers(rbac_module):
 class BaseIdentityManager(metaclass=abc.ABCMeta):
     def __init__(self, tenant_id, context_manager: ContextManager = None, **kwargs):
         self.tenant_id = tenant_id
-        if context_manager:
-            self.logger = context_manager.get_logger()
-        else:
-            self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(__name__)
 
     def on_start(self, app) -> None:
         """

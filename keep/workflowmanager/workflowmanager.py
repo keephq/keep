@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import threading
 import typing
 import uuid
 
@@ -428,6 +429,10 @@ class WorkflowManager:
         self, workflow: Workflow, workflow_execution_id: str, test_run=False
     ):
         self.logger.debug(f"Running workflow {workflow.workflow_id}")
+        threading.current_thread().workflow_debug = workflow.workflow_debug
+        threading.current_thread().workflow_id = workflow.workflow_id
+        threading.current_thread().workflow_execution_id = workflow_execution_id
+        threading.current_thread().tenant_id = workflow.context_manager.tenant_id
         errors = []
         results = {}
         try:
@@ -444,9 +449,6 @@ class WorkflowManager:
             )
             self._run_workflow_on_failure(workflow, workflow_execution_id, str(e))
             raise
-        finally:
-            if not test_run:
-                workflow.context_manager.dump()
 
         if errors is not None and any(errors):
             self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
