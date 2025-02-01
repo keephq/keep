@@ -1,3 +1,4 @@
+import logging
 import time
 from enum import Enum
 
@@ -38,7 +39,7 @@ class Step:
         self.conditions = self.config.get("condition", [])
         self.vars = self.config.get("vars", {})
         self.conditions_results = {}
-        self.logger = context_manager.get_logger()
+        self.logger = logging.getLogger(__name__)
         self.__retry = self.on_failure.get("retry", {})
         self.__retry_count = self.__retry.get("count", 0)
         self.__retry_interval = self.__retry.get("interval", 0)
