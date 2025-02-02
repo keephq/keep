@@ -810,14 +810,18 @@ def push_logs_to_db(log_entries):
     if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY:
         for log_entry in log_entries:
             try:
+                try:
+                    # after formatting
+                    message = log_entry["message"][0:255]
+                except Exception:
+                    # before formatting, fallback
+                    message = log_entry["msg"][0:255]
                 log_entry = WorkflowExecutionLog(
                     workflow_execution_id=log_entry["workflow_execution_id"],
                     timestamp=datetime.strptime(
                         log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"
                     ),
-                    message=log_entry["message"][
-                        0:255
-                    ],  # limit the message to 255 chars
+                    message=message,
                     context=json.loads(
                         json.dumps(log_entry.get("context", {}), default=str)
                     ),  # workaround to serialize any object
@@ -829,12 +833,16 @@ def push_logs_to_db(log_entries):
     else:
         for log_entry in log_entries:
             try:
+                try:
+                    # after formatting
+                    message = log_entry["message"][0:255]
+                except Exception:
+                    # before formatting, fallback
+                    message = log_entry["msg"][0:255]
                 log_entry = WorkflowExecutionLog(
                     workflow_execution_id=log_entry["workflow_execution_id"],
                     timestamp=log_entry["created"],
-                    message=log_entry["message"][
-                        0:255
-                    ],  # limit the message to 255 chars
+                    message=message,  # limit the message to 255 chars
                     context=json.loads(
                         json.dumps(log_entry.get("context", {}), default=str)
                     ),  # workaround to serialize any object
