@@ -1,8 +1,10 @@
 import logging
 import os
 
-from keep.api.alert_deduplicator.deduplication_rules_provisioning import provision_deduplication_rules_from_env
 import keep.api.logging
+from keep.api.alert_deduplicator.deduplication_rules_provisioning import (
+    provision_deduplication_rules_from_env,
+)
 from keep.api.api import AUTH_TYPE
 from keep.api.core.db_on_start import migrate_db, try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -87,3 +89,12 @@ def on_starting(server=None):
         os.environ["KEEP_API_URL"] = public_url
 
     logger.info("Keep server started")
+
+
+def post_worker_init(worker):
+    # We need to reinitialize logging in each worker because gunicorn forks the worker processes
+    logging.getLogger().handlers = []  # noqa
+    keep.api.logging.setup_logging()  # noqa
+
+
+post_worker_init = post_worker_init
