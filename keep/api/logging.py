@@ -113,6 +113,7 @@ class WorkflowDBHandler(logging.Handler):
         if not KEEP_STORE_WORKFLOW_LOGS:
             return
         if hasattr(record, "workflow_execution_id") and record.workflow_execution_id:
+            self.format(record)
             self.records.append(record)
 
     def push_logs_to_db(self):
@@ -334,7 +335,7 @@ CONFIG = {
     },
     "loggers": {
         "": {
-            "handlers": ["default", "workflowhandler"],
+            "handlers": ["workflowhandler", "default"],
             "level": "DEBUG",
             "propagate": False,
         },
