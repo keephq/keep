@@ -12,7 +12,7 @@ from clickhouse_driver.dbapi.extras import DictCursor
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.validation.fields import NoSchemeUrl, UrlPort
 
@@ -66,7 +66,7 @@ class ClickhouseProviderAuthConfig:
     )
 
 
-class ClickhouseProvider(BaseProvider):
+class ClickhouseProvider(BaseProvider, ProviderHealthMixin):
     """Enrich alerts with data from Clickhouse."""
 
     PROVIDER_DISPLAY_NAME = "Clickhouse"

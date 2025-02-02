@@ -17,7 +17,7 @@ import requests
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
@@ -60,7 +60,7 @@ class CloudwatchProviderAuthConfig:
     )
 
 
-class CloudwatchProvider(BaseProvider):
+class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
     """Push alarms from AWS Cloudwatch to Keep."""
 
     PROVIDER_DISPLAY_NAME = "CloudWatch"

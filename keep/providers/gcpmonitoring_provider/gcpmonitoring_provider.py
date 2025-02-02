@@ -10,7 +10,7 @@ import pydantic
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
@@ -45,7 +45,7 @@ class GcpmonitoringProviderAuthConfig:
     )
 
 
-class GcpmonitoringProvider(BaseProvider):
+class GcpmonitoringProvider(BaseProvider, ProviderHealthMixin):
     """Get alerts from GCP Monitoring into Keep."""
 
     webhook_description = ""
