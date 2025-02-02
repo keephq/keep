@@ -82,6 +82,7 @@ class WorkflowContextFilter(logging.Filter):
 class WorkflowDBHandler(logging.Handler):
     def __init__(self, flush_interval: int = 2):
         super().__init__()
+        logging.getLogger(__name__).info("Initializing WorkflowDBHandler")
         self.records = []
         self.flush_interval = flush_interval
         self._stop_event = threading.Event()
@@ -90,7 +91,9 @@ class WorkflowDBHandler(logging.Handler):
         self._timer_thread.daemon = (
             True  # Make it a daemon so it stops when program exits
         )
+        logging.getLogger(__name__).info("Starting WorkflowDBHandler timer thread")
         self._timer_thread.start()
+        logging.getLogger(__name__).info("Started WorkflowDBHandler timer thread")
 
     def _timer_run(self):
         while not self._stop_event.is_set():
@@ -120,7 +123,9 @@ class WorkflowDBHandler(logging.Handler):
             return
 
         try:
+            logging.getLogger(__name__).info("Flushing workflow logs to DB")
             self.push_logs_to_db()
+            logging.getLogger(__name__).info("Flushed workflow logs to DB")
         except Exception as e:
             # Use the parent logger to avoid infinite recursion
             logging.getLogger(__name__).error(
