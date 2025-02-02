@@ -36,7 +36,7 @@ export function WorkflowDefinitionYAML({
     const workflow = load(content) as any;
     const workflowData = workflow.workflow;
 
-    const metadataFields = ["id", "name", "description", "disabled"];
+    const metadataFields = ["id", "name", "description", "disabled", "debug"];
     const sectionOrder = [
       "triggers",
       "consts",

@@ -178,6 +178,7 @@ class Parser:
             "strategy", WorkflowStrategy.NONPARALLEL_WITH_RETRY.value
         )
         workflow_consts = workflow.get("consts", {})
+        workflow_debug = workflow.get("debug", False)
 
         workflow = Workflow(
             workflow_id=workflow_id,
@@ -194,6 +195,7 @@ class Parser:
             workflow_providers_type=workflow_provider_types,
             workflow_strategy=workflow_strategy,
             workflow_consts=workflow_consts,
+            workflow_debug=workflow_debug,
         )
         self.logger.debug("Workflow parsed successfully")
         return workflow

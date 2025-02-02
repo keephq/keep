@@ -20,13 +20,15 @@ from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.config import config
-from keep.api.core.db import get_alert_audit as get_alert_audit_db, enrich_alerts_with_incidents, \
-    is_all_alerts_resolved, get_session
+from keep.api.core.db import enrich_alerts_with_incidents
+from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_metrics_by_provider,
     get_enrichment,
-    get_last_alerts
+    get_last_alerts,
+    get_session,
+    is_all_alerts_resolved,
 )
 from keep.api.core.alerts import get_alert_facets, get_alert_facets_data, get_alert_potential_facet_fields, query_last_alerts
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
@@ -36,7 +38,8 @@ from keep.api.models.alert import (
     AlertDto,
     DeleteRequestBody,
     EnrichAlertRequestBody,
-    UnEnrichAlertRequestBody, IncidentStatus,
+    IncidentStatus,
+    UnEnrichAlertRequestBody,
 )
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import ActionType
@@ -708,7 +711,7 @@ def enrich_alert(
         enrich_data,
         authenticated_entity=authenticated_entity,
         dispose_on_new_alert=dispose_on_new_alert,
-        session=session
+        session=session,
     )
 
 
@@ -718,7 +721,7 @@ def _enrich_alert(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
     dispose_on_new_alert: Optional[bool] = False,
-    session: Optional[Session] = None
+    session: Optional[Session] = None,
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -822,12 +825,13 @@ def _enrich_alert(
                 tenant_id=tenant_id, events=[enriched_alerts_dto[0]]
             )
 
-        if should_check_incidents_resolution:
+        # @tb add "and session" cuz I saw AttributeError: 'NoneType' object has no attribute 'add'"
+        if should_check_incidents_resolution and session:
             enrich_alerts_with_incidents(tenant_id=tenant_id, alerts=alert)
             for incident in alert[0]._incidents:
-                if incident.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
-                    incident=incident,
-                    session=session
+                if (
+                    incident.resolve_on == ResolveOn.ALL.value
+                    and is_all_alerts_resolved(incident=incident, session=session)
                 ):
                     incident.status = IncidentStatus.RESOLVED.value
                     session.add(incident)

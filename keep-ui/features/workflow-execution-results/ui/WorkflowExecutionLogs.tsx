@@ -262,7 +262,8 @@ export function WorkflowExecutionLogs({
       // Create new group if we're switching context
       if (currentStepName) {
         const messageBelongsToCurrentStep =
-          log.message?.includes(currentStepName);
+          log.message?.includes(currentStepName) ||
+          log.context?.step_id === currentStepName;
         const needsNewGroup =
           stepStartMatch || messageBelongsToCurrentStep
             ? currentGroup.id !== currentStepName
