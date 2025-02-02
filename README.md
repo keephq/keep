@@ -224,13 +224,19 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/netbox-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/netbox-icon.png" alt="NetBox"/><br/>
+            NetBox
+        </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/netdata-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/netdata-icon.png" alt="Netdata"/><br/>
             Netdata
         </a>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/new-relic-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/newrelic-icon.png" alt="New Relic"/><br/>
@@ -261,14 +267,14 @@
             Rollbar
         </a>
     </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/sentry-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/sentry-icon.png" alt="Sentry"/><br/>
             Sentry
         </a>
     </td>
-</tr>
-<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/signalfx-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/signalfx-icon.png" alt="SignalFX"/><br/>
@@ -299,14 +305,14 @@
           StatusCake
         </a>
   </td>
+</tr>
+<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/sumologic-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/sumologic-icon.png" alt="SumoLogic"/><br/>
           SumoLogic
         </a>
   </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/uptimekuma-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/uptimekuma-icon.png" alt="UptimeKuma"/><br/>
