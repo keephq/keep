@@ -806,32 +806,42 @@ def push_logs_to_db(log_entries):
     # avoid circular import
     from keep.api.logging import LOG_FORMAT, LOG_FORMAT_OPEN_TELEMETRY
 
+    db_log_entries = []
     if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY:
-        db_log_entries = [
-            WorkflowExecutionLog(
-                workflow_execution_id=log_entry["workflow_execution_id"],
-                timestamp=datetime.strptime(
-                    log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"
-                ),
-                message=log_entry["message"][0:255],  # limit the message to 255 chars
-                context=json.loads(
-                    json.dumps(log_entry.get("context", {}), default=str)
-                ),  # workaround to serialize any object
-            )
-            for log_entry in log_entries
-        ]
+        for log_entry in log_entries:
+            try:
+                WorkflowExecutionLog(
+                    workflow_execution_id=log_entry["workflow_execution_id"],
+                    timestamp=datetime.strptime(
+                        log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"
+                    ),
+                    message=log_entry["message"][
+                        0:255
+                    ],  # limit the message to 255 chars
+                    context=json.loads(
+                        json.dumps(log_entry.get("context", {}), default=str)
+                    ),  # workaround to serialize any object
+                )
+                db_log_entries.append(log_entry)
+            except Exception:
+                print("Failed to parse log entry - ", log_entry)
+
     else:
-        db_log_entries = [
-            WorkflowExecutionLog(
-                workflow_execution_id=log_entry["workflow_execution_id"],
-                timestamp=log_entry["created"],
-                message=log_entry["message"][0:255],  # limit the message to 255 chars
-                context=json.loads(
-                    json.dumps(log_entry.get("context", {}), default=str)
-                ),  # workaround to serialize any object
-            )
-            for log_entry in log_entries
-        ]
+        for log_entry in log_entries:
+            try:
+                log_entry = WorkflowExecutionLog(
+                    workflow_execution_id=log_entry["workflow_execution_id"],
+                    timestamp=log_entry["created"],
+                    message=log_entry["message"][
+                        0:255
+                    ],  # limit the message to 255 chars
+                    context=json.loads(
+                        json.dumps(log_entry.get("context", {}), default=str)
+                    ),  # workaround to serialize any object
+                )
+                db_log_entries.append(log_entry)
+            except Exception:
+                print("Failed to parse log entry - ", log_entry)
 
     # Add the LogEntry instances to the database session
     with Session(engine) as session:

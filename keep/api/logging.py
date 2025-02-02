@@ -43,6 +43,7 @@ class WorkflowContextFilter(logging.Filter):
         if not workflow_id:
             return False
 
+        print("Adding workflow_id to log record")
         # Skip DEBUG logs unless debug mode is enabled
         if not getattr(thread, "workflow_debug", False) and record.levelname == "DEBUG":
             return False
@@ -97,9 +98,9 @@ class WorkflowDBHandler(logging.Handler):
 
     def _timer_run(self):
         while not self._stop_event.is_set():
-            logging.getLogger(__name__).info("Timer running")
+            # logging.getLogger(__name__).info("Timer running")
             self.flush()
-            logging.getLogger(__name__).info("Timer sleeping")
+            # logging.getLogger(__name__).info("Timer sleeping")
             self._stop_event.wait(self.flush_interval)  # Wait but can be interrupted
 
     def close(self):
@@ -459,22 +460,6 @@ class CustomizedUvicornLogger(logging.Logger):
         )
 
 
-# MONKEY PATCHING http.client
-# See: https://stackoverflow.com/questions/58738195/python-http-request-and-debug-level-logging-to-the-log-file
-http_client_logger = logging.getLogger("http.client")
-http_client_logger.setLevel(logging.DEBUG)
-http.client.HTTPConnection.debuglevel = 1
-
-
-def print_to_log(*args):
-    http_client_logger.debug(" ".join(args))
-
-
-# monkey-patch a `print` global into the http.client module; all calls to
-# print() in that module will then use our print_to_log implementation
-http.client.print = print_to_log
-
-
 def setup_logging():
     # Add file handler if KEEP_LOG_FILE is set
     if KEEP_LOG_FILE:
@@ -489,3 +474,15 @@ def setup_logging():
         CONFIG["loggers"][""]["handlers"].append("file")
 
     logging.config.dictConfig(CONFIG)
+    # MONKEY PATCHING http.client
+    # See: https://stackoverflow.com/questions/58738195/python-http-request-and-debug-level-logging-to-the-log-file
+    http_client_logger = logging.getLogger("http.client")
+    http_client_logger.setLevel(logging.DEBUG)
+    http.client.HTTPConnection.debuglevel = 1
+
+    def print_to_log(*args):
+        http_client_logger.debug(" ".join(args))
+
+    # monkey-patch a `print` global into the http.client module; all calls to
+    # print() in that module will then use our print_to_log implementation
+    http.client.print = print_to_log
