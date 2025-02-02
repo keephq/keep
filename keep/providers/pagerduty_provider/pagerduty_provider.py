@@ -24,7 +24,7 @@ from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import (
     BaseIncidentProvider,
     BaseProvider,
-    BaseTopologyProvider,
+    BaseTopologyProvider, ProviderHealthMixin,
 )
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
@@ -69,7 +69,7 @@ class PagerdutyProviderAuthConfig:
     )
 
 
-class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
+class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider, ProviderHealthMixin):
     """Pull alerts and query incidents from PagerDuty."""
 
     PROVIDER_SCOPES = [

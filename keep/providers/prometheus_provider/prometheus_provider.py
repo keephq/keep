@@ -12,7 +12,7 @@ from requests.auth import HTTPBasicAuth
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
@@ -42,7 +42,7 @@ class PrometheusProviderAuthConfig:
     )
 
 
-class PrometheusProvider(BaseProvider):
+class PrometheusProvider(BaseProvider, ProviderHealthMixin):
     """Get alerts from Prometheus into Keep."""
 
     webhook_description = "This provider takes advantage of configurable webhooks available with Prometheus Alertmanager. Use the following template to configure AlertManager:"
