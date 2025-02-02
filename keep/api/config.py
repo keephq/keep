@@ -93,8 +93,10 @@ def on_starting(server=None):
 
 def post_worker_init(worker):
     # We need to reinitialize logging in each worker because gunicorn forks the worker processes
+    print("Init logging in worker")
     logging.getLogger().handlers = []  # noqa
     keep.api.logging.setup_logging()  # noqa
+    print("Logging initialized in worker")
 
 
 post_worker_init = post_worker_init
