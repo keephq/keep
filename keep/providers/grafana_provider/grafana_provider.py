@@ -15,7 +15,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
-from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider
+from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider, ProviderHealthMixin
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.grafana_provider.grafana_alert_format_description import (
     GrafanaAlertFormatDescription,
@@ -58,7 +58,7 @@ class GrafanaProviderAuthConfig:
     )
 
 
-class GrafanaProvider(BaseTopologyProvider):
+class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
     PROVIDER_DISPLAY_NAME = "Grafana"
     """Pull/Push alerts & Topology map from Grafana."""
 
