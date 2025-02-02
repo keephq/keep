@@ -810,7 +810,7 @@ def push_logs_to_db(log_entries):
     if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY:
         for log_entry in log_entries:
             try:
-                WorkflowExecutionLog(
+                log_entry = WorkflowExecutionLog(
                     workflow_execution_id=log_entry["workflow_execution_id"],
                     timestamp=datetime.strptime(
                         log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"
