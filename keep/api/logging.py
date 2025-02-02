@@ -97,7 +97,9 @@ class WorkflowDBHandler(logging.Handler):
 
     def _timer_run(self):
         while not self._stop_event.is_set():
+            logging.getLogger(__name__).info("Timer running")
             self.flush()
+            logging.getLogger(__name__).info("Timer sleeping")
             self._stop_event.wait(self.flush_interval)  # Wait but can be interrupted
 
     def close(self):
