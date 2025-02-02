@@ -816,11 +816,17 @@ def push_logs_to_db(log_entries):
                 except Exception:
                     # before formatting, fallback
                     message = log_entry["msg"][0:255]
+
+                try:
+                    timestamp = datetime.strptime(
+                        log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"
+                    )
+                except Exception:
+                    timestamp = log_entry["created"]
+
                 log_entry = WorkflowExecutionLog(
                     workflow_execution_id=log_entry["workflow_execution_id"],
-                    timestamp=datetime.strptime(
-                        log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"
-                    ),
+                    timestamp=timestamp,
                     message=message,
                     context=json.loads(
                         json.dumps(log_entry.get("context", {}), default=str)
