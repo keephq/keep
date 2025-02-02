@@ -30,6 +30,7 @@ const MonacoYAMLEditor = ({
       const workflowKeyOrder = [
         "id",
         "name",
+        "debug",
         "description",
         "triggers",
         "steps",

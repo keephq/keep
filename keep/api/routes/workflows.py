@@ -239,7 +239,10 @@ def run_workflow(
     except Exception as e:
         logger.exception(
             "Failed to run workflow",
-            extra={"workflow_id": workflow_id},
+            extra={
+                "workflow_id": workflow_id,
+                "tenant_id": tenant_id,
+            },
         )
         raise HTTPException(
             status_code=500,
