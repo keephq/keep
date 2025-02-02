@@ -11,7 +11,7 @@ import requests
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
@@ -36,7 +36,7 @@ class IncidentioProviderAuthConfig:
     )
 
 
-class IncidentioProvider(BaseProvider):
+class IncidentioProvider(BaseProvider, ProviderHealthMixin):
     """Receive Incidents from Incidentio."""
 
     PROVIDER_DISPLAY_NAME = "incident.io"
