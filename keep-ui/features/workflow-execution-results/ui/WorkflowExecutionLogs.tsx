@@ -83,6 +83,12 @@ function getAccordionHeaderClassName(
         isHovered && "bg-yellow-200",
         isOpen && "border-yellow-200"
       );
+    case "skipped":
+      return clsx(
+        "bg-gray-100 hover:bg-gray-200",
+        isHovered && "bg-gray-200",
+        isOpen && "border-gray-200"
+      );
     default:
       return clsx(
         "hover:bg-gray-200",
