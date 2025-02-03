@@ -286,7 +286,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           }}
           selectId="0"
           options={attributes}
-          disabled={(!editMode && !parsedData) || mappingType === "topology"}
+          disabled={!editMode && !parsedData}
           defaultValue={selectedLookupAttributes.join("||")}
           className="mt-1"
         />
@@ -301,10 +301,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         </Text>
       </div>
       <div className="mt-2.5">
-        <Text>Result attributes</Text>
-        <Text className="text-xs">
-          (E.g. attributes that will be added to matching incoming alerts)
-        </Text>
+        <Text>Enriched with</Text>
         <div className="flex flex-col gap-1 py-1">
           {selectedLookupAttributes.length === 0 ? (
             <Badge color="gray">...</Badge>
