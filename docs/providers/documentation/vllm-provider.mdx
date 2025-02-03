@@ -38,21 +38,29 @@ To connect to a vLLM deployment:
 
 ## Structured Output
 
-Example:
+Structure output for vLLM should follow Json Schema notation. Example:
 
 ```yaml
-  structured_output_format:
-    type: object
-    properties:
-      environment:
-        type: string
-        enum:
-          - production
-          - debug
-          - pre-prod
-      impacted_customer_name:
-        type: string
-    required:
-      - environment
-      - impacted_customer_name
+steps:
+  - name: get-enrichments
+    provider:
+      config: "{{ providers.my_vllm }}"
+      type: vllm
+      with:
+        prompt: "You received such an alert {{alert}}, generate missing fields."
+        model: "Qwen/Qwen1.5-1.8B-Chat" # This model supports structured output
+        structured_output_format: # We limit what model could return
+          type: object
+          properties:
+            environment:
+              type: string
+              enum:
+                - production
+                - debug
+                - pre-prod
+            impacted_customer_name:
+              type: string
+          required:
+            - environment
+            - impacted_customer_name
 ```
