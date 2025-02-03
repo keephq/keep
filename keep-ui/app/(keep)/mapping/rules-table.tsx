@@ -1,6 +1,7 @@
 import {
   Badge,
   Button,
+  Icon,
   Table,
   TableBody,
   TableCell,
@@ -25,6 +26,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import * as HoverCard from "@radix-ui/react-hover-card";
 import TimeAgo from "react-timeago";
+import { FaFileCsv, FaFileCode, FaNetworkWired } from "react-icons/fa";
 
 const columnHelper = createColumnHelper<MappingRule>();
 
@@ -32,6 +34,27 @@ interface Props {
   mappings: MappingRule[];
   editCallback: (rule: MappingRule) => void;
 }
+
+const getTypeIcon = (type: string) => {
+  switch (type) {
+    case "csv":
+      return <Icon icon={FaFileCsv} tooltip="CSV" className="text-green-500" />;
+    case "json":
+      return (
+        <Icon icon={FaFileCode} tooltip="JSON" className="text-blue-500" />
+      );
+    case "topology":
+      return (
+        <Icon
+          icon={FaNetworkWired}
+          tooltip="Topology"
+          className="text-purple-500"
+        />
+      );
+    default:
+      return null;
+  }
+};
 
 export default function RulesTable({ mappings, editCallback }: Props) {
   const api = useApi();
@@ -55,12 +78,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
     columnHelper.display({
       id: "type",
       header: "Type",
-      cell: (context) => context.row.original.type,
-    }),
-    columnHelper.display({
-      id: "fileName",
-      header: "Original File Name",
-      cell: (context) => context.row.original.file_name,
+      cell: (context) => getTypeIcon(context.row.original.type),
     }),
     columnHelper.display({
       id: "matchers",
@@ -166,7 +184,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       <TableBody>
         {table.getRowModel().rows.map((row) => (
           <>
-            <HoverCard.Root openDelay={100} closeDelay={200}>
+            <HoverCard.Root openDelay={2000} closeDelay={1000}>
               <HoverCard.Trigger asChild className="hover:cursor-pointer">
                 <TableRow
                   className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 group"
@@ -239,6 +257,16 @@ export default function RulesTable({ mappings, editCallback }: Props) {
                             {row.original.updated_by}
                           </span>
                         </div>
+                        {row.original.file_name && (
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              File Name:
+                            </span>
+                            <span className="whitespace-nowrap text-sm text-gray-900">
+                              {row.original.file_name}
+                            </span>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

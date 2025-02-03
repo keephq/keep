@@ -102,6 +102,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
     } else {
       setParsedData(topologyData!);
       setMappingType("topology");
+      setSelectedLookupAttributes(["service"]);
     }
   };
 
@@ -194,17 +195,37 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       className="w-full py-2 h-full overflow-y-auto"
       onSubmit={editMode ? updateRule : addRule}
     >
-      <Subtitle>Mapping Metadata</Subtitle>
-      <div className="mt-2.5">
-        <Text>
-          Name<span className="text-red-500 text-xs">*</span>
-        </Text>
-        <TextInput
-          placeholder="Map Name"
-          required={true}
-          value={mapName}
-          onValueChange={setMapName}
-        />
+      <div className="mt-2.5 flex space-x-4">
+        <div className="flex-1">
+          <Text>
+            Name<span className="text-red-500 text-xs">*</span>
+          </Text>
+          <TextInput
+            placeholder="Map Name"
+            required={true}
+            value={mapName}
+            onValueChange={setMapName}
+          />
+        </div>
+        <div className="flex-1/5">
+          <Text>
+            Priority
+            <Icon
+              icon={InformationCircleIcon}
+              size="xs"
+              color="gray"
+              tooltip="Higher priority will be executed first"
+            />
+          </Text>
+          <NumberInput
+            placeholder="Priority"
+            required={true}
+            value={priority}
+            onValueChange={setPriority}
+            min={0}
+            max={100}
+          />
+        </div>
       </div>
       <div className="mt-2.5">
         <Text>Description</Text>
@@ -212,25 +233,6 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           placeholder="Map Description"
           value={mapDescription}
           onValueChange={setMapDescription}
-        />
-      </div>
-      <div className="mt-2.5">
-        <Text>
-          Priority
-          <Icon
-            icon={InformationCircleIcon}
-            size="xs"
-            color="gray"
-            tooltip="Higher priority will be executed first"
-          />
-        </Text>
-        <NumberInput
-          placeholder="Priority"
-          required={true}
-          value={priority}
-          onValueChange={setPriority}
-          min={0}
-          max={100}
         />
       </div>
       <Divider />
@@ -277,17 +279,14 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       </div>
       <Subtitle className="mt-2.5">Mapping Schema</Subtitle>
       <div className="mt-2.5">
-        <Text>Alert lookup attributes to match against the uploaded CSV</Text>
-        <Text className="text-xs">
-          (E.g. the attributes that we will try to match before enriching)
-        </Text>
+        <Text>Lookup attributes</Text>
         <CreateableSearchSelect
           onFieldChange={(key, val) => {
             setSelectedLookupAttributes(val.split("||"));
           }}
           selectId="0"
           options={attributes}
-          disabled={!editMode && !parsedData}
+          disabled={(!editMode && !parsedData) || mappingType === "topology"}
           defaultValue={selectedLookupAttributes.join("||")}
           className="mt-1"
         />
