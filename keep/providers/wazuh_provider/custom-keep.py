@@ -131,7 +131,7 @@ def generate_msg(alert: any, options: any) -> any:
     result = {
         "message": title,
         "severity": severity,
-        "description": f"Rule ID {rule_id}\nLevel {level}\nAgent ID {agent_id}\nAgent Name {agent_name}\nTitle {title}\n Full Log {full_log}\n",
+        "description": f"Rule ID {rule_id}\nLevel {level}\nAgent ID {agent_id}\nAgent Name {agent_name}\nTitle {title}\nFull Log {full_log}\n",
         "created_at": created_at,
     }
     return result

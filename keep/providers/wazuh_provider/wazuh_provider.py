@@ -54,6 +54,9 @@ class WazuhProvider(BaseProvider):
             source=["wazuh"],
             lastReceived=event["created_at"],
         )
+        alert.fingerprint =WazuhProvider.get_alert_fingerprint(
+            alert, fingerprint_fields=WazuhProvider.FINGERPRINT_FIELDS
+        )
 
         return alert
 
