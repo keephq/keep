@@ -25,6 +25,10 @@ function buildCel(
   facetOptions: { [key: string]: FacetOptionDto[] },
   facetsState: FacetState
 ): string {
+  if (facetOptions == null) {
+    return "";
+  }
+
   const cel = Object.values(facets)
     .filter((facet) => facet.id in facetsState)
     .map((facet) => {
