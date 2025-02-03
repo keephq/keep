@@ -60,18 +60,22 @@ To send alerts from Dash0 to Keep, Use the following webhook url to configure Da
   def _format_alert(
      event: dict, provider_instance: "BaseProvider" = None
   ) -> AlertDto:
+
+    data = event.get("data")
+    issue = data.get("issue")
+
     alert = AlertDto(
-       id=event["data"]["issue"]["id"],
-       name=event["type"],
-       description=event["data"]["issue"]["description"],
-       summary=event["data"]["issue"]["summary"],
-       url=event["data"]["issue"]["url"],
-       status=Dash0Provider.STATUS_MAP[event["data"]["issue"]["status"]],
-       severity=Dash0Provider.SEVERITIES_MAP[event["data"]["issue"]["status"]],
-       lastReceived=event["data"]["issue"].get("end", event["data"]["issue"]["start"]),
-       startedAt=event["data"]["issue"]["start"],
-       labels=event["data"]["issue"]["labels"],
-       checkrules=event["data"]["issue"]["checkrules"],
+       id=issue.get("id"),
+       name=event.get("type"),
+       description=issue.get("description"),
+       summary=issue.get("summary"),
+       url=issue.get("url"),
+       status=Dash0Provider.STATUS_MAP.get(issue.get("status")),
+       severity=Dash0Provider.SEVERITIES_MAP.get(issue.get("status")),
+       lastReceived=issue.get("end", issue.get("start")),
+       startedAt=issue.get("start"),
+       labels=issue.get("labels", []),
+       checkrules=issue.get("checkrules", []),
        source=["dash0"],
     )
 
