@@ -30,12 +30,13 @@ import { IncidentDropdownMenu } from "./incident-dropdown-menu";
 import clsx from "clsx";
 import { IncidentChangeStatusSelect } from "@/features/change-incident-status/";
 import { useIncidentActions } from "@/entities/incidents/model";
-import { IncidentSeverityBadge } from "@/entities/incidents/ui";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import {
   DateTimeField,
   TableIndeterminateCheckbox,
   TablePagination,
+  TableSeverityCell,
+  UISeverity,
 } from "@/shared/ui";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
@@ -122,6 +123,22 @@ export default function IncidentsTable({
 
   const columns = [
     columnHelper.display({
+      id: "severity",
+      header: () => <></>,
+      cell: ({ row }) => (
+        <TableSeverityCell
+          severity={row.original.severity as unknown as UISeverity}
+        />
+      ),
+      size: 4,
+      minSize: 4,
+      maxSize: 4,
+      meta: {
+        tdClassName: "p-0",
+        thClassName: "p-0",
+      },
+    }),
+    columnHelper.display({
       id: "selected",
       minSize: 32,
       maxSize: 32,
@@ -178,13 +195,6 @@ export default function IncidentsTable({
     columnHelper.accessor("alerts_count", {
       id: "alerts_count",
       header: "Alerts",
-    }),
-    columnHelper.accessor("severity", {
-      id: "severity",
-      header: "Severity",
-      cell: ({ row }) => (
-        <IncidentSeverityBadge severity={row.original.severity} />
-      ),
     }),
     columnHelper.display({
       id: "alert_sources",
@@ -266,7 +276,7 @@ export default function IncidentsTable({
       pagination,
       sorting,
       columnPinning: {
-        left: ["selected"],
+        left: ["severity", "selected"],
         right: ["actions"],
       },
     },
