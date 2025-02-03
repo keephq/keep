@@ -66,7 +66,7 @@ To send alerts from Dash0 to Keep, Use the following webhook url to configure Da
 
     alert = AlertDto(
        id=issue.get("id"),
-       name=event.get("type"),
+       name=issue.get("summary"),
        description=issue.get("description"),
        summary=issue.get("summary"),
        url=issue.get("url"),
