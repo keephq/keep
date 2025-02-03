@@ -504,8 +504,8 @@ export const AlertsRulesBuilder = ({
           operators: getOperators(id),
         }))
     : customFields
-    ? customFields
-    : [];
+      ? customFields
+      : [];
 
   const onImportSQL = () => {
     setImportSQLOpen(true);

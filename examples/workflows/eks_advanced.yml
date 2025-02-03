@@ -1,0 +1,64 @@
+workflow:
+  id: eks-example-advanced
+  description: eks-example-advanced
+  triggers:
+    - type: manual
+  steps:
+    # get all pods
+    - name: get-pods
+      provider:
+        type: eks
+        config: "{{ providers.eks }}"
+        with:
+          command_type: get_pods
+
+    # get specific deployment info
+    - name: get-deployment-info
+      provider:
+        type: eks
+        config: "{{ providers.eks }}"
+        with:
+          command_type: get_deployment
+          namespace: default
+          deployment_name: nginx-test
+
+    # scale up deployment
+    - name: scale-up
+      provider:
+        type: eks
+        config: "{{ providers.eks }}"
+        with:
+          command_type: scale_deployment
+          namespace: default
+          deployment_name: nginx-test
+          replicas: 4
+
+    # get pods after scaling
+    - name: get-pods-after-scale
+      provider:
+        type: eks
+        config: "{{ providers.eks }}"
+        with:
+          command_type: get_pods
+          namespace: default
+
+  actions:
+    - name: echo-all-pods
+      foreach: "{{ steps.get-pods.results }}"
+      provider:
+        type: console
+        with:
+          message: "Pod name: {{ foreach.value.metadata.name }} || Namespace: {{ foreach.value.metadata.namespace }} || Status: {{ foreach.value.status.phase }}"
+
+    - name: echo-deployment-info
+      provider:
+        type: console
+        with:
+          message: "Deployment {{ steps.get-deployment-info.results.metadata.name }} has {{ steps.get-deployment-info.results.status.replicas }} replicas"
+
+    - name: echo-scaled-pods
+      foreach: "{{ steps.get-pods-after-scale.results }}"
+      provider:
+        type: console
+        with:
+          message: "After scaling - Pod name: {{ foreach.value.metadata.name }} || Status: {{ foreach.value.status.phase }}"

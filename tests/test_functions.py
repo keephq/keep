@@ -11,6 +11,7 @@ from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertStatus
 from keep.api.models.db.alert import ActionType
+from keep.iohandler.iohandler import IOHandler
 
 
 @pytest.mark.parametrize(
@@ -757,3 +758,121 @@ def test_is_business_hours_string_input_with_timezone():
     assert (
         functions.is_business_hours("2024-03-25T20:00:00Z", timezone=paris_tz) == False
     )
+
+
+def test_render_without_execution(mocked_context_manager):
+    """
+    Test rendering a template without executing it's internal keep functions.
+    """
+    template = "My yaml is: {{ yaml }}!"
+    context = {"yaml": "keep.is_business_hours(2024-03-25T14:00:00Z)"}
+    mocked_context_manager.get_full_context.return_value = context
+    iohandler = IOHandler(mocked_context_manager)
+    with pytest.raises(Exception):
+        iohandler.render(
+            template,
+            safe=True,
+        )
+
+    template = "raw_render_without_execution(My yaml is: {{ yaml }}!)"
+    rendered = iohandler.render(
+        template,
+        safe=True,
+    )
+    assert rendered == "My yaml is: keep.is_business_hours(2024-03-25T14:00:00Z)!"
+
+
+def test_dictget_basic():
+    """
+    Test basic dictionary get functionality
+    """
+    data = {"a": 1, "b": 2, "c": 3}
+    assert functions.dictget(data, "a", 0) == 1
+    assert functions.dictget(data, "b", 0) == 2
+    assert functions.dictget(data, "c", 0) == 3
+
+
+def test_dictget_missing_key():
+    """
+    Test getting a missing key returns default value
+    """
+    data = {"a": 1, "b": 2}
+    assert functions.dictget(data, "z", "default") == "default"
+    assert functions.dictget(data, "missing", None) is None
+
+
+def test_dictget_json_string():
+    """
+    Test getting values from JSON string input
+    """
+    data = '{"name": "test", "value": 42}'
+    assert functions.dictget(data, "name", "") == "test"
+    assert functions.dictget(data, "value", 0) == 42
+
+
+def test_dictget_invalid_json():
+    """
+    Test behavior with invalid JSON string
+    """
+    data = "not a json string"
+    assert functions.dictget(data, "key", "default") == "default"
+
+
+def test_dictget_none_input():
+    """
+    Test behavior with None input
+    """
+    assert functions.dictget(None, "key", "default") == "default"
+
+
+def test_dictget_empty_dict():
+    """
+    Test behavior with empty dictionary
+    """
+    data = {}
+    assert functions.dictget(data, "any_key", "default") == "default"
+
+
+def test_dictget_nested_dict():
+    """
+    Test behavior with nested dictionary structure
+    """
+    data = {"outer": {"inner": "value"}}
+    assert functions.dictget(data, "outer", {}) == {"inner": "value"}
+
+
+def test_dictget_different_value_types():
+    """
+    Test getting different value types
+    """
+    data = {
+        "string": "text",
+        "number": 42,
+        "boolean": True,
+        "list": [1, 2, 3],
+        "dict": {"key": "value"},
+    }
+    assert functions.dictget(data, "string", "") == "text"
+    assert functions.dictget(data, "number", 0) == 42
+    assert functions.dictget(data, "boolean", False) is True
+    assert functions.dictget(data, "list", []) == [1, 2, 3]
+    assert functions.dictget(data, "dict", {}) == {"key": "value"}
+
+
+def test_dictget_with_severities():
+    """
+    Test the specific use case shown in the workflow example
+    """
+    severities = {
+        "s1": "critical",
+        "s2": "error",
+        "s3": "warning",
+        "s4": "info",
+        "critical": "critical",
+        "error": "error",
+        "warning": "warning",
+        "info": "info",
+    }
+    assert functions.dictget(severities, "s1", "info") == "critical"
+    assert functions.dictget(severities, "s2", "info") == "error"
+    assert functions.dictget(severities, "unknown", "info") == "info"

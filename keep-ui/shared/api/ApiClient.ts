@@ -5,6 +5,7 @@ import { getApiUrlFromConfig } from "@/shared/lib/getApiUrlFromConfig";
 import { getApiURL } from "@/utils/apiUrl";
 import * as Sentry from "@sentry/nextjs";
 import { signOut as signOutClient } from "next-auth/react";
+import { GuestSession } from "@/types/auth";
 
 const READ_ONLY_ALLOWED_METHODS = ["GET", "OPTIONS"];
 const READ_ONLY_ALWAYS_ALLOWED_URLS = ["/alerts/audit"];
@@ -12,7 +13,7 @@ const READ_ONLY_ALWAYS_ALLOWED_URLS = ["/alerts/audit"];
 export class ApiClient {
   private readonly isServer: boolean;
   constructor(
-    private readonly session: Session | null,
+    private readonly session: Session | GuestSession | null,
     private readonly config: InternalConfig | null
   ) {
     this.isServer = typeof window === "undefined";
@@ -25,6 +26,10 @@ export class ApiClient {
   getHeaders() {
     if (!this.session || !this.session.accessToken) {
       throw new Error("No valid session or access token found");
+    }
+    // Guest session
+    if (this.session.accessToken === "unauthenticated") {
+      return {}
     }
     return {
       Authorization: `Bearer ${this.session.accessToken}`,
@@ -137,7 +142,7 @@ export class ApiClient {
     const response = await fetch(fullUrl, {
       ...requestInit,
       headers: {
-        ...this.getHeaders(),
+        ...(this.getHeaders() as HeadersInit),
         ...requestInit.headers,
       },
     });

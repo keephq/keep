@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo } from "react";
 import { Icon } from "@tremor/react";
-import Image from "next/image";
 import { Text } from "@tremor/react";
 import { FacetValueProps } from "./alert-table-facet-types";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
@@ -11,6 +10,7 @@ import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { useUser } from "@/entities/users/model/useUser";
 import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -31,7 +31,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
     100,
     undefined,
     undefined,
-    undefined,
+    "",
     {
       revalidateOnFocus: false,
     }
@@ -74,7 +74,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
     (label: string, facetKey: string) => {
       if (facetKey === "source") {
         return (
-          <Image
+          <DynamicImageProviderIcon
             className="inline-block"
             alt={label}
             height={16}

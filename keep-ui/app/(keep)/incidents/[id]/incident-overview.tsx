@@ -12,7 +12,7 @@ import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import Markdown from "react-markdown";
 import { Badge, Callout } from "@tremor/react";
-import { Button, DynamicIcon, Link } from "@/components/ui";
+import { Button, DynamicImageProviderIcon, Link } from "@/components/ui";
 import { IncidentChangeStatusSelect } from "@/features/change-incident-status";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { DateTimeField, FieldHeader } from "@/shared/ui";
@@ -219,7 +219,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
 
   return (
     // Adding padding bottom to visually separate from the tabs
-    <div className="flex max-h-48 gap-6 items-start w-full text-tremor-default">
+    <div className="flex max-h-56 gap-6 items-start w-full text-tremor-default">
       <div className="basis-2/3 grow">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <div className="max-w-2xl">
@@ -305,10 +305,12 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                       icon={
                         incident.enrichments?.incident_provider
                           ? (props: any) => (
-                              <DynamicIcon
+                              <DynamicImageProviderIcon
                                 providerType={
                                   incident.enrichments?.incident_provider
                                 }
+                                height="24"
+                                width="24"
                                 {...props}
                               />
                             )
@@ -340,7 +342,12 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                           color="orange"
                           size="sm"
                           icon={(props: any) => (
-                            <DynamicIcon providerType="github" {...props} />
+                            <DynamicImageProviderIcon
+                              providerType="github"
+                              height="24"
+                              width="24"
+                              {...props}
+                            />
                           )}
                           className="cursor-pointer"
                           onClick={() => window.open(repo, "_blank")}

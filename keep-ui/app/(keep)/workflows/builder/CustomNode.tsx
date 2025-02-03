@@ -12,6 +12,7 @@ import { toast } from "react-toastify";
 import { FlowNode } from "@/app/(keep)/workflows/builder/types";
 import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
 import { DebugNodeInfo } from "./debug-info";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 function IconUrlProvider(data: FlowNode["data"]) {
   const { componentType, type } = data || {};
@@ -120,7 +121,7 @@ function CustomNode({ id, data }: FlowNode) {
             <div className="container p-2 flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
               {getTriggerIcon(data)}
               {!!data && !["interval", "manual"].includes(data.type) && (
-                <Image
+                <DynamicImageProviderIcon
                   src={IconUrlProvider(data) || "/keep.png"}
                   alt={data?.type}
                   className="object-cover w-8 h-8 rounded-full bg-gray-100"

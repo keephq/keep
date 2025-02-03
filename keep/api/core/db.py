@@ -806,32 +806,56 @@ def push_logs_to_db(log_entries):
     # avoid circular import
     from keep.api.logging import LOG_FORMAT, LOG_FORMAT_OPEN_TELEMETRY
 
+    db_log_entries = []
     if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY:
-        db_log_entries = [
-            WorkflowExecutionLog(
-                workflow_execution_id=log_entry["workflow_execution_id"],
-                timestamp=datetime.strptime(
-                    log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"
-                ),
-                message=log_entry["message"][0:255],  # limit the message to 255 chars
-                context=json.loads(
-                    json.dumps(log_entry.get("context", {}), default=str)
-                ),  # workaround to serialize any object
-            )
-            for log_entry in log_entries
-        ]
+        for log_entry in log_entries:
+            try:
+                try:
+                    # after formatting
+                    message = log_entry["message"][0:255]
+                except Exception:
+                    # before formatting, fallback
+                    message = log_entry["msg"][0:255]
+
+                try:
+                    timestamp = datetime.strptime(
+                        log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"
+                    )
+                except Exception:
+                    timestamp = log_entry["created"]
+
+                log_entry = WorkflowExecutionLog(
+                    workflow_execution_id=log_entry["workflow_execution_id"],
+                    timestamp=timestamp,
+                    message=message,
+                    context=json.loads(
+                        json.dumps(log_entry.get("context", {}), default=str)
+                    ),  # workaround to serialize any object
+                )
+                db_log_entries.append(log_entry)
+            except Exception:
+                print("Failed to parse log entry - ", log_entry)
+
     else:
-        db_log_entries = [
-            WorkflowExecutionLog(
-                workflow_execution_id=log_entry["workflow_execution_id"],
-                timestamp=log_entry["created"],
-                message=log_entry["message"][0:255],  # limit the message to 255 chars
-                context=json.loads(
-                    json.dumps(log_entry.get("context", {}), default=str)
-                ),  # workaround to serialize any object
-            )
-            for log_entry in log_entries
-        ]
+        for log_entry in log_entries:
+            try:
+                try:
+                    # after formatting
+                    message = log_entry["message"][0:255]
+                except Exception:
+                    # before formatting, fallback
+                    message = log_entry["msg"][0:255]
+                log_entry = WorkflowExecutionLog(
+                    workflow_execution_id=log_entry["workflow_execution_id"],
+                    timestamp=log_entry["created"],
+                    message=message,  # limit the message to 255 chars
+                    context=json.loads(
+                        json.dumps(log_entry.get("context", {}), default=str)
+                    ),  # workaround to serialize any object
+                )
+                db_log_entries.append(log_entry)
+            except Exception:
+                print("Failed to parse log entry - ", log_entry)
 
     # Add the LogEntry instances to the database session
     with Session(engine) as session:
@@ -1733,7 +1757,11 @@ def update_rule(
 def get_rules(tenant_id, ids=None):
     with Session(engine) as session:
         # Start building the query
-        query = select(Rule).where(Rule.tenant_id == tenant_id)
+        query = (
+            select(Rule)
+            .where(Rule.tenant_id == tenant_id)
+            .where(Rule.is_deleted.is_(False))
+        )
 
         # Apply additional filters if ids are provided
         if ids is not None:
@@ -1769,8 +1797,8 @@ def delete_rule(tenant_id, rule_id):
             select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_uuid)
         ).first()
 
-        if rule:
-            session.delete(rule)
+        if rule and not rule.is_deleted:
+            rule.is_deleted = True
             session.commit()
             return True
         return False
@@ -2220,19 +2248,27 @@ def get_all_deduplication_stats(tenant_id):
     return stats
 
 
-def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint) -> str | None:
-    # get the last alert for a given fingerprint
+def get_last_alert_hashes_by_fingerprints(
+    tenant_id, fingerprints: list[str]
+) -> dict[str, str | None]:
+    # get the last alert hashes for a list of fingerprints
     # to check deduplication
     with Session(engine) as session:
         query = (
-            select(LastAlert.alert_hash)
+            select(LastAlert.fingerprint, LastAlert.alert_hash)
             .where(LastAlert.tenant_id == tenant_id)
-            .where(LastAlert.fingerprint == fingerprint)
-            .limit(1)
+            .where(LastAlert.fingerprint.in_(fingerprints))
         )
 
-        alert_hash: str | None = session.scalars(query).first()
-    return alert_hash
+        results = session.execute(query).all()
+
+    # Create a dictionary from the results
+    alert_hash_dict = {
+        fingerprint: alert_hash
+        for fingerprint, alert_hash in results
+        if alert_hash is not None
+    }
+    return alert_hash_dict
 
 
 def update_key_last_used(
@@ -3367,6 +3403,7 @@ def get_last_incidents(
 
         # Order by start_time in descending order and limit the results
         query = query.limit(limit).offset(offset)
+
         # Execute the query
         incidents = query.all()
 

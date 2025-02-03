@@ -21,7 +21,7 @@ from keep.api.core.db import (
     remove_alerts_to_incident_by_incident_id,
 )
 from keep.api.core.db_utils import get_json_extract_field
-from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.core.dependencies import SINGLE_TENANT_UUID, SINGLE_TENANT_EMAIL
 from keep.api.models.alert import (
     AlertSeverity,
     AlertStatus,
@@ -33,6 +33,8 @@ from keep.api.models.alert import (
 from keep.api.models.db.alert import Alert, LastAlertToIncident, Incident, NULL_FOR_DELETED_AT
 from keep.api.models.db.tenant import Tenant
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.rbac import Admin
 from tests.conftest import ElasticClientMock, PusherMock, WorkflowManagerMock
 from tests.fixtures.client import client, test_app  # noqa
 
@@ -449,6 +451,66 @@ def test_incident_status_change(
         )
         == 100
     )
+
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_incident_status_change_manual_alert_enrichment(
+    db_session, client, test_app, create_alert
+):
+    # Create an alert and add it to an incident
+    create_alert(
+        "alert-test",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    alert = db_session.query(Alert).filter_by(fingerprint="alert-test").first()
+    incident = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {"user_generated_name": "Test Incident", "user_summary": "Test Incident Summary"},
+    )
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident.id, [alert.fingerprint], session=db_session
+    )
+
+    # Ensure incident has one firing alert
+    incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id, with_alerts=True, session=db_session)
+    assert incident.status == IncidentStatus.FIRING.value
+    assert len(incident._alerts) == 1
+    assert incident._alerts[0].event["status"] == AlertStatus.FIRING.value
+
+    with patch(
+        "keep.identitymanager.identity_managers.noauth.noauth_authverifier.NoAuthVerifier._verify_api_key",
+        return_value=AuthenticatedEntity(
+            tenant_id=SINGLE_TENANT_UUID,
+            email=SINGLE_TENANT_EMAIL,
+            api_key_name=SINGLE_TENANT_UUID,
+            role=Admin.get_name(),
+        )
+    ):
+    # Manually enrich the alert to change its status to resolved
+        client.post(
+            f"/alerts/enrich?dispose_on_new_alert=true",
+            headers={"x-api-key": "some-key"},
+            json={
+                "enrichments": {
+                    "status": AlertStatus.RESOLVED.value,
+                    "dismissed": False,
+                    "dismissUntil": ""
+                },
+                "fingerprint": incident._alerts[0].fingerprint
+            }
+        )
+
+    # Refresh incident data and verify status change
+    db_session.expire_all()
+    incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id, with_alerts=True, session=db_session)
+    assert len(incident._alerts) == 1
+
+    alert_dtos = convert_db_alerts_to_dto_alerts(incident._alerts)
+
+    assert alert_dtos[0].status == AlertStatus.RESOLVED.value
+    assert incident.status == IncidentStatus.RESOLVED.value
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)

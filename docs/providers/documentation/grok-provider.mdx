@@ -1,0 +1,38 @@
+---
+title: "Grok Provider"
+description: "The Grok Provider allows for integrating X.AI's Grok language models into Keep."
+---
+
+<Tip>
+  The Grok Provider supports querying Grok language models for prompt-based
+  interactions.
+</Tip>
+
+## Inputs
+
+The Grok Provider supports the following inputs:
+
+- `prompt`: Interact with Grok models by sending prompts and receiving responses
+- `model`: The model to be used, defaults to `grok-1`
+- `max_tokens`: Limit amount of tokens returned by the model, default 1024.
+- `structured_output_format`: Optional JSON format for the structured output (check examples at the GitHub).
+
+## Outputs
+
+Currently, the Grok Provider outputs the response from the model based on the prompt provided.
+
+## Authentication Parameters
+
+To use the Grok Provider, you'll need an API Key from X.AI. The required parameter for authentication is:
+
+- **api_key** (required): Your X.AI API Key.
+
+## Connecting with the Provider
+
+To connect to Grok, you'll need to obtain an API Key:
+
+1. Subscribe to Grok on X.AI platform.
+2. Navigate to the API section in your X.AI account settings.
+3. Generate a new API key for Keep.
+
+Use the generated API key in the `authentication` section of your Grok Provider configuration.

@@ -1,4 +1,6 @@
 import enum
+import logging
+import threading
 import typing
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -33,6 +35,7 @@ class Workflow:
         workflow_strategy: WorkflowStrategy = WorkflowStrategy.NONPARALLEL_WITH_RETRY.value,
         on_failure: Step = None,
         workflow_consts: typing.Dict[str, str] = {},
+        workflow_debug: bool = False,
     ):
         self.workflow_id = workflow_id
         self.workflow_owners = workflow_owners
@@ -51,12 +54,14 @@ class Workflow:
         self.context_manager = context_manager
         self.context_manager.set_consts_context(workflow_consts)
         self.io_nandler = IOHandler(context_manager)
-        self.logger = self.context_manager.get_logger()
+        self.logger = logging.getLogger(__name__)
+        self.workflow_debug = workflow_debug
 
     def run_steps(self):
         self.logger.debug(f"Running steps for workflow {self.workflow_id}")
         for step in self.workflow_steps:
             try:
+                threading.current_thread().step_id = step.step_id
                 self.logger.info(
                     "Running step %s",
                     step.step_id,
@@ -69,6 +74,7 @@ class Workflow:
                         step.step_id,
                         extra={"step_id": step.step_id},
                     )
+                    threading.current_thread().step_id = None
                 # if the step ran + the step configured to stop the workflow:
                 if step_ran and not step.continue_to_next_step:
                     self.logger.info(
@@ -79,6 +85,7 @@ class Workflow:
                     break
             except StepError as e:
                 self.logger.error(f"Step {step.step_id} failed: {e}")
+                threading.current_thread().step_id = None
                 raise
         self.logger.debug(f"Steps for workflow {self.workflow_id} ran successfully")
 
@@ -110,9 +117,12 @@ class Workflow:
                 )
                 action_stop = True
         except Exception as e:
-            self.logger.error(f"Action {action.name} failed: {e}", extra={
-                "step_id": action.step_id,
-            })
+            self.logger.error(
+                f"Action {action.name} failed: {e}",
+                extra={
+                    "step_id": action.step_id,
+                },
+            )
             action_ran = False
             action_error = f"Failed to run action {action.name}: {str(e)}"
         return action_ran, action_error, action_stop
@@ -122,7 +132,9 @@ class Workflow:
         actions_firing = []
         actions_errors = []
         for action in self.workflow_actions:
+            threading.current_thread().step_id = action.step_id
             action_status, action_error, action_stop = self.run_action(action)
+            threading.current_thread().step_id = None
             if action_error:
                 actions_firing.append(action_status)
                 actions_errors.append(action_error)
@@ -137,8 +149,16 @@ class Workflow:
         if self.workflow_disabled:
             self.logger.info(f"Skipping disabled workflow {self.workflow_id}")
             return
-        self.logger.info(f"Running workflow {self.workflow_id}")
-        self.context_manager.set_execution_context(workflow_execution_id)
+        self.logger.info(
+            f"Running workflow {self.workflow_id}",
+            extra={
+                "event": self.context_manager.event_context
+                or self.context_manager.incident_context
+            },
+        )
+        self.context_manager.set_execution_context(
+            self.workflow_id, workflow_execution_id
+        )
         try:
             self.run_steps()
         except StepError as e:

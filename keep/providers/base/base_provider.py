@@ -13,10 +13,13 @@ import operator
 import os
 import re
 import uuid
+from collections import Counter
+from operator import attrgetter
 from typing import Literal, Optional
 
 import opentelemetry.trace as trace
 import requests
+from dateutil.parser import parse
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import (
@@ -36,6 +39,9 @@ from keep.providers.models.provider_method import ProviderMethod
 
 tracer = trace.get_tracer(__name__)
 
+SPAMMY_ALERTS_THRESHOLD_HOURS = 1
+SPAMMY_ALERTS_THRESHOLD = datetime.timedelta(hours=SPAMMY_ALERTS_THRESHOLD_HOURS)
+
 
 class BaseProvider(metaclass=abc.ABCMeta):
     OAUTH2_URL = None
@@ -45,6 +51,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_COMING_SOON = False  # tb: if the provider is coming soon, we show it in the UI but don't allow it to be added
     PROVIDER_CATEGORY: list[
         Literal[
+            "AI",
             "Monitoring",
             "Incident Management",
             "Cloud Infrastructure",
@@ -119,6 +126,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.results = []
         # tb: we can have this overriden by customer configuration, when initializing the provider
         self.fingerprint_fields = self.FINGERPRINT_FIELDS
+        self.step_id = None
 
     def _extract_type(self):
         """
@@ -142,7 +150,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         raise NotImplementedError("dispose() method not implemented")
 
     @abc.abstractmethod
-    def validate_config():
+    def validate_config(self):
         """
         Validate provider configuration.
         """
@@ -721,6 +729,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             event_id=alert_data.get("event_id", str(uuid.uuid4())),
             url=alert_data.get("url", None),
             fingerprint=alert_data.get("fingerprint", None),
+            providerId=self.provider_id,
         )
         # push the alert to the provider
         url = f'{os.environ["KEEP_API_URL"]}/alerts/event'
@@ -729,7 +738,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
             "Accept": "application/json",
             "X-API-KEY": self.context_manager.api_key,
         }
-        response = requests.post(url, json=alert_model.dict(), headers=headers)
+        response = requests.post(
+            url,
+            json=alert_model.dict(),
+            headers=headers,
+            params={"provider_id": self.provider_id},
+        )
         try:
             response.raise_for_status()
             self.logger.info("Alert pushed successfully")
@@ -777,6 +791,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
         parser = Parser()
         parser._parse_providers_from_env(self.context_manager)
         return self.config.name in self.context_manager.providers_context
+
+    @classmethod
+    def has_health_report(cls) -> bool:
+        return getattr(cls, "HAS_HEALTH_CHECK", False)
 
 
 class BaseTopologyProvider(BaseProvider):
@@ -853,3 +871,93 @@ class BaseIncidentProvider(BaseProvider):
             NotImplementedError: _description_
         """
         raise NotImplementedError("setup_webhook() method not implemented")
+
+
+class ProviderHealthMixin:
+
+    HAS_HEALTH_CHECK = True
+
+    def get_health_report(self):
+        health = {}
+
+        alerts = self.get_alerts()
+
+        self.check_topology_coverage(alerts, health)
+        self.check_spammy_alerts(alerts, health)
+        self.check_alerting_rules(alerts, health)
+
+        return health
+
+    def check_topology_coverage(self, alerts, health):
+        if hasattr(self, "pull_topology"):
+            topology, _ = self.pull_topology()
+            uncovered_topology = copy.deepcopy(topology)
+            for alert in alerts:
+                uncovered_topology = list(
+                    filter(lambda t: not alert.service == t.service, uncovered_topology)
+                )
+
+            health["topology"] = {
+                "covered": [t for t in topology if t not in uncovered_topology],
+                "uncovered": uncovered_topology,
+            }
+
+    def check_alerting_rules(self, alerts, health):
+        if hasattr(self, "get_alerts_configuration"):
+            rules = self.get_alerts_configuration()
+            try:
+                rules = list(map(json.loads, rules))
+            except json.JSONDecodeError:
+                pass
+            unused_rules = []
+            compiled_patterns = [re.compile(rule["message"]) for rule in rules]
+            matched_patterns = set()
+
+            for alert in alerts:
+                for idx, pattern in enumerate(compiled_patterns):
+                    if idx in matched_patterns:
+                        continue
+                    if pattern.search(alert.message):
+                        matched_patterns.add(idx)
+
+            health["rules"] = {
+                "total": len(rules),
+                "used": len(rules) - len(unused_rules),
+                "unused": len(unused_rules),
+            }
+
+    def check_spammy_alerts(self, alerts, health):
+        sorter = sorted(alerts, key=attrgetter("fingerprint"))
+        alerts_per_fingerprint = itertools.groupby(
+            sorter, key=attrgetter("fingerprint")
+        )
+        spammy_alerts = []
+        for fingerprint, fingerprint_alerts in alerts_per_fingerprint:
+            close_alerts = []
+
+            fingerprint_alerts = list(fingerprint_alerts)
+
+            fingerprint_alerts.sort(key=attrgetter("lastReceived"))
+            # Iterate through alerts to check if some of them are too close
+            for i in range(len(fingerprint_alerts)):
+                for j in range(i + 1, len(fingerprint_alerts)):
+                    if (
+                        parse(fingerprint_alerts[j].lastReceived)
+                        - parse(fingerprint_alerts[i].lastReceived)
+                        <= SPAMMY_ALERTS_THRESHOLD
+                    ):
+                        close_alerts.append(
+                            (fingerprint_alerts[i], fingerprint_alerts[j])
+                        )
+                    else:
+                        break
+
+            if len(close_alerts) > 2:
+                spammy_alerts.extend(fingerprint_alerts)
+
+        timestamps = [parse(alert.lastReceived) for alert in spammy_alerts]
+        hours = [ts.strftime("%Y-%m-%d %H:00") for ts in timestamps]
+        hourly_alerts = Counter(hours)
+        health["spammy"] = [
+            {"date": date, "value": value} for date, value in hourly_alerts.items()
+        ]

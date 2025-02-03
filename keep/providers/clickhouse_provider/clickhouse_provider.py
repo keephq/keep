@@ -4,13 +4,15 @@ Clickhouse is a class that provides a way to read data from Clickhouse.
 
 import dataclasses
 import os
+import typing
 
 import pydantic
 from clickhouse_driver import connect
 from clickhouse_driver.dbapi.extras import DictCursor
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
+from keep.exceptions.provider_exception import ProviderException
+from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.validation.fields import NoSchemeUrl, UrlPort
 
@@ -45,15 +47,26 @@ class ClickhouseProviderAuthConfig:
         metadata={"required": False, "description": "Clickhouse database name"},
         default=None,
     )
-    protocol: str = dataclasses.field(
-        metadata={"required": True, 
-                  "description": "Protocol (Use clickhouses for SSL wrapped TCP socket connection, \
-                  and clickhouse for plain TCP socket connection.)"},
+    protocol: typing.Literal["clickhouse", "clickhouses"] = dataclasses.field(
         default="clickhouse",
+        metadata={
+            "required": True,
+            "description": "Protocol (Type clickhouses for SSL or clickhouse for no SSL)",
+            "type": "select",
+            "options": ["clickhouse", "clickhouses"],
+        },
+    )
+    verify: bool = dataclasses.field(
+        metadata={
+            "description": "Enable SSL verification",
+            "hint": "SSL verification is enabled by default",
+            "type": "switch",
+        },
+        default=True,
     )
 
 
-class ClickhouseProvider(BaseProvider):
+class ClickhouseProvider(BaseProvider, ProviderHealthMixin):
     """Enrich alerts with data from Clickhouse."""
 
     PROVIDER_DISPLAY_NAME = "Clickhouse"
@@ -116,9 +129,15 @@ class ClickhouseProvider(BaseProvider):
         protocol = self.authentication_config.protocol
         if protocol is None:
             protocol = "clickhouse"
-        dsn = f"{protocol}://{user}:{password}@{host}:{port}/{database}"
 
-        return connect(dsn)
+        if protocol not in ["clickhouse", "clickhouses"]:
+            raise ProviderException("Invalid Clickhouse protocol")
+
+        dsn = f"{protocol}://{user}:{password}@{host}:{port}/{database}"
+        if self.authentication_config.verify is False:
+            dsn += "?verify=false"
+
+        return connect(dsn, verify=self.authentication_config.verify)
 
     def dispose(self):
         try:
@@ -173,7 +192,7 @@ if __name__ == "__main__":
             "password": os.environ.get("CLICKHOUSE_PASSWORD"),
             "host": os.environ.get("CLICKHOUSE_HOST"),
             "database": os.environ.get("CLICKHOUSE_DATABASE"),
-            "port": os.environ.get("CLICKHOUSE_PORT")
+            "port": os.environ.get("CLICKHOUSE_PORT"),
         }
     )
     context_manager = ContextManager(

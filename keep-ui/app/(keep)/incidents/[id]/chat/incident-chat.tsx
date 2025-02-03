@@ -138,10 +138,9 @@ export function IncidentChat({
     useIncidentActions();
   const providersWithGetTrace = useMemo(
     () =>
-      providers?.installed_providers.filter(
-        (provider) =>
-          provider.methods?.some((method) => method.func_name === "get_trace")
-      ),
+      providers?.installed_providers.filter((provider) =>
+        provider.methods?.some((method) => method.func_name === "get_trace")
+      ).map((provider) => provider.id),
     [providers]
   );
 
@@ -177,13 +176,19 @@ export function IncidentChat({
     value: alerts?.items,
   });
   useCopilotReadable({
-    description: "The providers you can get traces from",
+    description: "The provider ids you can get traces from",
     value: providersWithGetTrace,
   });
   useCopilotReadable({
     description:
       "The installed providers and the methods you can invoke using invokeProviderMethod",
-    value: providers?.installed_providers,
+    value: providers?.installed_providers
+      .filter((provider) => !!provider.methods)
+      .map((provider) => ({
+        id: provider.id,
+        type: provider.type,
+        methods: provider.methods,
+      })),
   });
 
   // Actions
@@ -560,8 +565,7 @@ export function IncidentChat({
     return (
       <EmptyStateCard
         title="Chat not available"
-        description="No alerts found for this incident. Go to the alerts feed and assign alerts to interact with the incident."
-        buttonText="Assign alerts to this incident"
+        description="Incident assitant will become available as alerts are assigned to this incident."
         onClick={() => router.push("/alerts/feed")}
       />
     );

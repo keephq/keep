@@ -15,9 +15,9 @@ import {
   differenceInHours,
   differenceInDays,
 } from "date-fns";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 const severityColors = {
   critical: "bg-red-300",
@@ -84,7 +84,7 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
         <p className="text-gray-400">Source:</p>
         <div className="flex items-center">
           {alert.source.map((source, index) => (
-            <Image
+            <DynamicImageProviderIcon
               className={`inline-block mr-2 ${index == 0 ? "" : "-ml-2"}`}
               key={source}
               alt={source}
@@ -283,9 +283,9 @@ export default function IncidentTimeline({
 
   // TODO: Load data on server side
   // Loading state is true if the data is not loaded and there is no error for smoother loading state on initial load
-  const alertsLoading = _alertsLoading || (!alerts && !alertsError);
-  const auditEventsLoading =
-    _auditEventsLoading || (!auditEvents && !auditEventsError);
+  // const alertsLoading = _alertsLoading || (!alerts && !alertsError);
+  // const auditEventsLoading =
+  //   _auditEventsLoading || (!auditEvents && !auditEventsError);
 
   const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
 
@@ -358,7 +358,7 @@ export default function IncidentTimeline({
     return {};
   }, [auditEvents, alerts]);
 
-  if (auditEventsLoading || alertsLoading) {
+  if (_auditEventsLoading || _alertsLoading) {
     return (
       <Card>
         <Loading />

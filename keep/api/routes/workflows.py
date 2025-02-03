@@ -4,7 +4,6 @@ import os
 from typing import Any, Dict, List, Optional
 
 import validators
-import yaml
 from fastapi import (
     APIRouter,
     Body,
@@ -38,6 +37,7 @@ from keep.api.models.workflow import (
 )
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import WorkflowExecutionsPaginatedResultsDto
+from keep.functions import cyaml
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.parser.parser import Parser
@@ -118,9 +118,10 @@ def get_workflows(
 
         # create the workflow DTO
         try:
-            workflow_raw = yaml.safe_load(workflow.workflow_raw)
+            workflow_raw = cyaml.safe_load(workflow.workflow_raw)
+            is_alert_rule_worfklow = WorkflowStore.is_alert_rule_workflow(workflow_raw)
             # very big width to avoid line breaks
-            workflow_raw = yaml.dump(workflow_raw, width=99999)
+            workflow_raw = cyaml.dump(workflow_raw, width=99999)
             workflow_dto = WorkflowDTO(
                 id=workflow.id,
                 name=workflow.name,
@@ -140,6 +141,7 @@ def get_workflows(
                 last_execution_started=last_execution_started,
                 disabled=workflow.is_disabled,
                 provisioned=workflow.provisioned,
+                alertRule=is_alert_rule_worfklow,
             )
         except Exception as e:
             logger.error(f"Error creating workflow DTO: {e}")
@@ -237,7 +239,10 @@ def run_workflow(
     except Exception as e:
         logger.exception(
             "Failed to run workflow",
-            extra={"workflow_id": workflow_id},
+            extra={
+                "workflow_id": workflow_id,
+                "tenant_id": tenant_id,
+            },
         )
         raise HTTPException(
             status_code=500,
@@ -313,7 +318,7 @@ async def __get_workflow_raw_data(request: Request, file: UploadFile | None) -> 
             workflow_raw_data = await file.read()
         else:
             workflow_raw_data = await request.body()
-        workflow_data = yaml.safe_load(workflow_raw_data)
+        workflow_data = cyaml.safe_load(workflow_raw_data)
         # backward comptability
         if "alert" in workflow_data:
             workflow_data = workflow_data.pop("alert")
@@ -321,7 +326,7 @@ async def __get_workflow_raw_data(request: Request, file: UploadFile | None) -> 
         elif "workflow" in workflow_data:
             workflow_data = workflow_data.pop("workflow")
 
-    except yaml.YAMLError:
+    except cyaml.YAMLError:
         logger.exception("Invalid YAML format")
         raise HTTPException(status_code=400, detail="Invalid YAML format")
     return workflow_data
@@ -461,7 +466,7 @@ def get_random_workflow_templates(
                 f"Neither {default_directory} nor {fallback_directory} exist"
             )
     workflows = workflowstore.get_random_workflow_templates(
-        tenant_id=tenant_id, workflows_dir=default_directory, limit=6
+        tenant_id=tenant_id, workflows_dir=default_directory, limit=8
     )
     return workflows
 
@@ -518,7 +523,8 @@ async def update_workflow_by_id(
         workflow["name"] = workflow_from_db.name
     workflow_from_db.description = workflow.get("description")
     workflow_from_db.interval = workflow_interval
-    workflow_from_db.workflow_raw = yaml.dump(workflow, width=99999)
+    workflow_from_db.is_disabled = workflow.get("disabled", False)
+    workflow_from_db.workflow_raw = cyaml.dump(workflow, width=99999)
     workflow_from_db.last_updated = datetime.datetime.now()
     session.add(workflow_from_db)
     session.commit()
@@ -587,9 +593,9 @@ def get_workflow_by_id(
         providers_dto, triggers = [], []  # Default in case of failure
 
     try:
-        workflow_yaml = yaml.safe_load(workflow.workflow_raw)
+        workflow_yaml = cyaml.safe_load(workflow.workflow_raw)
         valid_workflow_yaml = {"workflow": workflow_yaml}
-        final_workflow_raw = yaml.dump(valid_workflow_yaml, width=99999)
+        final_workflow_raw = cyaml.dump(valid_workflow_yaml, width=99999)
         workflow_dto = WorkflowDTO(
             id=workflow.id,
             name=workflow.name,
@@ -604,7 +610,7 @@ def get_workflow_by_id(
             disabled=workflow.is_disabled,
         )
         return workflow_dto
-    except yaml.YAMLError:
+    except cyaml.YAMLError:
         logger.exception("Invalid YAML format")
         raise HTTPException(status_code=500, detail="Error fetching workflow meta data")
 

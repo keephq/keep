@@ -5,7 +5,7 @@ import { ServiceNodeType, TopologyService } from "../../model/models";
 import { Badge } from "@tremor/react";
 import { getColorForUUID } from "@/app/(keep)/topology/lib/badge-colors";
 import { clsx } from "clsx";
-import Image from "next/image";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 const THRESHOLD = 5;
 
@@ -100,9 +100,7 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
   }, [showDetails]);
 
   const handleClick = () => {
-    router.push(
-      `/incidents?services=${encodeURIComponent(data.display_name)}`
-    );
+    router.push(`/incidents?services=${encodeURIComponent(data.display_name)}`);
   };
 
   const incidentsCount = data.incidents ?? 0;
@@ -121,7 +119,7 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
       >
         {data.category && (
           <div className="absolute top-2 right-2 text-gray-400">
-            <Image
+            <DynamicImageProviderIcon
               className="inline-block"
               alt={data.category}
               height={24}

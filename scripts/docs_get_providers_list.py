@@ -14,8 +14,7 @@ import sys
 
 LOGO_DEV_PUBLISHABLE_KEY = "pk_dfXfZBoKQMGDTIgqu7LvYg"
 
-NON_DOCUMENTED_PROVIDERS = [
-]
+NON_DOCUMENTED_PROVIDERS = []
 
 
 def validate_overview_is_complete(documented_providers):

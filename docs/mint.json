@@ -44,7 +44,8 @@
             "overview/howdoeskeepgetmyalerts",
             "overview/comparisons"
           ]
-        }
+        },
+        "overview/support"
       ]
     },
     {
@@ -54,22 +55,29 @@
         "alerts/table",
         "alerts/actionmenu",
         "alerts/sidebar",
-        "alerts/presets"
+        "alerts/presets",
+        "alerts/sound"
       ]
     },
     {
       "group": "Incidents",
-      "pages": ["incidents/overview"]
+      "pages": ["incidents/overview", "incidents/facets"]
     },
     {
       "group": "AIOps",
       "pages": [
-        "overview/correlation",
+        {
+          "group": "Correlation",
+          "pages": [
+            "overview/correlation-rules",
+            "overview/correlation-topology"
+          ]
+        },
         "overview/deduplication",
         "overview/enrichment/extraction",
         "overview/enrichment/mapping",
-        "overview/servicetopology",
         "overview/maintenance-windows",
+        "overview/servicetopology",
         "overview/workflow-automation"
       ]
     },
@@ -103,16 +111,32 @@
       ]
     },
     {
+      "group": "Alert Evaluation Engine",
+      "pages": [
+        "alertevaluation/overview",
+        {
+          "group": "Examples",
+          "pages": [
+            "alertevaluation/examples/victoriametricssingle",
+            "alertevaluation/examples/victoriametricsmulti"
+          ]
+        }
+      ]
+    },
+    {
       "group": "Providers",
       "pages": [
         "providers/overview",
         "providers/adding-a-new-provider",
+        "providers/provider-methods",
         {
           "group": "Supported Providers",
           "pages": [
             "providers/documentation/aks-provider",
             "providers/documentation/amazonsqs-provider",
+            "providers/documentation/anthropic-provider",
             "providers/documentation/appdynamics-provider",
+            "providers/documentation/s3-provider",
             "providers/documentation/argocd-provider",
             "providers/documentation/auth0-provider",
             "providers/documentation/axiom-provider",
@@ -121,16 +145,20 @@
             "providers/documentation/bigquery-provider",
             "providers/documentation/centreon-provider",
             "providers/documentation/checkmk-provider",
+            "providers/documentation/checkly-provider",
             "providers/documentation/cilium-provider",
             "providers/documentation/clickhouse-provider",
             "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
             "providers/documentation/coralogix-provider",
             "providers/documentation/datadog-provider",
+            "providers/documentation/deepseek-provider",
             "providers/documentation/discord-provider",
             "providers/documentation/dynatrace-provider",
+            "providers/documentation/eks-provider",
             "providers/documentation/elastic-provider",
             "providers/documentation/gcpmonitoring-provider",
+            "providers/documentation/gemini-provider",
             "providers/documentation/github-provider",
             "providers/documentation/github_workflows_provider",
             "providers/documentation/gitlab-provider",
@@ -141,6 +169,7 @@
             "providers/documentation/grafana_incident-provider",
             "providers/documentation/grafana_oncall-provider",
             "providers/documentation/graylog-provider",
+            "providers/documentation/grok-provider",
             "providers/documentation/http-provider",
             "providers/documentation/ilert-provider",
             "providers/documentation/incidentio-provider",
@@ -153,16 +182,19 @@
             "providers/documentation/kubernetes-provider",
             "providers/documentation/linear_provider",
             "providers/documentation/linearb-provider",
+            "providers/documentation/llamacpp-provider",
             "providers/documentation/mailchimp-provider",
             "providers/documentation/mailgun-provider",
             "providers/documentation/mattermost-provider",
             "providers/documentation/microsoft-planner-provider",
             "providers/documentation/mock-provider",
+            "providers/documentation/monday-provider",
             "providers/documentation/mongodb-provider",
             "providers/documentation/mysql-provider",
             "providers/documentation/netdata-provider",
             "providers/documentation/new-relic-provider",
             "providers/documentation/ntfy-provider",
+            "providers/documentation/ollama-provider",
             "providers/documentation/openai-provider",
             "providers/documentation/openobserve-provider",
             "providers/documentation/openshift-provider",
@@ -252,6 +284,10 @@
             "deployment/openshift",
             "deployment/ecs"
           ]
+        },
+        {
+          "group": "Local LLM",
+          "pages": ["deployment/local-llm/keep-with-litellm"]
         },
         "deployment/stress-testing"
       ]

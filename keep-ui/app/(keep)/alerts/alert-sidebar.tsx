@@ -1,5 +1,4 @@
 import { Fragment } from "react";
-import Image from "next/image";
 import { Dialog, Transition } from "@headlessui/react";
 import { AlertDto } from "@/entities/alerts/model";
 import { Button, Title, Badge, Divider } from "@tremor/react";
@@ -11,6 +10,7 @@ import { TopologySearchProvider } from "@/app/(keep)/topology/TopologySearchCont
 import { FieldHeader, SeverityLabel, UISeverity, Tooltip } from "@/shared/ui";
 import { QuestionMarkCircleIcon } from "@heroicons/react/20/solid";
 import { Link } from "@/components/ui";
+import { DynamicImageProviderIcon } from "@/components/ui";
 import { useProviders } from "@/utils/hooks/useProviders";
 import AlertMenu from "./alert-menu";
 import { useConfig } from "@/utils/hooks/useConfig";
@@ -120,7 +120,7 @@ const AlertSidebar = ({
                   )}
                   <p>
                     <FieldHeader>Source</FieldHeader>
-                    <Image
+                    <DynamicImageProviderIcon
                       src={`/icons/${alert.source![0]}-icon.png`}
                       alt={alert.source![0]}
                       width={24}
@@ -131,7 +131,7 @@ const AlertSidebar = ({
                   </p>
                   <p>
                     <FieldHeader>Description</FieldHeader>
-                    {alert.description}
+                    <pre className="overflow-scroll">{alert.description}</pre>
                   </p>
                   <p>
                     <FieldHeader className="flex items-center gap-1">
@@ -140,16 +140,16 @@ const AlertSidebar = ({
                         content={
                           <>
                             Fingerprints are unique identifiers associated with
-                            alert instances in Keep. Every provider declares the
-                            fields fingerprints are calculated upon.{" "}
+                            alert instances in Keep. Each provider declares the
+                            fields fingerprints are calculated based on.{" "}
                             <Link
                               href={`${
                                 config?.KEEP_DOCS_URL ||
                                 "https://docs.keephq.dev"
-                              }/providers/fingerprints#fingerprints`}
+                              }/overview/fingerprints`}
                               className="text-white"
                             >
-                              Docs
+                              Read more about it here.
                             </Link>
                           </>
                         }

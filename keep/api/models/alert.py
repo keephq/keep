@@ -20,7 +20,7 @@ from pydantic import (
 from sqlalchemy import desc
 from sqlmodel import col
 
-from keep.api.models.db.rule import ResolveOn
+from keep.api.models.db.rule import ResolveOn, Rule
 
 if TYPE_CHECKING:
     from keep.api.models.db.alert import Incident
@@ -454,6 +454,10 @@ class IncidentDto(IncidentDtoIn):
         description="Resolution strategy for the incident",
     )
 
+    rule_id: UUID | None
+    rule_name: str | None
+    rule_is_deleted: bool | None
+
     _tenant_id: str = PrivateAttr()
     _alerts: Optional[List[AlertDto]] = PrivateAttr(default=None)
 
@@ -509,7 +513,7 @@ class IncidentDto(IncidentDtoIn):
         return values
 
     @classmethod
-    def from_db_incident(cls, db_incident: "Incident"):
+    def from_db_incident(cls, db_incident: "Incident", rule: "Rule" = None):
 
         severity = (
             IncidentSeverity.from_number(db_incident.severity)
@@ -549,6 +553,9 @@ class IncidentDto(IncidentDtoIn):
             incident_application=str(db_incident.incident_application),
             enrichments=db_incident.enrichments,
             resolve_on=db_incident.resolve_on,
+            rule_id=rule.id if rule else None,
+            rule_name=rule.name if rule else None,
+            rule_is_deleted=rule.is_deleted if rule else None,
         )
 
         # This field is required for getting alerts when required

@@ -21,7 +21,6 @@ import useStore from "./builder-store";
 import { useEffect, useRef, useState } from "react";
 import { V2Properties } from "@/app/(keep)/workflows/builder/types";
 import { Textarea, TextInput } from "@/components/ui";
-import { DynamicIcon } from "@/components/ui";
 import { capitalize } from "@/utils/helpers";
 import { Disclosure } from "@headlessui/react";
 import clsx from "clsx";
@@ -29,6 +28,7 @@ import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { DebugJSON, ResultJsonCard } from "@/shared/ui";
 import { KeepApiError } from "@/shared/api/KeepApiError";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col p-4">{children}</div>;
@@ -170,7 +170,13 @@ function KeepStepEditor({
             const providerName = provider.details?.name ?? provider.id;
             return (
               <SelectItem
-                icon={() => <DynamicIcon providerType={providerType!} />}
+                icon={() => (
+                  <DynamicImageProviderIcon
+                    providerType={providerType!}
+                    width="24"
+                    height="24"
+                  />
+                )}
                 key={providerName}
                 value={providerName}
               >
@@ -905,7 +911,7 @@ function TestRunButton({
           {errors &&
             Object.values(errors).length > 0 &&
             Object.entries(errors).map(([key, error]) => (
-              <Callout title={key} color="red">
+              <Callout key={key} title={key} color="red">
                 {error}
               </Callout>
             ))}

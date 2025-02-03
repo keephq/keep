@@ -6,7 +6,7 @@ export interface AIConfig {
   algorithm: {
     name: string;
     description: string;
-  }
+  };
 }
 
 export interface AIStats {

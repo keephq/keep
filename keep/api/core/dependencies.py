@@ -5,12 +5,22 @@ from fastapi import Request
 from fastapi.datastructures import FormData
 from pusher import Pusher
 
+from keep.api.core.config import config
+
 logger = logging.getLogger(__name__)
 
 
 # Just a fake random tenant id
 SINGLE_TENANT_UUID = "keep"
 SINGLE_TENANT_EMAIL = "admin@keephq"
+
+PUSHER_ROOT_CA = config("PUSHER_ROOT_CA", default=None)
+
+if PUSHER_ROOT_CA:
+    logger.warning("Patching PUSHER root certificate")
+    from pusher import requests as pusher_requests
+
+    pusher_requests.CERT_PATH = PUSHER_ROOT_CA
 
 
 async def extract_generic_body(request: Request) -> dict | bytes | FormData:
@@ -38,6 +48,7 @@ async def extract_generic_body(request: Request) -> dict | bytes | FormData:
 
 
 def get_pusher_client() -> Pusher | None:
+    logger.debug("Getting pusher client")
     pusher_disabled = os.environ.get("PUSHER_DISABLED", "false") == "true"
     pusher_host = os.environ.get("PUSHER_HOST")
     pusher_app_id = os.environ.get("PUSHER_APP_ID")
@@ -53,7 +64,7 @@ def get_pusher_client() -> Pusher | None:
         return None
 
     # TODO: defaults on open source no docker
-    return Pusher(
+    pusher = Pusher(
         host=pusher_host,
         port=(
             int(os.environ.get("PUSHER_PORT"))
@@ -66,3 +77,5 @@ def get_pusher_client() -> Pusher | None:
         ssl=False if os.environ.get("PUSHER_USE_SSL", False) is False else True,
         cluster=os.environ.get("PUSHER_CLUSTER"),
     )
+    logging.debug("Pusher client initialized")
+    return pusher

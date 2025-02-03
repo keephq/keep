@@ -28,13 +28,13 @@ import {
   PlusIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
-import Image from "next/image";
 import { useProviders } from "utils/hooks/useProviders";
 import { useApi } from "@/shared/lib/hooks/useApi";
 
 const columnHelper = createColumnHelper<DeduplicationRule>();
 
 import { KeyedMutator } from "swr";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 type DeduplicationTableProps = {
   deduplicationRules: DeduplicationRule[];
@@ -120,7 +120,9 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       "Represents the percentage of alerts successfully deduplicated. Higher values indicate better deduplication efficiency, meaning fewer redundant alerts.",
   };
 
-  function resolveDeleteButtonTooltip(deduplicationRule: DeduplicationRule): string {
+  function resolveDeleteButtonTooltip(
+    deduplicationRule: DeduplicationRule
+  ): string {
     if (deduplicationRule.default) {
       return "Cannot delete default rule";
     }
@@ -129,7 +131,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       return "Cannot delete provisioned rule.";
     }
 
-    return "Delete Rule"
+    return "Delete Rule";
   }
 
   const DEDUPLICATION_TABLE_COLS = useMemo(
@@ -138,7 +140,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         header: "",
         cell: (info) => (
           <div className="flex items-center w-8">
-            <Image
+            <DynamicImageProviderIcon
               className="inline-block"
               key={info.getValue()}
               alt={info.getValue()}
@@ -276,10 +278,10 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
               size="xs"
               variant="secondary"
               icon={TrashIcon}
-              tooltip={
-                resolveDeleteButtonTooltip(info.row.original)
+              tooltip={resolveDeleteButtonTooltip(info.row.original)}
+              disabled={
+                info.row.original.default || info.row.original.is_provisioned
               }
-              disabled={info.row.original.default || info.row.original.is_provisioned}
               onClick={(e) => handleDeleteRule(info.row.original, e)}
             />
           </div>

@@ -1,0 +1,20 @@
+id: update-workflows-from-s3
+description: Dump workflows from S3 and update them in Keep
+triggers:
+  - type: manual
+
+steps:
+  - name: s3-dump
+    provider:
+      config: "{{ providers.s3 }}"
+      type: s3
+      with:
+        bucket: "keep-workflows"
+
+actions:
+  - name: update
+    foreach: "{{ steps.s3-dump.results }}"
+    provider:
+      type: keep
+      with:
+        workflow_to_update_yaml: "raw_render_without_execution({{ foreach.value }})"

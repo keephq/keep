@@ -1,12 +1,13 @@
 import dataclasses
 import typing
 
+import requests
 import opsgenie_sdk
 import pydantic
 from opsgenie_sdk.rest import ApiException
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 
@@ -16,12 +17,20 @@ class OpsgenieProviderAuthConfig:
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Ops genie api key",
-            "hint": "https://support.atlassian.com/opsgenie/docs/api-key-management/",
+            "description": "OpsGenie api key",
+            "hint": "https://support.atlassian.com/opsgenie/docs/create-a-default-api-integration/",
             "sensitive": True,
         },
     )
 
+    # Integration Name is only used for validating scopes
+    integration_name: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "OpsGenie integration name",
+            "hint": "https://support.atlassian.com/opsgenie/docs/create-a-default-api-integration/",
+        },
+    )
 
 class OpsGenieRecipient(pydantic.BaseModel):
     # https://github.com/opsgenie/opsgenie-python-sdk/blob/master/docs/Recipient.md
@@ -29,7 +38,7 @@ class OpsGenieRecipient(pydantic.BaseModel):
     id: typing.Optional[str] = None
 
 
-class OpsgenieProvider(BaseProvider):
+class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
     """Create incidents in OpsGenie."""
 
     PROVIDER_DISPLAY_NAME = "OpsGenie"
@@ -74,20 +83,41 @@ class OpsgenieProvider(BaseProvider):
         scopes = {}
         self.logger.info("Validating scopes")
         try:
-            alert = self._create_alert(
-                user="John Doe",
-                note="Simple alert",
-                message="Simple alert showing context with name: John Doe",
+            api_key = "GenieKey " + self.authentication_config.api_key
+            url = "https://api.opsgenie.com/v2/"
+
+            # Get the list of integrations
+            response = requests.get(
+                url + "integrations/",
+                headers={"Authorization": api_key},
             )
-            deleted = self._delete_alert(alert.get("alert_id"))
-            if not deleted:
-                self.logger.warning(
-                    "Failed to delete OpsGenie alert in scope validation"
-                )
-            scopes["opsgenie:create"] = True
-        except ApiException as e:
-            self.logger.exception("Failed to create OpsGenie alert")
-            scopes["opsgenie:create"] = str(e)
+
+            if response.status_code != 200:
+                response.raise_for_status()
+
+            # Find the OpsGenie integration
+            for integration in response.json()["data"]:
+                if integration["name"] == self.authentication_config.integration_name:
+                    api_key_id = integration["id"]
+                    break
+            else:
+                self.logger.error("Failed to find OpsGenie integration")
+                return {"opsgenie:create": f"Failed to find Integration name {self.authentication_config.integration_name}"}
+
+            # Get the integration details and check if it has write access
+            response = requests.get(
+                url + "integrations/" + api_key_id,
+                headers={"Authorization": api_key},
+            )
+
+            if response.status_code != 200:
+                response.raise_for_status()
+
+            if response.json()["data"]["allowWriteAccess"]:
+                scopes["opsgenie:create"] = True
+            else:
+                scopes["opsgenie:create"] = "OpsGenie integration does not have write access"
+            
         except Exception as e:
             self.logger.exception("Failed to create OpsGenie alert")
             scopes["opsgenie:create"] = str(e)

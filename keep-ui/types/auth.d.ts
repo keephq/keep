@@ -34,3 +34,7 @@ declare module "next-auth/jwt" {
     role?: string;
   }
 }
+
+interface GuestSession {
+  accessToken: "unauthenticated";
+}

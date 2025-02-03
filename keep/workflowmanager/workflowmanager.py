@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import threading
 import typing
 import uuid
 
@@ -21,7 +22,7 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 
 class WorkflowManager:
     # List of providers that are not allowed to be used in workflows in multi tenant mode.
-    PREMIUM_PROVIDERS = ["bash", "python"]
+    PREMIUM_PROVIDERS = ["bash", "python", "llamacpp", "ollama"]
 
     @staticmethod
     def get_instance() -> "WorkflowManager":
@@ -84,7 +85,7 @@ class WorkflowManager:
             self.logger.info("Got workflow from store")
             return workflow
         except ProviderConfigurationException:
-            self.logger.exception(
+            self.logger.warning(
                 "Workflow have a provider that is not configured",
                 extra={
                     "workflow_id": workflow_model.id,
@@ -183,6 +184,7 @@ class WorkflowManager:
                         self.logger.debug(f"Running filter {filter}")
                         filter_key = filter.get("key")
                         filter_val = filter.get("value")
+                        filter_exclude = filter.get("exclude", False)
                         event_val = self._get_event_value(event, filter_key)
                         self.logger.debug(
                             "Filtering",
@@ -193,8 +195,8 @@ class WorkflowManager:
                             },
                         )
                         if event_val is None:
-                            self.logger.warning(
-                                "Failed to run filter, skipping the event. Probably misconfigured workflow.",
+                            self.logger.debug(
+                                "Failed to run filter, skipping the event. This may happen if the event does not have the filter_key as attribute.",
                                 extra={
                                     "tenant_id": tenant_id,
                                     "filter_key": filter_key,
@@ -217,7 +219,11 @@ class WorkflowManager:
                                             "event": event,
                                         },
                                     )
-                                    should_run = True
+                                    # depends on the exclude flag
+                                    if filter_exclude:
+                                        should_run = False
+                                    else:
+                                        should_run = True
                                     break
                                 self.logger.debug(
                                     "Filter didn't match, skipping",
@@ -227,10 +233,12 @@ class WorkflowManager:
                                         "event": event,
                                     },
                                 )
-                                should_run = False
+                                if not filter_exclude:
+                                    should_run = False
                         # elif the filter is string/int/float, compare them:
                         elif type(event_val) in [int, str, float, bool]:
-                            if not self._apply_filter(filter_val, event_val):
+                            filter_applied = self._apply_filter(filter_val, event_val)
+                            if not filter_applied and not filter_exclude:
                                 self.logger.debug(
                                     "Filter didn't match, skipping",
                                     extra={
@@ -241,6 +249,17 @@ class WorkflowManager:
                                 )
                                 should_run = False
                                 break
+                            # if the filter applies but its exclusion filter, don't run
+                            elif filter_applied and filter_exclude:
+                                self.logger.debug(
+                                    "Filter matched but it's exclusion filter, skipping",
+                                    extra={
+                                        "filter_key": filter_key,
+                                        "filter_val": filter_val,
+                                        "event": event,
+                                    },
+                                )
+                                should_run = False
                         # other types currently does not supported
                         else:
                             self.logger.warning(
@@ -321,6 +340,7 @@ class WorkflowManager:
                             }
                         )
                     self.logger.info("Workflow added to run")
+            self.logger.info("All workflows added to run")
 
     def _get_event_value(self, event, filter_key):
         # if the filter key is a nested key, get the value
@@ -409,6 +429,10 @@ class WorkflowManager:
         self, workflow: Workflow, workflow_execution_id: str, test_run=False
     ):
         self.logger.debug(f"Running workflow {workflow.workflow_id}")
+        threading.current_thread().workflow_debug = workflow.workflow_debug
+        threading.current_thread().workflow_id = workflow.workflow_id
+        threading.current_thread().workflow_execution_id = workflow_execution_id
+        threading.current_thread().tenant_id = workflow.context_manager.tenant_id
         errors = []
         results = {}
         try:
@@ -425,11 +449,8 @@ class WorkflowManager:
             )
             self._run_workflow_on_failure(workflow, workflow_execution_id, str(e))
             raise
-        finally:
-            if not test_run:
-                workflow.context_manager.dump()
 
-        if any(errors):
+        if errors is not None and any(errors):
             self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
         else:
             self.logger.info(f"Workflow {workflow.workflow_id} ran successfully")

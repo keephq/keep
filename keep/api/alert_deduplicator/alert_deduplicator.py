@@ -16,7 +16,7 @@ from keep.api.core.db import (
     get_all_deduplication_stats,
     get_custom_deduplication_rule,
     get_deduplication_rule_by_id,
-    get_last_alert_hash_by_fingerprint,
+    get_last_alert_hashes_by_fingerprints,
     update_deduplication_rule,
 )
 from keep.api.models.alert import (
@@ -43,7 +43,10 @@ class AlertDeduplicator:
         self.tenant_id = tenant_id
 
     def _apply_deduplication_rule(
-        self, alert: AlertDto, rule: DeduplicationRuleDto
+        self,
+        alert: AlertDto,
+        rule: DeduplicationRuleDto,
+        last_alert_fingerprint_to_hash: dict[str, str] | None = None,
     ) -> bool:
         """
         Apply a deduplication rule to an alert.
@@ -65,14 +68,19 @@ class AlertDeduplicator:
             json.dumps(alert_copy.dict(), default=str).encode()
         ).hexdigest()
         alert.alert_hash = alert_hash
-        # Check if the hash is already in the database
-        last_alert_hash_by_fingerprint = get_last_alert_hash_by_fingerprint(
-            self.tenant_id, alert.fingerprint
+        # Check if the hash is already in the database.
+        # If last_alert_fingerprint_to_hash is provided, use it
+        # else, get the hash from the database
+        last_alerts_hash_by_fingerprint = (
+            last_alert_fingerprint_to_hash
+            or get_last_alert_hashes_by_fingerprints(
+                self.tenant_id, [alert.fingerprint]
+            )
         )
         # the hash is the same as the last alert hash by fingerprint - full deduplication
         if (
-            last_alert_hash_by_fingerprint
-            and last_alert_hash_by_fingerprint == alert_hash
+            last_alerts_hash_by_fingerprint.get(alert.fingerprint)
+            and last_alerts_hash_by_fingerprint.get(alert.fingerprint) == alert_hash
         ):
             self.logger.info(
                 "Alert is deduplicated",
@@ -85,7 +93,7 @@ class AlertDeduplicator:
             alert.isFullDuplicate = True
         # it means that there is another alert with the same fingerprint but different hash
         # so its a deduplication
-        elif last_alert_hash_by_fingerprint:
+        elif last_alerts_hash_by_fingerprint.get(alert.fingerprint):
             self.logger.info(
                 "Alert is partially deduplicated",
                 extra={
@@ -95,25 +103,30 @@ class AlertDeduplicator:
             )
             alert.isPartialDuplicate = True
         else:
-            self.logger.info(
+            self.logger.debug(
                 "Alert is not deduplicated",
                 extra={
                     "alert_id": alert.id,
                     "fingerprint": alert.fingerprint,
                     "tenant_id": self.tenant_id,
-                    "last_alert_hash_by_fingerprint": last_alert_hash_by_fingerprint,
+                    "last_alert_hash_by_fingerprint": last_alerts_hash_by_fingerprint,
                 },
             )
 
         return alert
 
-    def apply_deduplication(self, alert: AlertDto) -> bool:
+    def apply_deduplication(
+        self,
+        alert: AlertDto,
+        rules: list["DeduplicationRuleDto"] | None = None,
+        last_alert_fingerprint_to_hash: dict[str, str] | None = None,
+    ) -> bool:
         # IMPOTRANT NOTE TO SOMEONE WORKING ON THIS CODE:
         #   apply_deduplication runs AFTER _format_alert, so you can assume that alert fields are in the expected format.
         #   you are also safe to assume that alert.fingerprint is set by the provider itself
 
         # get only relevant rules
-        rules = self.get_deduplication_rules(
+        rules = rules or self.get_deduplication_rules(
             self.tenant_id, alert.providerId, alert.providerType
         )
 
@@ -125,7 +138,9 @@ class AlertDeduplicator:
                     "alert_id": alert.id,
                 },
             )
-            alert = self._apply_deduplication_rule(alert, rule)
+            alert = self._apply_deduplication_rule(
+                alert, rule, last_alert_fingerprint_to_hash
+            )
             self.logger.debug(
                 "Alert after deduplication rule applied",
                 extra={
@@ -181,7 +196,7 @@ class AlertDeduplicator:
 
     def get_deduplication_rules(
         self, tenant_id, provider_id, provider_type
-    ) -> DeduplicationRuleDto:
+    ) -> list[DeduplicationRuleDto]:
         # try to get the rule from the database
         rule = (
             get_custom_deduplication_rule(tenant_id, provider_id, provider_type)
