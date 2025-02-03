@@ -140,6 +140,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     });
 
     setFacetsState(newFacetsState);
+    // we need to run this effect only once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
