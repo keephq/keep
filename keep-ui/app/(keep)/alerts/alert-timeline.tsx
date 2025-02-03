@@ -8,7 +8,9 @@ import { getInitials } from "@/components/navbar/UserAvatar";
 import { DynamicImageProviderIcon } from "@/components/ui";
 
 const formatTimestamp = (timestamp: Date | string) => {
-  const date = new Date(timestamp);
+  const date = timestamp.toString().endsWith("Z")
+    ? new Date(timestamp)
+    : new Date(timestamp.toString() + "Z");
   return date.toLocaleString();
 };
 
