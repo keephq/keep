@@ -38,6 +38,20 @@ export const useIncidents = (
 
   const filtersParams = new URLSearchParams();
 
+  filtersParams.set("confirmed", confirmed.toString());
+
+  if (limit !== undefined) {
+    filtersParams.set("limit", limit.toString());
+  }
+
+  if (offset !== undefined) {
+    filtersParams.set("offset", offset.toString());
+  }
+
+  if (sorting) {
+    filtersParams.set("sorting", sorting.desc ? `-${sorting.id}` : sorting.id);
+  }
+
   if (cel) {
     filtersParams.set("cel", cel);
   }
@@ -45,9 +59,7 @@ export const useIncidents = (
   const swrValue = useSWR<PaginatedIncidentsDto>(
     () =>
       api.isReady()
-        ? `/incidents?confirmed=${confirmed}&limit=${limit}&offset=${offset}&sorting=${
-            sorting.desc ? "-" : ""
-          }${sorting.id}&${filtersParams.toString()}`
+        ? `/incidents${filtersParams.size ? `?${filtersParams.toString()}` : ""}`
         : null,
     (url) => api.get(url),
     options

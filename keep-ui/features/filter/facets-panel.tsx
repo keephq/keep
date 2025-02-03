@@ -132,13 +132,24 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     return facetsState[facetId] || new Set<string>();
   }
 
+  useEffect(() => {
+    const newFacetsState: FacetState = {};
+
+    facets.forEach((facet) => {
+      newFacetsState[facet.id] = getFacetState(facet.id);
+    });
+
+    setFacetsState(newFacetsState);
+    // we need to run this effect only once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const isOptionSelected = (facet_id: string, option_id: string) => {
     return !facetsState[facet_id] || !facetsState[facet_id].has(option_id);
   };
 
-  function calculateFacetsState(newFacetsState: FacetState): void {
-    setFacetsState(newFacetsState);
-    var cel = buildCel(facets, facetOptions, newFacetsState);
+  useEffect(() => {
+    var cel = buildCel(facets, facetOptions, facetsState);
 
     if (cel !== celState) {
       setCelState(cel);
@@ -152,12 +163,13 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       facetOptionQueries[facet.id] = buildCel(
         otherFacets,
         facetOptions,
-        newFacetsState
+        facetsState
       );
     });
 
     onReloadFacetOptions && onReloadFacetOptions(facetOptionQueries);
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facetsState]);
 
   function toggleFacetOption(facetId: string, value: string) {
     setClickedFacetId(facetId);
@@ -169,7 +181,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       facetState.delete(value);
     }
 
-    calculateFacetsState({ ...facetsState, [facetId]: facetState });
+    setFacetsState({ ...facetsState, [facetId]: facetState });
   }
 
   function selectOneFacetOption(facetId: string, optionValue: string): void {
@@ -185,7 +197,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       facetState.add(facetOption.display_name);
     });
 
-    calculateFacetsState({
+    setFacetsState({
       ...facetsState,
       [facetId]: facetState,
     });
@@ -199,14 +211,14 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       facetState.delete(option.display_name)
     );
 
-    calculateFacetsState({
+    setFacetsState({
       ...facetsState,
       [facetId]: facetState,
     });
   }
 
   function clearFilters(): void {
-    calculateFacetsState({});
+    setFacetsState({});
   }
 
   useEffect(
