@@ -13,6 +13,7 @@ import {
   ChevronRightIcon,
   ClockIcon,
   XCircleIcon,
+  ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
 import parseISO from "date-fns/parseISO";
 import formatDistance from "date-fns/formatDistance";
@@ -26,6 +27,8 @@ function getStepIcon(status: string) {
       return <CheckCircleIcon className="text-green-500 size-5" />;
     case "failed":
       return <XCircleIcon className="text-red-500 size-5" />;
+    case "skipped":
+      return <ExclamationCircleIcon className="text-gray-500 size-5" />;
     case "pending":
       return <ClockIcon className="text-yellow-500 size-5" />;
   }

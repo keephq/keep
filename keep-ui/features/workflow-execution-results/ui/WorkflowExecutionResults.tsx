@@ -12,7 +12,7 @@ import {
   isWorkflowExecution,
 } from "@/shared/api/workflow-executions";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { WorkflowDefinitionYAML } from "./WorkflowDefinitionYAML";
+import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
 import { setFavicon } from "@/shared/ui/utils/favicon";
@@ -191,15 +191,19 @@ export function WorkflowExecutionResultsInternal({
     {
       name: "Workflow Definition",
       content: (
-        <WorkflowDefinitionYAML
-          workflowRaw={workflowRaw ?? ""}
-          executionLogs={logs}
-          executionStatus={status}
-          hoveredStep={hoveredStep}
-          setHoveredStep={setHoveredStep}
-          selectedStep={selectedStep}
-          setSelectedStep={setSelectedStep}
-        />
+        <div className="h-[calc(100vh-300px)]">
+          <MonacoYAMLEditor
+            workflowRaw={workflowRaw ?? ""}
+            executionLogs={logs}
+            executionStatus={status}
+            hoveredStep={hoveredStep}
+            setHoveredStep={setHoveredStep}
+            selectedStep={selectedStep}
+            setSelectedStep={setSelectedStep}
+            readOnly={true}
+            filename={workflowId}
+          />
+        </div>
       ),
     },
     ...(hasEvent

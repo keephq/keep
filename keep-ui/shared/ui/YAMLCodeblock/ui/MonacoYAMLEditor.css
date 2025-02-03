@@ -1,0 +1,88 @@
+/* Workflow step status styles */
+.workflow-step.success {
+  background-color: rgb(220, 252, 231) !important; /* green-100 */
+}
+
+.workflow-step.success.hovered {
+  background-color: #bbf7d0 !important; /* green-200 */
+}
+
+.workflow-step.failed {
+  background-color: rgb(254, 226, 226) !important; /* red-100 */
+}
+
+.workflow-step.failed.hovered {
+  background-color: rgb(214, 68, 68) !important; /* red-200 */
+}
+
+.workflow-step.skipped {
+  background-color: #f3f4f6 !important; /* gray-100 */
+}
+
+.workflow-step.skipped.hovered {
+  background-color: #e5e7eb !important; /* gray-200 */
+}
+
+.workflow-step.pending {
+  background-color: rgb(254, 249, 195) !important; /* yellow-100 */
+}
+
+.workflow-step.pending.hovered {
+  background-color: rgb(220, 200, 47) !important; /* yellow-200 */
+}
+
+.workflow-step.in_progress {
+  background-color: rgb(254, 249, 195) !important; /* yellow-100 */
+}
+
+.workflow-step.in_progress.hovered {
+  background-color: rgb(254, 240, 138) !important; /* yellow-200 */
+}
+
+/* Status indicator icons in the glyph margin */
+.status-indicator {
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50%;
+  margin-left: 4px;
+  margin-top: 4px;
+}
+
+.status-indicator.success::before {
+  content: "●";
+  color: rgb(34, 197, 94); /* green-500 */
+  font-size: 12px;
+}
+
+.status-indicator.failed::before {
+  content: "●";
+  color: rgb(239, 68, 68); /* red-500 */
+  font-size: 12px;
+}
+
+.status-indicator.pending::before {
+  content: "○";
+  color: rgb(209, 213, 219); /* gray-300 */
+  font-size: 12px;
+}
+
+.status-indicator.in_progress::before {
+  content: "●";
+  color: rgb(234, 179, 8); /* yellow-500 */
+  font-size: 12px;
+}
+
+/* Editor container styles */
+.monaco-editor .margin {
+  margin-left: 8px !important;
+}
+
+/* Ensure decorations appear above the text */
+.monaco-editor .decorationsOverviewRuler {
+  z-index: 2;
+}
+
+/* Make sure the glyph margin is visible */
+.monaco-editor .margin-view-overlays {
+  width: 40px !important;
+}
