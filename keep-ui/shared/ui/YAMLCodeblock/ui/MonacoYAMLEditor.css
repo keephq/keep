@@ -60,6 +60,12 @@
   font-size: 12px;
 }
 
+.status-indicator.skipped::before {
+  content: "●";
+  color: #6b7280; /* gray-500 */
+  font-size: 12px;
+}
+
 .status-indicator.pending::before {
   content: "○";
   color: rgb(209, 213, 219); /* gray-300 */

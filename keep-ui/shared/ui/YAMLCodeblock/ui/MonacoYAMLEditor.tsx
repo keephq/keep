@@ -117,7 +117,7 @@ const MonacoYAMLEditor = ({
       if (workflowData[section] !== undefined) {
         if (section === "steps" || section === "actions") {
           // Reorder properties within each step/action while maintaining array order
-          const orderedItems = workflowData[section].map((item) => {
+          const orderedItems = workflowData[section].map((item: any) => {
             const orderedItem: any = {};
 
             // Add properties in the specified order
@@ -408,8 +408,12 @@ const MonacoYAMLEditor = ({
           const match = line.match(/- name:\s*(.+)/);
           if (match) {
             const stepName = match[1].trim();
+            // if already selected, deselect
+            if (selectedStep === stepName) {
+              setSelectedStep(null);
+              break;
+            }
             setSelectedStep(stepName);
-            setTimeout(() => setSelectedStep(null), 100);
             break;
           }
           currentLine--;
@@ -480,7 +484,9 @@ const MonacoYAMLEditor = ({
     insertSpaces: true,
     fontSize: 14,
     renderWhitespace: "all",
-    wordWrap: "off",
+    wordWrap: "on",
+    wordWrapColumn: 80,
+    wrappingIndent: "indent",
     theme: "vs-light",
   };
 
