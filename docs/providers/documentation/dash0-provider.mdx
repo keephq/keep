@@ -1,0 +1,84 @@
+---
+title: 'Dash0'
+sidebarTitle: 'Dash0 Provider'
+description: 'Dash0 provider allows you to get events from Dash0 using webhooks.'
+---
+
+## Overview
+
+Dash0 is modern OpenTelemetry Native Observability, built on CNCF Open Standards such as PromQL, Perses and OTLP with full cost control.
+
+## Connecting Dash0 to Keep
+
+To connect Dash0 to Keep, you need to create a webhook in Dash0.
+
+1. Go to Dash0 dashboard and click on Organization settings.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/dash0-provider_1.png" />
+</Frame>
+
+2. Click on `Notification Channels` and create a New notification channel of type `Webhook`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/dash0-provider_2.png" />
+</Frame>
+
+3. Give a name to the webhook and enter [https://api.keephq.dev/alerts/event/dash0](https://api.keephq.dev/alerts/event/dash0) as the URL.
+
+4. Follow the below steps to create a new API key in Keep.
+
+5. Go to Keep dashboard and click on the profile icon in the botton left corner and click `Settings`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-1.png" />
+</Frame>
+
+6. Select `Users and Access` tab and then select `API Keys` tab and create a new API key.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-2.png" />
+</Frame>
+
+7. Give name and select the role as `webhook` and click on `Create API Key`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-3.png" />
+</Frame>
+
+8. Copy the API key.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-4.png" />
+</Frame>
+
+9. Add a new request header with key `X-API-KEY` and value as the API key copied from Keep and save the webhook.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/dash0-provider_3.png" />
+</Frame>
+
+10. Go to `Notifications` under `Alerting` and create a new notification rule if required or change the existing notification rule to use the webhook created.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/dash0-provider_4.png" />
+</Frame>
+
+11. Go to `Checks` under `Alerting` and create a new check or edit an existing check to use the notification rule created.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/dash0-provider_5.png" />
+</Frame>
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/dash0-provider_6.png" />
+</Frame>
+
+12. Now you will start receiving events in Keep from Dash0.
+
+## Useful Links
+
+- [Dash0](https://dash0.com/)
+
+
+
