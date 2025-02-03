@@ -46,14 +46,20 @@ class NetboxProvider(BaseProvider):
   def _format_alert(
      event: dict, provider_instance: "BaseProvider" = None
   ) -> AlertDto:
+     
+     data = event.get("data", {})
+     snapshots = event.get("snapshots", {})
+
      alert = AlertDto(
-        name=event["event"],
-        lastReceived=event["timestamp"],
-        model=event["model"],
-        username=event["username"],
-        id=event["request_id"],
-        data=event["data"],
-        snapshots=event["snapshots"],
+        name=data.get("name", "Could not fetch name"),
+        lastReceived=event.get("timestamp"),
+        startedAt=data.get("created"),
+        model=event.get("model", "Could not fetch model"),
+        username=event.get("username", "Could not fetch username"),
+        id=event.get("request_id"),
+        data=data,
+        description=event.get("event"),
+        snapshots=snapshots,
         source=["netbox"]
      )
      
