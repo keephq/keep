@@ -3862,7 +3862,7 @@ def add_alerts_to_incident(
                 incident.alerts_count = alerts_data_for_incident["count"]
             alert_to_incident_entries = [
                 LastAlertToIncident(
-                    fingerprint=fingerprint,
+                    fingerprint=str(fingerprint),  # it may sometime be UUID...
                     incident_id=incident.id,
                     tenant_id=tenant_id,
                     is_created_by_ai=is_created_by_ai,
