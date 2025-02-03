@@ -24,11 +24,6 @@ def test_add_remove_alert_to_incidents(
 
     response = client.get("/metrics?labels=a.b", headers={"X-API-KEY": "valid_api_key"})
 
-    # expected = f'alerts_total{{incident_name="test" incident_id="{incident.id}" a_b=""}} 14'
-    # foo = response.text.split("\n")
-
-    print(response.text)
-
     # Checking for alert_total metric
     assert (
         f'alerts_total{{incident_name="test",incident_id="{incident.id}",a_b=""}} 14'
