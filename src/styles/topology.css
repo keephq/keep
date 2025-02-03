@@ -1,0 +1,33 @@
+.topology-toolbar {
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.dialog-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 300px;
+}
+
+.node-card {
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  background: white;
+}
+
+.node-card.third-party {
+  background: #f5f5f5;
+  border-style: dashed;
+}
+
+.edge-line {
+  stroke: #999;
+  stroke-width: 2;
+}
+
+.edge-line.async {
+  stroke-dasharray: 5, 5;
+}
