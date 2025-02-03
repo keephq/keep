@@ -218,12 +218,11 @@ def __save_to_db(
                 )
                 session.add(audit)
 
-            alert_dto = AlertDto(**formatted_event.dict())
             set_last_alert(tenant_id, alert, session=session)
 
             # Mapping
             try:
-                enrichments_bl.run_mapping_rules(alert_dto)
+                enrichments_bl.run_mapping_rules(formatted_event)
             except Exception:
                 logger.exception("Failed to run mapping rules")
 
@@ -236,8 +235,8 @@ def __save_to_db(
                 for enrichment in alert_enrichment.enrichments:
                     # set the enrichment
                     value = alert_enrichment.enrichments[enrichment]
-                    setattr(alert_dto, enrichment, value)
-            enriched_formatted_events.append(alert_dto)
+                    setattr(formatted_event, enrichment, value)
+            enriched_formatted_events.append(formatted_event)
         session.commit()
 
         logger.info(

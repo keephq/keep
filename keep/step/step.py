@@ -264,7 +264,7 @@ class Step:
         action_name = self.config.get("name")
         if not evaluated_if_met:
             self.logger.info(
-                f"Action {action_name} evaluated NOT to run, Reason: {if_met} evaluated to false.",
+                f"Action {action_name} evaluated NOT to run, Reason: {if_met} evaluated to false. [before evaluation: {if_conf}]",
                 extra={
                     "condition": if_conf,
                     "rendered": if_met,
