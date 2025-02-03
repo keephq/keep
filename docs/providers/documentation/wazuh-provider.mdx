@@ -1,0 +1,58 @@
+---
+title: 'Wazuh'
+sidebarTitle: 'Wazuh Provider'
+description: 'Wazuh provider allows you to get alerts from Wazuh via custom integration.'
+---
+
+## Overview
+
+The Wazuh provider enables seamless integration between Keep and Wazuh.
+It allows you to get alerts from Wazuh to Keep via custom integration making it easier to
+track security-related activities in one place.
+
+Please refer to the [Wazuh Docs](https://documentation.wazuh.com/current/user-manual/manager/integration-with-external-apis.html#custom-integration) if you want to learn more about Wazuh Custom Integrations.
+
+## Connecting Wazuh to Keep
+
+To connect Wazuh to Keep, you need to configure it as a custom integration in Wazuh. Follow the steps below to set up the integration:
+
+1. Keep webhook scripts need to installed on the Wazuh server.
+
+2. You can download the Keep webhook scripts using the following command:
+
+```bash
+wget -O custom-keep.py https://github.com/keephq/keep/blob/main/keep/providers/wazuh_provider/custom-keep.py?raw=true
+wget -O custom-keep https://github.com/keephq/keep/blob/main/keep/providers/wazuh_provider/custom-keep?raw=true
+```
+
+3. Copy the downloaded script to the following path on the Wazuh server: `/var/ossec/integrations/` and set correct permissions
+```bash
+cp custom-keep.py /var/ossec/integrations/custom-keep.py
+cp custom-keep /var/ossec/integrations/custom-keep
+chown root:wazuh custom-keep*
+chmod 750 /var/ossec/integrations/custom-keep*
+```
+
+4. Get the Webhook URL of Keep which is `https://api.keephq.dev/alerts/event/wazuh`.
+
+5. Get the API Key of Keep which you can generate in the [Keep settings](https://platform.keephq.dev/settings?selectedTab=users&userSubTab=api-keys).
+
+6. In the config `/var/ossec/etc/ossec.conf` set new integration block
+```xml
+<integration>
+    <name>custom-keep</name>
+    <level>10</level>
+    <hook_url>PLACE_YOUR_KEEP_WEBHOOK_URL_HERE</hook_url>
+    <api_key>PLACE_HERE_YOUR_API_KEY</api_key>
+    <alert_format>json</alert_format>
+</integration>
+```
+Please refer to the [Wazuh Documentation](https://documentation.wazuh.com/current/user-manual/manager/integration-with-external-apis.html#custom-integration) for more information 
+and set the `level` you are interested in.
+7. Restart the `wazuh-manager`
+```bash
+$ systemctl restart wazuh-manager
+```
+## Useful Links
+
+- [Wazuh](https://documentation.wazuh.com/)
