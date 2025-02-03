@@ -40,16 +40,16 @@ export const useIncidents = (
 
   filtersParams.set("confirmed", confirmed.toString());
 
-  if (sorting) {
-    filtersParams.set("sorting", sorting.desc ? `-${sorting.id}` : sorting.id);
-  }
-
   if (limit !== undefined) {
     filtersParams.set("limit", limit.toString());
   }
 
   if (offset !== undefined) {
     filtersParams.set("offset", offset.toString());
+  }
+
+  if (sorting) {
+    filtersParams.set("sorting", sorting.desc ? `-${sorting.id}` : sorting.id);
   }
 
   if (cel) {
@@ -61,11 +61,7 @@ export const useIncidents = (
       api.isReady()
         ? `/incidents${filtersParams.size ? `?${filtersParams.toString()}` : ""}`
         : null,
-    (url) => {
-      // console.log("Ihor " + url);
-
-      return api.get(url);
-    },
+    (url) => api.get(url),
     options
   );
 
