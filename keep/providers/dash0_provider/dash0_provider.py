@@ -70,7 +70,7 @@ To send alerts from Dash0 to Keep, Use the following webhook url to configure Da
        type=event.get("type", "Could not fetch type"),
        description=issue.get("description", "Could not fetch description"),
        summary=issue.get("summary", "Could not fetch summary"),
-       url=issue.get("url"),
+       url=issue.get("url", "https://could-not-find-url"),
        status=Dash0Provider.STATUS_MAP.get(issue.get("status"), AlertStatus.FIRING),
        severity=Dash0Provider.SEVERITIES_MAP.get(issue.get("status"), AlertSeverity.CRITICAL),
        lastReceived=issue.get("end", issue.get("start")),
