@@ -11,7 +11,7 @@ from typing import List, Optional
 
 import celpy
 from arq import ArqRedis
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pusher import Pusher
 from sqlmodel import Session
@@ -47,6 +47,7 @@ from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.db.rule import ResolveOn
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.models.time_stamp import TimeStampFilter
+from keep.api.routes.preset import pull_data_from_providers
 from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
@@ -171,6 +172,8 @@ def fetch_alert_facet_fields(
     description="Get last alerts occurrence",
 )
 def query_alerts(
+    request: Request,
+    bg_tasks: BackgroundTasks,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
@@ -180,6 +183,15 @@ def query_alerts(
     sort_by = Query(None),
     sort_dir = Query(None),
 ):
+    # Gathering alerts may take a while and we don't care if it will finish before we return the response.
+    # In the worst case, gathered alerts will be pulled in the next request.
+    # This approach is not good. We should continuesly pull alerts without relying on whether request is done or not.
+    bg_tasks.add_task(
+        pull_data_from_providers,
+        authenticated_entity.tenant_id,
+        request.state.trace_id,
+    )
+
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Fetching alerts from DB",
