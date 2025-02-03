@@ -22,14 +22,16 @@ import { useProviders } from "utils/hooks/useProviders";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
+import { AlertDto } from "@/entities/alerts/model";
 
 const supportedParamTypes = ["datetime", "literal", "str"];
 
 interface AlertMethodModalProps {
   presetName: string;
+  alerts: AlertDto[]
 }
 
-export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
+export function AlertMethodModal({ presetName, alerts }: AlertMethodModalProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const api = useApi();
@@ -45,8 +47,7 @@ export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
     (p) => p.id === providerId
   );
   const method = provider?.methods?.find((m) => m.name === methodName);
-  const { usePresetAlerts } = useAlerts();
-  const { data: alerts, mutate } = usePresetAlerts(presetName);
+  const { alertsMutator } = useAlerts();
   const alert = alerts?.find((a) => a.fingerprint === alertFingerprint);
   const [isLoading, setIsLoading] = useState(false);
   const [inputParameters, setInputParameters] = useState<{
@@ -71,6 +72,12 @@ export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
       });
     }
   }, [alert, method]);
+
+  if (isOpen) {
+    console.log({
+      provider, method, alert
+    })
+  }
 
   if (!isOpen || !provider || !method || !alert) {
     return <></>;
@@ -168,7 +175,7 @@ export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
         userParams
       );
       if (method.type === "action") {
-        mutate();
+        alertsMutator();
       }
       toast.success(`Successfully called "${method.name}"`, {
         position: toast.POSITION.TOP_LEFT,

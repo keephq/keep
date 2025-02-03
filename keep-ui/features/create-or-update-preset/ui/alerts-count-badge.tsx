@@ -1,7 +1,6 @@
 // TODO: move models to entities/alerts
-import { useSearchAlerts } from "@/utils/hooks/useSearchAlerts";
+import { useAlerts } from "@/utils/hooks/useAlerts";
 import { Badge, Card, Text } from "@tremor/react";
-import { parseCEL, RuleGroupType } from "react-querybuilder";
 
 interface AlertsCountBadgeProps {
   presetCEL: string;
@@ -15,21 +14,14 @@ export const AlertsCountBadge: React.FC<AlertsCountBadgeProps> = ({
   vertical = false,
 }) => {
   console.log("AlertsCountBadge::presetCEL", presetCEL);
-  // Create
-  const defaultQuery: RuleGroupType = parseCEL(presetCEL) as RuleGroupType;
+  const { useLastAlerts } = useAlerts()
+  const { totalCount, isLoading: isSearching } = useLastAlerts(
+    presetCEL,
+    20,
+    0,
+  );
 
-  // Parse CEL to RuleGroupType or use default empty rule group
-  const parsedQuery = presetCEL
-    ? (parseCEL(presetCEL) as RuleGroupType)
-    : defaultQuery;
-
-  // Add useSearchAlerts hook with proper typing
-  const { data: alertsFound, isLoading: isSearching } = useSearchAlerts({
-    query: parsedQuery,
-    timeframe: 0,
-  });
-
-  console.log("AlertsCountBadge::swr", alertsFound);
+  console.log("AlertsCountBadge::swr", totalCount);
 
   // Show loading state when searching or debouncing
   if (isSearching || isDebouncing) {
@@ -52,7 +44,7 @@ export const AlertsCountBadge: React.FC<AlertsCountBadgeProps> = ({
   }
 
   // Don't show anything if there's no data
-  if (!alertsFound) {
+  if (!Number.isInteger(totalCount)) {
     return null;
   }
 
@@ -65,10 +57,10 @@ export const AlertsCountBadge: React.FC<AlertsCountBadgeProps> = ({
           } items-center gap-2`}
         >
           <Badge size="xl" color="orange">
-            {alertsFound.length}
+            {totalCount}
           </Badge>
           <Text className="text-gray-500 text-sm">
-            {alertsFound.length === 1 ? "Alert" : "Alerts"} found
+            {totalCount === 1 ? "Alert" : "Alerts"} found
           </Text>
         </div>
       </div>

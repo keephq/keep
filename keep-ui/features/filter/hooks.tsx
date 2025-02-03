@@ -1,5 +1,5 @@
 import useSWR, { SWRConfiguration, useSWRConfig } from "swr";
-import { CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsDict, FacetOptionsQueries } from "./models";
+import { CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsDict, FacetOptionsQueries, FacetOptionsQuery } from "./models";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -32,10 +32,32 @@ export const useFacets = (
   };
 };
 
+
+export const useFacetPotentialFields = (
+  entityName: string,
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  }
+) => {
+  const api = useApi();
+  const requestUrl = `/${entityName}/facets/fields`;
+
+  const swrValue = useSWR<string[]>(
+    () => (api.isReady() ? requestUrl : null),
+    (url) => api.get(url),
+    options
+  );
+
+  return {
+    ...swrValue,
+    isLoading: swrValue.isLoading || (!options.fallbackData && !api.isReady()),
+  };
+};
+
 export const useFacetOptions = (
   entityName: string,
   initialFacetOptions: FacetOptionsDict | undefined,
-  facetsQuery: FacetOptionsQueries | null
+  facetsQuery: FacetOptionsQuery | null
 ) => {
   const api = useApi();
   const [mergedFacetOptions, setMergedFacetOptions] = useState(
@@ -44,50 +66,52 @@ export const useFacetOptions = (
   const [isLoading, setIsLoading] = useState(false);
   const requestUrl = `/${entityName}/facets/options`;
 
+  async function fetch() {
+    setIsLoading(true);
+    const fetchedData: FacetOptionsDict = await api.post(
+      requestUrl,
+      facetsQuery
+    );
+    const newFacetOptions: FacetOptionsDict = JSON.parse(
+      JSON.stringify(mergedFacetOptions || {})
+    );
+    Object.entries(fetchedData).forEach(([facetId, newOptions]) => {
+      if (newFacetOptions[facetId]) {
+        const currentFacetOptionsMap = newFacetOptions[facetId].reduce(
+          (accumulator, oldOption) => {
+            accumulator[oldOption.display_name] = oldOption;
+            oldOption.matches_count = 0;
+            return accumulator;
+          },
+          {} as Record<string, FacetOptionDto>
+        );
+
+        newOptions.forEach(
+          (newOption) =>
+            (currentFacetOptionsMap[newOption.display_name] = newOption)
+        );
+        newFacetOptions[facetId] = Object.values(currentFacetOptionsMap);
+        return;
+      }
+
+      newFacetOptions[facetId] = newOptions;
+    });
+
+    setMergedFacetOptions(newFacetOptions);
+    setIsLoading(false);
+  }
+
   useEffect(() => {
     if (!api.isReady() || !facetsQuery) {
       return;
     }
-
-    async function fetch() {
-      setIsLoading(true);
-      const fetchedData: FacetOptionsDict = await api.post(
-        requestUrl,
-        facetsQuery
-      );
-      const newFacetOptions: FacetOptionsDict = JSON.parse(
-        JSON.stringify(mergedFacetOptions || {})
-      );
-      Object.entries(fetchedData).forEach(([facetId, newOptions]) => {
-        if (newFacetOptions[facetId]) {
-          const currentFacetOptionsMap = newFacetOptions[facetId].reduce(
-            (accumulator, oldOption) => {
-              accumulator[oldOption.display_name] = oldOption;
-              oldOption.matches_count = 0;
-              return accumulator;
-            },
-            {} as Record<string, FacetOptionDto>
-          );
-
-          newOptions.forEach(
-            (newOption) =>
-              (currentFacetOptionsMap[newOption.display_name] = newOption)
-          );
-          newFacetOptions[facetId] = Object.values(currentFacetOptionsMap);
-          return;
-        }
-
-        newFacetOptions[facetId] = newOptions;
-      });
-
-      setMergedFacetOptions(newFacetOptions);
-      setIsLoading(false);
-    }
+    
     fetch();
-  }, [api, api?.isReady(), facetsQuery, requestUrl]);
+  }, [api, api?.isReady(), JSON.stringify(facetsQuery), requestUrl]);
 
   return {
     facetOptions: mergedFacetOptions,
+    mutate: fetch,
     isLoading
   };
 };
@@ -103,7 +127,7 @@ export const useFacetActions = (
   const mutateFacetsList = useCallback(
     () =>
       // Adding "?" to the key because the list always has a query param
-      mutate((key) => typeof key === "string" && key == "/incidents/facets"),
+      mutate((key) => typeof key === "string" && key == `/${entityName}/facets`),
     [mutate]
   );
 

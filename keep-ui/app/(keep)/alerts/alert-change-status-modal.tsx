@@ -38,11 +38,8 @@ export default function AlertChangeStatusModal({
   const api = useApi();
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
   const revalidateMultiple = useRevalidateMultiple();
+  const { alertsMutator } = useAlerts();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
-  const { useAllAlerts } = useAlerts();
-  const { mutate: alertsMutator } = useAllAlerts(presetName, {
-    revalidateOnMount: false,
-  });
 
   if (!alert) return null;
 

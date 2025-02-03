@@ -34,8 +34,7 @@ const PushAlertToServerModal = ({
   const [alertSources, setAlertSources] = useState<AlertSource[]>([]);
   const revalidateMultiple = useRevalidateMultiple();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
-  const { usePresetAlerts } = useAlerts();
-  const { mutate: mutateAlerts } = usePresetAlerts(presetName);
+  const { alertsMutator: mutateAlerts } = useAlerts();
 
   const {
     control,
