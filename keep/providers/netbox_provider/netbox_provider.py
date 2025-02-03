@@ -58,7 +58,7 @@ class NetboxProvider(BaseProvider):
         username=event.get("username", "Could not fetch username"),
         id=event.get("request_id"),
         data=data,
-        description=event.get("event"),
+        description=event.get("event", "Could not fetch event"),
         snapshots=snapshots,
         source=["netbox"]
      )
