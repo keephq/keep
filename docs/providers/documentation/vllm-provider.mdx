@@ -1,0 +1,58 @@
+---
+title: "vLLM Provider"
+description: "The vLLM Provider enables integration with vLLM-deployed language models into Keep."
+---
+
+<Tip>
+  The vLLM Provider supports querying language models deployed with vLLM for prompt-based interactions.
+</Tip>
+
+## Inputs
+
+The vLLM Provider supports the following parameters:
+
+- `prompt`: Interact with vLLM-deployed models by sending prompts and receiving responses
+- `model`: The model to be used, defaults to `Qwen/Qwen1.5-1.8B-Chat`
+- `temperature`: Controls randomness in the response, defaults to 0.7
+- `max_tokens`: Limit amount of tokens returned by the model, defaults to 1024
+- `structured_output_format`: Optional JSON schema for structured output formatting
+
+## Outputs
+
+The vLLM Provider returns the model's response based on the provided prompt. When using structured output format, the response will be formatted according to the provided JSON schema.
+
+## Authentication Parameters
+
+To use the vLLM Provider, you'll need to configure the following authentication parameters:
+
+- **api_url** (required): The endpoint URL where your vLLM service is deployed
+- **api_key** (optional): API key if your vLLM deployment requires authentication
+
+## Connecting with the Provider
+
+To connect to a vLLM deployment:
+
+1. Deploy your vLLM instance or obtain the API endpoint of an existing deployment
+2. Configure the API URL in your provider configuration
+3. If your deployment requires authentication, configure the API key
+
+## Structured Output
+
+Example:
+
+```yaml
+  structured_output_format:
+    type: object
+    properties:
+      environment:
+        type: string
+        enum:
+          - production
+          - debug
+          - pre-prod
+      impacted_customer_name:
+        type: string
+    required:
+      - environment
+      - impacted_customer_name
+```
