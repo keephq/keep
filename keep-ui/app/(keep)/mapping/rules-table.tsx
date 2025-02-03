@@ -23,6 +23,8 @@ import { toast } from "react-toastify";
 import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
+import * as HoverCard from "@radix-ui/react-hover-card";
+import TimeAgo from "react-timeago";
 
 const columnHelper = createColumnHelper<MappingRule>();
 
@@ -37,28 +39,13 @@ export default function RulesTable({ mappings, editCallback }: Props) {
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
   const columns = [
-    columnHelper.display({
-      id: "delete",
-      header: "",
-      cell: (context) => (
-        <div className={"space-x-1 flex flex-row items-center justify-center"}>
-          {/*If user wants to edit the mapping. We use the callback to set the data in mapping.tsx which is then passed to the create-new-mapping.tsx form*/}
-          <Button
-            color="orange"
-            size="xs"
-            variant="secondary"
-            icon={MdModeEdit}
-            onClick={() => editCallback(context.row.original!)}
-          />
-          <Button
-            color="red"
-            size="xs"
-            variant="secondary"
-            icon={MdRemoveCircle}
-            onClick={() => deleteRule(context.row.original.id!)}
-          />
-        </div>
-      ),
+    columnHelper.accessor("name", {
+      header: "Name",
+      cell: (info) => info.getValue(),
+    }),
+    columnHelper.accessor("description", {
+      header: "Description",
+      cell: (info) => info.getValue(),
     }),
     columnHelper.display({
       id: "priority",
@@ -66,19 +53,9 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       cell: (context) => context.row.original.priority,
     }),
     columnHelper.display({
-      id: "name",
-      header: "Name",
-      cell: (context) => context.row.original.name,
-    }),
-    columnHelper.display({
       id: "type",
       header: "Type",
       cell: (context) => context.row.original.type,
-    }),
-    columnHelper.display({
-      id: "description",
-      header: "Description",
-      cell: (context) => context.row.original.description,
     }),
     columnHelper.display({
       id: "fileName",
@@ -102,6 +79,39 @@ export default function RulesTable({ mappings, editCallback }: Props) {
           ))}
         </div>
       ),
+    }),
+    columnHelper.display({
+      id: "actions",
+      header: "",
+      cell: (context) => (
+        <div className="space-x-1 flex flex-row items-center justify-end opacity-0 group-hover:opacity-100 border-l">
+          <Button
+            color="orange"
+            size="xs"
+            variant="secondary"
+            icon={MdModeEdit}
+            tooltip="Edit"
+            onClick={(event) => {
+              event.stopPropagation();
+              editCallback(context.row.original!);
+            }}
+          />
+          <Button
+            color="red"
+            size="xs"
+            variant="secondary"
+            icon={MdRemoveCircle}
+            tooltip="Delete"
+            onClick={(event) => {
+              event.stopPropagation();
+              deleteRule(context.row.original.id!);
+            }}
+          />
+        </div>
+      ),
+      meta: {
+        sticky: true,
+      },
     }),
   ] as DisplayColumnDef<MappingRule>[];
 
@@ -135,68 +145,141 @@ export default function RulesTable({ mappings, editCallback }: Props) {
             className="border-b border-tremor-border dark:border-dark-tremor-border"
             key={headerGroup.id}
           >
-            {headerGroup.headers.map((header) => {
-              return (
-                <TableHeaderCell
-                  className="text-tremor-content-strong dark:text-dark-tremor-content-strong"
-                  key={header.id}
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                </TableHeaderCell>
-              );
-            })}
+            {headerGroup.headers.map((header) => (
+              <TableHeaderCell
+                className={`text-tremor-content-strong dark:text-dark-tremor-content-strong ${
+                  header.column.columnDef.meta?.sticky
+                    ? "sticky right-0 bg-white dark:bg-gray-800"
+                    : ""
+                }`}
+                key={header.id}
+              >
+                {flexRender(
+                  header.column.columnDef.header,
+                  header.getContext()
+                )}
+              </TableHeaderCell>
+            ))}
           </TableRow>
         ))}
       </TableHead>
       <TableBody>
         {table.getRowModel().rows.map((row) => (
           <>
-            <TableRow
-              className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100"
-              key={row.id}
-              onClick={() => row.toggleExpanded()}
-            >
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-            {row.getIsExpanded() && (
-              <TableRow className="pl-2.5">
-                <TableCell colSpan={columns.length}>
-                  <div className="flex space-x-2 divide-x">
+            <HoverCard.Root openDelay={100} closeDelay={200}>
+              <HoverCard.Trigger asChild className="hover:cursor-pointer">
+                <TableRow
+                  className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 group"
+                  key={row.id}
+                  onClick={() => row.toggleExpanded()}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell
+                      className={`${
+                        cell.column.columnDef.meta?.sticky
+                          ? "sticky right-0 bg-white dark:bg-gray-800"
+                          : ""
+                      }`}
+                      key={cell.id}
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </HoverCard.Trigger>
+              <HoverCard.Portal>
+                <HoverCard.Content
+                  side="left"
+                  className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 shadow-lg z-[9999] overflow-y-scroll"
+                  sideOffset={5}
+                >
+                  <div className="space-y-2">
                     <div className="flex items-center space-x-2">
-                      <span className="font-bold">Created At:</span>
-                      <span>
-                        {new Date(
-                          row.original.created_at + "Z"
-                        ).toLocaleString()}
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created:
+                      </span>
+                      <span className="whitespace-nowrap text-sm text-gray-900">
+                        <TimeAgo
+                          date={new Date(
+                            row.original.created_at + "Z"
+                          ).toLocaleString()}
+                        />
                       </span>
                     </div>
-                    <div className="flex items-center space-x-2 pl-2.5">
-                      <span className="font-bold">Created By:</span>
-                      <span>{row.original.created_by}</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created by:
+                      </span>
+                      <span className="whitespace-nowrap text-sm text-gray-900">
+                        {row.original.created_by}
+                      </span>
                     </div>
                     {row.original.last_updated_at && (
                       <>
-                        <div className="flex items-center space-x-2 pl-2.5">
-                          <span className="font-bold">Updated At:</span>
-                          <span>
-                            {new Date(
-                              row.original.last_updated_at + "Z"
-                            ).toLocaleString()}
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Last update:
+                          </span>
+                          <span className="whitespace-nowrap text-sm text-gray-900">
+                            <TimeAgo
+                              date={new Date(
+                                row.original.last_updated_at + "Z"
+                              ).toLocaleString()}
+                            />
                           </span>
                         </div>
-                        <div className="flex items-center space-x-2 pl-2.5">
-                          <span className="font-bold">Updated By:</span>
-                          <span>{row.original.updated_by}</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Updated by:
+                          </span>
+                          <span className="whitespace-nowrap text-sm text-gray-900">
+                            {row.original.updated_by}
+                          </span>
                         </div>
                       </>
                     )}
+                  </div>
+                  <HoverCard.Arrow className="fill-tremor-border" />
+                </HoverCard.Content>
+              </HoverCard.Portal>
+            </HoverCard.Root>
+            {row.getIsExpanded() && row.original.type === "csv" && (
+              <TableRow className="pl-2.5">
+                <TableCell colSpan={columns.length}>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead>
+                        <tr>
+                          {Object.keys(row.original.rows[0] || {}).map(
+                            (key) => (
+                              <th
+                                key={key}
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                              >
+                                {key}
+                              </th>
+                            )
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {row.original.rows.map((csvRow, index) => (
+                          <tr key={index}>
+                            {Object.values(csvRow).map((value, idx) => (
+                              <td
+                                key={idx}
+                                className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                              >
+                                {value}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </TableCell>
               </TableRow>
