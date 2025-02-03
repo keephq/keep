@@ -50,10 +50,7 @@ const ResizableColumns = ({
       className="flex h-full w-full overflow-hidden rounded"
       onMouseMove={onMouseMove}
     >
-      <div
-        className="bg-gray-50 p-4 overflow-auto"
-        style={{ width: `${leftWidth}%` }}
-      >
+      <div className="p-4 overflow-auto" style={{ width: `${leftWidth}%` }}>
         {leftChild}
       </div>
 
