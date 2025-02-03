@@ -5,7 +5,7 @@ import { Text, TextInput, Button } from "@tremor/react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { authenticate, revalidateAfterAuth } from "@/app/actions/authactions";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import "../../globals.css";
 
 export interface Provider {
@@ -28,12 +28,18 @@ interface SignInFormInputs {
   password: string;
 }
 
-export default function SignInForm({ params }: { params?: { amt: string } }) {
+export default function SignInForm({
+  params,
+  searchParams,
+}: {
+  params?: { amt: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
   console.log("Init SignInForm");
   const [providers, setProviders] = useState<Providers | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
+
   const {
     register,
     handleSubmit,
@@ -73,7 +79,7 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
         providers.credentials.name == "NoAuth"
       ) {
         signIn("credentials", {
-          callbackUrl: searchParams.get("callbackUrl") || "/",
+          callbackUrl: (searchParams["callbackUrl"] as string) || "/",
         });
       }
     }
