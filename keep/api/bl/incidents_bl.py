@@ -19,11 +19,11 @@ from keep.api.core.db import (
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
     remove_alerts_to_incident_by_incident_id,
-    update_incident_from_dto_by_id,
+    update_incident_from_dto_by_id, update_incident_severity, add_audit,
 )
 from keep.api.core.elastic import ElasticClient
-from keep.api.models.alert import IncidentDto, IncidentDtoIn
-from keep.api.models.db.alert import Incident
+from keep.api.models.alert import IncidentDto, IncidentDtoIn, IncidentSeverity
+from keep.api.models.db.alert import Incident, ActionType
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
@@ -270,22 +270,7 @@ class IncidentBl:
         incident = update_incident_from_dto_by_id(
             self.tenant_id, incident_id, updated_incident_dto, generated_by_ai
         )
-        if not incident:
-            raise HTTPException(status_code=404, detail="Incident not found")
-
-        new_incident_dto = IncidentDto.from_db_incident(incident)
-
-        self.update_client_on_incident_change(incident.id)
-        self.logger.info(
-            "Client updated on incident change",
-            extra={"incident_id": incident.id},
-        )
-        self.send_workflow_event(new_incident_dto, "updated")
-        self.logger.info(
-            "Workflows run on incident",
-            extra={"incident_id": incident.id},
-        )
-        return new_incident_dto
+        return self.__postprocess_incident_change(incident)
 
     def __postprocess_alerts_change(self, incident, alert_fingerprints):
 
@@ -314,3 +299,50 @@ class IncidentBl:
                 "alert_fingerprints": alert_fingerprints,
             },
         )
+
+    def update_severity(
+        self,
+        incident_id: UUID,
+        severity: IncidentSeverity,
+        comment: Optional[str] = None,
+    ) -> IncidentDto:
+        self.logger.info(
+            "Fetching incident",
+            extra={
+                "incident_id": incident_id,
+                "tenant_id": self.tenant_id,
+            },
+        )
+        incident = update_incident_severity(
+            self.tenant_id, incident_id, severity,
+        )
+
+        if comment:
+            add_audit(
+                self.tenant_id,
+                str(incident_id),
+                self.user,
+                ActionType.INCIDENT_COMMENT,
+                comment,
+            )
+
+        return self.__postprocess_incident_change(incident)
+
+
+    def __postprocess_incident_change(self, incident):
+        if not incident:
+            raise HTTPException(status_code=404, detail="Incident not found")
+
+        new_incident_dto = IncidentDto.from_db_incident(incident)
+
+        self.update_client_on_incident_change(incident.id)
+        self.logger.info(
+            "Client updated on incident change",
+            extra={"incident_id": incident.id},
+        )
+        self.send_workflow_event(new_incident_dto, "updated")
+        self.logger.info(
+            "Workflows run on incident",
+            extra={"incident_id": incident.id},
+        )
+        return new_incident_dto
