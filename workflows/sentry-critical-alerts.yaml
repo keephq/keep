@@ -1,0 +1,55 @@
+workflow:
+  id: sentry-critical-alerts
+  description: "Handle critical Sentry alerts for key services"
+
+  triggers:
+    - type: alert
+      filters:
+        - key: source
+          value: sentry
+        - key: severity
+          value: critical
+        - key: service
+          value: r"(payments|api)"
+
+  actions:
+    # Notify Slack
+    - name: notify-slack
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+        with:
+          channel: "#incidents"
+          message: |
+            🚨 *Critical Alert from Sentry*
+            *Service:* {{ alert.service }}
+            *Error:* {{ alert.name }}
+            *Description:* {{ alert.description }}
+
+    # Create Jira ticket
+    - name: create-ticket
+      if: "not '{{ alert.ticket_id }}'"
+      provider:
+        type: jira
+        config: "{{ providers.jira }}"
+        with:
+          project: "OPS"
+          issuetype: "Incident"
+          summary: "[{{ alert.service }}] {{ alert.name }}"
+          description: |
+            h2. Alert Details
+            * Service: {{ alert.service }}
+            * Severity: {{ alert.severity }}
+            * Description: {{ alert.description }}
+
+            h2. Context
+            {code:json}
+            {{ alert }}
+            {code}
+
+          # Store ticket reference
+          enrich_alert:
+            - key: ticket_id
+              value: results.issue.key
+            - key: ticket_url
+              value: results.ticket_url
