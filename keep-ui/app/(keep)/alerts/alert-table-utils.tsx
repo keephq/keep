@@ -339,8 +339,8 @@ export const useAlertTableCols = (
         const date = value instanceof Date ? value : new Date(value);
         const isoString = date.toISOString();
         return (
-          <span title={isoString}>
-            <TimeAgo date={isoString} />
+          <span>
+            <TimeAgo date={isoString} title={isoString}/>
           </span>
         );
       },

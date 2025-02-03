@@ -28,11 +28,18 @@ interface SignInFormInputs {
   password: string;
 }
 
-export default function SignInForm({ params }: { params?: { amt: string } }) {
+export default function SignInForm({
+  params,
+  searchParams,
+}: {
+  params?: { amt: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
   console.log("Init SignInForm");
   const [providers, setProviders] = useState<Providers | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const router = useRouter();
+
   const {
     register,
     handleSubmit,
@@ -71,7 +78,9 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
         providers.credentials &&
         providers.credentials.name == "NoAuth"
       ) {
-        signIn("credentials", { callbackUrl: "/" });
+        signIn("credentials", {
+          callbackUrl: (searchParams["callbackUrl"] as string) || "/",
+        });
       }
     }
   }, [providers, params]);
