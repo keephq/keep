@@ -191,6 +191,7 @@
             "providers/documentation/monday-provider",
             "providers/documentation/mongodb-provider",
             "providers/documentation/mysql-provider",
+            "providers/documentation/netbox-provider",
             "providers/documentation/netdata-provider",
             "providers/documentation/new-relic-provider",
             "providers/documentation/ntfy-provider",
