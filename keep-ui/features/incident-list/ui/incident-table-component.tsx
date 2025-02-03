@@ -21,15 +21,25 @@ interface Props {
 interface SortableHeaderCellProps {
   header: Header<IncidentDto, unknown>;
   children: ReactNode;
+  className?: string;
 }
 
-const SortableHeaderCell = ({ header, children }: SortableHeaderCellProps) => {
+const SortableHeaderCell = ({
+  header,
+  children,
+  className,
+}: SortableHeaderCellProps) => {
   const { column } = header;
-  const { style, className } = getCommonPinningStylesAndClassNames(column);
+  const { style, className: commonClassName } =
+    getCommonPinningStylesAndClassNames(column);
 
   return (
     <TableHeaderCell
-      className={clsx("relative bg-tremor-background group", className)}
+      className={clsx(
+        "relative bg-tremor-background group",
+        commonClassName,
+        className
+      )}
       style={style}
     >
       <div className="flex items-center">
@@ -87,6 +97,7 @@ export const IncidentTableComponent = (props: Props) => {
                 <SortableHeaderCell
                   header={header}
                   key={`${header.id}-${index}`}
+                  className={header.column.columnDef.meta?.tdClassName}
                 >
                   {flexRender(
                     header.column.columnDef.header,
@@ -113,6 +124,7 @@ export const IncidentTableComponent = (props: Props) => {
                   key={cell.id}
                   style={style}
                   className={clsx(
+                    cell.column.columnDef.meta?.tdClassName,
                     className,
                     "bg-white",
                     cell.column.id === "actions" ? "p-1" : ""

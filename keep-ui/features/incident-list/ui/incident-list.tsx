@@ -25,7 +25,7 @@ import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import { useUser } from "@/entities/users/model/useUser";
 import { severityMapping } from "@/entities/alerts/model";
 import { IncidentsNotFoundPlaceholder } from "./incidents-not-found";
-import { v4 as uuidV4 } from 'uuid';
+import { v4 as uuidV4 } from "uuid";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -81,13 +81,17 @@ export function IncidentList({
     null
   );
 
-  const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(null);
-  const [filterRevalidationToken, setFilterRevalidationToken] = useState<string | null>(null);
+  const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
+    null
+  );
+  const [filterRevalidationToken, setFilterRevalidationToken] = useState<
+    string | null
+  >(null);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 
   useEffect(() => {
     setFilterRevalidationToken(incidentChangeToken);
-  }, [incidentChangeToken])
+  }, [incidentChangeToken]);
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
@@ -129,7 +133,14 @@ export function IncidentList({
         );
       }
       if (facetName === "severity") {
-        return <SeverityBorderIcon severity={(severityMapping[Number(facetOptionName)] || facetOptionName) as UISeverity} />;
+        return (
+          <SeverityBorderIcon
+            severity={
+              (severityMapping[Number(facetOptionName)] ||
+                facetOptionName) as UISeverity
+            }
+          />
+        );
       }
       if (facetName === "assignee") {
         return <UserStatefulAvatar email={facetOptionName} size="xs" />;
@@ -162,7 +173,7 @@ export function IncidentList({
   const renderFacetOptionLabel = useCallback(
     (facetName: string, facetOptionName: string) => {
       facetName = facetName.toLowerCase();
-      
+
       switch (facetName) {
         case "assignee":
           if (!facetOptionName) {
@@ -172,8 +183,9 @@ export function IncidentList({
         case "dismissed":
           return facetOptionName === "true" ? "Dismissed" : "Not dismissed";
         case "severity": {
-            const label = severityMapping[Number(facetOptionName)] || facetOptionName;
-            return <span className="capitalize">{label}</span>;
+          const label =
+            severityMapping[Number(facetOptionName)] || facetOptionName;
+          return <span className="capitalize">{label}</span>;
         }
         default:
           return <span className="capitalize">{facetOptionName}</span>;
@@ -198,7 +210,9 @@ export function IncidentList({
     if (filterCel && incidents?.items.length === 0) {
       return (
         <Card className="flex-grow ">
-          <IncidentsNotFoundPlaceholder onClearFilters={() => setClearFiltersToken(uuidV4())} />
+          <IncidentsNotFoundPlaceholder
+            onClearFilters={() => setClearFiltersToken(uuidV4())}
+          />
         </Card>
       );
     }
@@ -212,7 +226,7 @@ export function IncidentList({
   }
 
   const uncheckedFacetOptionsByDefault: Record<string, string[]> = {
-    "Status": ["resolved", "deleted"],
+    Status: ["resolved", "deleted"],
   };
 
   return (
@@ -253,31 +267,29 @@ export function IncidentList({
             </div>
           </div>
           <div>
-            {
-              incidentsError ? (
-                <IncidentListError incidentError={incidentsError} />
-              ) : null
-            }
-            {
-              incidentsError ? null : (
-                <div className="flex flex-row gap-5">
-                  <FacetsPanelServerSide
-                    className="mt-14"
-                    entityName={"incidents"}
-                    clearFiltersToken={clearFiltersToken}
-                    initialFacetsData={initialFacetsData}
-                    uncheckedByDefaultOptionValues={uncheckedFacetOptionsByDefault}
-                    onCelChange={(cel) => setFilterCel(cel)}
-                    renderFacetOptionIcon={renderFacetOptionIcon}
-                    renderFacetOptionLabel={renderFacetOptionLabel}
-                    revalidationToken={filterRevalidationToken}
-                  />
-                  <div className="flex flex-col gap-5 flex-1">
-                    {renderIncidents()}
-                  </div>
+            {incidentsError ? (
+              <IncidentListError incidentError={incidentsError} />
+            ) : null}
+            {incidentsError ? null : (
+              <div className="flex flex-row gap-5">
+                <FacetsPanelServerSide
+                  className="mt-14"
+                  entityName={"incidents"}
+                  clearFiltersToken={clearFiltersToken}
+                  initialFacetsData={initialFacetsData}
+                  uncheckedByDefaultOptionValues={
+                    uncheckedFacetOptionsByDefault
+                  }
+                  onCelChange={(cel) => setFilterCel(cel)}
+                  renderFacetOptionIcon={renderFacetOptionIcon}
+                  renderFacetOptionLabel={renderFacetOptionLabel}
+                  revalidationToken={filterRevalidationToken}
+                />
+                <div className="flex flex-col gap-5 flex-1 min-w-0">
+                  {renderIncidents()}
                 </div>
-              )
-            }
+              </div>
+            )}
           </div>
         </div>
       </div>

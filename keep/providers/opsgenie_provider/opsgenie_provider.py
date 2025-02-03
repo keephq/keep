@@ -7,7 +7,7 @@ import pydantic
 from opsgenie_sdk.rest import ApiException
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 
@@ -38,7 +38,7 @@ class OpsGenieRecipient(pydantic.BaseModel):
     id: typing.Optional[str] = None
 
 
-class OpsgenieProvider(BaseProvider):
+class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
     """Create incidents in OpsGenie."""
 
     PROVIDER_DISPLAY_NAME = "OpsGenie"
