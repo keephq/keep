@@ -306,7 +306,6 @@ const ProviderForm = ({
 
   function validate(data?: ProviderFormData) {
     let schema = zodSchema;
-    console.log(222, data);
     if (data) {
       schema = zodSchema.pick(
         Object.fromEntries(Object.keys(data).map((field) => [field, true]))
