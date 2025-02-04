@@ -19,8 +19,6 @@ import { useIncident } from "@/utils/hooks/useIncidents";
 import { IncidentOverview } from "./incident-overview";
 import { CopilotKit } from "@copilotkit/react-core";
 import { TbInfoCircle, TbTopologyStar3 } from "react-icons/tb";
-import { IncidentChangeStatusSelect } from "@/features/change-incident-status";
-import { IncidentChangeSeveritySelect } from "@/features/change-incident-severity";
 
 export function IncidentHeader({
   incident: initialIncidentData,
@@ -114,10 +112,6 @@ export function IncidentHeader({
           )}
         </div>
         <div className="flex justify-start items-center text-sm gap-2">
-          <IncidentChangeSeveritySelect
-            incidentId={incident.id}
-            value={incident.severity}
-          />
           <div className="prose-2xl flex-grow flex gap-1">
             {incident.incident_type == "topology" && (
               <Badge
