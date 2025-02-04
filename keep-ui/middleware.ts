@@ -50,7 +50,7 @@ export const middleware = auth(async (request) => {
   // If not authenticated and not on signin page, redirect to signin
   if (!isAuthenticated && !pathname.startsWith("/signin") && !pathname.startsWith("/health")) {
     const redirectTo = request.nextUrl.href || "/incidents";
-    console.log("Redirecting to signin page because user is not authenticated");
+    console.log(`Redirecting ${pathname} to signin page because user is not authenticated`);
     return NextResponse.redirect(
       new URL(`/signin?callbackUrl=${redirectTo}`, request.url)
     );
@@ -90,6 +90,7 @@ export const config = {
      * Match all request paths except for the ones starting with:
      * - api (API routes)
      * - keep_big.svg (logo)
+     * - keep.svg (logo)
      * - gnip.webp (logo)
      * - api/aws-marketplace (aws marketplace)
      * - api/auth (auth)
@@ -97,7 +98,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - icons (providers' logos)
      */
-    "/((?!keep_big\\.svg$|gnip\\.webp|api/aws-marketplace$|api/auth|monitoring|_next/static|_next/image|favicon\\.ico).*)",
+    "/((?!keep_big\\.svg$|gnip\\.webp|api/aws-marketplace$|api/auth|monitoring|_next/static|_next/image|favicon\\.ico|icons|keep\\.svg).*)",
   ],
 };
