@@ -38,8 +38,9 @@ export function AlertName({
     }
   };
 
-  const relevantWorkflowExecution =
-    executions?.find((wf) => wf.event_id === alert.event_id) ?? null;
+  const relevantWorkflowExecution = executions?.find(
+    (wf) => wf.event_id === alert.event_id
+  );
 
   const {
     name,
@@ -138,15 +139,15 @@ export function AlertName({
               relevantWorkflowExecution.workflow_status === "success"
                 ? "green"
                 : relevantWorkflowExecution.workflow_status === "error"
-                  ? "red"
-                  : "gray"
+                ? "red"
+                : "gray"
             }`}
             tooltip={`${
               relevantWorkflowExecution.workflow_status === "success"
                 ? "Last workflow executed successfully"
                 : relevantWorkflowExecution.workflow_status === "error"
-                  ? "Last workflow execution failed"
-                  : undefined
+                ? "Last workflow execution failed"
+                : undefined
             }`}
             onClick={() => handleWorkflowClick(relevantWorkflowExecution)}
             className="ml-1 cursor-pointer"

@@ -23,6 +23,7 @@ from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_all_presets_dtos,
     get_enrichment_with_session,
+    get_last_alert_hashes_by_fingerprints,
     get_session_sync,
     set_last_alert,
 )
@@ -217,12 +218,11 @@ def __save_to_db(
                 )
                 session.add(audit)
 
-            alert_dto = AlertDto(**formatted_event.dict())
             set_last_alert(tenant_id, alert, session=session)
 
             # Mapping
             try:
-                enrichments_bl.run_mapping_rules(alert_dto)
+                enrichments_bl.run_mapping_rules(formatted_event)
             except Exception:
                 logger.exception("Failed to run mapping rules")
 
@@ -235,8 +235,8 @@ def __save_to_db(
                 for enrichment in alert_enrichment.enrichments:
                     # set the enrichment
                     value = alert_enrichment.enrichments[enrichment]
-                    setattr(alert_dto, enrichment, value)
-            enriched_formatted_events.append(alert_dto)
+                    setattr(formatted_event, enrichment, value)
+            enriched_formatted_events.append(formatted_event)
         session.commit()
 
         logger.info(
@@ -328,10 +328,17 @@ def __handle_formatted_events(
     with tracer.start_as_current_span("process_event_deduplication"):
         # second, filter out any deduplicated events
         alert_deduplicator = AlertDeduplicator(tenant_id)
-
+        deduplication_rules = alert_deduplicator.get_deduplication_rules(
+            tenant_id=tenant_id, provider_id=provider_id, provider_type=provider_type
+        )
+        last_alerts_fingerprint_to_hash = get_last_alert_hashes_by_fingerprints(
+            tenant_id, [event.fingerprint for event in formatted_events]
+        )
         for event in formatted_events:
             # apply_deduplication set alert_hash and isDuplicate on event
-            event = alert_deduplicator.apply_deduplication(event)
+            event = alert_deduplicator.apply_deduplication(
+                event, deduplication_rules, last_alerts_fingerprint_to_hash
+            )
 
         # filter out the deduplicated events
         deduplicated_events = list(
@@ -594,12 +601,14 @@ def process_event(
                     event_list = []
                     for event_item in event:
                         if not isinstance(event_item, AlertDto):
-                            event_list.append(provider_class.format_alert(
-                                tenant_id=tenant_id,
-                                event=event_item,
-                                provider_id=provider_id,
-                                provider_type=provider_type,
-                            ))
+                            event_list.append(
+                                provider_class.format_alert(
+                                    tenant_id=tenant_id,
+                                    event=event_item,
+                                    provider_id=provider_id,
+                                    provider_type=provider_type,
+                                )
+                            )
                         else:
                             event_list.append(event_item)
                     event = event_list
@@ -633,6 +642,8 @@ def process_event(
 
             # In case when provider_type is not set
             if isinstance(event, dict):
+                if not event.get("name"):
+                    event["name"] = event.get("id", "unknown alert name")
                 event = [AlertDto(**event)]
                 raw_event = [raw_event]
 

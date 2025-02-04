@@ -1,0 +1,38 @@
+id: enrich-using-ai-deepseek
+description: Enrich alerts using structured output from deepseek
+triggers:
+  - type: alert
+    filters:
+      - key: source
+        value: prometheus
+
+steps:
+  - name: get-enrichments
+    provider:
+      config: "{{ providers.my_deepseek }}"
+      type: deepseek
+      with:
+        prompt: "You received such an alert {{alert}}, generate missing fields.
+
+        Environment could be \"production\", \"staging\", \"development\".
+        
+        EXAMPLE JSON OUTPUT:
+            {
+                \"environment\": \"production\",
+                \"impacted_customer_name\": \"Acme Corporation\"
+            }
+        "
+        model: "deepseek-coder-33b-instruct"
+        structured_output_format: # We limit what model could return
+          type: json_object
+
+actions:
+  - name: enrich-alert
+    provider:
+      type: mock
+      with:
+        enrich_alert:
+          - key: environment
+            value: "{{ steps.get-enrichments.results.response.environment }}"
+          - key: impacted_customer_name
+            value: "{{ steps.get-enrichments.results.response.impacted_customer_name }}"

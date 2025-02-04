@@ -119,6 +119,7 @@ def get_workflows(
         # create the workflow DTO
         try:
             workflow_raw = cyaml.safe_load(workflow.workflow_raw)
+            is_alert_rule_worfklow = WorkflowStore.is_alert_rule_workflow(workflow_raw)
             # very big width to avoid line breaks
             workflow_raw = cyaml.dump(workflow_raw, width=99999)
             workflow_dto = WorkflowDTO(
@@ -140,6 +141,7 @@ def get_workflows(
                 last_execution_started=last_execution_started,
                 disabled=workflow.is_disabled,
                 provisioned=workflow.provisioned,
+                alertRule=is_alert_rule_worfklow,
             )
         except Exception as e:
             logger.error(f"Error creating workflow DTO: {e}")
@@ -237,7 +239,10 @@ def run_workflow(
     except Exception as e:
         logger.exception(
             "Failed to run workflow",
-            extra={"workflow_id": workflow_id},
+            extra={
+                "workflow_id": workflow_id,
+                "tenant_id": tenant_id,
+            },
         )
         raise HTTPException(
             status_code=500,
@@ -461,7 +466,7 @@ def get_random_workflow_templates(
                 f"Neither {default_directory} nor {fallback_directory} exist"
             )
     workflows = workflowstore.get_random_workflow_templates(
-        tenant_id=tenant_id, workflows_dir=default_directory, limit=6
+        tenant_id=tenant_id, workflows_dir=default_directory, limit=8
     )
     return workflows
 
@@ -518,6 +523,7 @@ async def update_workflow_by_id(
         workflow["name"] = workflow_from_db.name
     workflow_from_db.description = workflow.get("description")
     workflow_from_db.interval = workflow_interval
+    workflow_from_db.is_disabled = workflow.get("disabled", False)
     workflow_from_db.workflow_raw = cyaml.dump(workflow, width=99999)
     workflow_from_db.last_updated = datetime.datetime.now()
     session.add(workflow_from_db)

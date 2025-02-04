@@ -92,10 +92,10 @@ jobs:
 
       - name: Run unit tests and report coverage
         env:
-          LOG_LEVEL: DEBUG
+          # LOG_LEVEL: DEBUG
           SQLALCHEMY_WARN_20: 1
         run: |
-          poetry run coverage run --branch -m pytest --timeout 20 -n auto --non-integration --ignore=tests/e2e_tests/
+          poetry run coverage run --omit="*/test*" --branch -m pytest --timeout 20 -n auto --non-integration --ignore=tests/e2e_tests/
 
       - name: Run integration tests and report coverage
         run: |
@@ -105,11 +105,11 @@ jobs:
             sleep 1
           done
           echo "MySQL is up and running!"
-          poetry run coverage run --branch -m pytest --integration --ignore=tests/e2e_tests/
+          poetry run coverage run --omit="*/test*" --branch -m pytest --integration --ignore=tests/e2e_tests/
 
       - name: Convert coverage results to JSON (for CodeCov support)
-        env:
-          LOG_LEVEL: DEBUG
+        # env:
+        #   LOG_LEVEL: DEBUG
         run: poetry run coverage json --omit="keep/providers/*"
 
       - name: Upload coverage reports to Codecov

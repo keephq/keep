@@ -10,9 +10,30 @@ description: "Datadog provider allows you to query Datadog metrics and logs for 
 - `time_range`: dict = None: The time range for the query (e.g., `{'from': 'now-15m', 'to': 'now'}`)
 - `source`: str = None: The source type (metrics, traces, logs).
 
+Example:
+```python
+result = provider.query(
+    query="avg:system.cpu.user{*}",
+    from_time="now-1h",
+    to_time="now"
+)
+```
+
 ## Outputs
 
 _No information yet, feel free to contribute it using the "Edit this page" link at the bottom of the page_
+
+### Additional Methods
+
+| Method | Description | Required Scopes | Type |
+|--------|-------------|----------------|------|
+| `mute_monitor` | Mute a monitor | `monitors_write` | action |
+| `unmute_monitor` | Unmute a monitor | `monitors_write` | action |
+| `get_monitor_events` | Get all events related to this monitor | `events_read` | view |
+| `get_trace` | Get trace by id | `apm_read` | view |
+| `create_incident` | Create an incident | `incidents_write` | action |
+| `resolve_incident` | Resolve an active incident | `incidents_write` | action |
+| `add_incident_timeline_note` | Add a note to an incident timeline | `incidents_write` | action |
 
 ## Authentication Parameters
 

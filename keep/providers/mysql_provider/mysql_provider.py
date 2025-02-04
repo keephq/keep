@@ -100,6 +100,13 @@ class MysqlProvider(BaseProvider):
         self.authentication_config = MysqlProviderAuthConfig(
             **self.config.authentication
         )
+        
+    def _notify(self, **kwargs):
+        """
+        For MySQL there is no difference if we're querying data or we want to make an impact.
+        This will allow using the provider in actions as well as steps.
+        """
+        return self._query(**kwargs)
 
     def _query(
         self, query="", as_dict=False, single_row=False, **kwargs: dict

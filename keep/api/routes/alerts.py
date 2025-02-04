@@ -14,17 +14,21 @@ from arq import ArqRedis
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pusher import Pusher
+from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.config import config
+from keep.api.core.db import enrich_alerts_with_incidents
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_metrics_by_provider,
     get_enrichment,
     get_last_alerts,
+    get_session,
+    is_all_alerts_resolved,
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
@@ -33,10 +37,12 @@ from keep.api.models.alert import (
     AlertDto,
     DeleteRequestBody,
     EnrichAlertRequestBody,
+    IncidentStatus,
     UnEnrichAlertRequestBody,
 )
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import ActionType
+from keep.api.models.db.rule import ResolveOn
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.tasks.process_event_task import process_event
@@ -47,6 +53,7 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
+from keep.workflowmanager.workflowmanager import WorkflowManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -554,11 +561,13 @@ def enrich_alert(
     dispose_on_new_alert: Optional[bool] = Query(
         False, description="Dispose on new alert"
     ),
+    session: Session = Depends(get_session),
 ) -> dict[str, str]:
     return _enrich_alert(
         enrich_data,
         authenticated_entity=authenticated_entity,
         dispose_on_new_alert=dispose_on_new_alert,
+        session=session,
     )
 
 
@@ -568,6 +577,7 @@ def _enrich_alert(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
     dispose_on_new_alert: Optional[bool] = False,
+    session: Optional[Session] = None,
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -577,8 +587,12 @@ def _enrich_alert(
             "tenant_id": tenant_id,
         },
     )
+
+    should_run_workflow = False
+    should_check_incidents_resolution = False
+
     try:
-        enrichement_bl = EnrichmentsBl(tenant_id)
+        enrichement_bl = EnrichmentsBl(tenant_id, db=session)
         # Shahar: TODO, change to the specific action type, good enough for now
         if (
             "status" in enrich_data.enrichments
@@ -590,6 +604,9 @@ def _enrich_alert(
                 else ActionType.MANUAL_STATUS_CHANGE
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by {authenticated_entity.email}"
+            should_run_workflow = True
+            if enrich_data.enrichments["status"] == "resolved":
+                should_check_incidents_resolution = True
         elif "status" in enrich_data.enrichments and authenticated_entity.api_key_name:
             action_type = (
                 ActionType.API_AUTOMATIC_RESOLVE
@@ -597,6 +614,9 @@ def _enrich_alert(
                 else ActionType.API_STATUS_CHANGE
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by API `{authenticated_entity.api_key_name}`"
+            should_run_workflow = True
+            if enrich_data.enrichments["status"] == "resolved":
+                should_check_incidents_resolution = True
         elif "note" in enrich_data.enrichments and enrich_data.enrichments["note"]:
             action_type = ActionType.COMMENT
             action_description = f"Comment added by {authenticated_entity.email} - {enrich_data.enrichments['note']}"
@@ -624,7 +644,7 @@ def _enrich_alert(
             )
             return {"status": "failed"}
 
-        enriched_alerts_dto = convert_db_alerts_to_dto_alerts(alert)
+        enriched_alerts_dto = convert_db_alerts_to_dto_alerts(alert, session=session)
         # push the enriched alert to the elasticsearch
         try:
             logger.info("Pushing enriched alert to elasticsearch")
@@ -654,6 +674,25 @@ def _enrich_alert(
             "Alert enriched successfully",
             extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},
         )
+
+        if should_run_workflow:
+            workflow_manager = WorkflowManager.get_instance()
+            workflow_manager.insert_events(
+                tenant_id=tenant_id, events=[enriched_alerts_dto[0]]
+            )
+
+        # @tb add "and session" cuz I saw AttributeError: 'NoneType' object has no attribute 'add'"
+        if should_check_incidents_resolution and session:
+            enrich_alerts_with_incidents(tenant_id=tenant_id, alerts=alert)
+            for incident in alert[0]._incidents:
+                if (
+                    incident.resolve_on == ResolveOn.ALL.value
+                    and is_all_alerts_resolved(incident=incident, session=session)
+                ):
+                    incident.status = IncidentStatus.RESOLVED.value
+                    session.add(incident)
+                session.commit()
+
         return {"status": "ok"}
 
     except Exception as e:

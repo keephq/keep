@@ -182,3 +182,19 @@ def test_alert_ignored_due_to_acknowledged_status(
 
     # Should return False because the alert status is ACKNOWLEDGED
     assert result is False
+
+
+def test_alert_with_missing_cel_field(mock_session, active_maintenance_window_rule, alert_dto):
+    # Modify the cel_query to reference a non-existent field
+    active_maintenance_window_rule.cel_query = 'alertname == "test-alert"'
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+        active_maintenance_window_rule
+    ]
+
+    maintenance_window_bl = MaintenanceWindowsBl(
+        tenant_id="test-tenant", session=mock_session
+    )
+    result = maintenance_window_bl.check_if_alert_in_maintenance_windows(alert_dto)
+
+    # Should return False because the field doesn't exist
+    assert result is False

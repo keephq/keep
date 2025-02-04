@@ -67,24 +67,47 @@ import {
 import ProviderLogs from "./provider-logs";
 import { DynamicImageProviderIcon } from "@/components/ui";
 
+type HealthResults = {
+  spammy: any[];
+  rules: {
+    total: number;
+    used: number;
+    unused: number;
+  };
+  topology: {
+    covered: any[];
+    uncovered: any[];
+  };
+};
+
 type ProviderFormProps = {
   provider: Provider;
-  onConnectChange?: (isConnecting: boolean, isConnected: boolean) => void;
+  onConnectChange?: (
+    isConnecting: boolean,
+    isConnected: boolean,
+    healthResults: HealthResults | null
+  ) => void;
   closeModal: () => void;
   isProviderNameDisabled?: boolean;
   installedProvidersMode: boolean;
   isLocalhost?: boolean;
+  isHealthCheck?: boolean;
+  mutate: () => void;
 };
 
-function getInitialFormValues(provider: Provider) {
+function getInitialFormValues(provider: Provider, isHealthCheck?: boolean) {
   const initialValues: ProviderFormData = {
     provider_id: provider.id,
-    install_webhook: provider.can_setup_webhook ?? false,
+    install_webhook: !isHealthCheck
+      ? (provider.can_setup_webhook ?? false)
+      : false,
     pulling_enabled: provider.pulling_enabled,
   };
 
   Object.assign(initialValues, {
-    provider_name: provider.details?.name,
+    provider_name:
+      provider.details?.name ||
+      (isHealthCheck ? `${provider.id} health check` : undefined),
     ...provider.details?.authentication,
   });
 
@@ -113,12 +136,13 @@ const ProviderForm = ({
   isProviderNameDisabled,
   installedProvidersMode,
   isLocalhost,
+  isHealthCheck,
+  mutate
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
-  const { mutate } = useProviders();
   const searchParams = useSearchParams();
   const [formValues, setFormValues] = useState<ProviderFormData>(() =>
-    getInitialFormValues(provider)
+    getInitialFormValues(provider, isHealthCheck)
   );
   const [formErrors, setFormErrors] = useState<string | null>(null);
   const [inputErrors, setInputErrors] = useState<ProviderInputErrors>({});
@@ -282,6 +306,7 @@ const ProviderForm = ({
 
   function validate(data?: ProviderFormData) {
     let schema = zodSchema;
+    console.log(222, data)
     if (data) {
       schema = zodSchema.pick(
         Object.fromEntries(Object.keys(data).map((field) => [field, true]))
@@ -399,13 +424,14 @@ const ProviderForm = ({
   async function handleConnectClick() {
     if (!validate()) return;
     setIsLoading(true);
-    onConnectChange?.(true, false);
-    submit(`/providers/install`)
+    onConnectChange?.(true, false, null);
+    submit(isHealthCheck ? `/providers/healthcheck` : `/providers/install`)
       .then(async (data) => {
         console.log("Connect Result:", data);
         setIsLoading(false);
-        onConnectChange?.(false, true);
+        onConnectChange?.(false, true, data);
         if (
+          !isHealthCheck &&
           formValues.install_webhook &&
           provider.can_setup_webhook &&
           !isLocalhost
@@ -418,7 +444,7 @@ const ProviderForm = ({
       .catch((error) => {
         handleSubmitError(error);
         setIsLoading(false);
-        onConnectChange?.(false, false);
+        onConnectChange?.(false, false, null);
       });
   }
 
@@ -452,7 +478,7 @@ const ProviderForm = ({
               config={providerNameFieldConfig}
               value={(formValues["provider_name"] ?? "").toString()}
               error={inputErrors["provider_name"]}
-              disabled={isProviderNameDisabled ?? false}
+              disabled={(isProviderNameDisabled || isHealthCheck) ?? false}
               title={
                 isProviderNameDisabled
                   ? "This field is disabled because it is pre-filled from the workflow."
@@ -516,37 +542,91 @@ const ProviderForm = ({
       )}
 
       <div className="w-full mt-2" key="install_webhook">
-        {provider.can_setup_webhook && !installedProvidersMode && (
-          <div
-            className={`${
-              isLocalhost ? "bg-gray-100 p-2 rounded-tremor-default" : ""
-            }`}
-          >
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="install_webhook"
-                name="install_webhook"
-                className="mr-2.5"
-                onChange={handleWebhookChange}
-                checked={
-                  "install_webhook" in formValues &&
-                  typeof formValues["install_webhook"] === "boolean" &&
-                  formValues["install_webhook"] &&
-                  !isLocalhost
-                }
-                disabled={isLocalhost || provider.webhook_required}
-              />
-              <label htmlFor="install_webhook" className="flex items-center">
-                <Text className="capitalize">Install Webhook</Text>
-                <Icon
-                  icon={QuestionMarkCircleIcon}
-                  variant="simple"
-                  color="gray"
-                  size="sm"
-                  tooltip={`Whether to install Keep as a webhook integration in ${provider.type}. This allows Keep to asynchronously receive alerts from ${provider.type}. Please note that this will install a new integration in ${provider.type} and slightly modify your monitors/notification policy to include Keep.`}
+        {!isHealthCheck &&
+          provider.can_setup_webhook &&
+          !installedProvidersMode && (
+            <div
+              className={`${
+                isLocalhost ? "bg-gray-100 p-2 rounded-tremor-default" : ""
+              }`}
+            >
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="install_webhook"
+                  name="install_webhook"
+                  className="mr-2.5"
+                  onChange={handleWebhookChange}
+                  checked={
+                    "install_webhook" in formValues &&
+                    typeof formValues["install_webhook"] === "boolean" &&
+                    formValues["install_webhook"] &&
+                    !isLocalhost
+                  }
+                  disabled={isLocalhost || provider.webhook_required}
                 />
-              </label>
+                <label htmlFor="install_webhook" className="flex items-center">
+                  <Text className="capitalize">Install Webhook</Text>
+                  <Icon
+                    icon={QuestionMarkCircleIcon}
+                    variant="simple"
+                    color="gray"
+                    size="sm"
+                    tooltip={`Whether to install Keep as a webhook integration in ${provider.type}. This allows Keep to asynchronously receive alerts from ${provider.type}. Please note that this will install a new integration in ${provider.type} and slightly modify your monitors/notification policy to include Keep.`}
+                  />
+                </label>
+                <input
+                  type="checkbox"
+                  id="pulling_enabled"
+                  name="pulling_enabled"
+                  className="mr-2.5"
+                  onChange={handlePullingEnabledChange}
+                  checked={Boolean(formValues["pulling_enabled"])}
+                />
+                <label htmlFor="pulling_enabled" className="flex items-center">
+                  <Text className="capitalize">Pulling Enabled</Text>
+                  <Icon
+                    icon={QuestionMarkCircleIcon}
+                    variant="simple"
+                    color="gray"
+                    size="sm"
+                    tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
+                  />
+                </label>
+              </div>
+              {isLocalhost && (
+                <span className="text-sm">
+                  <Callout
+                    title=""
+                    className="mt-4"
+                    icon={ExclamationTriangleIcon}
+                    color="gray"
+                  >
+                    <a
+                      href={`${
+                        config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+                      }/development/external-url`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Webhook installation is disabled because Keep is running
+                      without an external URL.
+                      <br />
+                      <br />
+                      Click to learn more
+                    </a>
+                  </Callout>
+                </span>
+              )}
+            </div>
+          )}
+      </div>
+
+      {!isHealthCheck &&
+        provider.can_setup_webhook &&
+        installedProvidersMode && (
+          <>
+            <div className="flex">
               <input
                 type="checkbox"
                 id="pulling_enabled"
@@ -566,74 +646,24 @@ const ProviderForm = ({
                 />
               </label>
             </div>
-            {isLocalhost && (
-              <span className="text-sm">
-                <Callout
-                  title=""
-                  className="mt-4"
-                  icon={ExclamationTriangleIcon}
-                  color="gray"
-                >
-                  <a
-                    href={`${
-                      config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
-                    }/development/external-url`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Webhook installation is disabled because Keep is running
-                    without an external URL.
-                    <br />
-                    <br />
-                    Click to learn more
-                  </a>
-                </Callout>
-              </span>
-            )}
-          </div>
+            <Button
+              type="button"
+              icon={GlobeAltIcon}
+              onClick={callInstallWebhook}
+              variant="secondary"
+              color="orange"
+              className="mt-2.5"
+              disabled={!installOrUpdateWebhookEnabled || provider.provisioned}
+              tooltip={
+                !installOrUpdateWebhookEnabled
+                  ? "Fix required webhook scopes and refresh scopes to enable"
+                  : "This uses server saved credentials. If needed, please use the `Update` button first"
+              }
+            >
+              Install/Update Webhook
+            </Button>
+          </>
         )}
-      </div>
-
-      {provider.can_setup_webhook && installedProvidersMode && (
-        <>
-          <div className="flex">
-            <input
-              type="checkbox"
-              id="pulling_enabled"
-              name="pulling_enabled"
-              className="mr-2.5"
-              onChange={handlePullingEnabledChange}
-              checked={Boolean(formValues["pulling_enabled"])}
-            />
-            <label htmlFor="pulling_enabled" className="flex items-center">
-              <Text className="capitalize">Pulling Enabled</Text>
-              <Icon
-                icon={QuestionMarkCircleIcon}
-                variant="simple"
-                color="gray"
-                size="sm"
-                tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
-              />
-            </label>
-          </div>
-          <Button
-            type="button"
-            icon={GlobeAltIcon}
-            onClick={callInstallWebhook}
-            variant="secondary"
-            color="orange"
-            className="mt-2.5"
-            disabled={!installOrUpdateWebhookEnabled || provider.provisioned}
-            tooltip={
-              !installOrUpdateWebhookEnabled
-                ? "Fix required webhook scopes and refresh scopes to enable"
-                : "This uses server saved credentials. If needed, please use the `Update` button first"
-            }
-          >
-            Install/Update Webhook
-          </Button>
-        </>
-      )}
 
       {provider.supports_webhook && (
         <ProviderSemiAutomated provider={provider} />
@@ -669,6 +699,9 @@ const ProviderForm = ({
           </Link>
         </div>
 
+        {installedProvidersMode && provider.id && (
+          <Subtitle>{provider.id}</Subtitle>
+        )}
         {installedProvidersMode && provider.last_pull_time && (
           <Subtitle>
             Provider last pull time:{" "}
@@ -810,7 +843,7 @@ const ProviderForm = ({
             onClick={handleConnectClick}
             color="orange"
           >
-            Connect
+            {isHealthCheck ? `Check health` : `Connect`}
           </Button>
         )}
       </div>

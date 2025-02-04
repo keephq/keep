@@ -1,0 +1,45 @@
+# This workflow queries VictoriaMetrics metrics and creates alerts based on CPU usage
+workflow:
+  # Unique identifier for this workflow
+  id: query-victoriametrics
+  # Display name shown in the UI
+  name: victoriametrics-alert-example
+  # Brief description of what this workflow does
+  description: Monitors CPU usage metrics from VictoriaMetrics and creates alerts when thresholds are exceeded
+
+  # Define how the workflow is triggered
+  triggers:
+    - type: manual # Can be triggered manually from the UI
+
+  # Steps to execute in order
+  steps:
+    - name: victoriametrics-step
+      provider:
+        # Use VictoriaMetrics provider config defined in providers.vm
+        config: "{{ providers.vm }}"
+        type: victoriametrics
+        with:
+          # Query average CPU usage rate
+          query: avg(rate(process_cpu_seconds_total))
+          queryType: query
+
+  # Actions to take based on the query results
+  actions:
+    - name: create-alert
+      provider:
+        type: keep
+        with:
+          # Create alert if CPU usage exceeds threshold
+          if: "{{ value.1 }} > 0.0040"
+          alert:
+            name: "High CPU Usage"
+            description: "[Single] CPU usage is high on the VM (created from VM metric)"
+            # Set severity based on CPU usage thresholds
+            severity: '{{ value.1 }} > 0.9 ? "critical" : {{ value.1 }} > 0.7 ? "warning" : "info"'
+            # Alert labels for filtering and routing
+            labels:
+              environment: production
+              app: myapp
+              service: api
+              team: devops
+              owner: alice

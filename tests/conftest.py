@@ -33,6 +33,7 @@ from keep.contextmanager.contextmanager import ContextManager
 original_request = requests.Session.request  # noqa
 load_dotenv(find_dotenv())
 
+
 class PusherMock:
 
     def __init__(self):
@@ -40,6 +41,7 @@ class PusherMock:
 
     def trigger(self, channel, event_name, data):
         self.triggers.append((channel, event_name, data))
+
 
 class WorkflowManagerMock:
 
@@ -193,6 +195,7 @@ def mysql_container(docker_ip, docker_services):
 @pytest.fixture
 def db_session(request, monkeypatch):
     # Create a database connection
+    print("Creating db session")
     os.environ["DB_ECHO"] = "true"
     if (
         request

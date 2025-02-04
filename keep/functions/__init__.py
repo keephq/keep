@@ -1,6 +1,7 @@
 import copy
 import datetime
 import json
+import logging
 import re
 import urllib.parse
 from datetime import timedelta
@@ -16,8 +17,9 @@ from keep.api.core.db import get_alerts_by_fingerprint
 from keep.api.models.alert import AlertStatus
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
+logger = logging.getLogger(__name__)
+
 _len = len
-_all = all
 
 
 def all(iterable) -> bool:
@@ -129,7 +131,6 @@ def json_dumps(data: str | dict) -> str:
 
 
 def json_loads(data: str) -> dict:
-
     def parse_bad_json(bad_json):
         # Remove or replace control characters
         control_char_regex = re.compile(r"[\x00-\x1f\x7f-\x9f]")
@@ -150,9 +151,11 @@ def json_loads(data: str) -> dict:
         try:
             d = parse_bad_json(data)
         except json.JSONDecodeError:
+            logger.exception('Failed to parse "bad" JSON')
             d = {}
     # catch any other exceptions
     except Exception:
+        logger.exception("Failed to parse JSON")
         d = {}
 
     return d
@@ -424,6 +427,8 @@ def is_business_hours(
         ValueError: If timezone string is invalid
     """
     # Validate hour inputs
+    start_hour = int(start_hour)
+    end_hour = int(end_hour)
     if not (0 <= start_hour <= 23 and 0 <= end_hour <= 23):
         raise ValueError("Hours must be between 0 and 23")
 

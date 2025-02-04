@@ -324,11 +324,13 @@ class AISuggestionBl:
             try:
                 # Create the incident
                 incident_dto = IncidentDto.parse_obj(incident_with_feedback["incident"])
-                created_incident = incident_bl.create_incident(incident_dto, generated_from_ai=True)
+                created_incident = incident_bl.create_incident(
+                    incident_dto, generated_from_ai=True
+                )
 
                 # Add alerts to the created incident
                 alert_ids = [
-                    uuid.UUID(alert["event_id"])
+                    alert["fingerprint"]
                     for alert in incident_with_feedback["incident"]["alerts"]
                 ]
                 await incident_bl.add_alerts_to_incident(created_incident.id, alert_ids)

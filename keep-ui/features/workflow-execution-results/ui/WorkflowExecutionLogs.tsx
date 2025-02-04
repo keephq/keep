@@ -13,6 +13,7 @@ import {
   ChevronRightIcon,
   ClockIcon,
   XCircleIcon,
+  ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
 import parseISO from "date-fns/parseISO";
 import formatDistance from "date-fns/formatDistance";
@@ -26,6 +27,8 @@ function getStepIcon(status: string) {
       return <CheckCircleIcon className="text-green-500 size-5" />;
     case "failed":
       return <XCircleIcon className="text-red-500 size-5" />;
+    case "skipped":
+      return <ExclamationCircleIcon className="text-gray-500 size-5" />;
     case "pending":
       return <ClockIcon className="text-yellow-500 size-5" />;
   }
@@ -79,6 +82,12 @@ function getAccordionHeaderClassName(
         "bg-yellow-100 hover:bg-yellow-200",
         isHovered && "bg-yellow-200",
         isOpen && "border-yellow-200"
+      );
+    case "skipped":
+      return clsx(
+        "bg-gray-100 hover:bg-gray-200",
+        isHovered && "bg-gray-200",
+        isOpen && "border-gray-200"
       );
     default:
       return clsx(
@@ -262,7 +271,8 @@ export function WorkflowExecutionLogs({
       // Create new group if we're switching context
       if (currentStepName) {
         const messageBelongsToCurrentStep =
-          log.message?.includes(currentStepName);
+          log.message?.includes(currentStepName) ||
+          log.context?.step_id === currentStepName;
         const needsNewGroup =
           stepStartMatch || messageBelongsToCurrentStep
             ? currentGroup.id !== currentStepName

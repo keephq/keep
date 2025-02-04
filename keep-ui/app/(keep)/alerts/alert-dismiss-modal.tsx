@@ -157,15 +157,7 @@ export default function AlertDismissModal({
               <Tab>Dismiss Until</Tab>
             </TabList>
             <TabPanels>
-              <TabPanel>
-                <Title>Dismiss Comment</Title>
-                <ReactQuill
-                  value={dismissComment}
-                  onChange={(value: string) => setDismissComment(value)}
-                  theme="snow"
-                  placeholder="Add your dismiss comment here..."
-                />
-              </TabPanel>
+              <TabPanel></TabPanel>
               <TabPanel>
                 <Card className="relative z-50 mt-4 flex justify-center items-center">
                   <div className="flex flex-col items-center">
@@ -199,16 +191,16 @@ export default function AlertDismissModal({
                     )}
                   </div>
                 </Card>
-                <Title className="mt-2">Dismiss Comment</Title>
-                <ReactQuill
-                  value={dismissComment}
-                  onChange={(value: string) => setDismissComment(value)}
-                  theme="snow"
-                  placeholder="Add your dismiss comment here..."
-                />
               </TabPanel>
             </TabPanels>
           </TabGroup>
+          <Title>Dismiss Comment</Title>
+          <ReactQuill
+            value={dismissComment}
+            onChange={(value: string) => setDismissComment(value)}
+            theme="snow"
+            placeholder="Add your dismiss comment here..."
+          />
           <div className="mt-4 flex justify-end space-x-2">
             <Button onClick={handleDismissChange} color="orange">
               Dismiss

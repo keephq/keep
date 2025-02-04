@@ -19,6 +19,8 @@ services:
     image: us-central1-docker.pkg.dev/keephq/keep/keep-api
     environment:
       - AUTH_TYPE=NO_AUTH
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
+      - KEEP_METRICS=true
     volumes:
       - ./state:/state
 
