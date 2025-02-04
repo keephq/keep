@@ -326,6 +326,12 @@
         </a>
   </td>
   <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/wazuh-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/wazuh-icon.png" alt="Wazuh"/><br/>
+          Wazuh
+        </a>
+  </td>
+  <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/zabbix-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/zabbix-icon.png" alt="Zabbix"/><br/>
           Zabbix

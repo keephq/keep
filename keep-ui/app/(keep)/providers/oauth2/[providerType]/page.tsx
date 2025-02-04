@@ -29,10 +29,10 @@ export default async function InstallFromOAuth({
         cache: "no-store",
       }
     );
-    return redirect("/providers?oauth=success");
+    redirect("/providers?oauth=success");
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return redirect(
+    redirect(
       `/providers?oauth=failure&reason=${encodeURIComponent(errorMessage)}`
     );
   }

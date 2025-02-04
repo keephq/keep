@@ -164,7 +164,6 @@ export default function IncidentsTable({
       header: "Status",
       cell: ({ row }) => (
         <IncidentChangeStatusSelect
-          className="min-w-10 lg:min-w-32 xl:min-w-48"
           incidentId={row.original.id}
           value={row.original.status}
         />
@@ -174,7 +173,7 @@ export default function IncidentsTable({
       id: "name",
       header: "Incident",
       cell: ({ row }) => (
-        <div className="min-w-32 lg:min-w-64 xl:min-w-96">
+        <div className="min-w-32 lg:min-w-64">
           <Link
             href={`/incidents/${row.original.id}/alerts`}
             className="text-pretty"

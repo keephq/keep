@@ -235,6 +235,7 @@
             "providers/documentation/uptimekuma-provider",
             "providers/documentation/victoriametrics-provider",
             "providers/documentation/vllm-provider",
+            "providers/documentation/wazuh-provider",
             "providers/documentation/webhook-provider",
             "providers/documentation/websocket-provider",
             "providers/documentation/zabbix-provider",
