@@ -11,6 +11,7 @@ steps:
       with:
         query: |
           SELECT Url, Status FROM "observability"."Urls"
+          WHERE ( Url LIKE '%te_tests%' ) AND Timestamp >= toStartOfMinute(date_add(toDateTime(NOW()), INTERVAL -1 MINUTE)) AND Status = 0;
 
   - name: clickhouse-observability-events
     provider:
@@ -19,6 +20,7 @@ steps:
       with:
         query: |
           SELECT arrayElement(Metrics.testName, 1) AS mytest FROM observability.Events
+          WHERE (Sources = 'ThousandEyes') AND (Timestamp >= toStartOfMinute(toDateTime(NOW()) + toIntervalMinute(-1))) AND (mytest = 'Oceanspot-TE')
 
   - name: clickhouse-observability-traces
     provider:
@@ -27,6 +29,7 @@ steps:
       with:
         query: |
           SELECT count(*) as c FROM "observability"."Traces"
+          WHERE ( SpanName LIKE '%te_tests%' ) AND Timestamp >= toStartOfMinute(date_add(toDateTime(NOW()), INTERVAL -1 MINUTE));
 
   - name: clickhouse-observability-follow-up-query
     # if any of the previous queries return results, run this query
