@@ -1,15 +1,18 @@
 import datetime
-import hashlib
-import json
 import os
 import uuid
 from time import sleep
 
 import pytest
 
-from keep.api.core.db import create_rule as create_rule_db, enrich_incidents_with_alerts
-from keep.api.core.db import get_incident_alerts_by_incident_id, get_last_incidents, set_last_alert
+from keep.api.core.db import create_rule as create_rule_db
+from keep.api.core.db import (
+    enrich_incidents_with_alerts,
+    get_incident_alerts_by_incident_id,
+    get_last_incidents,
+)
 from keep.api.core.db import get_rules as get_rules_db
+from keep.api.core.db import set_last_alert
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import (
     AlertDto,
@@ -19,7 +22,7 @@ from keep.api.models.alert import (
     IncidentStatus,
 )
 from keep.api.models.db.alert import Alert, Incident
-from keep.api.models.db.rule import ResolveOn, CreateIncidentOn
+from keep.api.models.db.rule import CreateIncidentOn, ResolveOn
 from keep.rulesengine.rulesengine import RulesEngine
 
 
@@ -252,7 +255,7 @@ def test_incident_attributes(db_session):
         timeunit="seconds",
         definition_cel='(source == "grafana" && labels.label_1 == "a")',
         created_by="test@keephq.dev",
-        create_on="any"
+        create_on="any",
     )
     rules = get_rules_db(SINGLE_TENANT_UUID)
     assert len(rules) == 1
@@ -611,7 +614,9 @@ def test_rule_multiple_alerts(db_session, create_alert):
     # No incident yet
     assert db_session.query(Incident).filter(Incident.is_confirmed == True).count() == 0
     # But candidate is there
-    assert db_session.query(Incident).filter(Incident.is_confirmed == False).count() == 1
+    assert (
+        db_session.query(Incident).filter(Incident.is_confirmed == False).count() == 1
+    )
     incident = db_session.query(Incident).first()
     alert_1 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
 
@@ -636,7 +641,9 @@ def test_rule_multiple_alerts(db_session, create_alert):
     # Still no incident yet
     assert db_session.query(Incident).filter(Incident.is_confirmed == True).count() == 0
     # And still one candidate is there
-    assert db_session.query(Incident).filter(Incident.is_confirmed == False).count() == 1
+    assert (
+        db_session.query(Incident).filter(Incident.is_confirmed == False).count() == 1
+    )
 
     enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
 
@@ -706,7 +713,9 @@ def test_rule_event_groups_expires(db_session, create_alert):
     # Still no incident yet
     assert db_session.query(Incident).filter(Incident.is_confirmed == True).count() == 0
     # And still one candidate is there
-    assert db_session.query(Incident).filter(Incident.is_confirmed == False).count() == 1
+    assert (
+        db_session.query(Incident).filter(Incident.is_confirmed == False).count() == 1
+    )
 
     sleep(1)
 
@@ -722,8 +731,60 @@ def test_rule_event_groups_expires(db_session, create_alert):
     # Still no incident yet
     assert db_session.query(Incident).filter(Incident.is_confirmed == True).count() == 0
     # And now two candidates is there
-    assert db_session.query(Incident).filter(Incident.is_confirmed == False).count() == 2
+    assert (
+        db_session.query(Incident).filter(Incident.is_confirmed == False).count() == 2
+    )
 
+
+def test_at_sign(db_session):
+    # insert alerts
+    event = {"@timestamp": "abc", "#$": "abc", "!what": "abc"}
+    alerts = [
+        AlertDto(
+            id="grafana-1",
+            source=["grafana"],
+            name="grafana-test-alert",
+            status=AlertStatus.FIRING,
+            severity=AlertSeverity.CRITICAL,
+            lastReceived="2021-08-01T00:00:00Z",
+            **event,
+        ),
+    ]
+    # create a simple rule
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+    # simple rule
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='(source == "sentry") || (source == "grafana" && severity == "critical")',
+        created_by="test@keephq.dev",
+    )
+    rules = get_rules_db(SINGLE_TENANT_UUID)
+    assert len(rules) == 1
+    # add the alert to the db:
+    alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alerts[0].dict(),
+        fingerprint=alerts[0].fingerprint,
+    )
+
+    db_session.add(alert)
+    db_session.commit()
+
+    set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
+    # run the rules engine
+    alerts[0].event_id = alert.id
+    results = rules_engine.run_rules(alerts, session=db_session)
+    # check that there are results
+    assert len(results) > 0
 
 
 # Next steps:
