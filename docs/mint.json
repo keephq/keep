@@ -151,6 +151,7 @@
             "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
             "providers/documentation/coralogix-provider",
+            "providers/documentation/dash0-provider",
             "providers/documentation/datadog-provider",
             "providers/documentation/deepseek-provider",
             "providers/documentation/discord-provider",
