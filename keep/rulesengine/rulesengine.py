@@ -274,13 +274,57 @@ class RulesEngine:
         sub_rules[-1] = sub_rules[-1][:-1]
         return sub_rules
 
-    # TODO: a lot of unit tests to write here
+    def sanitize_cel_payload(self, payload):
+        """
+        Remove keys containing forbidden characters from payload and return warnings.
+        Returns tuple of (sanitized_payload, warnings)
+        """
+        forbidden_starts = [
+            "@",
+            "-",
+            "$",
+            "#",
+            " ",
+            ":",
+            ".",
+            "/",
+            "\\",
+            "*",
+            "&",
+            "^",
+            "%",
+            "!",
+        ]
+
+        def _sanitize_dict(d):
+            result = {}
+            for k, v in d.items():
+                if k[0] in forbidden_starts:  # Only check first character
+                    self.logger.warning(
+                        f"Removed key '{k}' starting with forbidden character '{k[0]}'"
+                    )
+                    continue
+
+                if isinstance(v, dict):
+                    result[k] = _sanitize_dict(v)
+                elif isinstance(v, list):
+                    result[k] = [
+                        _sanitize_dict(i) if isinstance(i, dict) else i for i in v
+                    ]
+                else:
+                    result[k] = v
+            return result
+
+        sanitized = _sanitize_dict(payload)
+        return sanitized
+
     def _check_if_rule_apply(self, rule: Rule, event: AlertDto) -> List[str]:
         sub_rules = self._extract_subrules(rule.definition_cel)
         payload = event.dict()
         # workaround since source is a list
         # todo: fix this in the future
         payload["source"] = payload["source"][0]
+        payload = self.sanitize_cel_payload(payload)
 
         # what we do here is to compile the CEL rule and evaluate it
         #   https://github.com/cloud-custodian/cel-python
