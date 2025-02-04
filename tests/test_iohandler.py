@@ -3,6 +3,7 @@ Test the io handler
 """
 
 import datetime
+from unittest.mock import patch
 
 import pytest
 
@@ -38,6 +39,44 @@ def test_with_function(context_manager):
     }
     s = iohandler.render("hello keep.len({{ steps.some_list }})")
     assert s == "hello 3"
+
+
+def test_with_function_is_business_hours_args(context_manager):
+    iohandler = IOHandler(context_manager)
+    context_manager.steps_context = {
+        "current_time": "2024-03-20T10:00:00+02:00",  # Example time in Asia/Jerusalem timezone
+    }
+    template = "keep.is_business_hours('2024-03-20T10:00:00+02:00', 8, 20, (0, 1, 2, 3, 6), 'Asia/Jerusalem')"
+
+    # Mock keep.utcnow to return the specific datetime
+    with patch(
+        "keep.functions.utcnow",
+        return_value=datetime.datetime(
+            2024, 3, 20, 8, 0, tzinfo=datetime.timezone(datetime.timedelta(hours=2))
+        ),
+    ):
+        result = iohandler.render(template)
+
+    # Assuming the function returns True if the time is within business hours
+    assert result == "True", f"Expected 'True', but got {result}"
+
+
+def test_with_function_is_business_hours_kwargs(context_manager):
+    iohandler = IOHandler(context_manager)
+    context_manager.steps_context = {
+        "current_time": "2024-03-20T10:00:00+02:00",  # Example time in Asia/Jerusalem timezone
+    }
+    template = (
+        "Business hours check: keep.is_business_hours("
+        "timezone='Asia/Jerusalem', "
+        "business_days=(0, 1, 2, 3, 6), "
+        "time_to_check='{{ steps.current_time }}')"
+    )
+    result = iohandler.render(template)
+    # Assuming the function returns True if the time is within business hours
+    assert (
+        result == "Business hours check: True"
+    ), f"Expected 'Business hours check: True', but got {result}"
 
 
 def test_with_function_2(context_manager):

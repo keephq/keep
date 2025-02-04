@@ -1,0 +1,21 @@
+workflow:
+  id: run-webhook
+  description: Run a webhook
+  debug: true
+  triggers:
+    - type: manual
+
+  steps:
+    - name: console-test
+      provider:
+        type: console
+        with:
+          message: "Hello world!"
+
+  actions:
+    - name: webhook-test
+      provider:
+        type: webhook
+        config: "{{ providers.googletest }}"
+        with:
+          body: { "message": "Hello world" }

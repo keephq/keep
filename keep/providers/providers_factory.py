@@ -151,7 +151,7 @@ class ProvidersFactory:
             )
             return provider_auth_config_class
         except (ImportError, AttributeError):
-            logging.getLogger(__name__).warning(
+            logging.getLogger(__name__).debug(
                 f"Provider {provider_type} does not have a provider auth config class"
             )
             return {}
@@ -422,6 +422,7 @@ class ProvidersFactory:
                         default_fingerprint_fields=default_fingerprint_fields,
                         categories=provider_class.PROVIDER_CATEGORY,
                         coming_soon=provider_class.PROVIDER_COMING_SOON,
+                        health=provider_class.has_health_report(),
                     )
                 )
             except ModuleNotFoundError:
@@ -490,7 +491,7 @@ class ProvidersFactory:
             # Somehow the provider is installed but the secret is missing, probably bug in deletion
             # TODO: solve its root cause
             except Exception:
-                logger.exception(
+                logger.warning(
                     f"Could not get provider {provider_copy.id} auth config from secret manager"
                 )
                 continue
@@ -513,7 +514,7 @@ class ProvidersFactory:
                 )
                 initialized_consumer_providers.append(provider_class)
             except Exception:
-                logger.exception(
+                logger.warning(
                     f"Could not get provider {provider.id} auth config from secret manager"
                 )
                 continue

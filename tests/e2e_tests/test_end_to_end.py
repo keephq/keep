@@ -24,6 +24,7 @@
 
 import os
 import random
+
 # Adding a new test:
 # 1. Manually:
 #    - Create a new test function.
@@ -36,8 +37,12 @@ import string
 import sys
 import re
 from datetime import datetime
+import requests
+from tests.e2e_tests.utils import trigger_alert
 
 from playwright.sync_api import expect
+
+from tests.e2e_tests.utils import install_webhook_provider, delete_provider, assert_connected_provider_count, assert_scope_text_count
 
 # Running the tests in GitHub Actions:
 # - Look at the test-pr-e2e.yml file in the .github/workflows directory.
@@ -130,6 +135,7 @@ def test_insert_new_alert(browser):  # browser is actually a page object
         save_failure_artifacts(browser, log_entries)
         raise
 
+
 def test_providers_page_is_accessible(browser):
     """
     Test to check if the providers page is accessible
@@ -191,7 +197,7 @@ def test_provider_validation(browser):
         expect(error_msg).to_have_count(1)
         host_input.fill("http://localhost")
         expect(error_msg).to_be_hidden()
-        host_input.fill( "https://keep.kb.us-central1.gcp.cloud.es.io")
+        host_input.fill("https://keep.kb.us-central1.gcp.cloud.es.io")
         expect(error_msg).to_be_hidden()
         # test `port` field validation
         port_input = browser.get_by_placeholder("Enter kibana_port")
@@ -284,6 +290,7 @@ def test_provider_validation(browser):
         save_failure_artifacts(browser, log_entries)
         raise
 
+
 def test_add_workflow(browser):
     """
     Test to add a workflow node
@@ -300,7 +307,9 @@ def test_add_workflow(browser):
         page.get_by_placeholder("Set the name").press("ControlOrMeta+a")
         page.get_by_placeholder("Set the name").fill("Example Console Workflow")
         page.get_by_placeholder("Set the name").press("Tab")
-        page.get_by_placeholder("Set the description").fill("Example workflow description")
+        page.get_by_placeholder("Set the description").fill(
+            "Example workflow description"
+        )
         page.get_by_test_id("wf-add-trigger-button").first.click()
         page.get_by_text("Manual").click()
         page.get_by_test_id("wf-add-step-button").first.click()
@@ -313,8 +322,100 @@ def test_add_workflow(browser):
         page.get_by_placeholder("message").fill("Hello world!")
         page.get_by_role("button", name="Save & Deploy").click()
         page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
-        expect(page.get_by_test_id("wf-name")).to_contain_text("Example Console Workflow")
-        expect(page.get_by_test_id("wf-description")).to_contain_text("Example workflow description")
+        expect(page.get_by_test_id("wf-name")).to_contain_text(
+            "Example Console Workflow"
+        )
+        expect(page.get_by_test_id("wf-description")).to_contain_text(
+            "Example workflow description"
+        )
     except Exception:
         save_failure_artifacts(page, log_entries)
+        raise
+
+
+def test_add_upload_workflow_with_alert_trigger(browser):
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    try:
+        browser.goto("http://localhost:3000/signin")
+        browser.get_by_role("link", name="Workflows").hover()
+        browser.get_by_role("link", name="Workflows").click()
+        browser.get_by_role("button", name="Upload Workflows").click()
+        browser.wait_for_timeout(5000)
+        file_input = browser.locator("#workflowFile")
+        file_input.set_input_files(
+            "./tests/e2e_tests/workflow-sample.yaml"
+        )
+        browser.get_by_role("button", name="Upload")
+        browser.wait_for_timeout(10000)
+        trigger_alert("prometheus")
+        browser.wait_for_timeout(3000)
+        browser.reload()
+        browser.wait_for_timeout(3000)
+        workflow_card = browser.locator(
+            "[data-sentry-component='WorkflowTile']",
+            has_text="9b3664f4-b248-4eda-8cc7-e69bc5a8bd92",
+        )
+        expect(workflow_card).not_to_contain_text("No data available")
+    except Exception:
+        save_failure_artifacts(browser, log_entries)
+        raise
+
+
+def test_start_with_keep_db(browser):
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    try:
+        browser.goto("http://localhost:3001/signin")
+        browser.wait_for_timeout(3000)
+        browser.get_by_placeholder("Enter your username").fill("keep")
+        browser.get_by_placeholder("Enter your password").fill("keep")
+        browser.wait_for_timeout(3000)
+        browser.get_by_role("button", name="Sign in").click()
+        browser.wait_for_timeout(5000)
+        expect(browser).to_have_url("http://localhost:3001/incidents")
+    except Exception:
+        save_failure_artifacts(browser, log_entries)
+        raise
+
+def test_provider_deletion(browser):
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
+    try:
+
+        # Checking deletion after Creation 
+        browser.goto("http://localhost:3000/signin")
+        browser.get_by_role("link", name="Providers").hover()
+        browser.get_by_role("link", name="Providers").click()
+        browser.wait_for_timeout(10000)
+        install_webhook_provider(browser=browser, provider_name=provider_name, webhook_url="http://keep-backend:8080", webhook_action="GET")
+        browser.wait_for_timeout(2000)
+        assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=1)
+        delete_provider(browser=browser, provider_type="Webhook", provider_name=provider_name)
+        assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=0)
+
+        # Checking deletion after Creation + Updation
+        install_webhook_provider(browser=browser, provider_name=provider_name, webhook_url="http://keep-backend:8080", webhook_action="GET")
+        browser.wait_for_timeout(2000)
+        assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=1)
+        # Updating provider
+        browser.locator(
+            f"button:has-text('Webhook'):has-text('Connected'):has-text('{provider_name}')"
+        ).click()
+        browser.get_by_placeholder("Enter url").clear()
+        browser.get_by_placeholder("Enter url").fill("https://this_is_UwU")
+
+        browser.get_by_role("button", name="Update", exact=True).click()
+        browser.wait_for_timeout(3000)
+        # Refreshing the scope
+        browser.get_by_role("button", name="Refresh", exact=True).click()
+        browser.wait_for_timeout(3000)
+        assert_scope_text_count(browser=browser, contains_text="HTTPSConnectionPool", count=1)
+        browser.mouse.click(10, 10)
+        delete_provider(browser=browser, provider_type="Webhook", provider_name=provider_name)
+        assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=0)
+
+    except Exception:
+        save_failure_artifacts(browser, log_entries)
         raise
