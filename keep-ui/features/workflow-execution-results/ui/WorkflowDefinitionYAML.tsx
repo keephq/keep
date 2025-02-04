@@ -5,6 +5,7 @@ import {
   CheckCircleIcon,
   ClockIcon,
   XCircleIcon,
+  ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
 import { getStepStatus } from "../lib/logs-utils";
 import { LogEntry } from "@/shared/api/workflow-executions";
@@ -95,6 +96,8 @@ export function WorkflowDefinitionYAML({
         return <CheckCircleIcon className="text-green-500 size-4" />;
       case "failed":
         return <XCircleIcon className="text-red-500 size-4" />;
+      case "skipped":
+        return <ExclamationCircleIcon className="text-gray-500 size-4" />;
       case "in_progress":
         return <ClockIcon className="text-yellow-500 size-4" />;
       default:

@@ -129,7 +129,7 @@ export default function WorkflowDetailPage({
             ) : (
               <Card className="h-[calc(100vh-200px)]">
                 <MonacoYAMLEditor
-                  yamlString={workflow.workflow_raw!}
+                  workflowRaw={workflow.workflow_raw!}
                   filename={workflow.id ?? "workflow"}
                   workflowId={workflow.id}
                 />
