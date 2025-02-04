@@ -67,7 +67,7 @@ export const AddFacetModalWithSuggestions: React.FC<
             <div className="mb-1">
               <span className="font-bold">Select facet property path:</span>
             </div>
-            {!propertyPathSuggestions && 'Loading...'}
+            {!propertyPathSuggestions && "Loading..."}
             {propertyPathSuggestions &&
               propertyPathSuggestions.length === 0 && (
                 <div>No property path suggestions found</div>

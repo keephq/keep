@@ -13,7 +13,7 @@ interface AddFacetModalProps {
 export const AddFacetModal: React.FC<AddFacetModalProps> = ({
   isOpen,
   onClose,
-  onAddFacet
+  onAddFacet,
 }) => {
   const [name, setName] = useState("");
   const [propertyPath, setPropertyPath] = useState("");
@@ -21,16 +21,16 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
   const handleNewFacetCreation = () => {
     onAddFacet({
       property_path: propertyPath,
-      name: name
-    })
+      name: name,
+    });
     close();
-  }
+  };
 
   const close = () => {
     setName("");
     setPropertyPath("");
     onClose();
-  }
+  };
 
   function isSubmitEnabled(): boolean {
     return name.trim().length > 0 && propertyPath.trim().length > 0;
@@ -48,7 +48,7 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
           <div className="mb-1">
             <span className="font-bold">Facet name (optional):</span>
           </div>
-          
+
           <TextInput
             placeholder="Enter facet name"
             required={true}
@@ -61,7 +61,7 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
           <div className="mb-1">
             <span className="font-bold">Facet property path:</span>
           </div>
-          
+
           <TextInput
             placeholder="Enter facet property path"
             required={true}
@@ -72,12 +72,7 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
         </div>
       </div>
       <div className="flex flex-1 justify-end gap-2">
-        <Button
-          color="orange"
-          size="xs"
-          variant="secondary"
-          onClick={close}
-        >
+        <Button color="orange" size="xs" variant="secondary" onClick={close}>
           Cancel
         </Button>
         <Button

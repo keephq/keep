@@ -27,7 +27,7 @@ export const TitleAndFilters = ({
   presetName,
   table,
   onThemeChange,
-  onDateRangeChange
+  onDateRangeChange,
 }: TableHeaderProps) => {
   const [timeFrame, setTimeFrame] = useState<{
     start: Date | null;
@@ -107,8 +107,8 @@ export const TitleAndFilters = ({
       );
     }
 
-      table.resetRowSelection();
-      table.resetPagination();
+    table.resetRowSelection();
+    table.resetPagination();
   };
 
   return (

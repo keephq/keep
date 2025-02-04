@@ -56,7 +56,7 @@ export interface AlertsQuery {
   offset: number;
   limit: number;
   sortBy: string;
-  sortDirection: 'ASC' | 'DESC';
+  sortDirection: "ASC" | "DESC";
 }
 
 interface PresetTab {
@@ -82,7 +82,7 @@ interface Props {
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
   setChangeStatusAlert?: (alert: AlertDto) => void;
-  onQueryChange?: (query:AlertsQuery) => void;
+  onQueryChange?: (query: AlertsQuery) => void;
   onRefresh?: () => void;
 }
 
@@ -104,13 +104,15 @@ export function AlertTableServerSide({
   setDismissModalAlert,
   setChangeStatusAlert,
   onQueryChange,
-  onRefresh
+  onRefresh,
 }: Props) {
-  const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(null);
+  const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
+    null
+  );
   const [filterCel, setFilterCel] = useState<string>("");
   const [searchCel, setSearchCel] = useState<string>("");
-  const [dateRange, setDateRange] = useState<DateRange | null>(null)
-  
+  const [dateRange, setDateRange] = useState<DateRange | null>(null);
+
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
@@ -168,24 +170,33 @@ export function AlertTableServerSide({
 
     filterArray.push(searchCel);
 
-    return filterArray.filter(Boolean).join(' && '); 
+    return filterArray.filter(Boolean).join(" && ");
   }, [searchCel, dateRange]);
 
-  const alertsQuery = useMemo(function whenQueryChange() {
-    let resultCel = [mainCelQuery, filterCel].filter(Boolean).join(' && ');
+  const alertsQuery = useMemo(
+    function whenQueryChange() {
+      let resultCel = [mainCelQuery, filterCel].filter(Boolean).join(" && ");
 
-    const limit = paginationState.pageSize;
-    const offset = limit * paginationState.pageIndex;
-    const alertsQuery: AlertsQuery = {
-      cel: resultCel, pageIndex: paginationState.pageIndex, offset, limit,
-      sortBy: sorting[0]?.id,
-      sortDirection: sorting[0]?.desc ? 'DESC' : 'ASC'
-    }
+      const limit = paginationState.pageSize;
+      const offset = limit * paginationState.pageIndex;
+      const alertsQuery: AlertsQuery = {
+        cel: resultCel,
+        pageIndex: paginationState.pageIndex,
+        offset,
+        limit,
+        sortBy: sorting[0]?.id,
+        sortDirection: sorting[0]?.desc ? "DESC" : "ASC",
+      };
 
-    return alertsQuery;
-  }, [filterCel, mainCelQuery, paginationState, sorting]);
+      return alertsQuery;
+    },
+    [filterCel, mainCelQuery, paginationState, sorting]
+  );
 
-  useEffect(() => onQueryChange && onQueryChange(alertsQuery), [alertsQuery, onQueryChange])
+  useEffect(
+    () => onQueryChange && onQueryChange(alertsQuery),
+    [alertsQuery, onQueryChange]
+  );
 
   const [tabs, setTabs] = useState([
     { name: "All", filter: (alert: AlertDto) => true },
@@ -222,7 +233,7 @@ export function AlertTableServerSide({
       pagination: {
         pageIndex: paginationState.pageIndex,
         pageSize: paginationState.pageSize,
-      }
+      },
     },
     manualSorting: true,
     onSortingChange: setSorting,
@@ -244,7 +255,7 @@ export function AlertTableServerSide({
     enableSorting: true,
     manualPagination: true,
     pageCount: Math.ceil(alertsTotalCount / paginationState.pageSize),
-    onPaginationChange: setPaginationState
+    onPaginationChange: setPaginationState,
   });
 
   const selectedRowIds = Object.entries(
@@ -291,7 +302,14 @@ export function AlertTableServerSide({
         );
       }
       if (facetName === "severity") {
-        return <SeverityBorderIcon severity={(severityMapping[Number(facetOptionName)] || facetOptionName) as UISeverity} />;
+        return (
+          <SeverityBorderIcon
+            severity={
+              (severityMapping[Number(facetOptionName)] ||
+                facetOptionName) as UISeverity
+            }
+          />
+        );
       }
       if (facetName === "assignee") {
         return <UserStatefulAvatar email={facetOptionName} size="xs" />;
@@ -324,7 +342,7 @@ export function AlertTableServerSide({
   const renderFacetOptionLabel = useCallback(
     (facetName: string, facetOptionName: string) => {
       facetName = facetName.toLowerCase();
-      
+
       switch (facetName) {
         case "assignee":
           if (!facetOptionName) {
@@ -334,8 +352,9 @@ export function AlertTableServerSide({
         case "dismissed":
           return facetOptionName === "true" ? "Dismissed" : "Not dismissed";
         case "severity": {
-            const label = severityMapping[Number(facetOptionName)] || facetOptionName;
-            return <span className="capitalize">{label}</span>;
+          const label =
+            severityMapping[Number(facetOptionName)] || facetOptionName;
+          return <span className="capitalize">{label}</span>;
         }
         default:
           return <span className="capitalize">{facetOptionName}</span>;
@@ -372,7 +391,10 @@ export function AlertTableServerSide({
             isIncidentSelectorOpen={isIncidentSelectorOpen}
           />
         ) : (
-          <AlertPresetManager presetName={presetName} onCelChanges={(searchCel) => setSearchCel(searchCel)} />
+          <AlertPresetManager
+            presetName={presetName}
+            onCelChanges={(searchCel) => setSearchCel(searchCel)}
+          />
         )}
       </div>
 

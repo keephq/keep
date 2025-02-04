@@ -22,9 +22,9 @@ export default async function Page() {
     const api = await createServerApiClient();
 
     const tasks = [
-      getIncidents(api, defaultIncidentsParams, ),
+      getIncidents(api, defaultIncidentsParams),
       getInitialFacetsData(api, "incidents"),
-    ]
+    ];
     const [_incidents, _facetsData] = await Promise.all(tasks);
     incidents = _incidents as PaginatedIncidentsDto;
     facetsData = _facetsData as InitialFacetsData;

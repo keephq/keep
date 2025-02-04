@@ -23,7 +23,7 @@ import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
 import { AlertsQuery } from "./alert-table-server-side";
 import { FacetDto } from "@/features/filter";
-import { v4 as uuidV4 } from 'uuid';
+import { v4 as uuidV4 } from "uuid";
 
 const defaultPresets: Preset[] = [
   {
@@ -45,7 +45,9 @@ type AlertsProps = {
 
 export default function Alerts({ presetName, initalFacets }: AlertsProps) {
   const api = useApi();
-  const [alertsQueryState, setAlertsQueryState] = useState<AlertsQuery | undefined>();
+  const [alertsQueryState, setAlertsQueryState] = useState<
+    AlertsQuery | undefined
+  >();
   const { useLastAlerts } = useAlerts();
   const { data: providersData = { installed_providers: [] } } = useProviders();
   const router = useRouter();
@@ -116,17 +118,23 @@ export default function Alerts({ presetName, initalFacets }: AlertsProps) {
     }
   }, [searchParams, alerts]);
 
-  useEffect(function setNewRefreshToken() {
-    if (pollAlerts) {
-      setRefreshToken(uuidV4());
-    }
-  }, [setRefreshToken, pollAlerts]);
+  useEffect(
+    function setNewRefreshToken() {
+      if (pollAlerts) {
+        setRefreshToken(uuidV4());
+      }
+    },
+    [setRefreshToken, pollAlerts]
+  );
 
-  useEffect(function refreshAlerts() {
-    if (refreshToken) {
-      mutateAlerts();
-    }
-  }, [mutateAlerts, refreshToken]);
+  useEffect(
+    function refreshAlerts() {
+      if (refreshToken) {
+        mutateAlerts();
+      }
+    },
+    [mutateAlerts, refreshToken]
+  );
 
   // if we don't have presets data yet, just show loading
   if (!selectedPreset && isPresetsLoading) {

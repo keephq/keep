@@ -300,7 +300,7 @@ export const AlertsRulesBuilder = ({
   minimal = false,
   showToast = false,
   shouldSetQueryParam = true,
-  onCelChanges
+  onCelChanges,
 }: AlertsRulesBuilderProps) => {
   const router = useRouter();
   const pathname = usePathname();

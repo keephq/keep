@@ -43,10 +43,12 @@ export const AlertPresetLink = ({
   const href = `/alerts/${preset.name.toLowerCase()}`;
   const isActive = decodeURIComponent(pathname?.toLowerCase() || "") === href;
   const { useLastAlerts } = useAlerts();
-  
-  const {
-    totalCount
-  } = useLastAlerts(preset.options.find(option => option.label === 'CEL')?.value || '', 20, 0);
+
+  const { totalCount } = useLastAlerts(
+    preset.options.find((option) => option.label === "CEL")?.value || "",
+    20,
+    0
+  );
 
   const { listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({

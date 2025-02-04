@@ -21,7 +21,7 @@ interface Props {
   setDismissModalAlert: (alert: AlertDto[] | null) => void;
   setChangeStatusAlert: (alert: AlertDto | null) => void;
   mutateAlerts: () => void;
-  onQueryChange?: (query:AlertsQuery) => void;
+  onQueryChange?: (query: AlertsQuery) => void;
 }
 
 export default function AlertTableTabPanelServerSide({
@@ -37,7 +37,7 @@ export default function AlertTableTabPanelServerSide({
   setDismissModalAlert,
   setChangeStatusAlert,
   mutateAlerts,
-  onQueryChange
+  onQueryChange,
 }: Props) {
   const additionalColsToGenerate = [
     ...new Set(
@@ -94,7 +94,7 @@ export default function AlertTableTabPanelServerSide({
       setDismissModalAlert={setDismissModalAlert}
       setChangeStatusAlert={setChangeStatusAlert}
       onQueryChange={onQueryChange}
-      onRefresh={() => {mutateAlerts}}
+      onRefresh={() => mutateAlerts()}
     />
   );
 }

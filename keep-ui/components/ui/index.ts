@@ -5,4 +5,4 @@ export { Button } from "./Button";
 export { Link } from "./Link";
 export { EmptyStateCard } from "./EmptyStateCard";
 export { DynamicImageProviderIcon } from "./DynamicProviderIcon";
-export { ShortNumber } from './ShortNumber';
+export { ShortNumber } from "./ShortNumber";

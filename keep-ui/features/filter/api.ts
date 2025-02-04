@@ -8,9 +8,9 @@ export interface InitialFacetsData {
 
 /**
  * Returns initial facets
- * @param api 
- * @param entityName 
- * @returns 
+ * @param api
+ * @param entityName
+ * @returns
  */
 export async function getInitalFacets(
   api: ApiClient,
@@ -21,16 +21,20 @@ export async function getInitalFacets(
 
 /**
  * Returns initial facets and their options
- * @param api 
- * @param entityName 
- * @returns 
+ * @param api
+ * @param entityName
+ * @returns
  */
 export async function getInitialFacetsData(
   api: ApiClient,
   entityName: string
 ): Promise<InitialFacetsData> {
   const facets = await getInitalFacets(api, entityName);
-  const facetOptionsQuery: FacetOptionsQuery = { facet_queries: facets.map((f) => f.id).reduce((acc, id) => ({...acc, [id]: ''}), {}) };
+  const facetOptionsQuery: FacetOptionsQuery = {
+    facet_queries: facets
+      .map((f) => f.id)
+      .reduce((acc, id) => ({ ...acc, [id]: "" }), {}),
+  };
   const facetOptions = await api.post<{ [key: string]: FacetOptionDto[] }>(
     `/${entityName}/facets/options`,
     facetOptionsQuery

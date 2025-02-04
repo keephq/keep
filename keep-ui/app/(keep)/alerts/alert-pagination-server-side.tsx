@@ -38,7 +38,7 @@ export default function AlertPaginationServerSide({
   table,
   isRefreshAllowed,
   isRefreshing,
-  onRefresh
+  onRefresh,
 }: Props) {
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();

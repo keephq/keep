@@ -6,7 +6,7 @@ const formatNumber = (num: number) => {
 };
 
 interface Props {
-    value: number;
+  value: number;
 }
 
 export function ShortNumber({ value }: Props) {

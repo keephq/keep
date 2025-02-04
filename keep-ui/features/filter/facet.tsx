@@ -18,7 +18,9 @@ export interface FacetProps {
   showIcon?: boolean;
   facetKey: string;
   facetState: Set<string>;
-  renderOptionLabel?: (optionDisplayName: string) => JSX.Element | string | undefined;
+  renderOptionLabel?: (
+    optionDisplayName: string
+  ) => JSX.Element | string | undefined;
   renderIcon?: (option_display_name: string) => JSX.Element | undefined;
   onSelectOneOption?: (value: string) => void;
   onSelectAllOptions?: () => void;
@@ -43,7 +45,7 @@ export const Facet: React.FC<FacetProps> = ({
   onDelete,
   renderIcon,
   renderOptionLabel,
-  isOpenByDefault
+  isOpenByDefault,
 }) => {
   const pathname = usePathname();
   // Get preset name from URL
@@ -117,10 +119,14 @@ export const Facet: React.FC<FacetProps> = ({
           !facetState.has(facetOption.display_name) &&
           facetOption.matches_count > 0
         }
-        renderLabel={() => renderOptionLabel && renderOptionLabel(facetOption.display_name)}
+        renderLabel={() =>
+          renderOptionLabel && renderOptionLabel(facetOption.display_name)
+        }
         renderIcon={() => renderIcon && renderIcon(facetOption.display_name)}
         onToggleOption={() => onSelect && onSelect(facetOption.display_name)}
-        onSelectOneOption={(value: string) => selectOneOption && selectOneOption(value)}
+        onSelectOneOption={(value: string) =>
+          selectOneOption && selectOneOption(value)
+        }
         onSelectAllOptions={() => selectAllOptions && selectAllOptions()}
       />
     );
@@ -133,11 +139,14 @@ export const Facet: React.FC<FacetProps> = ({
       );
     }
 
-    const filteredOptions = options?.filter((facetOption) =>
-      facetOption.display_name
-        .toLocaleLowerCase()
-        .includes(filter.toLocaleLowerCase())
-    ).sort((fst, scd) => scd.matches_count - fst.matches_count) || [];
+    const filteredOptions =
+      options
+        ?.filter((facetOption) =>
+          facetOption.display_name
+            .toLocaleLowerCase()
+            .includes(filter.toLocaleLowerCase())
+        )
+        .sort((fst, scd) => scd.matches_count - fst.matches_count) || [];
 
     if (!filteredOptions.length) {
       return (
@@ -160,12 +169,8 @@ export const Facet: React.FC<FacetProps> = ({
       >
         <div className="flex items-center space-x-2">
           <Icon className="size-5 -m-0.5 text-gray-600" />
-          {
-            isLoading && (<Skeleton containerClassName="h-4 w-20" />)
-          }
-          {
-            !isLoading && (<Title className="text-sm">{name}</Title>)
-          }
+          {isLoading && <Skeleton containerClassName="h-4 w-20" />}
+          {!isLoading && <Title className="text-sm">{name}</Title>}
         </div>
         {!isStatic && (
           <button
@@ -194,7 +199,11 @@ export const Facet: React.FC<FacetProps> = ({
               />
             </div>
           )}
-          <div className={`max-h-60 overflow-y-auto${optionsReloading ? ' pointer-events-none opacity-70' : ''}`}>{renderBody() as any}</div>
+          <div
+            className={`max-h-60 overflow-y-auto${optionsReloading ? " pointer-events-none opacity-70" : ""}`}
+          >
+            {renderBody() as any}
+          </div>
         </div>
       )}
     </div>

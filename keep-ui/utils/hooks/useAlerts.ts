@@ -122,8 +122,8 @@ export const useAlerts = () => {
     limit: number | undefined,
     offset: number | undefined,
     sortBy?: string | undefined,
-    sortDirection?: 'ASC' | 'DESC' | undefined,
-    options: SWRConfiguration = { revalidateOnFocus: false },
+    sortDirection?: "ASC" | "DESC" | undefined,
+    options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     const filtersParams = new URLSearchParams();
 
@@ -143,11 +143,11 @@ export const useAlerts = () => {
       filtersParams.set("sort_by", sortBy);
 
       switch (sortDirection) {
-        case 'DESC':
-          filtersParams.set("sort_dir", 'desc');
+        case "DESC":
+          filtersParams.set("sort_dir", "desc");
           break;
         default:
-          filtersParams.set("sort_dir", 'asc');
+          filtersParams.set("sort_dir", "asc");
       }
     }
 
@@ -158,8 +158,7 @@ export const useAlerts = () => {
     }
 
     const swrValue = useSWR<any>(
-      () =>
-        api.isReady() && cel !== undefined ? requestUrl : null,
+      () => (api.isReady() && cel !== undefined ? requestUrl : null),
       (url) => api.get(url),
       options
     );
@@ -170,7 +169,7 @@ export const useAlerts = () => {
       isLoading: swrValue.isLoading || !swrValue.data,
       totalCount: swrValue.data?.count,
       limit: swrValue.data?.limit,
-      offset: swrValue.data?.offset
+      offset: swrValue.data?.offset,
     };
   };
 
@@ -181,6 +180,6 @@ export const useAlerts = () => {
     useAlertAudit,
     useMultipleFingerprintsAlertAudit,
     useLastAlerts,
-    alertsMutator
+    alertsMutator,
   };
 };

@@ -82,9 +82,9 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   }
 
   const [isModalOpen, setIsModalOpen] = useLocalStorage<boolean>(
-      `addFacetModalOpen-${entityName}`,
-      false
-    );
+    `addFacetModalOpen-${entityName}`,
+    false
+  );
   const facetActions = useFacetActions(entityName, initialFacetsData);
   const [facetQueriesState, setFacetQueriesState] =
     useState<FacetOptionsQueries | null>(null);

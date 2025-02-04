@@ -1,5 +1,11 @@
 import useSWR, { SWRConfiguration, useSWRConfig } from "swr";
-import { CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsDict, FacetOptionsQueries, FacetOptionsQuery } from "./models";
+import {
+  CreateFacetDto,
+  FacetDto,
+  FacetOptionDto,
+  FacetOptionsDict,
+  FacetOptionsQuery,
+} from "./models";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -32,7 +38,6 @@ export const useFacets = (
   };
 };
 
-
 export const useFacetPotentialFields = (
   entityName: string,
   options: SWRConfiguration = {
@@ -60,9 +65,8 @@ export const useFacetOptions = (
   facetsQuery: FacetOptionsQuery | null
 ) => {
   const api = useApi();
-  const [mergedFacetOptions, setMergedFacetOptions] = useState(
-    initialFacetOptions
-  );
+  const [mergedFacetOptions, setMergedFacetOptions] =
+    useState(initialFacetOptions);
   const [isLoading, setIsLoading] = useState(false);
   const requestUrl = `/${entityName}/facets/options`;
 
@@ -105,14 +109,14 @@ export const useFacetOptions = (
     if (!api.isReady() || !facetsQuery) {
       return;
     }
-    
+
     fetch();
   }, [api, api?.isReady(), JSON.stringify(facetsQuery), requestUrl]);
 
   return {
     facetOptions: mergedFacetOptions,
     mutate: fetch,
-    isLoading
+    isLoading,
   };
 };
 
@@ -127,7 +131,9 @@ export const useFacetActions = (
   const mutateFacetsList = useCallback(
     () =>
       // Adding "?" to the key because the list always has a query param
-      mutate((key) => typeof key === "string" && key == `/${entityName}/facets`),
+      mutate(
+        (key) => typeof key === "string" && key == `/${entityName}/facets`
+      ),
     [mutate]
   );
 
