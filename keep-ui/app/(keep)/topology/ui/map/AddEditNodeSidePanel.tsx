@@ -19,7 +19,6 @@ export type TopologyServiceFormProps = {
   tags?: string;
   service: string;
   display_name: string;
-  // environment: "unknown";
   description?: string;
   team?: string;
   email?: string;
