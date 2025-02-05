@@ -738,7 +738,14 @@ def test_rule_event_groups_expires(db_session, create_alert):
 
 def test_at_sign(db_session):
     # insert alerts
-    event = {"@timestamp": "abc", "#$": "abc", "!what": "abc"}
+    event = {
+        "@timestamp": "abc",
+        "#$": "abc",
+        "!what": "abc",
+        "bla": {
+            "@timestamp": "abc",
+        },
+    }
     alerts = [
         AlertDto(
             id="grafana-1",
@@ -753,6 +760,7 @@ def test_at_sign(db_session):
     # create a simple rule
     rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
     # simple rule
+    cel = '(source == "sentry") || (source == "grafana" && severity == "critical")'
     create_rule_db(
         tenant_id=SINGLE_TENANT_UUID,
         name="test-rule",
@@ -762,7 +770,7 @@ def test_at_sign(db_session):
         },
         timeframe=600,
         timeunit="seconds",
-        definition_cel='(source == "sentry") || (source == "grafana" && severity == "critical")',
+        definition_cel=cel,
         created_by="test@keephq.dev",
     )
     rules = get_rules_db(SINGLE_TENANT_UUID)
@@ -785,6 +793,10 @@ def test_at_sign(db_session):
     results = rules_engine.run_rules(alerts, session=db_session)
     # check that there are results
     assert len(results) > 0
+
+    alerts = rules_engine.filter_alerts(alerts, cel)
+    assert len(alerts) == 1
+    assert alerts[0].id == "grafana-1"
 
 
 # Next steps:
