@@ -351,6 +351,7 @@ export const AlertsRulesBuilder = ({
 
   const handleClearInput = useCallback(() => {
     setCELRules("");
+    onCelChanges && onCelChanges(celRules);
     table?.resetGlobalFilter();
     setIsValidCEL(true);
   }, [table]);
@@ -483,11 +484,15 @@ export const AlertsRulesBuilder = ({
   };
 
   const onApplyFilter = () => {
+    if (onCelChanges) {
+      onCelChanges(celRules);
+      return;
+    }
+
     if (celRules.length === 0) {
       return table?.resetGlobalFilter();
     }
 
-    onCelChanges && onCelChanges(celRules);
     table?.setGlobalFilter(celRules);
   };
 
