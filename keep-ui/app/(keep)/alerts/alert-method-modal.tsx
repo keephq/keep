@@ -73,12 +73,6 @@ export function AlertMethodModal({ presetName, alerts }: AlertMethodModalProps) 
     }
   }, [alert, method]);
 
-  if (isOpen) {
-    console.log({
-      provider, method, alert
-    })
-  }
-
   if (!isOpen || !provider || !method || !alert) {
     return <></>;
   }
