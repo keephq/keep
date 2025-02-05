@@ -8,7 +8,7 @@ from sqlalchemy import (
     func,
     select,
 )
-from sqlmodel import Session, select, text
+from sqlmodel import Session, text
 
 # This import is required to create the tables
 from keep.api.core.facets import get_facet_options, get_facets
@@ -212,7 +212,7 @@ def query_last_alerts(
         query = query.group_by(Alert.id,AlertEnrichment.id)
 
         # Execute the query
-        total_count = session.exec(select(func.count()).select_from(query)).one()
+        total_count = session.exec(select(func.count()).select_from(query)).one()[0]
         alerts_with_start = session.execute(
             query.order_by(desc(Alert.timestamp)).limit(limit).offset(offset)
         ).all()
