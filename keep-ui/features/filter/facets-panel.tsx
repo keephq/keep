@@ -108,6 +108,8 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   const [facetsState, setFacetsState] = useState<FacetState>({});
   const [clickedFacetId, setClickedFacetId] = useState<string | null>(null);
   const [celState, setCelState] = useState("");
+  const [facetOptionQueries, setFacetOptionQueries] =
+    useState<FacetOptionsQueries | null>(null);
 
   function getFacetState(facetId: string): Set<string> {
     if (
@@ -149,11 +151,16 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
 
   useEffect(() => {
     var cel = buildCel(facets, facetOptions, facetsState);
+    setCelState(cel);
+  }, [facetsState, facetOptions, facets, celState, onCelChange]);
 
-    if (cel !== celState) {
-      setCelState(cel);
-      onCelChange && onCelChange(cel);
+  useEffect(() => {
+    if (facetOptionQueries) {
+      onReloadFacetOptions && onReloadFacetOptions(facetOptionQueries);
     }
+  }, [JSON.stringify(facetOptionQueries)]);
+
+  useEffect(() => {
     const facetOptionQueries: FacetOptionsQueries = {};
 
     facets.forEach((facet) => {
@@ -166,9 +173,9 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       );
     });
 
-    onReloadFacetOptions && onReloadFacetOptions(facetOptionQueries);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facetsState]);
+    setFacetOptionQueries(facetOptionQueries);
+    onCelChange && onCelChange(celState);
+  }, [celState, onCelChange, setFacetOptionQueries]);
 
   function toggleFacetOption(facetId: string, value: string) {
     setClickedFacetId(facetId);
