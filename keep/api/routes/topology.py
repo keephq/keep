@@ -12,6 +12,14 @@ from keep.api.models.db.topology import (
     TopologyApplicationDtoOut,
     TopologyServiceDtoIn,
     TopologyServiceDtoOut,
+    TopologyServiceCreateRequestDTO,
+    TopologyApplicationServiceDto,
+    TopologyServiceUpdateRequestDTO,
+    TopologyServiceDependencyCreateRequestDto,
+    TopologyServiceDependency,
+    TopologyServiceDependencyUpdateRequestDto,
+    TopologyServiceDependencyDto,
+    TopologyService, DeleteServicesRequest,
 )
 from keep.api.tasks.process_topology_task import process_topology
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -24,6 +32,7 @@ from keep.topologies.topologies_service import (
     InvalidApplicationDataException,
     ServiceNotFoundException,
     TopologiesService,
+    DependencyNotFoundException,
 )
 
 logger = logging.getLogger(__name__)
@@ -279,4 +288,136 @@ def pull_topology_data(
         )
         raise HTTPException(
             status_code=500, detail=f"Failed to pull topology data: {str(e)}"
+        )
+
+
+@router.post("/service", description="Creating a service manually")
+def create_service(
+    service: TopologyServiceCreateRequestDTO,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:topology"])
+    ),
+    session: Session = Depends(get_session),
+) -> TopologyService:
+    """
+    Any services created by this endpoint will have manual set to True.
+    """
+    try:
+        return TopologiesService.create_service(
+            service=service, tenant_id=authenticated_entity.tenant_id, session=session
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create service: {str(e)}"
+        )
+
+
+@router.put("/service", description="Updating a service manually")
+def update_service(
+    service: TopologyServiceUpdateRequestDTO,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:topology"])
+    ),
+    session: Session = Depends(get_session),
+) -> TopologyService:
+    try:
+        return TopologiesService.update_service(
+            service=service, tenant_id=authenticated_entity.tenant_id, session=session
+        )
+    except ServiceNotFoundException:
+        raise HTTPException(status_code=404, detail="Service not found")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update service: {str(e)}"
+        )
+
+
+@router.delete("/services", description="Delete a list of services manually")
+def delete_services(
+    service_ids: DeleteServicesRequest,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:topology"])
+    ),
+    session: Session = Depends(get_session),
+):
+    try:
+        TopologiesService.delete_services(
+            service_ids=service_ids.service_ids,
+            tenant_id=authenticated_entity.tenant_id,
+            session=session,
+        )
+        return JSONResponse(
+            status_code=200, content={"message": "Services deleted successfully"}
+        )
+    except ServiceNotFoundException:
+        raise HTTPException(status_code=404, detail="Service not found")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete services: {str(e)}"
+        )
+
+
+@router.post("/dependency", description="Creating a new dependency manually")
+def create_dependencies(
+    dependency: TopologyServiceDependencyCreateRequestDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:topology"])
+    ),
+    session: Session = Depends(get_session),
+) -> TopologyServiceDependencyDto:
+    """
+    Any services created by this endpoint will have manual set to True.
+    """
+    try:
+        return TopologiesService.create_dependency(
+            dependency=dependency, session=session
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create Dependency: {str(e)}"
+        )
+
+
+@router.put("/dependency", description="Updating a dependency manually")
+def update_dependency(
+    dependency: TopologyServiceDependencyUpdateRequestDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:topology"])
+    ),
+    session: Session = Depends(get_session),
+) -> TopologyServiceDependencyDto:
+    try:
+        return TopologiesService.update_dependency(
+            dependency=dependency, session=session
+        )
+    except DependencyNotFoundException:
+        raise HTTPException(status_code=404, detail="Dependency not found")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update Dependency: {str(e)}"
+        )
+
+
+@router.delete(
+    "/dependency/{dependency_id}", description="Deleting a dependency manually"
+)
+def delete_dependency(
+    dependency_id: int,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:topology"])
+    ),
+    session: Session = Depends(get_session),
+):
+    try:
+        TopologiesService.delete_dependency(
+            dependency_id=dependency_id, session=session
+        )
+        return JSONResponse(
+            status_code=200, content={"message": "Application deleted successfully"}
+        )
+    except DependencyNotFoundException:
+        raise HTTPException(status_code=404, detail="Dependency not found")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete Dependency: {str(e)}"
         )

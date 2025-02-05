@@ -41,6 +41,7 @@ class TopologyService(SQLModel, table=True):
     category: Optional[str] = None
     manufacturer: Optional[str] = None
     namespace: Optional[str] = None
+    manual: Optional[bool] = False
 
     updated_at: Optional[datetime] = Field(
         sa_column=Column(
@@ -115,6 +116,7 @@ class TopologyServiceDtoBase(BaseModel, extra="ignore"):
     category: Optional[str] = None
     manufacturer: Optional[str] = None
     namespace: Optional[str] = None
+    manual: Optional[bool] = False
 
 
 class TopologyServiceInDto(TopologyServiceDtoBase):
@@ -125,9 +127,19 @@ class TopologyServiceInDto(TopologyServiceDtoBase):
 
 
 class TopologyServiceDependencyDto(BaseModel, extra="ignore"):
-    serviceId: int
+    id: Optional[str] = None
+    serviceId: str
     serviceName: str
     protocol: Optional[str] = "unknown"
+
+    @classmethod
+    def from_orm(cls, db_dependency: TopologyServiceDependency):
+        return TopologyServiceDependencyDto(
+            id=db_dependency.id,
+            serviceId=str(db_dependency.depends_on_service_id),
+            protocol=db_dependency.protocol,
+            serviceName=db_dependency.dependent_service.service,
+        )
 
 
 class TopologyApplicationDto(BaseModel, extra="ignore"):
@@ -153,14 +165,14 @@ class TopologyApplicationDtoIn(BaseModel, extra="ignore"):
 
 
 class TopologyApplicationServiceDto(BaseModel, extra="ignore"):
-    id: int
+    id: str
     name: str
     service: str
 
     @classmethod
     def from_orm(cls, service: "TopologyService") -> "TopologyApplicationServiceDto":
         return cls(
-            id=service.id,
+            id=str(service.id),
             name=service.display_name,
             service=service.service,
         )
@@ -186,7 +198,7 @@ class TopologyApplicationDtoOut(TopologyApplicationDto):
 
 
 class TopologyServiceDtoOut(TopologyServiceDtoBase):
-    id: int
+    id: str
     dependencies: List[TopologyServiceDependencyDto]
     application_ids: List[UUID]
     updated_at: Optional[datetime]
@@ -196,7 +208,7 @@ class TopologyServiceDtoOut(TopologyServiceDtoBase):
         cls, service: "TopologyService", application_ids: List[UUID]
     ) -> "TopologyServiceDtoOut":
         return cls(
-            id=service.id,
+            id=str(service.id),
             source_provider_id=service.source_provider_id,
             repository=service.repository,
             tags=service.tags,
@@ -213,7 +225,8 @@ class TopologyServiceDtoOut(TopologyServiceDtoBase):
             category=service.category,
             dependencies=[
                 TopologyServiceDependencyDto(
-                    serviceId=dep.depends_on_service_id,
+                    id=dep.id,
+                    serviceId=str(dep.depends_on_service_id),
                     protocol=dep.protocol,
                     serviceName=dep.dependent_service.service,
                 )
@@ -222,4 +235,45 @@ class TopologyServiceDtoOut(TopologyServiceDtoBase):
             application_ids=application_ids,
             updated_at=service.updated_at,
             namespace=service.namespace,
+            manual=service.manual if service.manual is not None else False,
         )
+
+
+class TopologyServiceCreateRequestDTO(BaseModel, extra="ignore"):
+    repository: Optional[str] = None
+    tags: Optional[List[str]] = None
+    service: str
+    display_name: str
+    environment: str = "unknown"
+    description: Optional[str] = None
+    team: Optional[str] = None
+    email: Optional[str] = None
+    slack: Optional[str] = None
+    ip_address: Optional[str] = None
+    mac_address: Optional[str] = None
+    category: Optional[str] = None
+    manufacturer: Optional[str] = None
+    namespace: Optional[str] = None
+    manual = True
+
+
+class TopologyServiceUpdateRequestDTO(TopologyServiceCreateRequestDTO, extra="ignore"):
+    id: str
+
+
+class TopologyServiceDependencyCreateRequestDto(BaseModel, extra="ignore"):
+    service_id: int
+    depends_on_service_id: int
+    protocol: Optional[str] = "unknown"
+
+
+class TopologyServiceDependencyUpdateRequestDto(
+    TopologyServiceDependencyCreateRequestDto, extra="ignore"
+):
+    service_id: Optional[int]
+    depends_on_service_id: Optional[int]
+    id: int
+
+
+class DeleteServicesRequest(BaseModel, extra="ignore"):
+    service_ids: List[int]
