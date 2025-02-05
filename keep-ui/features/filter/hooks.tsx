@@ -62,20 +62,31 @@ export const useFacetPotentialFields = (
 export const useFacetOptions = (
   entityName: string,
   initialFacetOptions: FacetOptionsDict | undefined,
-  facetsQuery: FacetOptionsQuery | null
+  facetsQuery: FacetOptionsQuery | null,
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  }
 ) => {
   const api = useApi();
   const [mergedFacetOptions, setMergedFacetOptions] =
     useState(initialFacetOptions);
-  const [isLoading, setIsLoading] = useState(false);
   const requestUrl = `/${entityName}/facets/options`;
 
-  async function fetch() {
-    setIsLoading(true);
-    const fetchedData: FacetOptionsDict = await api.post(
-      requestUrl,
-      facetsQuery
-    );
+  const swrValue = useSWR<any>(
+    () =>
+      api.isReady() && facetsQuery
+        ? requestUrl + "_" + JSON.stringify(facetsQuery)
+        : null,
+    () => api.post(requestUrl, facetsQuery),
+    options
+  );
+
+  useEffect(() => {
+    if (!swrValue.data) {
+      return;
+    }
+
+    const fetchedData: FacetOptionsDict = swrValue.data;
     const newFacetOptions: FacetOptionsDict = JSON.parse(
       JSON.stringify(mergedFacetOptions || {})
     );
@@ -102,21 +113,12 @@ export const useFacetOptions = (
     });
 
     setMergedFacetOptions(newFacetOptions);
-    setIsLoading(false);
-  }
-
-  useEffect(() => {
-    if (!api.isReady() || !facetsQuery) {
-      return;
-    }
-
-    fetch();
-  }, [api, api?.isReady(), JSON.stringify(facetsQuery), requestUrl]);
+  }, [swrValue.data]);
 
   return {
     facetOptions: mergedFacetOptions,
-    mutate: fetch,
-    isLoading,
+    mutate: swrValue.mutate,
+    isLoading: swrValue.isLoading,
   };
 };
 
