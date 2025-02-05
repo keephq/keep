@@ -64,7 +64,13 @@ export default function RulesTable({ mappings, editCallback }: Props) {
   const columns = [
     columnHelper.accessor("name", {
       header: "Name",
-      cell: (info) => info.getValue(),
+      cell: (context) => {
+        return (
+          <div>
+            {getTypeIcon(context.row.original.type)} {context.row.original.name}
+          </div>
+        );
+      },
     }),
     columnHelper.accessor("description", {
       header: "Description",
@@ -74,11 +80,6 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       id: "priority",
       header: "Priority",
       cell: (context) => context.row.original.priority,
-    }),
-    columnHelper.display({
-      id: "type",
-      header: "Type",
-      cell: (context) => getTypeIcon(context.row.original.type),
     }),
     columnHelper.display({
       id: "matchers",
@@ -102,7 +103,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       id: "actions",
       header: "",
       cell: (context) => (
-        <div className="space-x-1 flex flex-row items-center justify-end opacity-0 group-hover:opacity-100 border-l">
+        <div className="space-x-1 flex flex-row items-center justify-end opacity-0 group-hover:opacity-100 bg-slate-100 border-l">
           <Button
             color="orange"
             size="xs"
@@ -195,7 +196,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
                     <TableCell
                       className={`${
                         cell.column.columnDef.meta?.sticky
-                          ? "sticky right-0 bg-white dark:bg-gray-800"
+                          ? "sticky right-0 bg-white dark:bg-gray-800 hover:bg-slate-100 group-hover:bg-slate-100"
                           : ""
                       }`}
                       key={cell.id}
