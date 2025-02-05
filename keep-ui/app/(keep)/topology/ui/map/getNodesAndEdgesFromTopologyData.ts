@@ -12,11 +12,13 @@ import {
   edgeMarkerEndNoHover,
 } from "@/app/(keep)/topology/ui/map/styles";
 import { IncidentDto } from "@/entities/incidents/model";
+import { KeyedMutator } from "swr";
 
 export function getNodesAndEdgesFromTopologyData(
   topologyData: TopologyService[],
   applicationsMap: Map<string, TopologyApplication>,
-  allIncidents: IncidentDto[]
+  allIncidents: IncidentDto[],
+  topologyMutator: KeyedMutator<TopologyService[]>
 ) {
   const nodeMap = new Map<string, TopologyNode>();
   const edgeMap = new Map<string, Edge>();
@@ -29,9 +31,13 @@ export function getNodesAndEdgesFromTopologyData(
         incident.services.includes(service.service)
     );
     const node: ServiceNodeType = {
-      id: service.service.toString(),
+      id: service.id.toString(),
       type: "service",
-      data: { ...service, incidents: numIncidentsToService.length },
+      data: {
+        ...service,
+        incidents: numIncidentsToService.length,
+        topologyMutator,
+      },
       position: { x: 0, y: 0 }, // Dagre will handle the actual positioning
       selectable: true,
     };
@@ -49,21 +55,17 @@ export function getNodesAndEdgesFromTopologyData(
         })
         .filter((a) => !!a);
     }
-    nodeMap.set(service.service.toString(), node);
+    nodeMap.set(service.id.toString(), node);
     service.dependencies.forEach((dependency) => {
       const dependencyService = topologyData.find(
-        (s) => s.service === dependency.serviceName
+        (s) => s.id === dependency.serviceId
       );
-      const edgeId = `${service.service}_${dependency.protocol}_${
-        dependencyService
-          ? dependencyService.service
-          : dependency.serviceId.toString()
-      }`;
+      const edgeId = dependency.id.toString();
       if (!edgeMap.has(edgeId)) {
         edgeMap.set(edgeId, {
-          id: edgeId,
-          source: service.service.toString(),
-          target: dependency.serviceName.toString(),
+          id: edgeId.toString(),
+          source: service.id.toString(),
+          target: dependencyService?.id.toString() ?? "",
           label: dependency.protocol === "unknown" ? "" : dependency.protocol,
           animated: false,
           labelBgPadding: edgeLabelBgPaddingNoHover,

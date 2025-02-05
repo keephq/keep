@@ -1,35 +1,90 @@
 "use client";
 
-import { useOnSelectionChange } from "@xyflow/react";
-import { useState, useCallback, useContext } from "react";
+import { Edge, useOnSelectionChange } from "@xyflow/react";
+import { useState, useCallback, useContext, useEffect } from "react";
 import { cn } from "@/utils/helpers";
 import { Button } from "@/components/ui";
 import {
   useTopologyApplications,
   TopologyApplication,
   ServiceNodeType,
-  TopologyServiceMinimal,
   TopologyNode,
 } from "@/app/(keep)/topology/model";
 import { TopologySearchContext } from "../../TopologySearchContext";
 import { ApplicationModal } from "@/app/(keep)/topology/ui/applications/application-modal";
 import { showErrorToast } from "@/shared/ui";
+import {
+  TopologyService,
+  TopologyServiceWithMutator,
+} from "../../model/models";
+import {
+  AddEditNodeSidePanel,
+  TopologyServiceFormProps,
+} from "./AddEditNodeSidePanel";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { toast } from "react-toastify";
+import { KeyedMutator } from "swr";
 
-export function ManageSelection({ className }: { className?: string }) {
+export function ManageSelection({
+  className,
+  topologyMutator,
+  getServiceById,
+}: {
+  className?: string;
+  topologyMutator: KeyedMutator<TopologyService[]>;
+  getServiceById: (_id: string) => TopologyService | undefined;
+}) {
   const { setSelectedObjectId } = useContext(TopologySearchContext);
   const { applications, addApplication, removeApplication, updateApplication } =
     useTopologyApplications();
   const [selectedApplication, setSelectedApplication] =
     useState<TopologyApplication | null>(null);
   const [selectedServices, setSelectedServices] = useState<
-    TopologyServiceMinimal[]
+    TopologyServiceWithMutator[]
   >([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState<boolean>(false);
+  const [serviceToEdit, setServiceToEdit] = useState<
+    TopologyServiceWithMutator | undefined
+  >(undefined);
+  const api = useApi();
+  const handleServicesDelete = async () => {
+    try {
+      const response = await api.delete("/topology/services", {
+        service_ids: selectedServices.map((service) => service.id),
+      });
+      selectedServices[0].topologyMutator();
+    } catch (error) {
+      toast.error(
+        `Error while deleting ${selectedServices.length === 1 ? "service" : "services"}: ${error}`
+      );
+    }
+  };
+  const [isDependencyEditable, setIsDependencyEditable] =
+    useState<boolean>(false);
 
-  const updateSelectedServices = useCallback(
-    ({ nodes }: { nodes: TopologyNode[] }) => {
+  const [selectedEdges, setSelectedEdges] = useState<Edge[]>([]);
+
+  useEffect(() => {
+    if (
+      selectedEdges.length === 1 &&
+      getServiceById(selectedEdges[0].source)?.manual === true &&
+      getServiceById(selectedEdges[0].target)?.manual === true
+    ) {
+      setIsDependencyEditable(true);
+    } else {
+      setIsDependencyEditable(false);
+    }
+  }, [selectedEdges, getServiceById]);
+
+  const updateSelectedServicesAndEdges = useCallback(
+    ({ nodes, edges }: { nodes: TopologyNode[]; edges: Edge[] }) => {
       if (isModalOpen) {
         // Avoid dropping selection when focus is on the modal
+        return;
+      }
+      setSelectedEdges(edges.map((edge) => ({ ...edge })));
+      if (edges.length > 0) {
         return;
       }
       if (nodes.length === 0) {
@@ -39,11 +94,10 @@ export function ManageSelection({ className }: { className?: string }) {
       }
       const servicesNodes = nodes.filter((node) => node.type === "service");
       setSelectedServices(
-        servicesNodes.map((node: TopologyNode) => ({
-          id: (node as ServiceNodeType).data.id,
-          name: (node as ServiceNodeType).data.display_name as string,
-          service: (node as ServiceNodeType).data.service,
-        }))
+        servicesNodes.map(
+          (node: TopologyNode) =>
+            ({ ...node.data }) as TopologyServiceWithMutator
+        )
       );
       // Setting selected application if all services selected has the same app id in data.application_ids
       const appIds = new Set(
@@ -67,7 +121,7 @@ export function ManageSelection({ className }: { className?: string }) {
   );
 
   useOnSelectionChange({
-    onChange: updateSelectedServices,
+    onChange: updateSelectedServicesAndEdges,
   });
 
   const handleUpdateApplication = async (
@@ -109,6 +163,24 @@ export function ManageSelection({ className }: { className?: string }) {
     [removeApplication]
   );
 
+  const editEdgeProtocol = async (edge: Edge) => {
+    const protocol = prompt(
+      "Please enter the protocol:",
+      edge.label?.toString()
+    );
+    if (protocol !== null) {
+      try {
+        const response = await api.put("/topology/dependency", {
+          id: edge.id,
+          protocol: protocol,
+        });
+        topologyMutator();
+      } catch (error) {
+        toast.error("Failed to update protocol");
+      }
+    }
+  };
+
   const renderManageApplicationForm = () => {
     if (selectedApplication === null) {
       return null;
@@ -139,29 +211,79 @@ export function ManageSelection({ className }: { className?: string }) {
     );
   };
 
-  const renderCreateApplicationForm = () => {
+  const renderCreateApplicationAndManageServicesForm = () => {
     return (
       <>
         <p>
           {selectedServices.length > 0 &&
             `Selected: ${selectedServices
-              .map((service) => service.name)
+              .map((service) => service.display_name)
               .join(", ")}`}
         </p>
-        <Button
-          color="orange"
-          size="xs"
-          variant="primary"
-          onClick={() => setIsModalOpen(true)}
-        >
-          Create Application
-        </Button>
+        <div className="">
+          {selectedServices.length === 1 && selectedServices[0].manual && (
+            <Button
+              color="orange"
+              size="xs"
+              variant="secondary"
+              className="mr-3"
+              onClick={() => {
+                setIsSidePanelOpen(true);
+                setServiceToEdit(selectedServices[0]);
+              }}
+            >
+              Update Service
+            </Button>
+          )}
+          {selectedServices.length > 0 &&
+            selectedServices.every((service) => service.manual === true) && (
+              <Button
+                color="red"
+                size="xs"
+                variant="primary"
+                className="mr-3"
+                onClick={() => handleServicesDelete()}
+              >
+                Delete {selectedServices.length === 1 ? "Service" : "Services"}
+              </Button>
+            )}
+          <Button
+            color="orange"
+            size="xs"
+            variant="primary"
+            onClick={() => setIsModalOpen(true)}
+          >
+            Create Application
+          </Button>
+        </div>
+        {serviceToEdit && (
+          <AddEditNodeSidePanel
+            isOpen={isSidePanelOpen}
+            editData={
+              {
+                ...serviceToEdit,
+                tags: serviceToEdit.tags?.join(","),
+              } as TopologyServiceFormProps
+            }
+            topologyMutator={serviceToEdit.topologyMutator}
+            handleClose={() => {
+              setIsSidePanelOpen(false);
+              setServiceToEdit(undefined);
+            }}
+          />
+        )}
         <ApplicationModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           actionType="create"
           application={{
-            services: selectedServices,
+            services: selectedServices.map(
+              (node: TopologyServiceWithMutator) => ({
+                id: node.id,
+                name: node.display_name as string,
+                service: node.service,
+              })
+            ),
           }}
           onSubmit={createApplication}
         />
@@ -169,7 +291,29 @@ export function ManageSelection({ className }: { className?: string }) {
     );
   };
 
-  if (selectedServices.length === 0 && selectedApplication === null) {
+  const renderEditEdgeToolBar = () => {
+    return (
+      <>
+        <div></div>
+        <div className="flex gap-2">
+          <Button
+            color="orange"
+            size="xs"
+            variant="secondary"
+            onClick={() => editEdgeProtocol(selectedEdges[0])}
+          >
+            Edit Dependency
+          </Button>
+        </div>
+      </>
+    );
+  };
+
+  if (
+    selectedServices.length === 0 &&
+    selectedApplication === null &&
+    !isDependencyEditable
+  ) {
     return null;
   }
 
@@ -182,8 +326,9 @@ export function ManageSelection({ className }: { className?: string }) {
     >
       {selectedApplication !== null ? renderManageApplicationForm() : null}
       {selectedApplication === null && selectedServices.length > 0
-        ? renderCreateApplicationForm()
+        ? renderCreateApplicationAndManageServicesForm()
         : null}
+      {isDependencyEditable ? renderEditEdgeToolBar() : null}
     </div>
   );
 }
