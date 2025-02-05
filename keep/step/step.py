@@ -1,3 +1,4 @@
+import logging
 import time
 from enum import Enum
 
@@ -38,7 +39,7 @@ class Step:
         self.conditions = self.config.get("condition", [])
         self.vars = self.config.get("vars", {})
         self.conditions_results = {}
-        self.logger = context_manager.get_logger()
+        self.logger = logging.getLogger(__name__)
         self.__retry = self.on_failure.get("retry", {})
         self.__retry_count = self.__retry.get("count", 0)
         self.__retry_interval = self.__retry.get("interval", 0)
@@ -73,7 +74,7 @@ class Step:
                 did_action_run = self._run_single()
             return did_action_run
         except Exception as e:
-            self.logger.error(
+            self.logger.warning(
                 "Failed to run step %s with error %s",
                 self.step_id,
                 e,
@@ -132,11 +133,14 @@ class Step:
             try:
                 did_action_run = self._run_single()
             except Exception as e:
-                self.logger.error(
-                    f"Failed to run action with error {e}",
+                self.logger.warning(
+                    "Failed to run step %s with error %s",
+                    self.step_id,
+                    e,
                     extra={
                         "step_id": self.step_id,
                     },
+                    exc_info=True,
                 )
                 continue
             # If at least one item triggered an action, return True
@@ -260,7 +264,7 @@ class Step:
         action_name = self.config.get("name")
         if not evaluated_if_met:
             self.logger.info(
-                f"Action {action_name} evaluated NOT to run, Reason: {if_met} evaluated to false.",
+                f"Action {action_name} evaluated NOT to run, Reason: {if_met} evaluated to false. [before evaluation: {if_conf}]",
                 extra={
                     "condition": if_conf,
                     "rendered": if_met,

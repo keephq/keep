@@ -1,0 +1,59 @@
+id: query-clickhouse
+description: Query Clickhouse and send an alert if there is an error
+triggers:
+  - type: manual
+
+steps:
+  - name: clickhouse-observability-urls
+    provider:
+      config: "{{ providers.clickhouse }}"
+      type: clickhouse
+      with:
+        query: |
+          SELECT Url, Status FROM "observability"."Urls"
+          WHERE ( Url LIKE '%te_tests%' ) AND Timestamp >= toStartOfMinute(date_add(toDateTime(NOW()), INTERVAL -1 MINUTE)) AND Status = 0;
+
+  - name: clickhouse-observability-events
+    provider:
+      config: "{{ providers.clickhouse }}"
+      type: clickhouse
+      with:
+        query: |
+          SELECT arrayElement(Metrics.testName, 1) AS mytest FROM observability.Events
+          WHERE (Sources = 'ThousandEyes') AND (Timestamp >= toStartOfMinute(toDateTime(NOW()) + toIntervalMinute(-1))) AND (mytest = 'Oceanspot-TE')
+
+  - name: clickhouse-observability-traces
+    provider:
+      config: "{{ providers.clickhouse }}"
+      type: clickhouse
+      with:
+        query: |
+          SELECT count(*) as c FROM "observability"."Traces"
+          WHERE ( SpanName LIKE '%te_tests%' ) AND Timestamp >= toStartOfMinute(date_add(toDateTime(NOW()), INTERVAL -1 MINUTE));
+
+  - name: clickhouse-observability-follow-up-query
+    # if any of the previous queries return results, run this query
+    if: keep.len( {{ steps.clickhouse-observability-urls.results }} ) or keep.len( {{ steps.clickhouse-observability-events.results }} ) or keep.len( {{ steps.clickhouse-observability-traces.results }} )
+    provider:
+      config: "{{ providers.clickhouse }}"
+      type: clickhouse
+      with:
+        query: |
+          SELECT Url, Status FROM "observability"."Urls"
+          WHERE ( Url LIKE '%te_tests%' ) AND Timestamp >= toStartOfMinute(date_add(toDateTime(NOW()), INTERVAL -1 MINUTE)) AND Status = 0;
+
+actions:
+  - name: snow-action
+    # if any of the previous queries return results, run this query
+    if: keep.len( {{ steps.clickhouse-observability-urls.results }} ) or keep.len( {{ steps.clickhouse-observability-events.results }} ) or keep.len( {{ steps.clickhouse-observability-traces.results }} )
+    provider:
+      type: servicenow
+      config: "{{ providers.servicenow }}"
+      with:
+        table_name: "yourtablename"
+        payload:
+          short_description: "Results returned for clickhouse-observability"
+          description: |
+            Urls: {{ steps.clickhouse-observability-urls.results }}
+            Events: {{ steps.clickhouse-observability-events.results }}
+            Traces: {{ steps.clickhouse-observability-traces.results }}

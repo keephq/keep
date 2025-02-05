@@ -5,6 +5,7 @@ Kibana provider.
 import dataclasses
 import datetime
 import json
+import logging
 import uuid
 from typing import Literal, Union
 from urllib.parse import urlparse
@@ -59,37 +60,14 @@ class KibanaProvider(BaseProvider):
     DEFAULT_TIMEOUT = 10
     WEBHOOK_PAYLOAD = json.dumps(
         {
-            "actionGroup": "{{alert.actionGroup}}",
-            "status": "{{alert.actionGroupName}}",
-            "actionSubgroup": "{{alert.actionSubgroup}}",
-            "isFlapping": "{{alert.flapping}}",
-            "id": "{{alert.id}}",
-            "fingerprint": "{{alert.id}}",
-            "url": "{{context.alertDetailsUrl}}",
-            "context.message": "{{context.message}}",
-            "context.hits": "{{context.hits}}",
-            "context.link": "{{context.link}}",
-            "context.query": "{{context.query}}",
-            "context.title": "{{context.title}}",
-            "context.cloud": "{{context.cloud}}",
-            "context.container": "{{context.container}}",
-            "context.group": "{{context.group}}",
-            "context.host": "{{context.host}}",
-            "context.labels": "{{context.labels}}",
-            "context.orchestrator": "{{context.orchestrator}}",
-            "description": "{{context.reason}}",
-            "contextTags": "{{context.tags}}",
-            "context.timestamp": "{{context.timestamp}}",
-            "context.value": "{{context.value}}",
-            "lastReceived": "{{date}}",
-            "ruleId": "{{rule.id}}",
-            "rule.spaceId": "{{rule.spaceId}}",
-            "ruleUrl": "{{rule.url}}",
-            "ruleTags": "{{rule.tags}}",
-            "name": "{{rule.name}}",
-            "rule.type": "{{rule.type}}",
+            "webhook_body": {
+                "context_info": "{{#context}}{{.}}{{/context}}",
+                "alert_info": "{{#alert}}{{.}}{{/alert}}",
+                "rule_info": "{{#rule}}{{.}}{{/rule}}",
+            }
         }
     )
+    SIEM_WEBHOOK_PAYLOAD = """{{#context.alerts}}{{{.}}}{{/context.alerts}}"""
 
     # Mock payloads for validating scopes
     MOCK_ALERT_PAYLOAD = {
@@ -396,6 +374,7 @@ class KibanaProvider(BaseProvider):
                 self.logger.info(f"Alert {alert_rule['id']} already updated, skipping")
                 continue
 
+            rule_type_id = alert_rule.get("rule_type_id")
             action_groups = rule_types.get(alert_rule["rule_type_id"], {}).get(
                 "action_groups", []
             )
@@ -404,7 +383,14 @@ class KibanaProvider(BaseProvider):
                     {
                         "group": action_group.get("id"),
                         "id": connector_id,
-                        "params": {"body": KibanaProvider.WEBHOOK_PAYLOAD},
+                        "params": {
+                            # SIEM can use a different payload for more context
+                            "body": (
+                                KibanaProvider.WEBHOOK_PAYLOAD
+                                if "siem" not in rule_type_id
+                                else KibanaProvider.SIEM_WEBHOOK_PAYLOAD
+                            )
+                        },
                         "frequency": {
                             "notify_when": "onActionGroupChange",
                             "throttle": None,
@@ -567,38 +553,116 @@ class KibanaProvider(BaseProvider):
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto | list[AlertDto]:
         """
-        Formats an alert from Kibana to a standard format.
+        Formats an alert from Kibana to a standard format, supporting both old and new webhook formats.
 
         Args:
-            event (dict): The event from Kibana
+            event (dict): The event from Kibana, either in legacy or new webhook format
+            provider_instance: The provider instance (optional)
 
         Returns:
             AlertDto | list[AlertDto]: The alert in a standard format
         """
-
         # If this is coming from Kibana Watcher
+        logger = logging.getLogger(__name__)
         if "payload" in event:
             return KibanaProvider.format_alert_from_watcher(event)
 
+        # SIEM alert
+        if "kibana" in event:
+            logger.info("Parsing SIEM Kibana alert")
+            description = (
+                event.get("kibana", {})
+                .get("alert", {})
+                .get("rule", {})
+                .get("description", "")
+            )
+            if not description:
+                logger.warning("Could not find description in SIEM Kibana alert")
+
+            name = (
+                event.get("kibana", {}).get("alert", {}).get("rule", {}).get("name", "")
+            )
+            if not name:
+                logger.warning("Could not find name in SIEM Kibana alert")
+                name = "SIEM Kibana Alert"
+
+            status = event.get("kibana", {}).get("alert", {}).get("status", "")
+            if not status:
+                logger.warning("Could not find status in SIEM Kibana alert")
+                name = "active"
+
+            # use map
+            status = KibanaProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
+            severity = (
+                event.get("kibana", {})
+                .get("alert", {})
+                .get("severity", "could not find severity")
+            )
+            # use map
+            severity = KibanaProvider.SEVERITIES_MAP.get(severity, AlertSeverity.INFO)
+            alert_dto = AlertDto(
+                name=name,
+                description=description,
+                status=status,
+                severity=severity,
+                source=["kibana"],
+                **event,
+            )
+            logger.info("Finished to parse SIEM Kibana alert")
+            return alert_dto
+        # Check if this is the new webhook format
+        # New Kibana webhook format
+        if "webhook_body" in event:
+            # Parse the JSON strings from the new format
+            try:
+                context_info = json.loads(event["webhook_body"]["context_info"])
+                alert_info = json.loads(event["webhook_body"]["alert_info"])
+                rule_info = json.loads(event["webhook_body"]["rule_info"])
+
+                # Construct event dict in old format for compatibility
+                event = {
+                    "actionGroup": alert_info.get("actionGroup"),
+                    "status": alert_info.get("actionGroupName"),
+                    "actionSubgroup": alert_info.get("actionSubgroup"),
+                    "isFlapping": alert_info.get("flapping"),
+                    "kibana_alert_id": alert_info.get("id"),
+                    "fingerprint": alert_info.get("uuid"),
+                    "url": context_info.get("alertDetailsUrl"),
+                    "context.message": context_info.get("message"),
+                    "context.hits": context_info.get("matchingDocuments"),
+                    "context.link": context_info.get("viewInAppUrl"),
+                    "context.query": rule_info.get("params", {}).get("criteria"),
+                    "context.title": rule_info.get("name"),
+                    "description": context_info.get("reason"),
+                    "lastReceived": context_info.get("timestamp"),
+                    "ruleId": rule_info.get("id"),
+                    "rule.spaceId": rule_info.get("spaceId"),
+                    "ruleUrl": rule_info.get("url"),
+                    "ruleTags": rule_info.get("tags", []),
+                    "name": rule_info.get("name"),
+                    "rule.type": rule_info.get("type"),
+                }
+            except json.JSONDecodeError as e:
+                logger.error(f"Error parsing new webhook format: {e}")
+                # Fall through to process as old format
+
+        # Process tags and labels (works for both old and new formats)
         labels = {}
         tags = event.get("ruleTags", [])
         for tag in tags:
-            # if the tag is a key=value pair
             if "=" in tag:
                 key, value = tag.split("=", 1)
                 labels[key] = value
 
-        # same with contextTags
         context_tags = event.get("contextTags", [])
         for tag in context_tags:
-            # if the tag is a key=value pair
             if "=" in tag:
                 key, value = tag.split("=", 1)
                 labels[key] = value
 
         environment = labels.get("environment", "undefined")
 
-        # format status and severity to Keep format
+        # Format status and severity
         event["status"] = KibanaProvider.STATUS_MAP.get(
             event.get("status"), AlertStatus.FIRING
         )
@@ -606,11 +670,14 @@ class KibanaProvider(BaseProvider):
             event.get("severity"), AlertSeverity.INFO
         )
 
+        # Handle URL fallback
         if not event.get("url"):
             event["url"] = event.get("ruleUrl")
-            # if still no url, popt it
             if not event.get("url"):
                 event.pop("url", None)
+
+        if "name" not in event:
+            event["name"] = event.get("rule.name")
 
         return AlertDto(
             environment=environment,

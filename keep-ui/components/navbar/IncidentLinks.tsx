@@ -19,7 +19,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
     25,
     0,
     { id: "creation_time", desc: false },
-    '',
+    '!(status in [\'deleted\', \'resolved\'])',
     {}
   );
   usePollIncidents(mutate);

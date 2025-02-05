@@ -90,18 +90,17 @@ def test_pulling_prometheus_alerts_to_provider(browser):
 
         # Delete provider
         browser.get_by_role("link", name="Providers").click()
-        browser.locator("button").filter(
-            has_text=re.compile(re.escape(provider_name))
-        ).first.hover()
-        browser.locator(".tile-basis").first.click()
+        browser.locator(
+            f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
+        ).click()
         browser.once("dialog", lambda dialog: dialog.accept())
         browser.get_by_role("button", name="Delete").click()
 
         # Assert provider was deleted
         expect(
-            browser.locator("button")
-            .filter(has_text=re.compile(re.escape(provider_name)))
-            .first
+            browser.locator(
+                f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
+            )
         ).not_to_be_visible()
     except Exception:
         # Current file + test name for unique html and png dump.

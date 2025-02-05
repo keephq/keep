@@ -127,9 +127,9 @@ def get_metrics(
             for label in labels:
                 label_value = chevron.render("{{ " + label + " }}", last_alert_dto)
                 label = label.replace(".", "_")
-                extra_labels += f' {label}="{label_value}"'
+                extra_labels += f',{label}="{label_value}"'
 
-        export += f'alerts_total{{incident_name="{incident_name}" incident_id="{incident.id}"{extra_labels}}} {incident.alerts_count}\n'
+        export += f'alerts_total{{incident_name="{incident_name}",incident_id="{incident.id}"{extra_labels}}} {incident.alerts_count}\n'
 
     # Exporting stats about open incidents
     export += "\n\n"

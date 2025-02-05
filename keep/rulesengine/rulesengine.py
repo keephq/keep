@@ -274,13 +274,59 @@ class RulesEngine:
         sub_rules[-1] = sub_rules[-1][:-1]
         return sub_rules
 
-    # TODO: a lot of unit tests to write here
+    @staticmethod
+    def sanitize_cel_payload(payload):
+        """
+        Remove keys containing forbidden characters from payload and return warnings.
+        Returns tuple of (sanitized_payload, warnings)
+        """
+        forbidden_starts = [
+            "@",
+            "-",
+            "$",
+            "#",
+            " ",
+            ":",
+            ".",
+            "/",
+            "\\",
+            "*",
+            "&",
+            "^",
+            "%",
+            "!",
+        ]
+        logger = logging.getLogger(__name__)
+
+        def _sanitize_dict(d):
+            result = {}
+            for k, v in d.items():
+                if k[0] in forbidden_starts:  # Only check first character
+                    logger.warning(
+                        f"Removed key '{k}' starting with forbidden character '{k[0]}'"
+                    )
+                    continue
+
+                if isinstance(v, dict):
+                    result[k] = _sanitize_dict(v)
+                elif isinstance(v, list):
+                    result[k] = [
+                        _sanitize_dict(i) if isinstance(i, dict) else i for i in v
+                    ]
+                else:
+                    result[k] = v
+            return result
+
+        sanitized = _sanitize_dict(payload)
+        return sanitized
+
     def _check_if_rule_apply(self, rule: Rule, event: AlertDto) -> List[str]:
         sub_rules = self._extract_subrules(rule.definition_cel)
         payload = event.dict()
         # workaround since source is a list
         # todo: fix this in the future
         payload["source"] = payload["source"][0]
+        payload = RulesEngine.sanitize_cel_payload(payload)
 
         # what we do here is to compile the CEL rule and evaluate it
         #   https://github.com/cloud-custodian/cel-python
@@ -358,6 +404,9 @@ class RulesEngine:
             # payload severity could be the severity itself or the order of the severity, cast it to the order
             if isinstance(payload["severity"], str):
                 payload["severity"] = AlertSeverity(payload["severity"].lower()).order
+
+            # sanitize the payload
+            payload = RulesEngine.sanitize_cel_payload(payload)
             activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
             activations.append(activation)
         return activations

@@ -260,7 +260,11 @@ class IOHandler:
                         _arg = str(arg.s)
                     elif isinstance(arg, ast.Dict):
                         _arg = ast.literal_eval(arg)
-                    elif isinstance(arg, ast.Set) or isinstance(arg, ast.List):
+                    elif (
+                        isinstance(arg, ast.Set)
+                        or isinstance(arg, ast.List)
+                        or isinstance(arg, ast.Tuple)
+                    ):
                         _arg = astunparse.unparse(arg).strip()
                         if (
                             (_arg.startswith("[") and _arg.endswith("]"))
@@ -300,7 +304,11 @@ class IOHandler:
                         _kwargs[key] = str(value.s)
                     elif isinstance(value, ast.Dict):
                         _kwargs[key] = ast.literal_eval(value)
-                    elif isinstance(value, ast.Set) or isinstance(value, ast.List):
+                    elif (
+                        isinstance(value, ast.Set)
+                        or isinstance(value, ast.List)
+                        or isinstance(value, ast.Tuple)
+                    ):
                         parsed_value = astunparse.unparse(value).strip()
                         if (
                             (
