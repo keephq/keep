@@ -274,7 +274,8 @@ class RulesEngine:
         sub_rules[-1] = sub_rules[-1][:-1]
         return sub_rules
 
-    def sanitize_cel_payload(self, payload):
+    @staticmethod
+    def sanitize_cel_payload(payload):
         """
         Remove keys containing forbidden characters from payload and return warnings.
         Returns tuple of (sanitized_payload, warnings)
@@ -295,12 +296,13 @@ class RulesEngine:
             "%",
             "!",
         ]
+        logger = logging.getLogger(__name__)
 
         def _sanitize_dict(d):
             result = {}
             for k, v in d.items():
                 if k[0] in forbidden_starts:  # Only check first character
-                    self.logger.warning(
+                    logger.warning(
                         f"Removed key '{k}' starting with forbidden character '{k[0]}'"
                     )
                     continue
@@ -324,7 +326,7 @@ class RulesEngine:
         # workaround since source is a list
         # todo: fix this in the future
         payload["source"] = payload["source"][0]
-        payload = self.sanitize_cel_payload(payload)
+        payload = RulesEngine.sanitize_cel_payload(payload)
 
         # what we do here is to compile the CEL rule and evaluate it
         #   https://github.com/cloud-custodian/cel-python
@@ -402,6 +404,9 @@ class RulesEngine:
             # payload severity could be the severity itself or the order of the severity, cast it to the order
             if isinstance(payload["severity"], str):
                 payload["severity"] = AlertSeverity(payload["severity"].lower()).order
+
+            # sanitize the payload
+            payload = RulesEngine.sanitize_cel_payload(payload)
             activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
             activations.append(activation)
         return activations
