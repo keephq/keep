@@ -33,7 +33,7 @@ steps:
 
   - name: clickhouse-observability-follow-up-query
     # if any of the previous queries return results, run this query
-    if: keep.len( {{ steps.clickhouse-observability-urls.results }} ) or keep.len( {{ steps.clickhouse-observability-urls.results }} ) or keep.len( {{ steps.clickhouse-observability-urls.results }} )
+    if: keep.len( {{ steps.clickhouse-observability-urls.results }} ) or keep.len( {{ steps.clickhouse-observability-events.results }} ) or keep.len( {{ steps.clickhouse-observability-traces.results }} )
     provider:
       config: "{{ providers.clickhouse }}"
       type: clickhouse
@@ -45,7 +45,7 @@ steps:
 actions:
   - name: snow-action
     # if any of the previous queries return results, run this query
-    if: keep.len( {{ steps.clickhouse-observability-urls.results }} ) or keep.len( {{ steps.clickhouse-observability-urls.results }} ) or keep.len( {{ steps.clickhouse-observability-urls.results }} )
+    if: keep.len( {{ steps.clickhouse-observability-urls.results }} ) or keep.len( {{ steps.clickhouse-observability-events.results }} ) or keep.len( {{ steps.clickhouse-observability-traces.results }} )
     provider:
       type: servicenow
       config: "{{ providers.servicenow }}"
