@@ -6,7 +6,10 @@ from sqlmodel import Session, col, text
 
 from keep.api.core.alerts import get_alert_potential_facet_fields
 from keep.api.core.cel_to_sql.properties_mapper import PropertiesMappingException
-from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata, FieldMappingConfiguration
+from keep.api.core.cel_to_sql.properties_metadata import (
+    PropertiesMetadata,
+    FieldMappingConfiguration,
+)
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider_for_dialect,
@@ -33,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 incident_field_configurations = [
     FieldMappingConfiguration("name", ["user_generated_name", "ai_generated_name"]),
-    FieldMappingConfiguration("summary", "user_summary", "generated_summary"),
+    FieldMappingConfiguration("summary", ["user_summary", "generated_summary"]),
     FieldMappingConfiguration("assignee", "assignee"),
     FieldMappingConfiguration("severity", "severity"),
     FieldMappingConfiguration("status", "status"),
@@ -47,7 +50,10 @@ incident_field_configurations = [
     FieldMappingConfiguration("merged_at", "merged_at"),
     FieldMappingConfiguration("merged_by", "merged_by"),
     FieldMappingConfiguration("alert.providerType", "incident_alert_provider_type"),
-    FieldMappingConfiguration(map_from_pattern = "alert.*", map_to=["alert_enrichments", "alert_event"], is_json=True),
+    FieldMappingConfiguration(
+        map_from_pattern="alert.*",
+        map_to=["JSON(alert_enrichments).*", "JSON(alert_event).*"],
+    ),
 ]
 
 properties_metadata = PropertiesMetadata(incident_field_configurations)

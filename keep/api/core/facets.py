@@ -1,5 +1,9 @@
 from sqlalchemy import func, literal, literal_column, select, text
-from keep.api.core.cel_to_sql.properties_metadata import JsonMapping, PropertiesMetadata, SimpleMapping
+from keep.api.core.cel_to_sql.properties_metadata import (
+    JsonFieldMapping,
+    PropertiesMetadata,
+    SimpleFieldMapping,
+)
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider_for_dialect,
 )
@@ -45,14 +49,14 @@ def build_facets_data_query(
         metadata = properties_metadata.get_property_metadata(facet.property_path)
         group_by_exp = []
 
-        for item in metadata:
-            if isinstance(item, JsonMapping):
+        for item in metadata.field_mappings:
+            if isinstance(item, JsonFieldMapping):
                 group_by_exp.append(
                     instance.json_extract_as_text(item.json_prop, item.prop_in_json)
                 )
-            elif isinstance(metadata[0], SimpleMapping):
+            elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
                 group_by_exp.append(item.map_to)
-        
+
         casted = f"{instance.coalesce([instance.cast(item, str) for item in group_by_exp])}"
 
         union_queries.append(

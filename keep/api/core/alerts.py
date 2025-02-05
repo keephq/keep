@@ -16,7 +16,12 @@ from keep.api.models.db.alert import Alert, AlertEnrichment, AlertField, Inciden
 from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from keep.api.core.db import engine
-from keep.api.core.cel_to_sql.properties_metadata import FieldMappingConfiguration, JsonMapping, PropertiesMetadata, SimpleMapping
+from keep.api.core.cel_to_sql.properties_metadata import (
+    FieldMappingConfiguration,
+    JsonFieldMapping,
+    PropertiesMetadata,
+    SimpleFieldMapping,
+)
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import get_cel_to_sql_provider_for_dialect
 
 logger = logging.getLogger(__name__)
@@ -27,8 +32,28 @@ alert_field_configurations = [
     FieldMappingConfiguration("providerType", "filter_provider_type"),
     FieldMappingConfiguration("lastReceived", "filter_last_received"),
     FieldMappingConfiguration("startedAt", "startedAt"),
-    FieldMappingConfiguration(map_from_pattern = "incident.name", map_to=['filter_incident_user_generated_name', 'filter_incident_ai_generated_name']),
-    FieldMappingConfiguration(map_from_pattern = "*", map_to=["filter_alert_enrichment_json", "filter_alert_event_json"], is_json=True),
+    FieldMappingConfiguration(
+        map_from_pattern="incident.name",
+        map_to=[
+            "filter_incident_user_generated_name",
+            "filter_incident_ai_generated_name",
+        ],
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="severity",
+        map_to=[
+            "JSON(filter_alert_enrichment_json).*",
+            "JSON(filter_alert_event_json).*",
+        ],
+        enum_values=["low", "info", "warning", "high", "critical"],
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="*",
+        map_to=[
+            "JSON(filter_alert_enrichment_json).*",
+            "JSON(filter_alert_event_json).*",
+        ],
+    ),
 ]
 alias_column_mapping = {
     "filter_last_received": "lastalert.timestamp",
@@ -128,14 +153,14 @@ def build_alerts_query(
     metadata = properties_metadata.get_property_metadata(sort_by)
     group_by_exp = []
 
-    for item in metadata:
-        if isinstance(item, JsonMapping):
+    for item in metadata.field_mappings:
+        if isinstance(item, JsonFieldMapping):
             group_by_exp.append(
                 cel_to_sql_instance.json_extract_as_text(item.json_prop, item.prop_in_json)
             )
-        elif isinstance(metadata[0], SimpleMapping):
+        elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
             group_by_exp.append(alias_column_mapping[item.map_to])
-    
+
     casted = f"{cel_to_sql_instance.coalesce([cel_to_sql_instance.cast(item, str) for item in group_by_exp])}"
 
     if sort_dir == "desc":

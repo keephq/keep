@@ -14,11 +14,17 @@ fake_field_configurations = [
     FieldMappingConfiguration("name", ["user_generated_name", "ai_generated_name"]),
     FieldMappingConfiguration("summary", ["user_summary", "generated_summary"]),
     FieldMappingConfiguration("created_at", "created_at"),
+    FieldMappingConfiguration(
+        "severity", "severity", ["info", "low", "medium", "high", "critical"]
+    ),
     FieldMappingConfiguration("alert.provider_type", "incident_alert_provider_type"),
     FieldMappingConfiguration(
+        map_from_pattern="alert.tags.*",
+        map_to=["JSON(alert_event).tagsContainer.*"],
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="alert.*",
-        map_to=["alert_enrichments", "alert_event"],
-        is_json=True,
+        map_to=["JSON(alert_enrichments).*", "JSON(alert_event).*"],
     ),
 ]
 properties_metadata = PropertiesMetadata(fake_field_configurations)

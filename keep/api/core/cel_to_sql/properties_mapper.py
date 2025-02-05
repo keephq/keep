@@ -10,7 +10,12 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     UnaryNode,
 )
 
-from keep.api.core.cel_to_sql.properties_metadata import JsonMapping, PropertiesMetadata, SimpleMapping
+from keep.api.core.cel_to_sql.properties_metadata import (
+    JsonFieldMapping,
+    PropertiesMetadata,
+    PropertyMetadataInfo,
+    SimpleFieldMapping,
+)
 
 class JsonPropertyAccessNode(PropertyAccessNode):
     """
@@ -114,15 +119,19 @@ class PropertiesMapper:
             )
 
         result = []
-        for mapping in property_metadata:
+
+        for mapping in property_metadata.field_mappings:
             property_access_node = self._create_property_access_node(mapping, None)
             result.append(property_access_node)
 
-        return ComparisonNode(
-                MultipleFieldsNode(result),
-                comparison_node.operator,
-                comparison_node.second_operand,
-            )
+        comparison_node = ComparisonNode(
+            MultipleFieldsNode(result),
+            comparison_node.operator,
+            comparison_node.second_operand,
+        )
+        return self._modify_comparison_node_based_on_mapping(
+            comparison_node, property_metadata
+        )
 
     def _visit_member_access_node(self, member_access_node: MemberAccessNode) -> Node:
         if (
@@ -140,12 +149,12 @@ class PropertiesMapper:
                 )
 
             result = None
-            for mapping in property_metadata:
+            for mapping in property_metadata.field_mappings:
                 method_access_node = member_access_node.get_method_access_node().copy()
                 current_node_result = self._create_property_access_node(
                     mapping, method_access_node
                 )
-                
+
                 if result is None:
                     result = current_node_result
                     continue
@@ -159,12 +168,95 @@ class PropertiesMapper:
             return result
 
         return member_access_node
-    
+
+    def _modify_comparison_node_based_on_mapping(
+        self, comparison_node: ComparisonNode, mapping: PropertyMetadataInfo
+    ):
+        """
+        Modifies a comparison node based on the provided property metadata mapping.
+
+        This method adjusts the comparison node if the property being compared has
+        enumerated values. Specifically, it handles cases where the comparison
+        operator is one of the following: GE (greater than or equal to), GT (greater
+        than), LE (less than or equal to), or LT (less than). If the second operand
+        of the comparison node is not in the enumerated values, it modifies the
+        comparison to use the IN operator with the enumerated values. Additionally,
+        it handles ranges based on the comparison operator and the index of the
+        second operand in the enumerated values.
+
+        Args:
+            comparison_node (ComparisonNode): The comparison node to be modified.
+            mapping (PropertyMetadataInfo): The property metadata information that
+                includes enumerated values.
+
+        Returns:
+            ComparisonNode: The modified comparison node, or the original comparison
+            node if no modifications are necessary.
+        """
+        if mapping.enum_values:
+            if comparison_node.operator in [
+                ComparisonNode.GE,
+                ComparisonNode.GT,
+                ComparisonNode.LE,
+                ComparisonNode.LT,
+            ]:
+                if comparison_node.second_operand.value not in mapping.enum_values:
+                    if comparison_node.operator in [
+                        ComparisonNode.LT,
+                        ComparisonNode.LE,
+                    ]:
+                        return UnaryNode(
+                            UnaryNode.NOT,
+                            ComparisonNode(
+                                comparison_node.first_operand,
+                                ComparisonNode.IN,
+                                [ConstantNode(item) for item in mapping.enum_values],
+                            ),
+                        )
+                    else:
+                        return ComparisonNode(
+                            comparison_node.first_operand,
+                            ComparisonNode.IN,
+                            [ConstantNode(item) for item in mapping.enum_values],
+                        )
+
+                index = mapping.enum_values.index(comparison_node.second_operand.value)
+                ranges = {
+                    ComparisonNode.GT: [index + 1, None],
+                    ComparisonNode.GE: [index, None],
+                    ComparisonNode.LT: [index, None],
+                    ComparisonNode.LE: [index + 1, None],
+                }
+
+                start_index, end_index = ranges[comparison_node.operator]
+
+                if start_index and start_index >= len(mapping.enum_values):
+                    return ComparisonNode(
+                        first_operand=comparison_node.first_operand,
+                        operator=ComparisonNode.EQ,
+                        second_operand=ConstantNode("not_valid_value"),
+                    )
+
+                result = ComparisonNode(
+                    comparison_node.first_operand,
+                    ComparisonNode.IN,
+                    [
+                        ConstantNode(item)
+                        for item in mapping.enum_values[start_index:end_index]
+                    ],
+                )
+
+                if comparison_node.operator in [ComparisonNode.LT, ComparisonNode.LE]:
+                    result = UnaryNode(UnaryNode.NOT, result)
+                return result
+
+        return comparison_node
+
     def _create_property_access_node(self, mapping, method_access_node: MethodAccessNode) -> Node:
-        if (isinstance(mapping, JsonMapping)):
+        if isinstance(mapping, JsonFieldMapping):
             return JsonPropertyAccessNode(mapping.json_prop, mapping.prop_in_json, method_access_node)
-        
-        if (isinstance(mapping, SimpleMapping)):
+
+        if isinstance(mapping, SimpleFieldMapping):
             return PropertyAccessNode(mapping.map_to, method_access_node)
-        
+
         raise NotImplementedError(f"Mapping type {type(mapping).__name__} is not supported yet")
