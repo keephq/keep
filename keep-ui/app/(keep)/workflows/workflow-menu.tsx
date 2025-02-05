@@ -4,6 +4,8 @@ import {
   PlayIcon,
   TrashIcon,
   WrenchIcon,
+  PauseIcon,
+  PlayCircleIcon,
 } from "@heroicons/react/24/outline";
 import { DownloadIcon } from "@radix-ui/react-icons";
 import React from "react";
@@ -15,9 +17,11 @@ interface WorkflowMenuProps {
   onView?: () => void;
   onDownload?: () => void;
   onBuilder?: () => void;
+  onToggleState?: () => Promise<void>;
   isRunButtonDisabled: boolean;
   runButtonToolTip?: string;
   provisioned?: boolean;
+  isDisabled?: boolean;
 }
 
 export default function WorkflowMenu({
@@ -26,9 +30,11 @@ export default function WorkflowMenu({
   onView,
   onDownload,
   onBuilder,
+  onToggleState,
   isRunButtonDisabled,
   runButtonToolTip,
   provisioned,
+  isDisabled,
 }: WorkflowMenuProps) {
   return (
     <div className="js-dont-propagate">
@@ -70,6 +76,17 @@ export default function WorkflowMenu({
             e.stopPropagation();
             onBuilder?.();
           }}
+        />
+        <DropdownMenu.Item
+          icon={isDisabled ? PlayCircleIcon : PauseIcon}
+          label={isDisabled ? "Enable workflow" : "Disable workflow"}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleState?.();
+          }}
+          disabled={provisioned}
+          title={provisioned ? "Cannot modify a provisioned workflow" : ""}
         />
         <DropdownMenu.Item
           icon={TrashIcon}
