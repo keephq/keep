@@ -25,6 +25,7 @@ import { ErrorComponent, TabNavigationLink, YAMLCodeblock } from "@/shared/ui";
 import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import Skeleton from "react-loading-skeleton";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useWorkflowDetail } from "@/utils/hooks/useWorkflowDetail";
 
 export default function WorkflowDetailPage({
   params,
@@ -51,17 +52,22 @@ export default function WorkflowDetailPage({
     }
   }, [searchParams]);
 
-  const {
-    data: workflow,
-    isLoading,
-    error,
-  } = useSWR<Workflow>(
-    api.isReady() ? `/workflows/${params.workflow_id}` : null,
-    (url: string) => api.get(url),
-    {
-      fallbackData: initialData,
-    }
+  const { workflow, isLoading, error } = useWorkflowDetail(
+    params.workflow_id,
+    initialData
   );
+
+  // Set initial tab based on URL query param
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "yaml") {
+      setTabIndex(2);
+    } else if (tab === "builder") {
+      setTabIndex(1);
+    } else {
+      setTabIndex(0);
+    }
+  }, [searchParams]);
 
   const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
 
