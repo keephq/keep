@@ -1,7 +1,7 @@
 """Add manual field in topology-service
 
 Revision ID: 8176d7153747
-Revises: d359baaf0836
+Revises: e343054ae740
 Create Date: 2025-01-26 15:25:23.811890
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "8176d7153747"
-down_revision = "d359baaf0836"
+down_revision = "e343054ae740"
 branch_labels = None
 depends_on = None
 
