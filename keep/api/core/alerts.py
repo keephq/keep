@@ -23,6 +23,7 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     SimpleFieldMapping,
 )
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import get_cel_to_sql_provider_for_dialect
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +142,7 @@ def __build_query_for_filtering_2(tenant_id: str):
 
 
 def __build_query_for_filtering(tenant_id: str):
-    # return __build_query_for_filtering_2(tenant_id)
+    return __build_query_for_filtering_2(tenant_id)
     return (
         select(
             LastAlert.alert_id,
@@ -304,7 +305,11 @@ def query_last_alerts(
 
         total_count_query = build_total_alerts_query(dialect_name, tenant_id, cel)
         # Execute the query
+        start_time = time.time()
         total_count = session.exec(total_count_query).one()[0]
+        end_time = time.time()
+        total_count_time = end_time - start_time
+        logger.info(f"Total count query executed in {end_time - start_time} seconds")
 
         if not limit:
             return [], total_count
@@ -312,7 +317,11 @@ def query_last_alerts(
             dialect_name, tenant_id, cel, sort_by, sort_dir, limit, offset
         )
 
+        start_time = time.time()
         alerts_with_start = session.execute(data_query).all()
+        end_time = time.time()
+        data_time = end_time - start_time
+        logger.info(f"Data query executed in {end_time - start_time} seconds")
 
         # Process results based on dialect
         alerts = []
