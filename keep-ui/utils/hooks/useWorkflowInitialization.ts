@@ -1,10 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { Edge, useReactFlow } from "@xyflow/react";
-import useStore from "@/app/(keep)/workflows/builder/builder-store";
+import { useStore } from "@/app/(keep)/workflows/builder/builder-store";
 import dagre, { graphlib } from "@dagrejs/dagre";
 import { processWorkflowV2, getTriggerStep } from "utils/reactFlow";
 import {
-  Definition,
   FlowNode,
   ReactFlowDefinition,
   V2Step,
@@ -87,6 +86,7 @@ const useWorkflowInitialization = (
   toolboxConfiguration: Record<string, any>
 ) => {
   const {
+    changes,
     nodes,
     edges,
     setNodes,
@@ -206,8 +206,10 @@ const useWorkflowInitialization = (
       setToolBoxConfig(toolboxConfiguration);
       setIsLoading(false);
     };
-    initializeWorkflow();
-  }, []);
+    if (changes === 0) {
+      initializeWorkflow();
+    }
+  }, [changes]);
 
   return {
     nodes: finalNodes,

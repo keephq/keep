@@ -132,3 +132,12 @@ export type ToolboxConfiguration = {
     steps: Partial<V2Step>[];
   }[];
 };
+
+export type ValidatorConfigurationV2 = {
+  step: (
+    step: V2Step,
+    parent?: V2Step,
+    definition?: ReactFlowDefinition
+  ) => boolean;
+  root: (def: Definition) => boolean;
+};

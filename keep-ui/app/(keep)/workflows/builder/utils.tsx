@@ -4,10 +4,14 @@ import { Action, LegacyWorkflow } from "./legacy-workflow.types";
 import { v4 as uuidv4 } from "uuid";
 import {
   Definition,
+  FlowNode,
   V2Properties,
   V2Step,
+  ValidatorConfigurationV2,
 } from "@/app/(keep)/workflows/builder/types";
 import { ToolboxConfiguration } from "./types";
+import { reConstructWorklowToDefinition } from "@/utils/reactFlow";
+import { Edge } from "@xyflow/react";
 
 export const triggerTemplates = {
   manual: {
@@ -583,5 +587,39 @@ export function wrapDefinitionV2({
       properties: properties,
     },
     isValid: !!isValid,
+  };
+}
+
+export function getDefinitionFromNodesEdgesProperties(
+  nodes: FlowNode[],
+  edges: Edge[],
+  _properties: V2Properties,
+  validatorConfiguration: ValidatorConfigurationV2
+): Definition {
+  let { sequence, properties } =
+    reConstructWorklowToDefinition({
+      nodes,
+      edges,
+      properties: _properties,
+    }) || {};
+  sequence = (sequence || []) as V2Step[];
+  properties = (properties || {}) as V2Properties;
+  let isValid = true;
+  for (let step of sequence) {
+    isValid = validatorConfiguration?.step(step);
+    if (!isValid) {
+      break;
+    }
+  }
+  if (isValid) {
+    isValid = validatorConfiguration?.root({
+      sequence,
+      properties,
+    });
+  }
+  return {
+    sequence,
+    properties,
+    isValid,
   };
 }

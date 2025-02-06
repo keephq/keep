@@ -17,7 +17,7 @@ import {
   PlusIcon,
 } from "@heroicons/react/24/outline";
 import React from "react";
-import useStore from "./builder-store";
+import { useStore } from "./builder-store";
 import { useEffect, useRef, useState } from "react";
 import { V2Properties } from "@/app/(keep)/workflows/builder/types";
 import { Textarea, TextInput } from "@/components/ui";
@@ -35,10 +35,8 @@ function EditorLayout({ children }: { children: React.ReactNode }) {
 }
 
 export function GlobalEditorV2({
-  synced,
   saveRef,
 }: {
-  synced: boolean;
   saveRef: React.MutableRefObject<boolean>;
 }) {
   const {
@@ -48,26 +46,12 @@ export function GlobalEditorV2({
   } = useStore();
 
   return (
-    <>
-      <EditorLayout>
-        <Title>Keep Workflow Editor</Title>
-        <Text>
-          Easily create or edit existing Keep workflow YAML specifications.
-        </Text>
-        <Text className="mt-5">
-          Use the edge add button or an empty step (a step with a +) to insert
-          steps, conditions, and actions into your workflow. Then, deploy it to
-          Keep or generate the YAML specification.
-        </Text>
-        <div className="text-right">{synced ? "Synced" : "Not Synced"}</div>
-      </EditorLayout>
-      <WorkflowEditorV2
-        properties={properties}
-        setProperties={setProperty}
-        selectedNode={selectedNode}
-        saveRef={saveRef}
-      />
-    </>
+    <WorkflowEditorV2
+      properties={properties}
+      setProperties={setProperty}
+      selectedNode={selectedNode}
+      saveRef={saveRef}
+    />
   );
 }
 
@@ -189,7 +173,10 @@ function KeepStepEditor({
       <Subtitle>Or</Subtitle>
       <TextInput
         placeholder="Enter provider name manually"
-        onChange={(e: any) => updateProperty("config", e.target.value)}
+        onChange={(e: any) => {
+          console.log("UPDATING provider config", e.target.value);
+          updateProperty("config", e.target.value);
+        }}
         className="my-2.5"
         value={providerConfig || ""}
         error={
@@ -565,7 +552,7 @@ function WorkflowEditorV2({
 
     return (
       <div key={key}>
-        {key === selectedNode && <Text className="capitalize mb-2">{key}</Text>}
+        <Text className="capitalize mb-2">{key}</Text>
         {(() => {
           switch (key) {
             case "disabled":
@@ -670,8 +657,9 @@ function WorkflowEditorV2({
   }
 
   const triggerProperties = ["manual", "alert", "interval", "incident"];
+  const metaProperties = ["name", "description"];
   const otherProperties = propertyKeys.filter(
-    (key) => !triggerProperties.includes(key)
+    (key) => !triggerProperties.includes(key) && !metaProperties.includes(key)
   );
   const isTriggerSelected =
     selectedNode && triggerProperties.includes(selectedNode);
@@ -679,7 +667,7 @@ function WorkflowEditorV2({
   return (
     <>
       <EditorLayout>
-        <Disclosure>
+        <Disclosure defaultOpen>
           <Disclosure.Button className="w-full flex justify-between items-center py-2">
             {({ open }) => (
               <>
@@ -716,14 +704,13 @@ function WorkflowEditorV2({
 export function StepEditorV2({
   providers,
   installedProviders,
-  setSynced,
   saveRef,
 }: {
   providers: Provider[] | undefined | null;
   installedProviders?: Provider[] | undefined | null;
-  setSynced: (sync: boolean) => void;
   saveRef: React.MutableRefObject<boolean>;
 }) {
+  const { setSynced } = useStore();
   const [formData, setFormData] = useState<{
     name?: string;
     properties?: V2Properties;

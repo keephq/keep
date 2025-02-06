@@ -1,22 +1,28 @@
 import { createContext, useContext } from "react";
 
 interface WorkflowBuilderContextType {
+  generateRequestCount: number;
+  saveRequestCount: number;
+  runRequestCount: number;
+  triggerGenerate: () => void;
+  triggerSave: () => void;
+  triggerRun: () => void;
   enableButtons: (state: boolean) => void;
   enableGenerate: (state: boolean) => void;
-  triggerGenerate: number;
-  triggerSave: number;
-  triggerRun: number;
   setIsSaving: (state: boolean) => void;
   isSaving: boolean;
 }
 
 export const WorkflowBuilderContext = createContext<WorkflowBuilderContextType>(
   {
+    generateRequestCount: 0,
+    triggerGenerate: () => {},
+    saveRequestCount: 0,
+    triggerSave: () => {},
+    runRequestCount: 0,
+    triggerRun: () => {},
     enableButtons: (state: boolean) => {},
     enableGenerate: (state: boolean) => {},
-    triggerGenerate: 0,
-    triggerSave: 0,
-    triggerRun: 0,
     setIsSaving: (state: boolean) => {},
     isSaving: false,
   }

@@ -3,7 +3,7 @@ import { Disclosure } from "@headlessui/react";
 import { Subtitle } from "@tremor/react";
 import { IoChevronUp, IoClose } from "react-icons/io5";
 import { IoIosArrowDown } from "react-icons/io";
-import useStore from "./builder-store";
+import { useStore } from "./builder-store";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import clsx from "clsx";
 import { V2Step } from "@/app/(keep)/workflows/builder/types";

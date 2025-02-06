@@ -1,17 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { IoMdSettings, IoMdClose } from "react-icons/io";
-import useStore from "./builder-store";
+import { useStore } from "./builder-store";
 import { GlobalEditorV2, StepEditorV2 } from "./editors";
-import { Divider } from "@tremor/react";
 import { Provider } from "@/app/(keep)/providers/providers";
-import { reConstructWorklowToDefinition } from "utils/reactFlow";
 import debounce from "lodash.debounce";
 import {
   Definition,
   ReactFlowDefinition,
-  V2Properties,
   V2Step,
 } from "@/app/(keep)/workflows/builder/types";
+import { getDefinitionFromNodesEdgesProperties } from "./utils";
 
 const ReactFlowEditor = ({
   providers,
@@ -34,13 +32,13 @@ const ReactFlowEditor = ({
   const {
     selectedNode,
     changes,
-    v2Properties,
-    nodes,
-    edges,
     setOpneGlobalEditor,
     synced,
     setSynced,
     setCanDeploy,
+    nodes,
+    edges,
+    v2Properties,
   } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const stepEditorRef = useRef<HTMLDivElement>(null);
@@ -88,30 +86,13 @@ const ReactFlowEditor = ({
     setSynced(false);
 
     const handleDefinitionChange = () => {
-      let { sequence, properties } =
-        reConstructWorklowToDefinition({
-          nodes: nodes,
-          edges: edges,
-          properties: v2Properties,
-        }) || {};
-      sequence = (sequence || []) as V2Step[];
-      properties = (properties || {}) as V2Properties;
-      let isValid = true;
-      for (let step of sequence) {
-        isValid = validatorConfiguration?.step(step);
-        if (!isValid) {
-          break;
-        }
-      }
-
-      if (!isValid) {
-        onDefinitionChange({ sequence, properties, isValid });
-        setSynced(true);
-        return;
-      }
-
-      isValid = validatorConfiguration.root({ sequence, properties });
-      onDefinitionChange({ sequence, properties, isValid });
+      const newDefinition = getDefinitionFromNodesEdgesProperties(
+        nodes,
+        edges,
+        v2Properties,
+        validatorConfiguration
+      );
+      onDefinitionChange(newDefinition);
       setSynced(true);
     };
     const debouncedHandleDefinitionChange = debounce(
@@ -151,7 +132,7 @@ const ReactFlowEditor = ({
           </button>
           <div className="flex-1 bg-white border-l-2 overflow-y-auto">
             <div style={{ width: "350px" }}>
-              <GlobalEditorV2 synced={synced} saveRef={saveRef} />
+              <GlobalEditorV2 saveRef={saveRef} />
               {!selectedNode?.includes("empty") && !isTrigger && (
                 <div className="w-full h-px bg-gray-200" ref={stepEditorRef} />
               )}
@@ -159,7 +140,6 @@ const ReactFlowEditor = ({
                 <StepEditorV2
                   providers={providers}
                   installedProviders={installedProviders}
-                  setSynced={setSynced}
                   saveRef={saveRef}
                 />
               )}

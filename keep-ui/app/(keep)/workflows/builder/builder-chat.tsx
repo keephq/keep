@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Provider } from "../../providers/providers";
 import { V2Step, V2Properties, FlowNode } from "./types";
 import { CopilotChat, CopilotKitCSSProperties } from "@copilotkit/react-ui";
-import useStore from "./builder-store";
+import { useStore } from "./builder-store";
 import {
   useCopilotAction,
   useCopilotChat,
@@ -19,9 +19,18 @@ import {
   GENERAL_INSTRUCTIONS,
 } from "./_constants";
 import { CheckCircleIcon } from "@heroicons/react/20/solid";
+import {
+  CursorArrowRaysIcon,
+  ExclamationCircleIcon,
+  NoSymbolIcon,
+} from "@heroicons/react/24/outline";
 import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
 import { triggerTemplates, triggerTypes } from "./utils";
 import { DebugJSON } from "@/shared/ui";
+import { PiDiamondsFourFill } from "react-icons/pi";
+import clsx from "clsx";
+
+const debug = true;
 
 function IconUrlProvider(data: V2Step) {
   const { type } = data || {};
@@ -36,15 +45,71 @@ function IconUrlProvider(data: V2Step) {
     ?.replace("condition-", "")}-icon.png`;
 }
 
-const StepPreview = ({ step }: { step: V2Step }) => {
+const SuggestionStatus = ({
+  status,
+  message,
+}: {
+  status: "complete" | "error" | "declined";
+  message: string;
+}) => {
+  if (status === "complete") {
+    return (
+      <p className="text-sm text-gray-500 flex items-center gap-1">
+        <CheckCircleIcon className="w-4 h-4" />
+        {message}
+      </p>
+    );
+  }
+  if (status === "error") {
+    return (
+      <p className="text-sm text-gray-500 flex items-center gap-1">
+        <ExclamationCircleIcon className="w-4 h-4" />
+        {message}
+      </p>
+    );
+  }
+  if (status === "declined") {
+    return (
+      <p className="text-sm text-gray-500 flex items-center gap-1">
+        <NoSymbolIcon className="w-4 h-4" />
+        {message}
+      </p>
+    );
+  }
+  return message;
+};
+
+const StepPreview = ({
+  step,
+  className,
+}: {
+  step: V2Step;
+  className?: string;
+}) => {
   const type = step?.type
     ?.replace("step-", "")
     ?.replace("action-", "")
     ?.replace("condition-", "")
     ?.replace("__end", "")
     ?.replace("trigger_", "");
+
+  function getTriggerIcon(step: any) {
+    const { type } = step;
+    switch (type) {
+      case "manual":
+        return <CursorArrowRaysIcon className="size-8" />;
+      case "interval":
+        return <PiDiamondsFourFill size={32} />;
+    }
+  }
   return (
-    <div className="max-w-[250px] flex shadow-md rounded-md bg-white border-2 border-stone-400 p-2 flex-1 flex-row items-center justify-between gap-2 flex-wrap">
+    <div
+      className={clsx(
+        "max-w-[250px] flex shadow-md rounded-md bg-white border-2 border-stone-400 p-2 flex-1 flex-row items-center justify-between gap-2 flex-wrap",
+        className
+      )}
+    >
+      {getTriggerIcon(step)}
       {!!type && !["interval", "manual"].includes(type) && (
         <Image
           src={IconUrlProvider(step) || "/keep.png"}
@@ -106,6 +171,177 @@ function DebugArgs({
   );
 }
 
+type CopilotActionStatus = "inProgress" | "executing" | "complete";
+type SuggestionStatus = "complete" | "error" | "declined";
+type SuggestionResult = {
+  status: SuggestionStatus;
+  message: string;
+  error?: any;
+};
+
+type AddTriggerUIProps =
+  | {
+      status: "complete";
+      args: {
+        triggerType?: string;
+        triggerProperties?: string;
+      };
+      respond: ((response: SuggestionResult) => void) | undefined;
+      result: SuggestionResult;
+    }
+  | {
+      status: "inProgress" | "executing";
+      args: {
+        triggerType?: string;
+        triggerProperties?: string;
+      };
+      respond: ((response: SuggestionResult) => void) | undefined;
+      result: undefined;
+    };
+
+const AddTriggerUI = ({ status, args, respond, result }: AddTriggerUIProps) => {
+  console.log("AddTriggerUI", { status, args, respond, result });
+  const [isAddingTrigger, setIsAddingTrigger] = useState(false);
+  const { nodes, addNodeBetween, getNextEdge } = useStore();
+  const { triggerType, triggerProperties } = args;
+
+  const triggerDefinition = useMemo(() => {
+    try {
+      return triggerType && triggerProperties
+        ? getTriggerDefinition(triggerType, triggerProperties)
+        : undefined;
+    } catch (e) {
+      respond?.({
+        status: "error",
+        error: e,
+        message: "Error getting trigger definition",
+      });
+      return undefined;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerType, triggerProperties]);
+
+  const handleAddTrigger = useCallback(() => {
+    if (!triggerDefinition) {
+      respond?.({
+        status: "error",
+        error: new Error("trigger definition not found"),
+        message: "trigger definition not found",
+      });
+      return;
+    }
+    if (isAddingTrigger) {
+      console.log("isAddingTrigger", isAddingTrigger);
+      return;
+    }
+    setIsAddingTrigger(true);
+    try {
+      const nextEdge = getNextEdge("trigger_start");
+      if (!nextEdge) {
+        respond?.({
+          status: "error",
+          error: new Error("Can't find the edge to add the trigger after"),
+          message: "Trigger not added due to error",
+        });
+        return;
+      }
+      addNodeBetween(nextEdge.id, triggerDefinition, "edge");
+      respond?.({
+        status: "complete",
+        message: "Trigger added",
+      });
+    } catch (e) {
+      console.error(e);
+      respond?.({
+        status: "error",
+        error: e,
+        message: "Error adding trigger",
+      });
+    }
+    setIsAddingTrigger(false);
+  }, [triggerDefinition, respond]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        if (!triggerDefinition) {
+          return;
+        }
+        handleAddTrigger();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [args, respond]);
+
+  if (status === "inProgress") {
+    return <div>Loading...</div>;
+  }
+  if (!triggerType || !triggerProperties) {
+    respond?.({
+      status: "error",
+      error: new Error("Trigger type or properties not provided"),
+      message: "Trigger type or properties not provided",
+    });
+    return <>Trigger type or properties not provided</>;
+  }
+  if (!triggerDefinition) {
+    respond?.({
+      status: "error",
+      error: new Error("Trigger definition not found"),
+      message: "Trigger definition not found",
+    });
+    return <>Trigger definition not found</>;
+  }
+  if (status === "complete") {
+    return (
+      <div className="flex flex-col gap-1">
+        {debug && <DebugArgs args={{ args, result, status }} nodes={nodes} />}
+        {debug && (
+          <DebugJSON name="triggerDefinition" json={triggerDefinition} />
+        )}
+        <StepPreview step={triggerDefinition} />
+        <SuggestionStatus status={result?.status} message={result?.message} />
+      </div>
+    );
+  }
+  return (
+    <div>
+      {debug && <DebugArgs args={{ args, result, status }} nodes={nodes} />}
+      {debug && <DebugJSON name="triggerDefinition" json={triggerDefinition} />}
+      <p>Do you want to add this trigger to the workflow?</p>
+      <div className="flex flex-col gap-2">
+        <StepPreview step={triggerDefinition} />
+        <div className="flex gap-2">
+          <Button
+            variant="primary"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleAddTrigger();
+            }}
+          >
+            {isAddingTrigger ? "Adding..." : "Add (⌘+Enter)"}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              respond?.({
+                status: "declined",
+                message: "Trigger suggestion declined",
+              })
+            }
+          >
+            No
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export function BuilderChat({
   definition,
   installedProviders,
@@ -119,7 +355,7 @@ export function BuilderChat({
   };
   installedProviders: Provider[];
 }) {
-  console.log("BuilderChat", { definition, installedProviders });
+  // console.log("BuilderChat", { definition, installedProviders });
   const {
     nodes,
     getNextEdge,
@@ -243,35 +479,6 @@ export function BuilderChat({
     },
   });
 
-  // useCopilotAction({
-  //   name: "addTrigger",
-  //   description: "Add a trigger to the workflow",
-  //   parameters: [
-  //     {
-  //       name: "triggerType",
-  //       description:
-  //         "The type of trigger to generate. One of: manual, alert, incident, or interval.",
-  //       type: "string",
-  //       required: true,
-  //     },
-  //     {
-  //       name: "triggerProperties",
-  //       description: "The properties of the trigger",
-  //       type: "string",
-  //       required: true,
-  //     },
-  //   ],
-  //   handler: ({
-  //     triggerType,
-  //     triggerProperties,
-  //   }: {
-  //     triggerType: string;
-  //     triggerProperties: string;
-  //   }) => {
-
-  //   },
-  // });
-
   useCopilotAction(
     {
       name: "generateStepDefinition",
@@ -355,52 +562,7 @@ export function BuilderChat({
           required: true,
         },
       ],
-      renderAndWaitForResponse: ({ status, args, respond }) => {
-        const { triggerType, triggerProperties } = args;
-
-        if (status === "inProgress") {
-          return <div>Loading...</div>;
-        }
-        if (!triggerType || !triggerProperties) {
-          respond?.("trigger type or properties not provided");
-          return <>Trigger type or properties not provided</>;
-        }
-        const triggerDefinition = getTriggerDefinition(
-          triggerType,
-          triggerProperties
-        );
-        if (!triggerDefinition) {
-          respond?.("trigger definition not found");
-          return <>Trigger definition not found</>;
-        }
-        return (
-          <div>
-            <p>Add a trigger to the workflow</p>
-            <DebugArgs args={args} nodes={nodes} />
-            <DebugJSON name="triggerDefinition" json={triggerDefinition} />
-            <p>Do you want to add this trigger to the workflow?</p>
-            <Button
-              variant="primary"
-              onClick={() => {
-                addNodeBetween(
-                  ADD_TRIGGER_AFTER_EDGE_ID,
-                  triggerDefinition,
-                  "edge"
-                );
-                respond?.("trigger added");
-              }}
-            >
-              Add
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => respond?.("do not add trigger")}
-            >
-              No
-            </Button>
-          </div>
-        );
-      },
+      renderAndWaitForResponse: AddTriggerUI,
     },
     [steps]
   );
@@ -410,7 +572,7 @@ export function BuilderChat({
       nodeToAddAfterId: string,
       step: V2Step,
       isStart: boolean,
-      respond: (message: string) => void
+      respond: (response: any) => void
     ) => {
       if (
         nodeToAddAfterId === "alert" ||
@@ -429,16 +591,29 @@ export function BuilderChat({
           node = getNodeById(nodeByName.id);
         }
         if (!node) {
-          respond?.("node not found");
+          respond?.({
+            status: "error",
+            error: new Error("Can't find the node to add the step after"),
+            message: "Step not added due to error",
+          });
+          return;
         }
       }
-      const nextEdge = getNextEdge(nodeToAddAfterId);
+      const nextEdge = getNextEdge(node.id);
       if (!nextEdge) {
-        respond?.("next edge not found");
+        respond?.({
+          status: "error",
+          error: new Error("Can't find the edge to add the step after"),
+          message: "Step not added due to error",
+        });
         return;
       }
       addNodeBetween(nextEdge.id, step, "edge");
-      respond?.("step added, nodeId=" + step.id);
+      respond?.({
+        status: "complete",
+        stepId: step.id,
+        message: "Step added",
+      });
     },
     [addNodeBetween, definition.value.sequence, getNextEdge, getNodeById]
   );
@@ -456,9 +631,9 @@ export function BuilderChat({
           required: true,
         },
         {
-          name: "addAfterNodeIdOrName",
+          name: "addAfterNodeName",
           description:
-            "The 'id' or 'name' property of the step to add the step after, get it from the workflow definition. DO NOT USE the workflow id. If you don't know the id, update the workflow definition and try again.",
+            "The 'name' of the step to add the new step after, get it from the workflow definition. If workflow is empty, use 'trigger_start'.",
           type: "string",
           required: true,
         },
@@ -470,12 +645,18 @@ export function BuilderChat({
           required: false,
         },
       ],
-      renderAndWaitForResponse: ({ status, args, respond }) => {
+      renderAndWaitForResponse: ({ status, args, respond, result }) => {
+        let {
+          stepDefinitionJSON,
+          addAfterNodeName: addAfterNodeIdOrName,
+          isStart,
+        } = args;
+        if (!stepDefinitionJSON) {
+          return <div>Step definition not found</div>;
+        }
         if (status === "inProgress") {
           return <div>Loading...</div>;
         }
-        console.log("args=", args);
-        let { stepDefinitionJSON, addAfterNodeIdOrName, isStart } = args;
         if (definition.value.sequence.length === 0) {
           isStart = true;
         }
@@ -484,11 +665,23 @@ export function BuilderChat({
         if (status === "complete") {
           return (
             <div className="flex flex-col gap-1">
-              <DebugArgs args={args} nodes={nodes} />
-              <StepPreview step={step} />
-              <p className="text-sm text-gray-500">
-                <CheckCircleIcon className="w-4 h-4" /> Step added
-              </p>
+              {debug && (
+                <DebugArgs
+                  args={{ isStart, addAfterNodeIdOrName }}
+                  nodes={nodes}
+                />
+              )}
+              <StepPreview
+                step={step}
+                className={clsx(
+                  result?.status === "declined" ? "opacity-50" : "",
+                  result?.status === "error" ? "bg-red-100" : ""
+                )}
+              />
+              <SuggestionStatus
+                status={result?.status}
+                message={result?.message}
+              />
             </div>
           );
         }
@@ -498,9 +691,18 @@ export function BuilderChat({
               <div>
                 Do you want to add this step after <b>{addAfterNodeIdOrName}</b>
                 <pre>{step.name}</pre>
-                <code className="text-xs leading-none text-gray-500">
-                  {stepDefinitionJSON}
-                </code>
+                {debug && (
+                  <DebugArgs
+                    args={{ isStart, addAfterNodeIdOrName }}
+                    nodes={nodes}
+                  />
+                )}
+                {debug && (
+                  <DebugJSON
+                    name="stepDefinitionJSON"
+                    json={JSON.parse(stepDefinitionJSON ?? "")}
+                  />
+                )}
               </div>
               <StepPreview step={step} />
             </div>
@@ -518,16 +720,25 @@ export function BuilderChat({
                     );
                   } catch (e) {
                     console.error(e);
-                    respond?.(`error adding step: ${e}`);
+                    respond?.({
+                      status: "error",
+                      error: e,
+                      message: `Error adding step: ${e}`,
+                    });
                   }
                 }}
               >
-                Add
+                Add (⌘+Enter)
               </Button>
               <Button
                 color="orange"
                 variant="secondary"
-                onClick={() => respond?.("step not added")}
+                onClick={() =>
+                  respond?.({
+                    status: "declined",
+                    message: "Step suggestion declined",
+                  })
+                }
               >
                 No
               </Button>
@@ -606,7 +817,16 @@ export function BuilderChat({
           </>
         )}
       </div>
-      <CopilotChat instructions={chatInstructions} className="h-full flex-1" />
+      <CopilotChat
+        instructions={chatInstructions}
+        labels={{
+          title: "Workflow Builder",
+          initial: "What can I help you automate?",
+          placeholder:
+            "For example: For each alert about CPU > 80%, send a slack message to the channel #alerts",
+        }}
+        className="h-full flex-1"
+      />
     </div>
   );
 }

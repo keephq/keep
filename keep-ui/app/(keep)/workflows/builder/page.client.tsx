@@ -23,10 +23,12 @@ export function WorkflowBuilderPageClient({
 }) {
   const [buttonsEnabled, setButtonsEnabled] = useState(false);
   const [generateEnabled, setGenerateEnabled] = useState(false);
-  const [triggerGenerate, setTriggerGenerate] = useState(0);
-  const [triggerSave, setTriggerSave] = useState(0);
+  // signals for saving, generating, running the workflow
+  const [generateRequestCount, setGenerateRequestCount] = useState(0);
+  const [saveRequestCount, setSaveRequestCount] = useState(0);
+  const [runRequestCount, setRunRequestCount] = useState(0);
+
   const [isSaving, setIsSaving] = useState(false);
-  const [triggerRun, setTriggerRun] = useState(0);
   const [fileContents, setFileContents] = useState<string | null>("");
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,18 +79,23 @@ export function WorkflowBuilderPageClient({
     reader.readAsText(file);
   }
   const incrementState = (s: number) => s + 1;
-
+  const triggerSave = () => setSaveRequestCount(incrementState);
+  const triggerGenerate = () => setGenerateRequestCount(incrementState);
+  const triggerRun = () => setRunRequestCount(incrementState);
   return (
     <main className="mx-auto max-w-full h-[98%]">
       <WorkflowBuilderContext.Provider
         value={{
-          enableButtons,
-          enableGenerate,
+          generateRequestCount,
+          saveRequestCount,
+          runRequestCount,
           triggerGenerate,
           triggerSave,
+          triggerRun,
+          enableButtons,
+          enableGenerate,
           isSaving,
           setIsSaving,
-          triggerRun,
         }}
       >
         <div className="flex justify-between">
@@ -135,7 +142,7 @@ export function WorkflowBuilderPageClient({
               className="min-w-28"
               icon={PlayIcon}
               disabled={!generateEnabled}
-              onClick={() => setTriggerRun(incrementState)}
+              onClick={triggerRun}
             >
               Run
             </Button>
@@ -145,7 +152,7 @@ export function WorkflowBuilderPageClient({
               className="min-w-28"
               icon={ArrowUpOnSquareIcon}
               disabled={!generateEnabled || isSaving}
-              onClick={() => setTriggerSave(incrementState)}
+              onClick={triggerSave}
             >
               {isSaving ? "Saving..." : "Deploy"}
             </Button>
@@ -156,7 +163,7 @@ export function WorkflowBuilderPageClient({
                 size="md"
                 className="min-w-28"
                 icon={BoltIcon}
-                onClick={() => setTriggerGenerate(incrementState)}
+                onClick={triggerGenerate}
               >
                 Get YAML
               </Button>

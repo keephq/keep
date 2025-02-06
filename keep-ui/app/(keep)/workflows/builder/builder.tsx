@@ -7,6 +7,8 @@ import {
   getToolboxConfiguration,
   getWorkflowFromDefinition,
   wrapDefinitionV2,
+  getDefinitionFromNodesEdgesProperties,
+  DefinitionV2,
 } from "./utils";
 import {
   CheckCircleIcon,
@@ -21,6 +23,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
 import {
+  Definition,
   Definition as FlowDefinition,
   ReactFlowDefinition,
   V2Step,
@@ -31,7 +34,7 @@ import {
 } from "@/shared/api/workflow-executions";
 import ReactFlowBuilder from "./ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
-import useStore from "./builder-store";
+import { useStore } from "./builder-store";
 import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
@@ -43,6 +46,7 @@ import Modal from "@/components/ui/Modal";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { useWorkflowBuilderContext } from "./workflow-builder-context";
 import ResizableColumns from "@/components/ui/ResizableColumns";
+import { EditWorkflowMetadataForm } from "@/features/edit-workflow-metadata";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -88,16 +92,28 @@ function Builder({
   );
   const { createWorkflow, updateWorkflow } = useWorkflowActions();
   const {
+    generateRequestCount,
+    saveRequestCount,
+    runRequestCount,
     enableGenerate,
-    triggerGenerate,
-    triggerSave,
-    triggerRun,
     setIsSaving,
+    triggerSave,
   } = useWorkflowBuilderContext();
   const router = useRouter();
 
   const searchParams = useSearchParams();
-  const { errorNode, setErrorNode, synced, reset, canDeploy } = useStore();
+  const isEditModalOpen = searchParams.get("edit") === "true";
+  const {
+    errorNode,
+    setErrorNode,
+    synced,
+    reset,
+    canDeploy,
+    v2Properties,
+    updateV2Properties,
+    nodes,
+    edges,
+  } = useStore();
 
   const setStepValidationErrorV2 = useCallback(
     (step: V2Step, error: string | null) => {
@@ -199,71 +215,72 @@ function Builder({
   );
 
   useEffect(() => {
-    if (triggerGenerate) {
+    if (generateRequestCount) {
       setLegacyWorkflow(getWorkflowFromDefinition(definition.value));
       if (!generateModalIsOpen) setGenerateModalIsOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [triggerGenerate]);
+  }, [generateRequestCount]);
 
   useEffect(() => {
-    if (triggerRun) {
+    if (runRequestCount) {
       testRunWorkflow();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [triggerRun]);
+  }, [runRequestCount]);
 
-  const saveWorkflow = useCallback(async () => {
-    if (!synced) {
-      toast(
-        "Please save the previous step or wait while properties sync with the workflow."
-      );
-      return;
-    }
-    if (errorNode || !definition.isValid) {
-      showErrorToast("Please fix the errors in the workflow before saving.");
-      return;
-    }
-    try {
-      setIsSaving(true);
-      if (workflowId) {
-        await updateWorkflow(workflowId, definition.value);
-      } else {
-        const response = await createWorkflow(definition.value);
-        if (response?.workflow_id) {
-          router.push(`/workflows/${response.workflow_id}`);
-        }
+  const saveWorkflow = useCallback(
+    async (definition: DefinitionV2, forceSave: boolean = false) => {
+      if (!synced && !forceSave) {
+        toast(
+          "Please save the previous step or wait while properties sync with the workflow."
+        );
+        return;
       }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [
-    synced,
-    errorNode,
-    definition.isValid,
-    definition.value,
-    setIsSaving,
-    workflowId,
-    updateWorkflow,
-    createWorkflow,
-    router,
-  ]);
+      if (errorNode || !definition.isValid) {
+        showErrorToast("Please fix the errors in the workflow before saving.");
+        return;
+      }
+      try {
+        setIsSaving(true);
+        if (workflowId) {
+          await updateWorkflow(workflowId, definition.value);
+        } else {
+          const response = await createWorkflow(definition.value);
+          if (response?.workflow_id) {
+            router.push(`/workflows/${response.workflow_id}`);
+          }
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [
+      synced,
+      errorNode,
+      setIsSaving,
+      workflowId,
+      updateWorkflow,
+      createWorkflow,
+      router,
+    ]
+  );
 
   // save workflow on "Deploy" button click
   useEffect(() => {
-    if (triggerSave) {
-      saveWorkflow();
+    if (saveRequestCount) {
+      saveWorkflow(definition);
     }
     // ignore since we want the latest values, but to run effect only when triggerSave changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [triggerSave]);
+  }, [saveRequestCount]);
 
   // save workflow on "Save & Deploy" button click from FlowEditor
   useEffect(() => {
     if (canDeploy) {
-      saveWorkflow();
+      saveWorkflow(definition);
     }
     // ignore since we want the latest values, but to run effect only when triggerSave changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -306,6 +323,42 @@ function Builder({
       root: (def) => globalValidatorV2(def, setGlobalValidationErrorV2),
     };
   }, [setStepValidationErrorV2, setGlobalValidationErrorV2]);
+
+  const setWrappedDefinition = useCallback(
+    (def: Definition) => {
+      setDefinition(wrapDefinitionV2(def));
+    },
+    [setDefinition]
+  );
+
+  // console.log("definition=", definition);
+  console.log("nodes.length=", nodes.length);
+  console.log("edges.length=", edges.length);
+
+  const updateWorkflowMetadata = useCallback(
+    (
+      workflowId: string,
+      { name, description }: { name: string; description: string }
+    ) => {
+      updateV2Properties({
+        name,
+        description,
+      });
+      const newDefinition = getDefinitionFromNodesEdgesProperties(
+        nodes,
+        edges,
+        { ...v2Properties, name, description },
+        ValidatorConfigurationV2
+      );
+      const definition = wrapDefinitionV2(newDefinition);
+      setDefinition(definition);
+      debugger;
+      saveWorkflow(definition, true);
+      router.back();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nodes, edges, v2Properties, ValidatorConfigurationV2]
+  );
 
   if (isLoading) {
     return (
@@ -384,15 +437,7 @@ function Builder({
                     installedProviders={installedProviders}
                     definition={definition}
                     validatorConfiguration={ValidatorConfigurationV2}
-                    onDefinitionChange={(def: any) => {
-                      setDefinition({
-                        value: {
-                          sequence: def?.sequence || [],
-                          properties: def?.properties || {},
-                        },
-                        isValid: def?.isValid || false,
-                      });
-                    }}
+                    onDefinitionChange={setWrappedDefinition}
                     toolboxConfiguration={getToolboxConfiguration(providers)}
                   />
                 </ReactFlowProvider>
@@ -408,6 +453,22 @@ function Builder({
           />
         </Card>
       </CopilotKit>
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => router.back()}
+        className="w-[600px]"
+        title="Edit Workflow Metadata"
+      >
+        <EditWorkflowMetadataForm
+          workflow={{
+            id: v2Properties.id,
+            name: v2Properties.name,
+            description: v2Properties.description,
+          }}
+          onCancel={() => router.back()}
+          onSubmit={updateWorkflowMetadata}
+        />
+      </Modal>
     </div>
   );
 }

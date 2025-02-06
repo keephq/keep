@@ -2,7 +2,7 @@ import { Menu, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 import { CiSquareChevDown } from "react-icons/ci";
 import { TrashIcon } from "@heroicons/react/24/outline";
-import useStore from "./builder-store";
+import { useStore } from "./builder-store";
 import { IoMdSettings } from "react-icons/io";
 import { FlowNode } from "@/app/(keep)/workflows/builder/types";
 

@@ -75,6 +75,7 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
           }
         );
         showSuccessToast("Workflow updated successfully");
+        revalidateMultiple([`/workflows/${workflowId}`], { isExact: true });
         refreshWorkflows();
         return response;
       } catch (error) {
@@ -82,6 +83,7 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
         return null;
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [api, refreshWorkflows]
   );
 

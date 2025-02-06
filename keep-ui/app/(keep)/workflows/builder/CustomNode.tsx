@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import NodeMenu from "./NodeMenu";
-import useStore from "./builder-store";
+import { useStore } from "./builder-store";
 import Image from "next/image";
 import { GoPlus } from "react-icons/go";
 import { MdNotStarted } from "react-icons/md";

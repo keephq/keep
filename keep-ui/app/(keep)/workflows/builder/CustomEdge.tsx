@@ -1,7 +1,7 @@
 import React from "react";
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath } from "@xyflow/react";
 import type { EdgeProps } from "@xyflow/react";
-import useStore from "./builder-store";
+import { useStore } from "./builder-store";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { Button } from "@tremor/react";
 import "@xyflow/react/dist/style.css";
