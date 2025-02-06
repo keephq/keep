@@ -1,11 +1,11 @@
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { showErrorToast } from "@/shared/ui";
 import { Definition } from "@/app/(keep)/workflows/builder/builder-store";
 import { getWorkflowFromDefinition } from "@/app/(keep)/workflows/builder/utils";
 import { stringify } from "yaml";
 import { useCallback } from "react";
-import { useWorkflowsV2 } from "utils/hooks/useWorkflowsV2";
 
 type UseWorkflowActionsReturn = {
   createWorkflow: (
@@ -13,16 +13,9 @@ type UseWorkflowActionsReturn = {
   ) => Promise<CreateOrUpdateWorkflowResponse | null>;
   updateWorkflow: (
     workflowId: string,
-    definition: Definition | Record<string, unknown>,
-    options?: { mutateWorkflowDetail?: () => Promise<any> }
+    definition: Definition | Record<string, unknown>
   ) => Promise<CreateOrUpdateWorkflowResponse | null>;
-  deleteWorkflow: (
-    workflowId: string,
-    options?: {
-      skipConfirmation?: boolean;
-      mutateWorkflowDetail?: () => Promise<any>;
-    }
-  ) => void;
+  deleteWorkflow: (workflowId: string) => void;
 };
 
 type CreateOrUpdateWorkflowResponse = {
@@ -33,7 +26,10 @@ type CreateOrUpdateWorkflowResponse = {
 
 export function useWorkflowActions(): UseWorkflowActionsReturn {
   const api = useApi();
-  const { mutateWorkflows } = useWorkflowsV2();
+  const revalidateMultiple = useRevalidateMultiple();
+  const refreshWorkflows = useCallback(() => {
+    revalidateMultiple(["/workflows?is_v2=true"], { isExact: true });
+  }, [revalidateMultiple]);
 
   const createWorkflow = useCallback(
     async (definition: Definition) => {
@@ -49,21 +45,20 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
           }
         );
         showSuccessToast("Workflow created successfully");
-        await mutateWorkflows();
+        refreshWorkflows();
         return response;
       } catch (error) {
         showErrorToast(error, "Failed to create workflow");
         return null;
       }
     },
-    [api, mutateWorkflows]
+    [api, refreshWorkflows]
   );
 
   const updateWorkflow = useCallback(
     async (
       workflowId: string,
-      definition: Definition | Record<string, unknown>,
-      options?: { mutateWorkflowDetail?: () => Promise<any> }
+      definition: Definition | Record<string, unknown>
     ) => {
       try {
         const body = stringify(
@@ -80,32 +75,24 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
           }
         );
         showSuccessToast("Workflow updated successfully");
-
-        const mutations = [mutateWorkflows()];
-        if (options?.mutateWorkflowDetail) {
-          mutations.push(options.mutateWorkflowDetail());
-        }
-        await Promise.all(mutations);
-
+        refreshWorkflows();
+        revalidateMultiple([`/workflows/${workflowId}`], { isExact: true });
         return response;
       } catch (error) {
         showErrorToast(error, "Failed to update workflow");
         return null;
       }
     },
-    [api, mutateWorkflows]
+    [api, refreshWorkflows]
   );
 
   const deleteWorkflow = useCallback(
     async (
       workflowId: string,
-      options?: {
-        skipConfirmation?: boolean;
-        mutateWorkflowDetail?: () => Promise<any>;
-      }
+      { skipConfirmation = false }: { skipConfirmation?: boolean } = {}
     ) => {
       if (
-        !options?.skipConfirmation &&
+        !skipConfirmation &&
         !confirm("Are you sure you want to delete this workflow?")
       ) {
         return false;
@@ -113,17 +100,12 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
       try {
         await api.delete(`/workflows/${workflowId}`);
         showSuccessToast("Workflow deleted successfully");
-
-        const mutations = [mutateWorkflows()];
-        if (options?.mutateWorkflowDetail) {
-          mutations.push(options.mutateWorkflowDetail());
-        }
-        await Promise.all(mutations);
+        refreshWorkflows();
       } catch (error) {
         showErrorToast(error, "An error occurred while deleting workflow");
       }
     },
-    [api, mutateWorkflows]
+    [api, refreshWorkflows]
   );
 
   return {

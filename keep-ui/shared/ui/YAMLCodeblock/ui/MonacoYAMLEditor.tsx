@@ -446,7 +446,7 @@ const MonacoYAMLEditor = ({
         workflow: Record<string, unknown>;
       };
       // update workflow
-      await updateWorkflow(workflowId, parsedYaml, { mutateWorkflowDetail });
+      await updateWorkflow(workflowId, parsedYaml);
 
       setOriginalContent(content);
       setHasChanges(false);
