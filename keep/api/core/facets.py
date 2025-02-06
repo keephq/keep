@@ -48,29 +48,34 @@ def build_facets_data_query(
 
     for facet in facets:
         metadata = properties_metadata.get_property_metadata(facet.property_path)
-        group_by_exp = []
+        facet_value = []
 
         for item in metadata.field_mappings:
             if isinstance(item, JsonFieldMapping):
-                group_by_exp.append(
+                facet_value.append(
                     instance.json_extract_as_text(item.json_prop, item.prop_in_json)
                 )
             elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-                group_by_exp.append(item.map_to)
+                facet_value.append(item.map_to)
 
-        casted = f"{instance.coalesce([instance.cast(item, str) for item in group_by_exp])}"
+        casted = (
+            f"{instance.coalesce([instance.cast(item, str) for item in facet_value])}"
+        )
 
         union_queries.append(
             select(
                 literal(facet.id).label("facet_id"),
-                text(f"MIN({casted}) AS facet_value"),
-                func.count(func.distinct(literal_column("entity_id"))).label(
-                    "matches_count"
-                ),
+                text(f"{casted} AS facet_value"),
+                literal_column("entity_id").label("entity_id"),
             )
             .select_from(base_query)
-            .filter(text(instance.convert_to_sql_str(facet_options_query.facet_queries[facet.id])))
-            .group_by(text(instance.coalesce(group_by_exp) if len(group_by_exp) > 1 else group_by_exp[0]))
+            .filter(
+                text(
+                    instance.convert_to_sql_str(
+                        facet_options_query.facet_queries[facet.id]
+                    )
+                )
+            )
         )
 
     query = None
@@ -80,7 +85,17 @@ def build_facets_data_query(
     else:
         query = union_queries[0]
 
-    return query
+    return (
+        select(
+            literal_column("facet_id"),
+            literal_column("facet_value"),
+            func.count(func.distinct(literal_column("entity_id"))).label(
+                "matches_count"
+            ),
+        )
+        .select_from(query)
+        .group_by(literal_column("facet_id"), literal_column("facet_value"))
+    )
 
 
 def get_facet_options(
