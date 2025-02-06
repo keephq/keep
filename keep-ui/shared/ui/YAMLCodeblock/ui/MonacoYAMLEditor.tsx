@@ -9,11 +9,12 @@ import { getStepStatus } from "@/shared/lib/logs-utils";
 import yaml from "js-yaml";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import "./MonacoYAMLEditor.css";
+import { useWorkflowDetail } from "@/utils/hooks/useWorkflowDetail";
 
 interface Props {
   workflowRaw: string;
   filename?: string;
-  workflowId?: string;
+  workflowId: string;
   executionLogs?: LogEntry[] | null;
   executionStatus?: string;
   hoveredStep?: string | null;
@@ -37,6 +38,7 @@ const MonacoYAMLEditor = ({
 }: Props) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const { updateWorkflow } = useWorkflowActions();
+  const { mutateWorkflowDetail } = useWorkflowDetail(workflowId || "");
 
   const findStepNameForPosition = (
     lineNumber: number,
@@ -444,7 +446,7 @@ const MonacoYAMLEditor = ({
         workflow: Record<string, unknown>;
       };
       // update workflow
-      await updateWorkflow(workflowId!, parsedYaml);
+      await updateWorkflow(workflowId, parsedYaml, { mutateWorkflowDetail });
 
       setOriginalContent(content);
       setHasChanges(false);
