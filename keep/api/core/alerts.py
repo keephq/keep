@@ -56,7 +56,7 @@ alert_field_configurations = [
     ),
 ]
 alias_column_mapping = {
-    "filter_last_received": "lastalert.timestamp",
+    "filter_last_received": "alert.timestamp",
     "filter_provider_id": "alert.provider_id",
     "filter_provider_type": "alert.provider_type",
     "filter_incident_user_generated_name": "incident.user_generated_name",
@@ -99,7 +99,49 @@ static_facets = [
 ]
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
+
+def __build_query_for_filtering_2(tenant_id: str):
+    return (
+        select(
+            Alert.id.label("alert_id"),
+            Alert.tenant_id.label("last_alert_tenant_id"),
+            Alert.timestamp.label("startedAt"),
+            Alert.id.label("entity_id"),
+            # here it creates aliases for table columns that will be used in filtering and faceting
+            text(
+                ",".join(
+                    [f"{value} AS {key}" for key, value in alias_column_mapping.items()]
+                )
+            ),
+        )
+        .select_from(Alert)
+        .outerjoin(
+            AlertEnrichment,
+            and_(
+                Alert.tenant_id == AlertEnrichment.tenant_id,
+                Alert.fingerprint == AlertEnrichment.alert_fingerprint,
+            ),
+        )
+        .outerjoin(
+            LastAlertToIncident,
+            and_(
+                Alert.tenant_id == LastAlertToIncident.tenant_id,
+                Alert.fingerprint == LastAlertToIncident.fingerprint,
+            ),
+        )
+        .outerjoin(
+            Incident,
+            and_(
+                LastAlertToIncident.tenant_id == Incident.tenant_id,
+                LastAlertToIncident.incident_id == Incident.id,
+            ),
+        )
+        .where(Alert.tenant_id == tenant_id)
+    )
+
+
 def __build_query_for_filtering(tenant_id: str):
+    # return __build_query_for_filtering_2(tenant_id)
     return (
         select(
             LastAlert.alert_id,
@@ -135,13 +177,53 @@ def __build_query_for_filtering(tenant_id: str):
         .where(LastAlert.tenant_id == tenant_id)
     )
 
+
+def build_total_alerts_query(
+    dialect_name: str,
+    tenant_id,
+    cel=None,
+):
+    cel_to_sql_provider_type = get_cel_to_sql_provider_for_dialect(dialect_name)
+    cel_to_sql_instance = cel_to_sql_provider_type(properties_metadata)
+    base = __build_query_for_filtering(tenant_id)
+
+    query = (
+        select(
+            func.count(func.distinct(base.c.alert_id)).label("total_count"),
+        )
+        .select_from(base)
+        .join(
+            Alert,
+            and_(
+                base.c.last_alert_tenant_id == Alert.tenant_id,
+                base.c.alert_id == Alert.id,
+            ),
+        )
+        .outerjoin(
+            AlertEnrichment,
+            and_(
+                AlertEnrichment.tenant_id == Alert.tenant_id,
+                AlertEnrichment.alert_fingerprint == Alert.fingerprint,
+            ),
+        )
+    )
+
+    if cel:
+        sql_filter = cel_to_sql_instance.convert_to_sql_str(cel)
+        query = query.where(text(sql_filter))
+
+    return query
+
+
 def build_alerts_query(
-        dialect_name: str,
-        tenant_id,
-        cel=None,
-        sort_by=None,
-        sort_dir=None
-    ):
+    dialect_name: str,
+    tenant_id,
+    cel=None,
+    sort_by=None,
+    sort_dir=None,
+    limit=None,
+    offset=None,
+):
     cel_to_sql_provider_type = get_cel_to_sql_provider_for_dialect(dialect_name)
     cel_to_sql_instance = cel_to_sql_provider_type(properties_metadata)
     base = __build_query_for_filtering(tenant_id)
@@ -161,13 +243,6 @@ def build_alerts_query(
         elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
             group_by_exp.append(alias_column_mapping[item.map_to])
 
-    casted = f"{cel_to_sql_instance.coalesce([cel_to_sql_instance.cast(item, str) for item in group_by_exp])}"
-
-    if sort_dir == "desc":
-        base = base.order_by(desc(text(casted)))
-    else:
-        base = base.order_by(asc(text(casted)))
-
     query = (
         select(
             Alert,
@@ -178,17 +253,43 @@ def build_alerts_query(
         .join(
             Alert,
             and_(
-                base.c.last_alert_tenant_id == Alert.tenant_id, base.c.alert_id == Alert.id
+                base.c.last_alert_tenant_id == Alert.tenant_id,
+                base.c.alert_id == Alert.id,
             ),
         )
-        .outerjoin(AlertEnrichment, and_(AlertEnrichment.tenant_id == Alert.tenant_id, AlertEnrichment.alert_fingerprint == Alert.fingerprint))
+        .outerjoin(
+            AlertEnrichment,
+            and_(
+                AlertEnrichment.tenant_id == Alert.tenant_id,
+                AlertEnrichment.alert_fingerprint == Alert.fingerprint,
+            ),
+        )
     )
 
     if cel:
         sql_filter = cel_to_sql_instance.convert_to_sql_str(cel)
         query = query.where(text(sql_filter))
 
+    if limit is not None:
+        query = query.limit(limit)
+
+    if offset is not None:
+        query = query.offset(offset)
+
+    casted = f"{ cel_to_sql_instance.coalesce([cel_to_sql_instance.cast(item, str) for item in group_by_exp]) if len(group_by_exp) > 1 else group_by_exp[0]}"
+
+    if sort_dir == "desc":
+        query = query.order_by(desc(text(casted)))
+    else:
+        query = query.order_by(asc(text(casted)))
+
+    if dialect_name == "postgresql":
+        query = query.group_by(Alert.id, AlertEnrichment.id)
+    else:
+        query = query.group_by(Alert.id)
+
     return query
+
 
 def query_last_alerts(
     tenant_id,
@@ -201,21 +302,17 @@ def query_last_alerts(
     with Session(engine) as session:
         dialect_name = session.bind.dialect.name
 
-        query = build_alerts_query(
-            dialect_name,
-            tenant_id,
-            cel,
-            sort_by,
-            sort_dir
+        total_count_query = build_total_alerts_query(dialect_name, tenant_id, cel)
+        # Execute the query
+        total_count = session.exec(total_count_query).one()[0]
+
+        if not limit:
+            return [], total_count
+        data_query = build_alerts_query(
+            dialect_name, tenant_id, cel, sort_by, sort_dir, limit, offset
         )
 
-        query = query.group_by(Alert.id,AlertEnrichment.id)
-
-        # Execute the query
-        total_count = session.exec(select(func.count()).select_from(query)).one()[0]
-        alerts_with_start = session.execute(
-            query.order_by(desc(Alert.timestamp)).limit(limit).offset(offset)
-        ).all()
+        alerts_with_start = session.execute(data_query).all()
 
         # Process results based on dialect
         alerts = []
