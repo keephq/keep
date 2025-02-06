@@ -254,7 +254,6 @@ class TopologyServiceCreateRequestDTO(BaseModel, extra="ignore"):
     category: Optional[str] = None
     manufacturer: Optional[str] = None
     namespace: Optional[str] = None
-    is_manual = True
 
 
 class TopologyServiceUpdateRequestDTO(TopologyServiceCreateRequestDTO, extra="ignore"):

@@ -4,7 +4,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from pydantic import ValidationError
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, exists
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, select
 
@@ -45,6 +45,10 @@ class InvalidApplicationDataException(TopologyException):
 
 class ServiceNotFoundException(TopologyException):
     """Raised when a service is not found"""
+
+
+class ServiceNotManualException(TopologyException):
+    """Raised when a service is not manual"""
 
 
 class DependencyNotFoundException(TopologyException):
@@ -358,7 +362,10 @@ class TopologiesService:
         """This function is used for creating services manually. services.is_manual=True"""
 
         try:
-            db_service = TopologyService(**service.dict(), tenant_id=tenant_id)
+            # Setting is_manual to True since this service is created manually.
+            db_service = TopologyService(
+                **service.dict(), tenant_id=tenant_id, is_manual=True
+            )
             session.add(db_service)
             session.commit()
             session.refresh(db_service)
@@ -377,12 +384,20 @@ class TopologiesService:
             db_service: TopologyService = TopologiesService.get_service_by_id(
                 _id=service.id, tenant_id=tenant_id, session=session
             )
+
+            # Asserting that the service we're trying to update was created manually
+            if not db_service.is_manual:
+                raise ServiceNotManualException()
+
             service_dict = service.dict()
             if db_service is None:
                 raise ServiceNotFoundException()
             else:  # We update it.
                 for attr in service_dict:
-                    if service_dict[attr] is not None and db_service.__getattribute__(attr) != service_dict[attr]:
+                    if (
+                        service_dict[attr] is not None
+                        and db_service.__getattribute__(attr) != service_dict[attr]
+                    ):
                         db_service.__setattr__(attr, service_dict[attr])
                 session.commit()
                 session.refresh(db_service)
@@ -396,6 +411,20 @@ class TopologiesService:
     @staticmethod
     def delete_services(service_ids: list[int], tenant_id: str, session: Session):
         try:
+
+            # Asserting that all the services that we are trying to delete were created manually, if this assertion
+            # fails we do not proceed with deletion at all
+            non_manual_exists = session.query(
+                exists()
+                .where(TopologyService.id.in_(service_ids))
+                .where(TopologyService.tenant_id == tenant_id)
+                .where(TopologyService.is_manual.isnot(True))
+            ).scalar()
+
+            if non_manual_exists:
+                raise ServiceNotManualException()
+
+            # Deleting all the dependencies first
             session.query(TopologyServiceDependency).filter(
                 TopologyServiceDependency.service.has(
                     and_(
@@ -414,8 +443,7 @@ class TopologiesService:
                 session.query(TopologyService)
                 .filter(
                     TopologyService.id.in_(service_ids),
-                    TopologyService.tenant_id
-                    == tenant_id,  # Ensures deletion is scoped to the tenant
+                    TopologyService.tenant_id == tenant_id,
                 )
                 .delete(synchronize_session=False)  # Efficient batch delete
             )
@@ -462,7 +490,10 @@ class TopologiesService:
                 raise DependencyNotFoundException()
             else:  # We update it.
                 for attr in service_dict:
-                    if service_dict[attr] is not None and db_dependency.__getattribute__(attr) != service_dict[attr]:
+                    if (
+                        service_dict[attr] is not None
+                        and db_dependency.__getattribute__(attr) != service_dict[attr]
+                    ):
                         db_dependency.__setattr__(attr, service_dict[attr])
                 session.commit()
                 session.refresh(db_dependency)

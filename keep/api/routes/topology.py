@@ -17,7 +17,8 @@ from keep.api.models.db.topology import (
     TopologyServiceDependencyCreateRequestDto,
     TopologyServiceDependencyUpdateRequestDto,
     TopologyServiceDependencyDto,
-    TopologyService, DeleteServicesRequest,
+    TopologyService,
+    DeleteServicesRequest,
 )
 from keep.api.tasks.process_topology_task import process_topology
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -31,6 +32,7 @@ from keep.topologies.topologies_service import (
     ServiceNotFoundException,
     TopologiesService,
     DependencyNotFoundException,
+    ServiceNotManualException,
 )
 
 logger = logging.getLogger(__name__)
@@ -322,6 +324,12 @@ def update_service(
         return TopologiesService.update_service(
             service=service, tenant_id=authenticated_entity.tenant_id, session=session
         )
+
+    except ServiceNotManualException:
+        raise HTTPException(
+            status_code=404,
+            detail="The service you're trying to updated was not created manually.",
+        )
     except ServiceNotFoundException:
         raise HTTPException(status_code=404, detail="Service not found")
     except Exception as e:
@@ -346,6 +354,11 @@ def delete_services(
         )
         return JSONResponse(
             status_code=200, content={"message": "Services deleted successfully"}
+        )
+    except ServiceNotManualException:
+        raise HTTPException(
+            status_code=404,
+            detail="One or more service(s) you're trying to delete was not created manually.",
         )
     except ServiceNotFoundException:
         raise HTTPException(status_code=404, detail="Service not found")
