@@ -4,9 +4,9 @@
   "description": "Keep UI",
   "main": "next.config.js",
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "./scripts/check-required-env-vars.sh && next dev -p 3000",
     "build": "./next_build.sh",
-    "start": "next start",
+    "start": "./scripts/check-required-env-vars.sh && next start",
     "lint": "next lint"
   },
   "dependencies": {
