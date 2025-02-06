@@ -41,7 +41,7 @@ class TopologyService(SQLModel, table=True):
     category: Optional[str] = None
     manufacturer: Optional[str] = None
     namespace: Optional[str] = None
-    manual: Optional[bool] = False
+    is_manual: Optional[bool] = False
 
     updated_at: Optional[datetime] = Field(
         sa_column=Column(
@@ -116,7 +116,7 @@ class TopologyServiceDtoBase(BaseModel, extra="ignore"):
     category: Optional[str] = None
     manufacturer: Optional[str] = None
     namespace: Optional[str] = None
-    manual: Optional[bool] = False
+    is_manual: Optional[bool] = False
 
 
 class TopologyServiceInDto(TopologyServiceDtoBase):
@@ -235,7 +235,7 @@ class TopologyServiceDtoOut(TopologyServiceDtoBase):
             application_ids=application_ids,
             updated_at=service.updated_at,
             namespace=service.namespace,
-            manual=service.manual if service.manual is not None else False,
+            is_manual=service.is_manual if service.is_manual is not None else False,
         )
 
 
@@ -254,7 +254,7 @@ class TopologyServiceCreateRequestDTO(BaseModel, extra="ignore"):
     category: Optional[str] = None
     manufacturer: Optional[str] = None
     namespace: Optional[str] = None
-    manual = True
+    is_manual = True
 
 
 class TopologyServiceUpdateRequestDTO(TopologyServiceCreateRequestDTO, extra="ignore"):

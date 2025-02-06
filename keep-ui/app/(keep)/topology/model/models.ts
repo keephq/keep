@@ -29,7 +29,7 @@ export interface TopologyService {
   // Added on client to optimize rendering
   applications: TopologyApplicationMinimal[];
   incidents?: number;
-  manual: boolean;
+  is_manual: boolean;
 }
 
 export interface TopologyServiceWithMutator extends TopologyService {

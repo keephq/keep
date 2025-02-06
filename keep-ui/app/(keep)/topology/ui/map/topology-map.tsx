@@ -182,7 +182,7 @@ export function TopologyMap({
     async (params: EdgeBase | Connection) => {
       const sourceService = getServiceById(params.source);
       const targetService = getServiceById(params.target);
-      if (sourceService?.manual === true && targetService?.manual === true) {
+      if (sourceService?.is_manual === true && targetService?.is_manual === true) {
         setEdges((eds) => addEdge(params, eds));
         try {
           const response = await api.post("/topology/dependency", {
@@ -209,10 +209,10 @@ export function TopologyMap({
     async (oldEdge: EdgeBase, newConnection: Connection) => {
       edgeReconnectSuccessful.current = true;
       if (
-        getServiceById(oldEdge.source)?.manual === false ||
-        getServiceById(oldEdge.target)?.manual === false ||
-        getServiceById(newConnection.source)?.manual === false ||
-        getServiceById(newConnection.target)?.manual === false
+        getServiceById(oldEdge.source)?.is_manual === false ||
+        getServiceById(oldEdge.target)?.is_manual === false ||
+        getServiceById(newConnection.source)?.is_manual === false ||
+        getServiceById(newConnection.target)?.is_manual === false
       ) {
         return;
       }
@@ -256,8 +256,8 @@ export function TopologyMap({
   const onReconnectEnd = useCallback(
     async (_: MouseEvent | TouchEvent, edge: Edge) => {
       if (
-        getServiceById(edge.source)?.manual === false ||
-        getServiceById(edge.target)?.manual === false
+        getServiceById(edge.source)?.is_manual === false ||
+        getServiceById(edge.target)?.is_manual === false
       ) {
         return;
       }

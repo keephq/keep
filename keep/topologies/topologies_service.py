@@ -355,7 +355,7 @@ class TopologiesService:
     def create_service(
         service: TopologyServiceCreateRequestDTO, tenant_id: str, session: Session
     ) -> TopologyService:
-        """This function is used for creating services manually. services.manual=True"""
+        """This function is used for creating services manually. services.is_manual=True"""
 
         try:
             db_service = TopologyService(**service.dict(), tenant_id=tenant_id)

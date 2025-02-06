@@ -68,8 +68,8 @@ export function ManageSelection({
   useEffect(() => {
     if (
       selectedEdges.length === 1 &&
-      getServiceById(selectedEdges[0].source)?.manual === true &&
-      getServiceById(selectedEdges[0].target)?.manual === true
+      getServiceById(selectedEdges[0].source)?.is_manual === true &&
+      getServiceById(selectedEdges[0].target)?.is_manual === true
     ) {
       setIsDependencyEditable(true);
     } else {
@@ -221,7 +221,7 @@ export function ManageSelection({
               .join(", ")}`}
         </p>
         <div className="">
-          {selectedServices.length === 1 && selectedServices[0].manual && (
+          {selectedServices.length === 1 && selectedServices[0].is_manual && (
             <Button
               color="orange"
               size="xs"
@@ -236,7 +236,7 @@ export function ManageSelection({
             </Button>
           )}
           {selectedServices.length > 0 &&
-            selectedServices.every((service) => service.manual === true) && (
+            selectedServices.every((service) => service.is_manual === true) && (
               <Button
                 color="red"
                 size="xs"

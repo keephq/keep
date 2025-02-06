@@ -161,13 +161,13 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
       <>
         <Handle
           type="source"
-          className={clsx(data.manual === true && "!opacity-100")}
+          className={clsx(data.is_manual === true && "!opacity-100")}
           position={Position.Right}
           id="right"
         />
         <Handle
           type="target"
-          className={clsx(data.manual === true && "!opacity-100")}
+          className={clsx(data.is_manual === true && "!opacity-100")}
           position={Position.Left}
           id="left"
         />
