@@ -177,11 +177,11 @@ def query_alerts(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
-    cel = Query(None),
-    limit = Query(1000),
-    offset = Query(0),
-    sort_by = Query(None),
-    sort_dir = Query(None),
+    cel=Query(None),
+    limit: int = Query(1000),
+    offset: int = Query(0),
+    sort_by=Query(None),
+    sort_dir=Query(None),
 ):
     # Gathering alerts may take a while and we don't care if it will finish before we return the response.
     # In the worst case, gathered alerts will be pulled in the next request.

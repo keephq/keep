@@ -7,7 +7,10 @@ from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 class CelToPostgreSqlProvider(BaseCelToSqlProvider):
     def json_extract_as_text(self, column: str, path: str) -> str:
-        return " ->> ".join([column] + [f"'{item}'" for item in path.split(".")]) # example: 'json_column' ->> 'key1' ->> 'key2'
+        all_columns = [column] + [f"'{item}'" for item in path.split(".")]
+
+        json_property_path = " -> ".join(all_columns[:-1])
+        return f"({json_property_path}) ->> {all_columns[-1]}"  # (json_column -> 'labels' -> tags) ->> 'service'
 
     def coalesce(self, args):
         coalesce_args = args
@@ -30,15 +33,14 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
             raise ValueError(f"Unsupported type: {type}")
 
         return f"{exp}::{to_type_str}"
-    
+
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):
             date_exp = f"CAST('{value.strftime('%Y-%m-%d %H:%M:%S')}' as TIMESTAMP)"
             return date_exp
-        
+
         return super()._visit_constant_node(value)
 
-    
     def _visit_contains_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
