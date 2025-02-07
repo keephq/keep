@@ -98,6 +98,19 @@ def get_service_application_ids_dict(
     return result
 
 
+def validate_non_manual_exists(
+    service_ids: list[int], session: Session, tenant_id: str
+) -> bool:
+    non_manual_exists = session.query(
+        exists()
+        .where(TopologyService.id.in_(service_ids))
+        .where(TopologyService.tenant_id == tenant_id)
+        .where(TopologyService.is_manual.isnot(True))
+    ).scalar()
+
+    return non_manual_exists
+
+
 class TopologiesService:
     @staticmethod
     def get_all_topology_data(
@@ -341,7 +354,7 @@ class TopologiesService:
 
     @staticmethod
     def get_service_by_id(
-        _id: str, tenant_id: str, session: Session
+        _id: int, tenant_id: str, session: Session
     ) -> TopologyService:
         return session.exec(
             select(TopologyService)
@@ -371,6 +384,7 @@ class TopologiesService:
             session.refresh(db_service)
             return db_service
         except Exception as e:
+            session.rollback()
             logger.error(f"Error while creating/updating the services manually: {e}")
             raise e
         finally:
@@ -403,6 +417,7 @@ class TopologiesService:
                 session.refresh(db_service)
                 return db_service
         except Exception as e:
+            session.rollback()
             logger.error(f"Error while updating the services manually: {e}")
             raise e
         finally:
@@ -414,14 +429,11 @@ class TopologiesService:
 
             # Asserting that all the services that we are trying to delete were created manually, if this assertion
             # fails we do not proceed with deletion at all
-            non_manual_exists = session.query(
-                exists()
-                .where(TopologyService.id.in_(service_ids))
-                .where(TopologyService.tenant_id == tenant_id)
-                .where(TopologyService.is_manual.isnot(True))
-            ).scalar()
-
-            if non_manual_exists:
+            if validate_non_manual_exists(
+                service_ids=service_ids,
+                session=session,
+                tenant_id=tenant_id,
+            ):
                 raise ServiceNotManualException()
 
             # Deleting all the dependencies first
@@ -453,7 +465,7 @@ class TopologiesService:
 
             session.commit()
         except Exception as e:
-            session.rollback()  # Ensure rollback on error
+            session.rollback()
             logger.error(f"Error while deleting services: {e}")
             raise e
         finally:
@@ -461,15 +473,26 @@ class TopologiesService:
 
     @staticmethod
     def create_dependency(
-        dependency: TopologyServiceDependencyCreateRequestDto, session: Session
+        dependency: TopologyServiceDependencyCreateRequestDto,
+        tenant_id: str,
+        session: Session,
     ) -> TopologyServiceDependencyDto:
         try:
+           # Enforcing is_manual on the service_id and depends_on_service_id
+            if validate_non_manual_exists(
+                service_ids=[dependency.service_id, dependency.depends_on_service_id],
+                session=session,
+                tenant_id=tenant_id,
+            ):
+                raise ServiceNotManualException()
+
             db_dependency = TopologyServiceDependency(**dependency.dict())
             session.add(db_dependency)
             session.commit()
             session.refresh(db_dependency)
             return TopologyServiceDependencyDto.from_orm(db_dependency)
         except Exception as e:
+            session.rollback()
             logger.error(f"Error while creating/updating the Dependency manually: {e}")
             raise e
         finally:
@@ -477,9 +500,19 @@ class TopologiesService:
 
     @staticmethod
     def update_dependency(
-        dependency: TopologyServiceDependencyUpdateRequestDto, session: Session
+        dependency: TopologyServiceDependencyUpdateRequestDto,
+        session: Session,
+        tenant_id: str,
     ) -> TopologyServiceDependencyDto:
         try:
+            # Enforcing is_manual on the service_id and depends_on_service_id
+            if validate_non_manual_exists(
+                service_ids=[dependency.service_id, dependency.depends_on_service_id],
+                session=session,
+                tenant_id=tenant_id,
+            ):
+                raise ServiceNotManualException()
+
             db_dependency: TopologyServiceDependency = (
                 TopologiesService.get_dependency_by_id(
                     _id=dependency.id, session=session
@@ -499,25 +532,38 @@ class TopologiesService:
                 session.refresh(db_dependency)
                 return TopologyServiceDependencyDto.from_orm(db_dependency)
         except Exception as e:
+            session.rollback()
             logger.error(f"Error while updating the Dependency manually: {e}")
             raise e
         finally:
             session.close()
 
     @staticmethod
-    def delete_dependency(dependency_id: int, session: Session):
+    def delete_dependency(dependency_id: int, session: Session, tenant_id: str):
         try:
             db_dependency: TopologyServiceDependency = (
                 TopologiesService.get_dependency_by_id(
                     _id=dependency_id, session=session
                 )
             )
+            # Enforcing is_manual on the service_id and depends_on_service_id
+            if validate_non_manual_exists(
+                service_ids=[
+                    db_dependency.service_id,
+                    db_dependency.depends_on_service_id,
+                ],
+                session=session,
+                tenant_id=tenant_id,
+            ):
+                raise ServiceNotManualException()
+
             if db_dependency is None:
                 raise DependencyNotFoundException()
             session.delete(db_dependency)
             session.commit()
             return None
         except Exception as e:
+            session.rollback()
             logger.error(f"Error while updating the Dependency manually: {e}")
             raise e
         finally:

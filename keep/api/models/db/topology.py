@@ -257,7 +257,7 @@ class TopologyServiceCreateRequestDTO(BaseModel, extra="ignore"):
 
 
 class TopologyServiceUpdateRequestDTO(TopologyServiceCreateRequestDTO, extra="ignore"):
-    id: str
+    id: int
 
 
 class TopologyServiceDependencyCreateRequestDto(BaseModel, extra="ignore"):

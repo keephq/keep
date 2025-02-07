@@ -376,12 +376,16 @@ def create_dependencies(
     ),
     session: Session = Depends(get_session),
 ) -> TopologyServiceDependencyDto:
-    """
-    Any services created by this endpoint will have manual set to True.
-    """
     try:
         return TopologiesService.create_dependency(
-            dependency=dependency, session=session
+            dependency=dependency,
+            session=session,
+            tenant_id=authenticated_entity.tenant_id,
+        )
+    except ServiceNotManualException:
+        raise HTTPException(
+            status_code=404,
+            detail="You're tying to create a dependency between one or more pulled services.",
         )
     except Exception as e:
         raise HTTPException(
@@ -399,10 +403,17 @@ def update_dependency(
 ) -> TopologyServiceDependencyDto:
     try:
         return TopologiesService.update_dependency(
-            dependency=dependency, session=session
+            dependency=dependency,
+            session=session,
+            tenant_id=authenticated_entity.tenant_id,
         )
     except DependencyNotFoundException:
         raise HTTPException(status_code=404, detail="Dependency not found")
+    except ServiceNotManualException:
+        raise HTTPException(
+            status_code=404,
+            detail="You're tying to update a dependency between one or more pulled services.",
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to update Dependency: {str(e)}"
@@ -421,13 +432,18 @@ def delete_dependency(
 ):
     try:
         TopologiesService.delete_dependency(
-            dependency_id=dependency_id, session=session
+            dependency_id=dependency_id, session=session, tenant_id=authenticated_entity.tenant_id
         )
         return JSONResponse(
-            status_code=200, content={"message": "Application deleted successfully"}
+            status_code=200, content={"message": "Dependency deleted successfully"}
         )
     except DependencyNotFoundException:
         raise HTTPException(status_code=404, detail="Dependency not found")
+    except ServiceNotManualException:
+        raise HTTPException(
+            status_code=404,
+            detail="You're tying to delete a dependency between two or more manual services.",
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to delete Dependency: {str(e)}"
