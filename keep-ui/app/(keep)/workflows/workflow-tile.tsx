@@ -30,6 +30,7 @@ import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import "./workflow-tile.css";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { useToggleWorkflow } from "utils/hooks/useWorkflowToggle";
 
 function TriggerTile({ trigger }: { trigger: Trigger }) {
   return (
@@ -164,8 +165,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     ?.find((w) => w.type === "alert")
     ?.filters?.find((f) => f.key === "source")?.value;
   const [fallBackIcon, setFallBackIcon] = useState(false);
+  const { toggleWorkflow, isToggling } = useToggleWorkflow(workflow.id);
 
-  const { providers, mutate} = useFetchProviders();
+  const { providers, mutate } = useFetchProviders();
   const { deleteWorkflow } = useWorkflowActions();
   const {
     isRunning,
@@ -434,6 +436,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               onDownload={handleDownloadClick}
               onView={handleViewClick}
               onBuilder={handleBuilderClick}
+              onToggleState={toggleWorkflow}
+              isDisabled={workflow.disabled}
               runButtonToolTip={message}
               isRunButtonDisabled={!!isRunButtonDisabled}
               provisioned={workflow.provisioned}

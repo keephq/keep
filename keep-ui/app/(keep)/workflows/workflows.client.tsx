@@ -20,6 +20,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { showErrorToast, Input, ErrorComponent } from "@/shared/ui";
 import { Textarea } from "@/components/ui";
+import { useWorkflowsV2 } from "utils/hooks/useWorkflowsV2";
 
 const EXAMPLE_WORKFLOW_DEFINITIONS = {
   slack: `
@@ -82,16 +83,13 @@ export default function WorkflowsPage() {
           -> last_executions: Used for the workflow execution graph.
           ->last_execution_started: Used for showing the start time of execution in real-time.
   **/
-  const { data, error, isLoading } = useSWR<Workflow[]>(
-    api.isReady() ? `/workflows?is_v2=true` : null,
-    (url: string) => api.get(url)
-  );
+  const { workflows, error, isLoading } = useWorkflowsV2();
 
   if (error) {
     return <ErrorComponent error={error} reset={() => {}} />;
   }
 
-  if (isLoading || !data) {
+  if (isLoading || !workflows) {
     return <Loading />;
   }
 
@@ -208,11 +206,11 @@ export default function WorkflowsPage() {
               </Button>
             </div>
           </div>
-          {data.length === 0 ? (
+          {workflows.length === 0 ? (
             <WorkflowsEmptyState isNewUI={true} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
-              {data.map((workflow) => (
+              {workflows.map((workflow) => (
                 <WorkflowTile key={workflow.id} workflow={workflow} />
               ))}
             </div>
