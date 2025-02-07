@@ -1,18 +1,18 @@
 from datetime import datetime
-from unittest.mock import patch
-
-from fastapi import HTTPException
 from itertools import cycle
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import distinct, func, desc, and_
+from fastapi import HTTPException
+from sqlalchemy import and_, desc, distinct, func
 
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.core.db import (
     IncidentSorting,
     add_alerts_to_incident_by_incident_id,
     create_incident_from_dict,
+    get_alert_by_event_id,
     get_alerts_data_for_incident,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
@@ -21,20 +21,28 @@ from keep.api.core.db import (
     remove_alerts_to_incident_by_incident_id,
 )
 from keep.api.core.db_utils import get_json_extract_field
-from keep.api.core.dependencies import SINGLE_TENANT_UUID, SINGLE_TENANT_EMAIL
+from keep.api.core.dependencies import SINGLE_TENANT_EMAIL, SINGLE_TENANT_UUID
 from keep.api.models.alert import (
     AlertSeverity,
     AlertStatus,
+    IncidentDto,
+    IncidentDtoIn,
     IncidentSeverity,
     IncidentStatus,
-    IncidentDtoIn,
-    IncidentDto,
 )
-from keep.api.models.db.alert import Alert, LastAlertToIncident, Incident, NULL_FOR_DELETED_AT
+from keep.api.models.db.alert import (
+    NULL_FOR_DELETED_AT,
+    Alert,
+    Incident,
+    LastAlertToIncident,
+)
+from keep.api.models.db.mapping import MappingRule
+from keep.api.models.db.rule import CreateIncidentOn, ResolveOn, Rule
 from keep.api.models.db.tenant import Tenant
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.rbac import Admin
+from keep.rulesengine.rulesengine import RulesEngine
 from tests.conftest import ElasticClientMock, PusherMock, WorkflowManagerMock
 from tests.fixtures.client import client, test_app  # noqa
 
@@ -229,7 +237,13 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
 def test_get_last_incidents(db_session, create_alert):
 
     severity_cycle = cycle([s.order for s in IncidentSeverity])
-    status_cycle = cycle([s.value for s in IncidentStatus if s not in [IncidentStatus.MERGED, IncidentStatus.DELETED]])
+    status_cycle = cycle(
+        [
+            s.value
+            for s in IncidentStatus
+            if s not in [IncidentStatus.MERGED, IncidentStatus.DELETED]
+        ]
+    )
     services_cycle = cycle(["keep", None])
 
     for i in range(60):
@@ -467,14 +481,19 @@ def test_incident_status_change_manual_alert_enrichment(
     alert = db_session.query(Alert).filter_by(fingerprint="alert-test").first()
     incident = create_incident_from_dict(
         SINGLE_TENANT_UUID,
-        {"user_generated_name": "Test Incident", "user_summary": "Test Incident Summary"},
+        {
+            "user_generated_name": "Test Incident",
+            "user_summary": "Test Incident Summary",
+        },
     )
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident.id, [alert.fingerprint], session=db_session
     )
 
     # Ensure incident has one firing alert
-    incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id, with_alerts=True, session=db_session)
+    incident = get_incident_by_id(
+        SINGLE_TENANT_UUID, incident.id, with_alerts=True, session=db_session
+    )
     assert incident.status == IncidentStatus.FIRING.value
     assert len(incident._alerts) == 1
     assert incident._alerts[0].event["status"] == AlertStatus.FIRING.value
@@ -486,25 +505,27 @@ def test_incident_status_change_manual_alert_enrichment(
             email=SINGLE_TENANT_EMAIL,
             api_key_name=SINGLE_TENANT_UUID,
             role=Admin.get_name(),
-        )
+        ),
     ):
-    # Manually enrich the alert to change its status to resolved
+        # Manually enrich the alert to change its status to resolved
         client.post(
-            f"/alerts/enrich?dispose_on_new_alert=true",
+            "/alerts/enrich?dispose_on_new_alert=true",
             headers={"x-api-key": "some-key"},
             json={
                 "enrichments": {
                     "status": AlertStatus.RESOLVED.value,
                     "dismissed": False,
-                    "dismissUntil": ""
+                    "dismissUntil": "",
                 },
-                "fingerprint": incident._alerts[0].fingerprint
-            }
+                "fingerprint": incident._alerts[0].fingerprint,
+            },
         )
 
     # Refresh incident data and verify status change
     db_session.expire_all()
-    incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id, with_alerts=True, session=db_session)
+    incident = get_incident_by_id(
+        SINGLE_TENANT_UUID, incident.id, with_alerts=True, session=db_session
+    )
     assert len(incident._alerts) == 1
 
     alert_dtos = convert_db_alerts_to_dto_alerts(incident._alerts)
@@ -518,7 +539,9 @@ def test_incident_metadata(
     db_session, client, test_app, setup_stress_alerts_no_elastic
 ):
     severity_cycle = cycle([s.order for s in IncidentSeverity])
-    status_cycle = cycle([s.value for s in IncidentStatus if s != IncidentStatus.DELETED.value])
+    status_cycle = cycle(
+        [s.value for s in IncidentStatus if s != IncidentStatus.DELETED.value]
+    )
     sources_cycle = cycle(["keep", "keep-test", "keep-test-2"])
     services_cycle = cycle(["keep", "keep-test", "keep-test-2"])
 
@@ -878,6 +901,8 @@ def test_merge_incidents_app(
     assert incident_3_via_api["status"] == IncidentStatus.MERGED.value
     assert incident_3_via_api["merged_into_incident_id"] == str(incident_1.id)
 """
+
+
 @pytest.mark.asyncio
 async def test_split_incident(db_session, create_alert):
     # Create source incident with multiple alerts
@@ -888,7 +913,7 @@ async def test_split_incident(db_session, create_alert):
             "user_summary": "Source incident with mixed severity",
         },
     )
-    
+
     # Create alerts with different severities
     create_alert(
         "fp1",
@@ -908,7 +933,7 @@ async def test_split_incident(db_session, create_alert):
         datetime.utcnow(),
         {"severity": AlertSeverity.INFO.value},
     )
-    
+
     alerts = db_session.query(Alert).all()
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident_source.id, [a.fingerprint for a in alerts]
@@ -924,43 +949,52 @@ async def test_split_incident(db_session, create_alert):
     )
 
     # Verify initial state
-    incident_source = get_incident_by_id(SINGLE_TENANT_UUID, incident_source.id, with_alerts=True)
+    incident_source = get_incident_by_id(
+        SINGLE_TENANT_UUID, incident_source.id, with_alerts=True
+    )
     assert len(incident_source._alerts) == 3
     assert incident_source.severity == IncidentSeverity.CRITICAL.order
 
-    incident_dest = get_incident_by_id(SINGLE_TENANT_UUID, incident_dest.id, with_alerts=True)
+    incident_dest = get_incident_by_id(
+        SINGLE_TENANT_UUID, incident_dest.id, with_alerts=True
+    )
     assert len(incident_dest._alerts) == 0
 
     # Split the critical alert using IncidentBl
-    critical_alert = next(a for a in alerts if a.event["severity"] == AlertSeverity.CRITICAL.value)
+    critical_alert = next(
+        a for a in alerts if a.event["severity"] == AlertSeverity.CRITICAL.value
+    )
     incident_bl = IncidentBl(SINGLE_TENANT_UUID, db_session, pusher_client=None)
-    
+
     # Move alert to destination incident
     await incident_bl.add_alerts_to_incident(
-        incident_id=incident_dest.id,
-        alert_fingerprints=[critical_alert.fingerprint]
+        incident_id=incident_dest.id, alert_fingerprints=[critical_alert.fingerprint]
     )
-    
+
     # Remove alert from source incident
     incident_bl.delete_alerts_from_incident(
-        incident_id=incident_source.id,
-        alert_fingerprints=[critical_alert.fingerprint]
+        incident_id=incident_source.id, alert_fingerprints=[critical_alert.fingerprint]
     )
 
     db_session.expire_all()
 
     # Verify final state
-    incident_source = get_incident_by_id(SINGLE_TENANT_UUID, incident_source.id, with_alerts=True)
+    incident_source = get_incident_by_id(
+        SINGLE_TENANT_UUID, incident_source.id, with_alerts=True
+    )
     assert len(incident_source._alerts) == 2
     assert incident_source.severity == IncidentSeverity.WARNING.order
 
-    incident_dest = get_incident_by_id(SINGLE_TENANT_UUID, incident_dest.id, with_alerts=True)
+    incident_dest = get_incident_by_id(
+        SINGLE_TENANT_UUID, incident_dest.id, with_alerts=True
+    )
     assert len(incident_dest._alerts) == 1
     assert incident_dest.severity == IncidentSeverity.CRITICAL.order
     assert incident_dest._alerts[0].fingerprint == critical_alert.fingerprint
     assert len(incident_dest._alerts) == 1
     assert incident_dest.severity == IncidentSeverity.CRITICAL.order
     assert incident_dest._alerts[0].fingerprint == critical_alert.fingerprint
+
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 def test_split_incident_app(db_session, client, test_app, create_alert):
@@ -983,22 +1017,35 @@ def test_split_incident_app(db_session, client, test_app, create_alert):
         {"severity": AlertSeverity.CRITICAL.value},
     )
     alerts = db_session.query(Alert).all()
-    critical_alert = next(a for a in alerts if a.event["severity"] == AlertSeverity.CRITICAL.value)
+    critical_alert = next(
+        a for a in alerts if a.event["severity"] == AlertSeverity.CRITICAL.value
+    )
     incident_1 = create_incident_from_dict(
-        SINGLE_TENANT_UUID, {"user_generated_name": "Source incident", "user_summary": "Source incident"}
+        SINGLE_TENANT_UUID,
+        {"user_generated_name": "Source incident", "user_summary": "Source incident"},
     )
     add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident_1.id, [a.fingerprint for a in alerts],
-        session=db_session
+        SINGLE_TENANT_UUID,
+        incident_1.id,
+        [a.fingerprint for a in alerts],
+        session=db_session,
     )
 
-    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True, session=db_session)
+    incident_1 = get_incident_by_id(
+        SINGLE_TENANT_UUID, incident_1.id, with_alerts=True, session=db_session
+    )
     assert len(incident_1._alerts) == 3
 
     incident_2 = create_incident_from_dict(
-        SINGLE_TENANT_UUID, {"user_generated_name": "Destination incident", "user_summary": "Destination incident"}
+        SINGLE_TENANT_UUID,
+        {
+            "user_generated_name": "Destination incident",
+            "user_summary": "Destination incident",
+        },
     )
-    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True, session=db_session)
+    incident_2 = get_incident_by_id(
+        SINGLE_TENANT_UUID, incident_2.id, with_alerts=True, session=db_session
+    )
     assert len(incident_2._alerts) == 0
 
     response = client.post(
@@ -1094,25 +1141,30 @@ def test_cross_tenant_exposure_issue_2768(db_session, create_alert):
     assert len(incident_tenant_2_alerts) == 1
 
 
-
 def test_incident_bl_create_incident(db_session):
 
     pusher = PusherMock()
     workflow_manager = WorkflowManagerMock()
 
     with patch("keep.api.bl.incidents_bl.WorkflowManager", workflow_manager):
-        incident_bl = IncidentBl(tenant_id=SINGLE_TENANT_UUID, session=db_session, pusher_client=pusher)
+        incident_bl = IncidentBl(
+            tenant_id=SINGLE_TENANT_UUID, session=db_session, pusher_client=pusher
+        )
 
         incidents_count = db_session.query(Incident).count()
         assert incidents_count == 0
 
-        incident_dto_in = IncidentDtoIn(**{
-            "user_generated_name": "Incident name",
-            "user_summary": "Keep: Incident description",
-            "status": "firing",
-        })
+        incident_dto_in = IncidentDtoIn(
+            **{
+                "user_generated_name": "Incident name",
+                "user_summary": "Keep: Incident description",
+                "status": "firing",
+            }
+        )
 
-        incident_dto = incident_bl.create_incident(incident_dto_in, generated_from_ai=False)
+        incident_dto = incident_bl.create_incident(
+            incident_dto_in, generated_from_ai=False
+        )
         assert isinstance(incident_dto, IncidentDto)
 
         incidents_count = db_session.query(Incident).count()
@@ -1136,7 +1188,9 @@ def test_incident_bl_create_incident(db_session):
         assert event_name == "incident-change"
         assert isinstance(data, dict)
         assert "incident_id" in data
-        assert data["incident_id"] is None # For new incidents we don't send incident.id
+        assert (
+            data["incident_id"] is None
+        )  # For new incidents we don't send incident.id
 
         # Check workflow manager
         assert len(workflow_manager.events) == 1
@@ -1145,7 +1199,9 @@ def test_incident_bl_create_incident(db_session):
         assert wf_incident_dto.id == incident_dto.id
         assert wf_action == "created"
 
-        incident_dto_ai = incident_bl.create_incident(incident_dto_in, generated_from_ai=True)
+        incident_dto_ai = incident_bl.create_incident(
+            incident_dto_in, generated_from_ai=True
+        )
         assert isinstance(incident_dto_ai, IncidentDto)
 
         incidents_count = db_session.query(Incident).count()
@@ -1161,28 +1217,32 @@ def test_incident_bl_update_incident(db_session):
 
     with patch("keep.api.bl.incidents_bl.WorkflowManager", workflow_manager):
         incident_bl = IncidentBl(
-            tenant_id=SINGLE_TENANT_UUID,
-            session=db_session,
-            pusher_client=pusher
+            tenant_id=SINGLE_TENANT_UUID, session=db_session, pusher_client=pusher
         )
-        incident_dto_in = IncidentDtoIn(**{
-            "user_generated_name": "Incident name",
-            "user_summary": "Keep: Incident description",
-            "status": "firing",
-        })
+        incident_dto_in = IncidentDtoIn(
+            **{
+                "user_generated_name": "Incident name",
+                "user_summary": "Keep: Incident description",
+                "status": "firing",
+            }
+        )
 
         incident_dto = incident_bl.create_incident(incident_dto_in)
 
         incidents_count = db_session.query(Incident).count()
         assert incidents_count == 1
 
-        new_incident_dto_in = IncidentDtoIn(**{
-            "user_generated_name": "Not an incident",
-            "user_summary": "Keep: Incident description",
-            "status": "firing",
-        })
+        new_incident_dto_in = IncidentDtoIn(
+            **{
+                "user_generated_name": "Not an incident",
+                "user_summary": "Keep: Incident description",
+                "status": "firing",
+            }
+        )
 
-        incident_dto_update = incident_bl.update_incident(incident_dto.id, new_incident_dto_in, False)
+        incident_dto_update = incident_bl.update_incident(
+            incident_dto.id, new_incident_dto_in, False
+        )
 
         incidents_count = db_session.query(Incident).count()
         assert incidents_count == 1
@@ -1206,7 +1266,7 @@ def test_incident_bl_update_incident(db_session):
         assert wf_action == "updated"
 
         # Check pusher
-        assert len(pusher.triggers) == 2 # 1 for create, 1 for update
+        assert len(pusher.triggers) == 2  # 1 for create, 1 for update
         channel, event_name, data = pusher.triggers[-1]
         assert channel == f"private-{SINGLE_TENANT_UUID}"
         assert event_name == "incident-change"
@@ -1221,32 +1281,40 @@ def test_incident_bl_delete_incident(db_session):
 
     with patch("keep.api.bl.incidents_bl.WorkflowManager", workflow_manager):
         incident_bl = IncidentBl(
-            tenant_id=SINGLE_TENANT_UUID,
-            session=db_session,
-            pusher_client=pusher
+            tenant_id=SINGLE_TENANT_UUID, session=db_session, pusher_client=pusher
         )
         # Check error if no incident found
         with pytest.raises(HTTPException, match="Incident not found"):
             incident_bl.delete_incident(uuid4())
 
-        incident_dto_in = IncidentDtoIn(**{
-            "user_generated_name": "Incident name",
-            "user_summary": "Keep: Incident description",
-            "status": "firing",
-        })
+        incident_dto_in = IncidentDtoIn(
+            **{
+                "user_generated_name": "Incident name",
+                "user_summary": "Keep: Incident description",
+                "status": "firing",
+            }
+        )
 
         incident_dto = incident_bl.create_incident(incident_dto_in)
 
-        incidents_count = db_session.query(Incident).filter(Incident.status != IncidentStatus.DELETED.value).count()
+        incidents_count = (
+            db_session.query(Incident)
+            .filter(Incident.status != IncidentStatus.DELETED.value)
+            .count()
+        )
         assert incidents_count == 1
 
         incident_bl.delete_incident(incident_dto.id)
 
-        incidents_count = db_session.query(Incident).filter(Incident.status != IncidentStatus.DELETED.value).count()
+        incidents_count = (
+            db_session.query(Incident)
+            .filter(Incident.status != IncidentStatus.DELETED.value)
+            .count()
+        )
         assert incidents_count == 0
 
         # Check pusher
-        assert len(pusher.triggers) == 2 # Created, deleted
+        assert len(pusher.triggers) == 2  # Created, deleted
 
         channel, event_name, data = pusher.triggers[-1]
         assert channel == f"private-{SINGLE_TENANT_UUID}"
@@ -1256,7 +1324,7 @@ def test_incident_bl_delete_incident(db_session):
         assert data["incident_id"] is None
 
         # Check workflow manager
-        assert len(workflow_manager.events) == 2 # Created, deleted
+        assert len(workflow_manager.events) == 2  # Created, deleted
         wf_tenant_id, wf_incident_dto, wf_action = workflow_manager.events[-1]
         assert wf_tenant_id == SINGLE_TENANT_UUID
         assert wf_incident_dto.id == incident_dto.id
@@ -1272,15 +1340,15 @@ async def test_incident_bl_add_alert_to_incident(db_session, create_alert):
     with patch("keep.api.bl.incidents_bl.WorkflowManager", workflow_manager):
         with patch("keep.api.bl.incidents_bl.ElasticClient", elastic_client):
             incident_bl = IncidentBl(
-                tenant_id=SINGLE_TENANT_UUID,
-                session=db_session,
-                pusher_client=pusher
+                tenant_id=SINGLE_TENANT_UUID, session=db_session, pusher_client=pusher
             )
-            incident_dto_in = IncidentDtoIn(**{
-                "user_generated_name": "Incident name",
-                "user_summary": "Keep: Incident description",
-                "status": "firing",
-            })
+            incident_dto_in = IncidentDtoIn(
+                **{
+                    "user_generated_name": "Incident name",
+                    "user_summary": "Keep: Incident description",
+                    "status": "firing",
+                }
+            )
 
             incident_dto = incident_bl.create_incident(incident_dto_in)
 
@@ -1298,27 +1366,19 @@ async def test_incident_bl_add_alert_to_incident(db_session, create_alert):
             )
 
             await incident_bl.add_alerts_to_incident(
-                incident_dto.id,
-                ["alert-test-1"],
-                False
+                incident_dto.id, ["alert-test-1"], False
             )
 
             alerts_to_incident_count = (
-                db_session
-                .query(LastAlertToIncident)
-                .where(
-                    LastAlertToIncident.incident_id == incident_dto.id
-                )
+                db_session.query(LastAlertToIncident)
+                .where(LastAlertToIncident.incident_id == incident_dto.id)
                 .count()
             )
             assert alerts_to_incident_count == 1
 
             alert_to_incident = (
-                db_session
-                .query(LastAlertToIncident)
-                .where(
-                    LastAlertToIncident.fingerprint == "alert-test-1"
-                )
+                db_session.query(LastAlertToIncident)
+                .where(LastAlertToIncident.fingerprint == "alert-test-1")
                 .first()
             )
             assert alert_to_incident is not None
@@ -1358,15 +1418,15 @@ async def test_incident_bl_delete_alerts_from_incident(db_session, create_alert)
     with patch("keep.api.bl.incidents_bl.WorkflowManager", workflow_manager):
         with patch("keep.api.bl.incidents_bl.ElasticClient", elastic_client):
             incident_bl = IncidentBl(
-                tenant_id=SINGLE_TENANT_UUID,
-                session=db_session,
-                pusher_client=pusher
+                tenant_id=SINGLE_TENANT_UUID, session=db_session, pusher_client=pusher
             )
-            incident_dto_in = IncidentDtoIn(**{
-                "user_generated_name": "Incident name",
-                "user_summary": "Keep: Incident description",
-                "status": "firing",
-            })
+            incident_dto_in = IncidentDtoIn(
+                **{
+                    "user_generated_name": "Incident name",
+                    "user_summary": "Keep: Incident description",
+                    "status": "firing",
+                }
+            )
 
             incident_dto = incident_bl.create_incident(incident_dto_in)
 
@@ -1384,18 +1444,15 @@ async def test_incident_bl_delete_alerts_from_incident(db_session, create_alert)
             )
 
             await incident_bl.add_alerts_to_incident(
-                incident_dto.id,
-                ["alert-test-1"],
-                False
+                incident_dto.id, ["alert-test-1"], False
             )
 
             alerts_to_incident_count = (
-                db_session
-                .query(LastAlertToIncident)
+                db_session.query(LastAlertToIncident)
                 .where(
                     and_(
                         LastAlertToIncident.incident_id == incident_dto.id,
-                        LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT
+                        LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                     )
                 )
                 .count()
@@ -1408,12 +1465,11 @@ async def test_incident_bl_delete_alerts_from_incident(db_session, create_alert)
             )
 
             alerts_to_incident_count = (
-                db_session
-                .query(LastAlertToIncident)
+                db_session.query(LastAlertToIncident)
                 .where(
                     and_(
                         LastAlertToIncident.incident_id == incident_dto.id,
-                        LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT
+                        LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                     )
                 )
                 .count()
@@ -1446,3 +1502,134 @@ async def test_incident_bl_delete_alerts_from_incident(db_session, create_alert)
             assert el_tenant_id == SINGLE_TENANT_UUID
             assert el_alerts[-1].fingerprint == "alert-test-1"
             assert el_alerts[-1].incident is None
+
+
+def test_correlation_with_mapping(db_session, create_alert):
+    # 1. Create correlation rule for checkmk alerts
+    correlation_rule = Rule(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="CheckMK Alert Rule",
+        definition={
+            "sql": "N/A",  # Not used anymore
+            "params": {},
+        },
+        definition_cel='source == "checkmk"',  # Match all CheckMK alerts
+        timeframe=600,
+        timeunit="seconds",
+        created_by=SINGLE_TENANT_EMAIL,
+        creation_time=datetime.utcnow(),
+        require_approve=False,
+        resolve_on=ResolveOn.ALL.value,
+        create_on=CreateIncidentOn.ANY.value,
+    )
+    db_session.add(correlation_rule)
+
+    # 2. Create mapping rule that adds host, location, owner based on service
+    mapping_data = [
+        {"service": "app1", "host": "host1", "location": "us-east", "owner": "team-a"},
+        {"service": "app2", "host": "host2", "location": "us-west", "owner": "team-b"},
+    ]
+
+    mapping_rule = MappingRule(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Service Mapping",
+        description="Map service to additional attributes",
+        type="csv",
+        matchers=["service"],
+        rows=mapping_data,
+        file_name="service_mapping.csv",
+        priority=1,
+        created_by=SINGLE_TENANT_EMAIL,
+    )
+    db_session.add(mapping_rule)
+    db_session.commit()
+
+    # Create RulesEngine instance
+    RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+
+    # 3. Create alert that should trigger correlation rule
+    create_alert(
+        "checkmk-alert-1",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {
+            "check_command": "check_disk_1",
+            "source": ["checkmk"],
+            "service": "app1",
+            "severity": AlertSeverity.CRITICAL.value,
+            "name": "CPU Usage High",
+        },
+    )
+
+    # Verify incident was created
+    incidents, total = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_confirmed=True
+    )
+
+    assert total == 1
+    incident = incidents[0]
+
+    # Verify incident has one alert
+    assert incident.alerts_count == 1
+
+    # Get first alert and verify mapping enrichment
+    alert = incident._alerts[0]
+    alert_db = get_alert_by_event_id(SINGLE_TENANT_UUID, str(alert.id))
+    alert_dto = convert_db_alerts_to_dto_alerts([alert_db])[0]
+    assert alert_dto.host == "host1"
+    assert alert_dto.location == "us-east"
+    assert alert_dto.owner == "team-a"
+
+    # Create another alert for different service
+    create_alert(
+        "checkmk-alert-2",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {
+            "check_command": "check_disk_2",
+            "source": ["checkmk"],
+            "service": "app2",
+            "severity": AlertSeverity.CRITICAL.value,
+            "name": "Memory Usage High",
+        },
+    )
+
+    # Verify another incident was created
+    incidents, total = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_confirmed=True
+    )
+
+    assert total == 1
+
+    # Find the second incident (with app2 service)
+    assert incidents[0].alerts_count == 2
+
+    # Verify second incident's alert was properly mapped
+    alert2 = incidents[0]._alerts[1]
+    alert2_db = get_alert_by_event_id(SINGLE_TENANT_UUID, str(alert2.id))
+    alert2_dto = convert_db_alerts_to_dto_alerts([alert2_db])[0]
+
+    assert alert2_dto.host == "host2"
+    assert alert2_dto.location == "us-west"
+    assert alert2_dto.owner == "team-b"
+
+    # Test non-matching service
+    create_alert(
+        "checkmk-alert-3",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {
+            "check_command": "check_disk",
+            "source": ["checkmk"],
+            "service": "app3",  # Not in mapping
+            "severity": AlertSeverity.CRITICAL.value,
+            "name": "Disk Usage High",
+        },
+    )
+
+    incidents, total = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_confirmed=True
+    )
+
+    assert total == 1
+    assert incidents[0].alerts_count == 3
