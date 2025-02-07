@@ -149,9 +149,9 @@ export const CorrelationForm = ({
             render={({ field: { value, onChange } }) => (
               <Select value={value} onValueChange={onChange} className="mt-2">
                 <SelectItem value="never">No auto-resolution</SelectItem>
-                <SelectItem value="all">All alerts resolved</SelectItem>
-                <SelectItem value="first">First alert resolved</SelectItem>
-                <SelectItem value="last">Last alert resolved</SelectItem>
+                <SelectItem value="all_resolved">All alerts resolved</SelectItem>
+                <SelectItem value="first_resolved">First alert resolved</SelectItem>
+                <SelectItem value="last_resolved">Last alert resolved</SelectItem>
               </Select>
             )}
           />

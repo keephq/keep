@@ -139,7 +139,7 @@ export function WorkflowExecutionResultsInternal({
   checks,
 }: {
   executionData: WorkflowExecutionDetail | WorkflowExecutionFailure;
-  workflowId: string | undefined;
+  workflowId: string;
   workflowRaw: string | undefined;
   checks: number;
 }) {
@@ -189,6 +189,7 @@ export function WorkflowExecutionResultsInternal({
         <div className="h-[calc(100vh-300px)]">
           <MonacoYAMLEditor
             workflowRaw={workflowRaw ?? ""}
+            workflowId={workflowId}
             executionLogs={logs}
             executionStatus={status}
             hoveredStep={hoveredStep}
