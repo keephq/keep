@@ -7,7 +7,6 @@ Mainly, it creates the database engine based on the environment variables.
 import json
 import logging
 import os
-import sqlite3
 
 import pymysql
 from dotenv import find_dotenv, load_dotenv
@@ -17,8 +16,6 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.ddl import CreateColumn
 from sqlalchemy.sql.functions import GenericFunction
 from sqlmodel import Session, create_engine
-from sqlalchemy.engine import Engine
-from sqlalchemy import event
 
 # This import is required to create the tables
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
@@ -95,7 +92,6 @@ load_dotenv(find_dotenv())
 DB_CONNECTION_STRING = config(
     "DATABASE_CONNECTION_STRING", default=None
 )  # pylint: disable=invalid-name
-IS_DB_SQLITE = None
 DB_POOL_SIZE = config(
     "DATABASE_POOL_SIZE", default=5, cast=int
 )  # pylint: disable=invalid-name
@@ -211,19 +207,3 @@ def _compile_json_table(element, compiler, **kw):
             for clause in element.clauses.clauses[1:]
         ),
     )
-
-
-# By default, foreign_key support is false in sqlite
-# https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#foreign-key-support
-@event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    global IS_DB_SQLITE
-    if IS_DB_SQLITE:
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-    if IS_DB_SQLITE is None:
-        IS_DB_SQLITE = isinstance(dbapi_connection, sqlite3.Connection)
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
