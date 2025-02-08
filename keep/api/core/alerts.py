@@ -251,9 +251,11 @@ def build_alerts_query(
         order_by_field = group_by_exp[0]
 
     if sort_dir == "desc":
-        query = query.order_by(desc(text(order_by_field)))
+        query = query.order_by(Alert.id, desc(text(order_by_field)))
     else:
-        query = query.order_by(asc(text(order_by_field)))
+        query = query.order_by(Alert.id, asc(text(order_by_field)))
+
+    query = query.distinct(Alert.id)
 
     return query
 

@@ -216,7 +216,7 @@ def __build_last_incidents_query(
         provider_type = get_cel_to_sql_provider_for_dialect(dialect)
         instance = provider_type(properties_metadata)
         sql_filter = instance.convert_to_sql_str(cel)
-        query = query.filter(text(sql_filter)).group_by(Incident.id)
+        query = query.filter(text(sql_filter))
 
     query = query.group_by(Incident.id)
 
