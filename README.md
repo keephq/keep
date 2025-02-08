@@ -237,8 +237,6 @@
             NetBox
         </a>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/netdata-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/netdata-icon.png" alt="Netdata"/><br/>
@@ -269,14 +267,14 @@
             Prometheus
         </a>
     </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/rollbar-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/rollbar-icon.png" alt="Rollbar"/><br/>
             Rollbar
         </a>
     </td>
-</tr>
-<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/sentry-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/sentry-icon.png" alt="Sentry"/><br/>
@@ -307,14 +305,14 @@
           Splunk
         </a>
   </td>
+</tr>
+<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/statuscake-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/statuscake-icon.png" alt="StatusCake"/><br/>
           StatusCake
         </a>
   </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/sumologic-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/sumologic-icon.png" alt="SumoLogic"/><br/>
