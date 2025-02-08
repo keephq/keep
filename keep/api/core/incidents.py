@@ -210,7 +210,7 @@ def __build_last_incidents_query(
         query = query.filter(Incident.last_seen_time >= lower_timestamp)
 
     if sorting:
-        query = query.order_by(sorting.get_order_by(Incident))
+        query = query.order_by(Incident.id, sorting.get_order_by(Incident))
 
     if cel:
         provider_type = get_cel_to_sql_provider_for_dialect(dialect)
@@ -218,7 +218,7 @@ def __build_last_incidents_query(
         sql_filter = instance.convert_to_sql_str(cel)
         query = query.filter(text(sql_filter))
 
-    query = query.group_by(Incident.id)
+    query = query.distinct(Incident.id)
 
     # Order by start_time in descending order and limit the results
     query = query.limit(limit).offset(offset)
