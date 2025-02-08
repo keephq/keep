@@ -6,12 +6,15 @@ import { Download, Copy, Check, Save } from "lucide-react";
 import { Button } from "@tremor/react";
 import { LogEntry } from "@/shared/api/workflow-executions";
 import { getStepStatus } from "@/shared/lib/logs-utils";
+import yaml from "js-yaml";
+import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import "./MonacoYAMLEditor.css";
+import { useWorkflowDetail } from "@/utils/hooks/useWorkflowDetail";
 
 interface Props {
   workflowRaw: string;
   filename?: string;
-  workflowId?: string;
+  workflowId: string;
   executionLogs?: LogEntry[] | null;
   executionStatus?: string;
   hoveredStep?: string | null;
@@ -19,7 +22,6 @@ interface Props {
   selectedStep?: string | null;
   setSelectedStep?: (step: string | null) => void;
   readOnly?: boolean;
-  onSave?: (content: string) => Promise<void>;
 }
 
 const MonacoYAMLEditor = ({
@@ -33,9 +35,10 @@ const MonacoYAMLEditor = ({
   selectedStep,
   setSelectedStep,
   readOnly = false,
-  onSave,
 }: Props) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const { updateWorkflow } = useWorkflowActions();
+  const { mutateWorkflowDetail } = useWorkflowDetail(workflowId || "");
 
   const findStepNameForPosition = (
     lineNumber: number,
@@ -435,11 +438,16 @@ const MonacoYAMLEditor = ({
   }, [workflowRaw]);
 
   const handleSaveWorkflow = async () => {
-    if (!editorRef.current || !onSave) return;
+    if (!editorRef.current) return;
 
     const content = editorRef.current.getValue();
     try {
-      await onSave(content);
+      const parsedYaml = yaml.load(content) as {
+        workflow: Record<string, unknown>;
+      };
+      // update workflow
+      await updateWorkflow(workflowId, parsedYaml);
+
       setOriginalContent(content);
       setHasChanges(false);
     } catch (err) {
@@ -497,7 +505,7 @@ const MonacoYAMLEditor = ({
         style={{ height: "calc(100vh - 300px)" }}
       >
         <div className="absolute right-2 top-2 z-10 flex gap-2">
-          {!readOnly && onSave && (
+          {!readOnly && (
             <Button
               color="orange"
               size="sm"

@@ -774,3 +774,61 @@ def get_workflow_execution_status(
         event_type=event_type,
     )
     return workflow_execution_dto
+
+
+@router.put(
+    "/{workflow_id}/toggle",
+    description="Enable or disable a workflow",
+)
+def toggle_workflow_state(
+    workflow_id: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:workflows"])
+    ),
+    session: Session = Depends(get_session),
+) -> dict:
+    """
+    Toggle the enabled/disabled state of a workflow
+
+    Args:
+        workflow_id (str): The workflow ID
+        authenticated_entity (AuthenticatedEntity): The authenticated entity
+        session (Session): DB Session object
+
+    Raises:
+        HTTPException: If the workflow was not found or if it's provisioned
+
+    Returns:
+        dict: Status of the operation
+    """
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(f"Toggling workflow {workflow_id}", extra={"tenant_id": tenant_id})
+
+    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    if not workflow:
+        logger.warning(
+            f"Tenant tried to toggle workflow {workflow_id} that does not exist",
+            extra={"tenant_id": tenant_id},
+        )
+        raise HTTPException(404, "Workflow not found")
+
+    if workflow.provisioned:
+        raise HTTPException(403, detail="Cannot modify a provisioned workflow")
+
+    # Toggle the disabled state
+    workflow.is_disabled = not workflow.is_disabled
+    workflow.last_updated = datetime.datetime.now()
+
+    session.add(workflow)
+    session.commit()
+
+    logger.info(
+        f"Workflow {workflow_id} {'disabled' if workflow.is_disabled else 'enabled'}",
+        extra={"tenant_id": tenant_id},
+    )
+
+    return {
+        "workflow_id": workflow_id,
+        "status": "success",
+        "is_disabled": workflow.is_disabled,
+    }
