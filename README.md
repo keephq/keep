@@ -232,6 +232,14 @@
   </tr>
   <tr>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/netbox-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/netbox-icon.png" alt="NetBox"/><br/>
+            NetBox
+        </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/netdata-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/netdata-icon.png" alt="Netdata"/><br/>
             Netdata
