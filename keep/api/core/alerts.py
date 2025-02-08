@@ -347,8 +347,11 @@ def get_alert_facets(tenant_id: str, facet_ids_to_load: list[str] = None) -> lis
 
 def get_alert_potential_facet_fields(tenant_id: str) -> list[str]:
     with Session(engine) as session:
-        query = select(
-            AlertField.field_name
-        ).select_from(AlertField).where(AlertField.tenant_id == tenant_id).group_by(AlertField.field_name)
+        query = (
+            select(AlertField.field_name)
+            .select_from(AlertField)
+            .where(AlertField.tenant_id == tenant_id)
+            .distinct(AlertField.field_name)
+        )
         result = session.exec(query).all()
-        return result
+        return [row[0] for row in result]

@@ -63,6 +63,19 @@ export const AddFacetModalWithSuggestions: React.FC<
               className="mb-4"
             />
           </div>
+          <div>
+            <div className="mb-1">
+              <span className="font-bold">Facet property path:</span>
+            </div>
+
+            <TextInput
+              placeholder="Enter facet property path or select from the list"
+              required={true}
+              value={propertyPath}
+              onChange={(e) => setPropertyPath(e.target.value)}
+              className="mb-4"
+            />
+          </div>
           <div className="flex flex-col flex-1 overflow-hidden">
             <div className="mb-1">
               <span className="font-bold">Select facet property path:</span>
@@ -90,7 +103,7 @@ export const AddFacetModalWithSuggestions: React.FC<
                       <button
                         key={propPath}
                         onClick={() => setPropertyPath(propPath)}
-                        className={`w-full text-left px-4 py-2 rounded ${propertyPath === propPath ? "bg-orange-500" : "hover:bg-gray-100"}`}
+                        className={`w-full text-left px-4 py-2 rounded`}
                       >
                         {propPath}
                       </button>
