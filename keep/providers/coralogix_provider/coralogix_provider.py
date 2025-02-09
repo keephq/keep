@@ -2,6 +2,8 @@
 Coralogix is a modern observability platform delivers comprehensive visibility into all your logs, metrics, traces and security events with end-to-end monitoring.
 """
 
+import json
+
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -69,57 +71,39 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
+        fields_list = event["fields"] if "fields" in event else []
+        fields = {item["key"]: item["value"] for item in fields_list}
+
+        labels = fields.get("text", fields.get("labels"))
+        if isinstance(labels, str):
+            try:
+                labels = json.loads(labels)
+            except Exception:
+                # Do nothing, keep labels as str
+                pass
+
         alert = AlertDto(
-            id=(
-                CoralogixProvider.get_value_by_key(
-                    event["fields"], "alertUniqueIdentifier"
-                )
-                if "fields" in event
-                else None
-            ),
+            id=fields.get("alertUniqueIdentifier"),
             alert_id=event["alert_id"] if "alert_id" in event else None,
             name=event["name"] if "name" in event else None,
             description=event["description"] if "description" in event else None,
             status=CoralogixProvider.STATUS_MAP.get(event["alert_action"]),
             severity=CoralogixProvider.SEVERITIES_MAP.get(
-                CoralogixProvider.get_value_by_key(event["fields"], "severityLowercase")
+                fields.get("severityLowercase", "info")
             ),
-            lastReceived=(
-                CoralogixProvider.get_value_by_key(event["fields"], "timestampISO")
-                if "fields" in event
-                else None
-            ),
-            alertUniqueIdentifier=(
-                CoralogixProvider.get_value_by_key(
-                    event["fields"], "alertUniqueIdentifier"
-                )
-                if "fields" in event
-                else None
-            ),
+            lastReceived=fields.get("timestampISO"),
+            alertUniqueIdentifier=fields.get("alertUniqueIdentifier"),
             uuid=event["uuid"] if "uuid" in event else None,
             threshold=event["threshold"] if "threshold" in event else None,
             timewindow=event["timewindow"] if "timewindow" in event else None,
-            group_by_labels=(
-                event["group_by_labels"] if "group_by_labels" in event else None
-            ),
+            group_by_labels=fields.get("group_by_labels"),
             alert_url=event["alert_url"] if "alert_url" in event else None,
             log_url=event["log_url"] if "log_url" in event else None,
-            team=(
-                CoralogixProvider.get_value_by_key(event["fields"], "team")
-                if "fields" in event
-                else None
-            ),
-            priority=(
-                CoralogixProvider.get_value_by_key(event["fields"], "priority")
-                if "fields" in event
-                else None
-            ),
-            computer=(
-                CoralogixProvider.get_value_by_key(event["fields"], "computer")
-                if "fields" in event
-                else None
-            ),
-            fields=event["fields"] if "fields" in event else None,
+            team=fields.get("team"),
+            priority=fields.get("priority"),
+            computer=fields.get("computer"),
+            fields=fields,
+            labels=labels,
             source=["coralogix"],
         )
 
