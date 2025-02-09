@@ -221,4 +221,5 @@ tests/provision/*
 grafana/*
 !grafana/provisioning/
 !grafana/dashboards/
+superset/shared-db/db2
 keep/providers/grafana_provider/grafana/png/*
