@@ -162,7 +162,7 @@ export const Facet: React.FC<FacetProps> = ({
   }
 
   return (
-    <div className="pb-2 border-b border-gray-200">
+    <div data-test-id="facet" className="pb-2 border-b border-gray-200">
       <div
         className="relative lex items-center justify-between px-2 py-2 cursor-pointer hover:bg-gray-50"
         onClick={() => handleExpandCollapse(isOpen)}
