@@ -249,7 +249,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     <section
       id={`${panelId}-facets`}
       className={"min-w-52 max-w-52 " + className}
-      data-test-id="facets-panel"
+      data-testid="facets-panel"
     >
       <div className="space-y-2">
         <div className="flex justify-between">

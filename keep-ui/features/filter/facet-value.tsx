@@ -46,7 +46,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
     <div
       className={`flex items-center px-2 py-1 h-7 hover:bg-gray-100 rounded-sm cursor-pointer group ${!count ? "opacity-50 pointer-events-none" : ""}`}
       onClick={handleCheckboxClick}
-      data-test-id="facet-value"
+      data-testid="facet-value"
     >
       <div className="flex items-center min-w-[24px]">
         <input

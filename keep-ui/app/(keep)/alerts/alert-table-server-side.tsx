@@ -436,7 +436,7 @@ export function AlertTableServerSide({
                 <div ref={a11yContainerRef} className="sr-only" />
 
                 {/* Make table wrapper scrollable */}
-                <div data-test-id="alerts-table" className="flex-grow">
+                <div data-testid="alerts-table" className="flex-grow">
                   <Table className="[&>table]:table-fixed [&>table]:w-full">
                     <AlertsTableHeaders
                       columns={columns}

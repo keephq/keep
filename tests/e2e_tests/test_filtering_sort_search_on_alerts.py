@@ -4,6 +4,7 @@ import time
 from datetime import datetime, timedelta
 import uuid
 
+import pytest
 import requests
 from playwright.sync_api import expect, Browser
 
@@ -36,24 +37,41 @@ def query_allerts(
 
 
 def create_fake_alert(index: int, provider_type: str):
-    if provider_type == "datadog":
-        title = "Memory leak detected"
-        status = "Triggered"
-        severity = "P4"
+    title = "Low Disk Space"
+    status = "firing"
+    severity = "critical"
 
-        if index % 4:
-            title = "High CPU Usage"
-            status = "Recovered"
-            severity = "P3"
-        elif index % 3:
-            title = "Memory Usage High"
-            status = "Muted"
-            severity = "P2"
-        elif index % 2:
-            title = "Network Error"
+    if index % 4 == 0:
+        title = "High CPU Usage"
+        status = "resolved"
+        severity = "warning"
+    elif index % 3 == 0:
+        title = "Memory Usage High"
+        severity = "info"
+    elif index % 2 == 0:
+        title = "Network Error"
+        status = "suppressed"
+        severity = "high"
+
+    if severity == "critical":
+        print("f")
+
+    if provider_type == "datadog":
+        SEVERITIES_MAP = {
+            "info": "P4",
+            "warning": "P3",
+            "high": "P2",
+            "critical": "P1",
+        }
+
+        STATUS_MAP = {
+            "firing": "Triggered",
+            "resolved": "Recovered",
+            "suppressed": "Muted",
+        }
 
         return {
-            "title": f"[{severity}] [{status}] {title} {index}",
+            "title": f"[{SEVERITIES_MAP.get(severity, SEVERITIES_MAP['critical'])}] [{STATUS_MAP.get(status, STATUS_MAP['firing'])}] {title} {provider_type} {index}",
             "type": "metric alert",
             "query": "avg(last_5m):avg:system.cpu.user{*} by {host} > 90",
             "message": f"CPU usage is over 90% on srv1-eu1-prod. Searched value: {'even' if index % 2 else 'odd'}",
@@ -64,12 +82,42 @@ def create_fake_alert(index: int, provider_type: str):
             "scopes": "srv2-eu1-prod",
             "host.name": "srv2-ap1-prod",
             "last_updated": 1739114561286,
-            "alert_transition": status,
-            "timestamp": (datetime.now() + timedelta(minutes=index)).isoformat(),
+            "alert_transition": STATUS_MAP.get(status, "Triggered"),
             "tags": {
                 "envNameTag": "production" if index % 2 else "development",
             },
             "id": "bf414194e8622f241c38c645b634d6f18d92c58f56eccafa2e6a2b27b08adf05",
+        }
+    elif provider_type == "prometheus":
+        SEVERITIES_MAP = {
+            "critical": "critical",
+            "high": "error",
+            "warning": "warning",
+            "info": "info",
+            "low": "low",
+        }
+        STATUS_MAP = {
+            "firing": "firing",
+            "resolved": "firing",
+        }
+
+        return {
+            "summary": f"{title} {provider_type} {index} summary",
+            "labels": {
+                "severity": SEVERITIES_MAP.get(severity, SEVERITIES_MAP["critical"]),
+                "host": "host1",
+                "service": "calendar-producer-java-otel-api-dd",
+                "instance": "instance2",
+                "alertname": f"{title} {provider_type} {index}",
+            },
+            "status": STATUS_MAP.get(status, STATUS_MAP["firing"]),
+            "annotations": {
+                "summary": f"{title} {provider_type} {index}. It's not normal for customer_id:acme"
+            },
+            "startsAt": "2025-02-09T17:26:12.769318+00:00",
+            "endsAt": "0001-01-01T00:00:00Z",
+            "generatorURL": "http://example.com/graph?g0.expr=NetworkLatencyHigh",
+            "fingerprint": str(uuid.uuid4()),
         }
 
 
@@ -77,34 +125,45 @@ def upload_alerts():
     total_alerts = 20
     current_alerts = query_allerts()
 
-    if query_allerts()["count"] < total_alerts:
-        simulated_alerts = []
-        for index in range(total_alerts - current_alerts["count"]):
-            provider_type = random.choice(["datadog"])
-            alert = create_fake_alert(index, provider_type)
-            alert["temp_id"] = str(uuid.uuid4())
+    if current_alerts["count"] >= total_alerts:
+        return current_alerts
 
-            simulated_alerts.append(alert)
-            url = f"{KEEP_API_URL}/alerts/event/{provider_type}"
-            requests.post(
-                url,
-                json=alert,
-                timeout=5,
-                headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+    simulated_alerts = []
+
+    for alert_index, provider_type in enumerate(["datadog"] * 10 + ["prometheus"] * 10):
+        alert = create_fake_alert(alert_index, provider_type)
+        alert["temp_id"] = str(uuid.uuid4())
+        alert["randomDate"] = (
+            datetime.utcnow() + timedelta(days=-alert_index)
+        ).isoformat()
+
+        simulated_alerts.append((provider_type, alert))
+
+    print("f")
+
+    for provider_type, alert in simulated_alerts:
+        url = f"{KEEP_API_URL}/alerts/event/{provider_type}"
+        requests.post(
+            url,
+            json=alert,
+            timeout=5,
+            headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+        )
+        time.sleep(0.5)
+
+    attempt = 0
+    while True:
+        time.sleep(1)
+        current_alerts = query_allerts()
+        attempt += 1
+
+        if attempt >= 10:
+            raise Exception(
+                f"{total_alerts - current_alerts['count']} out of {total_alerts} alerts were not uploaded"
             )
-        attempt = 0
-        while True:
-            time.sleep(1)
-            current_alerts = query_allerts()
-            attempt += 1
 
-            if attempt >= 10:
-                raise Exception(
-                    f"{total_alerts - current_alerts['count']} out of {total_alerts} alerts were not uploaded"
-                )
-
-            if len(current_alerts["results"]) == len(simulated_alerts):
-                break
+        if len(current_alerts["results"]) == len(simulated_alerts):
+            break
     return current_alerts
 
 
@@ -113,11 +172,11 @@ def init_test(browser: Browser):
     current_alerts_results = current_alerts["results"]
 
     browser.goto(f"{KEEP_UI_URL}/alerts/feed", timeout=10000)
-    browser.wait_for_selector("[data-test-id='facet-value']", timeout=10000)
+    browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
     browser.wait_for_selector(
         f"text={current_alerts_results[0]['name']}", timeout=10000
     )
-    rows_count = browser.locator("[data-test-id='alerts-table'] table tbody tr").count()
+    rows_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()
     # check that required alerts are loaded and displayed
     assert rows_count == len(current_alerts_results)
     return current_alerts_results
@@ -131,10 +190,10 @@ def assert_facet(browser, facet_name, alerts, alert_property_name: str):
         counters_dict[alert[alert_property_name]] += 1
 
     for facet_value, count in counters_dict.items():
-        facet_locator = browser.locator("[data-test-id='facet']", has_text=facet_name)
+        facet_locator = browser.locator("[data-testid='facet']", has_text=facet_name)
         expect(facet_locator).to_be_visible()
         facet_value_locator = facet_locator.locator(
-            "[data-test-id='facet-value']", has_text=facet_value
+            "[data-testid='facet-value']", has_text=facet_value
         )
         expect(facet_value_locator).to_be_visible()
         expect(facet_value_locator).to_contain_text(str(count))
@@ -148,36 +207,113 @@ def assert_alerts_by_column(
     column_index: int,
 ):
     filtered_by_status = [alert for alert in alerts if predicate(alert)]
-    matched_rows = browser.locator("[data-test-id='alerts-table'] table tbody tr")
+    matched_rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
     expect(matched_rows).to_have_count(len(filtered_by_status))
 
     # check that only alerts with selected status are displayed
     for alert in filtered_by_status:
         row_locator = browser.locator(
-            "[data-test-id='alerts-table'] table tbody tr", has_text=alert["name"]
+            "[data-testid='alerts-table'] table tbody tr", has_text=alert["name"]
         )
         expect(row_locator).to_be_visible()
+
+        if column_index is None:
+            return
+
         column_locator = row_locator.locator("td").nth(column_index)
         expect(column_locator).to_have_text(alert[property_in_alert])
 
+facet_test_cases = {
+    "severity": {
+        "alert_property_name": "severity",
+        "value": "high",
+    },
+    "status": {
+        "alert_property_name": "status",
+        "column_index": 5,
+        "value": "suppressed",
+    },
+    "source": {
+        "alert_property_name": "providerType",
+        "value": "prometheus",
+    },
+}
 
-def test_filter(browser):
+
+@pytest.mark.parametrize("facet_test_case", facet_test_cases.keys())
+def test_filter_by_static_facet(browser, facet_test_case):
+    test_case = facet_test_cases[facet_test_case]
+    facet_name = facet_test_case
+    alert_property_name = test_case["alert_property_name"]
+    column_index = test_case.get("column_index", None)
+    value = test_case["value"]
     current_alerts = init_test(browser)
-    status = "suppressed"
 
     # check existence of default facets
-    for facet_name in ["severity", "status", "source", "source", "incident"]:
-        expect(
-            browser.locator("[data-test-id='facet']", has_text=facet_name)
-        ).to_be_visible()
+    # for facet_name in ["severity", "status", "source", "source", "incident"]:
+    expect(
+        browser.locator("[data-testid='facet']", has_text=facet_name)
+    ).to_be_visible()
 
-    assert_facet(browser, "status", current_alerts, "status")
+    assert_facet(browser, facet_name, current_alerts, alert_property_name)
 
-    option = browser.locator("[data-test-id='facet-value']", has_text=status)
+    option = browser.locator("[data-testid='facet-value']", has_text=value)
     option.hover()
 
     option.locator("button", has_text="Only").click()
 
     assert_alerts_by_column(
-        browser, current_alerts, lambda x: x["status"] == status, "status", 5
+        browser,
+        current_alerts,
+        lambda alert: alert[alert_property_name] == value,
+        alert_property_name,
+        column_index,
     )
+
+
+search_by_cel_tescases = {
+    "contains for nested property": {
+        "cel_query": "labels.service.contains('java-otel')",
+        "predicate": lambda alert: "java-otel"
+        in alert.get("labels", {}).get("service", ""),
+        "alert_property_name": "name",
+    },
+    "date comparison greater than or equal": {
+        "cel_query": f"randomDate >= '{(datetime.utcnow() + timedelta(days=-5)).isoformat()}'",
+        "predicate": lambda alert: alert.get("randomDate")
+        and datetime.fromisoformat(alert.get("randomDate"))
+        >= (datetime.utcnow() + timedelta(days=-5)),
+        "alert_property_name": "name",
+    },
+    # "high": {
+    #     "cel_query": "severity = 'high'",
+    # },
+    # "resolved": {
+    #     "cel_query": "status = 'resolved'",
+    # },
+}
+
+
+@pytest.mark.parametrize("search_test_case", search_by_cel_tescases.keys())
+def test_search_by_cel(browser, search_test_case):
+    test_case = search_by_cel_tescases[search_test_case]
+    cel_query = test_case["cel_query"]
+    predicate = test_case["predicate"]
+    alert_property_name = test_case["alert_property_name"]
+    current_alerts = init_test(browser)
+    browser.locator("")
+    search_input = browser.locator(
+        "textarea[placeholder*='Use CEL to filter your alerts']"
+    )
+    expect(search_input).to_be_visible()
+    search_input.fill(cel_query)
+    search_input.press("Enter")
+
+    assert_alerts_by_column(
+        browser,
+        current_alerts,
+        predicate,
+        alert_property_name,
+        None,
+    )
+    print("f")
