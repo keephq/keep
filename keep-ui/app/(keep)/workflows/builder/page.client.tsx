@@ -4,7 +4,6 @@ import { Title, Button } from "@tremor/react";
 import { useEffect, useRef, useState } from "react";
 import {
   PlusIcon,
-  BoltIcon,
   ArrowUpOnSquareIcon,
   PlayIcon,
 } from "@heroicons/react/20/solid";
@@ -12,7 +11,7 @@ import { BuilderCard } from "./builder-card";
 import { loadWorkflowYAML } from "./utils";
 import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
-import { useWorkflowBuilderContext } from "./workflow-builder-context";
+import { useWorkflowStore } from "./workflow-store";
 
 export function WorkflowBuilderPageClient({
   workflowRaw: workflow,
@@ -21,23 +20,12 @@ export function WorkflowBuilderPageClient({
   workflowRaw?: string;
   workflowId?: string;
 }) {
-  const {
-    buttonsEnabled,
-    generateEnabled,
-    triggerRun,
-    triggerGenerate,
-    triggerSave,
-    isSaving,
-  } = useWorkflowBuilderContext();
-
   const [fileContents, setFileContents] = useState<string | null>("");
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    setFileContents(null);
-    setFileName("");
-  }, []);
+  // TODO: find out do I need to use it like this or i can use the store directly
+  const { isPendingSync, saveWorkflow, triggerTestRun } = useWorkflowStore();
 
   function loadWorkflow() {
     document.getElementById("workflowFile")?.click();
@@ -92,7 +80,6 @@ export function WorkflowBuilderPageClient({
                 icon={PlusIcon}
                 className="min-w-28"
                 variant="secondary"
-                disabled={!buttonsEnabled}
               >
                 New
               </Button>
@@ -103,7 +90,6 @@ export function WorkflowBuilderPageClient({
                 className="min-w-28"
                 variant="secondary"
                 icon={ArrowUpOnSquareIcon}
-                disabled={!buttonsEnabled}
               >
                 Load
               </Button>
@@ -121,8 +107,8 @@ export function WorkflowBuilderPageClient({
             size="md"
             className="min-w-28"
             icon={PlayIcon}
-            disabled={!generateEnabled}
-            onClick={triggerRun}
+            disabled={isPendingSync}
+            onClick={() => triggerTestRun()}
           >
             Test run
           </Button>
@@ -131,23 +117,11 @@ export function WorkflowBuilderPageClient({
             size="md"
             className="min-w-28"
             icon={ArrowUpOnSquareIcon}
-            disabled={!generateEnabled || isSaving}
-            onClick={triggerSave}
+            disabled={isPendingSync}
+            onClick={() => saveWorkflow()}
           >
-            {isSaving ? "Saving..." : "Save"}
+            {isPendingSync ? "Saving..." : "Save"}
           </Button>
-          {!workflow && (
-            <Button
-              disabled={!generateEnabled}
-              color="orange"
-              size="md"
-              className="min-w-28"
-              icon={BoltIcon}
-              onClick={triggerGenerate}
-            >
-              Get YAML
-            </Button>
-          )}
         </div>
       </div>
       <BuilderCard

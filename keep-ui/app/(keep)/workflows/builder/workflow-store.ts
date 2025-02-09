@@ -1,4 +1,9 @@
-import { Edge } from "@xyflow/react";
+import {
+  addEdge,
+  applyEdgeChanges,
+  applyNodeChanges,
+  Edge,
+} from "@xyflow/react";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import {
@@ -7,16 +12,21 @@ import {
   ToolboxConfiguration,
 } from "./types";
 import { V2Properties, V2Step, FlowNode } from "./builder-store";
-import { DefinitionV2, getDefinitionFromNodesEdgesProperties } from "./utils";
+import {
+  DefinitionV2,
+  getDefinitionFromNodesEdgesProperties,
+  getToolboxConfiguration,
+} from "./utils";
 import { processWorkflowV2 } from "utils/reactFlow";
 import { debounce } from "lodash";
 import { v4 as uuidv4 } from "uuid";
-import { workflowsApi } from "@/shared/api/workflows";
+import { workflowsApi } from "@/shared/api/workflows-client";
 import { stepValidatorV2, globalValidatorV2 } from "./builder-validators";
 import { parseWorkflow, generateWorkflow } from "./utils";
 import { wrapDefinitionV2 } from "./utils";
 import { YAMLException } from "js-yaml";
 import { Provider } from "../../providers/providers";
+import dagre, { graphlib } from "@dagrejs/dagre";
 
 const { createWorkflow, updateWorkflow } = workflowsApi;
 
@@ -82,14 +92,14 @@ interface WorkflowStore {
   globalValidationError: string | null;
 
   // Workflow Actions
-  saveWorkflow: (workflowId: string) => Promise<void>;
+  saveWorkflow: () => Promise<void>;
 
   // Lifecycle
   initialize: (yamlString: string, providers: Provider[]) => void;
   cleanup: () => void;
 
   // Internal Actions
-  updateDefinition: () => void;
+  updateDefinition: ReturnType<typeof debounce>;
 
   // Add validator config to state
   validatorConfigurationV2: ValidatorConfigurationV2;
@@ -111,9 +121,36 @@ interface WorkflowStore {
   onEdgesChange: (changes: any) => void;
   onConnect: (connection: any) => void;
   onDragOver: (event: React.DragEvent) => void;
-  onDrop: (event: React.DragEvent, position: { x: number; y: number }) => void;
+  onDrop: (
+    event: React.DragEvent,
+    getPosition: () => { x: number; y: number }
+  ) => void;
   setToolBoxConfig: (config: any) => void;
-  setFirstInitilisationDone: (done: boolean) => void;
+
+  // Test Run State
+  runRequestCount: number;
+
+  // Test Run Actions
+  triggerTestRun: () => void;
+
+  // Layout Operations
+  onLayout: (options: {
+    direction: string;
+    useInitialNodes?: boolean;
+    initialNodes?: FlowNode[];
+    initialEdges?: Edge[];
+  }) => void;
+  getLayoutedElements: (
+    nodes: FlowNode[],
+    edges: Edge[],
+    options?: any
+  ) => {
+    nodes: FlowNode[];
+    edges: Edge[];
+  };
+
+  // Add isLoading state
+  isLoading: boolean;
 }
 
 const INITIAL_STATE = {
@@ -149,6 +186,8 @@ const INITIAL_STATE = {
     step: (step: V2Step, parent?: V2Step) => false,
     root: (def: Definition) => false,
   },
+  runRequestCount: 0,
+  isLoading: true,
 };
 
 export const useWorkflowStore = create<WorkflowStore>()(
@@ -336,8 +375,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
     },
 
     // Workflow Actions
-    saveWorkflow: async (workflowId) => {
+    saveWorkflow: async () => {
       const { definition, isPendingSync, errorNode } = get();
+      const workflowId = get().v2Properties.id;
 
       if (isPendingSync) {
         throw new Error("Cannot save while changes are pending");
@@ -483,18 +523,14 @@ export const useWorkflowStore = create<WorkflowStore>()(
       get().updateDefinition();
     },
 
-    // Update initialize to accept either workflow object or YAML string
-    initialize: (input, providers = []) => {
-      set(INITIAL_STATE);
+    // Update initialize to handle layout
+    initialize: (yamlString: string, providers = []) => {
+      set({ ...INITIAL_STATE, isLoading: true });
 
-      if (!input) {
-        return;
-      }
+      if (!yamlString) return;
 
       try {
-        // Parse input based on type
-        const definition = parseWorkflow(input, providers);
-
+        const definition = parseWorkflow(yamlString, providers);
         const { nodes, edges } = processWorkflowV2(definition.sequence, {
           x: 0,
           y: 0,
@@ -505,10 +541,13 @@ export const useWorkflowStore = create<WorkflowStore>()(
           edges,
           v2Properties: definition.properties || {},
           definition: wrapDefinitionV2(definition),
-          isLayouted: true,
           lastSyncedAt: Date.now(),
+          isLoading: false,
+          toolboxConfiguration: getToolboxConfiguration(providers),
         });
 
+        // Trigger layout after setting initial nodes/edges
+        get().onLayout({ direction: "DOWN" });
         get().validateWorkflow();
       } catch (error) {
         console.error("Failed to initialize workflow:", error);
@@ -522,6 +561,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
             ...state.validationErrors,
             global: errorMessage,
           },
+          isLoading: false,
         }));
       }
     },
@@ -653,35 +693,145 @@ export const useWorkflowStore = create<WorkflowStore>()(
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
     },
-
-    onDrop: (event, position) => {
+    onDrop: (event, getPosition) => {
       event.preventDefault();
+      event.stopPropagation();
 
-      const type = event.dataTransfer.getData("application/reactflow");
-      if (!type) return;
+      try {
+        let step: any = event.dataTransfer.getData("application/reactflow");
+        if (!step) {
+          return;
+        }
+        step = JSON.parse(step);
+        if (!step) return;
 
-      const newNode = {
-        id: uuidv4(),
-        type,
-        position,
-        data: { label: `${type} node` },
-      };
+        // Use the getPosition function to get flow coordinates
+        const position = getPosition();
 
-      set((state) => ({
-        nodes: [...state.nodes, newNode],
-        isPendingSync: true,
-        changes: state.changes + 1,
-      }));
-      get().updateDefinition();
+        const newUuid = uuidv4();
+        const newNode = {
+          id: newUuid,
+          type: "custom",
+          position,
+          data: {
+            label: step.name! as string,
+            ...step,
+            id: newUuid,
+            name: step.name,
+            type: step.type,
+            componentType: step.componentType,
+          },
+          isDraggable: true,
+          dragHandle: ".custom-drag-handle",
+        } as FlowNode;
+
+        set({ nodes: [...get().nodes, newNode] });
+      } catch (err) {
+        console.error(err);
+      }
     },
 
     setToolBoxConfig: (config) => {
       set({ toolboxConfiguration: config });
     },
 
-    setFirstInitilisationDone: (done) => {
-      // This could be added to the state if needed
-      // For now it seems to be only used in the hook
+    // Test Run Actions
+    triggerTestRun: () => {
+      set((state) => ({
+        runRequestCount: state.runRequestCount + 1,
+      }));
+    },
+
+    // Layout Operations
+    getLayoutedElements: (nodes, edges, options = {}) => {
+      const isHorizontal = options?.["elk.direction"] === "RIGHT";
+      const dagreGraph = new graphlib.Graph();
+      dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+      dagreGraph.setGraph({
+        rankdir: isHorizontal ? "LR" : "TB",
+        nodesep: 80,
+        ranksep: 80,
+        edgesep: 80,
+      });
+
+      nodes.forEach((node) => {
+        const type = node?.data?.type
+          ?.replace("step-", "")
+          ?.replace("action-", "")
+          ?.replace("condition-", "")
+          ?.replace("__end", "");
+
+        let width = ["start", "end"].includes(type) ? 80 : 280;
+        let height = 80;
+
+        if (node.id === "trigger_start" || node.id === "trigger_end") {
+          width = 150;
+          height = 40;
+        }
+
+        dagreGraph.setNode(node.id, { width, height });
+      });
+
+      edges.forEach((edge) => {
+        dagreGraph.setEdge(edge.source, edge.target);
+      });
+
+      dagre.layout(dagreGraph);
+
+      const layoutedNodes = nodes.map((node) => {
+        const dagreNode = dagreGraph.node(node.id);
+        return {
+          ...node,
+          targetPosition: isHorizontal ? "left" : "top",
+          sourcePosition: isHorizontal ? "right" : "bottom",
+          style: {
+            ...node.style,
+            width: dagreNode.width as number,
+            height: dagreNode.height as number,
+          },
+          position: {
+            x: dagreNode.x - dagreNode.width / 2,
+            y: dagreNode.y - dagreNode.height / 2,
+          },
+        };
+      });
+
+      return {
+        nodes: layoutedNodes,
+        edges,
+      };
+    },
+
+    onLayout: ({
+      direction,
+      useInitialNodes = false,
+      initialNodes,
+      initialEdges,
+    }) => {
+      const opts = { "elk.direction": direction };
+      const ns = useInitialNodes ? initialNodes : get().nodes;
+      const es = useInitialNodes ? initialEdges : get().edges;
+
+      const { nodes: layoutedNodes, edges: layoutedEdges } =
+        get().getLayoutedElements(ns, es, opts);
+
+      const finalEdges = layoutedEdges.map((edge: Edge) => ({
+        ...edge,
+        animated: !!edge?.target?.includes("empty"),
+        data: { ...edge.data, isLayouted: true },
+      }));
+
+      const finalNodes = layoutedNodes.map((node: FlowNode) => ({
+        ...node,
+        data: { ...node.data, isLayouted: true },
+      }));
+
+      set({
+        nodes: finalNodes,
+        edges: finalEdges,
+        isLayouted: true,
+      });
     },
   }))
 );

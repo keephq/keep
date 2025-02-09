@@ -14,17 +14,38 @@ export function WorkflowProvider({
   workflow,
   children,
 }: WorkflowProviderProps) {
-  const initialize = useWorkflowStore((s) => s.initialize);
-  const cleanup = useWorkflowStore((s) => s.cleanup);
+  const {
+    initialize,
+    cleanup,
+    setToolBoxConfig,
+    updateV2Properties,
+    setSelectedNode,
+  } = useWorkflowStore();
+  const initializedWorkflowId = useWorkflowStore((s) => s.v2Properties.id);
   const { data: providers } = useProviders();
 
   useEffect(() => {
-    if (!workflow?.workflow_raw || !providers) {
+    if (
+      !workflow?.workflow_raw ||
+      !providers ||
+      initializedWorkflowId === workflow.id
+    ) {
       return;
     }
-    initialize(workflow?.workflow_raw, providers.providers);
+
+    // Initialize workflow
+    initialize(workflow.workflow_raw, providers.providers);
+
     return cleanup;
-  }, [workflow, providers, initialize, cleanup]);
+  }, [
+    workflow,
+    providers,
+    initialize,
+    cleanup,
+    setToolBoxConfig,
+    updateV2Properties,
+    setSelectedNode,
+  ]);
 
   return children;
 }

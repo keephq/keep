@@ -4,10 +4,11 @@ import {
   Background,
   Controls,
   EdgeTypes as EdgeTypesType,
+  useReactFlow,
 } from "@xyflow/react";
 import CustomNode from "./CustomNode";
 import CustomEdge from "./CustomEdge";
-import useWorkflowInitialization from "utils/hooks/useWorkflowInitialization";
+import { useWorkflowStore } from "./workflow-store";
 import DragAndDropSidebar from "./ToolBox";
 import { Provider } from "@/app/(keep)/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
@@ -21,24 +22,29 @@ const edgeTypes: EdgeTypesType = {
 const ReactFlowBuilder = ({
   providers,
   installedProviders,
-  toolboxConfiguration,
-  definition,
 }: {
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
-  toolboxConfiguration: Record<string, any>;
-  definition: any;
 }) => {
   const {
     nodes,
     edges,
-    isLoading,
     onEdgesChange,
     onNodesChange,
     onConnect,
     onDragOver,
     onDrop,
-  } = useWorkflowInitialization(definition, toolboxConfiguration);
+    isLoading,
+  } = useWorkflowStore();
+
+  const { screenToFlowPosition } = useReactFlow();
+
+  const handleDrop = React.useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      onDrop(event, () => screenToFlowPosition({ x: 0, y: 0 }));
+    },
+    [screenToFlowPosition, onDrop]
+  );
 
   return (
     <div className="h-[inherit] rounded-lg">
@@ -51,7 +57,7 @@ const ReactFlowBuilder = ({
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            onDrop={onDrop}
+            onDrop={handleDrop}
             onDragOver={onDragOver}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}

@@ -38,7 +38,6 @@ export function Builder({
   workflowId,
   installedProviders,
 }: Props) {
-  const [isLoading, setIsLoading] = useState(true);
   const [testRunModalOpen, setTestRunModalOpen] = useState(false);
   const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<
     WorkflowExecutionDetail | WorkflowExecutionFailure | null
@@ -47,12 +46,15 @@ export function Builder({
   // TODO: move to context?
   const { testWorkflow } = useWorkflowActions();
 
-  const searchParams = useSearchParams();
-  const { v2Properties, updateV2Properties, nodes, edges, definition } =
-    useWorkflowStore();
-
-  const initialize = useWorkflowStore((s) => s.initialize);
-  const initializeEmpty = useWorkflowStore((s) => s.initializeEmpty);
+  const {
+    nodes,
+    edges,
+    definition,
+    stepValidationError,
+    globalValidationError,
+    runRequestCount,
+    isLoading,
+  } = useWorkflowStore();
 
   const testRunWorkflow = async () => {
     setTestRunModalOpen(true);
@@ -69,24 +71,9 @@ export function Builder({
   };
 
   useEffect(() => {
-    if (loadedAlertFile) {
-      initialize(loadedAlertFile, providers);
-    } else {
-      const alertName = searchParams?.get("alertName");
-      const alertSource = searchParams?.get("alertSource");
-
-      initializeEmpty({
-        alertName,
-        alertSource,
-      });
-    }
-  }, [loadedAlertFile, providers]);
-
-  useEffect(() => {
-    if (runRequestCount) {
+    if (runRequestCount > 0) {
       testRunWorkflow();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runRequestCount]);
 
   console.log("nodes.length=", nodes.length);
@@ -141,8 +128,6 @@ export function Builder({
                   <ReactFlowBuilder
                     providers={providers}
                     installedProviders={installedProviders}
-                    definition={definition}
-                    toolboxConfiguration={getToolboxConfiguration(providers)}
                   />
                 </ReactFlowProvider>
               </div>
