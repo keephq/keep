@@ -7,10 +7,14 @@ import Skeleton from "react-loading-skeleton";
 import { Button, Switch, Text } from "@tremor/react";
 import { useWorkflowRun } from "@/utils/hooks/useWorkflowRun";
 import AlertTriggerModal from "../workflow-run-with-alert-modal";
-import { useRouter } from "next/navigation";
 import { useStore } from "../builder/builder-store";
 import { CloudIcon, ExclamationTriangleIcon } from "@heroicons/react/20/solid";
 import { Tooltip } from "@/shared/ui";
+import Modal from "@/components/ui/Modal";
+import { useCallback, useState } from "react";
+import { EditWorkflowMetadataForm } from "@/features/edit-workflow-metadata";
+import { useWorkflowBuilderContext } from "../builder/workflow-builder-context";
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 function WorkflowSwitch() {
   const { v2Properties, setV2Properties } = useStore();
@@ -47,6 +51,65 @@ function WorkflowSyncStatus() {
   );
 }
 
+function EditWorkflowMetadataModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const { setDefinition, validatorConfigurationV2, triggerSave } =
+    useWorkflowBuilderContext();
+  const { v2Properties, nodes, edges, updateV2Properties } = useStore();
+  const revalidateMultiple = useRevalidateMultiple();
+
+  console.log("v2Properties", v2Properties);
+
+  // TODO: move to builder store? or refactor to rely on the sync
+  const updateWorkflowMetadata = useCallback(
+    async (
+      workflowId: string,
+      { name, description }: { name: string; description: string }
+    ) => {
+      updateV2Properties({
+        name,
+        description,
+      });
+      // FIX: definition is not updated at the time of save
+      // Wait for next tick to ensure definition is updated
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Now trigger save
+      await triggerSave();
+      revalidateMultiple([`/workflows/${workflowId}`], { isExact: true });
+      onClose();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nodes, edges, v2Properties, validatorConfigurationV2]
+  );
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      className="w-[600px]"
+      title="Edit Workflow Metadata"
+    >
+      <EditWorkflowMetadataForm
+        workflow={{
+          id: v2Properties.id,
+          name: v2Properties.name,
+          description: v2Properties.description,
+        }}
+        onCancel={onClose}
+        onSubmit={({ name, description }) =>
+          updateWorkflowMetadata(v2Properties.id, { name, description })
+        }
+      />
+    </Modal>
+  );
+}
+
 export default function WorkflowDetailHeader({
   workflowId: workflow_id,
   initialData,
@@ -55,16 +118,14 @@ export default function WorkflowDetailHeader({
   initialData?: Workflow;
 }) {
   const api = useApi();
-  const router = useRouter();
-  const {
-    data: workflow,
-    isLoading,
-    error,
-  } = useSWR<Partial<Workflow>>(
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const { data: workflow, error } = useSWR<Partial<Workflow>>(
     api.isReady() ? `/workflows/${workflow_id}` : null,
     (url: string) => api.get(url),
     { fallbackData: initialData, revalidateOnMount: false }
   );
+
+  const { v2Properties } = useStore();
 
   const {
     isRunning,
@@ -118,9 +179,8 @@ export default function WorkflowDetailHeader({
             color="orange"
             size="xs"
             variant="secondary"
-            onClick={() =>
-              router.push(`/workflows/${workflow.id}?tab=builder&edit=true`)
-            }
+            onClick={() => setIsEditModalOpen(true)}
+            disabled={!workflow || !v2Properties.id}
           >
             Edit
           </Button>
@@ -146,6 +206,10 @@ export default function WorkflowDetailHeader({
       {!!workflow && !!getTriggerModalProps && (
         <AlertTriggerModal {...getTriggerModalProps()} />
       )}
+      <EditWorkflowMetadataModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+      />
     </div>
   );
 }

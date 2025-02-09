@@ -8,7 +8,7 @@ import { useProviders } from "utils/hooks/useProviders";
 import { useWorkflowBuilderContext } from "./workflow-builder-context";
 import Loading from "../../loading";
 
-const Builder = dynamic(() => import("./builder"), {
+const Builder = dynamic(() => import("./builder").then((mod) => mod.Builder), {
   ssr: false, // Prevents server-side rendering
 });
 
@@ -76,7 +76,6 @@ export function BuilderCard({
       providers={providers}
       installedProviders={installedProviders}
       loadedAlertFile={fileContents}
-      fileName={fileName}
       workflow={workflow}
       workflowId={workflowId}
     />

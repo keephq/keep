@@ -12,7 +12,7 @@ import { BuilderCard } from "./builder-card";
 import { loadWorkflowYAML } from "./utils";
 import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
-import { WorkflowBuilderContext } from "./workflow-builder-context";
+import { useWorkflowBuilderContext } from "./workflow-builder-context";
 
 export function WorkflowBuilderPageClient({
   workflowRaw: workflow,
@@ -21,14 +21,15 @@ export function WorkflowBuilderPageClient({
   workflowRaw?: string;
   workflowId?: string;
 }) {
-  const [buttonsEnabled, setButtonsEnabled] = useState(false);
-  const [generateEnabled, setGenerateEnabled] = useState(false);
-  // signals for saving, generating, running the workflow
-  const [generateRequestCount, setGenerateRequestCount] = useState(0);
-  const [saveRequestCount, setSaveRequestCount] = useState(0);
-  const [runRequestCount, setRunRequestCount] = useState(0);
+  const {
+    buttonsEnabled,
+    generateEnabled,
+    triggerRun,
+    triggerGenerate,
+    triggerSave,
+    isSaving,
+  } = useWorkflowBuilderContext();
 
-  const [isSaving, setIsSaving] = useState(false);
   const [fileContents, setFileContents] = useState<string | null>("");
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,9 +51,6 @@ export function WorkflowBuilderPageClient({
       window.location.reload();
     }
   }
-
-  const enableButtons = (state: boolean) => setButtonsEnabled(state);
-  const enableGenerate = (state: boolean) => setGenerateEnabled(state);
 
   function handleFileChange(event: any) {
     const file = event.target.files[0];
@@ -78,105 +76,86 @@ export function WorkflowBuilderPageClient({
     };
     reader.readAsText(file);
   }
-  const incrementState = (s: number) => s + 1;
-  const triggerSave = () => setSaveRequestCount(incrementState);
-  const triggerGenerate = () => setGenerateRequestCount(incrementState);
-  const triggerRun = () => setRunRequestCount(incrementState);
   return (
     <main className="mx-auto max-w-full h-[98%]">
-      <WorkflowBuilderContext.Provider
-        value={{
-          generateRequestCount,
-          saveRequestCount,
-          runRequestCount,
-          triggerGenerate,
-          triggerSave,
-          triggerRun,
-          enableButtons,
-          enableGenerate,
-          isSaving,
-          setIsSaving,
-        }}
-      >
-        <div className="flex justify-between">
-          <div className="flex flex-col">
-            <Title>{workflowId ? "Edit" : "New"} Workflow</Title>
-          </div>
-          <div className="flex gap-2">
-            {!workflow && (
-              <>
-                <Button
-                  color="orange"
-                  size="md"
-                  onClick={createNewWorkflow}
-                  icon={PlusIcon}
-                  className="min-w-28"
-                  variant="secondary"
-                  disabled={!buttonsEnabled}
-                >
-                  New
-                </Button>
-                <Button
-                  color="orange"
-                  size="md"
-                  onClick={loadWorkflow}
-                  className="min-w-28"
-                  variant="secondary"
-                  icon={ArrowUpOnSquareIcon}
-                  disabled={!buttonsEnabled}
-                >
-                  Load
-                </Button>
-                <input
-                  type="file"
-                  id="workflowFile"
-                  style={{ display: "none" }}
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                />
-              </>
-            )}
-            <Button
-              color="orange"
-              size="md"
-              className="min-w-28"
-              icon={PlayIcon}
-              disabled={!generateEnabled}
-              onClick={triggerRun}
-            >
-              Run
-            </Button>
-            <Button
-              color="orange"
-              size="md"
-              className="min-w-28"
-              icon={ArrowUpOnSquareIcon}
-              disabled={!generateEnabled || isSaving}
-              onClick={triggerSave}
-            >
-              {isSaving ? "Saving..." : "Deploy"}
-            </Button>
-            {!workflow && (
+      <div className="flex justify-between">
+        <div className="flex flex-col">
+          <Title>{workflowId ? "Edit" : "New"} Workflow</Title>
+        </div>
+        <div className="flex gap-2">
+          {!workflow && (
+            <>
               <Button
-                disabled={!generateEnabled}
                 color="orange"
                 size="md"
+                onClick={createNewWorkflow}
+                icon={PlusIcon}
                 className="min-w-28"
-                icon={BoltIcon}
-                onClick={triggerGenerate}
+                variant="secondary"
+                disabled={!buttonsEnabled}
               >
-                Get YAML
+                New
               </Button>
-            )}
-          </div>
+              <Button
+                color="orange"
+                size="md"
+                onClick={loadWorkflow}
+                className="min-w-28"
+                variant="secondary"
+                icon={ArrowUpOnSquareIcon}
+                disabled={!buttonsEnabled}
+              >
+                Load
+              </Button>
+              <input
+                type="file"
+                id="workflowFile"
+                style={{ display: "none" }}
+                ref={fileInputRef}
+                onChange={handleFileChange}
+              />
+            </>
+          )}
+          <Button
+            color="orange"
+            size="md"
+            className="min-w-28"
+            icon={PlayIcon}
+            disabled={!generateEnabled}
+            onClick={triggerRun}
+          >
+            Test run
+          </Button>
+          <Button
+            color="orange"
+            size="md"
+            className="min-w-28"
+            icon={ArrowUpOnSquareIcon}
+            disabled={!generateEnabled || isSaving}
+            onClick={triggerSave}
+          >
+            {isSaving ? "Saving..." : "Save"}
+          </Button>
+          {!workflow && (
+            <Button
+              disabled={!generateEnabled}
+              color="orange"
+              size="md"
+              className="min-w-28"
+              icon={BoltIcon}
+              onClick={triggerGenerate}
+            >
+              Get YAML
+            </Button>
+          )}
         </div>
-        <BuilderCard
-          fileContents={fileContents}
-          fileName={fileName}
-          workflow={workflow}
-          workflowId={workflowId}
-        />
-      </WorkflowBuilderContext.Provider>
+      </div>
+      <BuilderCard
+        fileContents={fileContents}
+        fileName={fileName}
+        workflow={workflow}
+        workflowId={workflowId}
+      />
     </main>
   );
 }

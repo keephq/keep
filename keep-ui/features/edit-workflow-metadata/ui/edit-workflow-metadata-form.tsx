@@ -10,10 +10,13 @@ export function EditWorkflowMetadataForm({
 }: {
   workflow: Workflow;
   onCancel: () => void;
-  onSubmit: (
-    workflowId: string,
-    { name, description }: { name: string; description: string }
-  ) => void;
+  onSubmit: ({
+    name,
+    description,
+  }: {
+    name: string;
+    description: string;
+  }) => void;
 }) {
   const [name, setName] = useState(workflow.name);
   const [description, setDescription] = useState(workflow.description);
@@ -21,7 +24,7 @@ export function EditWorkflowMetadataForm({
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSubmit(workflow.id, { name, description });
+    onSubmit({ name, description });
   };
 
   return (

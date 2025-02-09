@@ -13,12 +13,6 @@ import { Provider } from "@/app/(keep)/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
 import "@xyflow/react/dist/style.css";
 
-import {
-  Definition,
-  ReactFlowDefinition,
-  V2Step,
-} from "@/app/(keep)/workflows/builder/types";
-
 const nodeTypes = { custom: CustomNode as any };
 const edgeTypes: EdgeTypesType = {
   "custom-edge": CustomEdge as React.ComponentType<any>,
@@ -29,22 +23,11 @@ const ReactFlowBuilder = ({
   installedProviders,
   toolboxConfiguration,
   definition,
-  onDefinitionChange,
-  validatorConfiguration,
 }: {
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
   toolboxConfiguration: Record<string, any>;
   definition: any;
-  validatorConfiguration: {
-    step: (
-      step: V2Step,
-      parent?: V2Step,
-      defnition?: ReactFlowDefinition
-    ) => boolean;
-    root: (def: Definition) => boolean;
-  };
-  onDefinitionChange: (def: Definition) => void;
 }) => {
   const {
     nodes,
@@ -81,8 +64,6 @@ const ReactFlowBuilder = ({
         <ReactFlowEditor
           providers={providers}
           installedProviders={installedProviders}
-          onDefinitionChange={onDefinitionChange}
-          validatorConfiguration={validatorConfiguration}
         />
       </div>
     </div>
