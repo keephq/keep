@@ -16,6 +16,8 @@ import {
   Tab,
   TabPanels,
   TabPanel,
+  MultiSelect,
+  MultiSelectItem,
 } from "@tremor/react";
 import {
   ChangeEvent,
@@ -29,10 +31,10 @@ import { usePapaParse } from "react-papaparse";
 import { toast } from "react-toastify";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { MappingRule } from "./models";
-import { CreateableSearchSelect } from "@/components/ui/CreateableSearchSelect";
 import { useTopology } from "@/app/(keep)/topology/model";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui";
+import { showErrorToast, Input } from "@/shared/ui";
+import { PlusIcon, MinusIcon } from "@heroicons/react/20/solid";
 
 interface Props {
   editRule: MappingRule | null;
@@ -45,11 +47,9 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const [tabIndex, setTabIndex] = useState<number>(0);
   const [mapName, setMapName] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
+  const [attributeGroups, setAttributeGroups] = useState<string[][]>([[]]);
   const [mappingType, setMappingType] = useState<"csv" | "topology">("csv");
   const [mapDescription, setMapDescription] = useState<string>("");
-  const [selectedLookupAttributes, setSelectedLookupAttributes] = useState<
-    string[]
-  >([]);
   const { topologyData } = useTopology();
   const [priority, setPriority] = useState<number>(0);
   const editMode = editRule !== null;
@@ -64,7 +64,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       setMapDescription(editRule.description ? editRule.description : "");
       setMappingType(editRule.type ? editRule.type : "csv");
       setTabIndex(editRule.type === "csv" ? 0 : 1);
-      setSelectedLookupAttributes(editRule.matchers ? editRule.matchers : []);
+      setAttributeGroups(editRule.matchers ?? [[]]);
       setPriority(editRule.priority);
     }
   }, [editRule]);
@@ -73,16 +73,12 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const [parsedData, setParsedData] = useState<any[] | null>(null);
   const attributes = useMemo(() => {
     if (parsedData) {
-      setSelectedLookupAttributes([]);
       return Object.keys(parsedData[0]);
     }
 
     // If we are in the editMode then we need to generate attributes i.e. [selectedAttributes + matchers]
     if (editRule) {
-      return [
-        ...(editRule.attributes ? editRule.attributes : []),
-        ...editRule.matchers,
-      ];
+      return Object.keys(editRule.rows[0]);
     }
     return [];
   }, [parsedData, editRule]);
@@ -99,10 +95,11 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
     if (index === 0) {
       setParsedData(null);
       setMappingType("csv");
+      setAttributeGroups([[]]);
     } else {
       setParsedData(topologyData!);
       setMappingType("topology");
-      setSelectedLookupAttributes(["service"]);
+      setAttributeGroups([["service"]]);
     }
   };
 
@@ -128,20 +125,20 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
     setMapName("");
     setMapDescription("");
     setParsedData(null);
-    setSelectedLookupAttributes([]);
+    setAttributeGroups([[]]);
     handleFileReset();
   };
 
   const addRule = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const response = await api.post("/mapping", {
+      await api.post("/mapping", {
         priority: priority,
         name: mapName,
         description: mapDescription,
         file_name: fileName,
         type: mappingType,
-        matchers: selectedLookupAttributes.map((attr) => attr.trim()),
+        matchers: attributeGroups,
         rows: mappingType === "csv" ? parsedData : null,
       });
       exitEditOrCreateMode();
@@ -156,14 +153,14 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const updateRule = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const response = await api.put(`/mapping/${editRule?.id}`, {
+      await api.put(`/mapping/${editRule?.id}`, {
         id: editRule?.id,
         priority: priority,
         name: mapName,
         description: mapDescription,
         file_name: fileName,
         type: mappingType,
-        matchers: selectedLookupAttributes.map((attr) => attr.trim()),
+        matchers: attributeGroups,
         rows: mappingType === "csv" ? parsedData : null,
       });
       exitEditOrCreateMode();
@@ -179,15 +176,24 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
     clearForm();
   };
 
-  const submitEnabled = (): boolean => {
-    return (
-      !!mapName &&
-      selectedLookupAttributes.length > 0 &&
-      (editMode || !!parsedData) &&
-      attributes.filter(
-        (attribute) => !selectedLookupAttributes.includes(attribute)
-      ).length > 0
-    );
+  useEffect(() => {
+    if (mappingType === "topology") {
+      setAttributeGroups([["service"]]);
+    }
+  }, [mappingType]);
+
+  const handleAttributeChange = (groupIndex: number, selected: string[]) => {
+    const newGroups = [...attributeGroups];
+    newGroups[groupIndex] = selected;
+    setAttributeGroups(newGroups);
+  };
+
+  const addAttributeGroup = () => {
+    setAttributeGroups([...attributeGroups, []]);
+  };
+
+  const removeAttributeGroup = (index: number) => {
+    setAttributeGroups(attributeGroups.filter((_, i) => i !== index));
   };
 
   return (
@@ -195,7 +201,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       className="w-full py-2 h-full overflow-y-auto"
       onSubmit={editMode ? updateRule : addRule}
     >
-      <div className="mt-2.5 flex space-x-4">
+      <div className="mt-2.5 flex space-x-4 items-center">
         <div className="flex-1">
           <Text>
             Name<span className="text-red-500 text-xs">*</span>
@@ -257,7 +263,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           <TabPanels>
             <TabPanel>
               {mappingType === "csv" && (
-                <input
+                <Input
                   type="file"
                   accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
                   onChange={readFile}
@@ -267,9 +273,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
               )}
               {!parsedData && (
                 <Text className="text-xs text-red-500">
-                  {!editMode
-                    ? "* Upload a CSV file to begin with creating a new mapping"
-                    : ""}
+                  {!editMode ? "* Upload a CSV file to begin" : ""}
                 </Text>
               )}
             </TabPanel>
@@ -279,42 +283,66 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       </div>
       <Subtitle className="mt-2.5">Mapping Schema</Subtitle>
       <div className="mt-2.5">
-        <Text>Lookup attributes</Text>
-        <CreateableSearchSelect
-          onFieldChange={(key, val) => {
-            setSelectedLookupAttributes(val.split("||"));
-          }}
-          selectId="0"
-          options={attributes}
-          disabled={!editMode && !parsedData}
-          defaultValue={selectedLookupAttributes.join("||")}
-          className="mt-1"
-        />
-        <Text className="text-xs mt-1">
-          (Use `&&` to match multiple attributes at once and `||` to
-          condtionally match others)
-        </Text>
-        <Text className="text-xs mt-2">
-          For example: `tags.service_name || labels.service_name` will match if
-          either `tags.service_name` or `labels.service_name` is present in the
-          alert and matches the CSV.
-        </Text>
+        <Text>Select attributes to match against the uploaded CSV</Text>
+        <div className="flex flex-col gap-4 mt-2">
+          {attributeGroups.map((group, index) => (
+            <div key={index} className="flex items-center space-x-2">
+              <MultiSelect
+                onValueChange={(selected) =>
+                  handleAttributeChange(index, selected)
+                }
+                value={group}
+                placeholder="Select Attributes"
+                className="max-w-96"
+                disabled={mappingType === "topology"}
+              >
+                {attributes.map((attribute) => (
+                  <MultiSelectItem key={attribute} value={attribute}>
+                    {attribute}
+                  </MultiSelectItem>
+                ))}
+              </MultiSelect>
+              {index === attributeGroups.length - 1 &&
+                mappingType !== "topology" && (
+                  <Button
+                    onClick={addAttributeGroup}
+                    color="orange"
+                    size="xs"
+                    variant="secondary"
+                    className="flex items-center"
+                    disabled={group.length === 0}
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                  </Button>
+                )}
+              {index > 0 && mappingType !== "topology" && (
+                <Button
+                  onClick={() => removeAttributeGroup(index)}
+                  color="red"
+                  size="xs"
+                  variant="secondary"
+                  className="flex items-center"
+                >
+                  <MinusIcon className="w-4 h-4" />
+                </Button>
+              )}
+              {index < attributeGroups.length - 1 && (
+                <Text className="mx-2">OR</Text>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
       <div className="mt-2.5">
         <Text>Enriched with</Text>
         <div className="flex flex-col gap-1 py-1">
-          {selectedLookupAttributes.length === 0 ? (
+          {attributeGroups.flat().length === 0 ? (
             <Badge color="gray">...</Badge>
           ) : (
             attributes
-              .filter((attribute) => {
-                return !selectedLookupAttributes.some((lookupAttr) => {
-                  const parts = lookupAttr
-                    .split("&&")
-                    .map((part) => part.trim());
-                  return parts.includes(attribute);
-                });
-              })
+              .filter(
+                (attribute) => !attributeGroups.flat().includes(attribute)
+              )
               .map((attribute) => (
                 <Badge key={attribute} color="orange">
                   {attribute}
@@ -323,6 +351,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           )}
         </div>
       </div>
+
       <div className={"space-x-1 flex flex-row justify-end items-center"}>
         <Button
           color="orange"
@@ -333,12 +362,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           Cancel
         </Button>
 
-        <Button
-          disabled={!submitEnabled()}
-          color="orange"
-          size="xs"
-          type="submit"
-        >
+        <Button color="orange" size="xs" type="submit">
           {editMode ? "Update" : "Create"}
         </Button>
       </div>

@@ -66,7 +66,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       header: "Name",
       cell: (context) => {
         return (
-          <div>
+          <div className="flex items-center space-x-2">
             {getTypeIcon(context.row.original.type)} {context.row.original.name}
           </div>
         );
@@ -236,7 +236,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
                         {row.original.created_by}
                       </span>
                     </div>
-                    {row.original.last_updated_at && (
+                    {row.original.updated_by && (
                       <>
                         <div className="flex items-center space-x-2">
                           <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">

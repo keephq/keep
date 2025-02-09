@@ -40,10 +40,7 @@ def get_rules(
                 attributes = [
                     key
                     for key in rule.rows[0].keys()
-                    if not any(
-                        key in matcher.replace(" ", "").split("&&")
-                        for matcher in rule.matchers
-                    )
+                    if not any(key in matcher for matcher in rule.matchers)
                 ]
             elif rule_dto.type == "topology":
                 attributes = [
