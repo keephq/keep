@@ -274,7 +274,12 @@ class EnrichmentsBl:
         ):
             self.logger.debug(
                 "Alert does not match any of the conditions for the rule",
-                extra={"fingerprint": alert.fingerprint, "rule_id": rule.id},
+                extra={
+                    "fingerprint": alert.fingerprint,
+                    "rule_id": rule.id,
+                    "matchers": rule.matchers,
+                    "alert": str(alert),
+                },
             )
             return False
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Card, Title, Callout } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
@@ -12,11 +12,11 @@ import {
   isWorkflowExecution,
 } from "@/shared/api/workflow-executions";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { WorkflowDefinitionYAML } from "./WorkflowDefinitionYAML";
+import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
 import { setFavicon } from "@/shared/ui/utils/favicon";
-import { useMemo } from "react";
+import ResizableColumns from "@/components/ui/ResizableColumns";
 
 const convertWorkflowStatusToFaviconStatus = (
   status: WorkflowExecutionDetail["status"]
@@ -48,7 +48,6 @@ export function WorkflowExecutionResults({
   const [checks, setChecks] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
-  // TODO: enhance useWorkflowExecution hook with retry logic and use it here
   const { data: executionData, error: executionError } = useSWR(
     api.isReady() && workflowExecutionId
       ? `/workflows/${workflowId}/runs/${workflowExecutionId}`
@@ -66,7 +65,6 @@ export function WorkflowExecutionResults({
     }
   );
 
-  // Get workflow definition
   const { data: workflowData, error: workflowError } = useSWR(
     api.isReady() ? `/workflows/${workflowId}` : null,
     (url) => api.get(url)
@@ -92,7 +90,6 @@ export function WorkflowExecutionResults({
     }
     if (executionData.error) {
       setError(executionData?.error);
-      console.log("Stopping refresh interval");
       setRefreshInterval(0);
     } else if (executionData?.status === "success") {
       setError(executionData?.error);
@@ -170,13 +167,11 @@ export function WorkflowExecutionResultsInternal({
     return logs.some((log) => log.context?.event);
   }, [logs]);
 
-  // Get the event data from the first log that has it
   const eventData = useMemo(() => {
     if (!logs) return null;
     const eventLog = logs.find((log) => log.context?.event);
     if (!eventLog?.context?.event) return null;
 
-    // If the event is a string, try to parse it as JSON
     if (typeof eventLog.context.event === "string") {
       try {
         return JSON.parse(eventLog.context.event);
@@ -191,15 +186,19 @@ export function WorkflowExecutionResultsInternal({
     {
       name: "Workflow Definition",
       content: (
-        <WorkflowDefinitionYAML
-          workflowRaw={workflowRaw ?? ""}
-          executionLogs={logs}
-          executionStatus={status}
-          hoveredStep={hoveredStep}
-          setHoveredStep={setHoveredStep}
-          selectedStep={selectedStep}
-          setSelectedStep={setSelectedStep}
-        />
+        <div className="h-[calc(100vh-300px)]">
+          <MonacoYAMLEditor
+            workflowRaw={workflowRaw ?? ""}
+            executionLogs={logs}
+            executionStatus={status}
+            hoveredStep={hoveredStep}
+            setHoveredStep={setHoveredStep}
+            selectedStep={selectedStep}
+            setSelectedStep={setSelectedStep}
+            readOnly={true}
+            filename={workflowId}
+          />
+        </div>
       ),
     },
     ...(hasEvent
@@ -230,36 +229,43 @@ export function WorkflowExecutionResultsInternal({
           eventType={eventType}
         />
       )}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="flex flex-col gap-4">
-          <Title>Workflow Logs</Title>
-          <WorkflowExecutionLogs
-            logs={logs ?? null}
-            results={results ?? null}
-            status={status ?? ""}
-            checks={checks}
-            hoveredStep={hoveredStep}
-            selectedStep={selectedStep}
-          />
-        </div>
-        <div className="flex flex-col gap-4">
-          <Title>Workflow Metadata</Title>
-          <Card className="p-0 overflow-hidden">
-            <TabGroup>
-              <TabList className="p-2">
-                {tabs.map((tab) => (
-                  <Tab key={tab.name}>{tab.name}</Tab>
-                ))}
-              </TabList>
-              <TabPanels>
-                {tabs.map((tab) => (
-                  <TabPanel key={tab.name}>{tab.content}</TabPanel>
-                ))}
-              </TabPanels>
-            </TabGroup>
-          </Card>
-        </div>
-      </div>
+      <ResizableColumns
+        leftChild={
+          <div className="pr-2">
+            <Title>Workflow Logs</Title>
+            <Card className="p-0 overflow-hidden">
+              <WorkflowExecutionLogs
+                logs={logs ?? null}
+                results={results ?? null}
+                status={status ?? ""}
+                checks={checks}
+                hoveredStep={hoveredStep}
+                selectedStep={selectedStep}
+              />
+            </Card>
+          </div>
+        }
+        rightChild={
+          <div className="pl-2">
+            <Title>Workflow Metadata</Title>
+            <Card className="p-0 overflow-hidden">
+              <TabGroup>
+                <TabList className="p-2">
+                  {tabs.map((tab) => (
+                    <Tab key={tab.name}>{tab.name}</Tab>
+                  ))}
+                </TabList>
+                <TabPanels>
+                  {tabs.map((tab) => (
+                    <TabPanel key={tab.name}>{tab.content}</TabPanel>
+                  ))}
+                </TabPanels>
+              </TabGroup>
+            </Card>
+          </div>
+        }
+        initialLeftWidth={50}
+      />
     </div>
   );
 }
