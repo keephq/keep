@@ -19,7 +19,7 @@ export function SupersetDashboard() {
 
       try {
         const dashboard = await embedDashboard({
-          id: "aa283b8e-e52b-41e1-a337-3d7edf35945d",
+          id: "69977aca-5562-486f-a113-626ab8cf1e68",
           supersetDomain: "http://localhost:8088",
           mountPoint,
           fetchGuestToken: () => Promise.resolve(token),
