@@ -25,20 +25,30 @@ import clsx from "clsx";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 import { usePresetPolling } from "@/entities/presets/model/usePresetPolling";
+import { useAlerts } from "@/utils/hooks/useAlerts";
 
 type AlertPresetLinkProps = {
   preset: Preset;
   pathname: string | null;
-  deletePreset: (id: string, name: string) => void;
+  isDeletable?: boolean;
+  deletePreset?: (id: string, name: string) => void;
 };
 
-const AlertPresetLink = ({
+export const AlertPresetLink = ({
   preset,
   pathname,
   deletePreset,
+  isDeletable = false,
 }: AlertPresetLinkProps) => {
   const href = `/alerts/${preset.name.toLowerCase()}`;
   const isActive = decodeURIComponent(pathname?.toLowerCase() || "") === href;
+  const { useLastAlerts } = useAlerts();
+
+  const { totalCount } = useLastAlerts(
+    preset.options.find((option) => option.label === "CEL")?.value || "",
+    20,
+    0
+  );
 
   const { listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({
@@ -67,9 +77,9 @@ const AlertPresetLink = ({
       <LinkWithIcon
         href={href}
         icon={getIcon()}
-        count={preset.alerts_count}
-        isDeletable={true}
-        onDelete={() => deletePreset(preset.id, preset.name)}
+        count={totalCount}
+        isDeletable={isDeletable}
+        onDelete={() => deletePreset && deletePreset(preset.id, preset.name)}
         isExact={true}
         className={clsx(
           "flex items-center space-x-2 text-sm p-1 text-slate-400 font-medium rounded-lg",
@@ -81,7 +91,7 @@ const AlertPresetLink = ({
         )}
       >
         <Subtitle
-          className={clsx("truncate max-w-[7.5rem]", {
+          className={clsx("truncate max-w-24", {
             "text-orange-400": isActive,
           })}
           title={preset.name}
@@ -179,6 +189,7 @@ export const CustomPresetAlertLinks = ({
             key={preset.id}
             preset={preset}
             pathname={pathname}
+            isDeletable={true}
             deletePreset={deletePresetAndRedirect}
           />
         ))}

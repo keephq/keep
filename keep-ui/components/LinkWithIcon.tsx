@@ -5,6 +5,7 @@ import { Badge, Icon } from "@tremor/react";
 import { usePathname } from "next/navigation";
 import { Trashcan } from "@/components/icons";
 import clsx from "clsx";
+import { ShortNumber } from "./ui";
 
 type LinkWithIconProps = {
   children: ReactNode;
@@ -91,7 +92,7 @@ export const LinkWithIcon = ({
       <div className="flex items-center">
         {count !== undefined && count !== null && (
           <Badge size="xs" color="orange" data-testid={`${testId}-badge`}>
-            {count}
+            <ShortNumber value={count}></ShortNumber>
           </Badge>
         )}
         {isBeta && (

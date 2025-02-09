@@ -4,8 +4,12 @@ from typing import List, Optional, Tuple
 from sqlalchemy import and_, func, select
 from sqlmodel import Session, col, text
 
+from keep.api.core.alerts import get_alert_potential_facet_fields
 from keep.api.core.cel_to_sql.properties_mapper import PropertiesMappingException
-from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata, FieldMappingConfiguration
+from keep.api.core.cel_to_sql.properties_metadata import (
+    PropertiesMetadata,
+    FieldMappingConfiguration,
+)
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider_for_dialect,
@@ -25,14 +29,14 @@ from keep.api.models.db.alert import (
     LastAlertToIncident,
 )
 from keep.api.models.db.facet import FacetType
-from keep.api.models.facet import FacetDto, FacetOptionDto
+from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 import logging
 
 logger = logging.getLogger(__name__)
 
 incident_field_configurations = [
     FieldMappingConfiguration("name", ["user_generated_name", "ai_generated_name"]),
-    FieldMappingConfiguration("summary", "user_summary", "generated_summary"),
+    FieldMappingConfiguration("summary", ["user_summary", "generated_summary"]),
     FieldMappingConfiguration("assignee", "assignee"),
     FieldMappingConfiguration("severity", "severity"),
     FieldMappingConfiguration("status", "status"),
@@ -45,8 +49,11 @@ incident_field_configurations = [
     FieldMappingConfiguration("alerts_count", "alerts_count"),
     FieldMappingConfiguration("merged_at", "merged_at"),
     FieldMappingConfiguration("merged_by", "merged_by"),
-    FieldMappingConfiguration("alert.provider_type", "incident_alert_provider_type"),
-    FieldMappingConfiguration(map_from_pattern = "alert.*", map_to=["alert_enrichments", "alert_event"], is_json=True),
+    FieldMappingConfiguration("alert.providerType", "incident_alert_provider_type"),
+    FieldMappingConfiguration(
+        map_from_pattern="alert.*",
+        map_to=["JSON(alert_enrichments).*", "JSON(alert_event).*"],
+    ),
 ]
 
 properties_metadata = PropertiesMetadata(incident_field_configurations)
@@ -203,15 +210,15 @@ def __build_last_incidents_query(
         query = query.filter(Incident.last_seen_time >= lower_timestamp)
 
     if sorting:
-        query = query.order_by(sorting.get_order_by(Incident))
+        query = query.order_by(Incident.id, sorting.get_order_by(Incident))
 
     if cel:
         provider_type = get_cel_to_sql_provider_for_dialect(dialect)
         instance = provider_type(properties_metadata)
         sql_filter = instance.convert_to_sql_str(cel)
-        query = query.filter(text(sql_filter)).group_by(Incident.id)
+        query = query.filter(text(sql_filter))
 
-    query = query.group_by(Incident.id)
+    query = query.distinct(Incident.id)
 
     # Order by start_time in descending order and limit the results
     query = query.limit(limit).offset(offset)
@@ -290,7 +297,7 @@ def get_last_incidents_by_cel(
 def get_incident_facets_data(
     tenant_id: str,
     allowed_incident_ids: list[str],
-    facets_query: dict[str, str],
+    facet_options_query: FacetOptionsQueryDto,
 ) -> dict[str, list[FacetOptionDto]]:
     """
     Retrieves incident facets data for a given tenant.
@@ -302,8 +309,8 @@ def get_incident_facets_data(
     Returns:
         dict[str, list[FacetOptionDto]]: A dictionary where the keys are facet ids and the values are lists of FacetOptionDto objects.
     """
-    if facets_query:
-        facets = get_incident_facets(tenant_id, facets_query.keys())
+    if facet_options_query and facet_options_query.facet_queries:
+        facets = get_incident_facets(tenant_id, facet_options_query.facet_queries.keys())
     else:
         facets = static_facets
 
@@ -331,7 +338,7 @@ def get_incident_facets_data(
     return get_facet_options(
         base_query=base_query,
         facets=facets,
-        facets_query=facets_query,
+        facet_options_query=facet_options_query,
         properties_metadata=properties_metadata,
     )
 
@@ -371,3 +378,14 @@ def get_incident_facets(tenant_id: str, facet_ids_to_load: list[str] = None) -> 
         facets += get_facets(tenant_id, "incident", not_static_facet_ids)
 
     return facets
+
+def get_incident_potential_facet_fields(tenant_id: str) -> list[str]:
+    alert_fields = [f"alert.{item}" for item in get_alert_potential_facet_fields(tenant_id)]
+    incident_fields = [item.map_from_pattern for item in incident_field_configurations if not item.map_from_pattern.startswith("alert.*")]
+    seen = set()
+    result = []
+    for item in incident_fields + alert_fields:
+        if item not in seen:
+            seen.add(item)
+            result.append(item)
+    return result
