@@ -294,6 +294,7 @@ def get_app(
         deduplications.router, prefix="/deduplications", tags=["deduplications"]
     )
     app.include_router(facets.router, prefix="/{entity_name}/facets", tags=["facets"])
+    app.include_router(facets.router, prefix="/dashboardnew", tags=["dashboardnew"])
     app.include_router(
         provider_images.router, prefix="/provider-images", tags=["provider-images"]
     )
