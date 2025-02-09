@@ -180,19 +180,25 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/dash0-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/dash0-icon.png" alt="Dash0"/><br/>
+            Dash0
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/datadog-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/datadog-icon.png" alt="Datadog"/><br/>
             Datadog
         </a>
     </td>
+  </tr>
+  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/dynatrace-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/dynatrace-icon.png" alt="Dynatrace"/><br/>
             Dynatrace
         </a>
     </td>
-  </tr>
-  <tr>
     <td align="center">
         <a href="https://docs.keephq.dev/providers/documentation/elastic-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/elastic-icon.png" alt="Elastic"/><br/>
@@ -223,14 +229,20 @@
             Kibana
         </a>
     </td>
+  </tr>
+  <tr>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/netbox-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/netbox-icon.png" alt="NetBox"/><br/>
+            NetBox
+        </a>
+    </td>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/netdata-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/netdata-icon.png" alt="Netdata"/><br/>
             Netdata
         </a>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/new-relic-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/newrelic-icon.png" alt="New Relic"/><br/>
@@ -255,6 +267,8 @@
             Prometheus
         </a>
     </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/rollbar-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/rollbar-icon.png" alt="Rollbar"/><br/>
@@ -267,8 +281,6 @@
             Sentry
         </a>
     </td>
-</tr>
-<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/signalfx-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/signalfx-icon.png" alt="SignalFX"/><br/>
@@ -293,6 +305,8 @@
           Splunk
         </a>
   </td>
+</tr>
+<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/statuscake-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/statuscake-icon.png" alt="StatusCake"/><br/>
@@ -305,8 +319,6 @@
           SumoLogic
         </a>
   </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/uptimekuma-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/uptimekuma-icon.png" alt="UptimeKuma"/><br/>
@@ -317,6 +329,12 @@
         <a href="https://docs.keephq.dev/providers/documentation/victoriametrics-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/victoriametrics-icon.png" alt="VictoriaMetrics"/><br/>
           VictoriaMetrics
+        </a>
+  </td>
+  <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/wazuh-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/wazuh-icon.png" alt="Wazuh"/><br/>
+          Wazuh
         </a>
   </td>
   <td align="center" width="150">

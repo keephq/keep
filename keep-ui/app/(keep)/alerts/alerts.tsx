@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "@/entities/presets/model/usePresets";
-import AlertTableTabPanel from "./alert-table-tab-panel";
 import { AlertHistory } from "./alert-history";
 import AlertAssignTicketModal from "./alert-assign-ticket-modal";
 import AlertNoteModal from "./alert-note-modal";
@@ -21,6 +20,10 @@ import EnrichAlertSidePanel from "@/app/(keep)/alerts/EnrichAlertSidePanel";
 import Loading from "../loading";
 import { Preset } from "@/entities/presets/model/types";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
+import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
+import { AlertsQuery } from "./alert-table-server-side";
+import { FacetDto } from "@/features/filter";
+import { v4 as uuidV4 } from "uuid";
 
 const defaultPresets: Preset[] = [
   {
@@ -36,12 +39,16 @@ const defaultPresets: Preset[] = [
 ];
 
 type AlertsProps = {
+  initalFacets: FacetDto[];
   presetName: string;
 };
 
-export default function Alerts({ presetName }: AlertsProps) {
+export default function Alerts({ presetName, initalFacets }: AlertsProps) {
   const api = useApi();
-  const { usePresetAlerts } = useAlerts();
+  const [alertsQueryState, setAlertsQueryState] = useState<
+    AlertsQuery | undefined
+  >();
+  const { useLastAlerts } = useAlerts();
   const { data: providersData = { installed_providers: [] } } = useProviders();
   const router = useRouter();
 
@@ -57,6 +64,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   // hooks for the note and ticket modals
   const [noteModalAlert, setNoteModalAlert] = useState<AlertDto | null>();
   const [ticketModalAlert, setTicketModalAlert] = useState<AlertDto | null>();
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [runWorkflowModalAlert, setRunWorkflowModalAlert] =
     useState<AlertDto | null>();
   const [dismissModalAlert, setDismissModalAlert] = useState<
@@ -81,12 +89,17 @@ export default function Alerts({ presetName }: AlertsProps) {
   const { data: pollAlerts } = useAlertPolling();
   const {
     data: alerts = [],
+    totalCount,
     isLoading: isAsyncLoading,
     mutate: mutateAlerts,
     error: alertsError,
-  } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
-
-  const isLoading = isAsyncLoading || !api.isReady();
+  } = useLastAlerts(
+    alertsQueryState?.cel,
+    alertsQueryState?.limit,
+    alertsQueryState?.offset,
+    alertsQueryState?.sortBy,
+    alertsQueryState?.sortDirection
+  );
 
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
@@ -105,11 +118,23 @@ export default function Alerts({ presetName }: AlertsProps) {
     }
   }, [searchParams, alerts]);
 
-  useEffect(() => {
-    if (pollAlerts) {
-      mutateAlerts();
-    }
-  }, [mutateAlerts, pollAlerts]);
+  useEffect(
+    function setNewRefreshToken() {
+      if (pollAlerts) {
+        setRefreshToken(uuidV4());
+      }
+    },
+    [setRefreshToken, pollAlerts]
+  );
+
+  useEffect(
+    function refreshAlerts() {
+      if (refreshToken) {
+        mutateAlerts();
+      }
+    },
+    [mutateAlerts, refreshToken]
+  );
 
   // if we don't have presets data yet, just show loading
   if (!selectedPreset && isPresetsLoading) {
@@ -127,19 +152,22 @@ export default function Alerts({ presetName }: AlertsProps) {
 
   return (
     <>
-      <AlertTableTabPanel
+      <AlertTableTabPanelServerSide
+        initalFacets={initalFacets}
         key={selectedPreset.name}
+        refreshToken={refreshToken}
         preset={selectedPreset}
         alerts={alerts}
-        isAsyncLoading={isLoading}
+        alertsTotalCount={totalCount}
+        isAsyncLoading={isAsyncLoading}
         setTicketModalAlert={setTicketModalAlert}
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
         setDismissModalAlert={setDismissModalAlert}
         setChangeStatusAlert={setChangeStatusAlert}
         mutateAlerts={mutateAlerts}
+        onQueryChange={setAlertsQueryState}
       />
-
       <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
       <AlertDismissModal
         alert={dismissModalAlert}
@@ -151,7 +179,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         presetName={selectedPreset.name}
         handleClose={() => setChangeStatusAlert(null)}
       />
-      <AlertMethodModal presetName={selectedPreset.name} />
+      <AlertMethodModal alerts={alerts} presetName={selectedPreset.name} />
       <AlertAssignTicketModal
         handleClose={() => setTicketModalAlert(null)}
         ticketingProviders={ticketingProviders}
