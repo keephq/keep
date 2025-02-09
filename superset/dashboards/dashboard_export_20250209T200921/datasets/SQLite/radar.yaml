@@ -1,0 +1,146 @@
+table_name: radar
+main_dttm_col: null
+description: null
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+schema: main
+sql:
+  "WITH time_window AS (\n    SELECT datetime('now', '-140 day') as start_time,\n\
+  \    datetime('now') as end_time\n),\nraw_metrics AS (\n    SELECT\n        (SELECT\
+  \ COUNT(DISTINCT type)\n         FROM provider) as connected_providers,\n\n    \
+  \    (SELECT COUNT(*)\n         FROM alert\n         WHERE timestamp BETWEEN (SELECT\
+  \ start_time FROM time_window)\n                            AND (SELECT end_time\
+  \ FROM time_window)) as total_alerts,\n\n        (SELECT COUNT(*)\n         FROM\
+  \ alertdeduplicationevent\n         WHERE date_hour BETWEEN (SELECT start_time FROM\
+  \ time_window)\n                            AND (SELECT end_time FROM time_window))\
+  \ as dedup_events,\n\n        (SELECT COUNT(*)\n         FROM workflowexecution\n\
+  \         WHERE execution_time BETWEEN (SELECT start_time FROM time_window)\n  \
+  \                          AND (SELECT end_time FROM time_window)) as workflow_executions,\n\
+  \n        (SELECT CAST(COUNT(*) * 0.10 as INTEGER)\n         FROM alert\n      \
+  \   WHERE timestamp BETWEEN (SELECT start_time FROM time_window)\n             \
+  \               AND (SELECT end_time FROM time_window)) as incidents,\n\n      \
+  \  (SELECT COUNT(*)\n         FROM alertenrichment\n         WHERE timestamp BETWEEN\
+  \ (SELECT start_time FROM time_window)\n                            AND (SELECT\
+  \ end_time FROM time_window)) as enrichments\n)\nSELECT\n    'Current' as group_name,\n\
+  \    CASE WHEN connected_providers = 0 THEN 1\n         ELSE ROUND(CAST(connected_providers\
+  \ AS FLOAT) / NULLIF(connected_providers, 0) * 10, 2)\n    END as connected_providers,\n\
+  \    CASE WHEN total_alerts = 0 THEN 1\n         ELSE ROUND(CAST(total_alerts AS\
+  \ FLOAT) / NULLIF(total_alerts, 0) * 10, 2)\n    END as total_alerts,\n    CASE\
+  \ WHEN dedup_events = 0 THEN 1\n         ELSE ROUND(CAST(dedup_events AS FLOAT)\
+  \ / NULLIF(dedup_events, 0) * 10, 2)\n    END as dedup_events,\n    CASE WHEN workflow_executions\
+  \ = 0 THEN 1\n         ELSE ROUND(CAST(workflow_executions AS FLOAT) / NULLIF(workflow_executions,\
+  \ 0) * 10, 2)\n    END as workflow_executions,\n    CASE WHEN incidents = 0 THEN\
+  \ 1\n         ELSE ROUND(CAST(incidents AS FLOAT) / NULLIF(incidents, 0) * 10, 2)\n\
+  \    END as incidents,\n    CASE WHEN enrichments = 0 THEN 1\n         ELSE ROUND(CAST(enrichments\
+  \ AS FLOAT) / NULLIF(enrichments, 0) * 10, 2)\n    END as enrichments\nFROM raw_metrics\n\
+  \nUNION ALL\n\n-- Add reference group with max values\nSELECT\n    'Max Reference'\
+  \ as group_name,\n    10 as connected_providers,\n    10 as total_alerts,\n    10\
+  \ as dedup_events,\n    10 as workflow_executions,\n    10 as incidents,\n    10\
+  \ as enrichments;\n"
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+uuid: 3d362caf-0c3c-46e2-a44e-5de80c222ab4
+metrics:
+  - metric_name: count
+    verbose_name: COUNT(*)
+    metric_type: count
+    expression: COUNT(*)
+    description: null
+    d3format: null
+    currency: null
+    extra: null
+    warning_text: null
+columns:
+  - column_name: total_alerts
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: FLOAT
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+  - column_name: dedup_events
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: FLOAT
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+  - column_name: incidents
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: FLOAT
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+  - column_name: group_name
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: STRING
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+  - column_name: connected_providers
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: INT
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+  - column_name: workflow_executions
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: INT
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+  - column_name: enrichments
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: INT
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+version: 1.0.0
+database_uuid: a31681c4-8e40-4153-aec6-69167d4d2627

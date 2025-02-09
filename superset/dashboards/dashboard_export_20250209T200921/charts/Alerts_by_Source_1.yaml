@@ -1,0 +1,40 @@
+slice_name: Alerts by Source
+description: null
+certified_by: null
+certification_details: null
+viz_type: pie
+params:
+  datasource: 1__table
+  viz_type: pie
+  groupby:
+    - provider_type
+  metric:
+    expressionType: SQL
+    sqlExpression: c
+    column: null
+    aggregate: null
+    datasourceWarning: false
+    hasCustomLabel: false
+    label: c
+    optionName: metric_2rg2beyd8z9_5qu06aitlix
+  adhoc_filters: []
+  row_limit: 100
+  sort_by_metric: true
+  color_scheme: redToYellow
+  show_labels_threshold: 5
+  show_legend: true
+  legendType: scroll
+  legendOrientation: top
+  label_type: key
+  number_format: SMART_NUMBER
+  date_format: smart_date
+  show_labels: true
+  labels_outside: true
+  outerRadius: 70
+  extra_form_data: {}
+  dashboards: []
+query_context: '{"datasource":{"id":1,"type":"table"},"force":false,"queries":[{"filters":[],"extras":{"having":"","where":""},"applied_time_extras":{},"columns":["provider_type"],"metrics":[{"expressionType":"SQL","sqlExpression":"c","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"c","optionName":"metric_2rg2beyd8z9_5qu06aitlix"}],"orderby":[[{"expressionType":"SQL","sqlExpression":"c","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"c","optionName":"metric_2rg2beyd8z9_5qu06aitlix"},false]],"annotation_layers":[],"row_limit":100,"series_limit":0,"order_desc":true,"url_params":{},"custom_params":{},"custom_form_data":{}}],"form_data":{"datasource":"1__table","viz_type":"pie","groupby":["provider_type"],"metric":{"expressionType":"SQL","sqlExpression":"c","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"c","optionName":"metric_2rg2beyd8z9_5qu06aitlix"},"adhoc_filters":[],"row_limit":100,"sort_by_metric":true,"color_scheme":"redToYellow","show_labels_threshold":5,"show_legend":true,"legendType":"scroll","legendOrientation":"top","label_type":"key","number_format":"SMART_NUMBER","date_format":"smart_date","show_labels":true,"labels_outside":true,"outerRadius":70,"extra_form_data":{},"dashboards":[],"force":false,"result_format":"json","result_type":"full"},"result_format":"json","result_type":"full"}'
+cache_timeout: null
+uuid: 1621863b-8818-4f79-a567-875e89cf4aac
+version: 1.0.0
+dataset_uuid: b0ea9ddb-2c68-47b2-a4ff-e3395c690ba6

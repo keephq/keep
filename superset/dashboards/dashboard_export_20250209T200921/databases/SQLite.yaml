@@ -1,0 +1,13 @@
+database_name: SQLite
+sqlalchemy_uri: sqlite:////shared-db/db2?check_same_thread=false
+cache_timeout: null
+expose_in_sqllab: true
+allow_run_async: false
+allow_ctas: false
+allow_cvas: false
+allow_dml: false
+allow_file_upload: false
+extra:
+  allows_virtual_table_explore: true
+uuid: a31681c4-8e40-4153-aec6-69167d4d2627
+version: 1.0.0

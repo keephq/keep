@@ -1,0 +1,76 @@
+slice_name: Radar
+description: null
+certified_by: null
+certification_details: null
+viz_type: radar
+params:
+  datasource: 4__table
+  viz_type: radar
+  groupby: []
+  metrics:
+    - expressionType: SQL
+      sqlExpression: connected_providers
+      column: null
+      aggregate: null
+      datasourceWarning: false
+      hasCustomLabel: false
+      label: connected_providers
+      optionName: metric_pej2bgixdmi_2eb585xodbn
+    - expressionType: SQL
+      sqlExpression: total_alerts
+      column: null
+      aggregate: null
+      datasourceWarning: false
+      hasCustomLabel: false
+      label: total_alerts
+      optionName: metric_twmpqwiui3p_sjzn950izxa
+    - expressionType: SQL
+      sqlExpression: dedup_events
+      column: null
+      aggregate: null
+      datasourceWarning: false
+      hasCustomLabel: false
+      label: dedup_events
+      optionName: metric_0zmqwiso0nf_i67xcowqsua
+    - expressionType: SQL
+      sqlExpression: workflow_executions
+      column: null
+      aggregate: null
+      datasourceWarning: false
+      hasCustomLabel: false
+      label: workflow_executions
+      optionName: metric_012enws5d09m_2ckebs529k2
+    - expressionType: SQL
+      sqlExpression: incidents
+      column: null
+      aggregate: null
+      datasourceWarning: false
+      hasCustomLabel: false
+      label: incidents
+      optionName: metric_oyuz7rlt8u_nfscslek17
+    - expressionType: SQL
+      sqlExpression: enrichments
+      column: null
+      aggregate: null
+      datasourceWarning: false
+      hasCustomLabel: false
+      label: enrichments
+      optionName: metric_8aquiph7hx7_2g7en52sxey
+  adhoc_filters: []
+  row_limit: 1000
+  color_scheme: redToYellow
+  show_legend: true
+  legendType: scroll
+  legendOrientation: top
+  show_labels: true
+  label_type: value
+  label_position: top
+  number_format: SMART_NUMBER
+  date_format: smart_date
+  extra_form_data: {}
+  dashboards: []
+query_context: '{"datasource":{"id":4,"type":"table"},"force":false,"queries":[{"filters":[],"extras":{"having":"","where":""},"applied_time_extras":{},"columns":[],"metrics":[{"expressionType":"SQL","sqlExpression":"connected_providers","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"connected_providers","optionName":"metric_pej2bgixdmi_2eb585xodbn"},{"expressionType":"SQL","sqlExpression":"total_alerts","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"total_alerts","optionName":"metric_twmpqwiui3p_sjzn950izxa"},{"expressionType":"SQL","sqlExpression":"dedup_events","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"dedup_events","optionName":"metric_0zmqwiso0nf_i67xcowqsua"},{"expressionType":"SQL","sqlExpression":"workflow_executions","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"workflow_executions","optionName":"metric_012enws5d09m_2ckebs529k2"},{"expressionType":"SQL","sqlExpression":"incidents","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"incidents","optionName":"metric_oyuz7rlt8u_nfscslek17"},{"expressionType":"SQL","sqlExpression":"enrichments","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"enrichments","optionName":"metric_8aquiph7hx7_2g7en52sxey"}],"orderby":[[{"expressionType":"SQL","sqlExpression":"connected_providers","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"connected_providers","optionName":"metric_pej2bgixdmi_2eb585xodbn"},false]],"annotation_layers":[],"row_limit":1000,"series_limit":0,"order_desc":true,"url_params":{},"custom_params":{},"custom_form_data":{}}],"form_data":{"datasource":"4__table","viz_type":"radar","groupby":[],"metrics":[{"expressionType":"SQL","sqlExpression":"connected_providers","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"connected_providers","optionName":"metric_pej2bgixdmi_2eb585xodbn"},{"expressionType":"SQL","sqlExpression":"total_alerts","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"total_alerts","optionName":"metric_twmpqwiui3p_sjzn950izxa"},{"expressionType":"SQL","sqlExpression":"dedup_events","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"dedup_events","optionName":"metric_0zmqwiso0nf_i67xcowqsua"},{"expressionType":"SQL","sqlExpression":"workflow_executions","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"workflow_executions","optionName":"metric_012enws5d09m_2ckebs529k2"},{"expressionType":"SQL","sqlExpression":"incidents","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"incidents","optionName":"metric_oyuz7rlt8u_nfscslek17"},{"expressionType":"SQL","sqlExpression":"enrichments","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"enrichments","optionName":"metric_8aquiph7hx7_2g7en52sxey"}],"adhoc_filters":[],"row_limit":1000,"color_scheme":"redToYellow","show_legend":true,"legendType":"scroll","legendOrientation":"top","show_labels":true,"label_type":"value","label_position":"top","number_format":"SMART_NUMBER","date_format":"smart_date","extra_form_data":{},"dashboards":[],"force":false,"result_format":"json","result_type":"full"},"result_format":"json","result_type":"full"}'
+cache_timeout: null
+uuid: c05a2188-6ba0-48af-a13d-9e626b0dadc1
+version: 1.0.0
+dataset_uuid: 3d362caf-0c3c-46e2-a44e-5de80c222ab4
