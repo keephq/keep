@@ -6,6 +6,7 @@ from sqlalchemy import (
     asc,
     desc,
     func,
+    literal_column,
     select,
 )
 from sqlmodel import Session, text
@@ -215,6 +216,8 @@ def build_alerts_query(
             Alert,
             AlertEnrichment,
             base.c.startedAt,
+            literal_column("filter_alert_event_json"),
+            literal_column("filter_alert_enrichment_json"),
         )
         .select_from(base)
         .join(
@@ -251,11 +254,11 @@ def build_alerts_query(
         order_by_field = group_by_exp[0]
 
     if sort_dir == "desc":
-        query = query.order_by(Alert.id, desc(text(order_by_field)))
+        query = query.order_by(desc(text(order_by_field)), Alert.id)
     else:
-        query = query.order_by(Alert.id, asc(text(order_by_field)))
+        query = query.order_by(asc(text(order_by_field)), Alert.id)
 
-    query = query.distinct(Alert.id)
+    query = query.distinct(text(order_by_field), Alert.id)
 
     return query
 
