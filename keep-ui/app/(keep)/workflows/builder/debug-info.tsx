@@ -1,7 +1,7 @@
 import { CustomEdgeProps } from "./CustomEdge";
 import { FlowNode } from "./types";
 
-const WF_DEBUG_INFO = true;
+export const WF_DEBUG_INFO = false;
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
   if (!WF_DEBUG_INFO) {

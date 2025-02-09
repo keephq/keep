@@ -29,6 +29,7 @@ import { triggerTemplates, triggerTypes } from "./utils";
 import { DebugJSON } from "@/shared/ui";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import clsx from "clsx";
+import { WF_DEBUG_INFO } from "./debug-info";
 
 const debug = true;
 
@@ -770,53 +771,59 @@ export function BuilderChat({
       }
     >
       {/* Debug info */}
-      <div className="">
-        <div className="flex">
-          <Button variant="secondary" size="sm" onClick={() => setMessages([])}>
-            Reset
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setDebugInfoVisible(!debugInfoVisible)}
-          >
-            {debugInfoVisible ? "Hide" : "Show debug info"}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={async () => {
-              try {
-                const step = steps.find(
-                  (step: any) => step.type === "step-python"
-                ) as V2Step;
-                if (!step) {
-                  return;
+      {WF_DEBUG_INFO && (
+        <div className="">
+          <div className="flex">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setMessages([])}
+            >
+              Reset
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setDebugInfoVisible(!debugInfoVisible)}
+            >
+              {debugInfoVisible ? "Hide" : "Show debug info"}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={async () => {
+                try {
+                  const step = steps.find(
+                    (step: any) => step.type === "step-python"
+                  ) as V2Step;
+                  if (!step) {
+                    return;
+                  }
+                  // Generate a step definition of a python step that returns a list of 5 random cheer-up messages as a JSON object, allowed keys are: ${step.properties.stepParams?.join(", ") ?? "none"}
+                  const definition = await generateStepDefinition({
+                    name: "python-step",
+                    stepType: step.type,
+                    stepProperties: { ...step.properties },
+                    aim: "This step should return random of five cheer-up messages (generate a list of 5 messages and hardcode them)",
+                  });
+                  console.log("!!!response", definition);
+                } catch (e) {
+                  console.error(e);
                 }
-                // Generate a step definition of a python step that returns a list of 5 random cheer-up messages as a JSON object, allowed keys are: ${step.properties.stepParams?.join(", ") ?? "none"}
-                const definition = await generateStepDefinition({
-                  name: "python-step",
-                  stepType: step.type,
-                  stepProperties: { ...step.properties },
-                  aim: "This step should return random of five cheer-up messages (generate a list of 5 messages and hardcode them)",
-                });
-                console.log("!!!response", definition);
-              } catch (e) {
-                console.error(e);
-              }
-            }}
-          >
-            Generate Example Definition
-          </Button>
+              }}
+            >
+              Generate Example Definition
+            </Button>
+          </div>
+          {debugInfoVisible && (
+            <>
+              <pre>{JSON.stringify(definition.value, null, 2)}</pre>
+              <pre>selectedNode={JSON.stringify(selectedNode, null, 2)}</pre>
+              <pre>selectedEdge={JSON.stringify(selectedEdge, null, 2)}</pre>
+            </>
+          )}
         </div>
-        {debugInfoVisible && (
-          <>
-            <pre>{JSON.stringify(definition.value, null, 2)}</pre>
-            <pre>selectedNode={JSON.stringify(selectedNode, null, 2)}</pre>
-            <pre>selectedEdge={JSON.stringify(selectedEdge, null, 2)}</pre>
-          </>
-        )}
-      </div>
+      )}
       <CopilotChat
         instructions={chatInstructions}
         labels={{
