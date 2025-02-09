@@ -1,0 +1,82 @@
+table_name: funnel
+main_dttm_col: null
+description: null
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+schema: main
+sql:
+  "WITH time_window AS (\n    SELECT datetime('now', '-140 day') as start_time,\n\
+  \    datetime('now') as end_time\n),\n-- Level 1: Total events (alerts + dedup)\n\
+  total_events AS (\n    SELECT COUNT(*) as value, 'Total Events' as step\n    FROM\
+  \ (\n        SELECT DISTINCT id FROM alertdeduplicationevent\n        WHERE date_hour\
+  \ BETWEEN (SELECT start_time FROM time_window)\n                           AND (SELECT\
+  \ end_time FROM time_window)\n        UNION ALL\n        SELECT id FROM alert\n\
+  \        WHERE timestamp BETWEEN (SELECT start_time FROM time_window)\n        \
+  \                   AND (SELECT end_time FROM time_window)\n    ) all_events\n),\n\
+  -- Level 2: Dedup events\ndedup_events AS (\n    SELECT COUNT(*) as value, 'Deduplicated\
+  \ Events' as step\n    FROM alertdeduplicationevent\n    WHERE date_hour BETWEEN\
+  \ (SELECT start_time FROM time_window)\n                       AND (SELECT end_time\
+  \ FROM time_window)\n),\n-- Level 3: Alerts (after dedup)\nalerts AS (\n    SELECT\
+  \ COUNT(*) as value, 'Alerts' as step\n    FROM (\n        SELECT * FROM alertdeduplicationevent\n\
+  \        WHERE date_hour BETWEEN (SELECT start_time FROM time_window)\n        \
+  \                   AND (SELECT end_time FROM time_window)\n        AND deduplication_type\
+  \ = 'partial'\n        UNION ALL\n        SELECT * FROM alert\n        WHERE timestamp\
+  \ BETWEEN (SELECT start_time FROM time_window)\n                           AND (SELECT\
+  \ end_time FROM time_window)\n    ) combined_alerts\n),\n-- Level 4: Incidents (10%\
+  \ of alerts based on your Sankey logic)\nincidents AS (\n    SELECT CAST(COUNT(*)\
+  \ * 0.10 as INTEGER) as value, 'Incidents' as step\n    FROM (\n        SELECT *\
+  \ FROM alertdeduplicationevent\n        WHERE date_hour BETWEEN (SELECT start_time\
+  \ FROM time_window)\n                           AND (SELECT end_time FROM time_window)\n\
+  \        AND deduplication_type = 'partial'\n        UNION ALL\n        SELECT *\
+  \ FROM alert\n        WHERE timestamp BETWEEN (SELECT start_time FROM time_window)\n\
+  \                           AND (SELECT end_time FROM time_window)\n    ) combined_alerts\n\
+  )\n\n-- Combine all levels\nSELECT * FROM total_events\nUNION ALL\nSELECT * FROM\
+  \ dedup_events\nUNION ALL\nSELECT * FROM alerts\nUNION ALL\nSELECT * FROM incidents\n\
+  ORDER BY value DESC;\n"
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+uuid: 33e30b1c-d7fb-4ec1-8ae2-83dcb218d500
+metrics:
+  - metric_name: count
+    verbose_name: COUNT(*)
+    metric_type: count
+    expression: COUNT(*)
+    description: null
+    d3format: null
+    currency: null
+    extra: null
+    warning_text: null
+columns:
+  - column_name: step
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: STRING
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+  - column_name: value
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: INT
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+version: 1.0.0
+database_uuid: a31681c4-8e40-4153-aec6-69167d4d2627
