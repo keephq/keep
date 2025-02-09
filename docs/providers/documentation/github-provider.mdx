@@ -45,6 +45,56 @@ workflow:
           action: "create_issue"
           issue_title: "New Issue Title"
           issue_body: "Description of the issue."
+```
+
+## Webhook Integration
+
+1. Github supports the following webhook events
+
+- Repository webhooks 
+- Organization webhooks
+- GitHub Marketplace webhooks
+- GitHub Sponsors webhooks
+- GitHub Apps webhooks
+
+2. Follow this [guide](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks) from GitHub to create a webhook according to your requirements.
+
+3. Follow the below steps to create a new API key in Keep.
+
+4. Go to Keep dashboard and click on the profile icon in the botton left corner and click `Settings`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-1.png" />
+</Frame>
+
+5. Select `Users and Access` tab and then select `API Keys` tab and create a new API key.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-2.png" />
+</Frame>
+
+6. Give name and select the role as `webhook` and click on `Create API Key`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-3.png" />
+</Frame>
+
+7. Copy the API key.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-4.png" />
+</Frame>
+
+8. Set the Payload URL as [https://api.keephq.dev/alerts/event/github?api_key=your-keep-api-key-here](https://api.keephq.dev/alerts/event/github?api_key=your-keep-api-key-here).
+
+9. Set the Content type as `application/json`.
+
+10. Configure the rest of the settings as per your requirements.
+
+11. Add the webhook.
 
 ## Useful Links
--[GitHub REST API Documentation](https://docs.github.com/en/rest?apiVersion=2022-11-28)
+
+- [GitHub REST API Documentation](https://docs.github.com/en/rest?apiVersion=2022-11-28)
+
+- [Creating webhooks in GitHub](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks)
