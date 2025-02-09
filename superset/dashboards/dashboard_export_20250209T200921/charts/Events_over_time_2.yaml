@@ -1,0 +1,47 @@
+slice_name: Events over time
+description: null
+certified_by: null
+certification_details: null
+viz_type: echarts_timeseries_line
+params:
+  datasource: 2__table
+  viz_type: echarts_timeseries_line
+  x_axis: event_date
+  metrics:
+    - expressionType: SQL
+      sqlExpression: total_events
+      column: null
+      aggregate: null
+      datasourceWarning: false
+      hasCustomLabel: false
+      label: total_events
+      optionName: metric_h0g16jb0wf_mux03ide8j
+  groupby: []
+  adhoc_filters: []
+  row_limit: 1000
+  truncate_metric: true
+  show_empty_columns: true
+  annotation_layers: []
+  x_axis_title_margin: 15
+  y_axis_title_margin: 15
+  y_axis_title_position: Left
+  sort_series_type: sum
+  color_scheme: redToYellow
+  seriesType: line
+  area: true
+  opacity: 0.2
+  show_legend: true
+  legendType: scroll
+  legendOrientation: top
+  x_axis_time_format: smart_date
+  rich_tooltip: true
+  tooltipTimeFormat: smart_date
+  y_axis_format: SMART_NUMBER
+  truncateXAxis: true
+  extra_form_data: {}
+  dashboards: []
+query_context: '{"datasource":{"id":2,"type":"table"},"force":false,"queries":[{"filters":[],"extras":{"having":"","where":""},"applied_time_extras":{},"columns":[{"columnType":"BASE_AXIS","sqlExpression":"event_date","label":"event_date","expressionType":"SQL"}],"metrics":[{"expressionType":"SQL","sqlExpression":"total_events","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"total_events","optionName":"metric_h0g16jb0wf_mux03ide8j"}],"orderby":[[{"expressionType":"SQL","sqlExpression":"total_events","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"total_events","optionName":"metric_h0g16jb0wf_mux03ide8j"},false]],"annotation_layers":[],"row_limit":1000,"series_columns":[],"series_limit":0,"order_desc":true,"url_params":{},"custom_params":{},"custom_form_data":{},"time_offsets":[],"post_processing":[{"operation":"pivot","options":{"index":["event_date"],"columns":[],"aggregates":{"total_events":{"operator":"mean"}},"drop_missing_columns":false}},{"operation":"flatten"}]}],"form_data":{"datasource":"2__table","viz_type":"echarts_timeseries_line","x_axis":"event_date","metrics":[{"expressionType":"SQL","sqlExpression":"total_events","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"total_events","optionName":"metric_h0g16jb0wf_mux03ide8j"}],"groupby":[],"adhoc_filters":[],"row_limit":1000,"truncate_metric":true,"show_empty_columns":true,"annotation_layers":[],"x_axis_title_margin":15,"y_axis_title_margin":15,"y_axis_title_position":"Left","sort_series_type":"sum","color_scheme":"redToYellow","seriesType":"line","area":true,"opacity":0.2,"show_legend":true,"legendType":"scroll","legendOrientation":"top","x_axis_time_format":"smart_date","rich_tooltip":true,"tooltipTimeFormat":"smart_date","y_axis_format":"SMART_NUMBER","truncateXAxis":true,"extra_form_data":{},"dashboards":[],"force":false,"result_format":"json","result_type":"full"},"result_format":"json","result_type":"full"}'
+cache_timeout: null
+uuid: f7f31899-4cf3-4a81-8a94-3198c8c782a8
+version: 1.0.0
+dataset_uuid: 5ef5732b-1875-401d-8151-101b25730cb1

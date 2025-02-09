@@ -1,0 +1,29 @@
+slice_name: Alerts Sankey
+description: null
+certified_by: null
+certification_details: null
+viz_type: sankey_v2
+params:
+  datasource: 5__table
+  viz_type: sankey_v2
+  source: source
+  target: target
+  metric:
+    expressionType: SQL
+    sqlExpression: count
+    column: null
+    aggregate: null
+    datasourceWarning: false
+    hasCustomLabel: false
+    label: count
+    optionName: metric_65ary50cb2w_tklud3ezav
+  adhoc_filters: []
+  row_limit: 1000
+  color_scheme: redToYellow
+  extra_form_data: {}
+  dashboards: []
+query_context: '{"datasource":{"id":5,"type":"table"},"force":false,"queries":[{"filters":[],"extras":{"having":"","where":""},"applied_time_extras":{},"columns":[],"metrics":[{"expressionType":"SQL","sqlExpression":"count","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"count","optionName":"metric_65ary50cb2w_tklud3ezav"}],"annotation_layers":[],"row_limit":1000,"series_limit":0,"order_desc":true,"url_params":{},"custom_params":{},"custom_form_data":{},"groupby":["source","target"]}],"form_data":{"datasource":"5__table","viz_type":"sankey_v2","source":"source","target":"target","metric":{"expressionType":"SQL","sqlExpression":"count","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"count","optionName":"metric_65ary50cb2w_tklud3ezav"},"adhoc_filters":[],"row_limit":1000,"color_scheme":"redToYellow","extra_form_data":{},"dashboards":[],"force":false,"result_format":"json","result_type":"full"},"result_format":"json","result_type":"full"}'
+cache_timeout: null
+uuid: 6cde6ea9-9770-4520-8e1e-4cac8f912558
+version: 1.0.0
+dataset_uuid: c03ad041-fde1-4e95-9256-1e5872656e8c

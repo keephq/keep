@@ -1,0 +1,180 @@
+dashboard_title: Keep
+description: null
+css: ""
+slug: null
+certified_by: ""
+certification_details: ""
+published: false
+uuid: 6fe8eaa7-14a2-4f58-9163-1fdfabac4744
+position:
+  CHART--CX7G0gaaw0zL7-H5Aqh_:
+    children: []
+    id: CHART--CX7G0gaaw0zL7-H5Aqh_
+    meta:
+      chartId: 3
+      height: 50
+      sliceName: funnel
+      uuid: 169153bf-effa-422b-a971-fd17c03acc2e
+      width: 4
+    parents:
+      - ROOT_ID
+      - GRID_ID
+      - ROW-aVn6vQMyg--HahJrU7QkF
+    type: CHART
+  CHART-MQXpKg1WlflwEh27VAMBH:
+    children: []
+    id: CHART-MQXpKg1WlflwEh27VAMBH
+    meta:
+      chartId: 2
+      height: 50
+      sliceName: Events over time
+      uuid: f7f31899-4cf3-4a81-8a94-3198c8c782a8
+      width: 4
+    parents:
+      - ROOT_ID
+      - GRID_ID
+      - ROW-aVn6vQMyg--HahJrU7QkF
+    type: CHART
+  CHART-adAAHX9BH-Cj7WH_QFBXv:
+    children: []
+    id: CHART-adAAHX9BH-Cj7WH_QFBXv
+    meta:
+      chartId: 4
+      height: 50
+      sliceName: Radar
+      uuid: c05a2188-6ba0-48af-a13d-9e626b0dadc1
+      width: 4
+    parents:
+      - ROOT_ID
+      - GRID_ID
+      - ROW-C7YgWD4mWoc7T6Q24vx9R
+    type: CHART
+  CHART-jayJzmGWBqLA0388XAjbF:
+    children: []
+    id: CHART-jayJzmGWBqLA0388XAjbF
+    meta:
+      chartId: 1
+      height: 50
+      sliceName: Alerts by Source
+      uuid: 1621863b-8818-4f79-a567-875e89cf4aac
+      width: 4
+    parents:
+      - ROOT_ID
+      - GRID_ID
+      - ROW-aVn6vQMyg--HahJrU7QkF
+    type: CHART
+  CHART-rJRChwiGlLKiuQyEvrLsy:
+    children: []
+    id: CHART-rJRChwiGlLKiuQyEvrLsy
+    meta:
+      chartId: 5
+      height: 50
+      sliceName: Alerts Sankey
+      uuid: 6cde6ea9-9770-4520-8e1e-4cac8f912558
+      width: 8
+    parents:
+      - ROOT_ID
+      - GRID_ID
+      - ROW-C7YgWD4mWoc7T6Q24vx9R
+    type: CHART
+  DASHBOARD_VERSION_KEY: v2
+  GRID_ID:
+    children:
+      - ROW-C7YgWD4mWoc7T6Q24vx9R
+      - ROW-aVn6vQMyg--HahJrU7QkF
+    id: GRID_ID
+    parents:
+      - ROOT_ID
+    type: GRID
+  HEADER_ID:
+    id: HEADER_ID
+    meta:
+      text: Keep
+    type: HEADER
+  ROOT_ID:
+    children:
+      - GRID_ID
+    id: ROOT_ID
+    type: ROOT
+  ROW-C7YgWD4mWoc7T6Q24vx9R:
+    children:
+      - CHART-rJRChwiGlLKiuQyEvrLsy
+      - CHART-adAAHX9BH-Cj7WH_QFBXv
+    id: ROW-C7YgWD4mWoc7T6Q24vx9R
+    meta:
+      background: BACKGROUND_TRANSPARENT
+    parents:
+      - ROOT_ID
+      - GRID_ID
+    type: ROW
+  ROW-aVn6vQMyg--HahJrU7QkF:
+    children:
+      - CHART-MQXpKg1WlflwEh27VAMBH
+      - CHART--CX7G0gaaw0zL7-H5Aqh_
+      - CHART-jayJzmGWBqLA0388XAjbF
+    id: ROW-aVn6vQMyg--HahJrU7QkF
+    meta:
+      background: BACKGROUND_TRANSPARENT
+    parents:
+      - ROOT_ID
+      - GRID_ID
+    type: ROW
+metadata:
+  chart_configuration:
+    "1":
+      id: 1
+      crossFilters:
+        scope: global
+        chartsInScope:
+          - 2
+          - 3
+          - 4
+          - 5
+    "2":
+      id: 2
+      crossFilters:
+        scope: global
+        chartsInScope:
+          - 1
+          - 3
+          - 4
+          - 5
+    "3":
+      id: 3
+      crossFilters:
+        scope: global
+        chartsInScope:
+          - 1
+          - 2
+          - 4
+          - 5
+    "4":
+      id: 4
+      crossFilters:
+        scope: global
+        chartsInScope:
+          - 1
+          - 2
+          - 3
+          - 5
+  global_chart_configuration:
+    scope:
+      rootPath:
+        - ROOT_ID
+      excluded: []
+    chartsInScope:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+  color_scheme: ""
+  refresh_frequency: 0
+  color_scheme_domain: []
+  expanded_slices: {}
+  label_colors: {}
+  shared_label_colors: {}
+  timed_refresh_immune_slices: []
+  cross_filters_enabled: true
+  default_filters: "{}"
+version: 1.0.0
