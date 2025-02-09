@@ -63,7 +63,9 @@ def get_guest_token_route(
             cookies=cookies,
             json={
                 "user": {"username": "apiuser"},
-                "resources": [{"type": "dashboard", "id": "2"}],
+                "resources": [
+                    {"type": "dashboard", "id": "69977aca-5562-486f-a113-626ab8cf1e68"}
+                ],
                 "rls": [],  # Add RLS rule
             },
         )
