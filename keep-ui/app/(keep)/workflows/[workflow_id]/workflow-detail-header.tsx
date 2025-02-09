@@ -7,17 +7,16 @@ import Skeleton from "react-loading-skeleton";
 import { Button, Switch, Text } from "@tremor/react";
 import { useWorkflowRun } from "@/utils/hooks/useWorkflowRun";
 import AlertTriggerModal from "../workflow-run-with-alert-modal";
-import { useStore } from "../builder/builder-store";
 import { CloudIcon, ExclamationTriangleIcon } from "@heroicons/react/20/solid";
 import { Tooltip } from "@/shared/ui";
 import Modal from "@/components/ui/Modal";
 import { useCallback, useState } from "react";
 import { EditWorkflowMetadataForm } from "@/features/edit-workflow-metadata";
-import { useWorkflowBuilderContext } from "../builder/workflow-builder-context";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
+import { useWorkflowStore } from "../builder/workflow-store";
 
 function WorkflowSwitch() {
-  const { v2Properties, setV2Properties } = useStore();
+  const { v2Properties, updateV2Properties } = useWorkflowStore();
   return (
     <div className="flex items-center gap-2 px-2">
       <Switch
@@ -25,7 +24,7 @@ function WorkflowSwitch() {
         id="enabled"
         checked={v2Properties.disabled !== "true"}
         onChange={() => {
-          setV2Properties({
+          updateV2Properties({
             ...v2Properties,
             disabled: v2Properties.disabled === "true" ? "false" : "true",
           });
@@ -39,8 +38,8 @@ function WorkflowSwitch() {
 }
 
 function WorkflowSyncStatus() {
-  const { synced } = useStore();
-  return synced ? (
+  const { isPendingSync } = useWorkflowStore();
+  return !isPendingSync ? (
     <Tooltip content="Saved to Keep">
       <CloudIcon className="w-4 h-4 text-gray-500" />
     </Tooltip>
@@ -58,34 +57,28 @@ function EditWorkflowMetadataModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const { setDefinition, validatorConfigurationV2, triggerSave } =
-    useWorkflowBuilderContext();
-  const { v2Properties, nodes, edges, updateV2Properties } = useStore();
+  const { v2Properties, updateV2Properties } = useWorkflowStore();
   const revalidateMultiple = useRevalidateMultiple();
 
   console.log("v2Properties", v2Properties);
 
-  // TODO: move to builder store? or refactor to rely on the sync
   const updateWorkflowMetadata = useCallback(
     async (
       workflowId: string,
       { name, description }: { name: string; description: string }
     ) => {
+      // Update properties first
       updateV2Properties({
         name,
         description,
       });
-      // FIX: definition is not updated at the time of save
-      // Wait for next tick to ensure definition is updated
-      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      // Now trigger save
-      await triggerSave();
+      // Finally update UI
+      // todo revalidation should wait for the workflow to be saved or workflow-store should be used as a source of truth for header
       revalidateMultiple([`/workflows/${workflowId}`], { isExact: true });
       onClose();
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [nodes, edges, v2Properties, validatorConfigurationV2]
+    []
   );
 
   return (
@@ -125,7 +118,7 @@ export default function WorkflowDetailHeader({
     { fallbackData: initialData, revalidateOnMount: false }
   );
 
-  const { v2Properties } = useStore();
+  const { v2Properties } = useWorkflowStore();
 
   const {
     isRunning,

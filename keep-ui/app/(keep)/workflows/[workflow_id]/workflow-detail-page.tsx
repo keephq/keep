@@ -21,10 +21,10 @@ import WorkflowOverview from "./workflow-overview";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "utils/hooks/useConfig";
 import { AiOutlineSwap } from "react-icons/ai";
-import { ErrorComponent, TabNavigationLink, YAMLCodeblock } from "@/shared/ui";
+import { ErrorComponent, TabNavigationLink } from "@/shared/ui";
 import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import Skeleton from "react-loading-skeleton";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function WorkflowDetailPage({
   params,

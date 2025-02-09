@@ -7,7 +7,7 @@ import { ApiClient } from "../ApiClient";
  * @throws {Error} If authentication fails or configuration cannot be loaded
  * @returns {Promise<ApiClient>} Configured API client instance
  */
-export async function createServerApiClient(): Promise<ApiClient> {
+export async function createServerApiClient() {
   try {
     const session = await auth();
     const config = getConfig();

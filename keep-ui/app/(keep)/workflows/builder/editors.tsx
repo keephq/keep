@@ -17,7 +17,6 @@ import {
   PlusIcon,
 } from "@heroicons/react/24/outline";
 import React from "react";
-import { useStore } from "./builder-store";
 import { useEffect, useRef, useState } from "react";
 import { V2Properties } from "@/app/(keep)/workflows/builder/types";
 import { Textarea, TextInput } from "@/components/ui";
@@ -29,6 +28,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { DebugJSON, ResultJsonCard } from "@/shared/ui";
 import { KeepApiError } from "@/shared/api/KeepApiError";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { useWorkflowStore } from "./workflow-store";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col p-4">{children}</div>;
@@ -43,7 +43,7 @@ export function GlobalEditorV2({
     v2Properties: properties,
     updateV2Properties: setProperty,
     selectedNode,
-  } = useStore();
+  } = useWorkflowStore();
 
   return (
     <WorkflowEditorV2
@@ -710,13 +710,13 @@ export function StepEditorV2({
   installedProviders?: Provider[] | undefined | null;
   saveRef: React.MutableRefObject<boolean>;
 }) {
-  const { setSynced } = useStore();
   const [formData, setFormData] = useState<{
     name?: string;
     properties?: V2Properties;
     type?: string;
   }>({});
-  const { selectedNode, updateSelectedNodeData, getNodeById } = useStore();
+  const { selectedNode, updateSelectedNodeData, getNodeById } =
+    useWorkflowStore();
   const deployRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -733,7 +733,6 @@ export function StepEditorV2({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setSynced(false);
   };
 
   const handlePropertyChange = (key: string, value: any) => {
@@ -741,7 +740,6 @@ export function StepEditorV2({
       ...formData,
       properties: { ...formData.properties, [key]: value },
     });
-    setSynced(false);
     if (saveRef.current) {
       saveRef.current = false;
     }
@@ -751,7 +749,6 @@ export function StepEditorV2({
     // Finalize the changes before saving
     updateSelectedNodeData("name", formData.name);
     updateSelectedNodeData("properties", formData.properties);
-    setSynced(false);
     if (saveRef && deployRef?.current?.checked) {
       saveRef.current = true;
     }

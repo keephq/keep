@@ -1,7 +1,6 @@
 import React, { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import NodeMenu from "./NodeMenu";
-import { useStore } from "./builder-store";
 import Image from "next/image";
 import { GoPlus } from "react-icons/go";
 import { MdNotStarted } from "react-icons/md";
@@ -13,6 +12,7 @@ import { FlowNode } from "@/app/(keep)/workflows/builder/types";
 import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
 import { DebugNodeInfo } from "./debug-info";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { useWorkflowStore } from "./workflow-store";
 
 function IconUrlProvider(data: FlowNode["data"]) {
   const { componentType, type } = data || {};
@@ -31,10 +31,10 @@ function CustomNode({ id, data }: FlowNode) {
   const {
     selectedNode,
     setSelectedNode,
-    setOpneGlobalEditor,
+    setOpenGlobalEditor,
     errorNode,
-    synced,
-  } = useStore();
+    isPendingSync,
+  } = useWorkflowStore();
   const type = data?.type
     ?.replace("step-", "")
     ?.replace("action-", "")
@@ -42,6 +42,7 @@ function CustomNode({ id, data }: FlowNode) {
     ?.replace("__end", "")
     ?.replace("trigger_", "");
 
+  const synced = !isPendingSync;
   const isEmptyNode = !!data?.type?.includes("empty");
   const specialNodeCheck = ["start", "end"].includes(type);
 
@@ -70,7 +71,7 @@ function CustomNode({ id, data }: FlowNode) {
       if (id?.includes("empty")) {
         setSelectedNode(id);
       }
-      setOpneGlobalEditor(true);
+      setOpenGlobalEditor(true);
       return;
     }
     setSelectedNode(id);
@@ -158,7 +159,7 @@ function CustomNode({ id, data }: FlowNode) {
               return;
             }
             if (specialNodeCheck || id?.includes("end")) {
-              setOpneGlobalEditor(true);
+              setOpenGlobalEditor(true);
               return;
             }
             setSelectedNode(id);

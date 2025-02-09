@@ -30,6 +30,7 @@ import { DebugJSON } from "@/shared/ui";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import clsx from "clsx";
 import { WF_DEBUG_INFO } from "./debug-info";
+import { useWorkflowStore } from "./workflow-store";
 
 const debug = true;
 
@@ -203,7 +204,7 @@ type AddTriggerUIProps =
 const AddTriggerUI = ({ status, args, respond, result }: AddTriggerUIProps) => {
   console.log("AddTriggerUI", { status, args, respond, result });
   const [isAddingTrigger, setIsAddingTrigger] = useState(false);
-  const { nodes, addNodeBetween, getNextEdge } = useStore();
+  const { nodes, addNodeBetween, getNextEdge } = useWorkflowStore();
   const { triggerType, triggerProperties } = args;
 
   const triggerDefinition = useMemo(() => {
@@ -366,7 +367,7 @@ export function BuilderChat({
     selectedNode,
     deleteNodes,
     getNodeById,
-  } = useStore();
+  } = useWorkflowStore();
 
   const steps = useMemo(() => {
     return toolboxConfiguration?.groups?.map((g) => g.steps).flat();
@@ -399,7 +400,7 @@ export function BuilderChat({
   const { setMessages } = useCopilotChat();
 
   const { v2Properties: properties, updateV2Properties: setProperties } =
-    useStore();
+    useWorkflowStore();
 
   useCopilotAction({
     name: "changeWorkflowName",

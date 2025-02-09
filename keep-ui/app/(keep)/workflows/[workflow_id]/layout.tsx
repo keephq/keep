@@ -1,7 +1,7 @@
 import { getWorkflowWithRedirectSafe } from "@/shared/api/workflows";
 import { WorkflowBreadcrumbs } from "./workflow-breadcrumbs";
 import WorkflowDetailHeader from "./workflow-detail-header";
-import { WorkflowBuilderProvider } from "../builder/workflow-builder-context";
+import { WorkflowProvider } from "../builder/workflow-provider";
 
 export default async function Layout({
   children,
@@ -11,8 +11,9 @@ export default async function Layout({
   params: { workflow_id: string };
 }) {
   const workflow = await getWorkflowWithRedirectSafe(params.workflow_id);
+
   return (
-    <WorkflowBuilderProvider workflowId={params.workflow_id}>
+    <WorkflowProvider workflow={workflow}>
       <div className="flex flex-col mb-4 h-full gap-6">
         <WorkflowBreadcrumbs workflowId={params.workflow_id} />
         <WorkflowDetailHeader
@@ -21,6 +22,6 @@ export default async function Layout({
         />
         <div className="flex-1 h-full">{children}</div>
       </div>
-    </WorkflowBuilderProvider>
+    </WorkflowProvider>
   );
 }

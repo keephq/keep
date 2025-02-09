@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import { Edge, useReactFlow } from "@xyflow/react";
-import { useStore } from "@/app/(keep)/workflows/builder/builder-store";
 import dagre, { graphlib } from "@dagrejs/dagre";
 import { processWorkflowV2, getTriggerStep } from "utils/reactFlow";
 import {
@@ -8,6 +7,7 @@ import {
   ReactFlowDefinition,
   V2Step,
 } from "@/app/(keep)/workflows/builder/types";
+import { useWorkflowStore } from "@/app/(keep)/workflows/builder/workflow-store";
 
 const getLayoutedElements = (
   nodes: FlowNode[],
@@ -86,7 +86,6 @@ const useWorkflowInitialization = (
   toolboxConfiguration: Record<string, any>
 ) => {
   const {
-    changes,
     nodes,
     edges,
     setNodes,
@@ -96,16 +95,16 @@ const useWorkflowInitialization = (
     onConnect,
     onDragOver,
     onDrop,
-    setV2Properties,
+    updateV2Properties,
     openGlobalEditor,
     selectedNode,
     setToolBoxConfig,
     isLayouted,
     setIsLayouted,
-    setChanges,
+    changes,
     setSelectedNode,
     setFirstInitilisationDone,
-  } = useStore();
+  } = useWorkflowStore();
 
   const [isLoading, setIsLoading] = useState(true);
   const { screenToFlowPosition } = useReactFlow();
@@ -114,7 +113,7 @@ const useWorkflowInitialization = (
 
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
-      onDrop(event, screenToFlowPosition);
+      onDrop(event, screenToFlowPosition({ x: 0, y: 0 }));
     },
     [screenToFlowPosition]
   );
@@ -201,8 +200,7 @@ const useWorkflowInitialization = (
       setIsLayouted(false);
       setNodes(nodes);
       setEdges(edges);
-      setV2Properties({ ...(parsedWorkflow?.properties ?? {}), name });
-      setChanges(1);
+      updateV2Properties({ ...(parsedWorkflow?.properties ?? {}), name });
       setToolBoxConfig(toolboxConfiguration);
       setIsLoading(false);
     };

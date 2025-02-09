@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { IoMdSettings, IoMdClose } from "react-icons/io";
-import { useStore } from "./builder-store";
 import { GlobalEditorV2, StepEditorV2 } from "./editors";
 import { Provider } from "@/app/(keep)/providers/providers";
+import { useWorkflowStore } from "./workflow-store";
 
 const ReactFlowEditor = ({
   providers,
@@ -11,12 +11,7 @@ const ReactFlowEditor = ({
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
 }) => {
-  const {
-    selectedNode,
-    setOpneGlobalEditor: setGlobalEditorOpen,
-    setCanDeploy,
-    synced,
-  } = useStore();
+  const { selectedNode, setOpenGlobalEditor } = useWorkflowStore();
   const [isOpen, setIsOpen] = useState(false);
   const stepEditorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -24,12 +19,6 @@ const ReactFlowEditor = ({
     selectedNode || ""
   );
   const saveRef = useRef<boolean>(false);
-  useEffect(() => {
-    if (saveRef.current && synced) {
-      setCanDeploy(true);
-      saveRef.current = false;
-    }
-  }, [saveRef?.current, synced]);
 
   useEffect(() => {
     setIsOpen(true);
@@ -37,7 +26,7 @@ const ReactFlowEditor = ({
       saveRef.current = false;
       const timer = setTimeout(() => {
         if (isTrigger) {
-          setGlobalEditorOpen(true);
+          setOpenGlobalEditor(true);
           return;
         }
         if (containerRef.current && stepEditorRef.current) {

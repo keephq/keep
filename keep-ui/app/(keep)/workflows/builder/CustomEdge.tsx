@@ -1,11 +1,11 @@
 import React from "react";
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath } from "@xyflow/react";
 import type { EdgeProps } from "@xyflow/react";
-import { useStore } from "./builder-store";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { Button } from "@tremor/react";
 import "@xyflow/react/dist/style.css";
 import { DebugEdgeInfo } from "./debug-info";
+import { useWorkflowStore } from "./workflow-store";
 
 export interface CustomEdgeProps extends EdgeProps {
   label?: string;
@@ -25,7 +25,7 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
   data,
   style,
 }: CustomEdgeProps) => {
-  const { setSelectedEdge, selectedEdge } = useStore();
+  const { setSelectedEdge, selectedEdge } = useWorkflowStore();
 
   // Calculate the path and midpoint
   const [edgePath, labelX, labelY] = getSmoothStepPath({

@@ -4,19 +4,34 @@ import {
   V2Step,
 } from "@/app/(keep)/workflows/builder/types";
 
+export interface ValidationResult {
+  isValid: boolean;
+  error?: {
+    nodeId: string | null;
+    message: string;
+  };
+}
+
 export function globalValidatorV2(
-  definition: FlowDefinition,
-  setGlobalValidationError: (id: string | null, error: string | null) => void
-): boolean {
+  definition: FlowDefinition
+): ValidationResult {
   const workflowName = definition?.properties?.name;
   const workflowDescription = definition?.properties?.description;
+
   if (!workflowName) {
-    setGlobalValidationError(null, "Workflow name cannot be empty.");
-    return false;
+    return {
+      isValid: false,
+      error: { nodeId: null, message: "Workflow name cannot be empty." },
+    };
   }
   if (!workflowDescription) {
-    setGlobalValidationError(null, "Workflow description cannot be empty.");
-    return false;
+    return {
+      isValid: false,
+      error: {
+        nodeId: null,
+        message: "Workflow description cannot be empty.",
+      },
+    };
   }
 
   if (
@@ -26,11 +41,13 @@ export function globalValidatorV2(
     !definition.properties["alert"] &&
     !definition.properties["incident"]
   ) {
-    setGlobalValidationError(
-      "trigger_start",
-      "Workflow should have at least one trigger."
-    );
-    return false;
+    return {
+      isValid: false,
+      error: {
+        nodeId: "trigger_start",
+        message: "Workflow should have at least one trigger.",
+      },
+    };
   }
 
   if (
@@ -38,8 +55,13 @@ export function globalValidatorV2(
     "interval" in definition.properties &&
     !definition.properties.interval
   ) {
-    setGlobalValidationError("interval", "Workflow interval cannot be empty.");
-    return false;
+    return {
+      isValid: false,
+      error: {
+        nodeId: "interval",
+        message: "Workflow interval cannot be empty.",
+      },
+    };
   }
 
   const alertSources = Object.values(definition.properties.alert || {}).filter(
@@ -50,11 +72,13 @@ export function globalValidatorV2(
     definition.properties["alert"] &&
     alertSources.length == 0
   ) {
-    setGlobalValidationError(
-      "alert",
-      "Workflow alert trigger cannot be empty."
-    );
-    return false;
+    return {
+      isValid: false,
+      error: {
+        nodeId: "alert",
+        message: "Workflow alert trigger cannot be empty.",
+      },
+    };
   }
 
   const incidentActions = Object.values(
@@ -65,16 +89,21 @@ export function globalValidatorV2(
     definition.properties["incident"] &&
     incidentActions.length == 0
   ) {
-    setGlobalValidationError(
-      "incident",
-      "Workflow incident trigger cannot be empty."
-    );
-    return false;
+    return {
+      isValid: false,
+      error: {
+        nodeId: "incident",
+        message: "Workflow incident trigger cannot be empty.",
+      },
+    };
   }
 
   const anyStepOrAction = definition?.sequence?.length > 0;
   if (!anyStepOrAction) {
-    setGlobalValidationError(null, "At least 1 step/action is required.");
+    return {
+      isValid: false,
+      error: { nodeId: null, message: "At least 1 step/action is required." },
+    };
   }
   const anyActionsInMainSequence = (
     definition.sequence[0] as V2Step
@@ -88,30 +117,36 @@ export function globalValidatorV2(
       const sequence = definition?.sequence?.[0]?.sequence || [];
       for (let i = actionIndex + 1; i < sequence.length; i++) {
         if (sequence[i]?.type?.includes("step-")) {
-          setGlobalValidationError(
-            sequence[i].id,
-            "Steps cannot be placed after actions."
-          );
-          return false;
+          return {
+            isValid: false,
+            error: {
+              nodeId: sequence[i].id,
+              message: "Steps cannot be placed after actions.",
+            },
+          };
         }
       }
     }
   }
   const valid = anyStepOrAction;
-  if (valid) setGlobalValidationError(null, null);
-  return valid;
+  if (valid) return { isValid: true };
+  return { isValid: false };
 }
 
 export function stepValidatorV2(
   step: V2Step,
-  setStepValidationError: (step: V2Step, error: string | null) => void,
   parentSequence?: V2Step,
   definition?: ReactFlowDefinition
-): boolean {
+): ValidationResult {
   if (step.type.includes("condition-")) {
     if (!step.name) {
-      setStepValidationError(step, "Step/action name cannot be empty.");
-      return false;
+      return {
+        isValid: false,
+        error: {
+          nodeId: step.id,
+          message: "Step/action name cannot be empty.",
+        },
+      };
     }
     const branches = (step?.branches || {
       true: [],
@@ -121,36 +156,49 @@ export function stepValidatorV2(
       step.type.includes("action-")
     );
     if (!onlyActions) {
-      setStepValidationError(step, "Conditions can only contain actions.");
-      return false;
+      return {
+        isValid: false,
+        error: {
+          nodeId: step.id,
+          message: "Conditions can only contain actions.",
+        },
+      };
     }
     const conditionHasActions = branches?.true
       ? branches?.true.length > 0
       : false;
     if (!conditionHasActions)
-      setStepValidationError(
-        step,
-        "Conditions must contain at least one action."
-      );
+      return {
+        isValid: false,
+        error: {
+          nodeId: step.id,
+          message: "Conditions must contain at least one action.",
+        },
+      };
     const valid = conditionHasActions && onlyActions;
-    if (valid) setStepValidationError(step, null);
-    return valid;
+    if (valid) return { isValid: true };
+    return { isValid: false };
   }
   if (step?.componentType === "task") {
     const valid = step?.name !== "";
-    if (!valid) setStepValidationError(step, "Step name cannot be empty.");
+    if (!valid)
+      return {
+        isValid: false,
+        error: { nodeId: step.id, message: "Step name cannot be empty." },
+      };
     if (!step?.properties?.with) {
-      setStepValidationError(
-        step,
-        "There is step/action with no parameters configured!"
-      );
-      return false;
+      return {
+        isValid: false,
+        error: {
+          nodeId: step.id,
+          message: "There is step/action with no parameters configured!",
+        },
+      };
     }
     if (valid && step?.properties?.with) {
-      setStepValidationError(step, null);
+      return { isValid: true };
     }
-    return valid;
+    return { isValid: false };
   }
-  setStepValidationError(step, null);
-  return true;
+  return { isValid: true };
 }

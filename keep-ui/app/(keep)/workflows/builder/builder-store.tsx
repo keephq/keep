@@ -119,14 +119,6 @@ export type FlowState = {
   setChanges: (changes: number) => void;
   firstInitilisationDone: boolean;
   setFirstInitilisationDone: (firstInitilisationDone: boolean) => void;
-  lastSavedChanges: { nodes: FlowNode[] | null; edges: Edge[] | null };
-  setLastSavedChanges: ({
-    nodes,
-    edges,
-  }: {
-    nodes: FlowNode[];
-    edges: Edge[];
-  }) => void;
   setErrorNode: (id: string | null) => void;
   errorNode: string | null;
   synced: boolean;
@@ -150,7 +142,6 @@ export type FlowStateValues = Pick<
   | "selectedEdge"
   | "changes"
   | "firstInitilisationDone"
-  | "lastSavedChanges"
   | "errorNode"
   | "synced"
   | "canDeploy"
