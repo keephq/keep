@@ -934,6 +934,7 @@ def test_workflow_execution_logs(
     assert workflow_execution.status == "success"
 
     # Get logs from DB
+    db_session.expire_all()
     logs = (
         db_session.query(WorkflowExecutionLog)
         .filter(WorkflowExecutionLog.workflow_execution_id == workflow_execution.id)
