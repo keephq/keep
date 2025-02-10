@@ -24,7 +24,7 @@ export default async function Page() {
 
     const tasks = [
       getIncidents(api, defaultIncidentsParams),
-      await getInitalFacets(api, "incidents"),
+      await getInitialFacets(api, "incidents"),
     ];
     const [_incidents, _facetsData] = await Promise.all(tasks);
     incidents = _incidents as PaginatedIncidentsDto;

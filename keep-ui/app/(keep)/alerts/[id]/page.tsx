@@ -10,7 +10,7 @@ type PageProps = {
 export default async function Page({ params }: PageProps) {
   const api = await createServerApiClient();
   const initialFacets = await getInitialFacets(api, "alerts");
-  return <AlertsPage presetName={params.id} initalFacets={initialFacets} />;
+  return <AlertsPage presetName={params.id} initialFacets={initialFacets} />;
 }
 
 export const metadata = {
