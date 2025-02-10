@@ -174,6 +174,7 @@ export const Facet: React.FC<FacetProps> = ({
         </div>
         {!isStatic && (
           <button
+            data-testid="delete-facet"
             onClick={(mouseEvent) => {
               mouseEvent.preventDefault();
               mouseEvent.stopPropagation();

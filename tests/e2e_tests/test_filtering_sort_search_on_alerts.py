@@ -40,18 +40,22 @@ def create_fake_alert(index: int, provider_type: str):
     title = "Low Disk Space"
     status = "firing"
     severity = "critical"
+    custom_tag = "environment:production"
 
     if index % 4 == 0:
         title = "High CPU Usage"
         status = "resolved"
         severity = "warning"
+        custom_tag = "environment:development"
     elif index % 3 == 0:
         title = "Memory Usage High"
         severity = "info"
+        custom_tag = "environment:staging"
     elif index % 2 == 0:
         title = "Network Error"
         status = "suppressed"
         severity = "high"
+        custom_tag = "environment:custom"
 
     if provider_type == "datadog":
         SEVERITIES_MAP = {
@@ -83,6 +87,9 @@ def create_fake_alert(index: int, provider_type: str):
             "date_happened": (datetime.utcnow() + timedelta(days=-index)).timestamp(),
             "tags": {
                 "envNameTag": "production" if index % 2 else "development",
+            },
+            "custom_tags": {
+                "env": custom_tag,
             },
             "id": "bf414194e8622f241c38c645b634d6f18d92c58f56eccafa2e6a2b27b08adf05",
         }
@@ -116,6 +123,9 @@ def create_fake_alert(index: int, provider_type: str):
             "endsAt": "0001-01-01T00:00:00Z",
             "generatorURL": "http://example.com/graph?g0.expr=NetworkLatencyHigh",
             "fingerprint": str(uuid.uuid4()),
+            "custom_tags": {
+                "env": custom_tag,
+            },
         }
 
 
@@ -192,9 +202,18 @@ def select_one_facet_option(browser, facet_name, option_name):
 def assert_facet(browser, facet_name, alerts, alert_property_name: str):
     counters_dict = {}
     for alert in alerts:
-        if alert[alert_property_name] not in counters_dict:
-            counters_dict[alert[alert_property_name]] = 0
-        counters_dict[alert[alert_property_name]] += 1
+        prop_value = None
+        for prop in alert_property_name.split("."):
+            prop_value = alert.get(prop, None)
+            if prop_value is None:
+                prop_value = "None"
+                break
+            alert = prop_value
+
+        if prop_value not in counters_dict:
+            counters_dict[prop_value] = 0
+
+        counters_dict[prop_value] += 1
 
     for facet_value, count in counters_dict.items():
         facet_locator = browser.locator("[data-testid='facet']", has_text=facet_name)
@@ -274,6 +293,48 @@ def test_filter_by_static_facet(browser, facet_test_case):
         alert_property_name,
         column_index,
     )
+
+
+def test_adding_custom_facet(browser):
+    facet_property_path = "custom_tags.env"
+    facet_name = "Custom Env"
+    alert_property_name = facet_property_path
+    value = "environment:staging"
+    current_alerts = init_test(browser)
+
+    browser.locator("button", has_text="Add Facet").click()
+
+    browser.locator("input[placeholder='Enter facet name']").fill(facet_name)
+    browser.locator("input[placeholder*='Search columns']").fill(facet_property_path)
+    browser.locator("button", has_text=facet_property_path).click()
+    browser.locator("button", has_text="Create").click()
+
+    expect(
+        browser.locator("[data-testid='facet']", has_text=facet_name)
+    ).to_be_visible()
+
+    assert_facet(browser, facet_name, current_alerts, alert_property_name)
+
+    option = browser.locator("[data-testid='facet-value']", has_text=value)
+    option.hover()
+    option.locator("button", has_text="Only").click()
+
+    assert_alerts_by_column(
+        browser,
+        current_alerts,
+        lambda alert: alert.get("custom_tags", {}).get("env") == value,
+        alert_property_name,
+        None,
+    )
+    browser.on("dialog", lambda dialog: dialog.accept())
+    browser.locator("[data-testid='facet']", has_text=facet_name).locator(
+        '[data-testid="delete-facet"]'
+    ).click()
+    expect(
+        browser.locator("[data-testid='facet']", has_text=facet_name)
+    ).not_to_be_visible()
+
+    print("f")
 
 
 search_by_cel_tescases = {
