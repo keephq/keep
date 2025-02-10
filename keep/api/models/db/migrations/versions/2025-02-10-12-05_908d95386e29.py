@@ -1,8 +1,8 @@
 """Add incident severity_forced flag
 
 Revision ID: 908d95386e29
-Revises: d359baaf0836
-Create Date: 2025-02-03 20:19:19.795904
+Revises: e343054ae740
+Create Date: 2025-02-05 12:05:19.795904
 
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "908d95386e29"
-down_revision = "d359baaf0836"
+down_revision = "e343054ae740"
 branch_labels = None
 depends_on = None
 
