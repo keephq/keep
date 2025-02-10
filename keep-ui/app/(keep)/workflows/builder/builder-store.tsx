@@ -1,13 +1,18 @@
 import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
 import {
   addEdge,
   applyNodeChanges,
   applyEdgeChanges,
   Edge,
+  Position,
 } from "@xyflow/react";
-
-import { createCustomEdgeMeta, processWorkflowV2 } from "utils/reactFlow";
+import {
+  createCustomEdgeMeta,
+  processWorkflowV2,
+  getTriggerStep,
+} from "utils/reactFlow";
 import { createDefaultNodeV2 } from "../../../../utils/reactFlow";
 import { wrapDefinitionV2 } from "./utils";
 import {
@@ -17,7 +22,9 @@ import {
   FlowStateValues,
   FlowState,
   FlowNode,
+  DefinitionV2,
 } from "./types";
+import dagre, { graphlib } from "@dagrejs/dagre";
 
 function addNodeBetween(
   nodeOrEdge: string | null,
@@ -175,260 +182,444 @@ const defaultState: FlowStateValues = {
   isLoading: true,
 };
 
-const useStore = create<FlowState>((set, get) => ({
-  ...defaultState,
-  setDefinition: (def) => set({ definition: def }),
-  setIsLoading: (loading) => set({ isLoading: loading }),
-  setButtonsEnabled: (state: boolean) => set({ buttonsEnabled: state }),
-  setGenerateEnabled: (state: boolean) => set({ generateEnabled: state }),
-  triggerGenerate: () =>
-    set((state) => ({ generateRequestCount: state.generateRequestCount + 1 })),
-  triggerSave: () =>
-    set((state) => ({ saveRequestCount: state.saveRequestCount + 1 })),
-  triggerRun: () =>
-    set((state) => ({ runRequestCount: state.runRequestCount + 1 })),
-  setIsSaving: (state: boolean) => set({ isSaving: state }),
-  setCanDeploy: (deploy) => set({ canDeploy: deploy }),
-  setSynced: (sync) => set({ synced: sync }),
-  setErrorNode: (id) => set({ errorNode: id }),
-  setFirstInitilisationDone: (firstInitilisationDone) =>
-    set({ firstInitilisationDone }),
-  setSelectedEdge: (id) =>
-    set({ selectedEdge: id, selectedNode: null, openGlobalEditor: true }),
-  setChanges: (changes: number) => set({ changes: changes }),
-  setIsLayouted: (isLayouted) => set({ isLayouted }),
-  addNodeBetween: (nodeOrEdge: string | null, step: any, type: string) => {
-    addNodeBetween(nodeOrEdge, step, type, set, get);
-  },
-  setToolBoxConfig: (config) => set({ toolboxConfiguration: config }),
-  setOpneGlobalEditor: (open) => set({ openGlobalEditor: open }),
-  updateSelectedNodeData: (key, value) => {
-    const currentSelectedNode = get().selectedNode;
-    if (currentSelectedNode) {
-      const updatedNodes = get().nodes.map((node) => {
-        if (node.id === currentSelectedNode) {
-          //properties changes  should not reconstructed the defintion. only recontrreconstructing if there are any structural changes are done on the flow.
-          if (value) {
-            node.data[key] = value;
-          }
-          if (!value) {
-            delete node.data[key];
-          }
-          return { ...node };
-        }
-        return node;
-      });
-      set({
-        nodes: updatedNodes,
-        changes: get().changes + 1,
-      });
-    }
-  },
-  setV2Properties: (properties) =>
-    set({ v2Properties: properties, canDeploy: false }),
-  updateV2Properties: (properties) => {
-    const updatedProperties = { ...get().v2Properties, ...properties };
-    set({
-      v2Properties: updatedProperties,
-      changes: get().changes + 1,
-      canDeploy: false,
-    });
-  },
-  setSelectedNode: (id) => {
-    set({
-      selectedNode: id || null,
-      openGlobalEditor: false,
-      selectedEdge: null,
-    });
-  },
-  setStepEditorOpenForNode: (nodeId) => {
-    set({ openGlobalEditor: false });
-    set({ stepEditorOpenForNode: nodeId });
-  },
-  onNodesChange: (changes) =>
-    set({ nodes: applyNodeChanges(changes, get().nodes) }),
-  onEdgesChange: (changes) =>
-    set({ edges: applyEdgeChanges(changes, get().edges) }),
-  onConnect: (connection) => {
-    const { source, target } = connection;
-    const sourceNode = get().getNodeById(source);
-    const targetNode = get().getNodeById(target);
-
-    // Define the connection restrictions
-    const canConnect = (
-      sourceNode: FlowNode | undefined,
-      targetNode: FlowNode | undefined
-    ) => {
-      if (!sourceNode || !targetNode) return false;
-
-      const sourceType = sourceNode?.data?.componentType;
-      const targetType = targetNode?.data?.componentType;
-
-      // Restriction logic based on node types
-      if (sourceType === "switch") {
-        return get().edges.filter((edge) => edge.source === source).length < 2;
-      }
-      if (sourceType === "foreach" || sourceNode?.data?.type === "foreach") {
-        return true;
-      }
-      return get().edges.filter((edge) => edge.source === source).length === 0;
-    };
-
-    // Check if the connection is allowed
-    if (canConnect(sourceNode, targetNode)) {
-      const edge = { ...connection, type: "custom-edge" };
-      set({ edges: addEdge(edge, get().edges) });
-      set({
-        nodes: get().nodes.map((node) => {
-          if (node.id === target) {
-            return { ...node, prevStepId: source, isDraggable: false };
-          }
-          if (node.id === source) {
-            return { ...node, isDraggable: false };
+const useStore = create<FlowState>()(
+  devtools((set, get) => ({
+    ...defaultState,
+    setDefinition: (def) => set({ definition: def }),
+    setIsLoading: (loading) => set({ isLoading: loading }),
+    setButtonsEnabled: (state: boolean) => set({ buttonsEnabled: state }),
+    setGenerateEnabled: (state: boolean) => set({ generateEnabled: state }),
+    triggerGenerate: () =>
+      set((state) => ({
+        generateRequestCount: state.generateRequestCount + 1,
+      })),
+    triggerSave: () =>
+      set((state) => ({ saveRequestCount: state.saveRequestCount + 1 })),
+    triggerRun: () =>
+      set((state) => ({ runRequestCount: state.runRequestCount + 1 })),
+    setIsSaving: (state: boolean) => set({ isSaving: state }),
+    setCanDeploy: (deploy) => set({ canDeploy: deploy }),
+    setSynced: (sync) => set({ synced: sync }),
+    setErrorNode: (id) => set({ errorNode: id }),
+    setFirstInitilisationDone: (firstInitilisationDone) =>
+      set({ firstInitilisationDone }),
+    setSelectedEdge: (id) =>
+      set({ selectedEdge: id, selectedNode: null, openGlobalEditor: true }),
+    setChanges: (changes: number) => set({ changes: changes }),
+    setIsLayouted: (isLayouted) => set({ isLayouted }),
+    addNodeBetween: (nodeOrEdge: string | null, step: any, type: string) => {
+      addNodeBetween(nodeOrEdge, step, type, set, get);
+    },
+    setToolBoxConfig: (config) => set({ toolboxConfiguration: config }),
+    setOpneGlobalEditor: (open) => set({ openGlobalEditor: open }),
+    updateSelectedNodeData: (key, value) => {
+      const currentSelectedNode = get().selectedNode;
+      if (currentSelectedNode) {
+        const updatedNodes = get().nodes.map((node) => {
+          if (node.id === currentSelectedNode) {
+            //properties changes  should not reconstructed the defintion. only recontrreconstructing if there are any structural changes are done on the flow.
+            if (value) {
+              node.data[key] = value;
+            }
+            if (!value) {
+              delete node.data[key];
+            }
+            return { ...node };
           }
           return node;
-        }),
+        });
+        set({
+          nodes: updatedNodes,
+          changes: get().changes + 1,
+        });
+      }
+    },
+    setV2Properties: (properties) =>
+      set({ v2Properties: properties, canDeploy: false }),
+    updateV2Properties: (properties) => {
+      const updatedProperties = { ...get().v2Properties, ...properties };
+      set({
+        v2Properties: updatedProperties,
+        changes: get().changes + 1,
+        canDeploy: false,
       });
-    } else {
-      console.warn("Connection not allowed based on node types");
-    }
-  },
+    },
+    setSelectedNode: (id) => {
+      set({
+        selectedNode: id || null,
+        openGlobalEditor: false,
+        selectedEdge: null,
+      });
+    },
+    setStepEditorOpenForNode: (nodeId) => {
+      set({ openGlobalEditor: false });
+      set({ stepEditorOpenForNode: nodeId });
+    },
+    onNodesChange: (changes) =>
+      set({ nodes: applyNodeChanges(changes, get().nodes) }),
+    onEdgesChange: (changes) =>
+      set({ edges: applyEdgeChanges(changes, get().edges) }),
+    onConnect: (connection) => {
+      const { source, target } = connection;
+      const sourceNode = get().getNodeById(source);
+      const targetNode = get().getNodeById(target);
 
-  onDragOver: (event) => {
-    event.preventDefault();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = "move";
-    }
-  },
-  onDrop: (event, screenToFlowPosition) => {
-    event.preventDefault();
-    event.stopPropagation();
+      // Define the connection restrictions
+      const canConnect = (
+        sourceNode: FlowNode | undefined,
+        targetNode: FlowNode | undefined
+      ) => {
+        if (!sourceNode || !targetNode) return false;
 
-    try {
-      const dataTransfer = event.dataTransfer;
-      if (!dataTransfer) return;
+        const sourceType = sourceNode?.data?.componentType;
+        const targetType = targetNode?.data?.componentType;
 
-      let step: any = dataTransfer.getData("application/reactflow");
-      if (!step) {
+        // Restriction logic based on node types
+        if (sourceType === "switch") {
+          return (
+            get().edges.filter((edge) => edge.source === source).length < 2
+          );
+        }
+        if (sourceType === "foreach" || sourceNode?.data?.type === "foreach") {
+          return true;
+        }
+        return (
+          get().edges.filter((edge) => edge.source === source).length === 0
+        );
+      };
+
+      // Check if the connection is allowed
+      if (canConnect(sourceNode, targetNode)) {
+        const edge = { ...connection, type: "custom-edge" };
+        set({ edges: addEdge(edge, get().edges) });
+        set({
+          nodes: get().nodes.map((node) => {
+            if (node.id === target) {
+              return { ...node, prevStepId: source, isDraggable: false };
+            }
+            if (node.id === source) {
+              return { ...node, isDraggable: false };
+            }
+            return node;
+          }),
+        });
+      } else {
+        console.warn("Connection not allowed based on node types");
+      }
+    },
+
+    onDragOver: (event) => {
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "move";
+      }
+    },
+    onDrop: (event, screenToFlowPosition) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      try {
+        const dataTransfer = event.dataTransfer;
+        if (!dataTransfer) return;
+
+        let step: any = dataTransfer.getData("application/reactflow");
+        if (!step) {
+          return;
+        }
+        step = JSON.parse(step);
+        if (!step) return;
+        // Use the screenToFlowPosition function to get flow coordinates
+        const position = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        const newUuid = uuidv4();
+        const newNode = {
+          id: newUuid,
+          type: "custom",
+          position, // Use the position object with x and y
+          data: {
+            label: step.name! as string,
+            ...step,
+            id: newUuid,
+            name: step.name,
+            type: step.type,
+            componentType: step.componentType,
+          },
+          isDraggable: true,
+          dragHandle: ".custom-drag-handle",
+        } as FlowNode;
+
+        set({ nodes: [...get().nodes, newNode] });
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    setNodes: (nodes) => set({ nodes }),
+    setEdges: (edges) => set({ edges }),
+    getNodeById: (id) => get().nodes.find((node) => node.id === id),
+    deleteNodes: (ids) => {
+      //for now handling only single node deletion. can later enhance to multiple deletions
+      if (typeof ids !== "string") {
         return;
       }
-      step = JSON.parse(step);
-      if (!step) return;
-      // Use the screenToFlowPosition function to get flow coordinates
-      const position = screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-      const newUuid = uuidv4();
-      const newNode = {
-        id: newUuid,
-        type: "custom",
-        position, // Use the position object with x and y
-        data: {
-          label: step.name! as string,
-          ...step,
-          id: newUuid,
-          name: step.name,
-          type: step.type,
-          componentType: step.componentType,
-        },
-        isDraggable: true,
-        dragHandle: ".custom-drag-handle",
-      } as FlowNode;
+      const nodes = get().nodes;
+      const nodeStartIndex = nodes.findIndex((node) => ids == node.id);
+      if (nodeStartIndex === -1) {
+        return;
+      }
+      let idArray = Array.isArray(ids) ? ids : [ids];
 
-      set({ nodes: [...get().nodes, newNode] });
-    } catch (err) {
-      console.error(err);
-    }
-  },
-  setNodes: (nodes) => set({ nodes }),
-  setEdges: (edges) => set({ edges }),
-  getNodeById: (id) => get().nodes.find((node) => node.id === id),
-  deleteNodes: (ids) => {
-    //for now handling only single node deletion. can later enhance to multiple deletions
-    if (typeof ids !== "string") {
-      return;
-    }
-    const nodes = get().nodes;
-    const nodeStartIndex = nodes.findIndex((node) => ids == node.id);
-    if (nodeStartIndex === -1) {
-      return;
-    }
-    let idArray = Array.isArray(ids) ? ids : [ids];
+      const startNode = nodes[nodeStartIndex];
+      const customIdentifier = `${startNode?.data?.type}__end__${startNode?.id}`;
 
-    const startNode = nodes[nodeStartIndex];
-    const customIdentifier = `${startNode?.data?.type}__end__${startNode?.id}`;
+      let endIndex = nodes.findIndex((node) => node.id === customIdentifier);
+      endIndex = endIndex === -1 ? nodeStartIndex : endIndex;
 
-    let endIndex = nodes.findIndex((node) => node.id === customIdentifier);
-    endIndex = endIndex === -1 ? nodeStartIndex : endIndex;
+      const endNode = nodes[endIndex];
 
-    const endNode = nodes[endIndex];
+      let edges = get().edges;
+      let finalEdges = edges;
+      idArray = nodes
+        .slice(nodeStartIndex, endIndex + 1)
+        .map((node) => node.id);
 
-    let edges = get().edges;
-    let finalEdges = edges;
-    idArray = nodes.slice(nodeStartIndex, endIndex + 1).map((node) => node.id);
-
-    finalEdges = edges.filter(
-      (edge) =>
-        !(idArray.includes(edge.source) || idArray.includes(edge.target))
-    );
-    if (
-      ["interval", "alert", "manual", "incident"].includes(ids) &&
-      edges.some(
-        (edge) => edge.source === "trigger_start" && edge.target !== ids
-      )
-    ) {
-      edges = edges.filter((edge) => !idArray.includes(edge.source));
-    }
-    const sources = [
-      ...new Set(edges.filter((edge) => startNode.id === edge.target)),
-    ];
-    const targets = [
-      ...new Set(edges.filter((edge) => endNode.id === edge.source)),
-    ];
-    targets.forEach((edge) => {
-      const target =
-        edge.source === "trigger_start" ? "triggger_end" : edge.target;
-
-      finalEdges = [
-        ...finalEdges,
-        ...sources
-          .map((source: Edge) =>
-            createCustomEdgeMeta(source.source, target, source.label as string)
-          )
-          .flat(1),
+      finalEdges = edges.filter(
+        (edge) =>
+          !(idArray.includes(edge.source) || idArray.includes(edge.target))
+      );
+      if (
+        ["interval", "alert", "manual", "incident"].includes(ids) &&
+        edges.some(
+          (edge) => edge.source === "trigger_start" && edge.target !== ids
+        )
+      ) {
+        edges = edges.filter((edge) => !idArray.includes(edge.source));
+      }
+      const sources = [
+        ...new Set(edges.filter((edge) => startNode.id === edge.target)),
       ];
-    });
-    // }
+      const targets = [
+        ...new Set(edges.filter((edge) => endNode.id === edge.source)),
+      ];
+      targets.forEach((edge) => {
+        const target =
+          edge.source === "trigger_start" ? "triggger_end" : edge.target;
 
-    nodes[endIndex + 1].position = { x: 0, y: 0 };
+        finalEdges = [
+          ...finalEdges,
+          ...sources
+            .map((source: Edge) =>
+              createCustomEdgeMeta(
+                source.source,
+                target,
+                source.label as string
+              )
+            )
+            .flat(1),
+        ];
+      });
+      // }
 
-    const newNode = createDefaultNodeV2(
-      { ...nodes[endIndex + 1].data, islayouted: false },
-      nodes[endIndex + 1].id
-    );
+      nodes[endIndex + 1].position = { x: 0, y: 0 };
 
-    const newNodes = [
-      ...nodes.slice(0, nodeStartIndex),
-      newNode,
-      ...nodes.slice(endIndex + 2),
-    ];
-    if (["manual", "alert", "interval", "incident"].includes(ids)) {
-      const v2Properties = get().v2Properties;
-      delete v2Properties[ids];
-      set({ v2Properties });
-    }
-    set({
-      edges: finalEdges,
-      nodes: newNodes,
-      selectedNode: null,
-      isLayouted: false,
-      changes: get().changes + 1,
-      openGlobalEditor: true,
-    });
+      const newNode = createDefaultNodeV2(
+        { ...nodes[endIndex + 1].data, islayouted: false },
+        nodes[endIndex + 1].id
+      );
+
+      const newNodes = [
+        ...nodes.slice(0, nodeStartIndex),
+        newNode,
+        ...nodes.slice(endIndex + 2),
+      ];
+      if (["manual", "alert", "interval", "incident"].includes(ids)) {
+        const v2Properties = get().v2Properties;
+        delete v2Properties[ids];
+        set({ v2Properties });
+      }
+      set({
+        edges: finalEdges,
+        nodes: newNodes,
+        selectedNode: null,
+        isLayouted: false,
+        changes: get().changes + 1,
+        openGlobalEditor: true,
+      });
+    },
+    // used to reset the store to the initial state, on builder unmount
+    reset: () => set(defaultState),
+    onLayout: (params: {
+      direction: string;
+      useInitialNodes?: boolean;
+      initialNodes?: FlowNode[];
+      initialEdges?: Edge[];
+    }) => onLayout(params, set, get),
+    initializeWorkflow: (toolboxConfiguration: Record<string, any>) =>
+      initializeWorkflow(toolboxConfiguration, set, get),
+  }))
+);
+
+function onLayout(
+  {
+    direction,
+    useInitialNodes = false,
+    initialNodes = [],
+    initialEdges = [],
+  }: {
+    direction: string;
+    useInitialNodes?: boolean;
+    initialNodes?: FlowNode[];
+    initialEdges?: Edge[];
   },
-  // used to reset the store to the initial state, on builder unmount
-  reset: () => set(defaultState),
-}));
+  set: StoreSet,
+  get: StoreGet
+) {
+  const opts = { "elk.direction": direction };
+  const ns = useInitialNodes ? initialNodes : get().nodes || [];
+  const es = useInitialNodes ? initialEdges : get().edges || [];
+
+  const { nodes: _layoutedNodes, edges: _layoutedEdges } = getLayoutedElements(
+    ns,
+    es,
+    opts
+  );
+  const layoutedEdges = _layoutedEdges.map((edge: Edge) => {
+    return {
+      ...edge,
+      animated: !!edge?.target?.includes("empty"),
+      data: { ...edge.data, isLayouted: true },
+    };
+  });
+  const layoutedNodes = _layoutedNodes.map((node: FlowNode) => {
+    return {
+      ...node,
+      data: { ...node.data, isLayouted: true },
+    };
+  });
+  set({
+    nodes: layoutedNodes,
+    edges: layoutedEdges,
+    isLayouted: true,
+  });
+}
+
+async function initializeWorkflow(
+  toolboxConfiguration: Record<string, any>,
+  set: StoreSet,
+  get: StoreGet
+) {
+  const definition = get().definition;
+  set({ isLoading: true });
+  let parsedWorkflow = definition?.value;
+  const name =
+    parsedWorkflow?.properties?.name || parsedWorkflow?.properties?.id;
+
+  const sequences = [
+    {
+      id: "start",
+      type: "start",
+      componentType: "start",
+      properties: {},
+      isLayouted: false,
+      name: "start",
+    } as V2Step,
+    ...getTriggerStep(parsedWorkflow?.properties),
+    ...(parsedWorkflow?.sequence || []),
+    {
+      id: "end",
+      type: "end",
+      componentType: "end",
+      properties: {},
+      isLayouted: false,
+      name: "end",
+    } as V2Step,
+  ];
+  const initialPosition = { x: 0, y: 50 };
+  let { nodes, edges } = processWorkflowV2(sequences, initialPosition, true);
+  set({
+    selectedNode: null,
+    firstInitilisationDone: false,
+    isLayouted: false,
+    nodes,
+    edges,
+    v2Properties: { ...(parsedWorkflow?.properties ?? {}), name },
+    changes: 1,
+    toolboxConfiguration,
+    isLoading: false,
+  });
+}
+
+const getLayoutedElements = (
+  nodes: FlowNode[],
+  edges: Edge[],
+  options = {}
+) => {
+  // @ts-ignore
+  const isHorizontal = options?.["elk.direction"] === "RIGHT";
+  const dagreGraph = new graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+  // Set graph direction and spacing
+  dagreGraph.setGraph({
+    rankdir: isHorizontal ? "LR" : "TB",
+    nodesep: 80,
+    ranksep: 80,
+    edgesep: 80,
+  });
+
+  // Add nodes to dagre graph
+  nodes.forEach((node) => {
+    const type = node?.data?.type
+      ?.replace("step-", "")
+      ?.replace("action-", "")
+      ?.replace("condition-", "")
+      ?.replace("__end", "");
+
+    let width = ["start", "end"].includes(type) ? 80 : 280;
+    let height = 80;
+
+    // Special case for trigger start and end nodes, which act as section headers
+    if (node.id === "trigger_start" || node.id === "trigger_end") {
+      width = 150;
+      height = 40;
+    }
+
+    dagreGraph.setNode(node.id, { width, height });
+  });
+
+  // Add edges to dagre graph
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  // Run the layout
+  dagre.layout(dagreGraph);
+
+  // Get the positioned nodes and edges
+  const layoutedNodes = nodes.map((node) => {
+    const dagreNode = dagreGraph.node(node.id);
+    return {
+      ...node,
+      targetPosition: isHorizontal ? "left" : "top",
+      sourcePosition: isHorizontal ? "right" : "bottom",
+      style: {
+        ...node.style,
+        width: dagreNode.width as number,
+        height: dagreNode.height as number,
+      },
+      // Dagre provides positions with the center of the node as origin
+      position: {
+        x: dagreNode.x - dagreNode.width / 2,
+        y: dagreNode.y - dagreNode.height / 2,
+      },
+    };
+  });
+
+  return {
+    nodes: layoutedNodes,
+    edges,
+  };
+};
 
 export default useStore;

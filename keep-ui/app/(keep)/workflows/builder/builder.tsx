@@ -4,7 +4,6 @@ import { Provider } from "../../providers/providers";
 import {
   parseWorkflow,
   generateWorkflow,
-  getToolboxConfiguration,
   getWorkflowFromDefinition,
   wrapDefinitionV2,
 } from "./utils";
@@ -366,18 +365,7 @@ function Builder({
                   <ReactFlowBuilder
                     providers={providers}
                     installedProviders={installedProviders}
-                    definition={definition}
                     validatorConfiguration={ValidatorConfigurationV2}
-                    onDefinitionChange={(def: any) => {
-                      setDefinition({
-                        value: {
-                          sequence: def?.sequence || [],
-                          properties: def?.properties || {},
-                        },
-                        isValid: def?.isValid || false,
-                      });
-                    }}
-                    toolboxConfiguration={getToolboxConfiguration(providers)}
                   />
                 </ReactFlowProvider>
               </div>

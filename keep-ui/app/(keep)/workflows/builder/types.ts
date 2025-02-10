@@ -121,4 +121,11 @@ export interface FlowState extends FlowStateValues {
   reset: () => void;
   setDefinition: (def: DefinitionV2) => void;
   setIsLoading: (loading: boolean) => void;
+  onLayout: (params: {
+    direction: string;
+    useInitialNodes?: boolean;
+    initialNodes?: FlowNode[];
+    initialEdges?: Edge[];
+  }) => void;
+  initializeWorkflow: (toolboxConfiguration: Record<string, any>) => void;
 }

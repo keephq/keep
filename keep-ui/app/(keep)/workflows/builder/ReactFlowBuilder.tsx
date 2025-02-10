@@ -13,11 +13,8 @@ import { Provider } from "@/app/(keep)/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
 import "@xyflow/react/dist/style.css";
 
-import {
-  Definition,
-  ReactFlowDefinition,
-  V2Step,
-} from "@/app/(keep)/workflows/builder/types";
+import { Definition, V2Step } from "@/app/(keep)/workflows/builder/types";
+import { getToolboxConfiguration } from "./utils";
 
 const nodeTypes = { custom: CustomNode as any };
 const edgeTypes: EdgeTypesType = {
@@ -27,41 +24,32 @@ const edgeTypes: EdgeTypesType = {
 const ReactFlowBuilder = ({
   providers,
   installedProviders,
-  toolboxConfiguration,
-  definition,
-  onDefinitionChange,
   validatorConfiguration,
 }: {
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
-  toolboxConfiguration: Record<string, any>;
-  definition: any;
   validatorConfiguration: {
-    step: (
-      step: V2Step,
-      parent?: V2Step,
-      defnition?: ReactFlowDefinition
-    ) => boolean;
+    step: (step: V2Step, parent?: V2Step, definition?: Definition) => boolean;
     root: (def: Definition) => boolean;
   };
-  onDefinitionChange: (def: Definition) => void;
 }) => {
+  const toolboxConfiguration = getToolboxConfiguration(providers ?? []);
   const {
     nodes,
     edges,
-    isLoading,
+    isLayouted,
     onEdgesChange,
     onNodesChange,
     onConnect,
     onDragOver,
     onDrop,
-  } = useWorkflowInitialization(definition, toolboxConfiguration);
+  } = useWorkflowInitialization(toolboxConfiguration);
 
   return (
     <div className="h-[inherit] rounded-lg">
       <div className="h-full sqd-theme-light sqd-layout-desktop">
         <DragAndDropSidebar isDraggable={false} />
-        {!isLoading && (
+        {isLayouted && (
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -81,7 +69,6 @@ const ReactFlowBuilder = ({
         <ReactFlowEditor
           providers={providers}
           installedProviders={installedProviders}
-          onDefinitionChange={onDefinitionChange}
           validatorConfiguration={validatorConfiguration}
         />
       </div>

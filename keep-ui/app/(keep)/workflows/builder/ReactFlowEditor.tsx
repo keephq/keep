@@ -8,28 +8,22 @@ import { reConstructWorklowToDefinition } from "utils/reactFlow";
 import debounce from "lodash.debounce";
 import {
   Definition,
-  ReactFlowDefinition,
   V2Properties,
   V2Step,
 } from "@/app/(keep)/workflows/builder/types";
+import { wrapDefinitionV2 } from "./utils";
 
 const ReactFlowEditor = ({
   providers,
   installedProviders,
   validatorConfiguration,
-  onDefinitionChange,
 }: {
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
   validatorConfiguration: {
-    step: (
-      step: V2Step,
-      parent?: V2Step,
-      defnition?: ReactFlowDefinition
-    ) => boolean;
+    step: (step: V2Step, parent?: V2Step, defnition?: Definition) => boolean;
     root: (def: Definition) => boolean;
   };
-  onDefinitionChange: (def: Definition) => void;
 }) => {
   const {
     selectedNode,
@@ -38,6 +32,7 @@ const ReactFlowEditor = ({
     nodes,
     edges,
     setOpneGlobalEditor,
+    setDefinition,
     synced,
     setSynced,
     setCanDeploy,
@@ -105,13 +100,13 @@ const ReactFlowEditor = ({
       }
 
       if (!isValid) {
-        onDefinitionChange({ sequence, properties, isValid });
+        setDefinition(wrapDefinitionV2({ sequence, properties, isValid }));
         setSynced(true);
         return;
       }
 
       isValid = validatorConfiguration.root({ sequence, properties });
-      onDefinitionChange({ sequence, properties, isValid });
+      setDefinition(wrapDefinitionV2({ sequence, properties, isValid }));
       setSynced(true);
     };
     const debouncedHandleDefinitionChange = debounce(
