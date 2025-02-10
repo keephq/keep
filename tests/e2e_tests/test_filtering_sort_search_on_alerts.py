@@ -15,8 +15,8 @@ GRAFANA_HOST = "http://grafana:3000"
 GRAFANA_HOST_LOCAL = "http://localhost:3002"
 KEEP_UI_URL = "http://localhost:3000"
 KEEP_API_URL = "http://localhost:8080"
-
-test_run_id = str(uuid.uuid4())
+test_run_id = "facets-tests"
+test_run_cel = f"description.contains('{test_run_id}')"
 
 def query_allerts(
     cell_query: str = None,
@@ -77,8 +77,8 @@ def create_fake_alert(index: int, provider_type: str):
             "title": f"[{SEVERITIES_MAP.get(severity, SEVERITIES_MAP['critical'])}] [{STATUS_MAP.get(status, STATUS_MAP['firing'])}] {title} {provider_type} {index}",
             "type": "metric alert",
             "query": "avg(last_5m):avg:system.cpu.user{*} by {host} > 90",
-            "message": f"CPU usage is over 90% on srv1-eu1-prod. Searched value: {'even' if index % 2 else 'odd'}",
-            "description": "CPU usage is over 90% on srv1-us2-prod.",
+            "message": f"CPU usage is over 90% on srv1-eu1-prod. Test run id: {test_run_id}. Searched value: {'even' if index % 2 else 'odd'}",
+            "description": f"CPU usage is over 90% on srv1-us2-prod. Test run id: {test_run_id}",
             "tagsList": "environment:production,team:backend,monitor,service:api",
             "priority": "P2",
             "monitor_id": f"1234567890-{index}",
@@ -119,7 +119,7 @@ def create_fake_alert(index: int, provider_type: str):
             },
             "status": STATUS_MAP.get(status, STATUS_MAP["firing"]),
             "annotations": {
-                "summary": f"{title} {provider_type} {index}. It's not normal for customer_id:acme"
+                "summary": f"{title} {provider_type} {index}. It's not normal for customer_id:acme. Test run id: {test_run_id}",
             },
             "startsAt": "2025-02-09T17:26:12.769318+00:00",
             "endsAt": "0001-01-01T00:00:00Z",
@@ -133,7 +133,7 @@ def create_fake_alert(index: int, provider_type: str):
 
 def upload_alerts():
     total_alerts = 20
-    current_alerts = query_allerts()
+    current_alerts = query_allerts(test_run_cel)
 
     if current_alerts["count"] >= total_alerts:
         return current_alerts
@@ -146,7 +146,6 @@ def upload_alerts():
         alert["dateForTests"] = (
             datetime(2025, 2, 10, 10) + timedelta(days=-alert_index)
         ).isoformat()
-        # Tests will open the page with the CEL query for this test_run_id
         alert["test_run_id"] = test_run_id
 
         simulated_alerts.append((provider_type, alert))
@@ -183,9 +182,7 @@ def init_test(browser: Browser):
     current_alerts = upload_alerts()
     current_alerts_results = current_alerts["results"]
 
-    browser.goto(
-        f"{KEEP_UI_URL}/alerts/feed?cel=test_run_id == 'test_run_id'", timeout=10000
-    )
+    browser.goto(f"{KEEP_UI_URL}/alerts/feed?cel={test_run_cel}", timeout=10000)
     browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
     browser.wait_for_selector(
         f"text={current_alerts_results[0]['name']}", timeout=10000
@@ -340,8 +337,6 @@ def test_adding_custom_facet(browser):
         browser.locator("[data-testid='facet']", has_text=facet_name)
     ).not_to_be_visible()
 
-    print("f")
-
 
 search_by_cel_tescases = {
     "contains for nested property": {
@@ -371,7 +366,7 @@ def test_search_by_cel(browser, search_test_case):
     )
     expect(search_input).to_be_visible()
     browser.wait_for_timeout(1000)
-    search_input.fill(cel_query)
+    search_input.fill(f"{test_run_cel} && {cel_query}")
     search_input.press("Enter")
 
     assert_alerts_by_column(
