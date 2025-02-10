@@ -73,12 +73,12 @@ export default function AlertMenu({
           "After assigning this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
         )
       ) {
-        const res = await api.post(
-          `/alerts/${fingerprint}/assign/${alert.lastReceived.toISOString()}`
-        );
-        if (res.ok) {
-          await mutate();
-        }
+        const lastReceived =
+          typeof alert.lastReceived === "string"
+            ? alert.lastReceived
+            : alert.lastReceived.toISOString();
+        await api.post(`/alerts/${fingerprint}/assign/${lastReceived}`);
+        await mutate();
       }
     },
     [alert, fingerprint, api, mutate]

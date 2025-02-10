@@ -19,6 +19,12 @@ from sqlmodel import Session
 from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
+from keep.api.core.alerts import (
+    get_alert_facets,
+    get_alert_facets_data,
+    get_alert_potential_facet_fields,
+    query_last_alerts,
+)
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alerts_with_incidents
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
@@ -30,7 +36,6 @@ from keep.api.core.db import (
     get_session,
     is_all_alerts_resolved,
 )
-from keep.api.core.alerts import get_alert_facets, get_alert_facets_data, get_alert_potential_facet_fields, query_last_alerts
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
@@ -43,8 +48,8 @@ from keep.api.models.alert import (
 )
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import ActionType
-from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.db.rule import ResolveOn
+from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.routes.preset import pull_data_from_providers
@@ -90,9 +95,8 @@ def fetch_alert_facet_options(
     )
 
     facet_options = get_alert_facets_data(
-            tenant_id = tenant_id,
-            facet_options_query = facet_options_query
-        )
+        tenant_id=tenant_id, facet_options_query=facet_options_query
+    )
 
     logger.info(
         "Fetched alert facets from DB",
@@ -111,7 +115,7 @@ def fetch_alert_facet_options(
 def fetch_alert_facets(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
-    )
+    ),
 ) -> list:
     tenant_id = authenticated_entity.tenant_id
 
@@ -122,9 +126,7 @@ def fetch_alert_facets(
         },
     )
 
-    facets = get_alert_facets(
-            tenant_id = tenant_id
-        )
+    facets = get_alert_facets(tenant_id=tenant_id)
 
     logger.info(
         "Fetched alert facets from DB",
@@ -143,7 +145,7 @@ def fetch_alert_facets(
 def fetch_alert_facet_fields(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
-    )
+    ),
 ) -> list:
     tenant_id = authenticated_entity.tenant_id
 
@@ -154,9 +156,7 @@ def fetch_alert_facet_fields(
         },
     )
 
-    fields = get_alert_potential_facet_fields(
-            tenant_id = tenant_id
-        )
+    fields = get_alert_potential_facet_fields(tenant_id=tenant_id)
 
     logger.info(
         "Fetched alert facet fields from DB",
@@ -359,7 +359,9 @@ def assign_alert(
     last_received: str,
     unassign: bool = False,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+        # @tb: this is read because NOC users can also assign alerts to themselves
+        # anyway, this function needs to be refactored
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
