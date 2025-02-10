@@ -27,7 +27,7 @@ import { showErrorToast } from "@/shared/ui";
 import * as HoverCard from "@radix-ui/react-hover-card";
 import TimeAgo from "react-timeago";
 import { FaFileCsv, FaFileCode, FaNetworkWired } from "react-icons/fa";
-
+import { Fragment } from "react";
 const columnHelper = createColumnHelper<MappingRule>();
 
 interface Props {
@@ -54,6 +54,16 @@ const getTypeIcon = (type: string) => {
     default:
       return null;
   }
+};
+
+const formattedMatchers = (matchers: string[][]) => {
+  return matchers.map((matcher, index) => (
+    <Fragment key={index}>
+      <div className="p-2 bg-gray-50 border rounded space-x-2">
+        {matcher.join(",")}
+      </div>
+    </Fragment>
+  ));
 };
 
 export default function RulesTable({ mappings, editCallback }: Props) {
