@@ -206,12 +206,12 @@ def assert_alerts_by_column(
     property_in_alert: str,
     column_index: int,
 ):
-    filtered_by_status = [alert for alert in alerts if predicate(alert)]
+    filtered_alerts = [alert for alert in alerts if predicate(alert)]
     matched_rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
-    expect(matched_rows).to_have_count(len(filtered_by_status))
+    expect(matched_rows).to_have_count(len(filtered_alerts))
 
     # check that only alerts with selected status are displayed
-    for alert in filtered_by_status:
+    for alert in filtered_alerts:
         row_locator = browser.locator(
             "[data-testid='alerts-table'] table tbody tr", has_text=alert["name"]
         )
@@ -279,20 +279,13 @@ search_by_cel_tescases = {
         "alert_property_name": "name",
     },
     "date comparison greater than or equal": {
-        "cel_query": f"randomDate >= '{(datetime.utcnow() + timedelta(days=-5)).isoformat()}'",
+        "cel_query": f"randomDate >= '{(datetime.utcnow() + timedelta(days=-15)).isoformat()}'",
         "predicate": lambda alert: alert.get("randomDate")
         and datetime.fromisoformat(alert.get("randomDate"))
-        >= (datetime.utcnow() + timedelta(days=-5)),
+        >= (datetime.utcnow() + timedelta(days=-15)),
         "alert_property_name": "name",
     },
-    # "high": {
-    #     "cel_query": "severity = 'high'",
-    # },
-    # "resolved": {
-    #     "cel_query": "status = 'resolved'",
-    # },
 }
-
 
 @pytest.mark.parametrize("search_test_case", search_by_cel_tescases.keys())
 def test_search_by_cel(browser, search_test_case):
@@ -301,7 +294,6 @@ def test_search_by_cel(browser, search_test_case):
     predicate = test_case["predicate"]
     alert_property_name = test_case["alert_property_name"]
     current_alerts = init_test(browser)
-    browser.locator("")
     search_input = browser.locator(
         "textarea[placeholder*='Use CEL to filter your alerts']"
     )
@@ -316,4 +308,36 @@ def test_search_by_cel(browser, search_test_case):
         alert_property_name,
         None,
     )
+    print("f")
+
+sort_tescases = {
+    "sort by lastReceived": {
+        "column_name": "Last Received",
+        "sort_callback": lambda alert: datetime.fromisoformat(alert["lastReceived"]),
+    }
+}
+
+
+@pytest.mark.parametrize("sort_test_case", sort_tescases.keys())
+def test_sort(browser, sort_test_case):
+    test_case = sort_tescases[sort_test_case]
+    coumn_name = test_case["column_name"]
+    sort_callback = test_case["sort_callback"]
+    current_alerts = init_test(browser)
+    current_debug = [sort_callback(alert) for alert in current_alerts]
+
+    sorted_alerts = sorted(current_alerts, key=sort_callback)
+    sorted_debug = [sort_callback(alert) for alert in sorted_alerts]
+    sorted_debug_v2 = [alert["name"] for alert in sorted_alerts]
+
+    column_header_locator = browser.locator(
+        "[data-testid='alerts-table'] table thead th", has_text=coumn_name
+    )
+    expect(column_header_locator).to_be_visible()
+    column_header_locator.click()
+    rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
+
+    for index, alert in enumerate(sorted_alerts):
+        row_locator = rows.nth(index)
+        expect(row_locator).to_have_text(alert["name"])
     print("f")
