@@ -124,5 +124,14 @@
       "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = 'with ''double-quotes'''",
       "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = 'with ''double-quotes'''"
     }
+  },
+  {
+    "input_cel": "alert.tags.tagKey == \"' OR alert.provider_type == 'grafana' OR'\"",
+    "description": "When literal contains SQL injection",
+    "expected_sql_dialect_based": {
+      "sqlite": "CAST(json_extract(alert_event, '$.tagsContainer.tagKey') as TEXT) = ''' OR alert.provider_type == ''grafana'' OR'''",
+      "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = ''' OR alert.provider_type == ''grafana'' OR'''",
+      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = ''' OR alert.provider_type == ''grafana'' OR'''"
+    }
   }
 ]

@@ -11,7 +11,7 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
-from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider import (
+from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
 )
 
