@@ -1,6 +1,8 @@
 from typing import List
 from types import NoneType
 
+from sqlalchemy import Dialect, String
+
 from keep.api.core.cel_to_sql.ast_nodes import (
     ConstantNode,
     MemberAccessNode,
@@ -80,8 +82,9 @@ class BaseCelToSqlProvider:
             Converts a NOT operation to an SQL string.
         """
 
-    def __init__(self, properties_metadata: PropertiesMetadata):
+    def __init__(self, dialect: Dialect, properties_metadata: PropertiesMetadata):
         super().__init__()
+        self.literal_proc = String("").literal_processor(dialect=dialect)
         self.properties_mapper = PropertiesMapper(properties_metadata)
 
     def convert_to_sql_str(self, cel: str) -> str:
@@ -278,7 +281,7 @@ class BaseCelToSqlProvider:
         if value is None:
             return self._get_default_value_for_type(NoneType)
         if isinstance(value, str):
-            return f"'{value}'"
+            return self.literal_proc(value)
         if isinstance(value, bool):
             return str(value).lower()
         if isinstance(value, float) or isinstance(value, int):
