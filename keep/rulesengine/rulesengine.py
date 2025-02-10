@@ -96,6 +96,13 @@ class RulesEngine:
                 )
                 try:
                     matched_rules = self._check_if_rule_apply(rule, event)
+                except ValueError as e:
+                    if "Invalid name" in str(e):
+                        self.logger.warning(
+                            f"{str(e)} in the CEL expression {rule.definition_cel} for alert {event.id}. This might mean there's a blank space in the field name",
+                            extra={"alert_id": event.id, "payload": event.dict()},
+                        )
+                        continue
                 except Exception:
                     self.logger.exception(
                         f"Failed to evaluate rule {rule.name} on event {event.id}"
@@ -444,6 +451,13 @@ class RulesEngine:
                 activation = self.get_alerts_activation([alert])[0]
             try:
                 r = prgm.evaluate(activation)
+            except ValueError as e:
+                if "Invalid name" in str(e):
+                    logger.warning(
+                        f"{str(e)} in the CEL expression {cel} for alert {alert.id}. This might mean there's a blank space in the field name",
+                        extra={"alert_id": alert.id, "payload": alert.dict()},
+                    )
+                    continue
             except celpy.evaluation.CELEvalError as e:
                 # this is ok, it means that the subrule is not relevant for this event
                 if "no such member" in str(e):
