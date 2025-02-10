@@ -137,7 +137,7 @@ const ProviderForm = ({
   installedProvidersMode,
   isLocalhost,
   isHealthCheck,
-  mutate
+  mutate,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
   const searchParams = useSearchParams();
@@ -306,7 +306,6 @@ const ProviderForm = ({
 
   function validate(data?: ProviderFormData) {
     let schema = zodSchema;
-    console.log(222, data)
     if (data) {
       schema = zodSchema.pick(
         Object.fromEntries(Object.keys(data).map((field) => [field, true]))

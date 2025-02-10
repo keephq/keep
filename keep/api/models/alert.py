@@ -654,6 +654,11 @@ class IncidentStatusChangeDto(BaseModel):
     comment: str | None
 
 
+class IncidentSeverityChangeDto(BaseModel):
+    severity: IncidentSeverity
+    comment: str | None
+
+
 class IncidentSorting(Enum):
     creation_time = "creation_time"
     start_time = "start_time"
