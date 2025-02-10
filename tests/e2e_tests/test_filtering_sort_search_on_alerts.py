@@ -53,9 +53,6 @@ def create_fake_alert(index: int, provider_type: str):
         status = "suppressed"
         severity = "high"
 
-    if severity == "critical":
-        print("f")
-
     if provider_type == "datadog":
         SEVERITIES_MAP = {
             "info": "P4",
@@ -139,8 +136,6 @@ def upload_alerts():
         ).isoformat()
 
         simulated_alerts.append((provider_type, alert))
-
-    print("f")
 
     for provider_type, alert in simulated_alerts:
         url = f"{KEEP_API_URL}/alerts/event/{provider_type}"
@@ -316,7 +311,6 @@ def test_search_by_cel(browser, search_test_case):
         alert_property_name,
         None,
     )
-    print("f")
 
 sort_tescases = {
     "sort by lastReceived asc/dsc": {
@@ -327,7 +321,7 @@ sort_tescases = {
 
 
 @pytest.mark.parametrize("sort_test_case", sort_tescases.keys())
-def test_sort(browser, sort_test_case):
+def test_sort_asc_dsc(browser, sort_test_case):
     test_case = sort_tescases[sort_test_case]
     coumn_name = test_case["column_name"]
     sort_callback = test_case["sort_callback"]
@@ -336,25 +330,30 @@ def test_sort(browser, sort_test_case):
         alert for alert in current_alerts if alert["providerType"] == "prometheus"
     ]
     select_one_facet_option(browser, "source", "prometheus")
+    expect(
+        browser.locator("[data-testid='alerts-table'] table tbody tr")
+    ).to_have_count(len(filtered_alerts))
 
-    current_debug = [sort_callback(alert) for alert in filtered_alerts]
+    for sort_direction_title in ["Sort ascending", "Sort descending"]:
+        sorted_alerts = sorted(filtered_alerts, key=sort_callback)
 
-    sorted_alerts = sorted(filtered_alerts, key=sort_callback)
-    sorted_debug = [sort_callback(alert) for alert in sorted_alerts]
-    sorted_debug_v2 = [alert["name"] for alert in sorted_alerts]
+        if sort_direction_title == "Sort descending":
+            sorted_alerts = list(reversed(sorted_alerts))
 
-    column_header_locator = browser.locator(
-        "[data-testid='alerts-table'] table thead th", has_text=coumn_name
-    )
-    expect(column_header_locator).to_be_visible()
-    column_sort_indicator_locator = column_header_locator.locator(
-        "[title='Sort descending'] svg"
-    )
-    expect(column_sort_indicator_locator).to_be_visible()
-    column_header_locator.click()
-    rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
+        column_header_locator = browser.locator(
+            "[data-testid='alerts-table'] table thead th", has_text=coumn_name
+        )
+        expect(column_header_locator).to_be_visible()
+        column_sort_indicator_locator = column_header_locator.locator(
+            f"[title='{sort_direction_title}'] svg"
+        )
+        expect(column_sort_indicator_locator).to_be_visible()
 
-    for index, alert in enumerate(sorted_alerts):
-        row_locator = rows.nth(index)
-        expect(row_locator).to_have_text(alert["name"])
-    print("f")
+        column_sort_indicator_locator.click()
+        rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
+
+        for index, alert in enumerate(sorted_alerts):
+            row_locator = rows.nth(index)
+            # 3 is index of "name" column
+            column_locator = row_locator.locator("td").nth(3)
+            expect(column_locator).to_have_text(alert["name"])
