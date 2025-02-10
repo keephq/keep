@@ -68,7 +68,7 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
         fields_list = event["fields"] if "fields" in event else []
         fields = {item["key"]: item["value"] for item in fields_list}
 
-        labels = fields.get("text", fields.get("labels"))
+        labels = fields.get("text", fields.get("labels", {}))
         if isinstance(labels, str):
             try:
                 labels = json.loads(labels)
@@ -97,7 +97,7 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
             priority=fields.get("priority"),
             computer=fields.get("computer"),
             fields=fields,
-            labels=labels,
+            labels=labels if isinstance(labels, dict) else {},
             source=["coralogix"],
         )
 

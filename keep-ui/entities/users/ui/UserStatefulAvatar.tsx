@@ -24,5 +24,12 @@ export function UserStatefulAvatar({
       />
     );
   }
-  return <UserAvatar name={user?.name} image={user?.picture} size={size} />;
+  return (
+    <UserAvatar
+      name={user?.name}
+      image={user?.picture}
+      size={size}
+      email={email}
+    />
+  );
 }

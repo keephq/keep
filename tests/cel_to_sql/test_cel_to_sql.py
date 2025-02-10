@@ -52,13 +52,12 @@ with open(
 
 @pytest.mark.parametrize("testcase_key", list(testcases_dict.keys()))
 def test_cel_to_sql(testcase_key):
-    dialect, input_cel, expected_sql = testcases_dict[testcase_key]
+    dialect_name, input_cel, expected_sql = testcases_dict[testcase_key]
 
     if expected_sql == 'no_expected_sql':
         pytest.fail("No expected SQL for this dialect")
         pytest.skip("No expected SQL for this dialect")
 
-    dialect_based_type = get_cel_to_sql_provider_for_dialect(dialect)
-    instance = dialect_based_type(properties_metadata)
+    instance = get_cel_to_sql_provider_for_dialect(dialect_name, properties_metadata)
     actual_sql_filter = instance.convert_to_sql_str(input_cel)
     assert actual_sql_filter == expected_sql
