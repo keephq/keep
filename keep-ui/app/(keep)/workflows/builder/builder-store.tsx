@@ -88,20 +88,13 @@ export type FlowState = {
   setNodes: (nodes: FlowNode[]) => void;
   setEdges: (edges: Edge[]) => void;
   getNodeById: (id: string | null) => FlowNode | undefined;
-  hasNode: (id: string) => boolean;
-  deleteEdges: (ids: string | string[]) => void;
   deleteNodes: (ids: string | string[]) => void;
-  updateNode: (node: FlowNode) => void;
-  duplicateNode: (node: FlowNode) => void;
-  // addNode: (node: Partial<FlowNode>) => void;
   setSelectedNode: (id: string | null) => void;
   setV2Properties: (properties: V2Properties) => void;
   setOpneGlobalEditor: (open: boolean) => void;
-  // updateNodeData: (nodeId: string, key: string, value: any) => void;
   updateSelectedNodeData: (key: string, value: any) => void;
   updateV2Properties: (properties: V2Properties) => void;
   setStepEditorOpenForNode: (nodeId: string | null) => void;
-  updateEdge: (id: string, key: string, value: any) => void;
   setToolBoxConfig: (config: Record<string, any>) => void;
   addNodeBetween: (
     nodeOrEdge: string | null,
@@ -112,19 +105,11 @@ export type FlowState = {
   setIsLayouted: (isLayouted: boolean) => void;
   selectedEdge: string | null;
   setSelectedEdge: (id: string | null) => void;
-  getEdgeById: (id: string) => Edge | undefined;
   changes: number;
   setChanges: (changes: number) => void;
   firstInitilisationDone: boolean;
   setFirstInitilisationDone: (firstInitilisationDone: boolean) => void;
   lastSavedChanges: { nodes: FlowNode[] | null; edges: Edge[] | null };
-  setLastSavedChanges: ({
-    nodes,
-    edges,
-  }: {
-    nodes: FlowNode[];
-    edges: Edge[];
-  }) => void;
   setErrorNode: (id: string | null) => void;
   errorNode: string | null;
   synced: boolean;
@@ -311,18 +296,10 @@ const useStore = create<FlowState>((set, get) => ({
   setErrorNode: (id) => set({ errorNode: id }),
   setFirstInitilisationDone: (firstInitilisationDone) =>
     set({ firstInitilisationDone }),
-  setLastSavedChanges: ({
-    nodes,
-    edges,
-  }: {
-    nodes: FlowNode[];
-    edges: Edge[];
-  }) => set({ lastSavedChanges: { nodes, edges } }),
   setSelectedEdge: (id) =>
     set({ selectedEdge: id, selectedNode: null, openGlobalEditor: true }),
   setChanges: (changes: number) => set({ changes: changes }),
   setIsLayouted: (isLayouted) => set({ isLayouted }),
-  getEdgeById: (id) => get().edges.find((edge) => edge.id === id),
   addNodeBetween: (nodeOrEdge: string | null, step: any, type: string) => {
     addNodeBetween(nodeOrEdge, step, type, set, get);
   },
@@ -464,12 +441,7 @@ const useStore = create<FlowState>((set, get) => ({
   },
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
-  hasNode: (id) => !!get().nodes.find((node) => node.id === id),
   getNodeById: (id) => get().nodes.find((node) => node.id === id),
-  deleteEdges: (ids) => {
-    const idArray = Array.isArray(ids) ? ids : [ids];
-    set({ edges: get().edges.filter((edge) => !idArray.includes(edge.id)) });
-  },
   deleteNodes: (ids) => {
     //for now handling only single node deletion. can later enhance to multiple deletions
     if (typeof ids !== "string") {
@@ -553,30 +525,7 @@ const useStore = create<FlowState>((set, get) => ({
       openGlobalEditor: true,
     });
   },
-  updateEdge: (id: string, key: string, value: any) => {
-    const edge = get().edges.find((e) => e.id === id);
-    if (!edge) return;
-    const newEdge = { ...edge, [key]: value };
-    set({ edges: get().edges.map((e) => (e.id === edge.id ? newEdge : e)) });
-  },
-  updateNode: (node) =>
-    set({ nodes: get().nodes.map((n) => (n.id === node.id ? node : n)) }),
-  duplicateNode: (node) => {
-    const { data, position } = node;
-    const newUuid = uuidv4();
-    const newNode: FlowNode = {
-      ...node,
-      data: {
-        ...data,
-        id: newUuid,
-      },
-      isDraggable: true,
-      id: newUuid,
-      position: { x: position.x + 100, y: position.y + 100 },
-      dragHandle: ".custom-drag-handle",
-    };
-    set({ nodes: [...get().nodes, newNode] });
-  },
+  // used to reset the store to the initial state, on builder unmount
   reset: () => set(defaultState),
 }));
 

@@ -74,7 +74,6 @@ export type FlowState = {
   setNodes: (nodes: FlowNode[]) => void;
   setEdges: (edges: Edge[]) => void;
   getNodeById: (id: string | null) => FlowNode | undefined;
-  hasNode: (id: string) => boolean;
   deleteEdges: (ids: string | string[]) => void;
   deleteNodes: (ids: string | string[]) => void;
   updateNode: (node: FlowNode) => void;
@@ -98,19 +97,11 @@ export type FlowState = {
   setIsLayouted: (isLayouted: boolean) => void;
   selectedEdge: string | null;
   setSelectedEdge: (id: string | null) => void;
-  getEdgeById: (id: string) => Edge | undefined;
   changes: number;
   setChanges: (changes: number) => void;
   firstInitilisationDone: boolean;
   setFirstInitilisationDone: (firstInitilisationDone: boolean) => void;
   lastSavedChanges: { nodes: FlowNode[] | null; edges: Edge[] | null };
-  setLastSavedChanges: ({
-    nodes,
-    edges,
-  }: {
-    nodes: FlowNode[];
-    edges: Edge[];
-  }) => void;
   setErrorNode: (id: string | null) => void;
   errorNode: string | null;
   synced: boolean;
