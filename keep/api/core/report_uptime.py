@@ -8,14 +8,15 @@ from keep.api.core.db import get_activity_report, get_or_creat_posthog_instance_
 from keep.api.core.posthog import (
     posthog_client,
     is_posthog_reachable,
-    KEEP_VERSION, 
-    POSTHOG_DISABLED, 
+    KEEP_VERSION,
+    POSTHOG_DISABLED,
 )
 
 logger = logging.getLogger(__name__)
 UPTIME_REPORTING_CADENCE = 60 * 60  # 1 hour
 
 LAUNCH_TIME = datetime.now()
+
 
 async def report_uptime_to_posthog():
     """
@@ -32,7 +33,9 @@ async def report_uptime_to_posthog():
         end_time = time.time()
 
         properties["db_request_duration_ms"] = int((end_time - start_time) * 1000)
-        properties["uptime_hours"] = round(((datetime.now() - LAUNCH_TIME).total_seconds()) / 3600)
+        properties["uptime_hours"] = round(
+            ((datetime.now() - LAUNCH_TIME).total_seconds()) / 3600
+        )
 
         ee_enabled = os.environ.get("EE_ENABLED", "false").lower() == "true"
         if ee_enabled:
@@ -44,9 +47,10 @@ async def report_uptime_to_posthog():
             properties=properties,
         )
         posthog_client.flush()
-        logger.info("Uptime reported to PostHog.")
+        logger.info("Uptime reported to PostHog.", extra=properties)
 
         await asyncio.sleep(UPTIME_REPORTING_CADENCE)
+
 
 def launch_uptime_reporting_thread() -> threading.Thread | None:
     """
@@ -54,7 +58,9 @@ def launch_uptime_reporting_thread() -> threading.Thread | None:
     """
     if not POSTHOG_DISABLED:
         if is_posthog_reachable():
-            thread = threading.Thread(target=asyncio.run, args=(report_uptime_to_posthog(), ))
+            thread = threading.Thread(
+                target=asyncio.run, args=(report_uptime_to_posthog(),)
+            )
             thread.start()
             logger.info("Uptime Reporting to Posthog launched.")
             return thread
