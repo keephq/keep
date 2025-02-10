@@ -7,7 +7,7 @@ import {
 } from "@xyflow/react";
 import CustomNode from "./CustomNode";
 import CustomEdge from "./CustomEdge";
-import useWorkflowInitialization from "utils/hooks/useWorkflowInitialization";
+import useWorkflowInitialization from "@/utils/hooks/useWorkflowInitialization";
 import DragAndDropSidebar from "./ToolBox";
 import { Provider } from "@/app/(keep)/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
