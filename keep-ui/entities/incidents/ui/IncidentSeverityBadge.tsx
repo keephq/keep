@@ -7,6 +7,7 @@ import {
   InformationCircleIcon,
 } from "@heroicons/react/20/solid";
 import { capitalize } from "@/utils/helpers";
+import {getIncidentSeverityIconAndColor} from "@/entities/incidents/lib/utils";
 
 interface Props {
   severity: IncidentDto["severity"];
@@ -14,34 +15,7 @@ interface Props {
 }
 
 export function IncidentSeverityBadge({ severity, size = "xs" }: Props) {
-  let icon: any;
-  let color: any;
-  switch (severity) {
-    case "critical":
-      icon = ExclamationCircleIcon;
-      color = "red";
-      break;
-    case "high":
-      icon = ExclamationTriangleIcon;
-      color = "orange";
-      break;
-    case "warning":
-      color = "yellow";
-      icon = ExclamationTriangleIcon;
-      break;
-    case "info":
-      icon = InformationCircleIcon;
-      color = "green";
-      break;
-    case "low":
-      icon = InformationCircleIcon;
-      color = "blue";
-      break;
-    default:
-      icon = InformationCircleIcon;
-      color = "blue";
-      break;
-  }
+  const {icon, color} = getIncidentSeverityIconAndColor(severity);
 
   return (
     <Badge color={color} className="capitalize" size={size} icon={icon}>

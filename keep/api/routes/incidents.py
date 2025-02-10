@@ -60,7 +60,7 @@ from keep.api.models.alert import (
     MergeIncidentsRequestDto,
     MergeIncidentsResponseDto,
     SplitIncidentRequestDto,
-    SplitIncidentResponseDto,
+    SplitIncidentResponseDto, IncidentSeverityChangeDto,
 )
 from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.db.alert import ActionType, AlertAudit
@@ -795,6 +795,34 @@ def change_incident_status(
     new_incident_dto = IncidentDto.from_db_incident(incident)
 
     return new_incident_dto
+
+
+@router.post(
+    "/{incident_id}/severity",
+    description="Change incident severity",
+    response_model=IncidentDto,
+)
+def change_incident_severity(
+    incident_id: UUID,
+    change: IncidentSeverityChangeDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    session: Session = Depends(get_session),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+) -> IncidentDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Changing the severity of an incident",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+            "severity": change.severity.value,
+        },
+    )
+    incident_bl = IncidentBl(tenant_id, session, pusher_client, user=authenticated_entity.email)
+    incident_dto = incident_bl.update_severity(incident_id, change.severity, change.comment)
+    return incident_dto
 
 
 @router.post("/{incident_id}/comment", description="Add incident audit activity")

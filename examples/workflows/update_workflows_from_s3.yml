@@ -12,6 +12,13 @@ steps:
         bucket: "keep-workflows"
 
 actions:
+  # optional: delete all workflows before updating for full sync
+  # - name: full-sync
+  #   provider:
+  #     type: keep
+  #     with:
+  #       workflow_full_sync: true
+
   - name: update
     foreach: "{{ steps.s3-dump.results }}"
     provider:

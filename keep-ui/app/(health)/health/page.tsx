@@ -42,7 +42,7 @@ const useFetchProviders = () => {
   };
 };
 
-export default function ProviderHealthPage () {
+export default function ProviderHealthPage() {
   const { providers, isLocalhost, mutate } = useFetchProviders();
 
   if (!providers || providers.length <= 0) {

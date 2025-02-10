@@ -39,11 +39,11 @@ const defaultPresets: Preset[] = [
 ];
 
 type AlertsProps = {
-  initalFacets: FacetDto[];
+  initialFacets: FacetDto[];
   presetName: string;
 };
 
-export default function Alerts({ presetName, initalFacets }: AlertsProps) {
+export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   const api = useApi();
   const [alertsQueryState, setAlertsQueryState] = useState<
     AlertsQuery | undefined
@@ -153,7 +153,7 @@ export default function Alerts({ presetName, initalFacets }: AlertsProps) {
   return (
     <>
       <AlertTableTabPanelServerSide
-        initalFacets={initalFacets}
+        initialFacets={initialFacets}
         key={selectedPreset.name}
         refreshToken={refreshToken}
         preset={selectedPreset}

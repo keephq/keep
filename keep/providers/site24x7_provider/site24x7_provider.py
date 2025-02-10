@@ -55,7 +55,7 @@ class Site24X7ProviderAuthConfig:
             "required": True,
             "description": "Zoho Account's TLD (.com | .eu | .com.cn | .in | .au | .jp)",
             "hint": "Possible: .com | .eu | .com.cn | .in | .com.au | .jp",
-            "validation": "tld"
+            "validation": "tld",
         },
     )
 
@@ -160,7 +160,8 @@ class Site24X7Provider(BaseProvider):
             if response.status_code == 401:
                 authentication_scope = response.json()
                 self.logger.error(
-                    "Failed to authenticate user", extra=authentication_scope
+                    "Failed to authenticate user",
+                    extra={"response": authentication_scope},
                 )
             elif response.status_code == 200:
                 authentication_scope = True
@@ -207,7 +208,12 @@ class Site24X7Provider(BaseProvider):
         )
         if not response.ok:
             response_json = response.json()
-            self.logger.error("Error while creating webhook", extra=response_json)
+            self.logger.error(
+                "Error while creating webhook",
+                extra={
+                    "response": response_json,
+                },
+            )
             raise Exception(response_json["message"])
         else:
             self.logger.info("Webhook created successfully")
@@ -242,5 +248,7 @@ class Site24X7Provider(BaseProvider):
                 )
             return alerts
         else:
-            self.logger.error("Failed to get alerts", extra=response.json())
+            self.logger.error(
+                "Failed to get alerts", extra={"response": response.json()}
+            )
             raise Exception("Could not get alerts")
