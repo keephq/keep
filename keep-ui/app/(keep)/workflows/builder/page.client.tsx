@@ -27,10 +27,10 @@ export function WorkflowBuilderPageClient({
   const {
     buttonsEnabled,
     generateEnabled,
+    triggerGenerate,
+    triggerSave,
+    triggerRun,
     isSaving,
-    setTriggerGenerate,
-    setTriggerSave,
-    setTriggerRun,
   } = useStore();
 
   useEffect(() => {
@@ -122,9 +122,9 @@ export function WorkflowBuilderPageClient({
             className="min-w-28"
             icon={PlayIcon}
             disabled={!generateEnabled}
-            onClick={() => setTriggerRun()}
+            onClick={() => triggerRun()}
           >
-            Run
+            Test Run
           </Button>
           <Button
             color="orange"
@@ -132,9 +132,9 @@ export function WorkflowBuilderPageClient({
             className="min-w-28"
             icon={ArrowUpOnSquareIcon}
             disabled={!generateEnabled || isSaving}
-            onClick={() => setTriggerSave()}
+            onClick={() => triggerSave()}
           >
-            {isSaving ? "Saving..." : "Deploy"}
+            {isSaving ? "Saving..." : "Save & Deploy"}
           </Button>
           {!workflow && (
             <Button
@@ -143,7 +143,7 @@ export function WorkflowBuilderPageClient({
               size="md"
               className="min-w-28"
               icon={BoltIcon}
-              onClick={() => setTriggerGenerate()}
+              onClick={() => triggerGenerate()}
             >
               Get YAML
             </Button>

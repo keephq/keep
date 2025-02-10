@@ -7,7 +7,6 @@ import {
   getToolboxConfiguration,
   getWorkflowFromDefinition,
   wrapDefinitionV2,
-  DefinitionV2,
 } from "./utils";
 import {
   CheckCircleIcon,
@@ -86,9 +85,9 @@ function Builder({
   const { createWorkflow, updateWorkflow } = useWorkflowActions();
   const {
     setGenerateEnabled,
-    triggerGenerate,
-    triggerSave,
-    triggerRun,
+    generateRequestCount,
+    saveRequestCount,
+    runRequestCount,
     setIsSaving,
     errorNode,
     setErrorNode,
@@ -200,19 +199,19 @@ function Builder({
   );
 
   useEffect(() => {
-    if (triggerGenerate) {
+    if (generateRequestCount) {
       setLegacyWorkflow(getWorkflowFromDefinition(definition.value));
       if (!generateModalIsOpen) setGenerateModalIsOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [triggerGenerate]);
+  }, [generateRequestCount]);
 
   useEffect(() => {
-    if (triggerRun) {
+    if (runRequestCount) {
       testRunWorkflow();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [triggerRun]);
+  }, [runRequestCount]);
 
   const saveWorkflow = useCallback(async () => {
     if (!synced) {
@@ -254,12 +253,12 @@ function Builder({
 
   // save workflow on "Deploy" button click
   useEffect(() => {
-    if (triggerSave) {
+    if (saveRequestCount) {
       saveWorkflow();
     }
     // ignore since we want the latest values, but to run effect only when triggerSave changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [triggerSave]);
+  }, [saveRequestCount]);
 
   // save workflow on "Save & Deploy" button click from FlowEditor
   useEffect(() => {

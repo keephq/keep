@@ -78,9 +78,9 @@ export interface FlowStateValues {
   canDeploy: boolean;
   buttonsEnabled: boolean;
   generateEnabled: boolean;
-  triggerGenerate: number;
-  triggerSave: number;
-  triggerRun: number;
+  generateRequestCount: number;
+  saveRequestCount: number;
+  runRequestCount: number;
   isSaving: boolean;
 }
 
@@ -115,8 +115,8 @@ export interface FlowState extends FlowStateValues {
   reset: () => void;
   setButtonsEnabled: (state: boolean) => void;
   setGenerateEnabled: (state: boolean) => void;
-  setTriggerGenerate: () => void;
-  setTriggerSave: () => void;
-  setTriggerRun: () => void;
+  triggerGenerate: () => void;
+  triggerSave: () => void;
+  triggerRun: () => void;
   setIsSaving: (state: boolean) => void;
 }
