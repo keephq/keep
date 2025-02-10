@@ -63,6 +63,15 @@
     }
   },
   {
+    "input_cel": "alert.randomDate >= '2025-01-30T10:00:09.553Z'",
+    "description": "Comparison operator with dates for a JSON multiple columns",
+    "expected_sql_dialect_based": {
+      "sqlite": "COALESCE(json_extract(alert_enrichments, '$.randomDate'), json_extract(alert_event, '$.randomDate'), NULL) >= datetime('2025-01-30 10:00:09')",
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.randomDate')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.randomDate')), NULL) >= CAST('2025-01-30 10:00:09' as DATETIME)",
+      "postgresql": "COALESCE(((alert_enrichments) ->> 'randomDate')::TIMESTAMP, ((alert_event) ->> 'randomDate')::TIMESTAMP, NULL) >= CAST('2025-01-30 10:00:09' as TIMESTAMP)"
+    }
+  },
+  {
     "input_cel": "severity >= 'medium'",
     "description": "Greater than or equal comparison operator with enum",
     "expected_sql_dialect_based": {
