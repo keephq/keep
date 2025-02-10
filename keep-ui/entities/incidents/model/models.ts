@@ -9,6 +9,14 @@ export enum Status {
   Deleted = "deleted",
 }
 
+export enum Severity {
+  Critical = "critical",
+  High = "high",
+  Warning = "warning",
+  Low = "low",
+  Info = "info",
+}
+
 export const DefaultIncidentFilteredStatuses: string[] = [
   Status.Firing,
   Status.Acknowledged,
@@ -25,7 +33,7 @@ export interface IncidentDto {
   user_summary: string;
   generated_summary: string;
   assignee: string;
-  severity: string;
+  severity: Severity;
   status: Status;
   alerts_count: number;
   alert_sources: string[];
