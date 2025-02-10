@@ -157,6 +157,8 @@ class Incident(SQLModel, table=True):
 
     assignee: str | None
     severity: int = Field(default=IncidentSeverity.CRITICAL.order)
+    forced_severity: bool = Field(default=False)
+
     status: str = Field(default=IncidentStatus.FIRING.value, index=True)
 
     creation_time: datetime = Field(default_factory=datetime.utcnow)

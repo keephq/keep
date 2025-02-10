@@ -75,8 +75,10 @@ To use the Site24x7 Provider, initialize it with the necessary authentication cr
 ---
 ## Notes
 
+- You must use your domain-specific Zoho Accounts URL to generate refresh tokens, otherwise you will receive an `invalid_client` error. See [Data center for Zoho Account](https://help.zoho.com/portal/en/kb/accounts/manage-your-zoho-account/articles/data-center-for-zoho-account).
 - Ensure that the necessary scopes **Site24x7.Admin.Read, Site24x7.Admin.Create, Site24x7.Operations.Read** are included when generating the grant token, as they dictate the API functionalities accessible via the provider.
 - Zoho API Console [Link](https://api-console.zoho.com)
+
 
 ## Webhook Integration Modifications
 
@@ -94,3 +96,4 @@ The webhook can be accessed via the "Alarms" section in the Site24x7 console.
 - [Zoho OAuth Documentation](https://www.zoho.com/accounts/protocol/oauth/web-apps.html)
 - [Site 24x7 Authentication Guide](https://www.site24x7.com/help/api/#authentication)
 - [Third Party and Webhook Integrations](https://www.site24x7.com/help/api/#third-party-integrations)
+- [List of Zoho Account datacenters](https://help.zoho.com/portal/en/kb/accounts/manage-your-zoho-account/articles/data-center-for-zoho-account)
