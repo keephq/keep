@@ -302,6 +302,16 @@ class Alert(SQLModel, table=True):
             "timestamp",
             "fingerprint",
         ),
+        # Index to optimize linked provider queries (is_linked_provider function)
+        # These queries look for alerts with specific tenant_id and provider_id combinations
+        # where the provider doesn't exist in the provider table
+        # Without this index, the query scans 400k+ rows and takes ~2s
+        # With this index, the query takes ~0.4s
+        Index(
+            "idx_alert_tenant_provider",
+            "tenant_id",
+            "provider_id",
+        ),
     )
 
     class Config:

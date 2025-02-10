@@ -2337,12 +2337,16 @@ def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
 
 def is_linked_provider(tenant_id: str, provider_id: str) -> bool:
     with Session(engine) as session:
+        query = session.query(Alert.provider_id)
+
+        # Add FORCE INDEX hint only for MySQL
+        if engine.dialect.name == "mysql":
+            query = query.with_hint(Alert, "FORCE INDEX (idx_alert_tenant_provider)")
+
         linked_provider = (
-            session.query(Alert.provider_id)
-            .outerjoin(Provider, Alert.provider_id == Provider.id)
+            query.outerjoin(Provider, Alert.provider_id == Provider.id)
             .filter(
                 Alert.tenant_id == tenant_id,
-                Alert.provider_type != "group",
                 Alert.provider_id == provider_id,
                 Provider.id == None,
             )
