@@ -3130,25 +3130,6 @@ def get_workflows_with_last_executions_v2(
     return result
 
 
-def timeout_long_lasting_workflows():
-    with Session(engine) as session:
-        # Get all workflows that are running for more than 24 hours
-        workflows = session.exec(
-            select(WorkflowExecution)
-            .where(WorkflowExecution.status == WorkflowExecutionStatus.RUNNING.value)
-            .where(
-                WorkflowExecution.started
-                < datetime.now(tz=timezone.utc) - timedelta(hours=24)
-            )
-        ).all()
-
-        # Update the status of the workflows to TIMEOUT
-        for workflow in workflows:
-            workflow.status = WorkflowExecutionStatus.TIMEOUT.value
-            session.add(workflow)
-        session.commit()
-
-
 def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
     with Session(engine) as session:
 
