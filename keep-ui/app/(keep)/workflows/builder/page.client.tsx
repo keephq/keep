@@ -7,12 +7,15 @@ import {
   BoltIcon,
   ArrowUpOnSquareIcon,
   PlayIcon,
+  PencilIcon,
 } from "@heroicons/react/20/solid";
 import { BuilderCard } from "./builder-card";
 import { loadWorkflowYAML } from "./utils";
 import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 import useStore from "./builder-store";
+import BuilderMetadataModal from "./builder-metadata-modal";
+import { Workflow } from "@/shared/api/workflows";
 
 export function WorkflowBuilderPageClient({
   workflowRaw: workflow,
@@ -24,6 +27,7 @@ export function WorkflowBuilderPageClient({
   const [fileContents, setFileContents] = useState<string | null>("");
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const {
     buttonsEnabled,
     generateEnabled,
@@ -31,6 +35,8 @@ export function WorkflowBuilderPageClient({
     triggerSave,
     triggerRun,
     isSaving,
+    v2Properties,
+    updateV2Properties,
   } = useStore();
 
   useEffect(() => {
@@ -76,6 +82,18 @@ export function WorkflowBuilderPageClient({
     reader.readAsText(file);
   }
 
+  const handleMetadataSubmit = ({
+    name,
+    description,
+  }: {
+    name: string;
+    description: string;
+  }) => {
+    updateV2Properties({ name, description });
+    setIsEditModalOpen(false);
+    triggerSave();
+  };
+
   return (
     <main className="mx-auto max-w-full h-[98%]">
       <div className="flex justify-between">
@@ -119,6 +137,17 @@ export function WorkflowBuilderPageClient({
           <Button
             color="orange"
             size="md"
+            onClick={() => setIsEditModalOpen(true)}
+            icon={PencilIcon}
+            className="min-w-28"
+            variant="secondary"
+            disabled={!buttonsEnabled}
+          >
+            Edit Metadata
+          </Button>
+          <Button
+            color="orange"
+            size="md"
             className="min-w-28"
             icon={PlayIcon}
             disabled={!generateEnabled}
@@ -155,6 +184,17 @@ export function WorkflowBuilderPageClient({
         fileName={fileName}
         workflow={workflow}
         workflowId={workflowId}
+      />
+      <BuilderMetadataModal
+        workflow={
+          {
+            name: v2Properties?.name || "",
+            description: v2Properties?.description || "",
+          } as Workflow
+        }
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSubmit={handleMetadataSubmit}
       />
     </main>
   );

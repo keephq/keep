@@ -4,6 +4,7 @@ import { Action, LegacyWorkflow } from "./legacy-workflow.types";
 import { v4 as uuidv4 } from "uuid";
 import {
   Definition,
+  DefinitionV2,
   V2Properties,
   V2Step,
 } from "@/app/(keep)/workflows/builder/types";
@@ -549,23 +550,11 @@ export function getWorkflowFromDefinition(
   } as LegacyWorkflow;
 }
 
-export type DefinitionV2 = {
-  value: {
-    sequence: V2Step[];
-    properties: V2Properties;
-  };
-  isValid: boolean;
-};
-
 export function wrapDefinitionV2({
   properties,
   sequence,
   isValid,
-}: {
-  properties: V2Properties;
-  sequence: V2Step[];
-  isValid?: boolean;
-}): DefinitionV2 {
+}: Definition): DefinitionV2 {
   return {
     value: {
       sequence: sequence,

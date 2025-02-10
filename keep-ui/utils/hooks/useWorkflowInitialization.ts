@@ -4,9 +4,8 @@ import useStore from "@/app/(keep)/workflows/builder/builder-store";
 import dagre, { graphlib } from "@dagrejs/dagre";
 import { processWorkflowV2, getTriggerStep } from "utils/reactFlow";
 import {
-  Definition,
+  DefinitionV2,
   FlowNode,
-  ReactFlowDefinition,
   V2Step,
 } from "@/app/(keep)/workflows/builder/types";
 
@@ -83,7 +82,7 @@ const getLayoutedElements = (
 };
 
 const useWorkflowInitialization = (
-  definition: ReactFlowDefinition,
+  definition: DefinitionV2,
   toolboxConfiguration: Record<string, any>
 ) => {
   const {
@@ -105,6 +104,7 @@ const useWorkflowInitialization = (
     setChanges,
     setSelectedNode,
     setFirstInitilisationDone,
+    changes,
   } = useStore();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -167,47 +167,50 @@ const useWorkflowInitialization = (
     }
   }, [nodes, edges]);
 
-  useEffect(() => {
-    const initializeWorkflow = async () => {
-      setIsLoading(true);
-      let parsedWorkflow = definition?.value;
-      const name =
-        parsedWorkflow?.properties?.name || parsedWorkflow?.properties?.id;
+  const initializeWorkflow = useCallback(async () => {
+    setIsLoading(true);
+    let parsedWorkflow = definition?.value;
+    const name =
+      parsedWorkflow?.properties?.name || parsedWorkflow?.properties?.id;
 
-      const sequences = [
-        {
-          id: "start",
-          type: "start",
-          componentType: "start",
-          properties: {},
-          isLayouted: false,
-          name: "start",
-        } as V2Step,
-        ...getTriggerStep(parsedWorkflow?.properties),
-        ...(parsedWorkflow?.sequence || []),
-        {
-          id: "end",
-          type: "end",
-          componentType: "end",
-          properties: {},
-          isLayouted: false,
-          name: "end",
-        } as V2Step,
-      ];
-      const intialPositon = { x: 0, y: 50 };
-      let { nodes, edges } = processWorkflowV2(sequences, intialPositon, true);
-      setSelectedNode(null);
-      setFirstInitilisationDone(false);
-      setIsLayouted(false);
-      setNodes(nodes);
-      setEdges(edges);
-      setV2Properties({ ...(parsedWorkflow?.properties ?? {}), name });
-      setChanges(1);
-      setToolBoxConfig(toolboxConfiguration);
-      setIsLoading(false);
-    };
-    initializeWorkflow();
-  }, []);
+    const sequences = [
+      {
+        id: "start",
+        type: "start",
+        componentType: "start",
+        properties: {},
+        isLayouted: false,
+        name: "start",
+      } as V2Step,
+      ...getTriggerStep(parsedWorkflow?.properties),
+      ...(parsedWorkflow?.sequence || []),
+      {
+        id: "end",
+        type: "end",
+        componentType: "end",
+        properties: {},
+        isLayouted: false,
+        name: "end",
+      } as V2Step,
+    ];
+    const intialPositon = { x: 0, y: 50 };
+    let { nodes, edges } = processWorkflowV2(sequences, intialPositon, true);
+    setSelectedNode(null);
+    setFirstInitilisationDone(false);
+    setIsLayouted(false);
+    setNodes(nodes);
+    setEdges(edges);
+    setV2Properties({ ...(parsedWorkflow?.properties ?? {}), name });
+    setChanges(1);
+    setToolBoxConfig(toolboxConfiguration);
+    setIsLoading(false);
+  }, [definition, toolboxConfiguration]);
+
+  useEffect(() => {
+    if (changes === 0) {
+      initializeWorkflow();
+    }
+  }, [changes]);
 
   return {
     nodes: finalNodes,

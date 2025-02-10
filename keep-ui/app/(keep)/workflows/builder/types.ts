@@ -1,24 +1,21 @@
-import {
-  Edge,
-  Node,
-  OnConnect,
-  OnEdgesChange,
-  OnNodesChange,
-} from "@xyflow/react";
+import { Edge, Node } from "@xyflow/react";
 
 export type V2Properties = Record<string, any>;
+
 export type Definition = {
   sequence: V2Step[];
   properties: V2Properties;
   isValid?: boolean;
 };
-export type ReactFlowDefinition = {
+
+export type DefinitionV2 = {
   value: {
     sequence: V2Step[];
     properties: V2Properties;
   };
-  isValid?: boolean;
+  isValid: boolean;
 };
+
 export type V2Step = {
   id: string;
   name?: string;
@@ -82,9 +79,17 @@ export interface FlowStateValues {
   saveRequestCount: number;
   runRequestCount: number;
   isSaving: boolean;
+  definition: DefinitionV2;
+  isLoading: boolean;
 }
 
 export interface FlowState extends FlowStateValues {
+  setButtonsEnabled: (state: boolean) => void;
+  setGenerateEnabled: (state: boolean) => void;
+  triggerGenerate: () => void;
+  triggerSave: () => void;
+  triggerRun: () => void;
+  setIsSaving: (state: boolean) => void;
   setCanDeploy: (deploy: boolean) => void;
   setSynced: (sync: boolean) => void;
   setErrorNode: (id: string | null) => void;
@@ -92,7 +97,11 @@ export interface FlowState extends FlowStateValues {
   setSelectedEdge: (id: string | null) => void;
   setChanges: (changes: number) => void;
   setIsLayouted: (isLayouted: boolean) => void;
-  addNodeBetween: (nodeOrEdge: string | null, step: any, type: string) => void;
+  addNodeBetween: (
+    nodeOrEdge: string | null,
+    step: V2Step,
+    type: string
+  ) => void;
   setToolBoxConfig: (config: Record<string, any>) => void;
   setOpneGlobalEditor: (open: boolean) => void;
   updateSelectedNodeData: (key: string, value: any) => void;
@@ -103,20 +112,13 @@ export interface FlowState extends FlowStateValues {
   onNodesChange: (changes: any) => void;
   onEdgesChange: (changes: any) => void;
   onConnect: (connection: any) => void;
-  onDragOver: (event: React.DragEvent<HTMLDivElement>) => void;
-  onDrop: (
-    event: React.DragEvent<HTMLDivElement>,
-    screenToFlowPosition: any
-  ) => void;
+  onDragOver: (event: DragEvent) => void;
+  onDrop: (event: DragEvent, screenToFlowPosition: any) => void;
   setNodes: (nodes: FlowNode[]) => void;
   setEdges: (edges: Edge[]) => void;
   getNodeById: (id: string) => FlowNode | undefined;
   deleteNodes: (ids: string | string[]) => void;
   reset: () => void;
-  setButtonsEnabled: (state: boolean) => void;
-  setGenerateEnabled: (state: boolean) => void;
-  triggerGenerate: () => void;
-  triggerSave: () => void;
-  triggerRun: () => void;
-  setIsSaving: (state: boolean) => void;
+  setDefinition: (def: DefinitionV2) => void;
+  setIsLoading: (loading: boolean) => void;
 }

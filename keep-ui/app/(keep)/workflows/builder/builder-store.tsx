@@ -9,6 +9,7 @@ import {
 
 import { createCustomEdgeMeta, processWorkflowV2 } from "utils/reactFlow";
 import { createDefaultNodeV2 } from "../../../../utils/reactFlow";
+import { wrapDefinitionV2 } from "./utils";
 import {
   V2Step,
   StoreSet,
@@ -143,6 +144,12 @@ function addNodeBetween(
   }
 }
 
+const INITIAL_DEFINITION = wrapDefinitionV2({
+  sequence: [],
+  properties: {},
+  isValid: false,
+});
+
 const defaultState: FlowStateValues = {
   nodes: [],
   edges: [],
@@ -164,10 +171,14 @@ const defaultState: FlowStateValues = {
   saveRequestCount: 0,
   runRequestCount: 0,
   isSaving: false,
+  definition: INITIAL_DEFINITION,
+  isLoading: true,
 };
 
 const useStore = create<FlowState>((set, get) => ({
   ...defaultState,
+  setDefinition: (def) => set({ definition: def }),
+  setIsLoading: (loading) => set({ isLoading: loading }),
   setButtonsEnabled: (state: boolean) => set({ buttonsEnabled: state }),
   setGenerateEnabled: (state: boolean) => set({ generateEnabled: state }),
   triggerGenerate: () =>
@@ -285,14 +296,19 @@ const useStore = create<FlowState>((set, get) => ({
 
   onDragOver: (event) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = "move";
+    }
   },
   onDrop: (event, screenToFlowPosition) => {
     event.preventDefault();
     event.stopPropagation();
 
     try {
-      let step: any = event.dataTransfer.getData("application/reactflow");
+      const dataTransfer = event.dataTransfer;
+      if (!dataTransfer) return;
+
+      let step: any = dataTransfer.getData("application/reactflow");
       if (!step) {
         return;
       }

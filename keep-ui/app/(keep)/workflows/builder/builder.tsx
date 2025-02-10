@@ -20,11 +20,7 @@ import { stringify } from "yaml";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
-import {
-  Definition as FlowDefinition,
-  ReactFlowDefinition,
-  V2Step,
-} from "./types";
+import { Definition, V2Step } from "./types";
 import {
   WorkflowExecutionDetail,
   WorkflowExecutionFailure,
@@ -42,32 +38,20 @@ import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowAction
 
 interface Props {
   loadedAlertFile: string | null;
-  fileName: string;
   providers: Provider[];
   workflow?: string;
   workflowId?: string;
   installedProviders?: Provider[] | undefined | null;
-  isPreview?: boolean;
 }
-
-const INITIAL_DEFINITION = wrapDefinitionV2({
-  sequence: [],
-  properties: {},
-  isValid: false,
-});
 
 function Builder({
   loadedAlertFile,
-  fileName,
   providers,
   workflow,
   workflowId,
   installedProviders,
-  isPreview,
 }: Props) {
   const api = useApi();
-  const [definition, setDefinition] = useState(INITIAL_DEFINITION);
-  const [isLoading, setIsLoading] = useState(true);
   const [stepValidationError, setStepValidationError] = useState<string | null>(
     null
   );
@@ -84,6 +68,12 @@ function Builder({
   );
   const { createWorkflow, updateWorkflow } = useWorkflowActions();
   const {
+    // Definition
+    definition,
+    setDefinition,
+    isLoading,
+    setIsLoading,
+    // UI State
     setGenerateEnabled,
     generateRequestCount,
     saveRequestCount,
@@ -293,12 +283,8 @@ function Builder({
   ]);
 
   const ValidatorConfigurationV2: {
-    step: (
-      step: V2Step,
-      parent?: V2Step,
-      definition?: ReactFlowDefinition
-    ) => boolean;
-    root: (def: FlowDefinition) => boolean;
+    step: (step: V2Step, parent?: V2Step, definition?: Definition) => boolean;
+    root: (def: Definition) => boolean;
   } = useMemo(() => {
     return {
       step: (step, parent, definition) =>
