@@ -133,5 +133,23 @@
       "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = ''' OR alert.provider_type == ''grafana'' OR'''",
       "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = ''' OR alert.provider_type == ''grafana'' OR'''"
     }
+  },
+  {
+    "input_cel": "alert.tags.tagKey.startsWith(\"with 'single-quotes'\")",
+    "description": "When startsWith is used with literal containing quoted substring",
+    "expected_sql_dialect_based": {
+      "sqlite": "json_extract(alert_event, '$.tagsContainer.tagKey') IS NOT NULL AND json_extract(alert_event, '$.tagsContainer.tagKey') GLOB 'with ''single-quotes''*'",
+      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) LIKE 'with ''single-quotes''%'",
+      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey' IS NOT NULL AND (alert_event -> 'tagsContainer') ->> 'tagKey' LIKE 'with ''single-quotes''%'"
+    }
+  },
+  {
+    "input_cel": "alert.tags.tagKey.endsWith(\"with 'single-quotes'\")",
+    "description": "When endsWith is used with literal containing quoted substring",
+    "expected_sql_dialect_based": {
+      "sqlite": "json_extract(alert_event, '$.tagsContainer.tagKey') IS NOT NULL AND json_extract(alert_event, '$.tagsContainer.tagKey') GLOB '*with ''single-quotes'''",
+      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) LIKE '%with ''single-quotes'''",
+      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey' IS NOT NULL AND (alert_event -> 'tagsContainer') ->> 'tagKey' LIKE '%with ''single-quotes'''"
+    }
   }
 ]
