@@ -16,8 +16,9 @@ on:
         required: false
         type: string
         default: "resolved"
-  pull_request:
-    types: [opened, edited, closed]
+  push:
+    branches:
+      - main
 
 jobs:
   auto-resolve-keep:
