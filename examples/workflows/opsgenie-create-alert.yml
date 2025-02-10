@@ -1,0 +1,24 @@
+id: opsgenie-create-alert
+description: Create an alert in OpsGenie
+triggers:
+  - type: manual
+  - type: alert
+    filters:
+      - key: source
+        value: coralogix
+      - key: severity
+        value: critical
+actions:
+  - name: create-alert
+    provider:
+      config: "{{ providers.opsgenie }}"
+      type: opsgenie
+      if: "not '{{ alert.opsgenie_alert_id }}'"
+      with:
+        message: "{{ alert.name }}"
+        responders:
+          - name: "{{ alert.team }}"
+            type: team
+        enrich_alert:
+          - key: opsgenie_alert_id
+            value: results.alertId
