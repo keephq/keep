@@ -83,6 +83,7 @@ def create_fake_alert(index: int, provider_type: str):
             "host.name": "srv2-ap1-prod",
             "last_updated": 1739114561286,
             "alert_transition": STATUS_MAP.get(status, "Triggered"),
+            "date_happened": (datetime.utcnow() + timedelta(days=-index)).timestamp(),
             "tags": {
                 "envNameTag": "production" if index % 2 else "development",
             },
@@ -149,7 +150,7 @@ def upload_alerts():
             timeout=5,
             headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
         )
-        time.sleep(0.5)
+        time.sleep(1)
 
     attempt = 0
     while True:
@@ -180,6 +181,15 @@ def init_test(browser: Browser):
     # check that required alerts are loaded and displayed
     assert rows_count == len(current_alerts_results)
     return current_alerts_results
+
+
+def select_one_facet_option(browser, facet_name, option_name):
+    expect(
+        browser.locator("[data-testid='facet']", has_text=facet_name)
+    ).to_be_visible()
+    option = browser.locator("[data-testid='facet-value']", has_text=option_name)
+    option.hover()
+    option.locator("button", has_text="Only").click()
 
 
 def assert_facet(browser, facet_name, alerts, alert_property_name: str):
@@ -249,8 +259,6 @@ def test_filter_by_static_facet(browser, facet_test_case):
     value = test_case["value"]
     current_alerts = init_test(browser)
 
-    # check existence of default facets
-    # for facet_name in ["severity", "status", "source", "source", "incident"]:
     expect(
         browser.locator("[data-testid='facet']", has_text=facet_name)
     ).to_be_visible()
@@ -311,9 +319,9 @@ def test_search_by_cel(browser, search_test_case):
     print("f")
 
 sort_tescases = {
-    "sort by lastReceived": {
+    "sort by lastReceived asc/dsc": {
         "column_name": "Last Received",
-        "sort_callback": lambda alert: datetime.fromisoformat(alert["lastReceived"]),
+        "sort_callback": lambda alert: alert["lastReceived"],
     }
 }
 
@@ -324,9 +332,14 @@ def test_sort(browser, sort_test_case):
     coumn_name = test_case["column_name"]
     sort_callback = test_case["sort_callback"]
     current_alerts = init_test(browser)
-    current_debug = [sort_callback(alert) for alert in current_alerts]
+    filtered_alerts = [
+        alert for alert in current_alerts if alert["providerType"] == "prometheus"
+    ]
+    select_one_facet_option(browser, "source", "prometheus")
 
-    sorted_alerts = sorted(current_alerts, key=sort_callback)
+    current_debug = [sort_callback(alert) for alert in filtered_alerts]
+
+    sorted_alerts = sorted(filtered_alerts, key=sort_callback)
     sorted_debug = [sort_callback(alert) for alert in sorted_alerts]
     sorted_debug_v2 = [alert["name"] for alert in sorted_alerts]
 
@@ -334,6 +347,10 @@ def test_sort(browser, sort_test_case):
         "[data-testid='alerts-table'] table thead th", has_text=coumn_name
     )
     expect(column_header_locator).to_be_visible()
+    column_sort_indicator_locator = column_header_locator.locator(
+        "[title='Sort descending'] svg"
+    )
+    expect(column_sort_indicator_locator).to_be_visible()
     column_header_locator.click()
     rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
 
