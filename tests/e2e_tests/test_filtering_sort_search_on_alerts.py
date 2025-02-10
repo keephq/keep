@@ -144,8 +144,10 @@ def upload_alerts():
             json=alert,
             timeout=5,
             headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
-        )
-        time.sleep(1)
+        ).raise_for_status()
+        time.sleep(
+            1
+        )  # this is important for sorting by lastReceived. We need to have different lastReceived for alerts
 
     attempt = 0
     while True:
@@ -282,7 +284,7 @@ search_by_cel_tescases = {
         "alert_property_name": "name",
     },
     "date comparison greater than or equal": {
-        "cel_query": f"randomDate >= '{(datetime(2025, 2, 10, 10) + timedelta(days=-14)).isoformat()}'",
+        "cel_query": f"dateForTests >= '{(datetime(2025, 2, 10, 10) + timedelta(days=-14)).isoformat()}'",
         "predicate": lambda alert: alert.get("dateForTests")
         and datetime.fromisoformat(alert.get("dateForTests"))
         >= (datetime(2025, 2, 10, 10) + timedelta(days=-14)),
