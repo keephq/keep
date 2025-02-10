@@ -138,9 +138,11 @@ export function IncidentChat({
     useIncidentActions();
   const providersWithGetTrace = useMemo(
     () =>
-      providers?.installed_providers.filter((provider) =>
-        provider.methods?.some((method) => method.func_name === "get_trace")
-      ).map((provider) => provider.id),
+      providers?.installed_providers
+        .filter((provider) =>
+          provider.methods?.some((method) => method.func_name === "get_trace")
+        )
+        .map((provider) => provider.id),
     [providers]
   );
 

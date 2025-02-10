@@ -28,10 +28,13 @@ const supportedParamTypes = ["datetime", "literal", "str"];
 
 interface AlertMethodModalProps {
   presetName: string;
-  alerts: AlertDto[]
+  alerts: AlertDto[];
 }
 
-export function AlertMethodModal({ presetName, alerts }: AlertMethodModalProps) {
+export function AlertMethodModal({
+  presetName,
+  alerts,
+}: AlertMethodModalProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const api = useApi();

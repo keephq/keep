@@ -2337,12 +2337,16 @@ def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
 
 def is_linked_provider(tenant_id: str, provider_id: str) -> bool:
     with Session(engine) as session:
+        query = session.query(Alert.provider_id)
+
+        # Add FORCE INDEX hint only for MySQL
+        if engine.dialect.name == "mysql":
+            query = query.with_hint(Alert, "FORCE INDEX (idx_alert_tenant_provider)")
+
         linked_provider = (
-            session.query(Alert.provider_id)
-            .outerjoin(Provider, Alert.provider_id == Provider.id)
+            query.outerjoin(Provider, Alert.provider_id == Provider.id)
             .filter(
                 Alert.tenant_id == tenant_id,
-                Alert.provider_type != "group",
                 Alert.provider_id == provider_id,
                 Provider.id == None,
             )
@@ -3850,12 +3854,14 @@ def add_alerts_to_incident(
                 set(incident.affected_services if incident.affected_services else [])
                 | set(alerts_data_for_incident["services"])
             )
-            # If incident has alerts already, use the max severity between existing and new alerts, otherwise use the new alerts max severity
-            incident.severity = (
-                max(incident.severity, alerts_data_for_incident["max_severity"].order)
-                if incident.alerts_count
-                else alerts_data_for_incident["max_severity"].order
-            )
+            if not incident.forced_severity:
+                # If incident has alerts already, use the max severity between existing and new alerts,
+                # otherwise use the new alerts max severity
+                incident.severity = (
+                    max(incident.severity, alerts_data_for_incident["max_severity"].order)
+                    if incident.alerts_count
+                    else alerts_data_for_incident["max_severity"].order
+                )
             if not override_count:
                 incident.alerts_count += alerts_data_for_incident["count"]
             else:
@@ -4103,11 +4109,12 @@ def remove_alerts_to_incident_by_incident_id(
         ]
 
         incident.alerts_count -= alerts_data_for_incident["count"]
-        incident.severity = (
-            max(updated_severities)
-            if updated_severities
-            else IncidentSeverity.LOW.order
-        )
+        if not incident.forced_severity:
+            incident.severity = (
+                max(updated_severities)
+                if updated_severities
+                else IncidentSeverity.LOW.order
+            )
         incident.start_time = started_at
         incident.last_seen_time = last_seen_at
 
@@ -4321,6 +4328,33 @@ def update_incident_name(tenant_id: str, incident_id: UUID, name: str) -> Incide
 
         return incident
 
+
+def update_incident_severity(
+    tenant_id: str, incident_id: UUID, severity: IncidentSeverity
+) -> Optional[Incident]:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
+    with Session(engine) as session:
+        incident = session.exec(
+            select(Incident)
+            .where(Incident.tenant_id == tenant_id)
+            .where(Incident.id == incident_id)
+        ).first()
+
+        if not incident:
+            logger.error(
+                f"Incident not found for tenant {tenant_id} and incident {incident_id}",
+                extra={"tenant_id": tenant_id},
+            )
+            return
+
+        incident.severity = severity.order
+        incident.forced_severity = True
+        session.add(incident)
+        session.commit()
+        session.refresh(incident)
+
+        return incident
 
 def get_topology_data_by_dynamic_matcher(
     tenant_id: str, matchers_value: dict[str, str]
