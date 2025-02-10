@@ -31,9 +31,10 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
 
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):
-            date_exp = f"datetime('{value.strftime('%Y-%m-%d %H:%M:%S')}')"
+            date_str = self.literal_proc(value.strftime("%Y-%m-%d %H:%M:%S"))
+            date_exp = f"datetime({date_str})"
             return date_exp
-        
+
         return super()._visit_constant_node(value)
 
     def _visit_contains_method_calling(
@@ -59,7 +60,7 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
             raise ValueError(f'{property_path}.endsWith accepts 1 argument but got {len(method_args)}')
 
         return f"{property_path} IS NOT NULL AND {property_path} GLOB '*{method_args[0].value}'"
-    
+
     def _get_default_value_for_type(self, type):
         if type is datetime:
             return "'0000-00-00 00:00:00'"

@@ -4,7 +4,6 @@ from typing import List
 from keep.api.core.cel_to_sql.ast_nodes import ConstantNode
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
-
 class CelToMySqlProvider(BaseCelToSqlProvider):
     def json_extract_as_text(self, column: str, path: str) -> str:
         return f"JSON_UNQUOTE(JSON_EXTRACT({column}, '$.{path}'))"
@@ -23,15 +22,15 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
 
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):
-            date_exp = f"CAST('{value.strftime('%Y-%m-%d %H:%M:%S')}' as DATETIME)"
+            date_str = self.literal_proc(value.strftime("%Y-%m-%d %H:%M:%S"))
+            date_exp = f"CAST({date_str} as DATETIME)"
             return date_exp
-        
+
         return super()._visit_constant_node(value)
 
     def coalesce(self, args):
         return f"COALESCE({', '.join(args)})"
 
-    
     def _visit_contains_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
     ) -> str:

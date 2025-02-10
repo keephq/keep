@@ -11,8 +11,8 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
-from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
-    get_cel_to_sql_provider_for_dialect,
+from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider import (
+    get_cel_to_sql_provider,
 )
 
 from keep.api.core.facets import get_facet_options, get_facets
@@ -139,12 +139,11 @@ def __build_base_incident_query(tenant_id: str):
             )
         )
     )
-    
+
     return incidents_alerts_cte
 
 
 def __build_last_incidents_query(
-    dialect: str,
     tenant_id: str,
     limit: int = 25,
     offset: int = 0,
@@ -213,8 +212,7 @@ def __build_last_incidents_query(
         query = query.order_by(Incident.id, sorting.get_order_by(Incident))
 
     if cel:
-        provider_type = get_cel_to_sql_provider_for_dialect(dialect)
-        instance = provider_type(properties_metadata)
+        instance = get_cel_to_sql_provider(properties_metadata)
         sql_filter = instance.convert_to_sql_str(cel)
         query = query.filter(text(sql_filter))
 
@@ -258,31 +256,29 @@ def get_last_incidents_by_cel(
     Returns:
         Tuple[list[Incident], int]: A tuple containing a list of incidents and the total count of incidents.
     """
-    
 
     with Session(engine) as session:
         try:
             sql_query = __build_last_incidents_query(
-                    dialect=session.bind.dialect.name,
-                    tenant_id=tenant_id,
-                    limit=limit,
-                    offset=offset,
-                    timeframe=timeframe,
-                    upper_timestamp=upper_timestamp,
-                    lower_timestamp=lower_timestamp,
-                    is_confirmed=is_confirmed,
-                    sorting=sorting,
-                    is_predicted=is_predicted,
-                    cel=cel,
-                    allowed_incident_ids=allowed_incident_ids,
-                )
+                tenant_id=tenant_id,
+                limit=limit,
+                offset=offset,
+                timeframe=timeframe,
+                upper_timestamp=upper_timestamp,
+                lower_timestamp=lower_timestamp,
+                is_confirmed=is_confirmed,
+                sorting=sorting,
+                is_predicted=is_predicted,
+                cel=cel,
+                allowed_incident_ids=allowed_incident_ids,
+            )
         except CelToSqlException as e:
             if isinstance(e.__cause__, PropertiesMappingException):
                 # if there is an error in mapping properties, return empty list
                 logger.error(f"Error mapping properties: {str(e)}")
                 return [], 0
             raise e
-        
+
         total_count = session.exec(select(func.count()).select_from(sql_query)).scalar()
         all_records = session.exec(sql_query).all()
 

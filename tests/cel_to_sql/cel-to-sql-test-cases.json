@@ -106,5 +106,23 @@
       "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = 'tag value'",
       "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = 'tag value'"
     }
+  },
+  {
+    "input_cel": "alert.tags.tagKey == 'with \"double-quotes\"'",
+    "description": "When literal is with double-quoted substring",
+    "expected_sql_dialect_based": {
+      "sqlite": "CAST(json_extract(alert_event, '$.tagsContainer.tagKey') as TEXT) = 'with \"double-quotes\"'",
+      "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = 'with \"double-quotes\"'",
+      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = 'with \"double-quotes\"'"
+    }
+  },
+  {
+    "input_cel": "alert.tags.tagKey == \"with 'double-quotes'\"",
+    "description": "When literal is with quoted substring",
+    "expected_sql_dialect_based": {
+      "sqlite": "CAST(json_extract(alert_event, '$.tagsContainer.tagKey') as TEXT) = 'with ''double-quotes'''",
+      "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = 'with ''double-quotes'''",
+      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = 'with ''double-quotes'''"
+    }
   }
 ]

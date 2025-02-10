@@ -36,7 +36,8 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
 
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):
-            date_exp = f"CAST('{value.strftime('%Y-%m-%d %H:%M:%S')}' as TIMESTAMP)"
+            date_str = self.literal_proc(value.strftime("%Y-%m-%d %H:%M:%S"))
+            date_exp = f"CAST({date_str} as TIMESTAMP)"
             return date_exp
 
         return super()._visit_constant_node(value)

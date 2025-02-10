@@ -4,8 +4,8 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     PropertiesMetadata,
     SimpleFieldMapping,
 )
-from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
-    get_cel_to_sql_provider_for_dialect,
+from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider import (
+    get_cel_to_sql_provider,
 )
 from keep.api.models.facet import CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from uuid import UUID, uuid4
@@ -18,7 +18,6 @@ from keep.api.models.db.facet import Facet, FacetType
 
 
 def build_facets_data_query(
-    dialect: str,
     base_query,
     facets: list[FacetDto],
     properties_metadata: PropertiesMetadata,
@@ -37,8 +36,7 @@ def build_facets_data_query(
     Returns:
         sqlalchemy.sql.Selectable: A SQLAlchemy selectable object representing the constructed query.
     """
-    provider_type = get_cel_to_sql_provider_for_dialect(dialect)
-    instance = provider_type(properties_metadata)
+    instance = get_cel_to_sql_provider(properties_metadata)
     base_query = base_query.filter(
         text(instance.convert_to_sql_str(facet_options_query.cel))
     )
@@ -119,7 +117,6 @@ def get_facet_options(
 
     with Session(engine) as session:
         db_query = build_facets_data_query(
-            dialect=session.bind.dialect.name,
             base_query=base_query,
             facets=valid_facets,
             properties_metadata=properties_metadata,

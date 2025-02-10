@@ -23,8 +23,8 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     PropertiesMetadata,
     SimpleFieldMapping,
 )
-from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
-    get_cel_to_sql_provider_for_dialect,
+from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider import (
+    get_cel_to_sql_provider,
 )
 
 logger = logging.getLogger(__name__)
@@ -150,9 +150,8 @@ def __build_query_for_filtering(tenant_id: str):
     )
 
 
-def build_total_alerts_query(dialect_name: str, tenant_id, cel=None):
-    cel_to_sql_provider_type = get_cel_to_sql_provider_for_dialect(dialect_name)
-    cel_to_sql_instance = cel_to_sql_provider_type(properties_metadata)
+def build_total_alerts_query(tenant_id, cel=None):
+    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     base = __build_query_for_filtering(tenant_id)
 
     query = (
@@ -184,7 +183,6 @@ def build_total_alerts_query(dialect_name: str, tenant_id, cel=None):
 
 
 def build_alerts_query(
-    dialect_name: str,
     tenant_id,
     cel=None,
     sort_by=None,
@@ -192,8 +190,7 @@ def build_alerts_query(
     limit=None,
     offset=None,
 ):
-    cel_to_sql_provider_type = get_cel_to_sql_provider_for_dialect(dialect_name)
-    cel_to_sql_instance = cel_to_sql_provider_type(properties_metadata)
+    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     base = __build_query_for_filtering(tenant_id).cte("alerts_query")
 
     if not sort_by:
@@ -272,10 +269,7 @@ def query_last_alerts(
     sort_dir=None
 ) -> Tuple[list[Alert], int]:
     with Session(engine) as session:
-        dialect_name = session.bind.dialect.name
-
         total_count_query = build_total_alerts_query(
-            dialect_name=dialect_name,
             tenant_id=tenant_id,
             cel=cel,
         )
@@ -285,7 +279,7 @@ def query_last_alerts(
             return [], total_count
 
         data_query = build_alerts_query(
-            dialect_name, tenant_id, cel, sort_by, sort_dir, limit, offset
+            tenant_id, cel, sort_by, sort_dir, limit, offset
         )
         alerts_with_start = session.execute(data_query).all()
 
