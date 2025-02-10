@@ -131,8 +131,8 @@ def upload_alerts():
     for alert_index, provider_type in enumerate(["datadog"] * 10 + ["prometheus"] * 10):
         alert = create_fake_alert(alert_index, provider_type)
         alert["temp_id"] = str(uuid.uuid4())
-        alert["randomDate"] = (
-            datetime.utcnow() + timedelta(days=-alert_index)
+        alert["dateForTests"] = (
+            datetime(2025, 2, 10, 10) + timedelta(days=-alert_index)
         ).isoformat()
 
         simulated_alerts.append((provider_type, alert))
@@ -282,10 +282,10 @@ search_by_cel_tescases = {
         "alert_property_name": "name",
     },
     "date comparison greater than or equal": {
-        "cel_query": f"randomDate >= '{(datetime.utcnow() + timedelta(days=-15)).isoformat()}'",
-        "predicate": lambda alert: alert.get("randomDate")
-        and datetime.fromisoformat(alert.get("randomDate"))
-        >= (datetime.utcnow() + timedelta(days=-15)),
+        "cel_query": f"randomDate >= '{(datetime(2025, 2, 10, 10) + timedelta(days=-14)).isoformat()}'",
+        "predicate": lambda alert: alert.get("dateForTests")
+        and datetime.fromisoformat(alert.get("dateForTests"))
+        >= (datetime(2025, 2, 10, 10) + timedelta(days=-14)),
         "alert_property_name": "name",
     },
 }
@@ -301,6 +301,7 @@ def test_search_by_cel(browser, search_test_case):
         "textarea[placeholder*='Use CEL to filter your alerts']"
     )
     expect(search_input).to_be_visible()
+    browser.wait_for_timeout(1000)
     search_input.fill(cel_query)
     search_input.press("Enter")
 
@@ -316,7 +317,11 @@ sort_tescases = {
     "sort by lastReceived asc/dsc": {
         "column_name": "Last Received",
         "sort_callback": lambda alert: alert["lastReceived"],
-    }
+    },
+    "sort by description asc/dsc": {
+        "column_name": "description",
+        "sort_callback": lambda alert: alert["description"],
+    },
 }
 
 
