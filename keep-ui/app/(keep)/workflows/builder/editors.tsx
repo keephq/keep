@@ -704,18 +704,16 @@ function WorkflowEditorV2({
 export function StepEditorV2({
   providers,
   installedProviders,
-  saveRef,
 }: {
   providers: Provider[] | undefined | null;
   installedProviders?: Provider[] | undefined | null;
-  saveRef: React.MutableRefObject<boolean>;
 }) {
   const [formData, setFormData] = useState<{
     name?: string;
     properties?: V2Properties;
     type?: string;
   }>({});
-  const { selectedNode, updateSelectedNodeData, getNodeById } =
+  const { selectedNode, updateSelectedNodeData, getNodeById, saveWorkflow } =
     useWorkflowStore();
   const deployRef = useRef<HTMLInputElement>(null);
 
@@ -740,17 +738,15 @@ export function StepEditorV2({
       ...formData,
       properties: { ...formData.properties, [key]: value },
     });
-    if (saveRef.current) {
-      saveRef.current = false;
-    }
   };
 
-  const handleSubmit = () => {
-    // Finalize the changes before saving
-    updateSelectedNodeData("name", formData.name);
-    updateSelectedNodeData("properties", formData.properties);
-    if (saveRef && deployRef?.current?.checked) {
-      saveRef.current = true;
+  const handleSubmit = async () => {
+    // Update node data and wait for definition update
+    await updateSelectedNodeData("name", formData.name);
+    await updateSelectedNodeData("properties", formData.properties);
+
+    if (deployRef?.current?.checked) {
+      await saveWorkflow();
     }
   };
 

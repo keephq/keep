@@ -65,11 +65,13 @@ export function WorkflowBuilderPageClient({
     reader.readAsText(file);
   }
   return (
-    <main className="mx-auto max-w-full h-[98%]">
+    // TODO: figure out better handling of the height
+    <main className="mx-auto max-w-full h-[98%] flex flex-col gap-2">
       <div className="flex justify-between">
         <div className="flex flex-col">
           <Title>{workflowId ? "Edit" : "New"} Workflow</Title>
         </div>
+        {/* TODO: move these buttons to the separate component to re-use it in the workflow detail header */}
         <div className="flex gap-2">
           {!workflow && (
             <>

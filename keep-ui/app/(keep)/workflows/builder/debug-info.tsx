@@ -1,7 +1,7 @@
 import { CustomEdgeProps } from "./CustomEdge";
 import { FlowNode } from "./types";
 
-export const WF_DEBUG_INFO = false;
+export const WF_DEBUG_INFO = true;
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
   if (!WF_DEBUG_INFO) {
@@ -12,7 +12,7 @@ export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
       <div
         className={`h-fit bg-black text-pink-500 font-mono text-[10px] px-1 py-1`}
       >
-        {id}
+        id={id}
       </div>
       <details className="bg-black text-pink-500 font-mono text-[10px] px-1 py-1">
         <summary>data=</summary>

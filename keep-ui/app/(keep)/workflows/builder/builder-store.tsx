@@ -272,7 +272,6 @@ function addNodeBetween(
     set({ selectedNode: newNodeId });
   }
 
-  // debugger;
   switch (newNodeId) {
     case "interval":
     case "manual": {

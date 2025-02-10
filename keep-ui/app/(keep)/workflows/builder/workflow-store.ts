@@ -17,10 +17,13 @@ import {
   getDefinitionFromNodesEdgesProperties,
   getToolboxConfiguration,
 } from "./utils";
-import { processWorkflowV2 } from "utils/reactFlow";
-import { debounce } from "lodash";
+import {
+  createCustomEdgeMeta,
+  createDefaultNodeV2,
+  getTriggerSteps,
+  processWorkflowV2,
+} from "utils/reactFlow";
 import { v4 as uuidv4 } from "uuid";
-import { workflowsApi } from "@/shared/api/workflows-client";
 import { stepValidatorV2, globalValidatorV2 } from "./builder-validators";
 import { parseWorkflow, generateWorkflow } from "./utils";
 import { wrapDefinitionV2 } from "./utils";
@@ -28,9 +31,8 @@ import { YAMLException } from "js-yaml";
 import { Provider } from "../../providers/providers";
 import dagre, { graphlib } from "@dagrejs/dagre";
 
-const { createWorkflow, updateWorkflow } = workflowsApi;
-
 interface WorkflowStore {
+  workflowId: string;
   // Core Flow State (from FlowState)
   nodes: FlowNode[];
   edges: Edge[];
@@ -41,7 +43,7 @@ interface WorkflowStore {
   // UI State (from FlowState)
   selectedNode: string | null;
   selectedEdge: string | null;
-  errorNode: string | null;
+  errorNodes: string[];
   openGlobalEditor: boolean;
   stepEditorOpenForNode: string | null;
   toolboxConfiguration: ToolboxConfiguration;
@@ -76,33 +78,28 @@ interface WorkflowStore {
   // UI Actions
   setSelectedNode: (id: string | null) => void;
   setSelectedEdge: (id: string | null) => void;
-  setErrorNode: (id: string | null) => void;
   setOpenGlobalEditor: (open: boolean) => void;
   setStepEditorOpenForNode: (nodeId: string | null) => void;
   setIsLayouted: (isLayouted: boolean) => void;
 
   // Validation
   validateStep: (step: V2Step, parent?: V2Step) => boolean;
-  validateWorkflow: () => boolean;
-  validationErrors: {
-    step: string | null;
-    global: string | null;
-  };
-  stepValidationError: string | null;
-  globalValidationError: string | null;
+  validateWorkflow: (definitionV1: Definition) => boolean;
+  validationErrors: Record<string, string | null>;
 
   // Workflow Actions
   saveWorkflow: () => Promise<void>;
 
   // Lifecycle
-  initialize: (yamlString: string, providers: Provider[]) => void;
+  initialize: (
+    yamlString: string,
+    providers: Provider[],
+    workflowId?: string
+  ) => void;
   cleanup: () => void;
 
   // Internal Actions
-  updateDefinition: ReturnType<typeof debounce>;
-
-  // Add validator config to state
-  validatorConfigurationV2: ValidatorConfigurationV2;
+  updateDefinition: () => void;
 
   // Add new method for empty workflow creation
   initializeEmpty: (options?: {
@@ -151,6 +148,9 @@ interface WorkflowStore {
 
   // Add isLoading state
   isLoading: boolean;
+
+  // Add setter for save function
+  setSaveWorkflow: (fn: () => Promise<void>) => void;
 }
 
 const INITIAL_STATE = {
@@ -166,7 +166,7 @@ const INITIAL_STATE = {
   },
   selectedNode: null,
   selectedEdge: null,
-  errorNode: null,
+  errorNodes: [],
   openGlobalEditor: true,
   stepEditorOpenForNode: null,
   toolboxConfiguration: { groups: [] },
@@ -176,16 +176,7 @@ const INITIAL_STATE = {
   lastSyncedAt: 0,
   canDeploy: false,
   changes: 0,
-  validationErrors: {
-    step: null,
-    global: null,
-  },
-  stepValidationError: null,
-  globalValidationError: null,
-  validatorConfigurationV2: {
-    step: (step: V2Step, parent?: V2Step) => false,
-    root: (def: Definition) => false,
-  },
+  validationErrors: {},
   runRequestCount: 0,
   isLoading: true,
 };
@@ -214,36 +205,37 @@ export const useWorkflowStore = create<WorkflowStore>()(
     },
 
     updateV2Properties: async (properties) => {
+      console.log("xxx updateV2Properties");
       set({
         v2Properties: { ...get().v2Properties, ...properties },
         isPendingSync: true,
         changes: get().changes + 1,
       });
 
-      // Wait for next tick to ensure state is updated
-      await new Promise((resolve) => setTimeout(resolve, 0));
       get().updateDefinition();
     },
 
     // Internal helper for definition updates
-    updateDefinition: debounce(() => {
-      const { nodes, edges, v2Properties, validatorConfigurationV2 } = get();
+    updateDefinition: () => {
+      const { nodes, edges, v2Properties } = get();
       const newDefinition = getDefinitionFromNodesEdgesProperties(
         nodes,
         edges,
         v2Properties,
-        validatorConfigurationV2
+        undefined
       );
+      const isValid = get().validateWorkflow(newDefinition);
 
+      const lastSyncedAt = Date.now();
       set({
-        definition: wrapDefinitionV2(newDefinition),
+        definition: wrapDefinitionV2({
+          ...newDefinition,
+          isValid,
+        }),
         isPendingSync: false,
-        lastSyncedAt: Date.now(),
+        lastSyncedAt,
       });
-
-      // Validate after definition update
-      get().validateWorkflow();
-    }, 300),
+    },
 
     // Node/Edge Queries
     getNodeById: (id) =>
@@ -254,30 +246,108 @@ export const useWorkflowStore = create<WorkflowStore>()(
     getNextEdge: (nodeId) => {
       const edge = get().edges.find((e) => e.source === nodeId);
       if (!edge) {
-        throw new Error("getNextEdge::Edge not found");
+        return null;
       }
       return edge;
     },
 
     // Node/Edge Management
-    deleteNodes: (ids) => {
-      const idArray = Array.isArray(ids) ? ids : [ids];
-      set((state) => ({
-        nodes: state.nodes.filter((node) => !idArray.includes(node.id)),
-        isPendingSync: true,
-        changes: state.changes + 1,
-      }));
-      get().updateDefinition();
-    },
-
     deleteEdges: (ids) => {
       const idArray = Array.isArray(ids) ? ids : [ids];
-      set((state) => ({
-        edges: state.edges.filter((edge) => !idArray.includes(edge.id)),
-        isPendingSync: true,
-        changes: state.changes + 1,
-      }));
+      set({
+        edges: get().edges.filter((edge) => !idArray.includes(edge.id)),
+      });
+    },
+    deleteNodes: (ids) => {
+      //for now handling only single node deletion. can later enhance to multiple deletions
+      if (typeof ids !== "string") {
+        return;
+      }
+      const nodes = get().nodes;
+      const nodeStartIndex = nodes.findIndex((node) => ids == node.id);
+      if (nodeStartIndex === -1) {
+        return;
+      }
+      let idArray = Array.isArray(ids) ? ids : [ids];
+
+      const startNode = nodes[nodeStartIndex];
+      const customIdentifier = `${startNode?.data?.type}__end__${startNode?.id}`;
+
+      let endIndex = nodes.findIndex((node) => node.id === customIdentifier);
+      endIndex = endIndex === -1 ? nodeStartIndex : endIndex;
+
+      const endNode = nodes[endIndex];
+
+      let edges = get().edges;
+      let finalEdges = edges;
+      idArray = nodes
+        .slice(nodeStartIndex, endIndex + 1)
+        .map((node) => node.id);
+
+      finalEdges = edges.filter(
+        (edge) =>
+          !(idArray.includes(edge.source) || idArray.includes(edge.target))
+      );
+      if (
+        ["interval", "alert", "manual", "incident"].includes(ids) &&
+        edges.some(
+          (edge) => edge.source === "trigger_start" && edge.target !== ids
+        )
+      ) {
+        edges = edges.filter((edge) => !idArray.includes(edge.source));
+      }
+      const sources = [
+        ...new Set(edges.filter((edge) => startNode.id === edge.target)),
+      ];
+      const targets = [
+        ...new Set(edges.filter((edge) => endNode.id === edge.source)),
+      ];
+      targets.forEach((edge) => {
+        const target =
+          edge.source === "trigger_start" ? "triggger_end" : edge.target;
+
+        finalEdges = [
+          ...finalEdges,
+          ...sources
+            .map((source: Edge) =>
+              createCustomEdgeMeta(
+                source.source,
+                target,
+                source.label as string
+              )
+            )
+            .flat(1),
+        ];
+      });
+      // }
+
+      nodes[endIndex + 1].position = { x: 0, y: 0 };
+
+      const newNode = createDefaultNodeV2(
+        { ...nodes[endIndex + 1].data, islayouted: false },
+        nodes[endIndex + 1].id
+      );
+
+      const newNodes = [
+        ...nodes.slice(0, nodeStartIndex),
+        newNode,
+        ...nodes.slice(endIndex + 2),
+      ];
+      if (["manual", "alert", "interval", "incident"].includes(ids)) {
+        const v2Properties = get().v2Properties;
+        delete v2Properties[ids];
+        set({ v2Properties });
+      }
+      set({
+        edges: finalEdges,
+        nodes: newNodes,
+        selectedNode: null,
+        isLayouted: false,
+        changes: get().changes + 1,
+        openGlobalEditor: true,
+      });
       get().updateDefinition();
+      get().onLayout({ direction: "DOWN" });
     },
 
     updateNode: (node) => {
@@ -335,8 +405,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
         openGlobalEditor: true,
       }),
 
-    setErrorNode: (id) => set({ errorNode: id }),
-
     setOpenGlobalEditor: (open) => set({ openGlobalEditor: open }),
 
     setStepEditorOpenForNode: (nodeId) =>
@@ -348,56 +416,35 @@ export const useWorkflowStore = create<WorkflowStore>()(
     setIsLayouted: (isLayouted) => set({ isLayouted }),
 
     // Validation
-    validateStep: (step, parent) => {
-      const result = stepValidatorV2(step, parent);
-      set((state) => ({
-        validationErrors: {
-          ...state.validationErrors,
-          step: result.error?.message ?? null,
-        },
-        stepValidationError: result.error?.message ?? null,
-      }));
-      return result.isValid;
-    },
+    validateWorkflow: (definition: Definition) => {
+      const validationErrors = {};
+      for (let step of definition.sequence) {
+        const validatorResult = stepValidatorV2(step);
+        if (validatorResult.error) {
+          validationErrors[step.name] = validatorResult.error.message;
+        }
+      }
 
-    validateWorkflow: () => {
-      const { definition } = get();
-      const result = globalValidatorV2(definition.value);
-      set((state) => ({
+      const globalValidationResult = globalValidatorV2(definition);
+
+      const isValid =
+        Object.values(validationErrors).every((error) => error === null) &&
+        globalValidationResult.isValid;
+
+      set({
         validationErrors: {
-          ...state.validationErrors,
-          global: result.error?.message ?? null,
+          ...validationErrors,
+          [globalValidationResult.error?.nodeId ?? "global"]:
+            globalValidationResult.error?.message ?? null,
         },
-        globalValidationError: result.error?.message ?? null,
-        canDeploy: result.isValid,
-      }));
-      return result.isValid;
+      });
+
+      return isValid;
     },
 
     // Workflow Actions
     saveWorkflow: async () => {
-      const { definition, isPendingSync, errorNode } = get();
-      const workflowId = get().v2Properties.id;
-
-      if (isPendingSync) {
-        throw new Error("Cannot save while changes are pending");
-      }
-
-      if (errorNode || !definition.isValid) {
-        throw new Error("Cannot save invalid workflow");
-      }
-
-      set({ isSaving: true });
-      try {
-        if (workflowId) {
-          await updateWorkflow(workflowId, definition.value);
-        } else {
-          const response = await createWorkflow(definition.value);
-          return response?.workflow_id;
-        }
-      } finally {
-        set({ isSaving: false });
-      }
+      throw new Error("Save workflow not initialized");
     },
 
     // Complex Node Management
@@ -521,26 +568,57 @@ export const useWorkflowStore = create<WorkflowStore>()(
       }
 
       get().updateDefinition();
+      get().onLayout({ direction: "DOWN" });
     },
 
     // Update initialize to handle layout
-    initialize: (yamlString: string, providers = []) => {
+    initialize: (yamlString, providers, workflowId) => {
+      console.log("xxx initialize", yamlString, workflowId);
       set({ ...INITIAL_STATE, isLoading: true });
 
-      if (!yamlString) return;
+      if (!yamlString) {
+        throw new Error("No YAML string provided");
+      }
 
       try {
         const definition = parseWorkflow(yamlString, providers);
-        const { nodes, edges } = processWorkflowV2(definition.sequence, {
-          x: 0,
-          y: 0,
-        });
+        const sequenceWithStartAndEndAndTriggers = [
+          {
+            id: "start",
+            type: "start",
+            componentType: "start",
+            properties: {},
+            isLayouted: false,
+            name: "start",
+          } as V2Step,
+          ...getTriggerSteps(definition.properties),
+          ...(definition.sequence || []),
+          {
+            id: "end",
+            type: "end",
+            componentType: "end",
+            properties: {},
+            isLayouted: false,
+            name: "end",
+          } as V2Step,
+        ];
+        const intialPositon = { x: 0, y: 50 };
+        let { nodes, edges } = processWorkflowV2(
+          sequenceWithStartAndEndAndTriggers,
+          intialPositon,
+          true
+        );
 
+        const isValid = get().validateWorkflow(definition);
         set({
+          workflowId,
           nodes,
           edges,
           v2Properties: definition.properties || {},
-          definition: wrapDefinitionV2(definition),
+          definition: wrapDefinitionV2({
+            ...definition,
+            isValid,
+          }),
           lastSyncedAt: Date.now(),
           isLoading: false,
           toolboxConfiguration: getToolboxConfiguration(providers),
@@ -548,7 +626,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
 
         // Trigger layout after setting initial nodes/edges
         get().onLayout({ direction: "DOWN" });
-        get().validateWorkflow();
       } catch (error) {
         console.error("Failed to initialize workflow:", error);
         const errorMessage =
@@ -616,7 +693,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
           lastSyncedAt: Date.now(),
         });
 
-        get().validateWorkflow();
+        get().validateWorkflow(definition.value);
       } catch (error) {
         console.error("Failed to initialize empty workflow:", error);
         set((state) => ({
@@ -630,36 +707,42 @@ export const useWorkflowStore = create<WorkflowStore>()(
 
     // Node Data Updates
     updateSelectedNodeData: (key, value) => {
+      console.log("xxx updateSelectedNodeData", key, value);
       const currentSelectedNode = get().selectedNode;
-      if (currentSelectedNode) {
-        const updatedNodes = get().nodes.map((node) => {
-          if (node.id === currentSelectedNode) {
-            // Properties changes should not reconstruct the definition
-            // Only reconstruct if there are structural changes to the flow
-            if (value) {
-              node.data[key] = value;
-            } else {
-              delete node.data[key];
-            }
-            return { ...node };
-          }
-          return node;
-        });
-
-        set({
-          nodes: updatedNodes,
-          changes: get().changes + 1,
-        });
+      console.log("xxx currentSelectedNode", currentSelectedNode);
+      console.log("xxx nodes", get().nodes);
+      if (!currentSelectedNode) {
+        return;
       }
+      const updatedNodes = get().nodes.map((node) => {
+        if (node.id === currentSelectedNode) {
+          if (value) {
+            node.data[key] = value;
+          } else {
+            delete node.data[key];
+          }
+          return { ...node };
+        }
+        return node;
+      });
+
+      set({
+        nodes: updatedNodes,
+        changes: get().changes + 1,
+      });
+
+      get().updateDefinition();
     },
 
     // Flow Operations
     setNodes: (nodes) => {
       set({ nodes });
+      get().updateDefinition();
     },
 
     setEdges: (edges) => {
       set({ edges });
+      get().updateDefinition();
     },
 
     onNodesChange: (changes) => {
@@ -681,11 +764,52 @@ export const useWorkflowStore = create<WorkflowStore>()(
     },
 
     onConnect: (connection) => {
-      set((state) => ({
-        edges: addEdge(connection, state.edges),
-        isPendingSync: true,
-        changes: state.changes + 1,
-      }));
+      const { source, target } = connection;
+      const sourceNode = get().getNodeById(source);
+      const targetNode = get().getNodeById(target);
+
+      // Define the connection restrictions
+      const canConnect = (
+        sourceNode: FlowNode | undefined,
+        targetNode: FlowNode | undefined
+      ) => {
+        if (!sourceNode || !targetNode) return false;
+
+        const sourceType = sourceNode?.data?.componentType;
+        const targetType = targetNode?.data?.componentType;
+
+        // Restriction logic based on node types
+        if (sourceType === "switch") {
+          return (
+            get().edges.filter((edge) => edge.source === source).length < 2
+          );
+        }
+        if (sourceType === "foreach" || sourceNode?.data?.type === "foreach") {
+          return true;
+        }
+        return (
+          get().edges.filter((edge) => edge.source === source).length === 0
+        );
+      };
+
+      // Check if the connection is allowed
+      if (canConnect(sourceNode, targetNode)) {
+        const edge = { ...connection, type: "custom-edge" };
+        set({ edges: addEdge(edge, get().edges) });
+        set({
+          nodes: get().nodes.map((node) => {
+            if (node.id === target) {
+              return { ...node, prevStepId: source, isDraggable: false };
+            }
+            if (node.id === source) {
+              return { ...node, isDraggable: false };
+            }
+            return node;
+          }),
+        });
+      } else {
+        console.warn("Connection not allowed based on node types");
+      }
       get().updateDefinition();
     },
 
@@ -770,6 +894,11 @@ export const useWorkflowStore = create<WorkflowStore>()(
           height = 40;
         }
 
+        if (node.id === "start") {
+          width = 0;
+          height = 0;
+        }
+
         dagreGraph.setNode(node.id, { width, height });
       });
 
@@ -833,5 +962,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
         isLayouted: true,
       });
     },
+
+    // Add setter for save function
+    setSaveWorkflow: (fn) => set({ saveWorkflow: fn }),
   }))
 );

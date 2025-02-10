@@ -1,7 +1,7 @@
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { Card, Callout } from "@tremor/react";
 import dynamic from "next/dynamic";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { EmptyBuilderState } from "./empty-builder-state";
 import { useProviders } from "utils/hooks/useProviders";
 import Loading from "../../loading";
@@ -32,7 +32,7 @@ export function BuilderCard({
 
   const initialize = useWorkflowStore((s) => s.initialize);
   const initializeEmpty = useWorkflowStore((s) => s.initializeEmpty);
-  const initializedWorkflowId = useWorkflowStore((s) => s.v2Properties.id);
+  const initializedWorkflowId = useWorkflowStore((s) => s.workflowId);
   const searchParams = useSearchParams();
   const isInitializing = useWorkflowStore((s) => s.isLoading);
   const { data, error, isLoading } = useProviders();
@@ -61,7 +61,7 @@ export function BuilderCard({
   if (!providers || isLoading)
     return (
       <Card className="mt-2 p-4 mx-auto">
-        <Loading />
+        <Loading loadingText="Loading providers..." />
       </Card>
     );
 
@@ -89,12 +89,13 @@ export function BuilderCard({
   }
 
   return (
-    <Builder
-      providers={providers}
-      installedProviders={installedProviders}
-      loadedAlertFile={fileContents}
-      workflow={workflow}
-      workflowId={workflowId}
-    />
+    <Suspense fallback={<Loading loadingText="Loading workflow builder..." />}>
+      <Builder
+        providers={providers}
+        installedProviders={installedProviders}
+        workflowRaw={workflow}
+        workflowId={workflowId}
+      />
+    </Suspense>
   );
 }

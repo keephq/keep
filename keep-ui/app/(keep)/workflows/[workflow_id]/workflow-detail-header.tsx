@@ -12,11 +12,10 @@ import { Tooltip } from "@/shared/ui";
 import Modal from "@/components/ui/Modal";
 import { useCallback, useState } from "react";
 import { EditWorkflowMetadataForm } from "@/features/edit-workflow-metadata";
-import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { useWorkflowStore } from "../builder/workflow-store";
 
 function WorkflowSwitch() {
-  const { v2Properties, updateV2Properties } = useWorkflowStore();
+  const { v2Properties, updateV2Properties, saveWorkflow } = useWorkflowStore();
   return (
     <div className="flex items-center gap-2 px-2">
       <Switch
@@ -28,6 +27,7 @@ function WorkflowSwitch() {
             ...v2Properties,
             disabled: v2Properties.disabled === "true" ? "false" : "true",
           });
+          saveWorkflow();
         }}
       />
       <label htmlFor="enabled" className="font-medium">
@@ -57,8 +57,8 @@ function EditWorkflowMetadataModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const { v2Properties, updateV2Properties } = useWorkflowStore();
-  const revalidateMultiple = useRevalidateMultiple();
+  const { workflowId, v2Properties, updateV2Properties, saveWorkflow } =
+    useWorkflowStore();
 
   console.log("v2Properties", v2Properties);
 
@@ -72,13 +72,11 @@ function EditWorkflowMetadataModal({
         name,
         description,
       });
+      saveWorkflow();
 
-      // Finally update UI
-      // todo revalidation should wait for the workflow to be saved or workflow-store should be used as a source of truth for header
-      revalidateMultiple([`/workflows/${workflowId}`], { isExact: true });
       onClose();
     },
-    []
+    [saveWorkflow, updateV2Properties]
   );
 
   return (
@@ -90,13 +88,13 @@ function EditWorkflowMetadataModal({
     >
       <EditWorkflowMetadataForm
         workflow={{
-          id: v2Properties.id,
+          id: workflowId,
           name: v2Properties.name,
           description: v2Properties.description,
         }}
         onCancel={onClose}
         onSubmit={({ name, description }) =>
-          updateWorkflowMetadata(v2Properties.id, { name, description })
+          updateWorkflowMetadata(workflowId, { name, description })
         }
       />
     </Modal>
@@ -118,7 +116,7 @@ export default function WorkflowDetailHeader({
     { fallbackData: initialData, revalidateOnMount: false }
   );
 
-  const { v2Properties } = useWorkflowStore();
+  const { workflowId } = useWorkflowStore();
 
   const {
     isRunning,
@@ -173,7 +171,7 @@ export default function WorkflowDetailHeader({
             size="xs"
             variant="secondary"
             onClick={() => setIsEditModalOpen(true)}
-            disabled={!workflow || !v2Properties.id}
+            disabled={!workflow || !workflowId}
           >
             Edit
           </Button>

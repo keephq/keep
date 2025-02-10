@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 import { Callout, Card } from "@tremor/react";
 import { Provider } from "../../providers/providers";
-import { getToolboxConfiguration } from "./utils";
 import {
   CheckCircleIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
-import { EmptyBuilderState } from "./empty-builder-state";
-import { useSearchParams } from "next/navigation";
 import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
 import {
   WorkflowExecutionDetail,
@@ -22,19 +19,18 @@ import Modal from "@/components/ui/Modal";
 import ResizableColumns from "@/components/ui/ResizableColumns";
 import { useWorkflowActions } from "@/entities/workflows";
 import { useWorkflowStore } from "./workflow-store";
+import Loading from "../../loading";
 
 interface Props {
-  loadedAlertFile: string | null;
   providers: Provider[];
-  workflow?: string;
+  workflowRaw?: string;
   workflowId?: string;
   installedProviders?: Provider[] | undefined | null;
 }
 
 export function Builder({
-  loadedAlertFile,
   providers,
-  workflow,
+  workflowRaw,
   workflowId,
   installedProviders,
 }: Props) {
@@ -50,9 +46,8 @@ export function Builder({
     nodes,
     edges,
     definition,
-    stepValidationError,
-    globalValidationError,
     runRequestCount,
+    validationErrors,
     isLoading,
   } = useWorkflowStore();
 
@@ -80,11 +75,7 @@ export function Builder({
   console.log("edges.length=", edges.length);
 
   if (isLoading) {
-    return (
-      <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
-        <EmptyBuilderState />
-      </Card>
-    );
+    return <Loading loadingText="Initializing workflow builder..." />;
   }
 
   const closeWorkflowExecutionResultsModal = () => {
@@ -93,29 +84,35 @@ export function Builder({
   };
 
   const getworkflowStatus = () => {
-    return stepValidationError || globalValidationError ? (
-      <Callout
-        className="mt-2.5 mb-2.5"
-        title="Validation Error"
-        icon={ExclamationCircleIcon}
-        color="rose"
-      >
-        {stepValidationError || globalValidationError}
-      </Callout>
-    ) : (
-      <Callout
-        className="mt-2.5 mb-2.5"
-        title="Schema Valid"
-        icon={CheckCircleIcon}
-        color="teal"
-      >
-        Workflow can be generated successfully
-      </Callout>
+    return (
+      <div className="">
+        {Object.values(validationErrors).some((error) => error !== null) ? (
+          <Callout
+            title={`Validation Error${Object.values(validationErrors).length > 1 ? "s" : ""}`}
+            icon={ExclamationCircleIcon}
+            color="rose"
+          >
+            {Object.entries(validationErrors)
+              .filter(([key, value]) => value !== null)
+              .map(([key, value]) => (
+                <div key={key}>
+                  <span className="font-bold">{key}:</span> {value}
+                </div>
+              ))}
+          </Callout>
+        ) : (
+          <Callout
+            title="Schema is valid"
+            icon={CheckCircleIcon}
+            color="teal"
+          ></Callout>
+        )}
+      </div>
     );
   };
 
   return (
-    <div className="h-full">
+    <div className="h-full flex flex-col gap-2">
       <CopilotKit runtimeUrl="/api/copilotkit">
         {getworkflowStatus()}
         <Card className="mt-2 p-0 h-[90%] overflow-hidden">
@@ -150,7 +147,7 @@ export function Builder({
         <BuilderWorkflowTestRunModalContent
           closeModal={closeWorkflowExecutionResultsModal}
           workflowExecution={runningWorkflowExecution}
-          workflowRaw={workflow ?? ""}
+          workflowRaw={workflowRaw ?? ""}
           workflowId={workflowId ?? ""}
         />
       </Modal>

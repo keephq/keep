@@ -594,7 +594,7 @@ export function getDefinitionFromNodesEdgesProperties(
   nodes: FlowNode[],
   edges: Edge[],
   _properties: V2Properties,
-  validatorConfiguration: ValidatorConfigurationV2
+  validatorConfiguration: ValidatorConfigurationV2 | undefined
 ): Definition {
   let { sequence, properties } =
     reConstructWorklowToDefinition({
@@ -604,6 +604,14 @@ export function getDefinitionFromNodesEdgesProperties(
     }) || {};
   sequence = (sequence || []) as V2Step[];
   properties = (properties || {}) as V2Properties;
+  if (!validatorConfiguration) {
+    return {
+      sequence,
+      properties,
+      isValid: true,
+    };
+  }
+
   let isValid = true;
   for (let step of sequence) {
     isValid = validatorConfiguration?.step(step);

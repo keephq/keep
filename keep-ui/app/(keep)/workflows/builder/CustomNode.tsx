@@ -13,6 +13,7 @@ import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
 import { DebugNodeInfo } from "./debug-info";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useWorkflowStore } from "./workflow-store";
+import clsx from "clsx";
 
 function IconUrlProvider(data: FlowNode["data"]) {
   const { componentType, type } = data || {};
@@ -32,7 +33,7 @@ function CustomNode({ id, data }: FlowNode) {
     selectedNode,
     setSelectedNode,
     setOpenGlobalEditor,
-    errorNode,
+    validationErrors,
     isPendingSync,
   } = useWorkflowStore();
   const type = data?.type
@@ -45,6 +46,9 @@ function CustomNode({ id, data }: FlowNode) {
   const synced = !isPendingSync;
   const isEmptyNode = !!data?.type?.includes("empty");
   const specialNodeCheck = ["start", "end"].includes(type);
+  const isError =
+    validationErrors.hasOwnProperty(data?.name) ||
+    validationErrors.hasOwnProperty(id);
 
   function getTriggerIcon(step: any) {
     const { type } = step;
@@ -81,7 +85,7 @@ function CustomNode({ id, data }: FlowNode) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <DebugNodeInfo id={id} data={data} />
-        <span className="rounded-full bg-orange-50 border border-orange-500 px-4 py-2 flex items-center justify-center">
+        <span className="rounded-full bg-slate-50 border border-stone-400 px-4 py-2 flex items-center justify-center">
           {data.name}
         </span>
         <Handle type="target" position={Position.Top} className="w-32" />
@@ -94,14 +98,15 @@ function CustomNode({ id, data }: FlowNode) {
     <>
       {!specialNodeCheck && (
         <div
-          className={`flex shadow-md rounded-md bg-white border-2 w-full h-full relative ${
-            id === selectedNode ? "border-orange-500" : "border-stone-400"
-          }`}
+          className={clsx(
+            "flex shadow-md rounded-md border-2 w-full h-full relative",
+            id === selectedNode ? "bg-orange-50" : "bg-white",
+            id === selectedNode ? "border-orange-500" : "border-stone-400",
+            isEmptyNode && "border-dashed"
+          )}
           onClick={handleNodeClick}
           style={{
             opacity: data.isLayouted ? 1 : 0,
-            borderStyle: isEmptyNode ? "dashed" : "",
-            borderColor: errorNode == id ? "red" : "",
           }}
         >
           <DebugNodeInfo id={id} data={data} />
@@ -115,7 +120,7 @@ function CustomNode({ id, data }: FlowNode) {
               )}
             </div>
           )}
-          {errorNode === id && (
+          {isError && (
             <BiSolidError className="size-16  text-red-500 absolute right-[-40px] top-[-40px]" />
           )}
           {!isEmptyNode && (
@@ -125,14 +130,18 @@ function CustomNode({ id, data }: FlowNode) {
                 <DynamicImageProviderIcon
                   src={IconUrlProvider(data) || "/keep.png"}
                   alt={data?.type}
-                  className="object-cover w-8 h-8 rounded-full bg-gray-100"
+                  className="object-cover w-8 h-8 rounded"
                   width={32}
                   height={32}
                 />
               )}
-              <div className="flex-1 flex-col gap-2 flex-wrap truncate">
-                <div className="text-lg font-bold truncate">{data?.name}</div>
-                <div className="text-gray-500 truncate">{type}</div>
+              <div className="flex-1 flex-col gap-1 flex-wrap truncate">
+                <div className="text-lg font-bold truncate leading-tight">
+                  {data?.name}
+                </div>
+                <div className="text-gray-500 truncate leading-tight">
+                  {type}
+                </div>
               </div>
               <div>
                 <NodeMenu data={data} id={id} />
@@ -166,12 +175,12 @@ function CustomNode({ id, data }: FlowNode) {
           }}
         >
           <div className={`flex flex-col items-center justify-center`}>
-            {type === "start" && (
+            {/* {type === "start" && (
               <MdNotStarted className="size-20 bg-orange-500 text-white rounded-full font-bold mb-2" />
             )}
             {type === "end" && (
               <GoSquareFill className="size-20 bg-orange-500 text-white rounded-full font-bold mb-2" />
-            )}
+            )} */}
             {["threshold", "assert", "foreach"].includes(type) && (
               <div
                 className={`border-2 ${

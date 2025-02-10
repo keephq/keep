@@ -576,7 +576,7 @@ export const processWorkflowV2 = (
   return { nodes: newNodes, edges: newEdges };
 };
 
-export function getTriggerStep(properties: V2Properties) {
+export function getTriggerSteps(properties: V2Properties) {
   const _steps = [] as V2Step[];
   function _triggerSteps() {
     if (!properties) {

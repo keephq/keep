@@ -186,16 +186,16 @@ export function stepValidatorV2(
         isValid: false,
         error: { nodeId: step.id, message: "Step name cannot be empty." },
       };
-    if (!step?.properties?.with) {
+    if (!Object.keys(step?.properties?.with || {}).length) {
       return {
         isValid: false,
         error: {
           nodeId: step.id,
-          message: "There is step/action with no parameters configured!",
+          message: `The step has no parameters configured!`,
         },
       };
     }
-    if (valid && step?.properties?.with) {
+    if (valid && Object.keys(step?.properties?.with || {}).length) {
       return { isValid: true };
     }
     return { isValid: false };
