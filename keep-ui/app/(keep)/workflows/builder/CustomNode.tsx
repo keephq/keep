@@ -31,8 +31,8 @@ function CustomNode({ id, data }: FlowNode) {
     selectedNode,
     setSelectedNode,
     setOpneGlobalEditor,
-    errorNode,
     synced,
+    validationErrors,
   } = useStore();
   const type = data?.type
     ?.replace("step-", "")
@@ -43,6 +43,8 @@ function CustomNode({ id, data }: FlowNode) {
 
   const isEmptyNode = !!data?.type?.includes("empty");
   const specialNodeCheck = ["start", "end"].includes(type);
+  const isError =
+    validationErrors.has(data?.name) || validationErrors.has(data?.id);
 
   function getTriggerIcon(step: any) {
     const { type } = step;
@@ -98,7 +100,7 @@ function CustomNode({ id, data }: FlowNode) {
           style={{
             opacity: data.isLayouted ? 1 : 0,
             borderStyle: isEmptyNode ? "dashed" : "",
-            borderColor: errorNode == id ? "red" : "",
+            borderColor: isError ? "red" : "",
           }}
         >
           {isEmptyNode && (
@@ -111,7 +113,7 @@ function CustomNode({ id, data }: FlowNode) {
               )}
             </div>
           )}
-          {errorNode === id && (
+          {isError && (
             <BiSolidError className="size-16  text-red-500 absolute right-[-40px] top-[-40px]" />
           )}
           {!isEmptyNode && (

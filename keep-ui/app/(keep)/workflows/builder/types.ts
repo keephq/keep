@@ -81,6 +81,7 @@ export interface FlowStateValues {
   isSaving: boolean;
   definition: DefinitionV2;
   isLoading: boolean;
+  validationErrors: Set<[string, string | null]>;
 }
 
 export interface FlowState extends FlowStateValues {
@@ -95,7 +96,6 @@ export interface FlowState extends FlowStateValues {
   setErrorNode: (id: string | null) => void;
   setFirstInitilisationDone: (firstInitilisationDone: boolean) => void;
   setSelectedEdge: (id: string | null) => void;
-  setChanges: (changes: number) => void;
   setIsLayouted: (isLayouted: boolean) => void;
   addNodeBetween: (
     nodeOrEdge: string | null,
@@ -128,4 +128,5 @@ export interface FlowState extends FlowStateValues {
     initialEdges?: Edge[];
   }) => void;
   initializeWorkflow: (toolboxConfiguration: Record<string, any>) => void;
+  updateDefinition: () => void;
 }

@@ -51,12 +51,6 @@ function Builder({
   installedProviders,
 }: Props) {
   const api = useApi();
-  const [stepValidationError, setStepValidationError] = useState<string | null>(
-    null
-  );
-  const [globalValidationError, setGlobalValidationError] = useState<
-    string | null
-  >(null);
   const [generateModalIsOpen, setGenerateModalIsOpen] = useState(false);
   const [testRunModalOpen, setTestRunModalOpen] = useState(false);
   const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<
@@ -78,37 +72,14 @@ function Builder({
     saveRequestCount,
     runRequestCount,
     setIsSaving,
-    errorNode,
-    setErrorNode,
     synced,
     reset,
     canDeploy,
+    validationErrors,
   } = useStore();
   const router = useRouter();
 
   const searchParams = useSearchParams();
-
-  const setStepValidationErrorV2 = useCallback(
-    (step: V2Step, error: string | null) => {
-      setStepValidationError(error);
-      if (error && step) {
-        return setErrorNode(step.id);
-      }
-      setErrorNode(null);
-    },
-    [setStepValidationError, setErrorNode]
-  );
-
-  const setGlobalValidationErrorV2 = useCallback(
-    (id: string | null, error: string | null) => {
-      setGlobalValidationError(error);
-      if (error && id) {
-        return setErrorNode(id);
-      }
-      setErrorNode(null);
-    },
-    [setGlobalValidationError, setErrorNode]
-  );
 
   const testRunWorkflow = () => {
     setTestRunModalOpen(true);
@@ -209,7 +180,7 @@ function Builder({
       );
       return;
     }
-    if (errorNode || !definition.isValid) {
+    if (validationErrors.size > 0 || !definition.isValid) {
       showErrorToast("Please fix the errors in the workflow before saving.");
       return;
     }
@@ -230,7 +201,6 @@ function Builder({
     }
   }, [
     synced,
-    errorNode,
     definition.isValid,
     definition.value,
     setIsSaving,
@@ -269,28 +239,9 @@ function Builder({
 
   useEffect(() => {
     setGenerateEnabled(
-      (definition.isValid &&
-        stepValidationError === null &&
-        globalValidationError === null) ||
-        false
+      (definition.isValid && validationErrors.size === 0) || false
     );
-  }, [
-    stepValidationError,
-    globalValidationError,
-    setGenerateEnabled,
-    definition.isValid,
-  ]);
-
-  const ValidatorConfigurationV2: {
-    step: (step: V2Step, parent?: V2Step, definition?: Definition) => boolean;
-    root: (def: Definition) => boolean;
-  } = useMemo(() => {
-    return {
-      step: (step, parent, definition) =>
-        stepValidatorV2(step, setStepValidationErrorV2, parent, definition),
-      root: (def) => globalValidatorV2(def, setGlobalValidationErrorV2),
-    };
-  }, [setStepValidationErrorV2, setGlobalValidationErrorV2]);
+  }, [validationErrors, setGenerateEnabled, definition.isValid]);
 
   if (isLoading) {
     return (
@@ -310,14 +261,18 @@ function Builder({
   };
 
   const getworkflowStatus = () => {
-    return stepValidationError || globalValidationError ? (
+    return validationErrors.size > 0 ? (
       <Callout
         className="mt-2.5 mb-2.5"
         title="Validation Error"
         icon={ExclamationCircleIcon}
         color="rose"
       >
-        {stepValidationError || globalValidationError}
+        {Array.from(validationErrors).map(([id, error]) => (
+          <div key={id}>
+            <span className="font-bold">{id}:</span> {error}
+          </div>
+        ))}
       </Callout>
     ) : (
       <Callout
@@ -365,7 +320,6 @@ function Builder({
                   <ReactFlowBuilder
                     providers={providers}
                     installedProviders={installedProviders}
-                    validatorConfiguration={ValidatorConfigurationV2}
                   />
                 </ReactFlowProvider>
               </div>

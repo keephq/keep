@@ -24,14 +24,9 @@ const edgeTypes: EdgeTypesType = {
 const ReactFlowBuilder = ({
   providers,
   installedProviders,
-  validatorConfiguration,
 }: {
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
-  validatorConfiguration: {
-    step: (step: V2Step, parent?: V2Step, definition?: Definition) => boolean;
-    root: (def: Definition) => boolean;
-  };
 }) => {
   const toolboxConfiguration = getToolboxConfiguration(providers ?? []);
   const {
@@ -69,7 +64,6 @@ const ReactFlowBuilder = ({
         <ReactFlowEditor
           providers={providers}
           installedProviders={installedProviders}
-          validatorConfiguration={validatorConfiguration}
         />
       </div>
     </div>

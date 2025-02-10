@@ -91,6 +91,7 @@ export function WorkflowBuilderPageClient({
   }) => {
     updateV2Properties({ name, description });
     setIsEditModalOpen(false);
+    // Properties are now synced immediately in the store
     triggerSave();
   };
 

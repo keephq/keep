@@ -12,6 +12,7 @@ import {
   createCustomEdgeMeta,
   processWorkflowV2,
   getTriggerStep,
+  reConstructWorklowToDefinition,
 } from "utils/reactFlow";
 import { createDefaultNodeV2 } from "../../../../utils/reactFlow";
 import { wrapDefinitionV2 } from "./utils";
@@ -22,8 +23,9 @@ import {
   FlowStateValues,
   FlowState,
   FlowNode,
-  DefinitionV2,
+  Definition,
 } from "./types";
+import { validateGlobalPure, validateStepPure } from "./builder-validators";
 import dagre, { graphlib } from "@dagrejs/dagre";
 
 function addNodeBetween(
@@ -124,6 +126,7 @@ function addNodeBetween(
     isLayouted: false,
     changes: get().changes + 1,
   });
+  get().updateDefinition();
   if (type == "edge") {
     set({
       selectedEdge: edges[edges.length - 1]?.id,
@@ -180,6 +183,7 @@ const defaultState: FlowStateValues = {
   isSaving: false,
   definition: INITIAL_DEFINITION,
   isLoading: true,
+  validationErrors: new Set(),
 };
 
 const useStore = create<FlowState>()(
@@ -205,7 +209,6 @@ const useStore = create<FlowState>()(
       set({ firstInitilisationDone }),
     setSelectedEdge: (id) =>
       set({ selectedEdge: id, selectedNode: null, openGlobalEditor: true }),
-    setChanges: (changes: number) => set({ changes: changes }),
     setIsLayouted: (isLayouted) => set({ isLayouted }),
     addNodeBetween: (nodeOrEdge: string | null, step: any, type: string) => {
       addNodeBetween(nodeOrEdge, step, type, set, get);
@@ -232,17 +235,58 @@ const useStore = create<FlowState>()(
           nodes: updatedNodes,
           changes: get().changes + 1,
         });
+        get().updateDefinition();
       }
     },
     setV2Properties: (properties) =>
       set({ v2Properties: properties, canDeploy: false }),
+    updateDefinition: () => {
+      // Immediately update definition with new properties
+      const { nodes, edges } = get();
+      const { sequence, properties: newProperties } =
+        reConstructWorklowToDefinition({
+          nodes,
+          edges,
+          properties: get().v2Properties,
+        });
+
+      // Use validators to check if the workflow is valid
+      let isValid = true;
+      const validationErrors = new Set<[string, string | null]>();
+      const definition: Definition = { sequence, properties: newProperties };
+
+      // Check each step's validity
+      for (const step of sequence) {
+        const error = validateStepPure(step);
+        if (error) {
+          validationErrors.add([step.name || step.id, error]);
+          isValid = false;
+        }
+      }
+
+      // Check global validity if all steps are valid
+      if (isValid) {
+        const result = validateGlobalPure(definition);
+        if (result) {
+          validationErrors.add(result);
+          isValid = false;
+        }
+      }
+
+      set({
+        definition: wrapDefinitionV2({
+          sequence,
+          properties: newProperties,
+          isValid,
+        }),
+        validationErrors,
+        synced: true,
+      });
+    },
     updateV2Properties: (properties) => {
       const updatedProperties = { ...get().v2Properties, ...properties };
-      set({
-        v2Properties: updatedProperties,
-        changes: get().changes + 1,
-        canDeploy: false,
-      });
+      set({ v2Properties: updatedProperties, changes: get().changes + 1 });
+      get().updateDefinition();
     },
     setSelectedNode: (id) => {
       set({
@@ -446,6 +490,7 @@ const useStore = create<FlowState>()(
         changes: get().changes + 1,
         openGlobalEditor: true,
       });
+      get().updateDefinition();
     },
     // used to reset the store to the initial state, on builder unmount
     reset: () => set(defaultState),
@@ -544,7 +589,6 @@ async function initializeWorkflow(
     nodes,
     edges,
     v2Properties: { ...(parsedWorkflow?.properties ?? {}), name },
-    changes: 1,
     toolboxConfiguration,
     isLoading: false,
   });
@@ -553,10 +597,9 @@ async function initializeWorkflow(
 const getLayoutedElements = (
   nodes: FlowNode[],
   edges: Edge[],
-  options = {}
+  options: { "elk.direction"?: string } = {}
 ) => {
-  // @ts-ignore
-  const isHorizontal = options?.["elk.direction"] === "RIGHT";
+  const isHorizontal = options["elk.direction"] === "RIGHT";
   const dagreGraph = new graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
 
@@ -601,8 +644,8 @@ const getLayoutedElements = (
     const dagreNode = dagreGraph.node(node.id);
     return {
       ...node,
-      targetPosition: isHorizontal ? "left" : "top",
-      sourcePosition: isHorizontal ? "right" : "bottom",
+      targetPosition: isHorizontal ? Position.Left : Position.Top,
+      sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
       style: {
         ...node.style,
         width: dagreNode.width as number,

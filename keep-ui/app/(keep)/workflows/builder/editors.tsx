@@ -17,49 +17,22 @@ import {
   FunnelIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import React from "react";
+import React, { useCallback } from "react";
 import useStore from "./builder-store";
 import { useEffect, useRef, useState } from "react";
 import { V2Properties } from "@/app/(keep)/workflows/builder/types";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import debounce from "lodash.debounce";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col m-2.5">{children}</div>;
 }
 
-export function GlobalEditorV2({
-  synced,
-  saveRef,
-}: {
-  synced: boolean;
-  saveRef: React.MutableRefObject<boolean>;
-}) {
-  const {
-    v2Properties: properties,
-    updateV2Properties: setProperty,
-    selectedNode,
-  } = useStore();
-
+export function GlobalEditorV2({ synced }: { synced: boolean }) {
   return (
     <EditorLayout>
-      <Title>Keep Workflow Editor</Title>
-      <Text>
-        Use this visual workflow editor to easily create or edit existing Keep
-        workflow YAML specifications.
-      </Text>
-      <Text className="mt-5">
-        Use the edge add button or an empty step (a step with a +) to insert
-        steps, conditions, and actions into your workflow. Then, click the
-        Generate button to compile the workflow or the Deploy button to deploy
-        it to Keep.
-      </Text>
       <div className="text-right">{synced ? "Synced" : "Not Synced"}</div>
-      <WorkflowEditorV2
-        properties={properties}
-        setProperties={setProperty}
-        selectedNode={selectedNode}
-        saveRef={saveRef}
-      />
+      <WorkflowEditorV2 />
     </EditorLayout>
   );
 }
@@ -317,32 +290,32 @@ function KeepForeachEditor({ properties, updateProperty }: keepEditorProps) {
   );
 }
 
-function WorkflowEditorV2({
-  properties,
-  setProperties,
-  selectedNode,
-  saveRef,
-}: {
-  properties: V2Properties;
-  setProperties: (updatedProperties: V2Properties) => void;
-  selectedNode: string | null;
-  saveRef: React.MutableRefObject<boolean>;
-}) {
+function WorkflowEditorV2() {
+  const {
+    v2Properties: properties,
+    updateV2Properties,
+    selectedNode,
+  } = useStore();
+
+  const handleChange = useCallback(
+    debounce((key: string, value: string | Record<string, any>) => {
+      updateV2Properties({ [key]: value });
+    }, 300),
+    [updateV2Properties]
+  );
+
   const addNewConstant = () => {
     const updatedConsts = {
       ...(properties["consts"] as { [key: string]: string }),
       [`newKey${Object.keys(properties["consts"] || {}).length}`]: "",
     };
-    handleChange("consts", updatedConsts);
+    updateV2Properties({ consts: updatedConsts });
   };
 
   const updateAlertFilter = (filter: string, value: string) => {
     const currentFilters = properties.alert || {};
     const updatedFilters = { ...currentFilters, [filter]: value };
-    setProperties({ ...properties, alert: updatedFilters });
-    if (saveRef.current) {
-      saveRef.current = false;
-    }
+    updateV2Properties({ alert: updatedFilters });
   };
 
   const addFilter = () => {
@@ -355,265 +328,278 @@ function WorkflowEditorV2({
   const deleteFilter = (filter: string) => {
     const currentFilters = { ...properties.alert };
     delete currentFilters[filter];
-    setProperties({ ...properties, alert: currentFilters });
-    if (saveRef.current) {
-      saveRef.current = false;
-    }
+    updateV2Properties({ alert: currentFilters });
   };
 
-  const handleChange = (key: string, value: string | Record<string, any>) => {
-    setProperties({
-      ...properties,
-      [key]: value,
-    });
-    if (saveRef.current) {
-      saveRef.current = false;
-    }
-  };
+  const toSkip = ["isLocked", "id", "name", "description"];
 
   const propertyKeys = Object.keys(properties).filter(
-    (k) => k !== "isLocked" && k !== "id"
+    (k) => !toSkip.includes(k)
   );
   let renderDivider = false;
   return (
     <>
       <Title className="mt-2.5">Workflow Settings</Title>
-      {propertyKeys.map((key, index) => {
-        const isTrigger = ["manual", "alert", "interval", "incident"].includes(
-          key
-        );
+      <div className="flex flex-col gap-2">
+        {propertyKeys.map((key, index) => {
+          const isTrigger = [
+            "manual",
+            "alert",
+            "interval",
+            "incident",
+          ].includes(key);
 
-        let isConst = key === "consts";
-        if (isConst && !properties[key]) {
-          properties[key] = {};
-        }
+          let isConst = key === "consts";
+          if (isConst && !properties[key]) {
+            properties[key] = {};
+          }
 
-        renderDivider =
-          isTrigger && key === selectedNode ? !renderDivider : false;
-        return (
-          <div key={key}>
-            {renderDivider && <Divider />}
-            {(key === selectedNode || !isTrigger) && (
-              <Text className="capitalize">{key}</Text>
-            )}
+          renderDivider =
+            isTrigger && key === selectedNode ? !renderDivider : false;
+          return (
+            <div key={key}>
+              {renderDivider && <Divider />}
+              {(key === selectedNode || !isTrigger) && (
+                <Text className="capitalize">{key}</Text>
+              )}
 
-            {(() => {
-              switch (key) {
-                case "manual":
-                  return (
-                    selectedNode === "manual" && (
+              {(() => {
+                switch (key) {
+                  case "manual":
+                    return (
+                      selectedNode === "manual" && (
+                        <div key={key}>
+                          <input
+                            type="checkbox"
+                            checked={true}
+                            onChange={(e) =>
+                              handleChange(
+                                key,
+                                e.target.checked ? "true" : "false"
+                              )
+                            }
+                            disabled={true}
+                          />
+                        </div>
+                      )
+                    );
+
+                  case "alert":
+                    return (
+                      selectedNode === "alert" && (
+                        <>
+                          <div className="w-1/2">
+                            <Button
+                              onClick={addFilter}
+                              size="xs"
+                              className="ml-1 mt-1"
+                              variant="light"
+                              color="gray"
+                              icon={FunnelIcon}
+                            >
+                              Add Filter
+                            </Button>
+                          </div>
+                          {properties.alert &&
+                            Object.keys(properties.alert as {}).map(
+                              (filter) => {
+                                return (
+                                  <>
+                                    <Subtitle className="mt-2.5">
+                                      {filter}
+                                    </Subtitle>
+                                    <div
+                                      className="flex items-center mt-1"
+                                      key={filter}
+                                    >
+                                      <TextInput
+                                        key={filter}
+                                        placeholder={`Set alert ${filter}`}
+                                        onChange={(e: any) =>
+                                          updateAlertFilter(
+                                            filter,
+                                            e.target.value
+                                          )
+                                        }
+                                        value={
+                                          (properties.alert as any)[filter] ||
+                                          ("" as string)
+                                        }
+                                      />
+                                      <Icon
+                                        icon={BackspaceIcon}
+                                        className="cursor-pointer"
+                                        color="red"
+                                        tooltip={`Remove ${filter} filter`}
+                                        onClick={() => deleteFilter(filter)}
+                                      />
+                                    </div>
+                                  </>
+                                );
+                              }
+                            )}
+                        </>
+                      )
+                    );
+
+                  case "incident":
+                    return (
+                      selectedNode === "incident" && (
+                        <>
+                          <Subtitle className="mt-2.5">
+                            Incident events
+                          </Subtitle>
+                          {Array("created", "updated", "deleted").map(
+                            (event) => (
+                              <div key={`incident-${event}`} className="flex">
+                                <Switch
+                                  id={event}
+                                  checked={
+                                    properties.incident.events?.indexOf(event) >
+                                    -1
+                                  }
+                                  onChange={() => {
+                                    let events =
+                                      properties.incident.events || [];
+                                    if (events.indexOf(event) > -1) {
+                                      events = (events as string[]).filter(
+                                        (e) => e !== event
+                                      );
+                                      updateV2Properties({
+                                        [key]: { events: events },
+                                      });
+                                    } else {
+                                      events.push(event);
+                                      updateV2Properties({
+                                        [key]: { events: events },
+                                      });
+                                    }
+                                  }}
+                                  color={"orange"}
+                                />
+                                <label
+                                  htmlFor={`incident-${event}`}
+                                  className="text-sm text-gray-500"
+                                >
+                                  <Text>{event}</Text>
+                                </label>
+                              </div>
+                            )
+                          )}
+                        </>
+                      )
+                    );
+                  case "interval":
+                    return (
+                      selectedNode === "interval" && (
+                        <TextInput
+                          placeholder={`Set the ${key}`}
+                          onChange={(e: any) =>
+                            handleChange(key, e.target.value)
+                          }
+                          value={properties[key] || ("" as string)}
+                        />
+                      )
+                    );
+                  case "disabled":
+                    return (
                       <div key={key}>
                         <input
                           type="checkbox"
-                          checked={true}
+                          checked={properties[key] === "true"}
                           onChange={(e) =>
                             handleChange(
                               key,
                               e.target.checked ? "true" : "false"
                             )
                           }
-                          disabled={true}
                         />
                       </div>
-                    )
-                  );
-
-                case "alert":
-                  return (
-                    selectedNode === "alert" && (
-                      <>
-                        <div className="w-1/2">
-                          <Button
-                            onClick={addFilter}
-                            size="xs"
-                            className="ml-1 mt-1"
-                            variant="light"
-                            color="gray"
-                            icon={FunnelIcon}
+                    );
+                  case "consts":
+                    // if consts is empty, set it to an empty object
+                    if (!properties[key]) {
+                      return null;
+                    }
+                    return (
+                      <div key={key}>
+                        {Object.entries(
+                          properties[key] as { [key: string]: string }
+                        ).map(([constKey, constValue]) => (
+                          <div
+                            key={constKey}
+                            className="flex items-center mt-1"
                           >
-                            Add Filter
-                          </Button>
-                        </div>
-                        {properties.alert &&
-                          Object.keys(properties.alert as {}).map((filter) => {
-                            return (
-                              <>
-                                <Subtitle className="mt-2.5">{filter}</Subtitle>
-                                <div
-                                  className="flex items-center mt-1"
-                                  key={filter}
-                                >
-                                  <TextInput
-                                    key={filter}
-                                    placeholder={`Set alert ${filter}`}
-                                    onChange={(e: any) =>
-                                      updateAlertFilter(filter, e.target.value)
-                                    }
-                                    value={
-                                      (properties.alert as any)[filter] ||
-                                      ("" as string)
-                                    }
-                                  />
-                                  <Icon
-                                    icon={BackspaceIcon}
-                                    className="cursor-pointer"
-                                    color="red"
-                                    tooltip={`Remove ${filter} filter`}
-                                    onClick={() => deleteFilter(filter)}
-                                  />
-                                </div>
-                              </>
-                            );
-                          })}
-                      </>
-                    )
-                  );
-
-                case "incident":
-                  return (
-                    selectedNode === "incident" && (
-                      <>
-                        <Subtitle className="mt-2.5">Incident events</Subtitle>
-                        {Array("created", "updated", "deleted").map((event) => (
-                          <div key={`incident-${event}`} className="flex">
-                            <Switch
-                              id={event}
-                              checked={
-                                properties.incident.events?.indexOf(event) > -1
-                              }
-                              onChange={() => {
-                                let events = properties.incident.events || [];
-                                if (events.indexOf(event) > -1) {
-                                  events = (events as string[]).filter(
-                                    (e) => e !== event
-                                  );
-                                  setProperties({
-                                    ...properties,
-                                    [key]: { events: events },
-                                  });
-                                } else {
-                                  events.push(event);
-                                  setProperties({
-                                    ...properties,
-                                    [key]: { events: events },
-                                  });
-                                }
+                            <TextInput
+                              placeholder={`Key ${constKey}`}
+                              value={constKey}
+                              onChange={(e) => {
+                                const updatedConsts = {
+                                  ...(properties[key] as {
+                                    [key: string]: string;
+                                  }),
+                                };
+                                delete updatedConsts[constKey];
+                                updatedConsts[e.target.value] = constValue;
+                                handleChange(key, updatedConsts);
                               }}
-                              color={"orange"}
                             />
-                            <label
-                              htmlFor={`incident-${event}`}
-                              className="text-sm text-gray-500"
-                            >
-                              <Text>{event}</Text>
-                            </label>
+                            <TextInput
+                              placeholder={`Value ${constValue}`}
+                              value={constValue}
+                              onChange={(e) => {
+                                const updatedConsts = {
+                                  ...(properties[key] as {
+                                    [key: string]: string;
+                                  }),
+                                };
+                                updatedConsts[constKey] = e.target.value;
+                                handleChange(key, updatedConsts);
+                              }}
+                            />
+                            <Icon
+                              icon={BackspaceIcon}
+                              className="cursor-pointer"
+                              color="red"
+                              tooltip={`Remove ${constKey}`}
+                              onClick={() => {
+                                const updatedConsts = {
+                                  ...(properties[key] as {
+                                    [key: string]: string;
+                                  }),
+                                };
+                                delete updatedConsts[constKey];
+                                handleChange(key, updatedConsts);
+                              }}
+                            />
                           </div>
                         ))}
-                      </>
-                    )
-                  );
-                case "interval":
-                  return (
-                    selectedNode === "interval" && (
+                        <Button
+                          onClick={addNewConstant}
+                          size="xs"
+                          className="ml-1 mt-1"
+                          variant="light"
+                          color="gray"
+                          icon={PlusIcon}
+                        >
+                          Add Constant
+                        </Button>
+                      </div>
+                    );
+                  default:
+                    return (
                       <TextInput
                         placeholder={`Set the ${key}`}
                         onChange={(e: any) => handleChange(key, e.target.value)}
                         value={properties[key] || ("" as string)}
                       />
-                    )
-                  );
-                case "disabled":
-                  return (
-                    <div key={key}>
-                      <input
-                        type="checkbox"
-                        checked={properties[key] === "true"}
-                        onChange={(e) =>
-                          handleChange(key, e.target.checked ? "true" : "false")
-                        }
-                      />
-                    </div>
-                  );
-                case "consts":
-                  // if consts is empty, set it to an empty object
-                  if (!properties[key]) {
-                    return null;
-                  }
-                  return (
-                    <div key={key}>
-                      {Object.entries(
-                        properties[key] as { [key: string]: string }
-                      ).map(([constKey, constValue]) => (
-                        <div key={constKey} className="flex items-center mt-1">
-                          <TextInput
-                            placeholder={`Key ${constKey}`}
-                            value={constKey}
-                            onChange={(e) => {
-                              const updatedConsts = {
-                                ...(properties[key] as {
-                                  [key: string]: string;
-                                }),
-                              };
-                              delete updatedConsts[constKey];
-                              updatedConsts[e.target.value] = constValue;
-                              handleChange(key, updatedConsts);
-                            }}
-                          />
-                          <TextInput
-                            placeholder={`Value ${constValue}`}
-                            value={constValue}
-                            onChange={(e) => {
-                              const updatedConsts = {
-                                ...(properties[key] as {
-                                  [key: string]: string;
-                                }),
-                              };
-                              updatedConsts[constKey] = e.target.value;
-                              handleChange(key, updatedConsts);
-                            }}
-                          />
-                          <Icon
-                            icon={BackspaceIcon}
-                            className="cursor-pointer"
-                            color="red"
-                            tooltip={`Remove ${constKey}`}
-                            onClick={() => {
-                              const updatedConsts = {
-                                ...(properties[key] as {
-                                  [key: string]: string;
-                                }),
-                              };
-                              delete updatedConsts[constKey];
-                              handleChange(key, updatedConsts);
-                            }}
-                          />
-                        </div>
-                      ))}
-                      <Button
-                        onClick={addNewConstant}
-                        size="xs"
-                        className="ml-1 mt-1"
-                        variant="light"
-                        color="gray"
-                        icon={PlusIcon}
-                      >
-                        Add Constant
-                      </Button>
-                    </div>
-                  );
-                default:
-                  return (
-                    <TextInput
-                      placeholder={`Set the ${key}`}
-                      onChange={(e: any) => handleChange(key, e.target.value)}
-                      value={properties[key] || ("" as string)}
-                    />
-                  );
-              }
-            })()}
-          </div>
-        );
-      })}
+                    );
+                }
+              })()}
+            </div>
+          );
+        })}
+      </div>
     </>
   );
 }
@@ -621,20 +607,22 @@ function WorkflowEditorV2({
 export function StepEditorV2({
   providers,
   installedProviders,
-  setSynced,
-  saveRef,
 }: {
   providers: Provider[] | undefined | null;
   installedProviders?: Provider[] | undefined | null;
-  setSynced: (sync: boolean) => void;
-  saveRef: React.MutableRefObject<boolean>;
 }) {
   const [formData, setFormData] = useState<{
     name?: string;
     properties?: V2Properties;
     type?: string;
   }>({});
-  const { selectedNode, updateSelectedNodeData, getNodeById } = useStore();
+  const {
+    selectedNode,
+    updateSelectedNodeData,
+    getNodeById,
+    setSynced,
+    triggerSave,
+  } = useStore();
 
   const deployRef = useRef<HTMLInputElement>(null);
 
@@ -661,19 +649,13 @@ export function StepEditorV2({
       properties: { ...formData.properties, [key]: value },
     });
     setSynced(false);
-    if (saveRef.current) {
-      saveRef.current = false;
-    }
   };
 
   const handleSubmit = () => {
     // Finalize the changes before saving
     updateSelectedNodeData("name", formData.name);
     updateSelectedNodeData("properties", formData.properties);
-    setSynced(false);
-    if (saveRef && deployRef?.current?.checked) {
-      saveRef.current = true;
-    }
+    triggerSave();
   };
 
   const type = formData
