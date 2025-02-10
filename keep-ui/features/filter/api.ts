@@ -12,7 +12,7 @@ export interface InitialFacetsData {
  * @param entityName
  * @returns
  */
-export async function getInitalFacets(
+export async function getInitialFacets(
   api: ApiClient,
   entityName: string
 ): Promise<FacetDto[]> {
@@ -29,7 +29,7 @@ export async function getInitialFacetsData(
   api: ApiClient,
   entityName: string
 ): Promise<InitialFacetsData> {
-  const facets = await getInitalFacets(api, entityName);
+  const facets = await getInitialFacets(api, entityName);
   const facetOptionsQuery: FacetOptionsQuery = {
     facet_queries: facets
       .map((f) => f.id)

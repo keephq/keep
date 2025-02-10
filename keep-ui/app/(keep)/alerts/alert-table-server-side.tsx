@@ -67,7 +67,7 @@ interface PresetTab {
 interface Props {
   refreshToken: string | null;
   alerts: AlertDto[];
-  initalFacets: FacetDto[];
+  initialFacets: FacetDto[];
   alertsTotalCount: number;
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
@@ -91,7 +91,7 @@ export function AlertTableServerSide({
   alerts,
   alertsTotalCount,
   columns,
-  initalFacets,
+  initialFacets,
   isAsyncLoading = false,
   presetName,
   presetStatic = false,
@@ -409,7 +409,7 @@ export function AlertTableServerSide({
               entityName={"alerts"}
               facetOptionsCel={mainCelQuery}
               clearFiltersToken={clearFiltersToken}
-              initialFacetsData={{ facets: initalFacets, facetOptions: null }}
+              initialFacetsData={{ facets: initialFacets, facetOptions: null }}
               onCelChange={(cel) => setFilterCel(cel)}
               renderFacetOptionIcon={renderFacetOptionIcon}
               renderFacetOptionLabel={renderFacetOptionLabel}
