@@ -536,7 +536,7 @@ def browser():
 
     # SHAHAR: you can remove locally, but keep in github actions
     # headless = os.getenv("PLAYWRIGHT_HEADLESS", "true") == "true"
-    headless = False
+    headless = True
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
         context = browser.new_context()

@@ -17,19 +17,19 @@ services:
       retries: 5
 
   # Frontend Services
-  # keep-frontend:
-  #   extends:
-  #     file: docker-compose.common.yml
-  #     service: keep-frontend-common
-  #   build:
-  #     context: ./keep-ui/
-  #     dockerfile: ../docker/Dockerfile.ui
-  #   environment:
-  #     - AUTH_TYPE=NO_AUTH
-  #     - API_URL=http://keep-backend:8080
-  #     - POSTHOG_DISABLED=true
-  #     - FRIGADE_DISABLED=true
-  #     - SENTRY_DISABLED=true
+  keep-frontend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-frontend-common
+    build:
+      context: ./keep-ui/
+      dockerfile: ../docker/Dockerfile.ui
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - API_URL=http://keep-backend:8080
+      - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
+      - SENTRY_DISABLED=true
 
   # Backend Services
   keep-backend:
@@ -69,22 +69,22 @@ services:
       retries: 5
 
   # Frontend Services (3001)
-  # keep-frontend-db-auth:
-  #   build:
-  #     context: ./keep-ui/
-  #     dockerfile: ../docker/Dockerfile.ui
-  #   ports:
-  #     - "3001:3000"
-  #   environment:
-  #     - NEXTAUTH_SECRET=secret
-  #     - NEXTAUTH_URL=http://localhost:3001
-  #     - NEXT_PUBLIC_API_URL=http://localhost:8081
-  #     - POSTHOG_DISABLED=true
-  #     - AUTH_TYPE=DB
-  #     - API_URL=http://keep-backend-db-auth:8080
-  #     - POSTHOG_DISABLED=true
-  #     - FRIGADE_DISABLED=true
-  #     - SENTRY_DISABLED=true
+  keep-frontend-db-auth:
+    build:
+      context: ./keep-ui/
+      dockerfile: ../docker/Dockerfile.ui
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXTAUTH_SECRET=secret
+      - NEXTAUTH_URL=http://localhost:3001
+      - NEXT_PUBLIC_API_URL=http://localhost:8081
+      - POSTHOG_DISABLED=true
+      - AUTH_TYPE=DB
+      - API_URL=http://keep-backend-db-auth:8080
+      - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
+      - SENTRY_DISABLED=true
 
   # Backend Services (8081)
   keep-backend-db-auth:
