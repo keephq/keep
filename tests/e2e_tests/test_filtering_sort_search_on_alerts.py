@@ -16,6 +16,8 @@ GRAFANA_HOST_LOCAL = "http://localhost:3002"
 KEEP_UI_URL = "http://localhost:3000"
 KEEP_API_URL = "http://localhost:8080"
 
+test_run_id = str(uuid.uuid4())
+
 def query_allerts(
     cell_query: str = None,
 ):
@@ -144,6 +146,8 @@ def upload_alerts():
         alert["dateForTests"] = (
             datetime(2025, 2, 10, 10) + timedelta(days=-alert_index)
         ).isoformat()
+        # Tests will open the page with the CEL query for this test_run_id
+        alert["test_run_id"] = test_run_id
 
         simulated_alerts.append((provider_type, alert))
 
@@ -170,7 +174,7 @@ def upload_alerts():
                 f"{total_alerts - current_alerts['count']} out of {total_alerts} alerts were not uploaded"
             )
 
-        if len(current_alerts["results"]) == len(simulated_alerts):
+        if len(current_alerts["results"]) >= len(simulated_alerts):
             break
     return current_alerts
 
@@ -179,7 +183,9 @@ def init_test(browser: Browser):
     current_alerts = upload_alerts()
     current_alerts_results = current_alerts["results"]
 
-    browser.goto(f"{KEEP_UI_URL}/alerts/feed", timeout=10000)
+    browser.goto(
+        f"{KEEP_UI_URL}/alerts/feed?cel=test_run_id == 'test_run_id'", timeout=10000
+    )
     browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
     browser.wait_for_selector(
         f"text={current_alerts_results[0]['name']}", timeout=10000
