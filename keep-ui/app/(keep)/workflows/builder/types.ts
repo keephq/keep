@@ -52,6 +52,15 @@ export type FlowNode = Node & {
   id: string;
   isNested: boolean;
 };
+
+export type StoreGet = () => FlowState;
+export type StoreSet = (
+  state:
+    | FlowState
+    | Partial<FlowState>
+    | ((state: FlowState) => FlowState | Partial<FlowState>)
+) => void;
+
 export type FlowState = {
   nodes: FlowNode[];
   edges: Edge[];
@@ -74,19 +83,13 @@ export type FlowState = {
   setNodes: (nodes: FlowNode[]) => void;
   setEdges: (edges: Edge[]) => void;
   getNodeById: (id: string | null) => FlowNode | undefined;
-  deleteEdges: (ids: string | string[]) => void;
   deleteNodes: (ids: string | string[]) => void;
-  updateNode: (node: FlowNode) => void;
-  duplicateNode: (node: FlowNode) => void;
-  // addNode: (node: Partial<FlowNode>) => void;
   setSelectedNode: (id: string | null) => void;
   setV2Properties: (properties: V2Properties) => void;
   setOpneGlobalEditor: (open: boolean) => void;
-  // updateNodeData: (nodeId: string, key: string, value: any) => void;
   updateSelectedNodeData: (key: string, value: any) => void;
   updateV2Properties: (properties: V2Properties) => void;
   setStepEditorOpenForNode: (nodeId: string | null) => void;
-  updateEdge: (id: string, key: string, value: any) => void;
   setToolBoxConfig: (config: Record<string, any>) => void;
   addNodeBetween: (
     nodeOrEdge: string | null,
@@ -101,18 +104,29 @@ export type FlowState = {
   setChanges: (changes: number) => void;
   firstInitilisationDone: boolean;
   setFirstInitilisationDone: (firstInitilisationDone: boolean) => void;
-  lastSavedChanges: { nodes: FlowNode[] | null; edges: Edge[] | null };
   setErrorNode: (id: string | null) => void;
   errorNode: string | null;
   synced: boolean;
   setSynced: (synced: boolean) => void;
   canDeploy: boolean;
   setCanDeploy: (deploy: boolean) => void;
+  reset: () => void;
 };
-export type StoreGet = () => FlowState;
-export type StoreSet = (
-  state:
-    | FlowState
-    | Partial<FlowState>
-    | ((state: FlowState) => FlowState | Partial<FlowState>)
-) => void;
+
+export type FlowStateValues = Pick<
+  FlowState,
+  | "nodes"
+  | "edges"
+  | "selectedNode"
+  | "v2Properties"
+  | "openGlobalEditor"
+  | "stepEditorOpenForNode"
+  | "toolboxConfiguration"
+  | "isLayouted"
+  | "selectedEdge"
+  | "changes"
+  | "firstInitilisationDone"
+  | "errorNode"
+  | "synced"
+  | "canDeploy"
+>;
