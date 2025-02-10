@@ -1,15 +1,13 @@
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 import { NextAuthProvider } from "../auth-provider";
 import { Mulish } from "next/font/google";
 import { ToastContainer } from "react-toastify";
-import Navbar from "components/navbar/Navbar";
-import { TopologyPollingContextProvider } from "@/app/(keep)/topology/model/TopologyPollingContext";
 import { FrigadeProvider } from "../frigade-provider";
 import { getConfig } from "@/shared/lib/server/getConfig";
 import { ConfigProvider } from "../config-provider";
 import { PHProvider } from "../posthog-provider";
 import dynamic from "next/dynamic";
-import ReadOnlyBanner from "../read-only-banner";
+import ReadOnlyBanner from "@/components/banners/read-only-banner";
 import { auth } from "@/auth";
 import { ThemeScript, WatchUpdateTheme } from "@/shared/ui";
 import "@/app/globals.css";
