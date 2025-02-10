@@ -61,72 +61,62 @@ export type StoreSet = (
     | ((state: FlowState) => FlowState | Partial<FlowState>)
 ) => void;
 
-export type FlowState = {
+export interface FlowStateValues {
   nodes: FlowNode[];
   edges: Edge[];
   selectedNode: string | null;
-  v2Properties: V2Properties;
+  v2Properties: Record<string, any>;
   openGlobalEditor: boolean;
   stepEditorOpenForNode: string | null;
   toolboxConfiguration: Record<string, any>;
-  onNodesChange: OnNodesChange<FlowNode>;
-  onEdgesChange: OnEdgesChange<Edge>;
-  onConnect: OnConnect;
-  onDragOver: (event: React.DragEvent) => void;
+  isLayouted: boolean;
+  selectedEdge: string | null;
+  changes: number;
+  firstInitilisationDone: boolean;
+  errorNode: string | null;
+  synced: boolean;
+  canDeploy: boolean;
+  buttonsEnabled: boolean;
+  generateEnabled: boolean;
+  triggerGenerate: number;
+  triggerSave: number;
+  triggerRun: number;
+  isSaving: boolean;
+}
+
+export interface FlowState extends FlowStateValues {
+  setCanDeploy: (deploy: boolean) => void;
+  setSynced: (sync: boolean) => void;
+  setErrorNode: (id: string | null) => void;
+  setFirstInitilisationDone: (firstInitilisationDone: boolean) => void;
+  setSelectedEdge: (id: string | null) => void;
+  setChanges: (changes: number) => void;
+  setIsLayouted: (isLayouted: boolean) => void;
+  addNodeBetween: (nodeOrEdge: string | null, step: any, type: string) => void;
+  setToolBoxConfig: (config: Record<string, any>) => void;
+  setOpneGlobalEditor: (open: boolean) => void;
+  updateSelectedNodeData: (key: string, value: any) => void;
+  setV2Properties: (properties: Record<string, any>) => void;
+  updateV2Properties: (properties: Record<string, any>) => void;
+  setSelectedNode: (id: string | null) => void;
+  setStepEditorOpenForNode: (nodeId: string | null) => void;
+  onNodesChange: (changes: any) => void;
+  onEdgesChange: (changes: any) => void;
+  onConnect: (connection: any) => void;
+  onDragOver: (event: React.DragEvent<HTMLDivElement>) => void;
   onDrop: (
-    event: React.DragEvent,
-    screenToFlowPosition: (coords: { x: number; y: number }) => {
-      x: number;
-      y: number;
-    }
+    event: React.DragEvent<HTMLDivElement>,
+    screenToFlowPosition: any
   ) => void;
   setNodes: (nodes: FlowNode[]) => void;
   setEdges: (edges: Edge[]) => void;
-  getNodeById: (id: string | null) => FlowNode | undefined;
+  getNodeById: (id: string) => FlowNode | undefined;
   deleteNodes: (ids: string | string[]) => void;
-  setSelectedNode: (id: string | null) => void;
-  setV2Properties: (properties: V2Properties) => void;
-  setOpneGlobalEditor: (open: boolean) => void;
-  updateSelectedNodeData: (key: string, value: any) => void;
-  updateV2Properties: (properties: V2Properties) => void;
-  setStepEditorOpenForNode: (nodeId: string | null) => void;
-  setToolBoxConfig: (config: Record<string, any>) => void;
-  addNodeBetween: (
-    nodeOrEdge: string | null,
-    step: V2Step,
-    type: string
-  ) => void;
-  isLayouted: boolean;
-  setIsLayouted: (isLayouted: boolean) => void;
-  selectedEdge: string | null;
-  setSelectedEdge: (id: string | null) => void;
-  changes: number;
-  setChanges: (changes: number) => void;
-  firstInitilisationDone: boolean;
-  setFirstInitilisationDone: (firstInitilisationDone: boolean) => void;
-  setErrorNode: (id: string | null) => void;
-  errorNode: string | null;
-  synced: boolean;
-  setSynced: (synced: boolean) => void;
-  canDeploy: boolean;
-  setCanDeploy: (deploy: boolean) => void;
   reset: () => void;
-};
-
-export type FlowStateValues = Pick<
-  FlowState,
-  | "nodes"
-  | "edges"
-  | "selectedNode"
-  | "v2Properties"
-  | "openGlobalEditor"
-  | "stepEditorOpenForNode"
-  | "toolboxConfiguration"
-  | "isLayouted"
-  | "selectedEdge"
-  | "changes"
-  | "firstInitilisationDone"
-  | "errorNode"
-  | "synced"
-  | "canDeploy"
->;
+  setButtonsEnabled: (state: boolean) => void;
+  setGenerateEnabled: (state: boolean) => void;
+  setTriggerGenerate: () => void;
+  setTriggerSave: () => void;
+  setTriggerRun: () => void;
+  setIsSaving: (state: boolean) => void;
+}

@@ -40,7 +40,6 @@ import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 import Modal from "@/components/ui/Modal";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import { useWorkflowBuilderContext } from "./workflow-builder-context";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -86,16 +85,20 @@ function Builder({
   );
   const { createWorkflow, updateWorkflow } = useWorkflowActions();
   const {
-    enableGenerate,
+    setGenerateEnabled,
     triggerGenerate,
     triggerSave,
     triggerRun,
     setIsSaving,
-  } = useWorkflowBuilderContext();
+    errorNode,
+    setErrorNode,
+    synced,
+    reset,
+    canDeploy,
+  } = useStore();
   const router = useRouter();
 
   const searchParams = useSearchParams();
-  const { errorNode, setErrorNode, synced, reset, canDeploy } = useStore();
 
   const setStepValidationErrorV2 = useCallback(
     (step: V2Step, error: string | null) => {
@@ -277,7 +280,7 @@ function Builder({
   );
 
   useEffect(() => {
-    enableGenerate(
+    setGenerateEnabled(
       (definition.isValid &&
         stepValidationError === null &&
         globalValidationError === null) ||
@@ -286,7 +289,7 @@ function Builder({
   }, [
     stepValidationError,
     globalValidationError,
-    enableGenerate,
+    setGenerateEnabled,
     definition.isValid,
   ]);
 

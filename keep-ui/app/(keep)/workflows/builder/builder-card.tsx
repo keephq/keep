@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { EmptyBuilderState } from "./empty-builder-state";
 import { Provider } from "../../providers/providers";
 import { useProviders } from "utils/hooks/useProviders";
-import { useWorkflowBuilderContext } from "./workflow-builder-context";
+import useStore from "./builder-store";
 import Loading from "../../loading";
 
 const Builder = dynamic(() => import("./builder"), {
@@ -29,7 +29,7 @@ export function BuilderCard({
   const [installedProviders, setInstalledProviders] = useState<
     Provider[] | null
   >(null);
-  const { enableButtons } = useWorkflowBuilderContext();
+  const { setButtonsEnabled } = useStore();
 
   const { data, error, isLoading } = useProviders();
 
@@ -37,9 +37,9 @@ export function BuilderCard({
     if (data && !providers && !installedProviders) {
       setProviders(data.providers);
       setInstalledProviders(data.installed_providers);
-      enableButtons(true);
+      setButtonsEnabled(true);
     }
-  }, [data, providers, installedProviders, enableButtons]);
+  }, [data, providers, installedProviders, setButtonsEnabled]);
 
   if (!providers || isLoading)
     return (
