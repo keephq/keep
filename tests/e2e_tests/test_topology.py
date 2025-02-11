@@ -15,7 +15,7 @@ from tests.e2e_tests.utils import (
 os.environ["PLAYWRIGHT_HEADLESS"] = "false"
 
 # Base URL of the application under test
-KEEP_UI_URL = "https://3000-35c4n0r-keep-j5ok1nvq1vv.ws-us117.gitpod.io"
+KEEP_UI_URL = "http://localhost:3000"
 
 def test_topology_manual(browser):
     try:
