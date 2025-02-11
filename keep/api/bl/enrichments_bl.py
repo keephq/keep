@@ -12,6 +12,7 @@ from sqlmodel import Session
 from keep.api.core.config import config
 from keep.api.core.db import enrich_entity as enrich_alert_db
 from keep.api.core.db import (
+    get_alert_by_event_id,
     get_enrichment_with_session,
     get_mapping_rule_by_id,
     get_session_sync,
@@ -20,6 +21,12 @@ from keep.api.core.db import (
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.alert import ActionType
+from keep.api.models.db.enrichment_event import (
+    EnrichmentEvent,
+    EnrichmentLog,
+    EnrichmentStatus,
+    EnrichmentType,
+)
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 
@@ -63,6 +70,7 @@ class EnrichmentsBl:
     def __init__(self, tenant_id: str, db: Session | None = None):
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
+        self.__logs: list[EnrichmentLog] = []
         if not EnrichmentsBl.ENRICHMENT_DISABLED:
             self.db_session = db or get_session_sync()
             self.elastic_client = ElasticClient(tenant_id=tenant_id)
@@ -72,7 +80,12 @@ class EnrichmentsBl:
         if not rule:
             raise HTTPException(status_code=404, detail="Mapping rule not found")
 
-        # alert = get_alert_by_id(self.db_session, alert_id, session=self.db_session)
+        alert = get_alert_by_event_id(
+            self.db_session, alert_id, session=self.db_session
+        )
+        if not alert:
+            raise HTTPException(status_code=404, detail="Alert not found")
+        return self._check_match_rule_and_enrich(alert, rule)
 
     def run_extraction_rules(
         self, event: AlertDto | dict, pre=False
@@ -168,6 +181,7 @@ class EnrichmentsBl:
                         "fingerprint": fingerprint,
                     },
                 )
+
             else:
                 self.logger.info(
                     "Regex did not match, skipping extraction",
@@ -194,9 +208,10 @@ class EnrichmentsBl:
             self.logger.debug("Enrichment is disabled, skipping mapping rules")
             return alert
 
-        self.logger.info(
+        self._add_enrichment_log(
             "Running mapping rules for incoming alert",
-            extra={"fingerprint": alert.fingerprint, "tenant_id": self.tenant_id},
+            "info",
+            {"fingerprint": alert.fingerprint, "tenant_id": self.tenant_id},
         )
 
         # Retrieve all active mapping rules for the current tenant, ordered by priority
@@ -210,24 +225,19 @@ class EnrichmentsBl:
 
         if not rules:
             # If no mapping rules are found for the tenant, log and return the original alert
-            self.logger.debug("No mapping rules found for tenant")
+            self._add_enrichment_log(
+                "No mapping rules found for tenant",
+                "debug",
+                {"fingerprint": alert.fingerprint, "tenant_id": self.tenant_id},
+            )
             return alert
 
         for rule in rules:
-            if self._check_alert_matches_rule(alert, rule):
-                self.logger.info(
-                    "Alert enriched by mapping rule",
-                    extra={"rule_id": rule.id, "alert_fingerprint": alert.fingerprint},
-                )
-            else:
-                self.logger.debug(
-                    "Alert not enriched by mapping rule",
-                    extra={"rule_id": rule.id, "alert_fingerprint": alert.fingerprint},
-                )
+            self._check_match_rule_and_enrich(alert, rule)
 
         return alert
 
-    def _check_alert_matches_rule(self, alert: AlertDto, rule: MappingRule) -> bool:
+    def _check_match_rule_and_enrich(self, alert: AlertDto, rule: MappingRule) -> bool:
         """
         Check if the alert matches the conditions specified in the mapping rule.
         If a match is found, enrich the alert and log the enrichment.
@@ -239,9 +249,10 @@ class EnrichmentsBl:
         Returns:
         - bool: True if alert matches the rule, False otherwise.
         """
-        self.logger.debug(
+        self._add_enrichment_log(
             "Checking alert against mapping rule",
-            extra={"fingerprint": alert.fingerprint, "rule_id": rule.id},
+            "debug",
+            {"fingerprint": alert.fingerprint, "rule_id": rule.id},
         )
 
         # Check if the alert has any of the attributes defined in matchers
@@ -249,20 +260,25 @@ class EnrichmentsBl:
             get_nested_attribute(alert, matcher) is not None
             for matcher in rule.matchers
         ):
-            self.logger.debug(
+            self._add_enrichment_log(
                 "Alert does not match any of the conditions for the rule",
-                extra={
+                "debug",
+                {
                     "fingerprint": alert.fingerprint,
                     "rule_id": rule.id,
                     "matchers": rule.matchers,
                     "alert": str(alert),
                 },
             )
+            self._track_enrichment_event(
+                alert.id, EnrichmentStatus.SKIPPED, EnrichmentType.MAPPING, rule.id, {}
+            )
             return False
 
-        self.logger.info(
+        self._add_enrichment_log(
             "Alert matched a mapping rule, enriching...",
-            extra={"fingerprint": alert.fingerprint, "rule_id": rule.id},
+            "info",
+            {"fingerprint": alert.fingerprint, "rule_id": rule.id},
         )
 
         # Apply enrichment to the alert
@@ -276,9 +292,10 @@ class EnrichmentsBl:
             )
 
             if not topology_service:
-                self.logger.debug(
+                self._add_enrichment_log(
                     "No topology service found to match on",
-                    extra={"matcher_value": matcher_value},
+                    "debug",
+                    {"matcher_value": matcher_value},
                 )
             else:
                 enrichments = topology_service.dict(exclude_none=True)
@@ -331,16 +348,31 @@ class EnrichmentsBl:
                 should_exist=False,
             )
 
-            self.logger.info(
+            self._add_enrichment_log(
                 "Alert enriched",
-                extra={"fingerprint": alert.fingerprint, "rule_id": rule.id},
+                "info",
+                {"fingerprint": alert.fingerprint, "rule_id": rule.id},
             )
-
+            self._track_enrichment_event(
+                alert.id,
+                EnrichmentStatus.SUCCESS,
+                EnrichmentType.MAPPING,
+                rule.id,
+                enrichments,
+            )
             return True  # Exit on first successful enrichment (assuming single match)
 
-        self.logger.info(
+        self._add_enrichment_log(
             "Alert was not enriched by mapping rule",
-            extra={"rule_id": rule.id, "alert_fingerprint": alert.fingerprint},
+            "info",
+            {"rule_id": rule.id, "alert_fingerprint": alert.fingerprint},
+        )
+        self._track_enrichment_event(
+            alert.id,
+            EnrichmentStatus.FAILURE,
+            EnrichmentType.MAPPING,
+            rule.id,
+            {},
         )
         return False
 
@@ -386,7 +418,14 @@ class EnrichmentsBl:
                     or row.get(matcher) == "*"  # Wildcard match
                 )
         except TypeError:
-            self.logger.exception("Error while checking matcher")
+            self._add_enrichment_log(
+                "Error while checking matcher",
+                "error",
+                {
+                    "fingerprint": alert.fingerprint,
+                    "matcher": matcher,
+                },
+            )
             return False
 
     def enrich_entity(
@@ -501,4 +540,69 @@ class EnrichmentsBl:
             self.elastic_client.enrich_alert(fingerprint, new_enrichments)
             self.logger.debug(
                 "enrichments disposed", extra={"fingerprint": fingerprint}
+            )
+
+    def _track_enrichment_event(
+        self,
+        alert_id: UUID,
+        status: EnrichmentStatus,
+        enrichment_type: EnrichmentType,
+        rule_id: int | None,
+        enriched_fields: dict,
+    ) -> None:
+        """
+        Track an enrichment event in the database
+        """
+        try:
+            enrichment_event = EnrichmentEvent(
+                tenant_id=self.tenant_id,
+                status=status.value,
+                enrichment_type=enrichment_type.value,
+                rule_id=rule_id,
+                alert_id=alert_id,
+                enriched_fields=enriched_fields,
+            )
+            self.db_session.add(enrichment_event)
+            self.db_session.flush()
+            if self.__logs:
+                for log in self.__logs:
+                    log.enrichment_event_id = enrichment_event.id
+                    self.db_session.add(log)
+            self.db_session.commit()
+            self.__logs = []
+        except Exception:
+            self.__logs = []
+            self.logger.exception(
+                "Failed to track enrichment event",
+                extra={
+                    "tenant_id": self.tenant_id,
+                    "alert_id": alert_id,
+                    "enrichment_type": enrichment_type.value,
+                    "rule_id": rule_id,
+                },
+            )
+
+    def _add_enrichment_log(
+        self,
+        message: str,
+        level: str,
+        details: dict | None = None,
+    ) -> None:
+        """
+        Add a log entry for an enrichment event
+        """
+        try:
+            getattr(self.logger, level)(message, extra=details)
+            log_entry = EnrichmentLog(
+                tenant_id=self.tenant_id,
+                message=message,
+            )
+            self.__logs.append(log_entry)
+        except Exception:
+            self.logger.exception(
+                "Failed to add enrichment log",
+                extra={
+                    "tenant_id": self.tenant_id,
+                    "message": message,
+                },
             )

@@ -61,6 +61,7 @@ from keep.api.models.db.action import Action
 from keep.api.models.db.ai_external import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.enrichment_event import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.extraction import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.maintenance_window import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-import
@@ -1487,8 +1488,10 @@ def get_alert_by_fingerprint_and_event_id(
     return alert
 
 
-def get_alert_by_event_id(tenant_id: str, event_id: str) -> Alert:
-    with Session(engine) as session:
+def get_alert_by_event_id(
+    tenant_id: str, event_id: str, session: Optional[Session] = None
+) -> Alert:
+    with existed_or_new_session(session) as session:
         query = (
             session.query(Alert)
             .filter(Alert.tenant_id == tenant_id)

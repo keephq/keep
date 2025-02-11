@@ -2,9 +2,10 @@ import datetime
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlmodel import Session
 
+from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import get_session
 from keep.api.models.db.mapping import MappingRule, MappingRuleDtoIn, MappingRuleDtoOut
 from keep.api.models.db.topology import TopologyService
@@ -146,12 +147,18 @@ def update_rule(
 
 
 @router.post(
-    "/{rule_id}/execute", description="Execute a mapping rule against an alert"
+    "/{rule_id}/execute",
+    description="Execute a mapping rule against an alert",
+    responses={
+        200: {"description": "Mapping rule executed successfully"},
+        400: {"description": "Mapping rule failed to execute"},
+        404: {"description": "Mapping rule or alert not found"},
+        403: {"description": "User does not have permission to execute mapping rule"},
+    },
 )
 def execute_rule(
     rule_id: int,
     alert_id: UUID,
-    session: Session = Depends(get_session),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:rules"])
     ),
@@ -164,4 +171,17 @@ def execute_rule(
             "tenant_id": authenticated_entity.tenant_id,
         },
     )
-    # enrichment_bl = EnrichmentsBl(tenant_id=authenticated_entity.tenant_id)
+    enrichment_bl = EnrichmentsBl(tenant_id=authenticated_entity.tenant_id)
+    enriched = enrichment_bl.run_mapping_rule_by_id(rule_id, alert_id)
+    if enriched:
+        logger.info(
+            "Mapping rule executed successfully",
+            extra={"rule_id": rule_id, "alert_id": alert_id},
+        )
+        return Response(status_code=200)
+    else:
+        logger.error(
+            "Mapping rule failed to execute",
+            extra={"rule_id": rule_id, "alert_id": alert_id},
+        )
+        return Response(status_code=400)
