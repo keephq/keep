@@ -77,6 +77,7 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
         showSuccessToast("Workflow updated successfully");
         revalidateMultiple([`/workflows/${workflowId}`], { isExact: true });
         refreshWorkflows();
+        revalidateMultiple([`/workflows/${workflowId}`], { isExact: true });
         return response;
       } catch (error) {
         showErrorToast(error, "Failed to update workflow");

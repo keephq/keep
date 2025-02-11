@@ -335,12 +335,12 @@ export const useAlertTableCols = (
       minSize: 100,
       // data is a Date object (converted in usePresetAlerts)
       cell: (context) => {
+        const value = context.getValue();
+        const date = value instanceof Date ? value : new Date(value);
+        const isoString = date.toISOString();
         return (
           <span>
-            <TimeAgo
-              date={context.getValue().toISOString()}
-              title={context.getValue().toLocaleString()}
-            />
+            <TimeAgo date={isoString} title={isoString} />
           </span>
         );
       },

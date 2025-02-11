@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { toast } from "react-toastify";
 import { useSWRConfig } from "swr";
-import { IncidentDto, Status } from "./models";
+import {IncidentDto, Severity, Status} from "./models";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 
@@ -15,6 +15,11 @@ type UseIncidentActionsValue = {
   changeStatus: (
     incidentId: string,
     status: Status,
+    comment?: string
+  ) => Promise<void>;
+  changeSeverity: (
+    incidentId: string,
+    severity: Severity,
     comment?: string
   ) => Promise<void>;
   deleteIncident: (
@@ -215,6 +220,29 @@ export function useIncidentActions(): UseIncidentActionsValue {
     [api, mutateIncidentsList]
   );
 
+  const changeSeverity = useCallback(
+    async (incidentId: string, severity: Severity, comment?: string) => {
+      if (!severity) {
+        showErrorToast(new Error("Please select a new severity."));
+        return;
+      }
+
+      try {
+        const result = await api.post(`/incidents/${incidentId}/severity`, {
+          severity,
+          comment,
+        });
+
+        toast.success("Incident severity changed successfully!");
+        mutateIncident(incidentId);
+        return result;
+      } catch (error) {
+        showErrorToast(error, "Failed to change incident severity");
+      }
+    },
+    [api, mutateIncident]
+  );
+
   // Is it used?
   const confirmPredictedIncident = useCallback(
     async (incidentId: string) => {
@@ -301,6 +329,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
     addIncident,
     updateIncident,
     changeStatus,
+    changeSeverity,
     deleteIncident,
     mergeIncidents,
     confirmPredictedIncident,

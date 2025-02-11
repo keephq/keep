@@ -16,6 +16,7 @@ import { useTags } from "utils/hooks/useTags";
 import { usePresets } from "@/entities/presets/model/usePresets";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
 import clsx from "clsx";
+import { useAlerts } from "@/utils/hooks/useAlerts";
 
 type AlertsLinksProps = {
   session: Session | null;
@@ -24,6 +25,7 @@ type AlertsLinksProps = {
 export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const isMounted = useMounted();
+  const { useLastAlerts } = useAlerts();
 
   const [storedTags, setStoredTags] = useLocalStorage<string[]>(
     "selectedTags",
@@ -66,15 +68,8 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
     return staticPresets?.some((preset) => preset.name === "feed");
   })();
 
-  // Get the current alerts count only if we should show feed
-  const currentAlertsCount = (() => {
-    if (!shouldShowFeed) {
-      return 0;
-    }
-
-    const feedPreset = staticPresets?.find((preset) => preset.name === "feed");
-    return feedPreset?.alerts_count ?? undefined;
-  })();
+  const { isLoading: isAsyncLoading, totalCount: feedAlertsTotalCount } =
+    useLastAlerts(shouldShowFeed ? "" : undefined, 20, 0);
 
   return (
     <>
@@ -118,7 +113,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                   <LinkWithIcon
                     href="/alerts/feed"
                     icon={AiOutlineSwap}
-                    count={currentAlertsCount}
+                    count={feedAlertsTotalCount}
                     testId="menu-alerts-feed"
                   >
                     <Subtitle>Feed</Subtitle>

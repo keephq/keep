@@ -38,10 +38,10 @@ from keep.api.core.db import (
     merge_incidents_to_id,
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
-from keep.api.core.facets import create_facet, delete_facet
 from keep.api.core.incidents import (
     get_incident_facets,
     get_incident_facets_data,
+    get_incident_potential_facet_fields,
     get_last_incidents_by_cel,
 )
 from keep.api.models.alert import (
@@ -60,10 +60,10 @@ from keep.api.models.alert import (
     MergeIncidentsRequestDto,
     MergeIncidentsResponseDto,
     SplitIncidentRequestDto,
-    SplitIncidentResponseDto,
+    SplitIncidentResponseDto, IncidentSeverityChangeDto,
 )
+from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.db.alert import ActionType, AlertAudit
-from keep.api.models.facet import CreateFacetDto, FacetDto
 from keep.api.models.workflow import WorkflowExecutionDTO
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
@@ -212,7 +212,7 @@ def get_all_incidents(
     description="Query incident facet options. Accepts dictionary where key is facet id and value is cel to query facet",
 )
 def fetch_inicident_facet_options(
-    facets_query: dict[str, str],
+    facet_options_query: FacetOptionsQueryDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
@@ -237,10 +237,10 @@ def fetch_inicident_facet_options(
     )
 
     facet_options = get_incident_facets_data(
-        tenant_id=tenant_id,
-        allowed_incident_ids=allowed_incident_ids,
-        facets_query=facets_query,
-    )
+            tenant_id = tenant_id,
+            allowed_incident_ids=allowed_incident_ids,
+            facet_options_query = facet_options_query
+        )
 
     logger.info(
         "Fetched incident facets from DB",
@@ -281,50 +281,35 @@ def fetch_inicident_facets(
 
     return facets
 
-
-@router.post(
-    "/facets",
-    description="Add facet for incidents",
+@router.get(
+    "/facets/fields",
+    description="Get potential fields for incident facets",
 )
-async def add_incidents_facet(
-    create_facet_dto: CreateFacetDto,
+def fetch_alert_facet_fields(
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
-    ),
-) -> FacetDto:
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    )
+) -> list:
     tenant_id = authenticated_entity.tenant_id
+
     logger.info(
-        "Creating facet for incident",
+        "Fetching incident facet fields from DB",
         extra={
             "tenant_id": tenant_id,
         },
     )
-    created_facet = create_facet(tenant_id=tenant_id, facet=create_facet_dto)
-    return created_facet
 
+    fields = get_incident_potential_facet_fields(
+            tenant_id = tenant_id
+        )
 
-@router.delete(
-    "/facets/{facet_id}",
-    description="Delete facet for incidents",
-)
-async def delete_incidents_facet(
-    facet_id: str,
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
-    ),
-):
-    tenant_id = authenticated_entity.tenant_id
     logger.info(
-        "Deleting facet for incident",
+        "Fetched incident facet fields from DB",
         extra={
             "tenant_id": tenant_id,
-            "facet_id": facet_id,
         },
     )
-    is_deleted = delete_facet(tenant_id=tenant_id, facet_id=facet_id)
-
-    if not is_deleted:
-        raise HTTPException(status_code=404, detail="Facet not found")
+    return fields
 
 
 @router.get(
@@ -810,6 +795,34 @@ def change_incident_status(
     new_incident_dto = IncidentDto.from_db_incident(incident)
 
     return new_incident_dto
+
+
+@router.post(
+    "/{incident_id}/severity",
+    description="Change incident severity",
+    response_model=IncidentDto,
+)
+def change_incident_severity(
+    incident_id: UUID,
+    change: IncidentSeverityChangeDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    session: Session = Depends(get_session),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+) -> IncidentDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Changing the severity of an incident",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+            "severity": change.severity.value,
+        },
+    )
+    incident_bl = IncidentBl(tenant_id, session, pusher_client, user=authenticated_entity.email)
+    incident_dto = incident_bl.update_severity(incident_id, change.severity, change.comment)
+    return incident_dto
 
 
 @router.post("/{incident_id}/comment", description="Add incident audit activity")

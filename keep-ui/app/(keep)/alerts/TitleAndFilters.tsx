@@ -4,7 +4,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import ColumnSelection from "./ColumnSelection";
 import { ThemeSelection } from "./ThemeSelection";
 import EnhancedDateRangePicker from "@/components/ui/DateRangePicker";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Theme = {
   [key: string]: string;
@@ -15,13 +15,19 @@ type TableHeaderProps = {
   alerts: AlertDto[];
   table: Table<AlertDto>;
   onThemeChange: (newTheme: Theme) => void;
+  onDateRangeChange?: (newDateRange: DateRange | null) => void;
 };
+
+export interface DateRange {
+  start: Date | null;
+  end: Date | null;
+}
 
 export const TitleAndFilters = ({
   presetName,
-  alerts,
   table,
   onThemeChange,
+  onDateRangeChange,
 }: TableHeaderProps) => {
   const [timeFrame, setTimeFrame] = useState<{
     start: Date | null;
@@ -35,6 +41,20 @@ export const TitleAndFilters = ({
     isFromCalendar: false,
   });
 
+  useEffect(() => {
+    if (onDateRangeChange) {
+      if (timeFrame.start && timeFrame.end) {
+        onDateRangeChange({
+          start: timeFrame.start,
+          end: timeFrame.end,
+        });
+        return;
+      }
+
+      onDateRangeChange(null);
+    }
+  }, [timeFrame]);
+
   const handleTimeFrameChange = (newTimeFrame: {
     start: Date | null;
     end: Date | null;
@@ -47,6 +67,12 @@ export const TitleAndFilters = ({
       paused: newTimeFrame.paused ?? true,
       isFromCalendar: newTimeFrame.isFromCalendar ?? false,
     });
+
+    // We don't need to manipulate table in case onDateRange is provided.
+    // Most likely the code below must be removed in the future.
+    if (onDateRangeChange) {
+      return;
+    }
 
     // Only apply date filter if both start and end dates exist
     if (newTimeFrame.start && newTimeFrame.end) {

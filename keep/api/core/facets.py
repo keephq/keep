@@ -1,9 +1,13 @@
 from sqlalchemy import func, literal, literal_column, select, text
-from keep.api.core.cel_to_sql.properties_metadata import JsonMapping, PropertiesMetadata, SimpleMapping
-from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
-    get_cel_to_sql_provider_for_dialect,
+from keep.api.core.cel_to_sql.properties_metadata import (
+    JsonFieldMapping,
+    PropertiesMetadata,
+    SimpleFieldMapping,
 )
-from keep.api.models.facet import CreateFacetDto, FacetDto, FacetOptionDto
+from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
+    get_cel_to_sql_provider,
+)
+from keep.api.models.facet import CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from uuid import UUID, uuid4
 
 # from pydantic import BaseModel
@@ -14,11 +18,10 @@ from keep.api.models.db.facet import Facet, FacetType
 
 
 def build_facets_data_query(
-    dialect: str,
     base_query,
     facets: list[FacetDto],
     properties_metadata: PropertiesMetadata,
-    facets_query: dict[str, str],
+    facet_options_query: FacetOptionsQueryDto,
 ):
     """
     Builds a SQL query to extract and count facet data based on the provided parameters.
@@ -33,38 +36,44 @@ def build_facets_data_query(
     Returns:
         sqlalchemy.sql.Selectable: A SQLAlchemy selectable object representing the constructed query.
     """
-    provider_type = get_cel_to_sql_provider_for_dialect(dialect)
-    instance = provider_type(properties_metadata)
-    base_query = base_query.cte("base_query_cte")
+    instance = get_cel_to_sql_provider(properties_metadata)
+    base_query = base_query.filter(
+        text(instance.convert_to_sql_str(facet_options_query.cel))
+    )
 
     # Main Query: JSON Extraction and Counting
     union_queries = []
 
     for facet in facets:
         metadata = properties_metadata.get_property_metadata(facet.property_path)
-        group_by_exp = []
+        facet_value = []
 
-        for item in metadata:
-            if isinstance(item, JsonMapping):
-                group_by_exp.append(
+        for item in metadata.field_mappings:
+            if isinstance(item, JsonFieldMapping):
+                facet_value.append(
                     instance.json_extract_as_text(item.json_prop, item.prop_in_json)
                 )
-            elif isinstance(metadata[0], SimpleMapping):
-                group_by_exp.append(item.map_to)
-        
-        casted = f"{instance.coalesce([instance.cast(item, str) for item in group_by_exp])}"
+            elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
+                facet_value.append(item.map_to)
+
+        casted = (
+            f"{instance.coalesce([instance.cast(item, str) for item in facet_value])}"
+        )
 
         union_queries.append(
             select(
                 literal(facet.id).label("facet_id"),
-                text(f"MIN({casted}) AS facet_value"),
-                func.count(func.distinct(literal_column("entity_id"))).label(
-                    "matches_count"
-                ),
+                text(f"{casted} AS facet_value"),
+                literal_column("entity_id").label("entity_id"),
             )
             .select_from(base_query)
-            .filter(text(instance.convert_to_sql_str(facets_query[facet.id])))
-            .group_by(text(instance.coalesce(group_by_exp) if len(group_by_exp) > 1 else group_by_exp[0]))
+            .filter(
+                text(
+                    instance.convert_to_sql_str(
+                        facet_options_query.facet_queries[facet.id]
+                    )
+                )
+            )
         )
 
     query = None
@@ -74,13 +83,23 @@ def build_facets_data_query(
     else:
         query = union_queries[0]
 
-    return query
+    return (
+        select(
+            literal_column("facet_id"),
+            literal_column("facet_value"),
+            func.count(func.distinct(literal_column("entity_id"))).label(
+                "matches_count"
+            ),
+        )
+        .select_from(query)
+        .group_by(literal_column("facet_id"), literal_column("facet_value"))
+    )
 
 
 def get_facet_options(
     base_query,
     facets: list[FacetDto],
-    facets_query: dict[str, str],
+    facet_options_query: FacetOptionsQueryDto,
     properties_metadata: PropertiesMetadata,
 ) -> dict[str, list[FacetOptionDto]]:
     """
@@ -94,45 +113,59 @@ def get_facet_options(
         dict[str, list[FacetOptionDto]]: A dictionary where keys are facet IDs and values are lists of FacetOptionDto objects.
     """
 
-    valid_facets = [facet for facet in facets if properties_metadata.get_property_metadata(facet.property_path)]
+    invalid_facets = []
+    valid_facets = []
 
-    with Session(engine) as session:
-        db_query = build_facets_data_query(
-            dialect=session.bind.dialect.name,
-            base_query=base_query,
-            facets=valid_facets,
-            properties_metadata=properties_metadata,
-            facets_query=facets_query,
-        )
-        data = session.exec(db_query).all()
-        grouped_by_id_dict = {}
+    for facet in facets:
+        if properties_metadata.get_property_metadata(facet.property_path):
+            valid_facets.append(facet)
+            continue
 
-        for facet_data in data:
-            if facet_data.facet_id not in grouped_by_id_dict:
-                grouped_by_id_dict[facet_data.facet_id] = []
+        invalid_facets.append(facet)
 
-            grouped_by_id_dict[facet_data.facet_id].append(facet_data)
+    result_dict: dict[str, list[FacetOptionDto]] = {}
 
-        result_dict: dict[str, list[FacetOptionDto]] = {}
+    if valid_facets:
+        with Session(engine) as session:
+            db_query = build_facets_data_query(
+                base_query=base_query,
+                facets=valid_facets,
+                properties_metadata=properties_metadata,
+                facet_options_query=facet_options_query,
+            )
 
-        for facet in facets:
-            if facet.id in grouped_by_id_dict:
-                result_dict[facet.id] = [
-                    FacetOptionDto(
-                        display_name=str(facet_value),
-                        value=facet_value,
-                        matches_count=matches_count,
-                    )
-                    for facet_id, facet_value, matches_count in grouped_by_id_dict[facet.id]
-                ]
-                continue
+            data = session.exec(db_query).all()
+            grouped_by_id_dict = {}
 
-            result_dict[facet.id] = []
+            for facet_data in data:
+                if facet_data.facet_id not in grouped_by_id_dict:
+                    grouped_by_id_dict[facet_data.facet_id] = []
 
-        return result_dict
+                grouped_by_id_dict[facet_data.facet_id].append(facet_data)
+
+            for facet in facets:
+                if facet.id in grouped_by_id_dict:
+                    result_dict[facet.id] = [
+                        FacetOptionDto(
+                            display_name=str(facet_value),
+                            value=facet_value,
+                            matches_count=matches_count,
+                        )
+                        for facet_id, facet_value, matches_count in grouped_by_id_dict[
+                            facet.id
+                        ]
+                    ]
+                    continue
+
+                result_dict[facet.id] = []
+
+    for invalid_facet in invalid_facets:
+        result_dict[invalid_facet.id] = []
+
+    return result_dict
 
 
-def create_facet(tenant_id: str, facet: CreateFacetDto) -> FacetDto:
+def create_facet(tenant_id: str, entity_type, facet: CreateFacetDto) -> FacetDto:
     """
     Creates a new facet for a given tenant and returns the created facet's details.
     Args:
@@ -148,7 +181,7 @@ def create_facet(tenant_id: str, facet: CreateFacetDto) -> FacetDto:
             tenant_id=tenant_id,
             name=facet.name,
             description=facet.description,
-            entity_type="incident",
+            entity_type=entity_type,
             property_path=facet.property_path,
             type=FacetType.str.value,
             user_id="system",
@@ -167,7 +200,7 @@ def create_facet(tenant_id: str, facet: CreateFacetDto) -> FacetDto:
     return None
 
 
-def delete_facet(tenant_id: str, facet_id: str) -> bool:
+def delete_facet(tenant_id: str, entity_type: str, facet_id: str) -> bool:
     """
     Deletes a facet from the database for a given tenant.
 
@@ -183,6 +216,7 @@ def delete_facet(tenant_id: str, facet_id: str) -> bool:
             select(Facet)
             .where(Facet.tenant_id == tenant_id)
             .where(Facet.id == UUID(facet_id))
+            .where(Facet.entity_type == entity_type)
         ).first()[0] # result returned as tuple
         if facet:
             session.delete(facet)

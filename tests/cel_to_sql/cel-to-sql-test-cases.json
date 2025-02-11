@@ -1,29 +1,155 @@
 [
-    {
-        "input_cel": "alert.severity == 'HIGH'",
-        "description": "Queried field refers to multiple JSON columns",
-        "expected_sql_dialect_based": {
-            "mysql": "COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.severity')) as CHAR), CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.severity')) as CHAR), '__@NULL@__') = 'HIGH'",
-            "postgresql": "COALESCE(alert_enrichments ->> 'severity'::TEXT, alert_event ->> 'severity'::TEXT, '__@NULL@__') = 'HIGH'",
-            "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.severity') as TEXT), CAST(json_extract(alert_event, '$.severity') as TEXT), '__@NULL@__') = 'HIGH'"
-        }
-    },
-    {
-        "input_cel": "name != 'Payments incident'",
-        "description": "Queried field refers to multipl columns",
-        "expected_sql_dialect_based": {
-            "mysql": "COALESCE(CAST(user_generated_name as CHAR), CAST(ai_generated_name as CHAR), '__@NULL@__') != 'Payments incident'",
-            "postgresql": "COALESCE(user_generated_name::TEXT, ai_generated_name::TEXT, '__@NULL@__') != 'Payments incident'",
-            "sqlite": "COALESCE(CAST(user_generated_name as TEXT), CAST(ai_generated_name as TEXT), '__@NULL@__') != 'Payments incident'"
-        }
-    },
-    {
-        "input_cel": "!(name in ['Payments incident', 'API incident', 'Network incident', null])",
-        "description": "IN operator along with NOT",
-        "expected_sql_dialect_based": {
-            "mysql": "NOT (COALESCE(CAST(user_generated_name as CHAR), CAST(ai_generated_name as CHAR), '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
-            "postgresql": "NOT (COALESCE(user_generated_name::TEXT, ai_generated_name::TEXT, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
-            "sqlite": "NOT (COALESCE(CAST(user_generated_name as TEXT), CAST(ai_generated_name as TEXT), '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))"
-        }
+  {
+    "input_cel": "alert.severity == 'HIGH'",
+    "description": "Queried field refers to multiple JSON columns",
+    "expected_sql_dialect_based": {
+      "mysql": "COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.severity')) as CHAR), CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.severity')) as CHAR), '__@NULL@__') = 'HIGH'",
+      "postgresql": "COALESCE((alert_enrichments) ->> 'severity'::TEXT, (alert_event) ->> 'severity'::TEXT, '__@NULL@__') = 'HIGH'",
+      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.severity') as TEXT), CAST(json_extract(alert_event, '$.severity') as TEXT), '__@NULL@__') = 'HIGH'"
     }
+  },
+  {
+    "input_cel": "name != 'Payments incident'",
+    "description": "Queried field refers to multipl columns",
+    "expected_sql_dialect_based": {
+      "mysql": "COALESCE(CAST(user_generated_name as CHAR), CAST(ai_generated_name as CHAR), '__@NULL@__') != 'Payments incident'",
+      "postgresql": "COALESCE(user_generated_name::TEXT, ai_generated_name::TEXT, '__@NULL@__') != 'Payments incident'",
+      "sqlite": "COALESCE(CAST(user_generated_name as TEXT), CAST(ai_generated_name as TEXT), '__@NULL@__') != 'Payments incident'"
+    }
+  },
+  {
+    "input_cel": "!(name in ['Payments incident', 'API incident', 'Network incident', null])",
+    "description": "IN operator along with NOT",
+    "expected_sql_dialect_based": {
+      "mysql": "NOT (COALESCE(CAST(user_generated_name as CHAR), CAST(ai_generated_name as CHAR), '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
+      "postgresql": "NOT (COALESCE(user_generated_name::TEXT, ai_generated_name::TEXT, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
+      "sqlite": "NOT (COALESCE(CAST(user_generated_name as TEXT), CAST(ai_generated_name as TEXT), '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))"
+    }
+  },
+  {
+    "input_cel": "alert.provider_type == 'grafana'",
+    "description": "Queried field refers to one column",
+    "expected_sql_dialect_based": {
+      "mysql": "CAST(incident_alert_provider_type as CHAR) = 'grafana'",
+      "sqlite": "CAST(incident_alert_provider_type as TEXT) = 'grafana'",
+      "postgresql": "incident_alert_provider_type::TEXT = 'grafana'"
+    }
+  },
+  {
+    "input_cel": "alert.provider_type.contains('graf')",
+    "description": "Contains operator with field refering to one column",
+    "expected_sql_dialect_based": {
+      "sqlite": "incident_alert_provider_type IS NOT NULL AND incident_alert_provider_type GLOB '*graf*'",
+      "mysql": "incident_alert_provider_type IS NOT NULL AND incident_alert_provider_type LIKE '%graf%'",
+      "postgresql": "incident_alert_provider_type IS NOT NULL AND incident_alert_provider_type LIKE '%graf%'"
+    }
+  },
+  {
+    "input_cel": "alert.some_json_prop.contains('lorem')",
+    "description": "Contains operator with field refering to multiple JSON columns",
+    "expected_sql_dialect_based": {
+      "sqlite": "json_extract(alert_enrichments, '$.some_json_prop') IS NOT NULL AND json_extract(alert_enrichments, '$.some_json_prop') GLOB '*lorem*' OR json_extract(alert_event, '$.some_json_prop') IS NOT NULL AND json_extract(alert_event, '$.some_json_prop') GLOB '*lorem*'",
+      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) LIKE '%lorem%' OR JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) LIKE '%lorem%'",
+      "postgresql": "(alert_enrichments) ->> 'some_json_prop' IS NOT NULL AND (alert_enrichments) ->> 'some_json_prop' LIKE '%lorem%' OR (alert_event) ->> 'some_json_prop' IS NOT NULL AND (alert_event) ->> 'some_json_prop' LIKE '%lorem%'"
+    }
+  },
+  {
+    "input_cel": "created_at >= '2025-01-30T10:00:09.553Z'",
+    "description": "Comparison operator with dates for a single column",
+    "expected_sql_dialect_based": {
+      "sqlite": "created_at >= datetime('2025-01-30 10:00:09')",
+      "mysql": "created_at >= CAST('2025-01-30 10:00:09' as DATETIME)",
+      "postgresql": "created_at >= CAST('2025-01-30 10:00:09' as TIMESTAMP)"
+    }
+  },
+  {
+    "input_cel": "severity >= 'medium'",
+    "description": "Greater than or equal comparison operator with enum",
+    "expected_sql_dialect_based": {
+      "sqlite": "CAST(severity as TEXT) in ('medium', 'high', 'critical')",
+      "mysql": "CAST(severity as CHAR) in ('medium', 'high', 'critical')",
+      "postgresql": "severity::TEXT in ('medium', 'high', 'critical')"
+    }
+  },
+  {
+    "input_cel": "severity > 'medium'",
+    "description": "Greater than comparison operator with enum",
+    "expected_sql_dialect_based": {
+      "sqlite": "CAST(severity as TEXT) in ('high', 'critical')",
+      "mysql": "CAST(severity as CHAR) in ('high', 'critical')",
+      "postgresql": "severity::TEXT in ('high', 'critical')"
+    }
+  },
+  {
+    "input_cel": "severity < 'medium'",
+    "description": "Less than comparison operator with enum",
+    "expected_sql_dialect_based": {
+      "sqlite": "NOT (CAST(severity as TEXT) in ('medium', 'high', 'critical'))",
+      "mysql": "NOT (CAST(severity as CHAR) in ('medium', 'high', 'critical'))",
+      "postgresql": "NOT (severity::TEXT in ('medium', 'high', 'critical'))"
+    }
+  },
+  {
+    "input_cel": "severity <= 'medium'",
+    "description": "Less than or equal comparison operator with enum",
+    "expected_sql_dialect_based": {
+      "sqlite": "NOT (CAST(severity as TEXT) in ('high', 'critical'))",
+      "mysql": "NOT (CAST(severity as CHAR) in ('high', 'critical'))",
+      "postgresql": "NOT (severity::TEXT in ('high', 'critical'))"
+    }
+  },
+  {
+    "input_cel": "alert.tags.tagKey == 'tag value'",
+    "description": "Prop is inside JSON column and nested",
+    "expected_sql_dialect_based": {
+      "sqlite": "CAST(json_extract(alert_event, '$.tagsContainer.tagKey') as TEXT) = 'tag value'",
+      "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = 'tag value'",
+      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = 'tag value'"
+    }
+  },
+  {
+    "input_cel": "alert.tags.tagKey == 'with \"double-quotes\"'",
+    "description": "When literal is with double-quoted substring",
+    "expected_sql_dialect_based": {
+      "sqlite": "CAST(json_extract(alert_event, '$.tagsContainer.tagKey') as TEXT) = 'with \"double-quotes\"'",
+      "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = 'with \"double-quotes\"'",
+      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = 'with \"double-quotes\"'"
+    }
+  },
+  {
+    "input_cel": "alert.tags.tagKey == \"with 'double-quotes'\"",
+    "description": "When literal is with quoted substring",
+    "expected_sql_dialect_based": {
+      "sqlite": "CAST(json_extract(alert_event, '$.tagsContainer.tagKey') as TEXT) = 'with ''double-quotes'''",
+      "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = 'with ''double-quotes'''",
+      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = 'with ''double-quotes'''"
+    }
+  },
+  {
+    "input_cel": "alert.tags.tagKey == \"' OR alert.provider_type == 'grafana' OR'\"",
+    "description": "When literal contains SQL injection",
+    "expected_sql_dialect_based": {
+      "sqlite": "CAST(json_extract(alert_event, '$.tagsContainer.tagKey') as TEXT) = ''' OR alert.provider_type == ''grafana'' OR'''",
+      "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = ''' OR alert.provider_type == ''grafana'' OR'''",
+      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = ''' OR alert.provider_type == ''grafana'' OR'''"
+    }
+  },
+  {
+    "input_cel": "alert.tags.tagKey.startsWith(\"with 'single-quotes'\")",
+    "description": "When startsWith is used with literal containing quoted substring",
+    "expected_sql_dialect_based": {
+      "sqlite": "json_extract(alert_event, '$.tagsContainer.tagKey') IS NOT NULL AND json_extract(alert_event, '$.tagsContainer.tagKey') GLOB 'with ''single-quotes''*'",
+      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) LIKE 'with ''single-quotes''%'",
+      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey' IS NOT NULL AND (alert_event -> 'tagsContainer') ->> 'tagKey' LIKE 'with ''single-quotes''%'"
+    }
+  },
+  {
+    "input_cel": "alert.tags.tagKey.endsWith(\"with 'single-quotes'\")",
+    "description": "When endsWith is used with literal containing quoted substring",
+    "expected_sql_dialect_based": {
+      "sqlite": "json_extract(alert_event, '$.tagsContainer.tagKey') IS NOT NULL AND json_extract(alert_event, '$.tagsContainer.tagKey') GLOB '*with ''single-quotes'''",
+      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) LIKE '%with ''single-quotes'''",
+      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey' IS NOT NULL AND (alert_event -> 'tagsContainer') ->> 'tagKey' LIKE '%with ''single-quotes'''"
+    }
+  }
 ]
