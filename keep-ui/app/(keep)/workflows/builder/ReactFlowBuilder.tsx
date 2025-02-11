@@ -1,19 +1,19 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   ReactFlow,
   Background,
   Controls,
   EdgeTypes as EdgeTypesType,
+  useReactFlow,
 } from "@xyflow/react";
 import CustomNode from "./CustomNode";
 import CustomEdge from "./CustomEdge";
-import useWorkflowInitialization from "@/utils/hooks/useWorkflowInitialization";
 import DragAndDropSidebar from "./ToolBox";
 import { Provider } from "@/app/(keep)/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
 import "@xyflow/react/dist/style.css";
-import { getToolboxConfiguration } from "./utils";
 import Loading from "../../loading";
+import useStore from "./builder-store";
 
 const nodeTypes = { custom: CustomNode as any };
 const edgeTypes: EdgeTypesType = {
@@ -21,15 +21,12 @@ const edgeTypes: EdgeTypesType = {
 };
 
 const ReactFlowBuilder = ({
-  workflowId,
   providers,
   installedProviders,
 }: {
-  workflowId: string | null;
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
 }) => {
-  const toolboxConfiguration = getToolboxConfiguration(providers ?? []);
   const {
     nodes,
     edges,
@@ -39,7 +36,18 @@ const ReactFlowBuilder = ({
     onConnect,
     onDragOver,
     onDrop,
-  } = useWorkflowInitialization(workflowId, toolboxConfiguration);
+  } = useStore();
+
+  const { screenToFlowPosition } = useReactFlow();
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      // TODO: do we use drag and drop?
+      // TODO: fix type;
+      onDrop(event as unknown as DragEvent, screenToFlowPosition);
+    },
+    [screenToFlowPosition]
+  );
 
   return (
     <div className="h-[inherit] rounded-lg">
@@ -52,7 +60,7 @@ const ReactFlowBuilder = ({
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            onDrop={onDrop}
+            onDrop={handleDrop}
             onDragOver={onDragOver}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}

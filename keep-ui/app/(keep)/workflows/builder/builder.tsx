@@ -6,6 +6,7 @@ import {
   generateWorkflow,
   getWorkflowFromDefinition,
   wrapDefinitionV2,
+  getToolboxConfiguration,
 } from "./utils";
 import {
   CheckCircleIcon,
@@ -67,6 +68,7 @@ function Builder({
     reset,
     canDeploy,
     validationErrors,
+    initializeWorkflow,
   } = useStore();
   const router = useRouter();
 
@@ -98,6 +100,11 @@ function Builder({
       });
   };
 
+  const toolboxConfiguration = useMemo(
+    () => getToolboxConfiguration(providers ?? []),
+    [providers]
+  );
+
   // TODO: move to useWorkflowInitialization
   useEffect(
     function updateDefinitionFromInput() {
@@ -114,6 +121,7 @@ function Builder({
               isValid: true,
             })
           );
+          initializeWorkflow(workflowId ?? null, toolboxConfiguration);
         } else if (loadedAlertFile == null) {
           const alertUuid = uuidv4();
           const alertName = searchParams?.get("alertName");
@@ -138,6 +146,7 @@ function Builder({
               isValid: true,
             })
           );
+          initializeWorkflow(workflowId ?? null, toolboxConfiguration);
         } else {
           const parsedDefinition = parseWorkflow(loadedAlertFile!, providers);
           setDefinition(
@@ -146,6 +155,7 @@ function Builder({
               isValid: true,
             })
           );
+          initializeWorkflow(workflowId ?? null, toolboxConfiguration);
         }
       } catch (error) {
         if (error instanceof YAMLException) {
