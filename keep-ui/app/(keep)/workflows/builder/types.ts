@@ -110,7 +110,7 @@ export interface FlowState extends FlowStateValues {
   onNodesChange: (changes: any) => void;
   onEdgesChange: (changes: any) => void;
   onConnect: (connection: any) => void;
-  onDragOver: (event: DragEvent) => void;
+  onDragOver: (event: React.DragEvent) => void;
   onDrop: (event: DragEvent, screenToFlowPosition: any) => void;
   setNodes: (nodes: FlowNode[]) => void;
   setEdges: (edges: Edge[]) => void;

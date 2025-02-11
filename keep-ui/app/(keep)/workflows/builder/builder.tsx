@@ -312,7 +312,6 @@ function Builder({
             <div className="flex-1 h-full relative">
               <ReactFlowProvider>
                 <ReactFlowBuilder
-                  workflowId={workflowId ?? null}
                   providers={providers}
                   installedProviders={installedProviders}
                 />
