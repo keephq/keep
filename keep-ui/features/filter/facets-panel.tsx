@@ -31,6 +31,7 @@ function buildCel(
 
   const cel = Object.values(facets)
     .filter((facet) => facet.id in facetsState)
+    .filter((facet) => facetOptions[facet.id])
     .map((facet) => {
       const notSelectedOptions = Object.values(facetOptions[facet.id])
         .filter((facetOption) =>

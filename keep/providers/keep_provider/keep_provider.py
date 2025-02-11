@@ -542,8 +542,30 @@ class KeepProvider(BaseProvider):
         )
         return alerts
 
+    def _delete_workflows(self):
+        self.logger.info("Deleting all workflows")
+        workflow_store = WorkflowStore()
+        workflows = workflow_store.get_all_workflows(self.context_manager.tenant_id)
+        for workflow in workflows:
+            self.logger.info(f"Deleting workflow {workflow['id']}")
+            try:
+                workflow_store.delete_workflow(
+                    self.context_manager.tenant_id, workflow.id
+                )
+                self.logger.info(f"Deleted workflow {workflow['id']}")
+            except Exception as e:
+                self.logger.exception(
+                    f"Failed to delete workflow {workflow['id']}: {e}"
+                )
+                raise ProviderException(
+                    f"Failed to delete workflow {workflow['id']}: {e}"
+                )
+        self.logger.info("Deleted all workflows")
+
     def _notify(self, **kwargs):
-        if "workflow_to_update_yaml" in kwargs:
+        if "workflow_full_sync" in kwargs:
+            self._delete_workflows()
+        elif "workflow_to_update_yaml" in kwargs:
             workflow_to_update_yaml = kwargs["workflow_to_update_yaml"]
             self.logger.info(
                 "Updating workflow YAML",

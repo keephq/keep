@@ -266,7 +266,7 @@ export function AlertTableServerSide({
 
   let showSkeleton = isAsyncLoading;
   let showEmptyState =
-    !!alertsQuery.cel && table.getPageCount() === 0 && !isAsyncLoading;
+    !alertsQuery.cel && table.getPageCount() === 0 && !isAsyncLoading;
 
   const handleRowClick = (alert: AlertDto) => {
     // if presetName is alert-history, do not open sidebar
