@@ -1,20 +1,41 @@
 import fnmatch
 import re
 
-class SimpleMapping:
+
+class SimpleFieldMapping:
     def __init__(self, map_to: str):
         self.map_to = map_to
 
-class JsonMapping:
+
+class JsonFieldMapping:
+
     def __init__(self, json_prop: str, prop_in_json: str):
         self.json_prop = json_prop
         self.prop_in_json = prop_in_json
 
+
+class PropertyMetadataInfo:
+    def __init__(
+        self,
+        field_mappings: list[SimpleFieldMapping | JsonFieldMapping],
+        enum_values: list[str],
+    ):
+        self.field_mappings = field_mappings
+        self.enum_values = enum_values
+
+
 class FieldMappingConfiguration:
-    def __init__(self, map_from_pattern: str, map_to: list[str] | str, is_json: bool = False):
+
+    def __init__(
+        self,
+        map_from_pattern: str,
+        map_to: list[str] | str,
+        enum_values: list[str] = None,
+    ):
         self.map_from_pattern = map_from_pattern
+        self.enum_values = enum_values
         self.map_to = map_to
-        self.is_json = is_json
+
 
 class PropertiesMetadata:
     """
@@ -37,10 +58,79 @@ class PropertiesMetadata:
             if '*' in field_mapping.map_from_pattern:
                 self.wildcard_configurations[field_mapping.map_from_pattern] = field_mapping
                 continue
-            
+
             self.known_configurations[field_mapping.map_from_pattern] = field_mapping
 
-    def get_property_metadata(self, prop_path: str):
+    def get_property_metadata(self, prop_path: str) -> PropertyMetadataInfo:
+        field_mapping_config, mapping_key = self.__find_mapping_configuration(prop_path)
+
+        if not field_mapping_config:
+            return None
+
+        field_mappings = []
+
+        map_to: list[str] = (
+            field_mapping_config.map_to
+            if isinstance(field_mapping_config.map_to, list)
+            else [field_mapping_config.map_to]
+        )
+        template_prop = None
+
+        if "*" in mapping_key:
+            # if mapping_key is a wildcard pattern (alert.*), extract the template prop (alert)
+            regex_pattern = re.escape(mapping_key).replace(r"\*", r"(.*)")
+            regex = re.compile(f"^{regex_pattern}$")
+            match = regex.match(prop_path)
+            template_prop = match.group(1)
+        else:
+            # otherwise, the template prop is the prop_path itself
+            template_prop = prop_path
+
+        for item in map_to:
+            splitted = item.split(".")
+            match = re.match(r"JSON\(([^)]+)\).*", splitted[0])
+
+            # If first element is a JSON mapping (JSON(event).tagsContainer.*)
+            # we extract JSON column (event) and replace * with prop_in_json
+            if match:
+                prop_in_json_list = [spl for spl in splitted]
+                if "*" in splitted:
+                    prop_in_json_list[splitted.index("*")] = template_prop
+                else:
+                    prop_in_json_list.append(template_prop)
+
+                json_prop = match.group(1)
+                field_mappings.append(
+                    JsonFieldMapping(
+                        json_prop=json_prop,
+                        prop_in_json=".".join(
+                            prop_in_json_list[1:]
+                        ),  # skip JSON column and take the rest
+                    )
+                )
+                continue
+
+            field_mappings.append(SimpleFieldMapping(item))
+
+        return PropertyMetadataInfo(
+            field_mappings=field_mappings,
+            enum_values=field_mapping_config.enum_values,
+        )
+
+    def __find_mapping_configuration(self, prop_path: str):
+        """
+        Find the mapping configuration for a given property path.
+
+        This method searches for a direct mapping configuration in the known configurations.
+        If no direct mapping is found, it checks for wildcard patterns in the wildcard configurations.
+
+        Args:
+            prop_path (str): The property path to find the mapping configuration for.
+
+        Returns:
+            tuple: A tuple containing the FieldMappingConfiguration and the mapping key.
+                   If no configuration is found, both elements of the tuple will be None.
+        """
         field_mapping_config: FieldMappingConfiguration = None
         mapping_key = None
 
@@ -55,21 +145,5 @@ class PropertiesMetadata:
                     field_mapping_config = field_mapping_config_from_dict
                     mapping_key = pattern
                     break
-        
-        if field_mapping_config:
-            map_to: list[str] = field_mapping_config.map_to if isinstance(field_mapping_config.map_to, list) else [field_mapping_config.map_to]
 
-            if field_mapping_config.is_json:
-                prop_in_json = None
-
-                if '*' in mapping_key:
-                    regex_pattern = re.escape(mapping_key).replace(r'\*', r'(.*)')
-                    regex = re.compile(f"^{regex_pattern}$")
-                    match = regex.match(prop_path)
-                    prop_in_json = match.group(1)
-
-                return [JsonMapping(item, prop_in_json) for item in map_to]
-            
-            return [SimpleMapping(item) for item in map_to]
-        
-        return None
+        return field_mapping_config, mapping_key

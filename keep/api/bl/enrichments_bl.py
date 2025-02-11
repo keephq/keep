@@ -331,7 +331,7 @@ class EnrichmentsBl:
                             if not is_matcher:
                                 # If the key has . (dot) in it, it'll be added as is while it needs to be nested.
                                 # @tb: fix when somebody will be complaining about this.
-                                enrichments[key] = value
+                                enrichments[key.strip()] = value
                     break
 
         if enrichments:
@@ -339,7 +339,7 @@ class EnrichmentsBl:
             for key, value in enrichments.items():
                 # It's not relevant to enrich if the value if empty
                 if value is not None:
-                    setattr(alert, key, value)
+                    setattr(alert, key.strip(), value)
 
             # Save the enrichments to the database
             # SHAHAR: since when running this enrich_alert, the alert is not in elastic yet (its indexed after),

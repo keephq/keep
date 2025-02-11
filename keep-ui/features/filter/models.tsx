@@ -5,7 +5,10 @@ export interface FacetOptionDto {
 }
 
 export type FacetOptionsDict = { [facetId: string]: FacetOptionDto[] };
-
+export type FacetOptionsQuery = {
+  cel?: string | undefined;
+  facet_queries?: FacetOptionsQueries;
+};
 export type FacetOptionsQueries = { [facet_id: string]: string };
 
 export interface FacetDto {

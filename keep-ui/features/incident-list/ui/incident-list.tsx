@@ -275,6 +275,7 @@ export function IncidentList({
                 <FacetsPanelServerSide
                   className="mt-14"
                   entityName={"incidents"}
+                  usePropertyPathsSuggestions={true}
                   clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}
                   uncheckedByDefaultOptionValues={

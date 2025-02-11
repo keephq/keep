@@ -25,8 +25,13 @@ function buildCel(
   facetOptions: { [key: string]: FacetOptionDto[] },
   facetsState: FacetState
 ): string {
+  if (facetOptions == null) {
+    return "";
+  }
+
   const cel = Object.values(facets)
     .filter((facet) => facet.id in facetsState)
+    .filter((facet) => facetOptions[facet.id])
     .map((facet) => {
       const notSelectedOptions = Object.values(facetOptions[facet.id])
         .filter((facetOption) =>
@@ -78,7 +83,7 @@ export interface FacetsPanelProps {
     optionDisplayName: string
   ) => JSX.Element | undefined;
   onCelChange: (cel: string) => void;
-  onAddFacet: (createFacet: CreateFacetDto) => void;
+  onAddFacet: () => void;
   onDeleteFacet: (facetId: string) => void;
   onLoadFacetOptions: (facetId: string) => void;
   onReloadFacetOptions: (facetsQuery: FacetOptionsQueries) => void;
@@ -103,12 +108,9 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   const defaultStateHandledForFacetIds = useMemo(() => new Set<string>(), []);
   const [facetsState, setFacetsState] = useState<FacetState>({});
   const [clickedFacetId, setClickedFacetId] = useState<string | null>(null);
-
-  const [isModalOpen, setIsModalOpen] = useLocalStorage<boolean>(
-    `addFacetModalOpen-${panelId}`,
-    false
-  );
   const [celState, setCelState] = useState("");
+  const [facetOptionQueries, setFacetOptionQueries] =
+    useState<FacetOptionsQueries | null>(null);
 
   function getFacetState(facetId: string): Set<string> {
     if (
@@ -150,11 +152,16 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
 
   useEffect(() => {
     var cel = buildCel(facets, facetOptions, facetsState);
+    setCelState(cel);
+  }, [facetsState, facetOptions, facets, celState, onCelChange]);
 
-    if (cel !== celState) {
-      setCelState(cel);
-      onCelChange && onCelChange(cel);
+  useEffect(() => {
+    if (facetOptionQueries) {
+      onReloadFacetOptions && onReloadFacetOptions(facetOptionQueries);
     }
+  }, [JSON.stringify(facetOptionQueries)]);
+
+  useEffect(() => {
     const facetOptionQueries: FacetOptionsQueries = {};
 
     facets.forEach((facet) => {
@@ -167,18 +174,26 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       );
     });
 
-    onReloadFacetOptions && onReloadFacetOptions(facetOptionQueries);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facetsState]);
+    setFacetOptionQueries(facetOptionQueries);
+    onCelChange && onCelChange(celState);
+  }, [celState, onCelChange, setFacetOptionQueries]);
 
   function toggleFacetOption(facetId: string, value: string) {
     setClickedFacetId(facetId);
     const facetState = getFacetState(facetId);
-
-    if (isOptionSelected(facetId, value)) {
-      facetState.add(value);
+    const facetOptionsWithMatches = facetOptions[facetId].filter(
+      (facetOption) => facetOption.matches_count
+    );
+    if (facetState.size === facetOptionsWithMatches.length - 1) {
+      facetOptionsWithMatches.forEach((facetOption) => {
+        facetState.delete(facetOption.display_name);
+      });
     } else {
-      facetState.delete(value);
+      if (isOptionSelected(facetId, value)) {
+        facetState.add(value);
+      } else {
+        facetState.delete(value);
+      }
     }
 
     setFacetsState({ ...facetsState, [facetId]: facetState });
@@ -234,13 +249,13 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   return (
     <section
       id={`${panelId}-facets`}
-      className={clsx("min-w-48 max-w-48", className)}
+      className={"min-w-52 max-w-52 " + className}
     >
       <div className="space-y-2">
         <div className="flex justify-between">
           {/* Facet button */}
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => onAddFacet && onAddFacet()}
             className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-1"
           >
             <PlusIcon className="h-4 w-4" />
@@ -255,46 +270,54 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
           </button>
         </div>
 
-        {facets?.map((facet, index) => (
-          <Facet
-            key={facet.id + index}
-            name={facet.name}
-            isStatic={facet.is_static}
-            options={facetOptions?.[facet.id]}
-            optionsLoading={!facetOptions?.[facet.id]}
-            optionsReloading={
-              areFacetOptionsLoading &&
-              !!facet.id &&
-              clickedFacetId !== facet.id
-            }
-            onSelect={(value) => toggleFacetOption(facet.id, value)}
-            onSelectOneOption={(value) => selectOneFacetOption(facet.id, value)}
-            onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
-            facetState={getFacetState(facet.id)}
-            facetKey={facet.id}
-            renderOptionLabel={(optionDisplayName) =>
-              renderFacetOptionLabel &&
-              renderFacetOptionLabel(facet.name, optionDisplayName)
-            }
-            renderIcon={(optionDisplayName) =>
-              renderFacetOptionIcon &&
-              renderFacetOptionIcon(facet.name, optionDisplayName)
-            }
-            onLoadOptions={() =>
-              onLoadFacetOptions && onLoadFacetOptions(facet.id)
-            }
-            onDelete={() => onDeleteFacet && onDeleteFacet(facet.id)}
-          />
-        ))}
+        {!facets &&
+          [undefined, undefined, undefined].map((facet, index) => (
+            <Facet
+              key={index}
+              name={""}
+              isStatic={true}
+              isOpenByDefault={true}
+              optionsLoading={true}
+              optionsReloading={false}
+              facetState={new Set()}
+              facetKey={`${index}`}
+            />
+          ))}
 
-        {/* Facet Modal */}
-        <AddFacetModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onAddFacet={(createFacet) =>
-            onAddFacet ? onAddFacet(createFacet) : null
-          }
-        />
+        {facets &&
+          facets.map((facet, index) => (
+            <Facet
+              key={facet.id + index}
+              name={facet.name}
+              isStatic={facet.is_static}
+              options={facetOptions?.[facet.id]}
+              optionsLoading={!facetOptions?.[facet.id]}
+              optionsReloading={
+                areFacetOptionsLoading &&
+                !!facet.id &&
+                clickedFacetId !== facet.id
+              }
+              onSelect={(value) => toggleFacetOption(facet.id, value)}
+              onSelectOneOption={(value) =>
+                selectOneFacetOption(facet.id, value)
+              }
+              onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
+              facetState={getFacetState(facet.id)}
+              facetKey={facet.id}
+              renderOptionLabel={(optionDisplayName) =>
+                renderFacetOptionLabel &&
+                renderFacetOptionLabel(facet.name, optionDisplayName)
+              }
+              renderIcon={(optionDisplayName) =>
+                renderFacetOptionIcon &&
+                renderFacetOptionIcon(facet.name, optionDisplayName)
+              }
+              onLoadOptions={() =>
+                onLoadFacetOptions && onLoadFacetOptions(facet.id)
+              }
+              onDelete={() => onDeleteFacet && onDeleteFacet(facet.id)}
+            />
+          ))}
       </div>
     </section>
   );
