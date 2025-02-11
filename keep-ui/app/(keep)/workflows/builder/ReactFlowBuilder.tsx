@@ -24,6 +24,7 @@ const ReactFlowBuilder = ({
   providers,
   installedProviders,
 }: {
+  // TODO: move providers from props to ReactFlowEditor itself
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
 }) => {
