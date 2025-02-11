@@ -169,27 +169,16 @@ describe("useStore", () => {
 
       // Setup initial state with trigger node
       act(() => {
-        result.current.setNodes([
-          {
-            id: "trigger_start",
-            data: { type: "trigger" },
-            position: { x: 0, y: 0 },
-            isNested: false,
-          } as FlowNode,
-          {
-            id: "interval",
-            data: { type: "interval" },
-            position: { x: 50, y: 50 },
-            isNested: false,
-          } as FlowNode,
-          {
-            id: "trigger_end",
-            data: { type: "trigger" },
-            position: { x: 100, y: 100 },
-            isNested: false,
-          } as FlowNode,
-        ]);
-        result.current.updateV2Properties({ interval: "5m" });
+        result.current.setDefinition({
+          value: {
+            sequence: [],
+            properties: {
+              interval: "5m",
+            },
+          },
+          isValid: true,
+        });
+        result.current.initializeWorkflow(null, {});
       });
 
       // Delete interval trigger

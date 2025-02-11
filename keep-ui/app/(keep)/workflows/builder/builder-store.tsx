@@ -212,13 +212,12 @@ const useStore = create<FlowState>()(
     setToolBoxConfig: (config) => set({ toolboxConfiguration: config }),
     setOpneGlobalEditor: (open) => set({ openGlobalEditor: open }),
     updateSelectedNodeData: (key, value) => {
-      console.log("updateSelectedNodeData", key, value);
       const currentSelectedNode = get().selectedNode;
       if (currentSelectedNode) {
         const updatedNodes = get().nodes.map((node) => {
           if (node.id === currentSelectedNode) {
             //properties changes  should not reconstructed the defintion. only recontrreconstructing if there are any structural changes are done on the flow.
-            if (value !== undefined) {
+            if (value !== undefined && value !== null) {
               node.data[key] = value;
             } else {
               delete node.data[key];
@@ -478,6 +477,7 @@ const useStore = create<FlowState>()(
         ...nodes.slice(endIndex + 2),
       ];
       if (["manual", "alert", "interval", "incident"].includes(ids)) {
+        console.log("REMOVING PROPERTY", ids);
         const v2Properties = get().v2Properties;
         delete v2Properties[ids];
         set({ v2Properties });
