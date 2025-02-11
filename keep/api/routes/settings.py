@@ -332,7 +332,7 @@ def delete_api_key(
         session, unique_api_key_id=keyId, tenant_id=authenticated_entity.tenant_id
     )
 
-    if api_key:
+    if api_key and api_key.is_deleted is False:
         try:
             context_manager = ContextManager(tenant_id=tenant_id)
             secret_manager = SecretManagerFactory.get_secret_manager(context_manager)

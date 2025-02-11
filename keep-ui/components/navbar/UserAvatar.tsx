@@ -5,6 +5,7 @@ interface Props {
   image: string | null | undefined;
   name: string;
   size?: "sm" | "xs";
+  email?: string;
 }
 
 export const getInitials = (name: string) =>
@@ -12,7 +13,7 @@ export const getInitials = (name: string) =>
     .join("")
     .toUpperCase();
 
-export default function UserAvatar({ image, name, size = "sm" }: Props) {
+export default function UserAvatar({ image, name, size = "sm", email }: Props) {
   const sizeClass = (function (size: "sm" | "xs") {
     if (size === "sm") return "w-7 h-7";
     if (size === "xs") return "w-5 h-5";
@@ -28,6 +29,7 @@ export default function UserAvatar({ image, name, size = "sm" }: Props) {
       alt="user avatar"
       width={sizeValue}
       height={sizeValue}
+      title={email ?? name}
     />
   ) : (
     <span
@@ -35,6 +37,7 @@ export default function UserAvatar({ image, name, size = "sm" }: Props) {
         "relative inline-flex items-center justify-center overflow-hidden bg-orange-400 rounded-full dark:bg-gray-600",
         sizeClass
       )}
+      title={email ?? name}
     >
       <span className="font-medium text-white text-xs">
         {getInitials(name)}

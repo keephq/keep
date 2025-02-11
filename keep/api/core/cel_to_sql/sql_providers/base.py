@@ -1,6 +1,8 @@
 from typing import List
 from types import NoneType
 
+from sqlalchemy import Dialect, String
+
 from keep.api.core.cel_to_sql.ast_nodes import (
     ConstantNode,
     MemberAccessNode,
@@ -13,7 +15,6 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     ParenthesisNode,
 )
 from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
-from datetime import datetime
 
 from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, MultipleFieldsNode, PropertiesMapper, PropertiesMappingException
 from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
@@ -81,8 +82,9 @@ class BaseCelToSqlProvider:
             Converts a NOT operation to an SQL string.
         """
 
-    def __init__(self, properties_metadata: PropertiesMetadata):
+    def __init__(self, dialect: Dialect, properties_metadata: PropertiesMetadata):
         super().__init__()
+        self.literal_proc = String("").literal_processor(dialect=dialect)
         self.properties_mapper = PropertiesMapper(properties_metadata)
 
     def convert_to_sql_str(self, cel: str) -> str:
@@ -279,16 +281,13 @@ class BaseCelToSqlProvider:
         if value is None:
             return self._get_default_value_for_type(NoneType)
         if isinstance(value, str):
-            return f"'{value}'"
+            return self.literal_proc(value)
         if isinstance(value, bool):
             return str(value).lower()
         if isinstance(value, float) or isinstance(value, int):
             return str(value)
-        if isinstance(value, datetime):
-            aaa = f"datetime('{value.strftime('%Y-%m-%d %H:%M:%S')}')"
-            return aaa
 
-        raise NotImplementedError(f"{type(value).__name__} constant type is not supported yet")
+        raise NotImplementedError(f"{type(value).__name__} constant type is not supported yet. Consider implementing this support in child class.")
 
     # region Member Access Visitors
     def _visit_multiple_fields_node(self, multiple_fields_node: MultipleFieldsNode, cast_to: type, stack) -> str:
@@ -299,6 +298,9 @@ class BaseCelToSqlProvider:
             if cast_to:
                 arg = self.cast(arg, cast_to)
             coalesce_args.append(arg)
+
+        if len(coalesce_args) == 1:
+            return coalesce_args[0]
 
         coalesce_args.append(self._get_default_value_for_type(cast_to))
 
@@ -343,27 +345,27 @@ class BaseCelToSqlProvider:
             return self._visit_contains_method_calling(property_path, method_args)
 
         if method_name == "startsWith":
-            return self._visit_startwith_method_calling(property_path, method_args)
+            return self._visit_starts_with_method_calling(property_path, method_args)
 
         if method_name == "endsWith":
-            return self._visit_endswith_method_calling(property_path, method_args)
+            return self._visit_ends_with_method_calling(property_path, method_args)
 
         raise NotImplementedError(f"'{method_name}' method is not supported")
 
     def _visit_contains_method_calling(
-        self, property_path: str, method_args: List[str]
+        self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
         raise NotImplementedError("'contains' method must be implemented in the child class")
 
-    def _visit_startwith_method_calling(
-        self, property_path: str, method_args: List[str]
+    def _visit_starts_with_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
-        raise NotImplementedError("'startswith' method call must be implemented in the child class")
+        raise NotImplementedError("'startsWith' method call must be implemented in the child class")
 
-    def _visit_endswith_method_calling(
-        self, property_path: str, method_args: List[str]
+    def _visit_ends_with_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
-        raise NotImplementedError("'endswith' method call must be implemented in the child class")
+        raise NotImplementedError("'endsWith' method call must be implemented in the child class")
 
     # endregion
 

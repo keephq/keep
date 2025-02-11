@@ -1,5 +1,11 @@
 import useSWR, { SWRConfiguration, useSWRConfig } from "swr";
-import { CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsDict, FacetOptionsQueries } from "./models";
+import {
+  CreateFacetDto,
+  FacetDto,
+  FacetOptionDto,
+  FacetOptionsDict,
+  FacetOptionsQuery,
+} from "./models";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -32,63 +38,87 @@ export const useFacets = (
   };
 };
 
+export const useFacetPotentialFields = (
+  entityName: string,
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  }
+) => {
+  const api = useApi();
+  const requestUrl = `/${entityName}/facets/fields`;
+
+  const swrValue = useSWR<string[]>(
+    () => (api.isReady() ? requestUrl : null),
+    (url) => api.get(url),
+    options
+  );
+
+  return {
+    ...swrValue,
+    isLoading: swrValue.isLoading || (!options.fallbackData && !api.isReady()),
+  };
+};
+
 export const useFacetOptions = (
   entityName: string,
   initialFacetOptions: FacetOptionsDict | undefined,
-  facetsQuery: FacetOptionsQueries | null
+  facetsQuery: FacetOptionsQuery | null,
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  }
 ) => {
   const api = useApi();
-  const [mergedFacetOptions, setMergedFacetOptions] = useState(
-    initialFacetOptions
-  );
-  const [isLoading, setIsLoading] = useState(false);
+  const [mergedFacetOptions, setMergedFacetOptions] =
+    useState(initialFacetOptions);
   const requestUrl = `/${entityName}/facets/options`;
 
+  const swrValue = useSWR<any>(
+    () =>
+      api.isReady() && facetsQuery
+        ? requestUrl + "_" + JSON.stringify(facetsQuery)
+        : null,
+    () => api.post(requestUrl, facetsQuery),
+    options
+  );
+
   useEffect(() => {
-    if (!api.isReady() || !facetsQuery) {
+    if (!swrValue.data) {
       return;
     }
 
-    async function fetch() {
-      setIsLoading(true);
-      const fetchedData: FacetOptionsDict = await api.post(
-        requestUrl,
-        facetsQuery
-      );
-      const newFacetOptions: FacetOptionsDict = JSON.parse(
-        JSON.stringify(mergedFacetOptions || {})
-      );
-      Object.entries(fetchedData).forEach(([facetId, newOptions]) => {
-        if (newFacetOptions[facetId]) {
-          const currentFacetOptionsMap = newFacetOptions[facetId].reduce(
-            (accumulator, oldOption) => {
-              accumulator[oldOption.display_name] = oldOption;
-              oldOption.matches_count = 0;
-              return accumulator;
-            },
-            {} as Record<string, FacetOptionDto>
-          );
+    const fetchedData: FacetOptionsDict = swrValue.data;
+    const newFacetOptions: FacetOptionsDict = JSON.parse(
+      JSON.stringify(mergedFacetOptions || {})
+    );
+    Object.entries(fetchedData).forEach(([facetId, newOptions]) => {
+      if (newFacetOptions[facetId]) {
+        const currentFacetOptionsMap = newFacetOptions[facetId].reduce(
+          (accumulator, oldOption) => {
+            accumulator[oldOption.display_name] = oldOption;
+            oldOption.matches_count = 0;
+            return accumulator;
+          },
+          {} as Record<string, FacetOptionDto>
+        );
 
-          newOptions.forEach(
-            (newOption) =>
-              (currentFacetOptionsMap[newOption.display_name] = newOption)
-          );
-          newFacetOptions[facetId] = Object.values(currentFacetOptionsMap);
-          return;
-        }
+        newOptions.forEach(
+          (newOption) =>
+            (currentFacetOptionsMap[newOption.display_name] = newOption)
+        );
+        newFacetOptions[facetId] = Object.values(currentFacetOptionsMap);
+        return;
+      }
 
-        newFacetOptions[facetId] = newOptions;
-      });
+      newFacetOptions[facetId] = newOptions;
+    });
 
-      setMergedFacetOptions(newFacetOptions);
-      setIsLoading(false);
-    }
-    fetch();
-  }, [api, api?.isReady(), facetsQuery, requestUrl]);
+    setMergedFacetOptions(newFacetOptions);
+  }, [swrValue.data]);
 
   return {
     facetOptions: mergedFacetOptions,
-    isLoading
+    mutate: swrValue.mutate,
+    isLoading: swrValue.isLoading,
   };
 };
 
@@ -102,8 +132,9 @@ export const useFacetActions = (
 
   const mutateFacetsList = useCallback(
     () =>
-      // Adding "?" to the key because the list always has a query param
-      mutate((key) => typeof key === "string" && key == "/incidents/facets"),
+      mutate(
+        (key) => typeof key === "string" && key == `/${entityName}/facets`
+      ),
     [mutate]
   );
 

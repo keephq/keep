@@ -2,6 +2,8 @@
 Coralogix is a modern observability platform delivers comprehensive visibility into all your logs, metrics, traces and security events with end-to-end monitoring.
 """
 
+import json
+
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -37,6 +39,14 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
         "critical": AlertSeverity.CRITICAL,
     }
 
+    PRIORTY_TO_SEVERITY_MAP = {
+        "P1": AlertSeverity.CRITICAL,
+        "P2": AlertSeverity.HIGH,
+        "P3": AlertSeverity.WARNING,
+        "P4": AlertSeverity.INFO,
+        "P5": AlertSeverity.LOW,
+    }
+
     STATUS_MAP = {
         "resolve": AlertStatus.RESOLVED,
         "trigger": AlertStatus.FIRING,
@@ -59,67 +69,51 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
         # no config
         pass
 
-    def get_value_by_key(fields: dict, key: str):
-        for item in fields:
-            if item["key"] == key:
-                return item["value"]
-        return None
-
     @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
+        fields_list = event["fields"] if "fields" in event else []
+        fields = {item["key"]: item["value"] for item in fields_list}
+
+        labels = fields.get("text", fields.get("labels", {}))
+        if isinstance(labels, str):
+            try:
+                labels = json.loads(labels)
+            except Exception:
+                # Do nothing, keep labels as str
+                pass
+
+        severity = AlertSeverity.INFO
+        if "severityLowercase" in fields:
+            severity = CoralogixProvider.SEVERITIES_MAP.get(
+                fields.get("severityLowercase", "info")
+            )
+        elif "priority" in fields:
+            severity = CoralogixProvider.PRIORTY_TO_SEVERITY_MAP.get(
+                fields.get("priority", "P5")
+            )
+
         alert = AlertDto(
-            id=(
-                CoralogixProvider.get_value_by_key(
-                    event["fields"], "alertUniqueIdentifier"
-                )
-                if "fields" in event
-                else None
-            ),
+            id=fields.get("alertUniqueIdentifier"),
             alert_id=event["alert_id"] if "alert_id" in event else None,
             name=event["name"] if "name" in event else None,
             description=event["description"] if "description" in event else None,
             status=CoralogixProvider.STATUS_MAP.get(event["alert_action"]),
-            severity=CoralogixProvider.SEVERITIES_MAP.get(
-                CoralogixProvider.get_value_by_key(event["fields"], "severityLowercase")
-            ),
-            lastReceived=(
-                CoralogixProvider.get_value_by_key(event["fields"], "timestampISO")
-                if "fields" in event
-                else None
-            ),
-            alertUniqueIdentifier=(
-                CoralogixProvider.get_value_by_key(
-                    event["fields"], "alertUniqueIdentifier"
-                )
-                if "fields" in event
-                else None
-            ),
+            severity=severity,
+            lastReceived=fields.get("timestampISO"),
+            alertUniqueIdentifier=fields.get("alertUniqueIdentifier"),
             uuid=event["uuid"] if "uuid" in event else None,
             threshold=event["threshold"] if "threshold" in event else None,
             timewindow=event["timewindow"] if "timewindow" in event else None,
-            group_by_labels=(
-                event["group_by_labels"] if "group_by_labels" in event else None
-            ),
+            group_by_labels=fields.get("group_by_labels"),
             alert_url=event["alert_url"] if "alert_url" in event else None,
             log_url=event["log_url"] if "log_url" in event else None,
-            team=(
-                CoralogixProvider.get_value_by_key(event["fields"], "team")
-                if "fields" in event
-                else None
-            ),
-            priority=(
-                CoralogixProvider.get_value_by_key(event["fields"], "priority")
-                if "fields" in event
-                else None
-            ),
-            computer=(
-                CoralogixProvider.get_value_by_key(event["fields"], "computer")
-                if "fields" in event
-                else None
-            ),
-            fields=event["fields"] if "fields" in event else None,
+            team=fields.get("team"),
+            priority=fields.get("priority"),
+            computer=fields.get("computer"),
+            fields=fields,
+            labels=labels if isinstance(labels, dict) else {},
             source=["coralogix"],
         )
 
