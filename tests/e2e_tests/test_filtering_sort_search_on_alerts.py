@@ -7,6 +7,7 @@ import uuid
 import pytest
 import requests
 from playwright.sync_api import expect, Browser
+import subprocess
 
 
 os.environ["PLAYWRIGHT_HEADLESS"] = "false"
@@ -25,14 +26,30 @@ def query_allerts(cell_query: str = None, limit: int = None, offset: int = None)
     if cell_query:
         query_params["cel"] = cell_query
 
+    if limit is not None:
+        query_params["limit"] = limit
+
+    if offset is not None:
+        query_params["offset"] = offset
+
     if query_params:
         url += "?" + "&".join([f"{k}={v}" for k, v in query_params.items()])
 
-    return requests.get(
+    response: dict = requests.get(
         url,
         headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
         timeout=5,
     ).json()
+    grouped_alerts_by_name = {}
+
+    for alert in response["results"]:
+        grouped_alerts_by_name.setdefault(alert["name"], []).append(alert)
+
+    return {
+        "results": response["results"],
+        "count": response["count"],
+        "grouped_by_name": grouped_alerts_by_name,
+    }
 
 
 def create_fake_alert(index: int, provider_type: str):
@@ -40,6 +57,7 @@ def create_fake_alert(index: int, provider_type: str):
     status = "firing"
     severity = "critical"
     custom_tag = "environment:production"
+    testAlertId = f"alert-finger-print-{index}"
 
     if index % 4 == 0:
         title = "High CPU Usage"
@@ -69,16 +87,18 @@ def create_fake_alert(index: int, provider_type: str):
             "resolved": "Recovered",
             "suppressed": "Muted",
         }
+        alert_name = f"[{SEVERITIES_MAP.get(severity, SEVERITIES_MAP['critical'])}] [{STATUS_MAP.get(status, STATUS_MAP['firing'])}] {title} {provider_type} {index}"
 
         return {
-            "title": f"[{SEVERITIES_MAP.get(severity, SEVERITIES_MAP['critical'])}] [{STATUS_MAP.get(status, STATUS_MAP['firing'])}] {title} {provider_type} {index}",
+            "alertName": alert_name,
+            "title": alert_name,
             "type": "metric alert",
             "query": "avg(last_5m):avg:system.cpu.user{*} by {host} > 90",
             "message": f"CPU usage is over 90% on srv1-eu1-prod. Searched value: {'even' if index % 2 else 'odd'}",
-            "description": f"CPU usage is over 90% on srv1-us2-prod.",
+            "description": "CPU usage is over 90% on srv1-us2-prod.",
             "tagsList": "environment:production,team:backend,monitor,service:api",
             "priority": "P2",
-            "monitor_id": f"1234567890-{index}",
+            "monitor_id": testAlertId,
             "scopes": "srv2-eu1-prod",
             "host.name": "srv2-ap1-prod",
             "last_updated": 1739114561286,
@@ -86,11 +106,12 @@ def create_fake_alert(index: int, provider_type: str):
             "date_happened": (datetime.utcnow() + timedelta(days=-index)).timestamp(),
             "tags": {
                 "envNameTag": "production" if index % 2 else "development",
+                "testAlertId": testAlertId,
             },
             "custom_tags": {
                 "env": custom_tag,
             },
-            "id": "bf414194e8622f241c38c645b634d6f18d92c58f56eccafa2e6a2b27b08adf05",
+            "id": testAlertId,
         }
     elif provider_type == "prometheus":
         SEVERITIES_MAP = {
@@ -104,15 +125,18 @@ def create_fake_alert(index: int, provider_type: str):
             "firing": "firing",
             "resolved": "firing",
         }
+        alert_name = f"{title} {provider_type} {index} summary"
 
         return {
-            "summary": f"{title} {provider_type} {index} summary",
+            "alertName": alert_name,
+            "testAlertId": testAlertId,
+            "summary": alert_name,
             "labels": {
                 "severity": SEVERITIES_MAP.get(severity, SEVERITIES_MAP["critical"]),
                 "host": "host1",
                 "service": "calendar-producer-java-otel-api-dd",
                 "instance": "instance2",
-                "alertname": f"{title} {provider_type} {index}",
+                "alertname": alert_name,
             },
             "status": STATUS_MAP.get(status, STATUS_MAP["firing"]),
             "annotations": {
@@ -121,7 +145,7 @@ def create_fake_alert(index: int, provider_type: str):
             "startsAt": "2025-02-09T17:26:12.769318+00:00",
             "endsAt": "0001-01-01T00:00:00Z",
             "generatorURL": "http://example.com/graph?g0.expr=NetworkLatencyHigh",
-            "fingerprint": str(uuid.uuid4()),
+            "fingerprint": testAlertId,
             "custom_tags": {
                 "env": custom_tag,
             },
@@ -129,14 +153,15 @@ def create_fake_alert(index: int, provider_type: str):
 
 
 def upload_alerts():
-    total_alerts = 20
     current_alerts = query_allerts(limit=1000, offset=0)
-    before_upload_alerts_count = current_alerts["count"]
-
-    if current_alerts["count"] >= total_alerts:
-        return current_alerts
-
     simulated_alerts = []
+
+    # def run_command_for_duration(command, duration):
+    #     process = subprocess.Popen(command, shell=True)
+    #     time.sleep(duration)
+    #     process.terminate()
+
+    # run_command_for_duration("your_command_here", 10)
 
     for alert_index, provider_type in enumerate(["datadog"] * 10 + ["prometheus"] * 10):
         alert = create_fake_alert(alert_index, provider_type)
@@ -147,7 +172,13 @@ def upload_alerts():
 
         simulated_alerts.append((provider_type, alert))
 
+    not_uploaded_alerts = []
+
     for provider_type, alert in simulated_alerts:
+        if alert["alertName"] not in current_alerts["grouped_by_name"]:
+            not_uploaded_alerts.append((provider_type, alert))
+
+    for provider_type, alert in not_uploaded_alerts:
         url = f"{KEEP_API_URL}/alerts/event/{provider_type}"
         requests.post(
             url,
@@ -159,19 +190,25 @@ def upload_alerts():
             1
         )  # this is important for sorting by lastReceived. We need to have different lastReceived for alerts
 
+    if not not_uploaded_alerts:
+        return current_alerts
+
     attempt = 0
     while True:
         time.sleep(1)
         current_alerts = query_allerts(limit=1000, offset=0)
         attempt += 1
 
+        if all(
+            alert["alertName"] in current_alerts["grouped_by_name"]
+            for _, alert in simulated_alerts
+        ):
+            break
+
         if attempt >= 10:
             raise Exception(
-                f"{total_alerts - current_alerts['count']} out of {total_alerts} alerts were not uploaded"
+                f"Not all alerts were uploaded. Not uploaded alerts: {not_uploaded_alerts}"
             )
-
-        if current_alerts["count"] == before_upload_alerts_count + total_alerts:
-            break
     return current_alerts
 
 
