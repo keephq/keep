@@ -33,7 +33,6 @@ export default function WorkflowDetailPage({
   params: { workflow_id: string };
   initialData?: Workflow;
 }) {
-  const api = useApi();
   const { data: configData } = useConfig();
   const [tabIndex, setTabIndex] = useState(0);
   const searchParams = useSearchParams();
@@ -134,6 +133,7 @@ export default function WorkflowDetailPage({
             ) : (
               <Card className="h-[calc(100vh-200px)]">
                 <MonacoYAMLEditor
+                  key={workflow.workflow_raw!}
                   workflowRaw={workflow.workflow_raw!}
                   filename={workflow.id ?? "workflow"}
                   workflowId={workflow.id}
