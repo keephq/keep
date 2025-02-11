@@ -45,7 +45,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                 {/* @ts-ignore-error Server Component */}
                 <PostHogPageView />
                 {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
-                <main className="page-container flex flex-col col-start-3 overflow-auto">
+                <main className="page-container mb-6 flex flex-col col-start-3 overflow-auto">
                   {/* Add the banner here, before the navbar */}
                   {config.READ_ONLY && <ReadOnlyBanner />}
                   <div className="flex-1">{children}</div>
@@ -60,7 +60,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         {/** footer */}
         {process.env.GIT_COMMIT_HASH &&
           process.env.SHOW_BUILD_INFO !== "false" && (
-            <div className="pointer-events-none p-2 flex flex-col text-slate-400 opacity-80 text-xs">
+            <div className="pointer-events-none fixed bottom-0 right-0 w-full p-2 flex flex-col text-slate-400 bg-gray-50 text-xs">
               <span className="w-full text-right">Build: {process.env.GIT_COMMIT_HASH}</span>
               <span className="w-full test-right">Version: {process.env.KEEP_VERSION}</span>
             </div>

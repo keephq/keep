@@ -48,7 +48,7 @@ export const Menu = ({ children }: MenuButtonProps) => {
           </div>
 
           <aside
-            className='relative bg-gray-50 col-span-1 border-r border-gray-300 h-full hidden lg:block [&[data-minimized="true"]>nav]:invisible'
+            className='relative pb-12 bg-gray-50 col-span-1 border-r border-gray-300 h-full hidden lg:block [&[data-minimized="true"]>nav]:invisible'
             data-minimized={isMenuMinimized}
           >
             <nav className="flex flex-col h-full">{children}</nav>
