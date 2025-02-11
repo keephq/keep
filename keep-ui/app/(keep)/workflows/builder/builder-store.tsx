@@ -253,8 +253,10 @@ const useStore = create<FlowState>()(
 
       const result = validateGlobalPure(definition);
       if (result) {
-        validationErrors[result[0]] = result[1];
-        isValid = false;
+        result.forEach(([key, error]) => {
+          validationErrors[key] = error;
+        });
+        isValid = result.length === 0;
       }
 
       // Check each step's validity
@@ -588,6 +590,7 @@ async function initializeWorkflow(
     toolboxConfiguration,
     isLoading: false,
   });
+  get().updateDefinition();
 }
 
 const getLayoutedElements = (

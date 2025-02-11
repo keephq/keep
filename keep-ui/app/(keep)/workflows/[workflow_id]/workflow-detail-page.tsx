@@ -15,16 +15,15 @@ import {
   WrenchIcon,
 } from "@heroicons/react/24/outline";
 import { Workflow } from "@/shared/api/workflows";
-import useSWR from "swr";
 import { WorkflowBuilderPageClient } from "../builder/page.client";
 import WorkflowOverview from "./workflow-overview";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "utils/hooks/useConfig";
 import { AiOutlineSwap } from "react-icons/ai";
-import { ErrorComponent, TabNavigationLink, YAMLCodeblock } from "@/shared/ui";
+import { ErrorComponent, TabNavigationLink } from "@/shared/ui";
 import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import Skeleton from "react-loading-skeleton";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useWorkflowDetail } from "@/utils/hooks/useWorkflowDetail";
 
 export default function WorkflowDetailPage({

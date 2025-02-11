@@ -2,7 +2,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Button, Card, Subtitle, Title } from "@tremor/react";
 import { stringify } from "yaml";
 import { LegacyWorkflow } from "./legacy-workflow.types";
-import { YAMLCodeblock } from "@/shared/ui";
+import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 
 interface Props {
   closeModal: () => void;
@@ -19,7 +19,7 @@ export default function BuilderModalContent({
 }: Props) {
   const alertYaml =
     typeof compiledAlert !== "string"
-      ? stringify(compiledAlert)
+      ? stringify({ workflow: compiledAlert })
       : compiledAlert;
 
   const fileName =
@@ -46,8 +46,12 @@ export default function BuilderModalContent({
           )}
         </div>
       </div>
-      <Card className="p-0 max-w-7xl overflow-hidden">
-        <YAMLCodeblock yamlString={alertYaml} filename={fileName} />
+      <Card className="p-0 max-w-7xl overflow-hidden h-[calc(100vh-300px)]">
+        <MonacoYAMLEditor
+          readOnly
+          workflowRaw={alertYaml}
+          filename={fileName}
+        />
       </Card>
     </>
   );

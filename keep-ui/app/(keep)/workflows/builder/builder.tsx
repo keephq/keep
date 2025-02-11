@@ -53,9 +53,6 @@ function Builder({
   const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<
     WorkflowExecutionDetail | WorkflowExecutionFailure | null
   >(null);
-  const [legacyWorkflow, setLegacyWorkflow] = useState<LegacyWorkflow | null>(
-    null
-  );
   const { createWorkflow, updateWorkflow } = useWorkflowActions();
   const {
     // Definition
@@ -154,9 +151,12 @@ function Builder({
     [loadedAlertFile, workflow, searchParams, providers]
   );
 
+  const legacyWorkflow = useMemo(() => {
+    return getWorkflowFromDefinition(definition.value);
+  }, [definition.value]);
+
   useEffect(() => {
     if (generateRequestCount) {
-      setLegacyWorkflow(getWorkflowFromDefinition(definition.value));
       if (!generateModalIsOpen) setGenerateModalIsOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -283,7 +283,23 @@ function Builder({
   };
 
   return (
-    <div className="h-full">
+    <>
+      <div className="h-full">
+        {getworkflowStatus()}
+        <Card className="mt-2 p-0 h-[90%] overflow-hidden">
+          <div className="flex h-full">
+            <div className="flex-1 h-full relative">
+              <ReactFlowProvider>
+                <ReactFlowBuilder
+                  workflowId={workflowId ?? null}
+                  providers={providers}
+                  installedProviders={installedProviders}
+                />
+              </ReactFlowProvider>
+            </div>
+          </div>
+        </Card>
+      </div>
       <Modal
         onClose={closeGenerateModal}
         isOpen={generateModalIsOpen}
@@ -306,25 +322,7 @@ function Builder({
           workflowId={workflowId ?? ""}
         />
       </Modal>
-      {generateModalIsOpen || testRunModalOpen ? null : (
-        <>
-          {getworkflowStatus()}
-          <Card className="mt-2 p-0 h-[90%] overflow-hidden">
-            <div className="flex h-full">
-              <div className="flex-1 h-full relative">
-                <ReactFlowProvider>
-                  <ReactFlowBuilder
-                    workflowId={workflowId ?? null}
-                    providers={providers}
-                    installedProviders={installedProviders}
-                  />
-                </ReactFlowProvider>
-              </div>
-            </div>
-          </Card>
-        </>
-      )}
-    </div>
+    </>
   );
 }
 

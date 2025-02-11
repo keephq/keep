@@ -295,14 +295,13 @@ function WorkflowEditorV2() {
     v2Properties: properties,
     updateV2Properties,
     selectedNode,
+    validationErrors,
   } = useStore();
+  const isDeployed = useStore((state) => state.workflowId !== null);
 
-  const handleChange = useCallback(
-    debounce((key: string, value: string | Record<string, any>) => {
-      updateV2Properties({ [key]: value });
-    }, 300),
-    [updateV2Properties]
-  );
+  const handleChange = (key: string, value: string | Record<string, any>) => {
+    updateV2Properties({ [key]: value });
+  };
 
   const addNewConstant = () => {
     const updatedConsts = {
@@ -331,7 +330,10 @@ function WorkflowEditorV2() {
     updateV2Properties({ alert: currentFilters });
   };
 
-  const toSkip = ["isLocked", "id", "name", "description"];
+  const lockedKeys = ["isLocked", "id"];
+  const metadataKeys = ["name", "description"];
+  // If workflow is not deployed, we can edit the metadata here, in side panel; otherwise we can edit via modal
+  const toSkip = [...lockedKeys, ...(isDeployed ? metadataKeys : [])];
 
   const propertyKeys = Object.keys(properties).filter(
     (k) => !toSkip.includes(k)
@@ -356,6 +358,11 @@ function WorkflowEditorV2() {
 
           renderDivider =
             isTrigger && key === selectedNode ? !renderDivider : false;
+
+          const errorKey = ["name", "description"].includes(key)
+            ? `workflow_${key}`
+            : key;
+          const error = validationErrors?.[errorKey];
           return (
             <div key={key}>
               {renderDivider && <Divider />}
@@ -592,6 +599,8 @@ function WorkflowEditorV2() {
                         placeholder={`Set the ${key}`}
                         onChange={(e: any) => handleChange(key, e.target.value)}
                         value={properties[key] || ("" as string)}
+                        error={!!error}
+                        errorMessage={error}
                       />
                     );
                 }
@@ -607,30 +616,25 @@ function WorkflowEditorV2() {
 export function StepEditorV2({
   providers,
   installedProviders,
+  initialFormData,
 }: {
   providers: Provider[] | undefined | null;
   installedProviders?: Provider[] | undefined | null;
+  initialFormData: {
+    name?: string;
+    properties?: V2Properties;
+    type?: string;
+  };
 }) {
   const [formData, setFormData] = useState<{
     name?: string;
     properties?: V2Properties;
     type?: string;
-  }>({});
-  const {
-    selectedNode,
-    updateSelectedNodeData,
-    getNodeById,
-    setSynced,
-    triggerSave,
-  } = useStore();
+  }>(initialFormData);
+  const { updateSelectedNodeData, setSynced, triggerSave, validationErrors } =
+    useStore();
 
-  useEffect(() => {
-    if (selectedNode) {
-      const { data } = getNodeById(selectedNode) || {};
-      const { name, type, properties } = data || {};
-      setFormData({ name, type, properties });
-    }
-  }, [selectedNode, getNodeById]);
+  const error = validationErrors?.[formData.name || ""];
 
   const saveFormDataToStoreDebounced = useCallback(
     debounce((formData: any) => {
@@ -639,10 +643,6 @@ export function StepEditorV2({
     }, 300),
     [updateSelectedNodeData]
   );
-
-  if (!selectedNode) {
-    return null;
-  }
 
   const providerType = formData?.type?.split("-")[1];
 
@@ -675,7 +675,8 @@ export function StepEditorV2({
 
   return (
     <EditorLayout>
-      <Title className="capitalize">{providerType}1 Editor</Title>
+      <Title className="capitalize">{providerType} Editor</Title>
+      {error && <Text className="text-red-500">{error}</Text>}
       <Text className="mt-1">Unique Identifier</Text>
       <TextInput
         className="mb-2.5"

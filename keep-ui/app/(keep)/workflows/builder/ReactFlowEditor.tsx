@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { IoMdSettings, IoMdClose } from "react-icons/io";
 import useStore from "./builder-store";
 import { GlobalEditorV2, StepEditorV2 } from "./editors";
@@ -12,7 +12,7 @@ const ReactFlowEditor = ({
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
 }) => {
-  const { selectedNode, setOpneGlobalEditor, synced, setSynced } = useStore();
+  const { selectedNode, setOpneGlobalEditor, synced, getNodeById } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const stepEditorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -47,6 +47,15 @@ const ReactFlowEditor = ({
     }
   }, [selectedNode]);
 
+  const initialFormData = useMemo(() => {
+    if (!selectedNode) {
+      return null;
+    }
+    const { data } = getNodeById(selectedNode) || {};
+    const { name, type, properties } = data || {};
+    return { name, type, properties };
+  }, [selectedNode]);
+
   return (
     <div
       className={`absolute top-0 right-0 transition-transform duration-300 z-50 ${
@@ -76,12 +85,15 @@ const ReactFlowEditor = ({
               {!selectedNode?.includes("empty") && !isTrigger && (
                 <Divider ref={stepEditorRef} />
               )}
-              {!selectedNode?.includes("empty") && !isTrigger && (
-                <StepEditorV2
-                  providers={providers}
-                  installedProviders={installedProviders}
-                />
-              )}
+              {!selectedNode?.includes("empty") &&
+                !isTrigger &&
+                initialFormData && (
+                  <StepEditorV2
+                    providers={providers}
+                    installedProviders={installedProviders}
+                    initialFormData={initialFormData}
+                  />
+                )}
             </div>
           </div>
         </div>

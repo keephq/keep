@@ -98,16 +98,20 @@ export function globalValidatorV2(
   return valid;
 }
 
-export function validateGlobalPure(
-  definition: Definition
-): [string, string] | null {
+type ValidationResult = [string, string];
+
+export function validateGlobalPure(definition: Definition): ValidationResult[] {
+  const errors: ValidationResult[] = [];
   const workflowName = definition?.properties?.name;
   const workflowDescription = definition?.properties?.description;
   if (!workflowName) {
-    return ["workflow_name", "Workflow name cannot be empty."];
+    errors.push(["workflow_name", "Workflow name cannot be empty."]);
   }
   if (!workflowDescription) {
-    return ["workflow_description", "Workflow description cannot be empty."];
+    errors.push([
+      "workflow_description",
+      "Workflow description cannot be empty.",
+    ]);
   }
 
   if (
@@ -117,7 +121,10 @@ export function validateGlobalPure(
     !definition.properties["alert"] &&
     !definition.properties["incident"]
   ) {
-    return ["trigger_start", "Workflow should have at least one trigger."];
+    errors.push([
+      "trigger_start",
+      "Workflow should have at least one trigger.",
+    ]);
   }
 
   if (
@@ -125,7 +132,7 @@ export function validateGlobalPure(
     "interval" in definition.properties &&
     !definition.properties.interval
   ) {
-    return ["interval", "Workflow interval cannot be empty."];
+    errors.push(["interval", "Workflow interval cannot be empty."]);
   }
 
   const alertSources = Object.values(definition.properties.alert || {}).filter(
@@ -136,7 +143,7 @@ export function validateGlobalPure(
     definition.properties["alert"] &&
     alertSources.length == 0
   ) {
-    return ["alert", "Workflow alert trigger cannot be empty."];
+    errors.push(["alert", "Workflow alert trigger cannot be empty."]);
   }
 
   const incidentActions = Object.values(
@@ -147,12 +154,12 @@ export function validateGlobalPure(
     definition.properties["incident"] &&
     incidentActions.length == 0
   ) {
-    return ["incident", "Workflow incident trigger cannot be empty."];
+    errors.push(["incident", "Workflow incident trigger cannot be empty."]);
   }
 
   const anyStepOrAction = definition?.sequence?.length > 0;
   if (!anyStepOrAction) {
-    return ["workflow_name", "At least 1 step/action is required."];
+    errors.push(["trigger_end", "At least 1 step/action is required."]);
   }
   const anyActionsInMainSequence = (
     definition.sequence[0] as V2Step
@@ -166,12 +173,15 @@ export function validateGlobalPure(
       const sequence = definition?.sequence?.[0]?.sequence || [];
       for (let i = actionIndex + 1; i < sequence.length; i++) {
         if (sequence[i]?.type?.includes("step-")) {
-          return [sequence[i].id, "Steps cannot be placed after actions."];
+          errors.push([
+            sequence[i].id,
+            "Steps cannot be placed after actions.",
+          ]);
         }
       }
     }
   }
-  return null;
+  return errors;
 }
 
 export function stepValidatorV2(
@@ -258,7 +268,7 @@ export function validateStepPure(step: V2Step): string | null {
         (value) => String(value).length > 0
       )
     ) {
-      return "Step/action with no parameters configured!";
+      return "Step with no parameters configured";
     }
     return null;
   }

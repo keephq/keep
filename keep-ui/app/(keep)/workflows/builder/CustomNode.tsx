@@ -80,8 +80,11 @@ function CustomNode({ id, data }: FlowNode) {
   if (data.id === "trigger_start" || data.id === "trigger_end") {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <span className="rounded-full bg-orange-50 border border-orange-500 px-4 py-2 flex items-center justify-center">
+        <span className="rounded-full bg-orange-50 border border-orange-500 px-4 py-2 flex items-center justify-center relative">
           {data.name}
+          {isError && (
+            <BiSolidError className="size-10  text-red-500 absolute right-[-20px] top-[-20px]" />
+          )}
         </span>
         <Handle type="target" position={Position.Top} className="w-32" />
         <Handle type="source" position={Position.Bottom} className="w-32" />

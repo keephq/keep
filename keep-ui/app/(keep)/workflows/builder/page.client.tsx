@@ -137,17 +137,19 @@ export function WorkflowBuilderPageClient({
               />
             </>
           )}
-          <Button
-            color="orange"
-            size="md"
-            onClick={() => setIsEditModalOpen(true)}
-            icon={PencilIcon}
-            className="min-w-28"
-            variant="secondary"
-            disabled={!isInitialized}
-          >
-            Edit Metadata
-          </Button>
+          {workflow && (
+            <Button
+              color="orange"
+              size="md"
+              onClick={() => setIsEditModalOpen(true)}
+              icon={PencilIcon}
+              className="min-w-28"
+              variant="secondary"
+              disabled={!isInitialized}
+            >
+              Edit Metadata
+            </Button>
+          )}
           <Button
             color="orange"
             size="md"
@@ -158,18 +160,9 @@ export function WorkflowBuilderPageClient({
           >
             Test Run
           </Button>
-          <Button
-            color="orange"
-            size="md"
-            className="min-w-28"
-            icon={ArrowUpOnSquareIcon}
-            disabled={!isValid || isSaving}
-            onClick={() => triggerSave()}
-          >
-            {isSaving ? "Saving..." : "Save & Deploy"}
-          </Button>
           {!workflow && (
             <Button
+              variant="secondary"
               disabled={!isValid}
               color="orange"
               size="md"
@@ -180,6 +173,16 @@ export function WorkflowBuilderPageClient({
               Get YAML
             </Button>
           )}
+          <Button
+            color="orange"
+            size="md"
+            className="min-w-28"
+            icon={ArrowUpOnSquareIcon}
+            disabled={!isValid || isSaving}
+            onClick={() => triggerSave()}
+          >
+            {isSaving ? "Saving..." : "Save & Deploy"}
+          </Button>
         </div>
       </div>
       <BuilderCard
