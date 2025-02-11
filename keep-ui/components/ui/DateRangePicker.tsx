@@ -19,7 +19,7 @@ const ONE_MINUTE = 60 * 1000;
 const ONE_HOUR = 60 * ONE_MINUTE;
 const ONE_DAY = 24 * ONE_HOUR;
 
-interface TimeFrame {
+export interface TimeFrame {
   start: Date | null;
   end: Date | null;
   paused?: boolean;
@@ -408,8 +408,8 @@ export default function EnhancedDateRangePicker({
                 {!timeFrame.start || !timeFrame.end
                   ? "All"
                   : timeFrame.paused
-                  ? formatDuration(timeFrame.start, timeFrame.end)
-                  : "Live"}
+                    ? formatDuration(timeFrame.start, timeFrame.end)
+                    : "Live"}
               </Badge>
               <span className="text-gray-900 text-left translate-y-[1px] min-w-[300px]">
                 <Text>

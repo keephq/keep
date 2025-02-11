@@ -15,7 +15,6 @@ import {
   getSortedRowModel,
   PaginationState,
 } from "@tanstack/react-table";
-import AlertPagination from "./alert-pagination";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import {
@@ -27,12 +26,10 @@ import {
 import AlertActions from "./alert-actions";
 import { AlertPresetManager } from "./alert-preset-manager";
 import { evalWithContext } from "./alerts-rules-builder";
-import { TitleAndFilters, DateRange } from "./TitleAndFilters";
+import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "@/entities/alerts/model";
 import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
-import { AlertFacets } from "./alert-table-alert-facets";
-import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import Image from "next/image";
@@ -44,6 +41,7 @@ import { Icon } from "@tremor/react";
 import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import AlertPaginationServerSide from "./alert-pagination-server-side";
 import { FacetDto } from "@/features/filter";
+import { TimeFrame } from "@/components/ui/DateRangePicker";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -83,6 +81,7 @@ interface Props {
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
   setChangeStatusAlert?: (alert: AlertDto) => void;
   onQueryChange?: (query: AlertsQuery) => void;
+  onLiveUpdateStateChange?: (isLiveUpdateEnabled: boolean) => void;
   onRefresh?: () => void;
 }
 
@@ -104,6 +103,7 @@ export function AlertTableServerSide({
   setDismissModalAlert,
   setChangeStatusAlert,
   onQueryChange,
+  onLiveUpdateStateChange,
   onRefresh,
 }: Props) {
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
@@ -111,7 +111,7 @@ export function AlertTableServerSide({
   );
   const [filterCel, setFilterCel] = useState<string>("");
   const [searchCel, setSearchCel] = useState<string>("");
-  const [dateRange, setDateRange] = useState<DateRange | null>(null);
+  const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
 
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
@@ -157,21 +157,32 @@ export function AlertTableServerSide({
     pageSize: 20,
   });
 
-  const mainCelQuery = useMemo(() => {
+  const rangeDiff =
+    (dateRange?.start?.getTime() || 0) - (dateRange?.end?.getTime() || 0);
+  const dateRangeRefreshToken = dateRange?.paused ? "paused" : refreshToken;
+
+  useEffect(() => {
+    onLiveUpdateStateChange && onLiveUpdateStateChange(!dateRange?.paused);
+  }, [dateRange?.paused, onLiveUpdateStateChange]);
+
+  const dateRangeCelQuery = useMemo(() => {
     const filterArray = [];
 
     if (dateRange?.start) {
       filterArray.push(`lastReceived >= '${dateRange.start.toISOString()}'`);
     }
 
-    if (dateRange?.end) {
+    if (dateRange?.paused && dateRange?.end) {
       filterArray.push(`lastReceived <= '${dateRange.end.toISOString()}'`);
     }
 
-    filterArray.push(searchCel);
-
     return filterArray.filter(Boolean).join(" && ");
-  }, [searchCel, dateRange]);
+  }, [dateRangeRefreshToken, rangeDiff]);
+
+  const mainCelQuery = useMemo(() => {
+    const filterArray = [dateRangeCelQuery, searchCel];
+    return filterArray.filter(Boolean).join(" && ");
+  }, [searchCel, dateRangeCelQuery]);
 
   const alertsQuery = useMemo(
     function whenQueryChange() {
@@ -371,9 +382,10 @@ export function AlertTableServerSide({
         <TitleAndFilters
           table={table}
           alerts={alerts}
+          liveUpdateOptionEnabled={true}
           presetName={presetName}
           onThemeChange={handleThemeChange}
-          onDateRangeChange={setDateRange}
+          onTimeframeChange={setDateRange}
         />
       </div>
 

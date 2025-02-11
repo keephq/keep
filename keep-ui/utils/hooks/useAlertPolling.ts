@@ -3,7 +3,7 @@ import { useWebsocket } from "@/utils/hooks/usePusher";
 
 const ALERT_POLLING_INTERVAL = 1000 * 10; // Once per 10 seconds.
 
-export const useAlertPolling = () => {
+export const useAlertPolling = (isEnabled: boolean) => {
   const { bind, unbind } = useWebsocket();
   const [pollAlerts, setPollAlerts] = useState(0);
   const lastPollTimeRef = useRef(0);
@@ -34,14 +34,18 @@ export const useAlertPolling = () => {
 
   useEffect(() => {
     console.log("useAlertPolling: Setting up event listener for 'poll-alerts'");
-    bind("poll-alerts", handleIncoming);
+    if (isEnabled) {
+      bind("poll-alerts", handleIncoming);
+    } else {
+      unbind("poll-alerts", handleIncoming);
+    }
     return () => {
       console.log(
         "useAlertPolling: Cleaning up event listener for 'poll-alerts'"
       );
       unbind("poll-alerts", handleIncoming);
     };
-  }, [bind, unbind, handleIncoming]);
+  }, [bind, unbind, handleIncoming, isEnabled]);
 
   console.log("useAlertPolling: Current poll alerts value:", pollAlerts);
   return { data: pollAlerts };

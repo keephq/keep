@@ -48,6 +48,8 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   const [alertsQueryState, setAlertsQueryState] = useState<
     AlertsQuery | undefined
   >();
+  const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(false);
+  const [alerts, setAlerts] = useState<AlertDto[] | undefined>(undefined);
   const { useLastAlerts } = useAlerts();
   const { data: providersData = { installed_providers: [] } } = useProviders();
   const router = useRouter();
@@ -86,9 +88,9 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
 
-  const { data: pollAlerts } = useAlertPolling();
+  const { data: pollAlerts } = useAlertPolling(isLiveUpdateEnabled);
   const {
-    data: alerts = [],
+    data: fetchedAlerts = [],
     totalCount,
     isLoading: isAsyncLoading,
     mutate: mutateAlerts,
@@ -100,6 +102,18 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     alertsQueryState?.sortBy,
     alertsQueryState?.sortDirection
   );
+
+  useEffect(() => {
+    if (isLiveUpdateEnabled) {
+      if (!isAsyncLoading) {
+        setAlerts(fetchedAlerts);
+      }
+
+      return;
+    }
+
+    setAlerts(isAsyncLoading ? undefined : fetchedAlerts);
+  }, [isLiveUpdateEnabled, isAsyncLoading, fetchedAlerts]);
 
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
@@ -127,15 +141,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     [setRefreshToken, pollAlerts]
   );
 
-  useEffect(
-    function refreshAlerts() {
-      if (refreshToken) {
-        mutateAlerts();
-      }
-    },
-    [mutateAlerts, refreshToken]
-  );
-
   // if we don't have presets data yet, just show loading
   if (!selectedPreset && isPresetsLoading) {
     return <Loading />;
@@ -157,18 +162,19 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         key={selectedPreset.name}
         refreshToken={refreshToken}
         preset={selectedPreset}
-        alerts={alerts}
+        alerts={alerts || []}
         alertsTotalCount={totalCount}
-        isAsyncLoading={isAsyncLoading}
+        isAsyncLoading={!alerts}
         setTicketModalAlert={setTicketModalAlert}
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
         setDismissModalAlert={setDismissModalAlert}
         setChangeStatusAlert={setChangeStatusAlert}
         mutateAlerts={mutateAlerts}
-        onQueryChange={setAlertsQueryState}
+        onQueryChange={(alertsQuery) => setAlertsQueryState(alertsQuery)}
+        onLiveUpdateStateChange={setIsLiveUpdateEnabled}
       />
-      <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
+      <AlertHistory alerts={alerts || []} presetName={selectedPreset.name} />
       <AlertDismissModal
         alert={dismissModalAlert}
         preset={selectedPreset.name}
@@ -179,7 +185,10 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         presetName={selectedPreset.name}
         handleClose={() => setChangeStatusAlert(null)}
       />
-      <AlertMethodModal alerts={alerts} presetName={selectedPreset.name} />
+      <AlertMethodModal
+        alerts={alerts || []}
+        presetName={selectedPreset.name}
+      />
       <AlertAssignTicketModal
         handleClose={() => setTicketModalAlert(null)}
         ticketingProviders={ticketingProviders}
