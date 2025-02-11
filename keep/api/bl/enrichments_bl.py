@@ -39,10 +39,9 @@ def get_nested_attribute(obj: AlertDto, attr_path: str):
     if attr_path == "source" and obj.source is not None and len(obj.source) > 0:
         return obj.source[0]
 
-    if "&&" in attr_path:
-        attr_paths = [attr.strip() for attr in attr_path.split("&&")]
+    if isinstance(attr_path, list):
         return (
-            all(get_nested_attribute(obj, attr) is not None for attr in attr_paths)
+            all(get_nested_attribute(obj, attr) is not None for attr in attr_path)
             or None
         )
 
@@ -256,10 +255,22 @@ class EnrichmentsBl:
         )
 
         # Check if the alert has any of the attributes defined in matchers
-        if not any(
-            get_nested_attribute(alert, matcher) is not None
-            for matcher in rule.matchers
-        ):
+        match = False
+        for matcher in rule.matchers:
+            if get_nested_attribute(alert, matcher) is not None:
+                self._add_enrichment_log(
+                    f"Alert matched a mapping rule for matcher: {matcher}",
+                    "debug",
+                    {
+                        "fingerprint": alert.fingerprint,
+                        "rule_id": rule.id,
+                        "matcher": matcher,
+                    },
+                )
+                match = True
+                break
+
+        if not match:
             self._add_enrichment_log(
                 "Alert does not match any of the conditions for the rule",
                 "debug",
@@ -319,7 +330,7 @@ class EnrichmentsBl:
                         if value is not None:
                             is_matcher = False
                             for matcher in rule.matchers:
-                                if key in matcher.replace(" ", "").split("&&"):
+                                if key in matcher:
                                     is_matcher = True
                                     break
                             if not is_matcher:
@@ -382,7 +393,7 @@ class EnrichmentsBl:
             return False
         return re.search(pattern, value) is not None
 
-    def _check_matcher(self, alert: AlertDto, row: dict, matcher: str) -> bool:
+    def _check_matcher(self, alert: AlertDto, row: dict, matcher: list) -> bool:
         """
         Check if the alert matches the conditions specified by a matcher.
 
@@ -395,28 +406,16 @@ class EnrichmentsBl:
         - bool: True if alert matches the matcher, False otherwise.
         """
         try:
-            if "&&" in matcher:
-                # Split by "&&" for AND condition
-                conditions = matcher.split("&&")
-                return all(
-                    self._is_match(
-                        get_nested_attribute(alert, attribute.strip()),
-                        row.get(attribute.strip()),
-                    )
-                    or get_nested_attribute(alert, attribute.strip())
-                    == row.get(attribute.strip())
-                    or row.get(attribute.strip()) == "*"  # Wildcard match
-                    for attribute in conditions
+            return all(
+                self._is_match(
+                    get_nested_attribute(alert, attribute.strip()),
+                    row.get(attribute.strip()),
                 )
-            else:
-                # Single condition check
-                return (
-                    self._is_match(
-                        get_nested_attribute(alert, matcher), row.get(matcher)
-                    )
-                    or get_nested_attribute(alert, matcher) == row.get(matcher)
-                    or row.get(matcher) == "*"  # Wildcard match
-                )
+                or get_nested_attribute(alert, attribute.strip())
+                == row.get(attribute.strip())
+                or row.get(attribute.strip()) == "*"  # Wildcard match
+                for attribute in matcher
+            )
         except TypeError:
             self._add_enrichment_log(
                 "Error while checking matcher",

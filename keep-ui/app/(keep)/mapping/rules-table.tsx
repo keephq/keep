@@ -19,7 +19,7 @@ import {
   useReactTable,
   ExpandedState,
 } from "@tanstack/react-table";
-import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
+import { MdRemoveCircle, MdModeEdit, MdPlayArrow } from "react-icons/md";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";
 import { useState } from "react";
@@ -29,6 +29,7 @@ import * as HoverCard from "@radix-ui/react-hover-card";
 import TimeAgo from "react-timeago";
 import { FaFileCsv, FaFileCode, FaNetworkWired } from "react-icons/fa";
 import { Fragment } from "react";
+import { Cog8ToothIcon } from "@heroicons/react/24/solid";
 const columnHelper = createColumnHelper<MappingRule>();
 
 interface Props {
@@ -131,6 +132,24 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       header: "",
       cell: (context) => (
         <div className="space-x-1 flex flex-row items-center justify-end opacity-0 group-hover:opacity-100 bg-slate-100 border-l">
+          <Button
+            color="orange"
+            size="xs"
+            icon={Cog8ToothIcon}
+            tooltip="Executions"
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          />
+          <Button
+            color="orange"
+            size="xs"
+            icon={MdPlayArrow}
+            tooltip="Run"
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          />
           <Button
             color="orange"
             size="xs"
