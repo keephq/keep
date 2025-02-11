@@ -16,23 +16,12 @@ type UseWorkflowActionsReturn = {
     definition: Definition | Record<string, unknown>
   ) => Promise<CreateOrUpdateWorkflowResponse | null>;
   deleteWorkflow: (workflowId: string) => void;
-  testWorkflow: (
-    definition: Definition
-  ) => Promise<TestWorkflowResponse | null>;
 };
 
 type CreateOrUpdateWorkflowResponse = {
   workflow_id: string;
   status: "created" | "updated";
   revision: number;
-};
-
-// TODO: move to api layer
-type TestWorkflowResponse = {
-  workflow_execution_id: string;
-  status: "success" | "error";
-  error: string | null;
-  results: Record<string, unknown>;
 };
 
 export function useWorkflowActions(): UseWorkflowActionsReturn {
@@ -91,7 +80,6 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
         return response;
       } catch (error) {
         showErrorToast(error, "Failed to update workflow");
-        console.error(error);
         return null;
       }
     },
@@ -121,26 +109,9 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
     [api, refreshWorkflows]
   );
 
-  const testWorkflow = useCallback(
-    async (definition: Definition) => {
-      const body = stringify(getWorkflowFromDefinition(definition));
-      const response = await api.request<TestWorkflowResponse>(
-        "/workflows/test",
-        {
-          method: "POST",
-          body,
-          headers: { "Content-Type": "text/html" },
-        }
-      );
-      return response;
-    },
-    [api]
-  );
-
   return {
     createWorkflow,
     updateWorkflow,
     deleteWorkflow,
-    testWorkflow,
   };
 }

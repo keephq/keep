@@ -3,19 +3,42 @@ import { IoMdSettings, IoMdClose } from "react-icons/io";
 import { useStore } from "./builder-store";
 import { GlobalEditorV2, StepEditorV2 } from "./editors";
 import { Provider } from "@/app/(keep)/providers/providers";
+import debounce from "lodash.debounce";
+import {
+  Definition,
+  ReactFlowDefinition,
+  V2Step,
+} from "@/app/(keep)/workflows/builder/types";
+import { getDefinitionFromNodesEdgesProperties } from "./utils";
 
 const ReactFlowEditor = ({
   providers,
   installedProviders,
+  validatorConfiguration,
+  onDefinitionChange,
 }: {
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
+  validatorConfiguration: {
+    step: (
+      step: V2Step,
+      parent?: V2Step,
+      defnition?: ReactFlowDefinition
+    ) => boolean;
+    root: (def: Definition) => boolean;
+  };
+  onDefinitionChange: (def: Definition) => void;
 }) => {
   const {
     selectedNode,
-    setOpneGlobalEditor: setGlobalEditorOpen,
-    setCanDeploy,
+    changes,
+    setOpneGlobalEditor,
     synced,
+    setSynced,
+    setCanDeploy,
+    nodes,
+    edges,
+    v2Properties,
   } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const stepEditorRef = useRef<HTMLDivElement>(null);
@@ -37,7 +60,7 @@ const ReactFlowEditor = ({
       saveRef.current = false;
       const timer = setTimeout(() => {
         if (isTrigger) {
-          setGlobalEditorOpen(true);
+          setOpneGlobalEditor(true);
           return;
         }
         if (containerRef.current && stepEditorRef.current) {
@@ -58,6 +81,31 @@ const ReactFlowEditor = ({
       return () => clearTimeout(timer); // Cleanup the timer on unmount
     }
   }, [selectedNode]);
+
+  useEffect(() => {
+    setSynced(false);
+
+    const handleDefinitionChange = () => {
+      const newDefinition = getDefinitionFromNodesEdgesProperties(
+        nodes,
+        edges,
+        v2Properties,
+        validatorConfiguration
+      );
+      onDefinitionChange(newDefinition);
+      setSynced(true);
+    };
+    const debouncedHandleDefinitionChange = debounce(
+      handleDefinitionChange,
+      300
+    );
+
+    debouncedHandleDefinitionChange();
+
+    return () => {
+      debouncedHandleDefinitionChange.cancel();
+    };
+  }, [changes]);
 
   return (
     <div
