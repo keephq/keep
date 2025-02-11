@@ -79,7 +79,6 @@ export function WorkflowBuilderPageClient({
   const {
     canDeploy,
     buttonsEnabled,
-    triggerGenerate,
     triggerSave,
     triggerRun,
     isSaving,
@@ -210,19 +209,6 @@ export function WorkflowBuilderPageClient({
           >
             Test Run
           </Button>
-          {!workflow && (
-            <Button
-              variant="secondary"
-              disabled={!isValid}
-              color="orange"
-              size="md"
-              className="min-w-28"
-              icon={BoltIcon}
-              onClick={() => triggerGenerate()}
-            >
-              Get YAML
-            </Button>
-          )}
           <Button
             color="orange"
             size="md"

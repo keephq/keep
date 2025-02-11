@@ -171,12 +171,11 @@ const defaultState: FlowStateValues = {
   synced: true,
   canDeploy: false,
   buttonsEnabled: false,
-  generateRequestCount: 0,
   saveRequestCount: 0,
   runRequestCount: 0,
   isSaving: false,
   definition: null,
-  isLoading: true,
+  isLoading: false,
   validationErrors: {},
 };
 
@@ -186,10 +185,6 @@ const useStore = create<FlowState>()(
     setDefinition: (def) => set({ definition: def }),
     setIsLoading: (loading) => set({ isLoading: loading }),
     setButtonsEnabled: (state: boolean) => set({ buttonsEnabled: state }),
-    triggerGenerate: () =>
-      set((state) => ({
-        generateRequestCount: state.generateRequestCount + 1,
-      })),
     triggerSave: () =>
       set((state) => ({ saveRequestCount: state.saveRequestCount + 1 })),
     triggerRun: () =>

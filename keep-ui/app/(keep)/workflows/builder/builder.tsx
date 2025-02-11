@@ -12,7 +12,6 @@ import {
   CheckCircleIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
-import BuilderModalContent from "./builder-modal";
 import { stringify } from "yaml";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
@@ -26,11 +25,13 @@ import { ReactFlowProvider } from "@xyflow/react";
 import useStore from "./builder-store";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
-import { showErrorToast } from "@/shared/ui";
+import { ResizableColumns, showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 import Modal from "@/components/ui/Modal";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import Loading from "../../loading";
+import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
+import Skeleton from "react-loading-skeleton";
 interface Props {
   loadedAlertFile: string | null;
   providers: Provider[];
@@ -47,7 +48,6 @@ function Builder({
   installedProviders,
 }: Props) {
   const api = useApi();
-  const [generateModalIsOpen, setGenerateModalIsOpen] = useState(false);
   const [testRunModalOpen, setTestRunModalOpen] = useState(false);
   const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<
     WorkflowExecutionDetail | WorkflowExecutionFailure | null
@@ -60,7 +60,6 @@ function Builder({
     isLoading,
     setIsLoading,
     // UI State
-    generateRequestCount,
     saveRequestCount,
     runRequestCount,
     setIsSaving,
@@ -164,20 +163,12 @@ function Builder({
     },
     [loadedAlertFile, workflow, searchParams, providers]
   );
-
-  const legacyWorkflow = useMemo(() => {
+  const workflowYaml = useMemo(() => {
     if (!definition?.value) {
       return null;
     }
-    return getWorkflowFromDefinition(definition.value);
+    return stringify({ workflow: getWorkflowFromDefinition(definition.value) });
   }, [definition?.value]);
-
-  useEffect(() => {
-    if (generateRequestCount) {
-      if (!generateModalIsOpen) setGenerateModalIsOpen(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [generateRequestCount]);
 
   useEffect(() => {
     if (runRequestCount) {
@@ -260,10 +251,6 @@ function Builder({
     );
   }
 
-  function closeGenerateModal() {
-    setGenerateModalIsOpen(false);
-  }
-
   const closeWorkflowExecutionResultsModal = () => {
     setTestRunModalOpen(false);
     setRunningWorkflowExecution(null);
@@ -304,28 +291,37 @@ function Builder({
       <div className="h-full">
         {getworkflowStatus()}
         <Card className="mt-2 p-0 h-[90%] overflow-hidden">
-          <div className="flex h-full">
-            <div className="flex-1 h-full relative">
-              <ReactFlowProvider>
-                <ReactFlowBuilder
-                  providers={providers}
-                  installedProviders={installedProviders}
+          <ResizableColumns
+            leftChild={
+              workflowYaml ? (
+                <MonacoYAMLEditor
+                  key={workflowYaml}
+                  workflowRaw={workflowYaml}
+                  filename={workflowId ?? "workflow"}
+                  workflowId={workflowId}
+                  // TODO: support readOnly for not yet deployed workflows
+                  readOnly={!workflowId}
                 />
-              </ReactFlowProvider>
-            </div>
-          </div>
+              ) : (
+                <Skeleton className="w-full h-full" />
+              )
+            }
+            initialLeftWidth={33}
+            rightChild={
+              <div className="flex h-full">
+                <div className="flex-1 h-full relative">
+                  <ReactFlowProvider>
+                    <ReactFlowBuilder
+                      providers={providers}
+                      installedProviders={installedProviders}
+                    />
+                  </ReactFlowProvider>
+                </div>
+              </div>
+            }
+          />
         </Card>
       </div>
-      <Modal
-        onClose={closeGenerateModal}
-        isOpen={generateModalIsOpen}
-        className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
-      >
-        <BuilderModalContent
-          closeModal={closeGenerateModal}
-          compiledAlert={legacyWorkflow}
-        />
-      </Modal>
       <Modal
         isOpen={testRunModalOpen}
         onClose={closeWorkflowExecutionResultsModal}

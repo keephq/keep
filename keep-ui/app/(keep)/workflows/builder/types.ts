@@ -81,14 +81,12 @@ export interface FlowStateValues {
   openGlobalEditor: boolean;
   stepEditorOpenForNode: string | null;
   buttonsEnabled: boolean;
-  generateRequestCount: number;
   saveRequestCount: number;
   runRequestCount: number;
 }
 
 export interface FlowState extends FlowStateValues {
   setButtonsEnabled: (state: boolean) => void;
-  triggerGenerate: () => void;
   triggerSave: () => void;
   triggerRun: () => void;
   setIsSaving: (state: boolean) => void;
