@@ -101,6 +101,10 @@ function Builder({
   useEffect(
     function updateDefinitionFromInput() {
       setIsLoading(true);
+      if (definition !== null) {
+        setIsLoading(false);
+        return;
+      }
       try {
         if (workflow) {
           setDefinition(
@@ -151,7 +155,7 @@ function Builder({
       }
       setIsLoading(false);
     },
-    [loadedAlertFile, workflow, searchParams, providers]
+    [loadedAlertFile, workflow, searchParams, providers, definition]
   );
 
   const legacyWorkflow = useMemo(() => {
@@ -243,7 +247,7 @@ function Builder({
   if (isLoading) {
     return (
       <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
-        <Loading loadingText="Initializing workflow builder..." />
+        <Loading loadingText="Loading workflow..." />
       </Card>
     );
   }

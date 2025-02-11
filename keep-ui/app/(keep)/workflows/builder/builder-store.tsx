@@ -126,6 +126,7 @@ function addNodeBetween(
     isLayouted: false,
     changes: get().changes + 1,
   });
+  get().onLayout({ direction: "DOWN" });
   get().updateDefinition();
   if (type == "edge") {
     set({
@@ -481,6 +482,7 @@ const useStore = create<FlowState>()(
         changes: get().changes + 1,
         openGlobalEditor: true,
       });
+      get().onLayout({ direction: "DOWN" });
       get().updateDefinition();
     },
     // used to reset the store to the initial state, on builder unmount
@@ -589,6 +591,7 @@ async function initializeWorkflow(
     toolboxConfiguration,
     isLoading: false,
   });
+  get().onLayout({ direction: "DOWN" });
   get().updateDefinition();
 }
 

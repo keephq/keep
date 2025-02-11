@@ -1,7 +1,7 @@
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { Card, Callout } from "@tremor/react";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { EmptyBuilderState } from "./empty-builder-state";
 import { Provider } from "../../providers/providers";
 import { useProviders } from "utils/hooks/useProviders";
@@ -66,12 +66,14 @@ export function BuilderCard({ fileContents, workflow, workflowId }: Props) {
   }
 
   return (
-    <Builder
-      providers={providers}
-      installedProviders={installedProviders}
-      loadedAlertFile={fileContents}
-      workflow={workflow}
-      workflowId={workflowId}
-    />
+    <Suspense fallback={<Loading loadingText="Loading workflow builder..." />}>
+      <Builder
+        providers={providers}
+        installedProviders={installedProviders}
+        loadedAlertFile={fileContents}
+        workflow={workflow}
+        workflowId={workflowId}
+      />
+    </Suspense>
   );
 }

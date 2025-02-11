@@ -13,6 +13,7 @@ import { Provider } from "@/app/(keep)/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
 import "@xyflow/react/dist/style.css";
 import { getToolboxConfiguration } from "./utils";
+import Loading from "../../loading";
 
 const nodeTypes = { custom: CustomNode as any };
 const edgeTypes: EdgeTypesType = {
@@ -44,7 +45,7 @@ const ReactFlowBuilder = ({
     <div className="h-[inherit] rounded-lg">
       <div className="h-full sqd-theme-light sqd-layout-desktop">
         <DragAndDropSidebar isDraggable={false} />
-        {isLayouted && (
+        {isLayouted ? (
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -60,6 +61,8 @@ const ReactFlowBuilder = ({
             <Controls orientation="horizontal" />
             <Background />
           </ReactFlow>
+        ) : (
+          <Loading loadingText="Initializing workflow builder..." />
         )}
         <ReactFlowEditor
           providers={providers}

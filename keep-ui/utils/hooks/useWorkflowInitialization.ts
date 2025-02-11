@@ -19,7 +19,6 @@ const useWorkflowInitialization = (
     selectedNode,
     isLayouted,
     changes,
-    onLayout,
     initializeWorkflow,
     isLoading,
   } = useStore();
@@ -32,12 +31,6 @@ const useWorkflowInitialization = (
     },
     [screenToFlowPosition]
   );
-
-  useEffect(() => {
-    if (!isLayouted && nodes.length > 0) {
-      onLayout({ direction: "DOWN" });
-    }
-  }, [nodes, edges]);
 
   useEffect(() => {
     if (changes === 0) {
