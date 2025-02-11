@@ -477,7 +477,6 @@ const useStore = create<FlowState>()(
         ...nodes.slice(endIndex + 2),
       ];
       if (["manual", "alert", "interval", "incident"].includes(ids)) {
-        console.log("REMOVING PROPERTY", ids);
         const v2Properties = get().v2Properties;
         delete v2Properties[ids];
         set({ v2Properties });
