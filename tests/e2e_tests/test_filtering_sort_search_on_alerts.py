@@ -174,7 +174,6 @@ def upload_alerts():
 
     for alert_index, provider_type in enumerate(["datadog"] * 10 + ["prometheus"] * 10):
         alert = create_fake_alert(alert_index, provider_type)
-        alert["temp_id"] = str(uuid.uuid4())
         alert["dateForTests"] = (
             datetime(2025, 2, 10, 10) + timedelta(days=-alert_index)
         ).isoformat()
