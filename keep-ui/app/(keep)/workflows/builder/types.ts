@@ -102,7 +102,6 @@ export interface FlowState extends FlowStateValues {
   setToolBoxConfig: (config: Record<string, any>) => void;
   setOpneGlobalEditor: (open: boolean) => void;
   updateSelectedNodeData: (key: string, value: any) => void;
-  setV2Properties: (properties: Record<string, any>) => void;
   updateV2Properties: (properties: Record<string, any>) => void;
   setSelectedNode: (id: string | null) => void;
   setStepEditorOpenForNode: (nodeId: string | null) => void;

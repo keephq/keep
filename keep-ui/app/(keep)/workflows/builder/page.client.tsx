@@ -29,6 +29,7 @@ export function WorkflowBuilderPageClient({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const {
+    canDeploy,
     buttonsEnabled,
     triggerGenerate,
     triggerSave,
@@ -178,7 +179,7 @@ export function WorkflowBuilderPageClient({
             size="md"
             className="min-w-28"
             icon={ArrowUpOnSquareIcon}
-            disabled={!isValid || isSaving}
+            disabled={!canDeploy || isSaving}
             onClick={() => triggerSave()}
           >
             {isSaving ? "Saving..." : "Save & Deploy"}

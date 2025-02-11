@@ -189,7 +189,7 @@ describe("useStore", () => {
             isNested: false,
           } as FlowNode,
         ]);
-        result.current.setV2Properties({ interval: "5m" });
+        result.current.updateV2Properties({ interval: "5m" });
       });
 
       // Delete interval trigger

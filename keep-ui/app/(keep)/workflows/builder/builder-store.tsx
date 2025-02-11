@@ -234,8 +234,6 @@ const useStore = create<FlowState>()(
         get().updateDefinition();
       }
     },
-    setV2Properties: (properties) =>
-      set({ v2Properties: properties, canDeploy: false }),
     updateDefinition: () => {
       // Immediately update definition with new properties
       const { nodes, edges } = get();
@@ -268,6 +266,12 @@ const useStore = create<FlowState>()(
         }
       }
 
+      // We allow deployment even if there are provider errors, as the user can fix them later
+      const canDeploy =
+        Object.values(validationErrors).filter(
+          (error) => !error.includes("provider")
+        ).length === 0;
+
       set({
         definition: wrapDefinitionV2({
           sequence,
@@ -275,6 +279,7 @@ const useStore = create<FlowState>()(
           isValid,
         }),
         validationErrors,
+        canDeploy,
         synced: true,
       });
     },

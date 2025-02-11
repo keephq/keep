@@ -19,7 +19,7 @@ import {
 } from "@heroicons/react/24/outline";
 import React, { useCallback } from "react";
 import useStore from "./builder-store";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { V2Properties } from "@/app/(keep)/workflows/builder/types";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import debounce from "lodash.debounce";
@@ -37,7 +37,7 @@ export function GlobalEditorV2({ synced }: { synced: boolean }) {
   );
 }
 
-interface keepEditorProps {
+interface KeepEditorProps {
   properties: V2Properties;
   updateProperty: (key: string, value: any) => void;
   providers?: Provider[] | null | undefined;
@@ -54,7 +54,12 @@ function KeepStepEditor({
   providers,
   providerType,
   type,
-}: keepEditorProps) {
+  providerError,
+  parametersError,
+}: KeepEditorProps & {
+  providerError?: string | null;
+  parametersError?: string | null;
+}) {
   const stepParams =
     ((type?.includes("step-")
       ? properties.stepParams
@@ -80,160 +85,174 @@ function KeepStepEditor({
         p.type === providerType && p.config && Object.keys(p.config).length > 0
     ) ?? false;
 
+  // TODO: move this to validateStepPure
+  const providerNameError =
+    providerConfig &&
+    isThisProviderNeedsInstallation &&
+    installedProviderByType?.find((p) => p.details?.name === providerConfig) ===
+      undefined
+      ? "This provider is not installed and you'll need to install it before executing this workflow."
+      : "";
+
   return (
-    <>
-      <Text>Provider Name</Text>
-      <Select
-        className="my-2.5"
-        placeholder={`Select from installed ${providerType} providers`}
-        disabled={
-          installedProviderByType?.length === 0 || !installedProviderByType
-        }
-        onValueChange={(value) => updateProperty("config", value)}
-      >
-        {
-          installedProviderByType?.map((provider) => {
-            const providerName = provider.details?.name ?? provider.id;
-            return (
-              <SelectItem
-                icon={() => (
-                  <DynamicImageProviderIcon
-                    providerType={providerType!}
-                    width="24"
-                    height="24"
-                  />
-                )}
-                key={providerName}
-                value={providerName}
-              >
-                {providerName}
-              </SelectItem>
-            );
-          })!
-        }
-      </Select>
-      <Subtitle>Or</Subtitle>
-      <TextInput
-        placeholder="Enter provider name manually"
-        onChange={(e: any) => updateProperty("config", e.target.value)}
-        className="my-2.5"
-        value={providerConfig || ""}
-        error={
-          providerConfig !== "" &&
-          providerConfig !== undefined &&
-          isThisProviderNeedsInstallation &&
-          installedProviderByType?.find(
-            (p) => p.details?.name === providerConfig
-          ) === undefined
-        }
-        errorMessage={`${
-          providerConfig &&
-          isThisProviderNeedsInstallation &&
-          installedProviderByType?.find(
-            (p) => p.details?.name === providerConfig
-          ) === undefined
-            ? "Please note this provider is not installed and you'll need to install it before executing this workflow."
-            : ""
-        }`}
-      />
-      <Text className="my-2.5">Provider Parameters</Text>
-      <div>
-        <Text>If</Text>
-        <TextInput
-          id="if"
-          placeholder="If Condition"
-          onValueChange={(value) => updateProperty("if", value)}
-          className="mb-2.5"
-          value={properties?.if || ("" as string)}
-        />
-      </div>
-      <div>
-        <Text>Vars</Text>
-        {Object.entries(properties?.vars || {}).map(([varKey, varValue]) => (
-          <div key={varKey} className="flex items-center mt-1">
-            <TextInput
-              placeholder={`Key ${varKey}`}
-              value={varKey}
-              onChange={(e) => {
-                const updatedVars = {
-                  ...(properties.vars as { [key: string]: string }),
-                };
-                delete updatedVars[varKey];
-                updatedVars[e.target.value] = varValue as string;
-                updateProperty("vars", updatedVars);
-              }}
-            />
-            <TextInput
-              placeholder={`Value ${varValue}`}
-              value={varValue as string}
-              onChange={(e) => {
-                const updatedVars = {
-                  ...(properties.vars as { [key: string]: string }),
-                };
-                updatedVars[varKey] = e.target.value;
-                updateProperty("vars", updatedVars);
-              }}
-            />
-            <Icon
-              icon={BackspaceIcon}
-              className="cursor-pointer"
-              color="red"
-              tooltip={`Remove ${varKey}`}
-              onClick={() => {
-                const updatedVars = {
-                  ...(properties.vars as { [key: string]: string }),
-                };
-                delete updatedVars[varKey];
-                updateProperty("vars", updatedVars);
-              }}
-            />
-          </div>
-        ))}
-        <Button
-          onClick={() => {
-            const updatedVars = {
-              ...(properties.vars as { [key: string]: string }),
-              "": "",
-            };
-            updateProperty("vars", updatedVars);
-          }}
-          size="xs"
-          className="ml-1 mt-1"
-          variant="light"
-          color="gray"
-          icon={PlusIcon}
-        >
-          Add Var
-        </Button>
-      </div>
-      {uniqueParams
-        ?.filter((key) => key !== "kwargs")
-        .map((key, index) => {
-          let currentPropertyValue = ((properties.with as any) ?? {})[key];
-          if (typeof currentPropertyValue === "object") {
-            currentPropertyValue = JSON.stringify(currentPropertyValue);
+    <div className="flex flex-col gap-2">
+      <section>
+        <div className="mb-2">
+          <Text className="font-bold">Provider Name</Text>
+          {providerError && (
+            <Text className="text-red-500">{providerError}</Text>
+          )}
+        </div>
+        <Text className="mb-1.5">
+          Select from installed {providerType} providers
+        </Text>
+        <Select
+          className="mb-1.5"
+          placeholder="Select provider"
+          disabled={
+            installedProviderByType?.length === 0 || !installedProviderByType
           }
-          return (
-            <div key={index}>
-              <Text>{key}</Text>
+          onValueChange={(value) => updateProperty("config", value)}
+        >
+          {
+            installedProviderByType?.map((provider) => {
+              const providerName = provider.details?.name ?? provider.id;
+              return (
+                <SelectItem
+                  icon={() => (
+                    <DynamicImageProviderIcon
+                      providerType={providerType!}
+                      width="24"
+                      height="24"
+                      className="mr-1.5"
+                    />
+                  )}
+                  key={providerName}
+                  value={providerName}
+                >
+                  {providerName}
+                </SelectItem>
+              );
+            })!
+          }
+        </Select>
+        {/* TODO: replace with select with "create new" option */}
+        <p className="text-sm text-gray-500 text-center mb-1.5">or</p>
+        <Text className="mb-1.5">Enter provider name manually</Text>
+        <TextInput
+          placeholder="Enter provider name"
+          onChange={(e: any) => updateProperty("config", e.target.value)}
+          className="mb-2.5"
+          value={providerConfig || ""}
+          error={!!providerNameError}
+          errorMessage={providerNameError ?? undefined}
+        />
+      </section>
+      <section>
+        <div className="mb-2">
+          <Text className="font-bold">Provider Parameters</Text>
+          {parametersError && (
+            <Text className="text-red-500">{parametersError}</Text>
+          )}
+        </div>
+        <div>
+          <Text>If</Text>
+          <TextInput
+            id="if"
+            placeholder="If Condition"
+            onValueChange={(value) => updateProperty("if", value)}
+            className="mb-2.5"
+            value={properties?.if || ("" as string)}
+          />
+        </div>
+        <div>
+          <Text>Vars</Text>
+          {Object.entries(properties?.vars || {}).map(([varKey, varValue]) => (
+            <div key={varKey} className="flex items-center mt-1">
               <TextInput
-                id={`${key}`}
-                placeholder={key}
-                onChange={propertyChanged}
-                className="mb-2.5"
-                value={currentPropertyValue || ""}
+                placeholder={`Key ${varKey}`}
+                value={varKey}
+                onChange={(e) => {
+                  const updatedVars = {
+                    ...(properties.vars as { [key: string]: string }),
+                  };
+                  delete updatedVars[varKey];
+                  updatedVars[e.target.value] = varValue as string;
+                  updateProperty("vars", updatedVars);
+                }}
+              />
+              <TextInput
+                placeholder={`Value ${varValue}`}
+                value={varValue as string}
+                onChange={(e) => {
+                  const updatedVars = {
+                    ...(properties.vars as { [key: string]: string }),
+                  };
+                  updatedVars[varKey] = e.target.value;
+                  updateProperty("vars", updatedVars);
+                }}
+              />
+              <Icon
+                icon={BackspaceIcon}
+                className="cursor-pointer"
+                color="red"
+                tooltip={`Remove ${varKey}`}
+                onClick={() => {
+                  const updatedVars = {
+                    ...(properties.vars as { [key: string]: string }),
+                  };
+                  delete updatedVars[varKey];
+                  updateProperty("vars", updatedVars);
+                }}
               />
             </div>
-          );
-        })}
-    </>
+          ))}
+          <Button
+            onClick={() => {
+              const updatedVars = {
+                ...(properties.vars as { [key: string]: string }),
+                "": "",
+              };
+              updateProperty("vars", updatedVars);
+            }}
+            size="xs"
+            className="ml-1 mt-1"
+            variant="light"
+            color="gray"
+            icon={PlusIcon}
+          >
+            Add Var
+          </Button>
+        </div>
+        {uniqueParams
+          ?.filter((key) => key !== "kwargs")
+          .map((key, index) => {
+            let currentPropertyValue = ((properties.with as any) ?? {})[key];
+            if (typeof currentPropertyValue === "object") {
+              currentPropertyValue = JSON.stringify(currentPropertyValue);
+            }
+            return (
+              <div key={index}>
+                <Text>{key}</Text>
+                <TextInput
+                  id={`${key}`}
+                  placeholder={key}
+                  onChange={propertyChanged}
+                  className="mb-2.5"
+                  value={currentPropertyValue || ""}
+                />
+              </div>
+            );
+          })}
+      </section>
+    </div>
   );
 }
 
 function KeepThresholdConditionEditor({
   properties,
   updateProperty,
-}: keepEditorProps) {
+}: KeepEditorProps) {
   const currentValueValue = (properties.value as string) ?? "";
   const currentCompareToValue = (properties.compare_to as string) ?? "";
   return (
@@ -259,7 +278,7 @@ function KeepThresholdConditionEditor({
 function KeepAssertConditionEditor({
   properties,
   updateProperty,
-}: keepEditorProps) {
+}: KeepEditorProps) {
   const currentAssertValue = (properties.assert as string) ?? "";
   return (
     <>
@@ -274,7 +293,7 @@ function KeepAssertConditionEditor({
   );
 }
 
-function KeepForeachEditor({ properties, updateProperty }: keepEditorProps) {
+function KeepForeachEditor({ properties, updateProperty }: KeepEditorProps) {
   const currentValueValue = (properties.value as string) ?? "";
 
   return (
@@ -634,8 +653,6 @@ export function StepEditorV2({
   const { updateSelectedNodeData, setSynced, triggerSave, validationErrors } =
     useStore();
 
-  const error = validationErrors?.[formData.name || ""];
-
   const saveFormDataToStoreDebounced = useCallback(
     debounce((formData: any) => {
       updateSelectedNodeData("name", formData.name);
@@ -673,10 +690,20 @@ export function StepEditorV2({
     ? formData.type?.includes("step-") || formData.type?.includes("action-")
     : "";
 
+  const error = validationErrors?.[formData.name || ""];
+  let parametersError = null;
+  let providerError = null;
+  if (error?.includes("parameters")) {
+    parametersError = error;
+  }
+
+  if (error?.includes("provider")) {
+    providerError = error;
+  }
+
   return (
     <EditorLayout>
       <Title className="capitalize">{providerType} Editor</Title>
-      {error && <Text className="text-red-500">{error}</Text>}
       <Text className="mt-1">Unique Identifier</Text>
       <TextInput
         className="mb-2.5"
@@ -687,6 +714,8 @@ export function StepEditorV2({
       />
       {type && formData.properties ? (
         <KeepStepEditor
+          providerError={providerError}
+          parametersError={parametersError}
           properties={formData.properties}
           updateProperty={handlePropertyChange}
           providers={providers}

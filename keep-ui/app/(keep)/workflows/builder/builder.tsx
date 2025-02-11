@@ -11,7 +11,6 @@ import {
   CheckCircleIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
-import { LegacyWorkflow } from "./legacy-workflow.types";
 import BuilderModalContent from "./builder-modal";
 import { EmptyBuilderState } from "./empty-builder-state";
 import { stringify } from "yaml";
@@ -178,7 +177,7 @@ function Builder({
       );
       return;
     }
-    if (Object.keys(validationErrors).length > 0 || !definition.isValid) {
+    if (!canDeploy) {
       showErrorToast(
         new Error("Please fix the errors in the workflow before saving.")
       );
@@ -203,7 +202,7 @@ function Builder({
     }
   }, [
     synced,
-    definition.isValid,
+    canDeploy,
     definition.value,
     setIsSaving,
     workflowId,
@@ -220,15 +219,6 @@ function Builder({
     // ignore since we want the latest values, but to run effect only when triggerSave changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveRequestCount]);
-
-  // save workflow on "Save & Deploy" button click from FlowEditor
-  useEffect(() => {
-    if (canDeploy) {
-      saveWorkflow();
-    }
-    // ignore since we want the latest values, but to run effect only when triggerSave changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canDeploy]);
 
   useEffect(
     function resetZustandStateOnUnMount() {
@@ -260,7 +250,11 @@ function Builder({
     return Object.keys(validationErrors).length > 0 ? (
       <Callout
         className="mt-2.5 mb-2.5"
-        title="Fix the errors before saving"
+        title={
+          canDeploy
+            ? "Fix errors to run workflow"
+            : "Fix the errors before saving"
+        }
         icon={ExclamationCircleIcon}
         color="rose"
       >

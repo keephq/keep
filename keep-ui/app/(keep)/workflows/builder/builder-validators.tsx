@@ -263,12 +263,16 @@ export function validateStepPure(step: V2Step): string | null {
     if (!step?.name) {
       return "Step name cannot be empty.";
     }
+    const providerConfig = (step?.properties.config as string)?.trim();
+    if (!providerConfig) {
+      return "No provider selected";
+    }
     if (
       !Object.values(step?.properties?.with || {}).some(
         (value) => String(value).length > 0
       )
     ) {
-      return "Step with no parameters configured";
+      return "No parameters configured";
     }
     return null;
   }
