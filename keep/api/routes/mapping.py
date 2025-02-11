@@ -2,7 +2,7 @@ import datetime
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlmodel import Session
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
@@ -146,8 +146,65 @@ def update_rule(
     return response
 
 
+@router.get("/{rule_id}/executions", description="Get all executions for a rule")
+def get_enrichment_events(
+    rule_id: int,
+    limit: int = Query(20),
+    offset: int = Query(0),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:rules"])
+    ),
+):
+    logger.info(
+        "Getting enrichment events",
+        extra={
+            "rule_id": rule_id,
+            "limit": limit,
+            "offset": offset,
+            "tenant_id": authenticated_entity.tenant_id,
+        },
+    )
+    enrichment_bl = EnrichmentsBl(tenant_id=authenticated_entity.tenant_id)
+    events = enrichment_bl.get_enrichment_events(rule_id, limit, offset)
+    logger.info(
+        "Got enrichment events",
+        extra={"events_count": len(events)},
+    )
+    return events
+
+
+@router.get(
+    "/{rule_id}/executions/{enrichment_event_id}",
+    description="Get an execution for a rule",
+)
+def get_enrichment_event_logs(
+    rule_id: int,
+    enrichment_event_id: UUID,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:rules"])
+    ),
+):
+    logger.info(
+        "Getting enrichment event logs",
+        extra={
+            "rule_id": rule_id,
+            "enrichment_event_id": enrichment_event_id,
+            "tenant_id": authenticated_entity.tenant_id,
+        },
+    )
+    enrichment_bl = EnrichmentsBl(tenant_id=authenticated_entity.tenant_id)
+    logs = enrichment_bl.get_enrichment_event_logs(enrichment_event_id)
+    if not logs:
+        raise HTTPException(status_code=404, detail="Logs not found")
+    logger.info(
+        "Got enrichment event logs",
+        extra={"logs_count": len(logs)},
+    )
+    return logs
+
+
 @router.post(
-    "/{rule_id}/execute",
+    "/{rule_id}/execute/{alert_id}",
     description="Execute a mapping rule against an alert",
     responses={
         200: {"description": "Mapping rule executed successfully"},

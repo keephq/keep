@@ -7,7 +7,7 @@ from uuid import UUID
 import celpy
 import chevron
 from fastapi import HTTPException
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from keep.api.core.config import config
 from keep.api.core.db import enrich_entity as enrich_alert_db
@@ -494,6 +494,27 @@ class EnrichmentsBl:
         self.logger.debug(
             "alert enriched in elastic", extra={"fingerprint": fingerprint}
         )
+
+    def get_enrichment_events(self, rule_id: int, limit: int, offset: int):
+        # todo: easy to make async
+        query = (
+            select(EnrichmentEvent)
+            .where(
+                EnrichmentEvent.rule_id == rule_id,
+                EnrichmentEvent.tenant_id == self.tenant_id,
+            )
+            .order_by(EnrichmentEvent.timestamp.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return self.db_session.exec(query).all()
+
+    def get_enrichment_event_logs(self, enrichment_event_id: UUID):
+        query = select(EnrichmentLog).where(
+            EnrichmentLog.enrichment_event_id == enrichment_event_id,
+            EnrichmentLog.tenant_id == self.tenant_id,
+        )
+        return self.db_session.exec(query).all()
 
     def dispose_enrichments(self, fingerprint: str):
         """
