@@ -98,6 +98,7 @@ function Builder({
       });
   };
 
+  // TODO: move to useWorkflowInitialization
   useEffect(
     function updateDefinitionFromInput() {
       setIsLoading(true);
@@ -179,6 +180,7 @@ function Builder({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runRequestCount]);
 
+  // TODO: move to useWorkflowInitialization or somewhere upper
   const saveWorkflow = useCallback(async () => {
     if (!definition?.value) {
       showErrorToast(new Error("Workflow is not initialized"));
