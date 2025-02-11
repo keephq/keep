@@ -8,6 +8,7 @@ import {
   TableHead,
   TableHeaderCell,
   TableRow,
+  Text,
 } from "@tremor/react";
 import { MappingRule } from "./models";
 import {
@@ -57,13 +58,29 @@ const getTypeIcon = (type: string) => {
 };
 
 const formattedMatchers = (matchers: string[][]) => {
-  return matchers.map((matcher, index) => (
-    <Fragment key={index}>
-      <div className="p-2 bg-gray-50 border rounded space-x-2">
-        {matcher.join(",")}
-      </div>
-    </Fragment>
-  ));
+  return (
+    <div className="inline-flex items-center">
+      {matchers.map((matcher, index) => (
+        <Fragment key={index}>
+          <div className="p-2 bg-gray-50 border rounded space-x-2">
+            {matcher.map((attribute, index) => (
+              <Fragment key={attribute}>
+                <span className="space-x-2">
+                  <b>{attribute}</b>{" "}
+                  {index < matcher.length - 1 && <span>+</span>}
+                </span>
+              </Fragment>
+            ))}
+          </div>
+          {index < matchers.length - 1 && (
+            <Text className="mx-1" color="slate">
+              OR
+            </Text>
+          )}
+        </Fragment>
+      ))}
+    </div>
+  );
 };
 
 export default function RulesTable({ mappings, editCallback }: Props) {
@@ -94,11 +111,11 @@ export default function RulesTable({ mappings, editCallback }: Props) {
     columnHelper.display({
       id: "matchers",
       header: "Matchers",
-      cell: (context) => context.row.original.matchers.join(","),
+      cell: (context) => formattedMatchers(context.row.original.matchers),
     }),
     columnHelper.display({
       id: "attributes",
-      header: "Attributes",
+      header: "Enriched With",
       cell: (context) => (
         <div className="flex flex-wrap">
           {context.row.original.attributes?.map((attr) => (
@@ -198,7 +215,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
             <HoverCard.Root openDelay={2000} closeDelay={1000}>
               <HoverCard.Trigger asChild className="hover:cursor-pointer">
                 <TableRow
-                  className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 group"
+                  className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 group overflow-hidden"
                   key={row.id}
                   onClick={() => row.toggleExpanded()}
                 >
