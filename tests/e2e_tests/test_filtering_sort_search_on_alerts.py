@@ -1,5 +1,4 @@
 import os
-import random
 import time
 from datetime import datetime, timedelta
 import uuid
@@ -7,7 +6,6 @@ import uuid
 import pytest
 import requests
 from playwright.sync_api import expect, Browser
-import subprocess
 
 
 os.environ["PLAYWRIGHT_HEADLESS"] = "false"
@@ -34,20 +32,33 @@ def query_allerts(cell_query: str = None, limit: int = None, offset: int = None)
 
     if query_params:
         url += "?" + "&".join([f"{k}={v}" for k, v in query_params.items()])
+    result: dict = None
 
-    response: dict = requests.get(
-        url,
-        headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
-        timeout=5,
-    ).json()
+    for _ in range(5):
+        try:
+            response = requests.get(
+                url,
+                headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+                timeout=5,
+            )
+            response.raise_for_status()
+            result = response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to query alerts: {e}")
+            time.sleep(1)
+            continue
+
+    if result is None:
+        raise Exception(f"Failed to query alerts after {5} attempts")
+
     grouped_alerts_by_name = {}
 
-    for alert in response["results"]:
+    for alert in result["results"]:
         grouped_alerts_by_name.setdefault(alert["name"], []).append(alert)
 
     return {
-        "results": response["results"],
-        "count": response["count"],
+        "results": result["results"],
+        "count": result["count"],
         "grouped_by_name": grouped_alerts_by_name,
     }
 
@@ -156,13 +167,6 @@ def upload_alerts():
     current_alerts = query_allerts(limit=1000, offset=0)
     simulated_alerts = []
 
-    # def run_command_for_duration(command, duration):
-    #     process = subprocess.Popen(command, shell=True)
-    #     time.sleep(duration)
-    #     process.terminate()
-
-    # run_command_for_duration("your_command_here", 10)
-
     for alert_index, provider_type in enumerate(["datadog"] * 10 + ["prometheus"] * 10):
         alert = create_fake_alert(alert_index, provider_type)
         alert["temp_id"] = str(uuid.uuid4())
@@ -212,19 +216,14 @@ def upload_alerts():
     return current_alerts
 
 
-def init_test(browser: Browser):
-    current_alerts = upload_alerts()
-    current_alerts_results = current_alerts["results"]
-
+def init_test(browser: Browser, alerts):
     browser.goto(f"{KEEP_UI_URL}/alerts/feed", timeout=10000)
     browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
-    browser.wait_for_selector(
-        f"text={current_alerts_results[0]['name']}", timeout=10000
-    )
+    browser.wait_for_selector(f"text={alerts[0]['name']}", timeout=10000)
     rows_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()
     # check that required alerts are loaded and displayed
     assert rows_count == 20
-    return current_alerts_results
+    return alerts
 
 
 def select_one_facet_option(browser, facet_name, option_name):
@@ -303,15 +302,27 @@ facet_test_cases = {
 }
 
 
+@pytest.fixture(scope="module")
+def setup_test_data():
+    # Set up test data before all tests in this file
+    print("Setting up test data...")
+    test_data = upload_alerts()
+
+    yield test_data["results"]  # Provide test data to tests
+
+    # Teardown (cleanup) logic after tests run
+    print("Cleaning up test data...")
+
+
 @pytest.mark.parametrize("facet_test_case", facet_test_cases.keys())
-def test_filter_by_static_facet(browser, facet_test_case):
+def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
     test_case = facet_test_cases[facet_test_case]
     facet_name = facet_test_case
     alert_property_name = test_case["alert_property_name"]
     column_index = test_case.get("column_index", None)
     value = test_case["value"]
-    current_alerts = init_test(browser)
-
+    current_alerts = setup_test_data
+    init_test(browser, current_alerts)
     expect(
         browser.locator("[data-testid='facet']", has_text=facet_name)
     ).to_be_visible()
@@ -332,13 +343,13 @@ def test_filter_by_static_facet(browser, facet_test_case):
     )
 
 
-def test_adding_custom_facet(browser):
+def test_adding_custom_facet(browser, setup_test_data):
     facet_property_path = "custom_tags.env"
     facet_name = "Custom Env"
     alert_property_name = facet_property_path
     value = "environment:staging"
-    current_alerts = init_test(browser)
-
+    current_alerts = setup_test_data
+    init_test(browser, current_alerts)
     browser.locator("button", has_text="Add Facet").click()
 
     browser.locator("input[placeholder='Enter facet name']").fill(facet_name)
@@ -388,13 +399,15 @@ search_by_cel_tescases = {
     },
 }
 
+
 @pytest.mark.parametrize("search_test_case", search_by_cel_tescases.keys())
-def test_search_by_cel(browser, search_test_case):
+def test_search_by_cel(browser, search_test_case, setup_test_data):
     test_case = search_by_cel_tescases[search_test_case]
     cel_query = test_case["cel_query"]
     predicate = test_case["predicate"]
     alert_property_name = test_case["alert_property_name"]
-    current_alerts = init_test(browser)
+    current_alerts = setup_test_data
+    init_test(browser, current_alerts)
     search_input = browser.locator(
         "textarea[placeholder*='Use CEL to filter your alerts']"
     )
@@ -411,6 +424,7 @@ def test_search_by_cel(browser, search_test_case):
         None,
     )
 
+
 sort_tescases = {
     "sort by lastReceived asc/dsc": {
         "column_name": "Last Received",
@@ -424,11 +438,12 @@ sort_tescases = {
 
 
 @pytest.mark.parametrize("sort_test_case", sort_tescases.keys())
-def test_sort_asc_dsc(browser, sort_test_case):
+def test_sort_asc_dsc(browser, sort_test_case, setup_test_data):
     test_case = sort_tescases[sort_test_case]
     coumn_name = test_case["column_name"]
     sort_callback = test_case["sort_callback"]
-    current_alerts = init_test(browser)
+    current_alerts = setup_test_data
+    init_test(browser, current_alerts)
     filtered_alerts = [
         alert for alert in current_alerts if alert["providerType"] == "prometheus"
     ]
