@@ -154,12 +154,6 @@ function addNodeBetween(
   }
 }
 
-const INITIAL_DEFINITION = wrapDefinitionV2({
-  sequence: [],
-  properties: {},
-  isValid: false,
-});
-
 const defaultState: FlowStateValues = {
   workflowId: null,
   nodes: [],
@@ -172,7 +166,6 @@ const defaultState: FlowStateValues = {
   isLayouted: false,
   selectedEdge: null,
   changes: 0,
-  errorNode: null,
   synced: true,
   canDeploy: false,
   buttonsEnabled: false,
@@ -180,7 +173,7 @@ const defaultState: FlowStateValues = {
   saveRequestCount: 0,
   runRequestCount: 0,
   isSaving: false,
-  definition: INITIAL_DEFINITION,
+  definition: null,
   isLoading: true,
   validationErrors: {},
 };
@@ -202,7 +195,6 @@ const useStore = create<FlowState>()(
     setIsSaving: (state: boolean) => set({ isSaving: state }),
     setCanDeploy: (deploy) => set({ canDeploy: deploy }),
     setSynced: (sync) => set({ synced: sync }),
-    setErrorNode: (id) => set({ errorNode: id }),
     setSelectedEdge: (id) =>
       set({ selectedEdge: id, selectedNode: null, openGlobalEditor: true }),
     setIsLayouted: (isLayouted) => set({ isLayouted }),
@@ -557,6 +549,9 @@ async function initializeWorkflow(
   get: StoreGet
 ) {
   const definition = get().definition;
+  if (definition === null) {
+    throw new Error("Definition should be set before initializing workflow");
+  }
   set({ isLoading: true });
   let parsedWorkflow = definition?.value;
   const name =

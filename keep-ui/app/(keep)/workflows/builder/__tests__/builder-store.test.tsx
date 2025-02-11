@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, RenderHookResult } from "@testing-library/react";
 import useStore from "../builder-store";
 import { v4 as uuidv4 } from "uuid";
 import { FlowNode, V2Step } from "../types";
@@ -346,6 +346,139 @@ describe("useStore", () => {
 
       // Verify property was removed
       expect(result.current.nodes[0].data).not.toHaveProperty("removable");
+    });
+  });
+
+  describe("updateDefinition", () => {
+    it("should validate a correct workflow without errors", () => {
+      const { result } = renderHook(() => useStore());
+
+      // Setup a valid workflow definition
+      act(() => {
+        result.current.setDefinition({
+          value: {
+            sequence: [
+              {
+                id: "step1",
+                name: "Step 1",
+                type: "step",
+                componentType: "task",
+                properties: {
+                  config: "test",
+                  with: {
+                    param1: "value1",
+                  },
+                },
+              },
+            ],
+            properties: {
+              name: "test",
+              description: "test",
+              manual: true,
+            },
+          },
+          isValid: true,
+        });
+        result.current.initializeWorkflow(null, {});
+      });
+
+      // Verify no validation errors and canDeploy is true
+      expect(result.current.validationErrors).toEqual({});
+      expect(result.current.canDeploy).toBe(true);
+    });
+
+    it("should capture validation errors for an invalid workflow", () => {
+      const { result } = renderHook(() => useStore());
+
+      // Setup an invalid workflow definition
+      act(() => {
+        result.current.setDefinition({
+          value: {
+            sequence: [],
+            properties: {},
+          },
+          isValid: false,
+        });
+        result.current.initializeWorkflow(null, {});
+      });
+
+      // Verify validation errors are captured
+      expect(result.current.validationErrors).not.toEqual({});
+      expect(result.current.validationErrors).toHaveProperty("workflow_name");
+      expect(result.current.validationErrors).toHaveProperty(
+        "workflow_description"
+      );
+      expect(result.current.canDeploy).toBe(false);
+    });
+
+    it("should validate each step and capture errors", () => {
+      const { result } = renderHook(() => useStore());
+
+      // Setup a workflow with an invalid step
+      act(() => {
+        result.current.setDefinition({
+          value: {
+            sequence: [
+              {
+                id: "step1",
+                name: "Step 1",
+                type: "step",
+                componentType: "task",
+                properties: {},
+              },
+              {
+                id: "step2",
+                name: "",
+                type: "step",
+                componentType: "task",
+                properties: {},
+              },
+            ],
+            properties: {
+              name: "test",
+              description: "test",
+              manual: true,
+            },
+          },
+          isValid: false,
+        });
+        result.current.initializeWorkflow(null, {});
+      });
+
+      // Verify step validation errors are captured
+      expect(result.current.validationErrors).toHaveProperty("step2");
+    });
+
+    it("should allow deployment if only provider errors exist", () => {
+      const { result } = renderHook(() => useStore());
+
+      // Setup a workflow with provider-related errors
+      act(() => {
+        result.current.setDefinition({
+          value: {
+            sequence: [
+              {
+                id: "step1",
+                name: "Step 1",
+                type: "step",
+                componentType: "step",
+                properties: {},
+              },
+            ],
+            properties: {
+              name: "test",
+              description: "test",
+              manual: true,
+            },
+          },
+          isValid: false,
+        });
+        result.current.initializeWorkflow(null, {});
+      });
+
+      // Verify canDeploy is true despite provider errors
+      expect(result.current.validationErrors).not.toBe({});
+      expect(result.current.canDeploy).toBe(true);
     });
   });
 });

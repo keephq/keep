@@ -60,27 +60,30 @@ export type StoreSet = (
 
 export interface FlowStateValues {
   workflowId: string | null;
+  definition: DefinitionV2 | null;
   nodes: FlowNode[];
   edges: Edge[];
   selectedNode: string | null;
+  selectedEdge: string | null;
   v2Properties: Record<string, any>;
-  openGlobalEditor: boolean;
-  stepEditorOpenForNode: string | null;
   toolboxConfiguration: Record<string, any>;
   isLayouted: boolean;
-  selectedEdge: string | null;
+
+  // Lifecycle
   changes: number;
-  errorNode: string | null;
   synced: boolean;
   canDeploy: boolean;
+  isSaving: boolean;
+  isLoading: boolean;
+  validationErrors: Record<string, string>;
+
+  // UI
+  openGlobalEditor: boolean;
+  stepEditorOpenForNode: string | null;
   buttonsEnabled: boolean;
   generateRequestCount: number;
   saveRequestCount: number;
   runRequestCount: number;
-  isSaving: boolean;
-  definition: DefinitionV2;
-  isLoading: boolean;
-  validationErrors: Record<string, string>;
 }
 
 export interface FlowState extends FlowStateValues {
@@ -91,7 +94,6 @@ export interface FlowState extends FlowStateValues {
   setIsSaving: (state: boolean) => void;
   setCanDeploy: (deploy: boolean) => void;
   setSynced: (sync: boolean) => void;
-  setErrorNode: (id: string | null) => void;
   setSelectedEdge: (id: string | null) => void;
   setIsLayouted: (isLayouted: boolean) => void;
   addNodeBetween: (

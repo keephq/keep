@@ -114,6 +114,7 @@ function Builder({
           if (alertName && alertSource) {
             triggers = { alert: { source: alertSource, name: alertName } };
           }
+          // Set empty definition to initialize the store
           setDefinition(
             wrapDefinitionV2({
               ...generateWorkflow(

@@ -1,7 +1,8 @@
-import { render } from "@testing-library/react";
+import { render, renderHook } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import ReactFlowBuilder from "../ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
+import useStore from "../builder-store";
 
 // Mock the hooks and components
 jest.mock("../ToolBox", () => ({
@@ -16,18 +17,9 @@ jest.mock("../ReactFlowEditor", () => ({
 
 // Mock minimal props
 const mockProps = {
+  workflowId: null,
   providers: [],
   installedProviders: [],
-  toolboxConfiguration: {},
-  definition: {
-    sequence: [],
-    properties: {},
-  },
-  validatorConfiguration: {
-    step: jest.fn(() => true),
-    root: jest.fn(() => true),
-  },
-  onDefinitionChange: jest.fn(),
 };
 
 describe("ReactFlowBuilder", () => {
@@ -41,19 +33,15 @@ describe("ReactFlowBuilder", () => {
   });
 
   it("renders successfully", () => {
-    jest.mock("@/utils/hooks/useWorkflowInitialization", () => ({
-      __esModule: true,
-      default: () => ({
-        nodes: [],
-        edges: [],
-        isLoading: false,
-        onEdgesChange: jest.fn(),
-        onNodesChange: jest.fn(),
-        onConnect: jest.fn(),
-        onDragOver: jest.fn(),
-        onDrop: jest.fn(),
-      }),
-    }));
+    const { result } = renderHook(() => useStore());
+
+    result.current.setDefinition({
+      value: {
+        sequence: [],
+        properties: {},
+      },
+      isValid: true,
+    });
 
     const { getByTestId } = render(
       <ReactFlowProvider>
