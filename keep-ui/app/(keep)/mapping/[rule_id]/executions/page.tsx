@@ -1,12 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { MappingExecutionTable } from "../mapping-execution-table";
-import { Card, Title, Icon, Subtitle } from "@tremor/react";
+import {
+  Card,
+  Title,
+  Icon,
+  Subtitle,
+  Badge,
+  Text,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+} from "@tremor/react";
 import { useEnrichmentEvents } from "@/utils/hooks/useEnrichmentEvents";
 import { Link } from "@/components/ui";
-import { ArrowRightIcon } from "@heroicons/react/16/solid";
+import {
+  ArrowRightIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+} from "@heroicons/react/16/solid";
 import { useMappings } from "@/utils/hooks/useMappingRules";
+import TimeAgo from "react-timeago";
 
 interface Pagination {
   limit: number;
@@ -22,6 +40,7 @@ export default function MappingExecutionsPage({
     limit: 20,
     offset: 0,
   });
+  const [isDataPreviewExpanded, setIsDataPreviewExpanded] = useState(false);
 
   const { data: mappings } = useMappings();
   const rule = mappings?.find((m) => m.id === parseInt(params.rule_id));
@@ -32,7 +51,7 @@ export default function MappingExecutionsPage({
     offset: pagination.offset,
   });
 
-  if (isLoading) {
+  if (isLoading || !rule) {
     return null;
   }
 
@@ -47,17 +66,59 @@ export default function MappingExecutionsPage({
         </Subtitle>
         <Title>Mapping Rule Executions</Title>
       </div>
-      <Card>
-        <MappingExecutionTable
-          executions={{
-            items: executions,
-            count: totalCount,
-            limit: pagination.limit,
-            offset: pagination.offset,
-          }}
-          setPagination={setPagination}
-        />
-      </Card>
+
+      <div className="space-y-4">
+        <Card>
+          <MappingExecutionTable
+            executions={{
+              items: executions,
+              count: totalCount,
+              limit: pagination.limit,
+              offset: pagination.offset,
+            }}
+            setPagination={setPagination}
+          />
+        </Card>
+        {rule.type === "csv" && rule.rows && rule.rows.length > 0 && (
+          <Card>
+            <div
+              className="flex justify-between items-center cursor-pointer"
+              onClick={() => setIsDataPreviewExpanded(!isDataPreviewExpanded)}
+            >
+              <Title>Data Preview</Title>
+              <Icon
+                icon={isDataPreviewExpanded ? ChevronUpIcon : ChevronDownIcon}
+                color="gray"
+                size="xs"
+              />
+            </div>
+            {isDataPreviewExpanded && (
+              <div className="mt-4 max-h-96 overflow-auto">
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      {Object.keys(rule.rows[0]).map((key) => (
+                        <TableHeaderCell key={key}>{key}</TableHeaderCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rule.rows.slice(0, 5).map((row, idx) => (
+                      <TableRow key={idx}>
+                        {Object.values(row).map((value: any, valueIdx) => (
+                          <TableCell key={valueIdx}>
+                            {JSON.stringify(value)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

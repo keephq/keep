@@ -17,7 +17,6 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
-  ExpandedState,
 } from "@tanstack/react-table";
 import { MdRemoveCircle, MdModeEdit, MdPlayArrow } from "react-icons/md";
 import { useMappings } from "utils/hooks/useMappingRules";
@@ -88,7 +87,6 @@ const formattedMatchers = (matchers: string[][]) => {
 export default function RulesTable({ mappings, editCallback }: Props) {
   const api = useApi();
   const { mutate } = useMappings();
-  const [expanded, setExpanded] = useState<ExpandedState>({});
   const router = useRouter();
 
   const columns = [
@@ -137,16 +135,6 @@ export default function RulesTable({ mappings, editCallback }: Props) {
           <Button
             color="orange"
             size="xs"
-            icon={Cog8ToothIcon}
-            tooltip="Executions"
-            onClick={(event) => {
-              event.stopPropagation();
-              router.push(`/mapping/${context.row.original.id}/executions`);
-            }}
-          />
-          <Button
-            color="orange"
-            size="xs"
             icon={MdPlayArrow}
             tooltip="Run"
             onClick={(event) => {
@@ -186,9 +174,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
   const table = useReactTable({
     columns,
     data: mappings.sort((a, b) => b.priority - a.priority),
-    state: { expanded },
     getCoreRowModel: getCoreRowModel(),
-    onExpandedChange: setExpanded,
   });
 
   const deleteRule = (ruleId: number) => {
@@ -233,132 +219,26 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       </TableHead>
       <TableBody>
         {table.getRowModel().rows.map((row) => (
-          <>
-            <HoverCard.Root>
-              <HoverCard.Trigger asChild className="hover:cursor-pointer">
-                <TableRow
-                  className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 group overflow-hidden"
-                  key={row.id}
-                  onClick={() => row.toggleExpanded()}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      className={`${
-                        cell.column.columnDef.meta?.sticky
-                          ? "sticky right-0 bg-white dark:bg-gray-800 hover:bg-slate-100 group-hover:bg-slate-100"
-                          : ""
-                      }`}
-                      key={cell.id}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </HoverCard.Trigger>
-              <HoverCard.Portal>
-                <HoverCard.Content className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 shadow-lg z-[9999] overflow-y-scroll">
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Created:
-                      </span>
-                      <span className="whitespace-nowrap text-sm text-gray-900">
-                        <TimeAgo
-                          date={new Date(
-                            row.original.created_at + "Z"
-                          ).toLocaleString()}
-                        />
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Created by:
-                      </span>
-                      <span className="whitespace-nowrap text-sm text-gray-900">
-                        {row.original.created_by}
-                      </span>
-                    </div>
-                    {row.original.updated_by && (
-                      <>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Last update:
-                          </span>
-                          <span className="whitespace-nowrap text-sm text-gray-900">
-                            <TimeAgo
-                              date={new Date(
-                                row.original.last_updated_at + "Z"
-                              ).toLocaleString()}
-                            />
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Updated by:
-                          </span>
-                          <span className="whitespace-nowrap text-sm text-gray-900">
-                            {row.original.updated_by}
-                          </span>
-                        </div>
-                        {row.original.file_name && (
-                          <div className="flex items-center space-x-2">
-                            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              File Name:
-                            </span>
-                            <span className="whitespace-nowrap text-sm text-gray-900">
-                              {row.original.file_name}
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                  <HoverCard.Arrow className="fill-tremor-border" />
-                </HoverCard.Content>
-              </HoverCard.Portal>
-            </HoverCard.Root>
-            {row.getIsExpanded() && row.original.type === "csv" && (
-              <TableRow className="pl-2.5">
-                <TableCell colSpan={columns.length}>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead>
-                        <tr>
-                          {Object.keys(row.original.rows[0] || {}).map(
-                            (key) => (
-                              <th
-                                key={key}
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                              >
-                                {key}
-                              </th>
-                            )
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {row.original.rows.map((csvRow, index) => (
-                          <tr key={index}>
-                            {Object.values(csvRow).map((value, idx) => (
-                              <td
-                                key={idx}
-                                className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                              >
-                                {value}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </>
+          <TableRow
+            className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 group cursor-pointer"
+            key={row.id}
+            onClick={() =>
+              router.push(`/mapping/${row.original.id}/executions`)
+            }
+          >
+            {row.getVisibleCells().map((cell) => (
+              <TableCell
+                className={`${
+                  cell.column.columnDef.meta?.sticky
+                    ? "sticky right-0 bg-white dark:bg-gray-800 hover:bg-slate-100 group-hover:bg-slate-100"
+                    : ""
+                }`}
+                key={cell.id}
+              >
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </TableCell>
+            ))}
+          </TableRow>
         ))}
       </TableBody>
     </Table>

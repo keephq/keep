@@ -60,8 +60,8 @@ export default function MappingExecutionDetailsPage({
 
         <div className="space-y-4">
           <Card>
-            <div>
-              <span className="text-gray-500">
+            <div className="mb-2.5">
+              <span className="text-gray-500 text-xs">
                 Alert ID:{" "}
                 <Link
                   href={alertFilterUrl}
