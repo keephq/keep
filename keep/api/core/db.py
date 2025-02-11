@@ -1688,6 +1688,7 @@ def create_rule(
     require_approve=False,
     resolve_on=ResolveOn.NEVER.value,
     create_on=CreateIncidentOn.ANY.value,
+    incident_name_template=None,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -1705,6 +1706,7 @@ def create_rule(
             require_approve=require_approve,
             resolve_on=resolve_on,
             create_on=create_on,
+            incident_name_template=incident_name_template,
         )
         session.add(rule)
         session.commit()
@@ -1836,14 +1838,18 @@ def get_incident_for_grouping_rule(
 
 
 def create_incident_for_grouping_rule(
-    tenant_id, rule, rule_fingerprint, session: Optional[Session] = None
+    tenant_id,
+    rule,
+    rule_fingerprint,
+    incident_name: str = None,
+    session: Optional[Session] = None,
 ):
 
     with existed_or_new_session(session) as session:
         # Create and add a new incident if it doesn't exist
         incident = Incident(
             tenant_id=tenant_id,
-            user_generated_name=f"{rule.name}",
+            user_generated_name=incident_name or f"{rule.name}",
             rule_id=rule.id,
             rule_fingerprint=rule_fingerprint,
             is_predicted=False,
@@ -3858,7 +3864,10 @@ def add_alerts_to_incident(
                 # If incident has alerts already, use the max severity between existing and new alerts,
                 # otherwise use the new alerts max severity
                 incident.severity = (
-                    max(incident.severity, alerts_data_for_incident["max_severity"].order)
+                    max(
+                        incident.severity,
+                        alerts_data_for_incident["max_severity"].order,
+                    )
                     if incident.alerts_count
                     else alerts_data_for_incident["max_severity"].order
                 )
@@ -4355,6 +4364,7 @@ def update_incident_severity(
         session.refresh(incident)
 
         return incident
+
 
 def get_topology_data_by_dynamic_matcher(
     tenant_id: str, matchers_value: dict[str, str]

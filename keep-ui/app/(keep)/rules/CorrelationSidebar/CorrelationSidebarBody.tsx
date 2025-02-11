@@ -68,6 +68,7 @@ export const CorrelationSidebarBody = ({
       requireApprove,
       resolveOn,
       createOn,
+      incidentNameTemplate,
     } = correlationFormData;
 
     const body = {
@@ -81,6 +82,7 @@ export const CorrelationSidebarBody = ({
       requireApprove: requireApprove,
       resolveOn: resolveOn,
       createOn: createOn,
+      incidentNameTemplate,
     };
 
     try {

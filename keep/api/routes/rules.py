@@ -3,12 +3,13 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from keep.api.core.db import create_rule as create_rule_db, get_rule_incidents_count_db
+from keep.api.core.db import create_rule as create_rule_db
 from keep.api.core.db import delete_rule as delete_rule_db
 from keep.api.core.db import get_rule_distribution as get_rule_distribution_db
+from keep.api.core.db import get_rule_incidents_count_db
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import update_rule as update_rule_db
-from keep.api.models.db.rule import ResolveOn, CreateIncidentOn
+from keep.api.models.db.rule import CreateIncidentOn, ResolveOn
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
@@ -28,6 +29,7 @@ class RuleCreateDto(BaseModel):
     requireApprove: bool = False
     resolveOn: str = ResolveOn.NEVER.value
     createOn: str = CreateIncidentOn.ANY.value
+    incidentNameTemplate: str = None
 
 
 @router.get(
@@ -79,11 +81,13 @@ async def create_rule(
     create_on = rule_create_request.createOn
     sql = rule_create_request.sqlQuery.get("sql")
     params = rule_create_request.sqlQuery.get("params")
+    incident_name_template = rule_create_request.incidentNameTemplate
 
     if not sql:
         raise HTTPException(status_code=400, detail="SQL is required")
 
-    if not params:
+    # params can be {} for example on '(( source is not null ))'
+    if not params and not params == {}:
         raise HTTPException(status_code=400, detail="Params are required")
 
     if not cel_query:
@@ -104,6 +108,9 @@ async def create_rule(
     if not create_on:
         raise HTTPException(status_code=400, detail="createOn is required")
 
+    if not incident_name_template:
+        raise HTTPException(status_code=400, detail="incidentNameTemplate is required")
+
     rule = create_rule_db(
         tenant_id=tenant_id,
         name=rule_name,
@@ -120,6 +127,7 @@ async def create_rule(
         require_approve=require_approve,
         resolve_on=resolve_on,
         create_on=create_on,
+        incident_name_template=incident_name_template,
     )
     logger.info("Rule created")
     return rule
@@ -180,7 +188,9 @@ async def update_rule(
     if not sql:
         raise HTTPException(status_code=400, detail="SQL is required")
 
-    if not params:
+    if (
+        not params and not params == {}
+    ):  # params can be {} for example on '(( source is not null ))'
         raise HTTPException(status_code=400, detail="Params are required")
 
     if not cel_query:
