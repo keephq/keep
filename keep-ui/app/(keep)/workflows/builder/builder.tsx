@@ -8,10 +8,6 @@ import {
   wrapDefinitionV2,
   getToolboxConfiguration,
 } from "./utils";
-import {
-  CheckCircleIcon,
-  ExclamationCircleIcon,
-} from "@heroicons/react/20/solid";
 import { stringify } from "yaml";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
@@ -66,7 +62,6 @@ function Builder({
     synced,
     reset,
     canDeploy,
-    validationErrors,
     initializeWorkflow,
   } = useStore();
   const router = useRouter();
@@ -256,41 +251,10 @@ function Builder({
     setRunningWorkflowExecution(null);
   };
 
-  const getworkflowStatus = () => {
-    return Object.keys(validationErrors).length > 0 ? (
-      <Callout
-        className="mt-2.5 mb-2.5"
-        title={
-          canDeploy
-            ? "Fix errors to run workflow"
-            : "Fix the errors before saving"
-        }
-        icon={ExclamationCircleIcon}
-        color="rose"
-      >
-        {Object.entries(validationErrors).map(([id, error]) => (
-          <div key={id}>
-            <span className="font-bold">{id}:</span> {error}
-          </div>
-        ))}
-      </Callout>
-    ) : (
-      <Callout
-        className="mt-2.5 mb-2.5"
-        title="Schema is valid"
-        icon={CheckCircleIcon}
-        color="teal"
-      >
-        Workflow can be generated successfully
-      </Callout>
-    );
-  };
-
   return (
     <>
       <div className="h-full">
-        {getworkflowStatus()}
-        <Card className="mt-2 p-0 h-[90%] overflow-hidden">
+        <Card className="mt-2 p-0 h-full overflow-hidden">
           <ResizableColumns
             leftChild={
               workflowYaml ? (

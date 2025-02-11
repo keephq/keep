@@ -4,7 +4,6 @@ import useStore from "./builder-store";
 import { GlobalEditorV2, StepEditorV2 } from "./editors";
 import { Divider } from "@tremor/react";
 import { Provider } from "@/app/(keep)/providers/providers";
-
 const ReactFlowEditor = ({
   providers,
   installedProviders,

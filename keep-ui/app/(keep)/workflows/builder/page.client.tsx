@@ -146,7 +146,7 @@ export function WorkflowBuilderPageClient({
   };
 
   return (
-    <main className="mx-auto max-w-full h-[98%]">
+    <main className="mx-auto max-w-full h-[90%]">
       <div className="flex justify-between">
         <div className="flex flex-col">
           <Title>{workflowId ? "Edit" : "New"} Workflow</Title>

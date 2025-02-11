@@ -23,6 +23,7 @@ import { useState } from "react";
 import { V2Properties } from "@/app/(keep)/workflows/builder/types";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import debounce from "lodash.debounce";
+import { WorkflowStatus } from "./workflow-status";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col m-2.5">{children}</div>;
@@ -367,6 +368,7 @@ function WorkflowEditorV2() {
           {synced ? "Synced" : "Not Synced"}
         </span>
       </Title>
+      <WorkflowStatus className="my-2" />
       <div className="flex flex-col gap-2">
         {propertyKeys.map((key, index) => {
           const isTrigger = [
@@ -392,7 +394,7 @@ function WorkflowEditorV2() {
             <div key={key}>
               {renderDivider && <Divider />}
               {(key === selectedNode || !isTrigger) && (
-                <Text className="capitalize">{key}</Text>
+                <Text className="capitalize mb-1.5">{key}</Text>
               )}
 
               {(() => {
@@ -421,6 +423,9 @@ function WorkflowEditorV2() {
                     return (
                       selectedNode === "alert" && (
                         <>
+                          {error && (
+                            <Text className="text-red-500 mb-1.5">{error}</Text>
+                          )}
                           <div className="w-1/2">
                             <Button
                               onClick={addFilter}
@@ -531,6 +536,8 @@ function WorkflowEditorV2() {
                             handleChange(key, e.target.value)
                           }
                           value={properties[key] || ("" as string)}
+                          error={!!error}
+                          errorMessage={error}
                         />
                       )
                     );
