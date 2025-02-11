@@ -14,7 +14,7 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.validation.fields import NoSchemeUrl, UrlPort
 
 
-DEFAULT_TIMEOUT = 120  # Not to hang the thread forever, only for extreme cases
+DEFAULT_TIMEOUT_SECONDS = 120  # Not to hang the thread forever, only for extreme cases
 
 
 @pydantic.dataclasses.dataclass
@@ -155,9 +155,9 @@ class ClickhouseProvider(BaseProvider, ProviderHealthMixin):
 
         return connect(
             dsn,
-            connect_timeout=DEFAULT_TIMEOUT,
-            send_receive_timeout=DEFAULT_TIMEOUT,
-            sync_request_timeout=DEFAULT_TIMEOUT,
+            connect_timeout=DEFAULT_TIMEOUT_SECONDS,
+            send_receive_timeout=DEFAULT_TIMEOUT_SECONDS,
+            sync_request_timeout=DEFAULT_TIMEOUT_SECONDS,
             verify=self.authentication_config.verify,
         )
 
@@ -198,7 +198,7 @@ class ClickhouseProvider(BaseProvider, ProviderHealthMixin):
                 self.authentication_config.password,
             ),
             verify=self.authentication_config.verify,
-            timeout=DEFAULT_TIMEOUT,
+            timeout=DEFAULT_TIMEOUT_SECONDS,
         )
 
         if not response.ok:
