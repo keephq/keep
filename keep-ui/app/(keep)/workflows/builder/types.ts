@@ -81,7 +81,7 @@ export interface FlowStateValues {
   isSaving: boolean;
   definition: DefinitionV2;
   isLoading: boolean;
-  validationErrors: Set<[string, string | null]>;
+  validationErrors: Record<string, string>;
 }
 
 export interface FlowState extends FlowStateValues {

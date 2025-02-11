@@ -250,15 +250,17 @@ export function validateStepPure(step: V2Step): string | null {
     return valid ? null : "Conditions must contain at least one action.";
   }
   if (step?.componentType === "task") {
-    const valid = step?.name !== "" ? null : "Step name cannot be empty.";
-    if (!valid) return "Step name cannot be empty.";
-    if (!step?.properties?.with) {
+    if (!step?.name) {
+      return "Step name cannot be empty.";
+    }
+    if (
+      !Object.values(step?.properties?.with || {}).some(
+        (value) => typeof value === "string" && value.length > 0
+      )
+    ) {
       return "Step/action with no parameters configured!";
     }
-    if (valid && Object.keys(step?.properties?.with).length > 0) {
-      return null;
-    }
-    return "Step/action with no parameters configured!";
+    return null;
   }
   return null;
 }

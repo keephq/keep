@@ -11,7 +11,6 @@ import {
   CheckCircleIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
-import { globalValidatorV2, stepValidatorV2 } from "./builder-validators";
 import { LegacyWorkflow } from "./legacy-workflow.types";
 import BuilderModalContent from "./builder-modal";
 import { EmptyBuilderState } from "./empty-builder-state";
@@ -19,7 +18,6 @@ import { stringify } from "yaml";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
-import { Definition, V2Step } from "./types";
 import {
   WorkflowExecutionDetail,
   WorkflowExecutionFailure,
@@ -175,13 +173,17 @@ function Builder({
 
   const saveWorkflow = useCallback(async () => {
     if (!synced) {
-      toast(
-        "Please save the previous step or wait while properties sync with the workflow."
+      showErrorToast(
+        new Error(
+          "Please save the previous step or wait while properties sync with the workflow."
+        )
       );
       return;
     }
-    if (validationErrors.size > 0 || !definition.isValid) {
-      showErrorToast("Please fix the errors in the workflow before saving.");
+    if (Object.keys(validationErrors).length > 0 || !definition.isValid) {
+      showErrorToast(
+        new Error("Please fix the errors in the workflow before saving.")
+      );
       return;
     }
     try {
@@ -196,6 +198,7 @@ function Builder({
       }
     } catch (error) {
       console.error(error);
+      showErrorToast(error);
     } finally {
       setIsSaving(false);
     }
@@ -239,7 +242,8 @@ function Builder({
 
   useEffect(() => {
     setGenerateEnabled(
-      (definition.isValid && validationErrors.size === 0) || false
+      (definition.isValid && Object.keys(validationErrors).length === 0) ||
+        false
     );
   }, [validationErrors, setGenerateEnabled, definition.isValid]);
 
@@ -261,14 +265,14 @@ function Builder({
   };
 
   const getworkflowStatus = () => {
-    return validationErrors.size > 0 ? (
+    return Object.keys(validationErrors).length > 0 ? (
       <Callout
         className="mt-2.5 mb-2.5"
         title="Validation Error"
         icon={ExclamationCircleIcon}
         color="rose"
       >
-        {Array.from(validationErrors).map(([id, error]) => (
+        {Object.entries(validationErrors).map(([id, error]) => (
           <div key={id}>
             <span className="font-bold">{id}:</span> {error}
           </div>
@@ -277,7 +281,7 @@ function Builder({
     ) : (
       <Callout
         className="mt-2.5 mb-2.5"
-        title="Schema Valid"
+        title="Schema is valid"
         icon={CheckCircleIcon}
         color="teal"
       >

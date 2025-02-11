@@ -183,7 +183,7 @@ const defaultState: FlowStateValues = {
   isSaving: false,
   definition: INITIAL_DEFINITION,
   isLoading: true,
-  validationErrors: new Set(),
+  validationErrors: {},
 };
 
 const useStore = create<FlowState>()(
@@ -252,14 +252,14 @@ const useStore = create<FlowState>()(
 
       // Use validators to check if the workflow is valid
       let isValid = true;
-      const validationErrors = new Set<[string, string | null]>();
+      const validationErrors: Record<string, string> = {};
       const definition: Definition = { sequence, properties: newProperties };
 
       // Check each step's validity
       for (const step of sequence) {
         const error = validateStepPure(step);
         if (error) {
-          validationErrors.add([step.name || step.id, error]);
+          validationErrors[step.name || step.id] = error;
           isValid = false;
         }
       }
@@ -268,7 +268,7 @@ const useStore = create<FlowState>()(
       if (isValid) {
         const result = validateGlobalPure(definition);
         if (result) {
-          validationErrors.add(result);
+          validationErrors[result[0]] = result[1];
           isValid = false;
         }
       }

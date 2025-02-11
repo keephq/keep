@@ -44,7 +44,7 @@ function CustomNode({ id, data }: FlowNode) {
   const isEmptyNode = !!data?.type?.includes("empty");
   const specialNodeCheck = ["start", "end"].includes(type);
   const isError =
-    validationErrors.has(data?.name) || validationErrors.has(data?.id);
+    !!validationErrors?.[data?.name] || !!validationErrors?.[data?.id];
 
   function getTriggerIcon(step: any) {
     const { type } = step;
