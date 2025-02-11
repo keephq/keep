@@ -135,7 +135,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   useEffect(
     function setNewRefreshToken() {
       if (pollAlerts) {
-        setRefreshToken(uuidV4());
+        setRefreshToken(pollAlerts);
       }
     },
     [setRefreshToken, pollAlerts]
