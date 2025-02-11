@@ -68,7 +68,7 @@ def create_fake_alert(index: int, provider_type: str):
     status = "firing"
     severity = "critical"
     custom_tag = "environment:production"
-    testAlertId = f"alert-finger-print-{index}"
+    test_alert_id = f"alert-finger-print-{index}"
 
     if index % 4 == 0:
         title = "High CPU Usage"
@@ -84,6 +84,9 @@ def create_fake_alert(index: int, provider_type: str):
         status = "suppressed"
         severity = "high"
         custom_tag = "environment:custom"
+
+    if index % 5 == 0:
+        title += "Enriched"
 
     if provider_type == "datadog":
         SEVERITIES_MAP = {
@@ -109,7 +112,7 @@ def create_fake_alert(index: int, provider_type: str):
             "description": "CPU usage is over 90% on srv1-us2-prod.",
             "tagsList": "environment:production,team:backend,monitor,service:api",
             "priority": "P2",
-            "monitor_id": testAlertId,
+            "monitor_id": test_alert_id,
             "scopes": "srv2-eu1-prod",
             "host.name": "srv2-ap1-prod",
             "last_updated": 1739114561286,
@@ -117,12 +120,12 @@ def create_fake_alert(index: int, provider_type: str):
             "date_happened": (datetime.utcnow() + timedelta(days=-index)).timestamp(),
             "tags": {
                 "envNameTag": "production" if index % 2 else "development",
-                "testAlertId": testAlertId,
+                "testAlertId": test_alert_id,
             },
             "custom_tags": {
                 "env": custom_tag,
             },
-            "id": testAlertId,
+            "id": test_alert_id,
         }
     elif provider_type == "prometheus":
         SEVERITIES_MAP = {
@@ -140,7 +143,7 @@ def create_fake_alert(index: int, provider_type: str):
 
         return {
             "alertName": alert_name,
-            "testAlertId": testAlertId,
+            "testAlertId": test_alert_id,
             "summary": alert_name,
             "labels": {
                 "severity": SEVERITIES_MAP.get(severity, SEVERITIES_MAP["critical"]),
@@ -156,7 +159,7 @@ def create_fake_alert(index: int, provider_type: str):
             "startsAt": "2025-02-09T17:26:12.769318+00:00",
             "endsAt": "0001-01-01T00:00:00Z",
             "generatorURL": "http://example.com/graph?g0.expr=NetworkLatencyHigh",
-            "fingerprint": testAlertId,
+            "fingerprint": test_alert_id,
             "custom_tags": {
                 "env": custom_tag,
             },
@@ -204,8 +207,8 @@ def upload_alerts():
         attempt += 1
 
         if all(
-            alert["alertName"] in current_alerts["grouped_by_name"]
-            for _, alert in simulated_alerts
+            simluated_alert["alertName"] in current_alerts["grouped_by_name"]
+            for _, simluated_alert in simulated_alerts
         ):
             break
 
@@ -213,7 +216,24 @@ def upload_alerts():
             raise Exception(
                 f"Not all alerts were uploaded. Not uploaded alerts: {not_uploaded_alerts}"
             )
-    return current_alerts
+
+    alerts_to_enrich = [
+        alert for alert in current_alerts["results"] if "Enriched" in alert["name"]
+    ]
+
+    for alert in alerts_to_enrich:
+        url = f"{KEEP_API_URL}/alerts/enrich"
+        requests.post(
+            url,
+            json={
+                "enrichments": {"status": "enriched status"},
+                "fingerprint": alert["fingerprint"],
+            },
+            timeout=5,
+            headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+        ).raise_for_status()
+
+    return query_allerts(limit=1000, offset=0)
 
 
 def init_test(browser: Browser, alerts):
@@ -250,7 +270,7 @@ def assert_facet(browser, facet_name, alerts, alert_property_name: str):
             counters_dict[prop_value] = 0
 
         counters_dict[prop_value] += 1
-
+    print()
     for facet_value, count in counters_dict.items():
         facet_locator = browser.locator("[data-testid='facet']", has_text=facet_name)
         expect(facet_locator).to_be_visible()
@@ -322,6 +342,14 @@ def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
     column_index = test_case.get("column_index", None)
     value = test_case["value"]
     current_alerts = setup_test_data
+
+    for alert in current_alerts:
+        if "Enriched" in alert["name"]:
+            # this is a workaround due to a bug in the backend
+            # that does not overwrite default fields with enrichment fields
+            # but facets work correctly
+            alert["status"] = "enriched status"
+
     init_test(browser, current_alerts)
     expect(
         browser.locator("[data-testid='facet']", has_text=facet_name)
@@ -388,6 +416,11 @@ search_by_cel_tescases = {
         "cel_query": "labels.service.contains('java-otel')",
         "predicate": lambda alert: "java-otel"
         in alert.get("labels", {}).get("service", ""),
+        "alert_property_name": "name",
+    },
+    "using enriched field": {
+        "cel_query": "status == 'enriched status'",
+        "predicate": lambda alert: "Enriched" in alert["name"],
         "alert_property_name": "name",
     },
     "date comparison greater than or equal": {
