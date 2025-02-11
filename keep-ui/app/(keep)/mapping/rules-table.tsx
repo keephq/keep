@@ -30,6 +30,7 @@ import TimeAgo from "react-timeago";
 import { FaFileCsv, FaFileCode, FaNetworkWired } from "react-icons/fa";
 import { Fragment } from "react";
 import { Cog8ToothIcon } from "@heroicons/react/24/solid";
+import { useRouter } from "next/navigation";
 const columnHelper = createColumnHelper<MappingRule>();
 
 interface Props {
@@ -88,6 +89,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
   const api = useApi();
   const { mutate } = useMappings();
   const [expanded, setExpanded] = useState<ExpandedState>({});
+  const router = useRouter();
 
   const columns = [
     columnHelper.accessor("name", {
@@ -139,6 +141,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
             tooltip="Executions"
             onClick={(event) => {
               event.stopPropagation();
+              router.push(`/mapping/${context.row.original.id}/executions`);
             }}
           />
           <Button
@@ -231,7 +234,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       <TableBody>
         {table.getRowModel().rows.map((row) => (
           <>
-            <HoverCard.Root openDelay={2000} closeDelay={1000}>
+            <HoverCard.Root>
               <HoverCard.Trigger asChild className="hover:cursor-pointer">
                 <TableRow
                   className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 group overflow-hidden"

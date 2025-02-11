@@ -7,6 +7,7 @@ from uuid import UUID
 import celpy
 import chevron
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from keep.api.core.config import config
@@ -494,6 +495,13 @@ class EnrichmentsBl:
         self.logger.debug(
             "alert enriched in elastic", extra={"fingerprint": fingerprint}
         )
+
+    def get_total_enrichment_events(self, rule_id: int):
+        query = select(func.count(EnrichmentEvent.id)).where(
+            EnrichmentEvent.rule_id == rule_id,
+            EnrichmentEvent.tenant_id == self.tenant_id,
+        )
+        return self.db_session.exec(query).one()
 
     def get_enrichment_events(self, rule_id: int, limit: int, offset: int):
         # todo: easy to make async

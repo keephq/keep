@@ -9,6 +9,7 @@ from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import get_session
 from keep.api.models.db.mapping import MappingRule, MappingRuleDtoIn, MappingRuleDtoOut
 from keep.api.models.db.topology import TopologyService
+from keep.api.utils.pagination import EnrichmentEventPaginatedResultsDto
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
@@ -146,6 +147,7 @@ def update_rule(
     return response
 
 
+# todo: we can make it generic for all enrichment events, not only mapping
 @router.get("/{rule_id}/executions", description="Get all executions for a rule")
 def get_enrichment_events(
     rule_id: int,
@@ -154,7 +156,7 @@ def get_enrichment_events(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:rules"])
     ),
-):
+) -> EnrichmentEventPaginatedResultsDto:
     logger.info(
         "Getting enrichment events",
         extra={
@@ -166,11 +168,17 @@ def get_enrichment_events(
     )
     enrichment_bl = EnrichmentsBl(tenant_id=authenticated_entity.tenant_id)
     events = enrichment_bl.get_enrichment_events(rule_id, limit, offset)
+    total_count = enrichment_bl.get_total_enrichment_events(rule_id)
     logger.info(
         "Got enrichment events",
         extra={"events_count": len(events)},
     )
-    return events
+    return EnrichmentEventPaginatedResultsDto(
+        count=total_count,
+        items=events,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get(
