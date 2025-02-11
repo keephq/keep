@@ -259,11 +259,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
                 </TableRow>
               </HoverCard.Trigger>
               <HoverCard.Portal>
-                <HoverCard.Content
-                  side="left"
-                  className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 shadow-lg z-[9999] overflow-y-scroll"
-                  sideOffset={5}
-                >
+                <HoverCard.Content className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 shadow-lg z-[9999] overflow-y-scroll">
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">

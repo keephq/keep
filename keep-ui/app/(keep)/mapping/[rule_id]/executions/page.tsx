@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { MappingExecutionTable } from "../mapping-execution-table";
-import { Card, Title } from "@tremor/react";
-import { useMappingExecutions } from "@/utils/hooks/useMappingExecutions";
+import { Card, Title, Icon, Subtitle } from "@tremor/react";
+import { useEnrichmentEvents } from "@/utils/hooks/useEnrichmentEvents";
+import { Link } from "@/components/ui";
+import { ArrowRightIcon } from "@heroicons/react/16/solid";
+import { useMappings } from "@/utils/hooks/useMappingRules";
 
 interface Pagination {
   limit: number;
@@ -20,7 +23,10 @@ export default function MappingExecutionsPage({
     offset: 0,
   });
 
-  const { executions, totalCount, isLoading } = useMappingExecutions({
+  const { data: mappings } = useMappings();
+  const rule = mappings?.find((m) => m.id === parseInt(params.rule_id));
+
+  const { executions, totalCount, isLoading } = useEnrichmentEvents({
     ruleId: params.rule_id,
     limit: pagination.limit,
     offset: pagination.offset,
@@ -32,7 +38,15 @@ export default function MappingExecutionsPage({
 
   return (
     <div className="p-4 space-y-4">
-      <Title>Mapping Rule Executions</Title>
+      <div>
+        <Subtitle className="text-sm">
+          <Link href="/mapping">All Rules</Link>{" "}
+          <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
+          {rule?.name || `Rule ${params.rule_id}`}
+          <Icon icon={ArrowRightIcon} color="gray" size="xs" /> Executions
+        </Subtitle>
+        <Title>Mapping Rule Executions</Title>
+      </div>
       <Card>
         <MappingExecutionTable
           executions={{

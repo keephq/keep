@@ -503,6 +503,16 @@ class EnrichmentsBl:
         )
         return self.db_session.exec(query).one()
 
+    def get_enrichment_event(self, enrichment_event_id: UUID) -> EnrichmentEvent:
+        query = select(EnrichmentEvent).where(
+            EnrichmentEvent.id == enrichment_event_id,
+            EnrichmentEvent.tenant_id == self.tenant_id,
+        )
+        enrichment_event = self.db_session.exec(query).one()
+        if not enrichment_event:
+            raise HTTPException(status_code=404, detail="Enrichment event not found")
+        return enrichment_event
+
     def get_enrichment_events(self, rule_id: int, limit: int, offset: int):
         # todo: easy to make async
         query = (

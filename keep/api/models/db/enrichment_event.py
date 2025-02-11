@@ -2,6 +2,7 @@ import enum
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
+from pydantic import BaseModel
 from sqlalchemy_utils import UUIDType
 from sqlmodel import JSON, TEXT, Column, Field, ForeignKey, Index, SQLModel
 
@@ -97,3 +98,8 @@ class EnrichmentLog(SQLModel, table=True):
             "enrichment_event_id",
         ),
     )
+
+
+class EnrichmentEventWithLogs(BaseModel):
+    enrichment_event: EnrichmentEvent
+    logs: list[EnrichmentLog]

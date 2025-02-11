@@ -7,6 +7,7 @@ from sqlmodel import Session
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import get_session
+from keep.api.models.db.enrichment_event import EnrichmentEventWithLogs
 from keep.api.models.db.mapping import MappingRule, MappingRuleDtoIn, MappingRuleDtoOut
 from keep.api.models.db.topology import TopologyService
 from keep.api.utils.pagination import EnrichmentEventPaginatedResultsDto
@@ -191,7 +192,7 @@ def get_enrichment_event_logs(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:rules"])
     ),
-):
+) -> EnrichmentEventWithLogs:
     logger.info(
         "Getting enrichment event logs",
         extra={
@@ -201,6 +202,7 @@ def get_enrichment_event_logs(
         },
     )
     enrichment_bl = EnrichmentsBl(tenant_id=authenticated_entity.tenant_id)
+    enrichment_event = enrichment_bl.get_enrichment_event(enrichment_event_id)
     logs = enrichment_bl.get_enrichment_event_logs(enrichment_event_id)
     if not logs:
         raise HTTPException(status_code=404, detail="Logs not found")
@@ -208,7 +210,10 @@ def get_enrichment_event_logs(
         "Got enrichment event logs",
         extra={"logs_count": len(logs)},
     )
-    return logs
+    return EnrichmentEventWithLogs(
+        enrichment_event=enrichment_event,
+        logs=logs,
+    )
 
 
 @router.post(

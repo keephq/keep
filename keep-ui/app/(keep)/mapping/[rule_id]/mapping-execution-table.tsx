@@ -1,9 +1,9 @@
 import { createColumnHelper, DisplayColumnDef } from "@tanstack/react-table";
 import { GenericTable } from "@/components/table/GenericTable";
 import {
-  MappingExecutionDetail,
+  EnrichmentEvent,
   PaginatedMappingExecutionDto,
-} from "@/shared/api/mapping-executions";
+} from "@/shared/api/enrichment-events";
 import { Dispatch, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { getIcon } from "../../workflows/[workflow_id]/workflow-execution-table";
@@ -21,7 +21,7 @@ interface Props {
 }
 
 export function MappingExecutionTable({ executions, setPagination }: Props) {
-  const columnHelper = createColumnHelper<MappingExecutionDetail>();
+  const columnHelper = createColumnHelper<EnrichmentEvent>();
   const router = useRouter();
 
   const columns = [
@@ -52,26 +52,15 @@ export function MappingExecutionTable({ executions, setPagination }: Props) {
       cell: ({ row }) => row.original.alert_id,
     }),
     columnHelper.display({
-      id: "execution_time",
-      header: "Duration",
-      cell: ({ row }) => {
-        const seconds = row.original.execution_time;
-        if (!seconds) return "";
-        return seconds > 60
-          ? `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`
-          : `${seconds.toFixed(2)}s`;
-      },
-    }),
-    columnHelper.display({
       id: "started",
       header: "Started",
       cell: ({ row }) => (
         <TimeAgo
-          date={row.original.started + "Z"}
+          date={row.original.timestamp + "Z"}
           formatter={(value, unit, suffix) => {
-            if (!row.original.started) return "";
+            if (!row.original.timestamp) return "";
             return formatDistanceToNowStrict(
-              new Date(row.original.started + "Z"),
+              new Date(row.original.timestamp + "Z"),
               {
                 addSuffix: true,
               }
@@ -84,10 +73,10 @@ export function MappingExecutionTable({ executions, setPagination }: Props) {
         />
       ),
     }),
-  ] as DisplayColumnDef<MappingExecutionDetail>[];
+  ] as DisplayColumnDef<EnrichmentEvent>[];
 
   return (
-    <GenericTable<MappingExecutionDetail>
+    <GenericTable<EnrichmentEvent>
       data={executions.items}
       columns={columns}
       rowCount={executions.count}
@@ -96,7 +85,7 @@ export function MappingExecutionTable({ executions, setPagination }: Props) {
       onPaginationChange={(newLimit: number, newOffset: number) =>
         setPagination({ limit: newLimit, offset: newOffset })
       }
-      onRowClick={(row: MappingExecutionDetail) => {
+      onRowClick={(row: EnrichmentEvent) => {
         router.push(`/mapping/${row.rule_id}/executions/${row.id}`);
       }}
     />

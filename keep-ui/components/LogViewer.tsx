@@ -1,8 +1,8 @@
-import { MappingLogEntry } from "@/shared/api/mapping-executions";
+import { EnrichmentEventLog } from "@/shared/api/enrichment-events";
 import { Card } from "@tremor/react";
 
 interface Props {
-  logs: MappingLogEntry[];
+  logs: EnrichmentEventLog[];
 }
 
 export function LogViewer({ logs }: Props) {

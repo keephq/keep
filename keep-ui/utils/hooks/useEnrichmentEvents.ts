@@ -1,23 +1,24 @@
 import { useApi } from "@/shared/lib/hooks/useApi";
 import useSWR, { SWRConfiguration } from "swr";
 import {
-  MappingExecutionDetail,
+  EnrichmentEvent,
+  EnrichmentEventWithLogs,
   PaginatedMappingExecutionDto,
-} from "@/shared/api/mapping-executions";
+} from "@/shared/api/enrichment-events";
 
-interface UseMappingExecutionsOptions {
+interface UseEnrichmentEventsOptions {
   ruleId: string;
   limit?: number;
   offset?: number;
   options?: SWRConfiguration;
 }
 
-export function useMappingExecutions({
+export function useEnrichmentEvents({
   ruleId,
   limit = 20,
   offset = 0,
   options = { revalidateOnFocus: false },
-}: UseMappingExecutionsOptions) {
+}: UseEnrichmentEventsOptions) {
   const api = useApi();
 
   const { data, error, isLoading, mutate } =
@@ -38,20 +39,20 @@ export function useMappingExecutions({
   };
 }
 
-interface UseMappingExecutionDetailOptions {
+interface UseEnrichmentEventOptions {
   ruleId: string;
   executionId: string;
   options?: SWRConfiguration;
 }
 
-export function useMappingExecutionDetail({
+export function useEnrichmentEvent({
   ruleId,
   executionId,
   options = { revalidateOnFocus: false },
-}: UseMappingExecutionDetailOptions) {
+}: UseEnrichmentEventOptions) {
   const api = useApi();
 
-  const { data, error, isLoading, mutate } = useSWR<MappingExecutionDetail>(
+  const { data, error, isLoading, mutate } = useSWR<EnrichmentEventWithLogs>(
     api.isReady() ? `/mapping/${ruleId}/executions/${executionId}` : null,
     (url) => api.get(url),
     options
