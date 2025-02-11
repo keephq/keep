@@ -126,8 +126,6 @@ function addNodeBetween(
     isLayouted: false,
     changes: get().changes + 1,
   });
-  get().onLayout({ direction: "DOWN" });
-  get().updateDefinition();
   if (type == "edge") {
     set({
       selectedEdge: edges[edges.length - 1]?.id,
@@ -153,6 +151,9 @@ function addNodeBetween(
       break;
     }
   }
+
+  get().onLayout({ direction: "DOWN" });
+  get().updateDefinition();
 }
 
 const defaultState: FlowStateValues = {
