@@ -14,15 +14,17 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.validation.fields import NoSchemeUrl, UrlPort
 
 
+DEFAULT_TIMEOUT_SECONDS = 120  # Not to hang the thread forever, only for extreme cases
+
+
 @pydantic.dataclasses.dataclass
 class ClickhouseProviderAuthConfig:
     username: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "Clickhouse username",
-            "config_main_group": "authentication"
+            "config_main_group": "authentication",
         },
-        
     )
     password: str = dataclasses.field(
         metadata={
@@ -52,15 +54,17 @@ class ClickhouseProviderAuthConfig:
         metadata={"required": False, "description": "Clickhouse database name"},
         default=None,
     )
-    protocol: typing.Literal["clickhouse", "clickhouses", "http", "https"] = dataclasses.field(
-        default="clickhouse",
-        metadata={
-            "required": True,
-            "description": "Protocol ('clickhouses' for SSL, 'clickhouse' for no SSL, 'http' or 'https')",
-            "type": "select",
-            "options": ["clickhouse", "clickhouses", "http", "https"],
-            "config_main_group": "authentication",
-        },
+    protocol: typing.Literal["clickhouse", "clickhouses", "http", "https"] = (
+        dataclasses.field(
+            default="clickhouse",
+            metadata={
+                "required": True,
+                "description": "Protocol ('clickhouses' for SSL, 'clickhouse' for no SSL, 'http' or 'https')",
+                "type": "select",
+                "options": ["clickhouse", "clickhouses", "http", "https"],
+                "config_main_group": "authentication",
+            },
+        )
     )
     verify: bool = dataclasses.field(
         metadata={
@@ -149,16 +153,22 @@ class ClickhouseProvider(BaseProvider, ProviderHealthMixin):
         if self.authentication_config.verify is False:
             dsn += "?verify=false"
 
-        return connect(dsn, verify=self.authentication_config.verify)
+        return connect(
+            dsn,
+            connect_timeout=DEFAULT_TIMEOUT_SECONDS,
+            send_receive_timeout=DEFAULT_TIMEOUT_SECONDS,
+            sync_request_timeout=DEFAULT_TIMEOUT_SECONDS,
+            verify=self.authentication_config.verify,
+        )
 
     def _execute_http_query(self, query: str, params: dict = None) -> list:
         """
         Execute a query using HTTP protocol.
-        
+
         Args:
             query: SQL query to execute
             params: Query parameters for formatting
-        
+
         Returns:
             list: Query results
         """
@@ -166,39 +176,40 @@ class ClickhouseProvider(BaseProvider, ProviderHealthMixin):
         host = self.authentication_config.host
         port = self.authentication_config.port
         database = self.authentication_config.database
-        
+
         url = f"{protocol}://{host}:{port}"
-        
+
         # Format query if parameters are provided
         if params:
             query = query.format(**params)
 
         # Prepare request parameters
-        request_params = {
-            "query": query,
-            "default_format": "JSONEachRow"
-        }
-        
+        request_params = {"query": query, "default_format": "JSONEachRow"}
+
         if database:
             request_params["database"] = database
-            
+
         # Make request with authentication
         response = requests.post(
             url,
             params=request_params,
-            auth=(self.authentication_config.username, self.authentication_config.password),
-            verify=self.authentication_config.verify
+            auth=(
+                self.authentication_config.username,
+                self.authentication_config.password,
+            ),
+            verify=self.authentication_config.verify,
+            timeout=DEFAULT_TIMEOUT_SECONDS,
         )
-        
+
         if not response.ok:
             raise ProviderException(f"HTTP query failed: {response.text}")
-            
+
         # Parse response - split by newlines as each line is a JSON object
         results = []
-        for line in response.text.strip().split('\n'):
+        for line in response.text.strip().split("\n"):
             if line:
                 results.append(json.loads(line))
-                
+
         return results
 
     def dispose(self):
@@ -248,7 +259,7 @@ class ClickhouseProvider(BaseProvider, ProviderHealthMixin):
 
 if __name__ == "__main__":
     import os
-    
+
     config = ProviderConfig(
         authentication={
             "username": os.environ.get("CLICKHOUSE_USER"),
