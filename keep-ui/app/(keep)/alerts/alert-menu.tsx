@@ -29,6 +29,7 @@ interface Props {
   presetName: string;
   isInSidebar?: boolean;
   setIsIncidentSelectorOpen?: (open: boolean) => void;
+  toggleSidebar?: VoidFunction;
 }
 
 interface MenuItem {
@@ -47,6 +48,7 @@ export default function AlertMenu({
   presetName,
   isInSidebar,
   setIsIncidentSelectorOpen,
+  toggleSidebar,
 }: Props) {
   const api = useApi();
   const router = useRouter();
@@ -231,7 +233,10 @@ export default function AlertMenu({
             return (
               <button
                 key={item.label + index}
-                onClick={item.onClick}
+                onClick={() => {
+                  item.onClick();
+                  toggleSidebar();
+                }}
                 disabled={item.disabled}
                 className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
               >
