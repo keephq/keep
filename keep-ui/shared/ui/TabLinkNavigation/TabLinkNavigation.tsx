@@ -18,7 +18,7 @@ export function TabLinkNavigation({
         className={twMerge(
           "justify-start flex border-b space-x-4",
           "border-tremor-border dark:border-dark-tremor-border",
-          "sticky xl:-top-10 -top-4 bg-tremor-background-muted z-10",
+          "sticky xl:-top-10 -top-4 bg-tremor-background-muted",
           className
         )}
         role="tablist"
@@ -32,11 +32,11 @@ export function TabLinkNavigation({
 
 // Example usage with icons:
 {
-  /* 
+  /*
 import { BellIcon, ActivityIcon, ClockIcon, NetworkIcon, WorkflowIcon, ChatIcon } from 'lucide-react'
 
 <TabLinkNavigation>
-  <TabLinkNavigationLink 
+  <TabLinkNavigationLink
     href="/incident/123"
     isActive={pathname === '/incident/123'}
     icon={BellIcon}

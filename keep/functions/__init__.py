@@ -202,6 +202,20 @@ def dict_pop(data: str | dict, *args) -> dict:
         dict_copy.pop(arg, None)
     return dict_copy
 
+def dict_filter_by_prefix(data: str | dict, prefix: str) -> dict:
+    """
+    This function filters a dictionary and returns only keys with the given prefix.
+
+    Args:
+        data (str | dict): the dictionary to filter
+        prefix (str): the prefix to filter by
+
+    Returns:
+        dict: the filtered dictionary
+    """
+    if isinstance(data, str):
+        data = json.loads(data)
+    return {k: v for k, v in data.items() if k.startswith(prefix)}
 
 def add_time_to_date(date, date_format, time_str):
     """

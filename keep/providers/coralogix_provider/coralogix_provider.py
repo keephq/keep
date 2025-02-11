@@ -39,6 +39,14 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
         "critical": AlertSeverity.CRITICAL,
     }
 
+    PRIORTY_TO_SEVERITY_MAP = {
+        "P1": AlertSeverity.CRITICAL,
+        "P2": AlertSeverity.HIGH,
+        "P3": AlertSeverity.WARNING,
+        "P4": AlertSeverity.INFO,
+        "P5": AlertSeverity.LOW,
+    }
+
     STATUS_MAP = {
         "resolve": AlertStatus.RESOLVED,
         "trigger": AlertStatus.FIRING,
@@ -76,15 +84,23 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
                 # Do nothing, keep labels as str
                 pass
 
+        severity = AlertSeverity.INFO
+        if "severityLowercase" in fields:
+            severity = CoralogixProvider.SEVERITIES_MAP.get(
+                fields.get("severityLowercase", "info")
+            )
+        elif "priority" in fields:
+            severity = CoralogixProvider.PRIORTY_TO_SEVERITY_MAP.get(
+                fields.get("priority", "P5")
+            )
+
         alert = AlertDto(
             id=fields.get("alertUniqueIdentifier"),
             alert_id=event["alert_id"] if "alert_id" in event else None,
             name=event["name"] if "name" in event else None,
             description=event["description"] if "description" in event else None,
             status=CoralogixProvider.STATUS_MAP.get(event["alert_action"]),
-            severity=CoralogixProvider.SEVERITIES_MAP.get(
-                fields.get("severityLowercase", "info")
-            ),
+            severity=severity,
             lastReceived=fields.get("timestampISO"),
             alertUniqueIdentifier=fields.get("alertUniqueIdentifier"),
             uuid=event["uuid"] if "uuid" in event else None,
