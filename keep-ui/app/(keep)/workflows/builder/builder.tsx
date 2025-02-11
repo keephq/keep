@@ -109,10 +109,6 @@ function Builder({
   useEffect(
     function updateDefinitionFromInput() {
       setIsLoading(true);
-      if (definition !== null) {
-        setIsLoading(false);
-        return;
-      }
       try {
         if (workflow) {
           setDefinition(
@@ -166,7 +162,7 @@ function Builder({
       }
       setIsLoading(false);
     },
-    [loadedAlertFile, workflow, searchParams, providers, definition]
+    [loadedAlertFile, workflow, searchParams, providers]
   );
 
   const legacyWorkflow = useMemo(() => {
