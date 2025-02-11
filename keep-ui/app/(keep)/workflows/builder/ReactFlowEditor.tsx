@@ -81,7 +81,7 @@ const ReactFlowEditor = ({
           </button>
           <div className="flex-1 p-2 bg-white border-2 overflow-y-auto">
             <div style={{ width: "350px" }}>
-              <GlobalEditorV2 synced={synced} />
+              <GlobalEditorV2 />
               {!selectedNode?.includes("empty") && !isTrigger && (
                 <Divider ref={stepEditorRef} />
               )}

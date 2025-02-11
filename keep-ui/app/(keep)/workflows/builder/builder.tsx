@@ -12,7 +12,6 @@ import {
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
 import BuilderModalContent from "./builder-modal";
-import { EmptyBuilderState } from "./empty-builder-state";
 import { stringify } from "yaml";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
@@ -30,7 +29,7 @@ import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 import Modal from "@/components/ui/Modal";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-
+import Loading from "../../loading";
 interface Props {
   loadedAlertFile: string | null;
   providers: Provider[];
@@ -74,6 +73,10 @@ function Builder({
   const searchParams = useSearchParams();
 
   const testRunWorkflow = () => {
+    if (!definition?.value) {
+      showErrorToast(new Error("Workflow is not initialized"));
+      return;
+    }
     setTestRunModalOpen(true);
     const body = stringify(getWorkflowFromDefinition(definition.value));
     api
@@ -152,8 +155,11 @@ function Builder({
   );
 
   const legacyWorkflow = useMemo(() => {
+    if (!definition?.value) {
+      return null;
+    }
     return getWorkflowFromDefinition(definition.value);
-  }, [definition.value]);
+  }, [definition?.value]);
 
   useEffect(() => {
     if (generateRequestCount) {
@@ -170,6 +176,10 @@ function Builder({
   }, [runRequestCount]);
 
   const saveWorkflow = useCallback(async () => {
+    if (!definition?.value) {
+      showErrorToast(new Error("Workflow is not initialized"));
+      return;
+    }
     if (!synced) {
       showErrorToast(
         new Error(
@@ -204,7 +214,7 @@ function Builder({
   }, [
     synced,
     canDeploy,
-    definition.value,
+    definition?.value,
     setIsSaving,
     workflowId,
     updateWorkflow,
@@ -233,7 +243,7 @@ function Builder({
   if (isLoading) {
     return (
       <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
-        <EmptyBuilderState />
+        <Loading loadingText="Initializing workflow builder..." />
       </Card>
     );
   }

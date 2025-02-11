@@ -28,10 +28,9 @@ function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col m-2.5">{children}</div>;
 }
 
-export function GlobalEditorV2({ synced }: { synced: boolean }) {
+export function GlobalEditorV2() {
   return (
     <EditorLayout>
-      <div className="text-right">{synced ? "Synced" : "Not Synced"}</div>
       <WorkflowEditorV2 />
     </EditorLayout>
   );
@@ -315,6 +314,7 @@ function WorkflowEditorV2() {
     updateV2Properties,
     selectedNode,
     validationErrors,
+    synced,
   } = useStore();
   const isDeployed = useStore((state) => state.workflowId !== null);
 
@@ -349,7 +349,7 @@ function WorkflowEditorV2() {
     updateV2Properties({ alert: currentFilters });
   };
 
-  const lockedKeys = ["isLocked", "id"];
+  const lockedKeys = ["isLocked", "id", "disabled"];
   const metadataKeys = ["name", "description"];
   // If workflow is not deployed, we can edit the metadata here, in side panel; otherwise we can edit via modal
   const toSkip = [...lockedKeys, ...(isDeployed ? metadataKeys : [])];
@@ -360,7 +360,13 @@ function WorkflowEditorV2() {
   let renderDivider = false;
   return (
     <>
-      <Title className="mt-2.5">Workflow Settings</Title>
+      <Title className="flex items-baseline justify-between">
+        Workflow Settings{" "}
+        {/* TODO: remove since user don't need to know about 'sync', it should just work */}
+        <span className="text-gray-500 text-sm">
+          {synced ? "Synced" : "Not Synced"}
+        </span>
+      </Title>
       <div className="flex flex-col gap-2">
         {propertyKeys.map((key, index) => {
           const isTrigger = [
@@ -393,6 +399,7 @@ function WorkflowEditorV2() {
                 switch (key) {
                   case "manual":
                     return (
+                      // TODO: explain what is manual trigger
                       selectedNode === "manual" && (
                         <div key={key}>
                           <input

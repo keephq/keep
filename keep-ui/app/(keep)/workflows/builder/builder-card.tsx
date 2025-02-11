@@ -38,7 +38,7 @@ export function BuilderCard({ fileContents, workflow, workflowId }: Props) {
   if (!providers || isLoading)
     return (
       <Card className="mt-2 p-4 mx-auto">
-        <Loading />
+        <Loading loadingText="Loading providers..." />
       </Card>
     );
 

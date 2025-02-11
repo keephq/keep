@@ -1,6 +1,6 @@
 "use client";
 
-import { Title, Button } from "@tremor/react";
+import { Title, Button, Switch } from "@tremor/react";
 import { useEffect, useRef, useState } from "react";
 import {
   PlusIcon,
@@ -16,6 +16,54 @@ import { YAMLException } from "js-yaml";
 import useStore from "./builder-store";
 import BuilderMetadataModal from "./builder-metadata-modal";
 import { Workflow } from "@/shared/api/workflows";
+
+function WorkflowEnabledSwitch() {
+  const { updateV2Properties, triggerSave } = useStore();
+  const isValid = useStore((state) => !!state.definition?.isValid);
+  const isInitialized = useStore((state) => !!state.workflowId);
+  const isEnabled = useStore(
+    (state) => !!state.workflowId && !state.v2Properties?.disabled
+  );
+  let tooltip = undefined;
+  if (!isValid) {
+    tooltip = "Fix the errors in the workflow before enabling it";
+  } else if (!isInitialized) {
+    tooltip = "Deploy the workflow before enabling it";
+  } else if (isEnabled) {
+    tooltip = "The workflow is enabled";
+  } else {
+    tooltip = "The workflow is disabled";
+  }
+  return (
+    <div className="flex items-center gap-2 px-2">
+      <Switch
+        id="workflow-enabled-switch"
+        checked={isEnabled}
+        onChange={(flag) => {
+          if (!isValid) {
+            showErrorToast(
+              new Error("Fix the errors in the workflow before enabling it")
+            );
+            return;
+          }
+          updateV2Properties({
+            disabled: !flag,
+          });
+          triggerSave();
+        }}
+        tooltip={
+          !isValid
+            ? "Fix the errors in the workflow before enabling it"
+            : undefined
+        }
+        disabled={!isValid}
+      />
+      <label className="text-sm" htmlFor="workflow-enabled-switch">
+        {isEnabled ? "Enabled" : "Disabled"}
+      </label>
+    </div>
+  );
+}
 
 export function WorkflowBuilderPageClient({
   workflowRaw: workflow,
@@ -39,7 +87,7 @@ export function WorkflowBuilderPageClient({
     updateV2Properties,
   } = useStore();
 
-  const isValid = useStore((state) => state.definition.isValid);
+  const isValid = useStore((state) => !!state.definition?.isValid);
   const isInitialized = useStore((state) => !!state.workflowId);
 
   useEffect(() => {
@@ -138,6 +186,7 @@ export function WorkflowBuilderPageClient({
               />
             </>
           )}
+          {isInitialized && <WorkflowEnabledSwitch />}
           {workflow && (
             <Button
               color="orange"
