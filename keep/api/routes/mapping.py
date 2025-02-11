@@ -1,5 +1,6 @@
 import datetime
 import logging
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
@@ -142,3 +143,25 @@ def update_rule(
             key for key in existing_rule.rows[0].keys() if key not in rule.matchers
         ]
     return response
+
+
+@router.post(
+    "/{rule_id}/execute", description="Execute a mapping rule against an alert"
+)
+def execute_rule(
+    rule_id: int,
+    alert_id: UUID,
+    session: Session = Depends(get_session),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:rules"])
+    ),
+):
+    logger.info(
+        "Executing a mapping rule against an alert",
+        extra={
+            "rule_id": rule_id,
+            "alert_id": alert_id,
+            "tenant_id": authenticated_entity.tenant_id,
+        },
+    )
+    # enrichment_bl = EnrichmentsBl(tenant_id=authenticated_entity.tenant_id)

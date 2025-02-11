@@ -200,9 +200,11 @@ def create_workflow_execution(
             raise
 
 
-def get_mapping_rule_by_id(tenant_id: str, rule_id: str) -> MappingRule | None:
+def get_mapping_rule_by_id(
+    tenant_id: str, rule_id: str, session: Optional[Session] = None
+) -> MappingRule | None:
     rule = None
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         rule: MappingRule | None = (
             session.query(MappingRule)
             .filter(MappingRule.tenant_id == tenant_id)
@@ -3854,7 +3856,10 @@ def add_alerts_to_incident(
                 # If incident has alerts already, use the max severity between existing and new alerts,
                 # otherwise use the new alerts max severity
                 incident.severity = (
-                    max(incident.severity, alerts_data_for_incident["max_severity"].order)
+                    max(
+                        incident.severity,
+                        alerts_data_for_incident["max_severity"].order,
+                    )
                     if incident.alerts_count
                     else alerts_data_for_incident["max_severity"].order
                 )
@@ -4351,6 +4356,7 @@ def update_incident_severity(
         session.refresh(incident)
 
         return incident
+
 
 def get_topology_data_by_dynamic_matcher(
     tenant_id: str, matchers_value: dict[str, str]

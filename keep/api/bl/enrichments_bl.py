@@ -2,9 +2,11 @@ import datetime
 import json
 import logging
 import re
+from uuid import UUID
 
 import celpy
 import chevron
+from fastapi import HTTPException
 from sqlmodel import Session
 
 from keep.api.core.config import config
@@ -64,6 +66,13 @@ class EnrichmentsBl:
         if not EnrichmentsBl.ENRICHMENT_DISABLED:
             self.db_session = db or get_session_sync()
             self.elastic_client = ElasticClient(tenant_id=tenant_id)
+
+    def run_mapping_rule_by_id(self, rule_id: int, alert_id: UUID) -> AlertDto:
+        rule = get_mapping_rule_by_id(self.db_session, rule_id, session=self.db_session)
+        if not rule:
+            raise HTTPException(status_code=404, detail="Mapping rule not found")
+
+        # alert = get_alert_by_id(self.db_session, alert_id, session=self.db_session)
 
     def run_extraction_rules(
         self, event: AlertDto | dict, pre=False
@@ -170,38 +179,6 @@ class EnrichmentsBl:
                 )
 
         return AlertDto(**event) if is_alert_dto else event
-
-    def run_mapping_rule_by_id(
-        self,
-        rule_id: int,
-        lst: list[dict],
-        entry_key: str,
-        matcher: str,
-        key: str,
-    ) -> list:
-        """
-        Read keep/functions/__init__.py.run_mapping function docstring for more information.
-        """
-        self.logger.info("Running mapping rule by ID", extra={"rule_id": rule_id})
-        mapping_rule = get_mapping_rule_by_id(self.tenant_id, rule_id)
-        if not mapping_rule:
-            self.logger.warning("Mapping rule not found", extra={"rule_id": rule_id})
-            return []
-
-        result = []
-        for entry in lst:
-            entry_key_value = entry.get(entry_key)
-            if entry_key_value is None:
-                self.logger.warning("Entry key not found", extra={"entry": entry})
-                continue
-            for row in mapping_rule.rows:
-                if row.get(matcher) == entry_key_value:
-                    result.append(row.get(key))
-                    break
-        self.logger.info(
-            "Mapping rule executed", extra={"rule_id": rule_id, "result": result}
-        )
-        return result
 
     def run_mapping_rules(self, alert: AlertDto) -> AlertDto:
         """
