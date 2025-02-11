@@ -108,7 +108,8 @@ def create_fake_alert(index: int, provider_type: str):
             "title": alert_name,
             "type": "metric alert",
             "query": "avg(last_5m):avg:system.cpu.user{*} by {host} > 90",
-            "message": f"CPU usage is over 90% on srv1-eu1-prod. Searched value: {'even' if index % 2 else 'odd'}",
+            # Leading index is for easier result verification in sort tests
+            "message": f"{index} CPU usage is over 90% on srv1-eu1-prod. Searched value: {'even' if index % 2 else 'odd'}",
             "description": "CPU usage is over 90% on srv1-us2-prod.",
             "tagsList": "environment:production,team:backend,monitor,service:api",
             "priority": "P2",
@@ -154,7 +155,8 @@ def create_fake_alert(index: int, provider_type: str):
             },
             "status": STATUS_MAP.get(status, STATUS_MAP["firing"]),
             "annotations": {
-                "summary": f"{title} {provider_type} {index}. It's not normal for customer_id:acme",
+                # Leading index is for easier result verification in sort tests
+                "summary": f"{index} {title} {provider_type}. It's not normal for customer_id:acme",
             },
             "startsAt": "2025-02-09T17:26:12.769318+00:00",
             "endsAt": "0001-01-01T00:00:00Z",
@@ -270,7 +272,7 @@ def assert_facet(browser, facet_name, alerts, alert_property_name: str):
             counters_dict[prop_value] = 0
 
         counters_dict[prop_value] += 1
-    print()
+
     for facet_value, count in counters_dict.items():
         facet_locator = browser.locator("[data-testid='facet']", has_text=facet_name)
         expect(facet_locator).to_be_visible()
@@ -324,14 +326,9 @@ facet_test_cases = {
 
 @pytest.fixture(scope="module")
 def setup_test_data():
-    # Set up test data before all tests in this file
     print("Setting up test data...")
     test_data = upload_alerts()
-
-    yield test_data["results"]  # Provide test data to tests
-
-    # Teardown (cleanup) logic after tests run
-    print("Cleaning up test data...")
+    yield test_data["results"]
 
 
 @pytest.mark.parametrize("facet_test_case", facet_test_cases.keys())
