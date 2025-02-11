@@ -255,7 +255,7 @@ export function validateStepPure(step: V2Step): string | null {
     }
     if (
       !Object.values(step?.properties?.with || {}).some(
-        (value) => typeof value === "string" && value.length > 0
+        (value) => String(value).length > 0
       )
     ) {
       return "Step/action with no parameters configured!";

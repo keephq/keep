@@ -161,6 +161,7 @@ const INITIAL_DEFINITION = wrapDefinitionV2({
 });
 
 const defaultState: FlowStateValues = {
+  workflowId: null,
   nodes: [],
   edges: [],
   selectedNode: null,
@@ -171,12 +172,10 @@ const defaultState: FlowStateValues = {
   isLayouted: false,
   selectedEdge: null,
   changes: 0,
-  firstInitilisationDone: false,
   errorNode: null,
   synced: true,
   canDeploy: false,
   buttonsEnabled: false,
-  generateEnabled: false,
   generateRequestCount: 0,
   saveRequestCount: 0,
   runRequestCount: 0,
@@ -192,7 +191,6 @@ const useStore = create<FlowState>()(
     setDefinition: (def) => set({ definition: def }),
     setIsLoading: (loading) => set({ isLoading: loading }),
     setButtonsEnabled: (state: boolean) => set({ buttonsEnabled: state }),
-    setGenerateEnabled: (state: boolean) => set({ generateEnabled: state }),
     triggerGenerate: () =>
       set((state) => ({
         generateRequestCount: state.generateRequestCount + 1,
@@ -205,8 +203,6 @@ const useStore = create<FlowState>()(
     setCanDeploy: (deploy) => set({ canDeploy: deploy }),
     setSynced: (sync) => set({ synced: sync }),
     setErrorNode: (id) => set({ errorNode: id }),
-    setFirstInitilisationDone: (firstInitilisationDone) =>
-      set({ firstInitilisationDone }),
     setSelectedEdge: (id) =>
       set({ selectedEdge: id, selectedNode: null, openGlobalEditor: true }),
     setIsLayouted: (isLayouted) => set({ isLayouted }),
@@ -216,15 +212,15 @@ const useStore = create<FlowState>()(
     setToolBoxConfig: (config) => set({ toolboxConfiguration: config }),
     setOpneGlobalEditor: (open) => set({ openGlobalEditor: open }),
     updateSelectedNodeData: (key, value) => {
+      console.log("updateSelectedNodeData", key, value);
       const currentSelectedNode = get().selectedNode;
       if (currentSelectedNode) {
         const updatedNodes = get().nodes.map((node) => {
           if (node.id === currentSelectedNode) {
             //properties changes  should not reconstructed the defintion. only recontrreconstructing if there are any structural changes are done on the flow.
-            if (value) {
+            if (value !== undefined) {
               node.data[key] = value;
-            }
-            if (!value) {
+            } else {
               delete node.data[key];
             }
             return { ...node };
@@ -255,20 +251,17 @@ const useStore = create<FlowState>()(
       const validationErrors: Record<string, string> = {};
       const definition: Definition = { sequence, properties: newProperties };
 
+      const result = validateGlobalPure(definition);
+      if (result) {
+        validationErrors[result[0]] = result[1];
+        isValid = false;
+      }
+
       // Check each step's validity
       for (const step of sequence) {
         const error = validateStepPure(step);
         if (error) {
           validationErrors[step.name || step.id] = error;
-          isValid = false;
-        }
-      }
-
-      // Check global validity if all steps are valid
-      if (isValid) {
-        const result = validateGlobalPure(definition);
-        if (result) {
-          validationErrors[result[0]] = result[1];
           isValid = false;
         }
       }
@@ -500,8 +493,10 @@ const useStore = create<FlowState>()(
       initialNodes?: FlowNode[];
       initialEdges?: Edge[];
     }) => onLayout(params, set, get),
-    initializeWorkflow: (toolboxConfiguration: Record<string, any>) =>
-      initializeWorkflow(toolboxConfiguration, set, get),
+    initializeWorkflow: (
+      workflowId: string | null,
+      toolboxConfiguration: Record<string, any>
+    ) => initializeWorkflow(workflowId, toolboxConfiguration, set, get),
   }))
 );
 
@@ -550,6 +545,7 @@ function onLayout(
 }
 
 async function initializeWorkflow(
+  workflowId: string | null,
   toolboxConfiguration: Record<string, any>,
   set: StoreSet,
   get: StoreGet
@@ -583,8 +579,8 @@ async function initializeWorkflow(
   const initialPosition = { x: 0, y: 50 };
   let { nodes, edges } = processWorkflowV2(sequences, initialPosition, true);
   set({
+    workflowId,
     selectedNode: null,
-    firstInitilisationDone: false,
     isLayouted: false,
     nodes,
     edges,

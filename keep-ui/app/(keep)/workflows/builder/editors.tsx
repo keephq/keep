@@ -624,8 +624,6 @@ export function StepEditorV2({
     triggerSave,
   } = useStore();
 
-  const deployRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (selectedNode) {
       const { data } = getNodeById(selectedNode) || {};
@@ -634,27 +632,40 @@ export function StepEditorV2({
     }
   }, [selectedNode, getNodeById]);
 
-  if (!selectedNode) return null;
+  const saveFormDataToStoreDebounced = useCallback(
+    debounce((formData: any) => {
+      updateSelectedNodeData("name", formData.name);
+      updateSelectedNodeData("properties", formData.properties);
+    }, 300),
+    [updateSelectedNodeData]
+  );
+
+  if (!selectedNode) {
+    return null;
+  }
 
   const providerType = formData?.type?.split("-")[1];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    console.log("handleInputChange", e.target.name, e.target.value);
+    const updatedFormData = { ...formData, [e.target.name]: e.target.value };
+    setFormData(updatedFormData);
     setSynced(false);
+    saveFormDataToStoreDebounced(updatedFormData);
   };
 
   const handlePropertyChange = (key: string, value: any) => {
-    setFormData({
+    console.log("handlePropertyChange", key, value);
+    const updatedFormData = {
       ...formData,
       properties: { ...formData.properties, [key]: value },
-    });
+    };
+    setFormData(updatedFormData);
     setSynced(false);
+    saveFormDataToStoreDebounced(updatedFormData);
   };
 
   const handleSubmit = () => {
-    // Finalize the changes before saving
-    updateSelectedNodeData("name", formData.name);
-    updateSelectedNodeData("properties", formData.properties);
     triggerSave();
   };
 
@@ -698,10 +709,6 @@ export function StepEditorV2({
           updateProperty={handlePropertyChange}
         />
       ) : null}
-      <div>
-        <Text className="capitalize">Deploy</Text>
-        <input ref={deployRef} type="checkbox" defaultChecked />
-      </div>
       <button
         className="sticky bottom-[-10px] mt-4 bg-orange-500 text-white p-2 rounded"
         onClick={handleSubmit}

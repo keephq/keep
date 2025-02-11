@@ -3,6 +3,7 @@ import { useReactFlow } from "@xyflow/react";
 import useStore from "@/app/(keep)/workflows/builder/builder-store";
 
 const useWorkflowInitialization = (
+  workflowId: string | null,
   toolboxConfiguration: Record<string, any>
 ) => {
   const {
@@ -40,7 +41,7 @@ const useWorkflowInitialization = (
 
   useEffect(() => {
     if (changes === 0) {
-      initializeWorkflow(toolboxConfiguration);
+      initializeWorkflow(workflowId, toolboxConfiguration);
     }
   }, [changes]);
 

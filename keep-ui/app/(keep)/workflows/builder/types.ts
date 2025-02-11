@@ -59,6 +59,7 @@ export type StoreSet = (
 ) => void;
 
 export interface FlowStateValues {
+  workflowId: string | null;
   nodes: FlowNode[];
   edges: Edge[];
   selectedNode: string | null;
@@ -69,12 +70,10 @@ export interface FlowStateValues {
   isLayouted: boolean;
   selectedEdge: string | null;
   changes: number;
-  firstInitilisationDone: boolean;
   errorNode: string | null;
   synced: boolean;
   canDeploy: boolean;
   buttonsEnabled: boolean;
-  generateEnabled: boolean;
   generateRequestCount: number;
   saveRequestCount: number;
   runRequestCount: number;
@@ -86,7 +85,6 @@ export interface FlowStateValues {
 
 export interface FlowState extends FlowStateValues {
   setButtonsEnabled: (state: boolean) => void;
-  setGenerateEnabled: (state: boolean) => void;
   triggerGenerate: () => void;
   triggerSave: () => void;
   triggerRun: () => void;
@@ -94,7 +92,6 @@ export interface FlowState extends FlowStateValues {
   setCanDeploy: (deploy: boolean) => void;
   setSynced: (sync: boolean) => void;
   setErrorNode: (id: string | null) => void;
-  setFirstInitilisationDone: (firstInitilisationDone: boolean) => void;
   setSelectedEdge: (id: string | null) => void;
   setIsLayouted: (isLayouted: boolean) => void;
   addNodeBetween: (
@@ -127,6 +124,9 @@ export interface FlowState extends FlowStateValues {
     initialNodes?: FlowNode[];
     initialEdges?: Edge[];
   }) => void;
-  initializeWorkflow: (toolboxConfiguration: Record<string, any>) => void;
+  initializeWorkflow: (
+    workflowId: string | null,
+    toolboxConfiguration: Record<string, any>
+  ) => void;
   updateDefinition: () => void;
 }

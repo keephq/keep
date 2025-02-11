@@ -30,7 +30,6 @@ export function WorkflowBuilderPageClient({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const {
     buttonsEnabled,
-    generateEnabled,
     triggerGenerate,
     triggerSave,
     triggerRun,
@@ -38,6 +37,9 @@ export function WorkflowBuilderPageClient({
     v2Properties,
     updateV2Properties,
   } = useStore();
+
+  const isValid = useStore((state) => state.definition.isValid);
+  const isInitialized = useStore((state) => !!state.workflowId);
 
   useEffect(() => {
     setFileContents(null);
@@ -142,7 +144,7 @@ export function WorkflowBuilderPageClient({
             icon={PencilIcon}
             className="min-w-28"
             variant="secondary"
-            disabled={!buttonsEnabled}
+            disabled={!isInitialized}
           >
             Edit Metadata
           </Button>
@@ -151,7 +153,7 @@ export function WorkflowBuilderPageClient({
             size="md"
             className="min-w-28"
             icon={PlayIcon}
-            disabled={!generateEnabled}
+            disabled={!isValid}
             onClick={() => triggerRun()}
           >
             Test Run
@@ -161,14 +163,14 @@ export function WorkflowBuilderPageClient({
             size="md"
             className="min-w-28"
             icon={ArrowUpOnSquareIcon}
-            disabled={!generateEnabled || isSaving}
+            disabled={!isValid || isSaving}
             onClick={() => triggerSave()}
           >
             {isSaving ? "Saving..." : "Save & Deploy"}
           </Button>
           {!workflow && (
             <Button
-              disabled={!generateEnabled}
+              disabled={!isValid}
               color="orange"
               size="md"
               className="min-w-28"
@@ -182,7 +184,6 @@ export function WorkflowBuilderPageClient({
       </div>
       <BuilderCard
         fileContents={fileContents}
-        fileName={fileName}
         workflow={workflow}
         workflowId={workflowId}
       />

@@ -14,17 +14,11 @@ const Builder = dynamic(() => import("./builder"), {
 
 interface Props {
   fileContents: string | null;
-  fileName: string;
   workflow?: string;
   workflowId?: string;
 }
 
-export function BuilderCard({
-  fileContents,
-  fileName,
-  workflow,
-  workflowId,
-}: Props) {
+export function BuilderCard({ fileContents, workflow, workflowId }: Props) {
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const [installedProviders, setInstalledProviders] = useState<
     Provider[] | null
@@ -76,7 +70,6 @@ export function BuilderCard({
       providers={providers}
       installedProviders={installedProviders}
       loadedAlertFile={fileContents}
-      fileName={fileName}
       workflow={workflow}
       workflowId={workflowId}
     />

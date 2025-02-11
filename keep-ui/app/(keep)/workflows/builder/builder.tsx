@@ -25,7 +25,6 @@ import {
 import ReactFlowBuilder from "./ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
 import useStore from "./builder-store";
-import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { showErrorToast } from "@/shared/ui";
@@ -65,7 +64,6 @@ function Builder({
     isLoading,
     setIsLoading,
     // UI State
-    setGenerateEnabled,
     generateRequestCount,
     saveRequestCount,
     runRequestCount,
@@ -190,6 +188,7 @@ function Builder({
       setIsSaving(true);
       if (workflowId) {
         await updateWorkflow(workflowId, definition.value);
+        // TODO: mark workflow as deployed to cloud
       } else {
         const response = await createWorkflow(definition.value);
         if (response?.workflow_id) {
@@ -240,13 +239,6 @@ function Builder({
     [reset]
   );
 
-  useEffect(() => {
-    setGenerateEnabled(
-      (definition.isValid && Object.keys(validationErrors).length === 0) ||
-        false
-    );
-  }, [validationErrors, setGenerateEnabled, definition.isValid]);
-
   if (isLoading) {
     return (
       <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
@@ -268,7 +260,7 @@ function Builder({
     return Object.keys(validationErrors).length > 0 ? (
       <Callout
         className="mt-2.5 mb-2.5"
-        title="Validation Error"
+        title="Fix the errors before saving"
         icon={ExclamationCircleIcon}
         color="rose"
       >
@@ -322,6 +314,7 @@ function Builder({
               <div className="flex-1 h-full relative">
                 <ReactFlowProvider>
                   <ReactFlowBuilder
+                    workflowId={workflowId ?? null}
                     providers={providers}
                     installedProviders={installedProviders}
                   />

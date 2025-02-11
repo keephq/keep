@@ -12,8 +12,6 @@ import DragAndDropSidebar from "./ToolBox";
 import { Provider } from "@/app/(keep)/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
 import "@xyflow/react/dist/style.css";
-
-import { Definition, V2Step } from "@/app/(keep)/workflows/builder/types";
 import { getToolboxConfiguration } from "./utils";
 
 const nodeTypes = { custom: CustomNode as any };
@@ -22,9 +20,11 @@ const edgeTypes: EdgeTypesType = {
 };
 
 const ReactFlowBuilder = ({
+  workflowId,
   providers,
   installedProviders,
 }: {
+  workflowId: string | null;
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
 }) => {
@@ -38,7 +38,7 @@ const ReactFlowBuilder = ({
     onConnect,
     onDragOver,
     onDrop,
-  } = useWorkflowInitialization(toolboxConfiguration);
+  } = useWorkflowInitialization(workflowId, toolboxConfiguration);
 
   return (
     <div className="h-[inherit] rounded-lg">
