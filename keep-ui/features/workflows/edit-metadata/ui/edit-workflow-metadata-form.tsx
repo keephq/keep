@@ -24,7 +24,7 @@ export function EditWorkflowMetadataForm({
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSubmit({ name, description });
+    onSubmit({ name: name.trim(), description: description.trim() });
   };
 
   return (
@@ -35,8 +35,8 @@ export function EditWorkflowMetadataForm({
           Name<span className="text-red-500 text-xs">*</span>
         </Text>
         <TextInput
+          required
           placeholder="Workflow Name"
-          required={true}
           value={name}
           onValueChange={setName}
         />
@@ -44,6 +44,7 @@ export function EditWorkflowMetadataForm({
       <div className="mt-2.5">
         <Text className="mb-2">Description</Text>
         <Textarea
+          required
           placeholder="Workflow Description"
           value={description}
           onValueChange={setDescription}
