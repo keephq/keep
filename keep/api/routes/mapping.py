@@ -80,6 +80,12 @@ def create_rule(
         tenant_id=authenticated_entity.tenant_id,
         created_by=authenticated_entity.email,
     )
+
+    if not new_rule.name or not new_rule.matchers:
+        raise HTTPException(
+            status_code=400, detail="Rule name and matchers are required"
+        )
+
     session.add(new_rule)
     session.commit()
     session.refresh(new_rule)
@@ -104,6 +110,7 @@ def delete_rule(
     )
     if rule is None:
         raise HTTPException(status_code=404, detail="Rule not found")
+
     session.delete(rule)
     session.commit()
     logger.info("Deleted a mapping rule", extra={"rule_id": rule_id})

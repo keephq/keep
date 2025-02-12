@@ -378,7 +378,12 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           Cancel
         </Button>
 
-        <Button color="orange" size="xs" type="submit">
+        <Button
+          color="orange"
+          size="xs"
+          type="submit"
+          disabled={!mapName || !attributeGroups.flat().length}
+        >
           {editMode ? "Update" : "Create"}
         </Button>
       </div>
