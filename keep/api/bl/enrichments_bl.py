@@ -136,7 +136,7 @@ class EnrichmentsBl:
                 },
             )
             self._track_enrichment_event(
-                event_id, EnrichmentStatus.SKIPPED, EnrichmentType.EXTRACT, 0, {}
+                event_id, EnrichmentStatus.SKIPPED, EnrichmentType.EXTRACTION, 0, {}
             )
             return event
 
@@ -164,7 +164,7 @@ class EnrichmentsBl:
                 self._track_enrichment_event(
                     event_id,
                     EnrichmentStatus.SKIPPED,
-                    EnrichmentType.EXTRACT,
+                    EnrichmentType.EXTRACTION,
                     rule.id,
                     {},
                 )
@@ -211,7 +211,7 @@ class EnrichmentsBl:
                 self._track_enrichment_event(
                     event_id,
                     EnrichmentStatus.SUCCESS,
-                    EnrichmentType.EXTRACT,
+                    EnrichmentType.EXTRACTION,
                     rule.id,
                     match_dict,
                 )
@@ -228,7 +228,7 @@ class EnrichmentsBl:
                 self._track_enrichment_event(
                     event_id,
                     EnrichmentStatus.SKIPPED,
-                    EnrichmentType.EXTRACT,
+                    EnrichmentType.EXTRACTION,
                     rule.id,
                     {},
                 )
