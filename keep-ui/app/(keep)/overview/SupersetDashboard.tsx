@@ -4,11 +4,23 @@ import { useEffect, useRef } from "react";
 import { embedDashboard, EmbeddedDashboard } from "@superset-ui/embedded-sdk";
 import { useSupersetToken } from "@/utils/hooks/useSupersetToken";
 import { Loader2 } from "lucide-react";
+import { useSupersetDashboards } from "@/utils/hooks/useSupersetDashboards";
 
-export function SupersetDashboard() {
-  const { token, isLoading, error } = useSupersetToken();
+interface SupersetDashboardProps {
+  dashboardId: string;
+}
+
+export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
+  const { token, isLoading, error } = useSupersetToken({ dashboardId });
   const containerRef = useRef<HTMLDivElement>(null);
   const dashboardRef = useRef<EmbeddedDashboard | null>(null);
+  const {
+    dashboards,
+    error: dashboardError,
+    isLoading: dashboardIsLoading,
+  } = useSupersetDashboards();
+
+  const embeddedId = dashboards.find((d) => d.id === dashboardId)?.uuid;
 
   useEffect(() => {
     if (!token || !containerRef.current || dashboardRef.current) return;
@@ -19,7 +31,7 @@ export function SupersetDashboard() {
 
       try {
         const dashboard = await embedDashboard({
-          id: "69977aca-5562-486f-a113-626ab8cf1e68",
+          id: embeddedId!,
           supersetDomain: "http://localhost:8088",
           mountPoint,
           fetchGuestToken: () => Promise.resolve(token),
@@ -52,7 +64,7 @@ export function SupersetDashboard() {
         dashboardRef.current = null;
       }
     };
-  }, [token]);
+  }, [token, embeddedId]);
 
   if (isLoading) {
     return (
