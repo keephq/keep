@@ -5,3 +5,8 @@ window.ResizeObserver = class ResizeObserver {
   unobserve() {}
   disconnect() {}
 };
+
+jest.mock("react-code-blocks", () => ({
+  CopyBlock: ({ text }: { text: string }) => null,
+  a11yLight: {},
+}));
