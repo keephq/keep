@@ -111,6 +111,9 @@ class BaseCelToSqlProvider:
         except PropertiesMappingException as e:
             raise CelToSqlException(f"Error while mapping columns: {str(e)}") from e
 
+        if not with_mapped_props:
+            return ""
+
         try:
             sql_filter = self.__build_sql_filter(with_mapped_props, [])
             return sql_filter

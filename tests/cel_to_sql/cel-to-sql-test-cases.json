@@ -99,6 +99,33 @@
     }
   },
   {
+    "input_cel": "severity <= 'critical'",
+    "description": "Less than than comparison operator with enum when constat is the last value in enum",
+    "expected_sql_dialect_based": {
+      "sqlite": "",
+      "mysql": "",
+      "postgresql": ""
+    }
+  },
+  {
+    "input_cel": "name == 'Payments incident' && severity <= 'critical'",
+    "description": "AND with less than than comparison operator with enum when constat is the last value in enum",
+    "expected_sql_dialect_based": {
+      "sqlite": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident'",
+      "mysql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident'",
+      "postgresql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident'"
+    }
+  },
+  {
+    "input_cel": "!(severity <= 'critical')",
+    "description": "UNARY_NOT with less than than comparison operator with enum when constat is the last value in enum",
+    "expected_sql_dialect_based": {
+      "sqlite": "NOT (true)",
+      "mysql": "NOT (TRUE)",
+      "postgresql": "NOT (true)"
+    }
+  },
+  {
     "input_cel": "alert.count <= 100",
     "description": "Less than or equal with integer",
     "expected_sql_dialect_based": {

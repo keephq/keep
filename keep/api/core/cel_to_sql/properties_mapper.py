@@ -85,10 +85,19 @@ class PropertiesMapper:
             return self.map_props_in_ast(abstract_node.expression)
 
         if isinstance(abstract_node, LogicalNode):
+            left = self.map_props_in_ast(abstract_node.left)
+            right = self.map_props_in_ast(abstract_node.right)
+
+            if left is None:
+                return right
+
+            if right is None:
+                return left
+
             return LogicalNode(
-                left=self.map_props_in_ast(abstract_node.left),
+                left=left,
                 operator=abstract_node.operator,
-                right=self.map_props_in_ast(abstract_node.right),
+                right=right,
             )
 
         if isinstance(abstract_node, ComparisonNode):
@@ -98,6 +107,11 @@ class PropertiesMapper:
             return self._visit_member_access_node(abstract_node)
 
         if isinstance(abstract_node, UnaryNode):
+            operand = self.map_props_in_ast(abstract_node.operand)
+
+            if operand is None:
+                return UnaryNode(abstract_node.operator, ConstantNode(True))
+
             return UnaryNode(abstract_node.operator, self.map_props_in_ast(abstract_node.operand))
 
         if isinstance(abstract_node, ConstantNode):
@@ -259,11 +273,10 @@ class PropertiesMapper:
                 start_index, end_index = ranges[comparison_node.operator]
 
                 if start_index and start_index >= len(mapping.enum_values):
-                    return ComparisonNode(
-                        first_operand=comparison_node.first_operand,
-                        operator=ComparisonNode.NE,
-                        second_operand=ConstantNode("not_valid_value"),
-                    )
+                    # it handles the case when queried value is the last in enum
+                    # and hence any value is applicable
+                    # and there is no need to even do filtering
+                    return None
 
                 result = ComparisonNode(
                     comparison_node.first_operand,
