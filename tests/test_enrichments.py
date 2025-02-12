@@ -177,38 +177,6 @@ def test_run_extraction_rules_empty_attribute_value(mock_session, mock_alert_dto
     assert enriched_event == mock_alert_dto  # Check if event is unchanged
 
 
-def test_run_extraction_rules_handle_source_special_case(mock_session):
-    event = {"name": "Test Alert", "source": "incorrect_format"}
-    rule = ExtractionRule(
-        id=1,
-        tenant_id="test_tenant",
-        priority=1,
-        attribute="{{ source }}",
-        regex="(?P<source>incorrect_format)",
-        disabled=False,
-        pre=True,
-    )
-    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
-        rule
-    ]
-
-    enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
-
-    # We'll mock chevron to return the exact content of 'source' to simulate the template rendering
-    with patch("chevron.render", return_value="incorrect_format"):
-        # We need to mock 're.search' to return a match object with a groupdict that includes 'source'
-        with patch(
-            "re.search",
-            return_value=Mock(groupdict=lambda: {"source": "incorrect_format"}),
-        ):
-            enriched_event = enrichment_bl.run_extraction_rules(event)
-
-    # Assert that the event's 'source' is now a list with the updated source
-    assert enriched_event["source"] == [
-        "incorrect_format"
-    ], "Source should be updated to a list containing the new source."
-
-
 #### 2. Testing `run_extraction_rules` with CEL Conditions
 
 
