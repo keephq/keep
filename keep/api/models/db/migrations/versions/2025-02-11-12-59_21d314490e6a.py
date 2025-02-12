@@ -39,7 +39,8 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("date_hour", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(["alert_id"], ["alert.id"], ondelete="CASCADE"),
+        # @tb: we might sometime save the alert_id before the alert is actually created
+        # sa.ForeignKeyConstraint(["alert_id"], ["alert.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["tenant_id"],
             ["tenant.id"],

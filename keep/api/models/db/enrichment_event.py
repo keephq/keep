@@ -34,7 +34,6 @@ class EnrichmentEvent(SQLModel, table=True):
     alert_id: UUID = Field(
         sa_column=Column(
             UUIDType(binary=False),
-            ForeignKey("alert.id", ondelete="CASCADE"),
             nullable=False,
         )
     )
