@@ -439,7 +439,7 @@ function WorkflowEditorV2() {
                             </Button>
                           </div>
                           {properties.alert &&
-                            Object.keys(properties.alert as {}).map(
+                            Object.keys(properties.alert ?? {}).map(
                               (filter) => {
                                 return (
                                   <div key={filter}>
