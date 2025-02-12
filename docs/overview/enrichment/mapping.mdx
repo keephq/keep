@@ -33,6 +33,15 @@ In complex monitoring environments, the need to enrich alert data with additiona
 
 Imagine you have a CSV file with columns representing different aspects of your infrastructure, such as `region`, `responsible_team`, and `severity_override`. By creating a mapping rule that matches alerts based on `service` and `region`, you can automatically enrich alerts with the responsible team and adjust severity based on the matched row in the CSV file.
 
+CVS file will look like: 
+
+| region       |responsible_team | severity_override               |
+|--------------|-----------------|---------------------------------|
+| us-east-1    | team-alpha      | high                            |
+| us-west-2    | team-beta       | medium                          |
+| eu-central-1 | team-gamma      | low                             |
+
+
 Similarly, you can use topology data to enrich alerts. For example, if an alert is related to a specific service, you can use topology data to find related components and their statuses, providing a more comprehensive view of the issue.
 
 ## Core Concepts

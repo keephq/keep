@@ -263,13 +263,27 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           <TabPanels>
             <TabPanel>
               {mappingType === "csv" && (
-                <Input
-                  type="file"
-                  accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-                  onChange={readFile}
-                  required={!editMode}
-                  ref={inputFile}
-                />
+                <div>
+                  <Subtitle className="mt-2.5">Upload CSV file</Subtitle>
+                  <Input
+                    type="file"
+                    accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                    onChange={readFile}
+                    required={!editMode}
+                    ref={inputFile}
+                  />
+                  <Text>
+                    Check{" "}
+                    <a
+                      href="https://docs.keephq.dev/overview/enrichment/mapping#practical-example"
+                      target="_blank"
+                      className="text-orange-500 underline"
+                    >
+                      docs
+                    </a>{" "}
+                    for the format example.
+                  </Text>
+                </div>
               )}
               {!parsedData && (
                 <Text className="text-xs text-red-500">
@@ -281,9 +295,11 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           </TabPanels>
         </TabGroup>
       </div>
-      <Subtitle className="mt-2.5">Mapping Schema</Subtitle>
-      <div className="mt-2.5">
-        <Text>Select attributes to match against the uploaded CSV</Text>
+      <Subtitle className="mt-4">Choose matching attributes</Subtitle>
+      <div className="">
+        <Text>
+          If alert will have matching atributes, it will be enriched with the rest of the fields {mappingType === "csv" ? "from the same row in the CVS file." : "from the topology."}
+        </Text>
         <div className="flex flex-col gap-4 mt-2">
           {attributeGroups.map((group, index) => (
             <div key={index} className="flex items-center space-x-2">
