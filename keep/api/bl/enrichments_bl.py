@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import re
+import uuid
 from uuid import UUID
 
 import celpy
@@ -622,6 +623,14 @@ class EnrichmentsBl:
                 "enrichments disposed", extra={"fingerprint": fingerprint}
             )
 
+    def is_valid_uuid(uuid_str):
+        try:
+            # UUID() will convert string to UUID object if valid
+            uuid.UUID(uuid_str)
+            return True
+        except ValueError:
+            return False
+
     def _track_enrichment_event(
         self,
         alert_id: UUID | None,
@@ -634,10 +643,10 @@ class EnrichmentsBl:
         Track an enrichment event in the database
         """
 
-        if alert_id is None:
+        if alert_id is None or not self.is_valid_uuid(alert_id):
             self.__logs = []
             self.logger.warning(
-                "Cannot track enrichment event without alert_id",
+                "Cannot track enrichment event without a valid alert_id",
                 extra={"tenant_id": self.tenant_id, "rule_id": rule_id},
             )
             return
