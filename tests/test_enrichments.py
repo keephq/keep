@@ -596,7 +596,7 @@ def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
         id=3,
         tenant_id=SINGLE_TENANT_UUID,
         priority=1,
-        matchers=["service"],
+        matchers=[["service"]],
         name="topology_rule",
         disabled=False,
         type="topology",
@@ -650,7 +650,7 @@ def test_run_mapping_rules_with_complex_matchers(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name && severity", "source"],
+        matchers=[["name", "severity"], ["source"]],
         rows=[
             {
                 "name": "Test Alert",
@@ -708,7 +708,7 @@ def test_run_mapping_rules_enrichments_filtering(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name && severity"],
+        matchers=[["name", "severity"]],
         rows=[
             {
                 "name": "Test Alert",

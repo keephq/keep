@@ -339,7 +339,8 @@ class EnrichmentsBl:
         if rule.type == "topology":
             matcher_value = {}
             for matcher in rule.matchers:
-                matcher_value[matcher] = get_nested_attribute(alert, matcher)
+                # [0] because topology is always 1 matcher
+                matcher_value[matcher[0]] = get_nested_attribute(alert, matcher)
             topology_service = get_topology_data_by_dynamic_matcher(
                 self.tenant_id, matcher_value
             )
