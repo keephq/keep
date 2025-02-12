@@ -108,9 +108,6 @@ async def create_rule(
     if not create_on:
         raise HTTPException(status_code=400, detail="createOn is required")
 
-    if not incident_name_template:
-        raise HTTPException(status_code=400, detail="incidentNameTemplate is required")
-
     rule = create_rule_db(
         tenant_id=tenant_id,
         name=rule_name,
