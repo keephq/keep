@@ -8,7 +8,11 @@ import { signOut as signOutClient } from "next-auth/react";
 import { GuestSession } from "@/types/auth";
 
 const READ_ONLY_ALLOWED_METHODS = ["GET", "OPTIONS"];
-const READ_ONLY_ALWAYS_ALLOWED_URLS = ["/alerts/audit"];
+const READ_ONLY_ALWAYS_ALLOWED_URLS = [
+  "/alerts/audit",
+  "/alerts/facets/options",
+  "/incidents/facets/options",
+];
 
 export class ApiClient {
   private readonly isServer: boolean;
