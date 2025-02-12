@@ -87,6 +87,7 @@ const AlertSidebar = ({
                   setDismissModalAlert={setDismissModalAlert}
                   setChangeStatusAlert={setChangeStatusAlert}
                   setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
+                  toggleSidebar={toggle}
                 />
                 <Divider />
                 <Dialog.Title

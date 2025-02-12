@@ -33,7 +33,7 @@ export function IncidentTabsNavigation({
   });
   const pathname = usePathname();
   return (
-    <TabLinkNavigation className="sticky xl:-top-10 -top-4 bg-tremor-background-muted z-10">
+    <TabLinkNavigation className="sticky xl:-top-10 -top-4 bg-tremor-background-muted">
       {tabs.map((tab) => (
         <TabNavigationLink
           key={tab.path}

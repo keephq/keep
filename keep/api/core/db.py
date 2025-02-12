@@ -94,6 +94,9 @@ ALLOWED_INCIDENT_FILTERS = [
 ]
 KEEP_AUDIT_EVENTS_ENABLED = config("KEEP_AUDIT_EVENTS_ENABLED", cast=bool, default=True)
 
+INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT = timedelta(minutes=60)
+WORKFLOWS_TIMEOUT = timedelta(minutes=120)
+
 
 def dispose_session():
     logger.info("Disposing engine pool")
@@ -228,6 +231,26 @@ def get_last_completed_execution(
     ).first()
 
 
+def get_timeouted_workflow_exections():
+    with Session(engine) as session:
+        logger.debug("Checking for timeouted workflows")
+        timeouted_workflows = []
+        try:
+            result = session.exec(
+                select(WorkflowExecution)
+                .filter(WorkflowExecution.status == "in_progress")
+                .filter(
+                    WorkflowExecution.started <= datetime.utcnow() - WORKFLOWS_TIMEOUT
+                )
+            )
+            timeouted_workflows = result.all()
+        except Exception as e:
+            logger.exception("Failed to get timeouted workflows: ", e)
+
+        logger.debug(f"Found {len(timeouted_workflows)} timeouted workflows")
+        return timeouted_workflows
+
+
 def get_workflows_that_should_run():
     with Session(engine) as session:
         logger.debug("Checking for workflows that should run")
@@ -318,8 +341,11 @@ def get_workflows_that_should_run():
                 # if this completed, error, than that's ok - the service who locked the execution is done
                 elif ongoing_execution.status != "in_progress":
                     continue
-                # if the ongoing execution runs more than 60 minutes, than its timeout
-                elif ongoing_execution.started + timedelta(minutes=60) <= current_time:
+                # if the ongoing execution runs more than timeout minutes, relaunch it
+                elif (
+                    ongoing_execution.started + INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT
+                    <= current_time
+                ):
                     ongoing_execution.status = "timeout"
                     session.commit()
                     # re-create the execution and try to get the lock
@@ -5049,6 +5075,7 @@ def set_last_alert(
                     )
                     last_alert.timestamp = alert.timestamp
                     last_alert.alert_id = alert.id
+                    last_alert.alert_hash = alert.alert_hash
                     session.add(last_alert)
 
                 elif not last_alert:
