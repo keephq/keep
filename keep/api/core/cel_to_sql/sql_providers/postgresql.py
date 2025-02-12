@@ -29,6 +29,8 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
             return expression_to_cast
         elif to_type is datetime:
             to_type_str = "TIMESTAMP"
+        elif to_type is bool:
+            to_type_str = "BOOLEAN"
         else:
             raise ValueError(f"Unsupported type: {type}")
 
