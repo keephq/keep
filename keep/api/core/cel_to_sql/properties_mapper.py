@@ -145,11 +145,6 @@ class PropertiesMapper:
             # it will behave like !!property in JS
             # converting queried property to boolean and evaluate as boolean
             mapped_prop = self._map_property(member_access_node)
-            # return ComparisonNode(
-            #     mapped_prop,
-            #     ComparisonNode.NE,
-            #     ConstantNode("true"),
-            # )
             return LogicalNode(
                 left=ComparisonNode(
                     mapped_prop,
