@@ -24,7 +24,6 @@ services:
       - DATABASE_CONNECTION_STRING=sqlite:////shared-db/db.sqlite3?check_same_thread=False
     volumes:
       - ./state:/state
-      - shared-db:/shared-db
     user: "${UID}:${GID}"
 
   keep-websocket-server:
@@ -39,19 +38,9 @@ services:
       - "8088:8088"
     volumes:
       - ./superset_config.py:/app/pythonpath/superset_config.py
-      - shared-db:/shared-db
       - ./entrypoint.sh:/entrypoint.sh:ro
+      - ./dashboards:/app/dashboards:ro
+      - ./dbs:/app/dbs:ro
     environment:
-      # Add environment variables if needed
-      - SUPERSET_ENV=production
-    depends_on:
-      - keep-backend
+      - KEEP_SUPERSET_DB=/app/dbs/db2
     entrypoint: ["/bin/bash", "/entrypoint.sh"]
-
-volumes:
-  shared-db:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${PWD}/shared-db
-      o: bind
