@@ -272,11 +272,22 @@ class PropertiesMapper:
 
                 start_index, end_index = ranges[comparison_node.operator]
 
-                if start_index and start_index >= len(mapping.enum_values):
+                if (
+                    comparison_node.operator == ComparisonNode.LE
+                    and start_index >= len(mapping.enum_values)
+                ):
                     # it handles the case when queried value is the last in enum
                     # and hence any value is applicable
                     # and there is no need to even do filtering
                     return None
+
+                if (
+                    comparison_node.operator == ComparisonNode.GT
+                    and start_index >= len(mapping.enum_values)
+                ):
+                    # nothig could be greater than the last value in enum
+                    # so it will always return False
+                    return ConstantNode(False)
 
                 result = ComparisonNode(
                     comparison_node.first_operand,
