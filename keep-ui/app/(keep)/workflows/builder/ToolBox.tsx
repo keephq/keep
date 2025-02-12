@@ -34,11 +34,12 @@ const GroupedMenu = ({
     if (isDraggable) {
       return;
     }
-    addNodeBetween(
-      selectedNode || selectedEdge,
-      step,
-      selectedNode ? "node" : "edge"
-    );
+    const nodeOrEdgeId = selectedNode || selectedEdge;
+    const type = selectedNode ? "node" : "edge";
+    if (!nodeOrEdgeId) {
+      return;
+    }
+    addNodeBetween(nodeOrEdgeId, step, type);
   };
 
   function IconUrlProvider(data: any) {

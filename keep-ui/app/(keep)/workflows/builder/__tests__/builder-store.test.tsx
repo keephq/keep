@@ -1,13 +1,20 @@
 import { act, renderHook, RenderHookResult } from "@testing-library/react";
 import useStore from "../builder-store";
 import { v4 as uuidv4 } from "uuid";
-import { FlowNode, V2Step } from "../types";
+import { FlowNode, ToolboxConfiguration, V2Step } from "../types";
 import { Connection } from "@xyflow/react";
+import { ConditionsGroup } from "../utils";
+import { MiscGroup } from "../utils";
+import { TriggersGroup } from "../utils";
 
 // Mock uuid to return predictable values
 jest.mock("uuid", () => ({
   v4: jest.fn(),
 }));
+
+const mockToolboxConfiguration: ToolboxConfiguration = {
+  groups: [TriggersGroup, MiscGroup, ConditionsGroup],
+};
 
 describe("useStore", () => {
   beforeEach(() => {
@@ -178,7 +185,7 @@ describe("useStore", () => {
           },
           isValid: true,
         });
-        result.current.initializeWorkflow(null, {});
+        result.current.initializeWorkflow(null, mockToolboxConfiguration);
       });
 
       // Delete interval trigger
@@ -379,7 +386,7 @@ describe("useStore", () => {
           },
           isValid: true,
         });
-        result.current.initializeWorkflow(null, {});
+        result.current.initializeWorkflow(null, mockToolboxConfiguration);
       });
 
       // Verify no validation errors and canDeploy is true
@@ -399,7 +406,7 @@ describe("useStore", () => {
           },
           isValid: false,
         });
-        result.current.initializeWorkflow(null, {});
+        result.current.initializeWorkflow(null, mockToolboxConfiguration);
       });
 
       // Verify validation errors are captured
@@ -442,7 +449,7 @@ describe("useStore", () => {
           },
           isValid: false,
         });
-        result.current.initializeWorkflow(null, {});
+        result.current.initializeWorkflow(null, mockToolboxConfiguration);
       });
 
       // Verify step validation errors are captured
@@ -473,7 +480,7 @@ describe("useStore", () => {
           },
           isValid: false,
         });
-        result.current.initializeWorkflow(null, {});
+        result.current.initializeWorkflow(null, mockToolboxConfiguration);
       });
 
       // Verify canDeploy is true despite provider errors

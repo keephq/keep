@@ -5,11 +5,105 @@ import { v4 as uuidv4 } from "uuid";
 import {
   Definition,
   DefinitionV2,
+  ToolboxConfiguration,
   V2Properties,
   V2Step,
 } from "@/app/(keep)/workflows/builder/types";
 
-export function getToolboxConfiguration(providers: Provider[]) {
+export const TriggersGroup = {
+  name: "Triggers",
+  steps: [
+    {
+      type: "manual",
+      componentType: "trigger",
+      name: "Manual",
+      id: "manual",
+      properties: {
+        manual: "true",
+      },
+    },
+    {
+      type: "interval",
+      componentType: "trigger",
+      name: "Interval",
+      id: "interval",
+      properties: {
+        interval: "",
+      },
+    },
+    {
+      type: "alert",
+      componentType: "trigger",
+      name: "Alert",
+      id: "alert",
+      properties: {
+        alert: {
+          source: "",
+        },
+      },
+    },
+    {
+      type: "incident",
+      componentType: "trigger",
+      name: "Incident",
+      id: "incident",
+      properties: {
+        incident: {
+          events: [],
+        },
+      },
+    },
+  ],
+};
+
+export const MiscGroup = {
+  name: "Misc",
+  steps: [
+    {
+      type: "foreach",
+      componentType: "container",
+      name: "Foreach",
+      properties: {},
+      sequence: [],
+    },
+  ],
+};
+
+export const ConditionsGroup = {
+  name: "Conditions",
+  steps: [
+    {
+      type: "condition-threshold",
+      componentType: "switch",
+      name: "Threshold",
+      properties: {
+        value: "",
+        compare_to: "",
+      },
+      branches: {
+        true: [],
+        false: [],
+      },
+    },
+    {
+      type: "condition-assert",
+      componentType: "switch",
+      name: "Assert",
+      properties: {
+        value: "",
+        compare_to: "",
+      },
+      branches: {
+        true: [],
+        false: [],
+      },
+    },
+  ],
+};
+
+export function getToolboxConfiguration(
+  providers: Provider[]
+): ToolboxConfiguration {
   /**
    * Generates the toolbox items
    */
@@ -40,51 +134,7 @@ export function getToolboxConfiguration(providers: Provider[]) {
   );
   return {
     groups: [
-      {
-        name: "Triggers",
-        steps: [
-          {
-            type: "manual",
-            componentType: "trigger",
-            name: "Manual",
-            id: "manual",
-            properties: {
-              manual: "true",
-            },
-          },
-          {
-            type: "interval",
-            componentType: "trigger",
-            name: "Interval",
-            id: "interval",
-            properties: {
-              interval: "",
-            },
-          },
-          {
-            type: "alert",
-            componentType: "trigger",
-            name: "Alert",
-            id: "alert",
-            properties: {
-              alert: {
-                source: "",
-              },
-            },
-          },
-          {
-            type: "incident",
-            componentType: "trigger",
-            name: "Incident",
-            id: "incident",
-            properties: {
-              incident: {
-                events: [],
-              },
-            },
-          },
-        ],
-      },
+      TriggersGroup,
       {
         name: "Steps",
         steps: steps,
@@ -93,50 +143,9 @@ export function getToolboxConfiguration(providers: Provider[]) {
         name: "Actions",
         steps: actions,
       },
-      {
-        name: "Misc",
-        steps: [
-          {
-            type: "foreach",
-            componentType: "container",
-            name: "Foreach",
-            properties: {},
-            sequence: [],
-          },
-        ],
-      },
-      // TODO: get conditions from API
-      {
-        name: "Conditions",
-        steps: [
-          {
-            type: "condition-threshold",
-            componentType: "switch",
-            name: "Threshold",
-            properties: {
-              value: "",
-              compare_to: "",
-            },
-            branches: {
-              true: [],
-              false: [],
-            },
-          },
-          {
-            type: "condition-assert",
-            componentType: "switch",
-            name: "Assert",
-            properties: {
-              value: "",
-              compare_to: "",
-            },
-            branches: {
-              true: [],
-              false: [],
-            },
-          },
-        ],
-      },
+      MiscGroup,
+      // TODO: get conditions from API,
+      ConditionsGroup,
     ],
   };
 }

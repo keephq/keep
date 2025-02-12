@@ -24,29 +24,36 @@ import {
   FlowState,
   FlowNode,
   Definition,
+  ToolboxConfiguration,
 } from "./types";
 import { validateGlobalPure, validateStepPure } from "./builder-validators";
 import dagre, { graphlib } from "@dagrejs/dagre";
 
 function addNodeBetween(
-  nodeOrEdge: string | null,
+  nodeOrEdgeId: string,
   step: V2Step,
-  type: string,
+  type: "node" | "edge",
   set: StoreSet,
   get: StoreGet
 ) {
-  if (!nodeOrEdge || !step) return;
+  if (!nodeOrEdgeId || !step) {
+    console.error("addNodeBetween: Node or edge or step is not defined");
+    return;
+  }
   let edge = {} as Edge;
   if (type === "node") {
-    edge = get().edges.find((edge) => edge.target === nodeOrEdge) as Edge;
+    edge = get().edges.find((edge) => edge.target === nodeOrEdgeId) as Edge;
   }
 
   if (type === "edge") {
-    edge = get().edges.find((edge) => edge.id === nodeOrEdge) as Edge;
+    edge = get().edges.find((edge) => edge.id === nodeOrEdgeId) as Edge;
   }
 
   let { source: sourceId, target: targetId } = edge || {};
-  if (!sourceId || !targetId) return;
+  if (!sourceId || !targetId) {
+    console.error("addNodeBetween: Source or target is not defined");
+    return;
+  }
 
   const isTriggerComponent = step.componentType === "trigger";
 
@@ -133,7 +140,7 @@ function addNodeBetween(
   }
 
   if (type === "node") {
-    set({ selectedNode: nodeOrEdge });
+    set({ selectedNode: nodeOrEdgeId });
   }
 
   switch (newNodeId) {
@@ -164,7 +171,7 @@ const defaultState: FlowStateValues = {
   v2Properties: {},
   openGlobalEditor: true,
   stepEditorOpenForNode: null,
-  toolboxConfiguration: {} as Record<string, any>,
+  toolboxConfiguration: null,
   isLayouted: false,
   selectedEdge: null,
   changes: 0,
@@ -195,10 +202,15 @@ const useStore = create<FlowState>()(
     setSelectedEdge: (id) =>
       set({ selectedEdge: id, selectedNode: null, openGlobalEditor: true }),
     setIsLayouted: (isLayouted) => set({ isLayouted }),
-    addNodeBetween: (nodeOrEdge: string | null, step: any, type: string) => {
-      addNodeBetween(nodeOrEdge, step, type, set, get);
+    addNodeBetween: (
+      nodeOrEdgeId: string,
+      step: V2Step,
+      type: "node" | "edge"
+    ) => {
+      addNodeBetween(nodeOrEdgeId, step, type, set, get);
     },
-    setToolBoxConfig: (config) => set({ toolboxConfiguration: config }),
+    setToolBoxConfig: (config: ToolboxConfiguration) =>
+      set({ toolboxConfiguration: config }),
     setOpneGlobalEditor: (open) => set({ openGlobalEditor: open }),
     updateSelectedNodeData: (key, value) => {
       const currentSelectedNode = get().selectedNode;
@@ -491,7 +503,7 @@ const useStore = create<FlowState>()(
     }) => onLayout(params, set, get),
     initializeWorkflow: (
       workflowId: string | null,
-      toolboxConfiguration: Record<string, any>
+      toolboxConfiguration: ToolboxConfiguration
     ) => initializeWorkflow(workflowId, toolboxConfiguration, set, get),
   }))
 );
@@ -542,7 +554,7 @@ function onLayout(
 
 async function initializeWorkflow(
   workflowId: string | null,
-  toolboxConfiguration: Record<string, any>,
+  toolboxConfiguration: ToolboxConfiguration,
   set: StoreSet,
   get: StoreGet
 ) {

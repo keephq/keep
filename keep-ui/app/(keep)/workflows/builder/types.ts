@@ -1,4 +1,5 @@
 import { Edge, Node } from "@xyflow/react";
+import { V2Step } from "./types";
 
 export type V2Properties = Record<string, any>;
 
@@ -66,7 +67,7 @@ export interface FlowStateValues {
   selectedNode: string | null;
   selectedEdge: string | null;
   v2Properties: Record<string, any>;
-  toolboxConfiguration: Record<string, any>;
+  toolboxConfiguration: ToolboxConfiguration | null;
   isLayouted: boolean;
 
   // Lifecycle
@@ -95,11 +96,11 @@ export interface FlowState extends FlowStateValues {
   setSelectedEdge: (id: string | null) => void;
   setIsLayouted: (isLayouted: boolean) => void;
   addNodeBetween: (
-    nodeOrEdge: string | null,
+    nodeOrEdgeId: string,
     step: V2Step,
-    type: string
+    type: "node" | "edge"
   ) => void;
-  setToolBoxConfig: (config: Record<string, any>) => void;
+  setToolBoxConfig: (config: ToolboxConfiguration) => void;
   setOpneGlobalEditor: (open: boolean) => void;
   updateSelectedNodeData: (key: string, value: any) => void;
   updateV2Properties: (properties: Record<string, any>) => void;
@@ -125,7 +126,13 @@ export interface FlowState extends FlowStateValues {
   }) => void;
   initializeWorkflow: (
     workflowId: string | null,
-    toolboxConfiguration: Record<string, any>
+    toolboxConfiguration: ToolboxConfiguration
   ) => void;
   updateDefinition: () => void;
 }
+export type ToolboxConfiguration = {
+  groups: {
+    name: string;
+    steps: Partial<V2Step>[];
+  }[];
+};
