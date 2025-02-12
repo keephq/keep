@@ -53,12 +53,9 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                     {/** footer */}
                     {process.env.GIT_COMMIT_HASH &&
                       process.env.SHOW_BUILD_INFO !== "false" && (
-                        <div className="pointer-events-none opacity-80 w-full p-2 flex flex-col text-slate-400 text-xs">
+                        <div className="pointer-events-none opacity-80 w-full p-2 text-slate-400 text-xs">
                           <span className="w-full text-right">
-                            Build: {process.env.GIT_COMMIT_HASH}
-                          </span>
-                          <span className="w-full test-right">
-                            Version: {process.env.KEEP_VERSION}
+                            Version: {process.env.KEEP_VERSION} | Build: {process.env.GIT_COMMIT_HASH.slice(0,6)}
                           </span>
                         </div>
                       )}
