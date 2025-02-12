@@ -20,7 +20,7 @@ export function EditWorkflowMetadataForm({
 }) {
   const [name, setName] = useState(workflow.name);
   const [description, setDescription] = useState(workflow.description);
-  const isSubmitEnabled = !!name && !!description;
+  const isSubmitEnabled = !!name.trim() && !!description.trim();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
