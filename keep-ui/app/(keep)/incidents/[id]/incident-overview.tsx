@@ -33,6 +33,7 @@ import { IncidentOverviewSkeleton } from "../incident-overview-skeleton";
 import { AlertDto } from "@/entities/alerts/model";
 import { useRouter } from "next/navigation";
 import { RootCauseAnalysis } from "@/components/ui/RootCauseAnalysis";
+import { IncidentChangeSeveritySelect } from "@/features/change-incident-severity";
 
 interface Props {
   incident: IncidentDto;
@@ -392,11 +393,18 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
         </div>
       </div>
       <div className="pr-10 grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div className="xl:col-span-2">
+        <div>
           <FieldHeader>Status</FieldHeader>
           <IncidentChangeStatusSelect
             incidentId={incident.id}
             value={incident.status}
+          />
+        </div>
+        <div>
+          <FieldHeader>Severity</FieldHeader>
+          <IncidentChangeSeveritySelect
+            incidentId={incident.id}
+            value={incident.severity}
           />
         </div>
         {!!incident.last_seen_time && (

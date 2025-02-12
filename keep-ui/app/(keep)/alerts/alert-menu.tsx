@@ -29,6 +29,7 @@ interface Props {
   presetName: string;
   isInSidebar?: boolean;
   setIsIncidentSelectorOpen?: (open: boolean) => void;
+  toggleSidebar?: VoidFunction;
 }
 
 interface MenuItem {
@@ -47,6 +48,7 @@ export default function AlertMenu({
   presetName,
   isInSidebar,
   setIsIncidentSelectorOpen,
+  toggleSidebar,
 }: Props) {
   const api = useApi();
   const router = useRouter();
@@ -56,8 +58,7 @@ export default function AlertMenu({
     },
   } = useProviders({ revalidateOnFocus: false, revalidateOnMount: false });
 
-  const { usePresetAlerts } = useAlerts();
-  const { mutate } = usePresetAlerts(presetName, { revalidateOnMount: false });
+  const { alertsMutator: mutate } = useAlerts();
 
   const fingerprint = alert.fingerprint;
 
@@ -74,12 +75,12 @@ export default function AlertMenu({
           "After assigning this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
         )
       ) {
-        const res = await api.post(
-          `/alerts/${fingerprint}/assign/${alert.lastReceived.toISOString()}`
-        );
-        if (res.ok) {
-          await mutate();
-        }
+        const lastReceived =
+          typeof alert.lastReceived === "string"
+            ? alert.lastReceived
+            : alert.lastReceived.toISOString();
+        await api.post(`/alerts/${fingerprint}/assign/${lastReceived}`);
+        await mutate();
       }
     },
     [alert, fingerprint, api, mutate]
@@ -232,7 +233,10 @@ export default function AlertMenu({
             return (
               <button
                 key={item.label + index}
-                onClick={item.onClick}
+                onClick={() => {
+                  item.onClick();
+                  toggleSidebar?.();
+                }}
                 disabled={item.disabled}
                 className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
               >

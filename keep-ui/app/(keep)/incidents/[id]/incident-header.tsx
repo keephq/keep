@@ -111,9 +111,8 @@ export function IncidentHeader({
             </div>
           )}
         </div>
-        <div className="flex justify-between items-end text-sm gap-2">
+        <div className="flex justify-start items-center text-sm gap-2">
           <div className="prose-2xl flex-grow flex gap-1">
-            <IncidentSeverityBadge severity={incident.severity} />
             {incident.incident_type == "topology" && (
               <Badge
                 color="blue"

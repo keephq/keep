@@ -11,7 +11,7 @@ from typing import List, Optional
 
 import celpy
 from arq import ArqRedis
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pusher import Pusher
 from sqlmodel import Session
@@ -19,6 +19,12 @@ from sqlmodel import Session
 from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
+from keep.api.core.alerts import (
+    get_alert_facets,
+    get_alert_facets_data,
+    get_alert_potential_facet_fields,
+    query_last_alerts,
+)
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alerts_with_incidents
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
@@ -43,8 +49,10 @@ from keep.api.models.alert import (
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import ActionType
 from keep.api.models.db.rule import ResolveOn
+from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.models.time_stamp import TimeStampFilter
+from keep.api.routes.preset import pull_data_from_providers
 from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
@@ -65,6 +73,154 @@ EVENT_WORKERS = int(config("KEEP_EVENT_WORKERS", default=5, cast=int))
 process_event_executor = ThreadPoolExecutor(
     max_workers=EVENT_WORKERS, thread_name_prefix="process_event_worker"
 )
+
+
+@router.post(
+    "/facets/options",
+    description="Query alert facet options. Accepts dictionary where key is facet id and value is cel to query facet",
+)
+def fetch_alert_facet_options(
+    facet_options_query: FacetOptionsQueryDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching alert facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    facet_options = get_alert_facets_data(
+        tenant_id=tenant_id, facet_options_query=facet_options_query
+    )
+
+    logger.info(
+        "Fetched alert facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facet_options
+
+
+@router.get(
+    "/facets",
+    description="Get alert facets",
+)
+def fetch_alert_facets(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching alert facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    facets = get_alert_facets(tenant_id=tenant_id)
+
+    logger.info(
+        "Fetched alert facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facets
+
+
+@router.get(
+    "/facets/fields",
+    description="Get potential fields for alert facets",
+)
+def fetch_alert_facet_fields(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching alert facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    fields = get_alert_potential_facet_fields(tenant_id=tenant_id)
+
+    logger.info(
+        "Fetched alert facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    return fields
+
+
+@router.get(
+    "/query",
+    description="Get last alerts occurrence",
+)
+def query_alerts(
+    request: Request,
+    bg_tasks: BackgroundTasks,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+    cel=Query(None),
+    limit: int = Query(1000),
+    offset: int = Query(0),
+    sort_by=Query(None),
+    sort_dir=Query(None),
+):
+    # Gathering alerts may take a while and we don't care if it will finish before we return the response.
+    # In the worst case, gathered alerts will be pulled in the next request.
+    # This approach is not good. We should continuesly pull alerts without relying on whether request is done or not.
+    bg_tasks.add_task(
+        pull_data_from_providers,
+        authenticated_entity.tenant_id,
+        request.state.trace_id,
+    )
+
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching alerts from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    db_alerts, total_count = query_last_alerts(
+        tenant_id=tenant_id,
+        limit=limit,
+        offset=offset,
+        cel=cel,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
+    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
+    logger.info(
+        "Fetched alerts from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return {
+        "limit": limit,
+        "offset": offset,
+        "count": total_count,
+        "results": enriched_alerts_dto,
+    }
 
 
 @router.get(
@@ -203,7 +359,9 @@ def assign_alert(
     last_received: str,
     unassign: bool = False,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+        # @tb: this is read because NOC users can also assign alerts to themselves
+        # anyway, this function needs to be refactored
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
