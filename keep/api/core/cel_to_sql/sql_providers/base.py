@@ -121,7 +121,7 @@ class BaseCelToSqlProvider:
         if type is str or type is NoneType:
             return "'__@NULL@__'" # This is a workaround for handling NULL values in SQL
 
-        raise NotImplementedError(f"{type.__name__} type is not supported yet")
+        return "NULL"
 
     def __build_sql_filter(self, abstract_node: Node, stack: list[Node]) -> str:
         stack.append(abstract_node)
@@ -197,6 +197,9 @@ class BaseCelToSqlProvider:
 
     # region Comparison Visitors
     def _visit_comparison_node(self, comparison_node: ComparisonNode, stack: list[Node]) -> str:
+        first_operand = None
+        second_operand = None
+
         if comparison_node.operator == ComparisonNode.IN:
             return self._visit_in(
                 comparison_node.first_operand,
@@ -211,13 +214,16 @@ class BaseCelToSqlProvider:
         if isinstance(comparison_node.second_operand, ConstantNode):
             second_operand = self._visit_constant_node(comparison_node.second_operand.value)
 
-            if isinstance(comparison_node.first_operand, PropertyAccessNode):
+            if isinstance(comparison_node.first_operand, JsonPropertyAccessNode):
                 first_operand = self.cast(self.__build_sql_filter(comparison_node.first_operand, stack), type(comparison_node.second_operand.value))
 
             if isinstance(comparison_node.first_operand, MultipleFieldsNode):
                 first_operand = self._visit_multiple_fields_node(comparison_node.first_operand, type(comparison_node.second_operand.value), stack)
-        else:
+
+        if first_operand is None:
             first_operand = self.__build_sql_filter(comparison_node.first_operand, stack)
+
+        if second_operand is None:
             second_operand = self.__build_sql_filter(comparison_node.second_operand, stack)
 
         if comparison_node.operator == ComparisonNode.EQ:
@@ -295,7 +301,7 @@ class BaseCelToSqlProvider:
 
         for item in multiple_fields_node.fields:
             arg = self._visit_property_access_node(item, stack)
-            if cast_to:
+            if isinstance(item, JsonPropertyAccessNode) and cast_to:
                 arg = self.cast(arg, cast_to)
             coalesce_args.append(arg)
 
