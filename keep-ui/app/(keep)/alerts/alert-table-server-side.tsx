@@ -266,7 +266,7 @@ export function AlertTableServerSide({
 
   let showSkeleton = isAsyncLoading;
   let showEmptyState =
-    !!alertsQuery.cel && table.getPageCount() === 0 && !isAsyncLoading;
+    !alertsQuery.cel && table.getPageCount() === 0 && !isAsyncLoading;
 
   const handleRowClick = (alert: AlertDto) => {
     // if presetName is alert-history, do not open sidebar
@@ -436,7 +436,7 @@ export function AlertTableServerSide({
                 <div ref={a11yContainerRef} className="sr-only" />
 
                 {/* Make table wrapper scrollable */}
-                <div className="flex-grow">
+                <div data-testid="alerts-table" className="flex-grow">
                   <Table className="[&>table]:table-fixed [&>table]:w-full">
                     <AlertsTableHeaders
                       columns={columns}
