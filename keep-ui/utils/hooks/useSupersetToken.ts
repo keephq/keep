@@ -5,13 +5,19 @@ interface SupersetTokenResponse {
   token: string;
 }
 
-export function useSupersetToken() {
+interface UseSupersetTokenProps {
+  dashboardId: string;
+}
+
+export function useSupersetToken({ dashboardId }: UseSupersetTokenProps) {
   const api = useApi();
 
   const { data, error, isLoading } = useSWR<SupersetTokenResponse>(
-    "/dashboardv2/token",
+    dashboardId ? `/dashboardv2/token?dashboard_id=${dashboardId}` : null,
     async () => {
-      const response = await api.get("/dashboardv2/token");
+      const response = await api.get(
+        `/dashboardv2/token?dashboard_id=${dashboardId}`
+      );
       if (!response?.token) {
         throw new Error("No token in response");
       }
@@ -20,7 +26,7 @@ export function useSupersetToken() {
     {
       revalidateOnFocus: false,
       revalidateIfStale: false,
-      dedupingInterval: 300000,
+      dedupingInterval: 300000, // 5 minutes
     }
   );
 
