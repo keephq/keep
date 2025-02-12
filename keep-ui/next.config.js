@@ -103,6 +103,28 @@ const nextConfig = {
       },
     ];
   },
+  rewrites: async () => {
+    // do not leak source-maps in Vercel production deployments
+    // but keep them in Vercel preview deployments with generated urls
+    // for better dev experience
+    // https://stackoverflow.com/a/70989748/12012756
+    const isVercelProdDeploy =
+      process.env.VERCEL_ENV === "production" ||
+      process.env.NODE_ENV === "production";
+
+    if (isVercelProdDeploy) {
+      return {
+        beforeFiles: [
+          {
+            source: "/:path*.map",
+            destination: "/404",
+          },
+        ],
+      };
+    }
+
+    return [];
+  },
 };
 
 const sentryConfig = {
