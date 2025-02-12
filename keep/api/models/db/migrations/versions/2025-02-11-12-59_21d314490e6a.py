@@ -6,6 +6,8 @@ Create Date: 2025-02-11 12:59:12.987863
 
 """
 
+import json
+
 import sqlalchemy as sa
 import sqlalchemy_utils
 import sqlmodel
@@ -89,6 +91,23 @@ def upgrade() -> None:
         batch_op.create_index(
             batch_op.f("ix_enrichmentlog_tenant_id"), ["tenant_id"], unique=False
         )
+
+    # Transform old matchers format to new format
+    connection = op.get_bind()
+    result = connection.execute(sa.text("SELECT id, matchers FROM mappingrule"))
+    for row in result:
+        old_matchers = row.matchers
+        old_matchers = json.loads(old_matchers)
+        new_matchers = []
+        for matcher in old_matchers:
+            m = matcher.split("&&") if isinstance(matcher, str) else matcher
+            m = [s.strip() for s in m]
+            new_matchers.append(m)
+        connection.execute(
+            sa.text("UPDATE mappingrule SET matchers = :new_matchers WHERE id = :id"),
+            {"new_matchers": json.dumps(new_matchers), "id": row.id},
+        )
+
     # ### end Alembic commands ###
 
 

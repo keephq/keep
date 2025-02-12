@@ -21,14 +21,10 @@ import {
 import { MdRemoveCircle, MdModeEdit, MdPlayArrow } from "react-icons/md";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";
-import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
-import * as HoverCard from "@radix-ui/react-hover-card";
-import TimeAgo from "react-timeago";
 import { FaFileCsv, FaFileCode, FaNetworkWired } from "react-icons/fa";
 import { Fragment } from "react";
-import { Cog8ToothIcon } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
 const columnHelper = createColumnHelper<MappingRule>();
 
@@ -220,7 +216,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       <TableBody>
         {table.getRowModel().rows.map((row) => (
           <TableRow
-            className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 group cursor-pointer"
+            className="hover:bg-slate-100 group cursor-pointer"
             key={row.id}
             onClick={() =>
               router.push(`/mapping/${row.original.id}/executions`)
