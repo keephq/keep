@@ -41,6 +41,7 @@ import clsx from "clsx";
 import { IncidentAlertsTableBodySkeleton } from "./incident-alert-table-body-skeleton";
 import { IncidentAlertsActions } from "./incident-alert-actions";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { ViewAlertModal } from "@/app/(keep)/alerts/ViewAlertModal";
 
 interface Props {
   incident: IncidentDto;
@@ -96,6 +97,9 @@ export default function IncidentAlerts({ incident }: Props) {
   }, [alerts, pagination]);
   usePollIncidentAlerts(incident.id);
 
+  // Add new state for the ViewAlertModal
+  const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>(null);
+
   const columns = useMemo(
     () => [
       columnHelper.display({
@@ -138,7 +142,10 @@ export default function IncidentAlerts({ incident }: Props) {
         header: "Name",
         minSize: 100,
         cell: (context) => (
-          <div className="max-w-[300px]">
+          <div
+            className="max-w-[300px] cursor-pointer hover:text-orange-500"
+            onClick={() => setViewAlertModal(context.row.original)}
+          >
             <AlertName alert={context.row.original} />
           </div>
         ),
@@ -350,6 +357,12 @@ export default function IncidentAlerts({ incident }: Props) {
       <div className="mt-4 mb-8">
         <TablePagination table={table} />
       </div>
+
+      <ViewAlertModal
+        alert={viewAlertModal}
+        handleClose={() => setViewAlertModal(null)}
+        mutate={mutateAlerts}
+      />
     </>
   );
 }

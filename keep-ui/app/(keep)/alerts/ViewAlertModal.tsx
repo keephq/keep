@@ -7,6 +7,7 @@ import "./ViewAlertModal.css";
 import React, { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
+import Editor from "@monaco-editor/react";
 
 interface ViewAlertModalProps {
   alert: AlertDto | null | undefined;
@@ -95,6 +96,20 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     }
   };
 
+  const editorOptions = {
+    readOnly: true,
+    minimap: { enabled: false },
+    lineNumbers: "on",
+    scrollBeyondLastLine: false,
+    automaticLayout: true,
+    tabSize: 2,
+    fontSize: 14,
+    renderWhitespace: "all",
+    wordWrap: "on",
+    wordWrapColumn: 80,
+    wrappingIndent: "indent",
+  };
+
   return (
     <Modal
       onClose={handleClose}
@@ -129,13 +144,17 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
           </Button>
         </div>
       </div>
-      {alert && (
-        <pre className="p-2 bg-gray-100 rounded mt-2 overflow-auto whitespace-pre-wrap break-all">
-          <p>&#123;</p>
-          {highlightKeys(alert, alert.enriched_fields)}
-          <p>&#125;</p>
-        </pre>
-      )}
+      <div className="h-[600px]">
+        {alert && (
+          <Editor
+            height="100%"
+            defaultLanguage="json"
+            value={JSON.stringify(alert, null, 2)}
+            options={editorOptions}
+            theme="vs-light"
+          />
+        )}
+      </div>
     </Modal>
   );
 };
