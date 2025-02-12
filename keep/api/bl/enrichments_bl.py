@@ -34,6 +34,8 @@ from keep.api.models.db.mapping import MappingRule
 
 
 def is_valid_uuid(uuid_str):
+    if isinstance(uuid_str, UUID):
+        return True
     try:
         # UUID() will convert string to UUID object if valid
         uuid.UUID(uuid_str)
@@ -81,17 +83,18 @@ class EnrichmentsBl:
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
         self.__logs: list[EnrichmentLog] = []
+        self.enrichment_event_id: UUID | None = None
         if not EnrichmentsBl.ENRICHMENT_DISABLED:
             self.db_session = db or get_session_sync()
             self.elastic_client = ElasticClient(tenant_id=tenant_id)
 
     def run_mapping_rule_by_id(self, rule_id: int, alert_id: UUID) -> AlertDto:
-        rule = get_mapping_rule_by_id(self.db_session, rule_id, session=self.db_session)
+        rule = get_mapping_rule_by_id(self.tenant_id, rule_id, session=self.db_session)
         if not rule:
             raise HTTPException(status_code=404, detail="Mapping rule not found")
 
         alert = get_alert_by_event_id(
-            self.db_session, alert_id, session=self.db_session
+            self.tenant_id, str(alert_id), session=self.db_session
         )
         if not alert:
             raise HTTPException(status_code=404, detail="Alert not found")
@@ -669,6 +672,7 @@ class EnrichmentsBl:
                     self.db_session.add(log)
             self.db_session.commit()
             self.__logs = []
+            self.enrichment_event_id = enrichment_event.id
         except Exception:
             self.__logs = []
             self.logger.exception(

@@ -24,8 +24,9 @@ import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { FaFileCsv, FaFileCode, FaNetworkWired } from "react-icons/fa";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
+import RunMappingModal from "./run-mapping-modal";
 const columnHelper = createColumnHelper<MappingRule>();
 
 interface Props {
@@ -84,6 +85,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
   const api = useApi();
   const { mutate } = useMappings();
   const router = useRouter();
+  const [runModalRule, setRunModalRule] = useState<number | null>(null);
 
   const columns = [
     columnHelper.accessor("name", {
@@ -135,6 +137,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
             tooltip="Run"
             onClick={(event) => {
               event.stopPropagation();
+              setRunModalRule(context.row.original.id!);
             }}
           />
           <Button
@@ -188,55 +191,63 @@ export default function RulesTable({ mappings, editCallback }: Props) {
   };
 
   return (
-    <Table>
-      <TableHead>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow
-            className="border-b border-tremor-border dark:border-dark-tremor-border"
-            key={headerGroup.id}
-          >
-            {headerGroup.headers.map((header) => (
-              <TableHeaderCell
-                className={`text-tremor-content-strong dark:text-dark-tremor-content-strong ${
-                  header.column.columnDef.meta?.sticky
-                    ? "sticky right-0 bg-white dark:bg-gray-800"
-                    : ""
-                }`}
-                key={header.id}
-              >
-                {flexRender(
-                  header.column.columnDef.header,
-                  header.getContext()
-                )}
-              </TableHeaderCell>
-            ))}
-          </TableRow>
-        ))}
-      </TableHead>
-      <TableBody>
-        {table.getRowModel().rows.map((row) => (
-          <TableRow
-            className="hover:bg-slate-100 group cursor-pointer"
-            key={row.id}
-            onClick={() =>
-              router.push(`/mapping/${row.original.id}/executions`)
-            }
-          >
-            {row.getVisibleCells().map((cell) => (
-              <TableCell
-                className={`${
-                  cell.column.columnDef.meta?.sticky
-                    ? "sticky right-0 bg-white dark:bg-gray-800 hover:bg-slate-100 group-hover:bg-slate-100"
-                    : ""
-                }`}
-                key={cell.id}
-              >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </TableCell>
-            ))}
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <>
+      <Table>
+        <TableHead>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow
+              className="border-b border-tremor-border dark:border-dark-tremor-border"
+              key={headerGroup.id}
+            >
+              {headerGroup.headers.map((header) => (
+                <TableHeaderCell
+                  className={`text-tremor-content-strong dark:text-dark-tremor-content-strong ${
+                    header.column.columnDef.meta?.sticky
+                      ? "sticky right-0 bg-white dark:bg-gray-800"
+                      : ""
+                  }`}
+                  key={header.id}
+                >
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext()
+                  )}
+                </TableHeaderCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableHead>
+        <TableBody>
+          {table.getRowModel().rows.map((row) => (
+            <TableRow
+              className="hover:bg-slate-100 group cursor-pointer"
+              key={row.id}
+              onClick={() =>
+                router.push(`/mapping/${row.original.id}/executions`)
+              }
+            >
+              {row.getVisibleCells().map((cell) => (
+                <TableCell
+                  className={`${
+                    cell.column.columnDef.meta?.sticky
+                      ? "sticky right-0 bg-white dark:bg-gray-800 hover:bg-slate-100 group-hover:bg-slate-100"
+                      : ""
+                  }`}
+                  key={cell.id}
+                >
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      <RunMappingModal
+        ruleId={runModalRule!}
+        isOpen={runModalRule !== null}
+        onClose={() => setRunModalRule(null)}
+      />
+    </>
   );
 }

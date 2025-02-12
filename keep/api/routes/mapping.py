@@ -2,7 +2,8 @@ import datetime
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
@@ -248,10 +249,12 @@ def execute_rule(
             "Mapping rule executed successfully",
             extra={"rule_id": rule_id, "alert_id": alert_id},
         )
-        return Response(status_code=200)
     else:
         logger.error(
             "Mapping rule failed to execute",
             extra={"rule_id": rule_id, "alert_id": alert_id},
         )
-        return Response(status_code=400)
+    return JSONResponse(
+        status_code=200,
+        content={"enrichment_event_id": str(enrichment_bl.enrichment_event_id)},
+    )
