@@ -1,5 +1,5 @@
 import { Button, Textarea, TextInput } from "@/components/ui";
-import { Workflow } from "@/shared/api/workflows";
+import { WorkflowMetadata } from "@/entities/workflows";
 import { Subtitle, Text } from "@tremor/react";
 import { useState } from "react";
 
@@ -8,7 +8,7 @@ export function EditWorkflowMetadataForm({
   onCancel,
   onSubmit,
 }: {
-  workflow: Workflow;
+  workflow: WorkflowMetadata;
   onCancel: () => void;
   onSubmit: ({
     name,

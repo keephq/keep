@@ -6,16 +6,16 @@ import {
   EdgeTypes as EdgeTypesType,
   useReactFlow,
 } from "@xyflow/react";
-import CustomNode from "./CustomNode";
-import CustomEdge from "./CustomEdge";
+import WorkflowNode from "./WorkflowNode";
+import CustomEdge from "./WorkflowEdge";
 import DragAndDropSidebar from "./ToolBox";
 import { Provider } from "@/app/(keep)/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
 import "@xyflow/react/dist/style.css";
-import Loading from "../../loading";
-import useStore from "./builder-store";
+import { useWorkflowStore } from "@/entities/workflows";
+import { KeepLoader } from "@/shared/ui";
 
-const nodeTypes = { custom: CustomNode as any };
+const nodeTypes = { custom: WorkflowNode as any };
 const edgeTypes: EdgeTypesType = {
   "custom-edge": CustomEdge as React.ComponentType<any>,
 };
@@ -37,7 +37,7 @@ const ReactFlowBuilder = ({
     onConnect,
     onDragOver,
     onDrop,
-  } = useStore();
+  } = useWorkflowStore();
 
   const { screenToFlowPosition } = useReactFlow();
 
@@ -71,7 +71,7 @@ const ReactFlowBuilder = ({
             <Background />
           </ReactFlow>
         ) : (
-          <Loading loadingText="Initializing workflow builder..." />
+          <KeepLoader loadingText="Initializing workflow builder..." />
         )}
         <ReactFlowEditor
           providers={providers}

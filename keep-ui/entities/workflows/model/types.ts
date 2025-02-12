@@ -1,5 +1,7 @@
 import { Edge, Node } from "@xyflow/react";
-import { V2Step } from "./types";
+import { Workflow } from "@/shared/api/workflows";
+
+export type WorkflowMetadata = Pick<Workflow, "name" | "description">;
 
 export type V2Properties = Record<string, any>;
 
@@ -35,6 +37,7 @@ export type V2Step = {
   edgeTarget?: string;
   notClickable?: boolean;
 };
+
 export type NodeData = Node["data"] & Record<string, any>;
 export type NodeStepMeta = { id: string; label?: string };
 export type FlowNode = Node & {

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import Loading from "@/app/(keep)/loading";
+import { KeepLoader } from "@/shared/ui";
 import { WorkflowBuilderPageClient } from "../builder/page.client";
 import Link from "next/link";
 
@@ -26,7 +26,7 @@ export default function Page({ params, searchParams }: PageProps) {
 
   return (
     <>
-      {!workflowPreviewData && <Loading />}
+      {!workflowPreviewData && <KeepLoader />}
       {workflowPreviewData && workflowPreviewData.name === key && (
         <WorkflowBuilderPageClient
           workflowRaw={workflowPreviewData?.Workflow_raw}

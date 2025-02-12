@@ -18,9 +18,9 @@ import {
   PlusIcon,
 } from "@heroicons/react/24/outline";
 import React, { useCallback } from "react";
-import useStore from "./builder-store";
+import { useWorkflowStore } from "@/entities/workflows";
 import { useState } from "react";
-import { V2Properties } from "@/app/(keep)/workflows/builder/types";
+import { V2Properties } from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import debounce from "lodash.debounce";
 import { WorkflowStatus } from "./workflow-status";
@@ -316,8 +316,8 @@ function WorkflowEditorV2() {
     selectedNode,
     validationErrors,
     synced,
-  } = useStore();
-  const isDeployed = useStore((state) => state.workflowId !== null);
+  } = useWorkflowStore();
+  const isDeployed = useWorkflowStore((state) => state.workflowId !== null);
 
   const handleChange = (key: string, value: string | Record<string, any>) => {
     updateV2Properties({ [key]: value });
@@ -665,7 +665,7 @@ export function StepEditorV2({
     type?: string;
   }>(initialFormData);
   const { updateSelectedNodeData, setSynced, triggerSave, validationErrors } =
-    useStore();
+    useWorkflowStore();
 
   const saveFormDataToStoreDebounced = useCallback(
     debounce((formData: any) => {

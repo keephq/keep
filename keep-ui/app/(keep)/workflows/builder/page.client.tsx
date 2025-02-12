@@ -1,69 +1,21 @@
 "use client";
 
-import { Title, Button, Switch } from "@tremor/react";
-import { useEffect, useRef, useState } from "react";
+import { Button, Title } from "@tremor/react";
+import { useRef, useState } from "react";
 import {
-  PlusIcon,
-  BoltIcon,
   ArrowUpOnSquareIcon,
-  PlayIcon,
   PencilIcon,
+  PlayIcon,
+  PlusIcon,
 } from "@heroicons/react/20/solid";
 import { BuilderCard } from "./builder-card";
-import { loadWorkflowYAML } from "./utils";
 import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
-import useStore from "./builder-store";
-import BuilderMetadataModal from "./builder-metadata-modal";
-import { Workflow } from "@/shared/api/workflows";
-
-function WorkflowEnabledSwitch() {
-  const { updateV2Properties, triggerSave } = useStore();
-  const isValid = useStore((state) => !!state.definition?.isValid);
-  const isInitialized = useStore((state) => !!state.workflowId);
-  const isEnabled = useStore(
-    (state) => !!state.workflowId && !state.v2Properties?.disabled
-  );
-  let tooltip = undefined;
-  if (!isValid) {
-    tooltip = "Fix the errors in the workflow before enabling it";
-  } else if (!isInitialized) {
-    tooltip = "Deploy the workflow before enabling it";
-  } else if (isEnabled) {
-    tooltip = "The workflow is enabled";
-  } else {
-    tooltip = "The workflow is disabled";
-  }
-  return (
-    <div className="flex items-center gap-2 px-2">
-      <Switch
-        id="workflow-enabled-switch"
-        checked={isEnabled}
-        onChange={(flag) => {
-          if (!isValid) {
-            showErrorToast(
-              new Error("Fix the errors in the workflow before enabling it")
-            );
-            return;
-          }
-          updateV2Properties({
-            disabled: !flag,
-          });
-          triggerSave();
-        }}
-        tooltip={
-          !isValid
-            ? "Fix the errors in the workflow before enabling it"
-            : undefined
-        }
-        disabled={!isValid}
-      />
-      <label className="text-sm" htmlFor="workflow-enabled-switch">
-        {isEnabled ? "Enabled" : "Disabled"}
-      </label>
-    </div>
-  );
-}
+import { useWorkflowStore } from "@/entities/workflows";
+import { loadWorkflowYAML } from "@/entities/workflows/lib/parser";
+import { WorkflowMetadataModal } from "@/features/workflows/edit-metadata";
+import { WorkflowTestRunModal } from "@/features/workflows/test-run";
+import { WorkflowEnabledSwitch } from "@/features/workflows/enable-disable";
 
 export function WorkflowBuilderPageClient({
   workflowRaw: workflow,
@@ -72,7 +24,7 @@ export function WorkflowBuilderPageClient({
   workflowRaw?: string;
   workflowId?: string;
 }) {
-  const [fileContents, setFileContents] = useState<string | null>("");
+  const [fileContents, setFileContents] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -84,18 +36,15 @@ export function WorkflowBuilderPageClient({
     isSaving,
     v2Properties,
     updateV2Properties,
-  } = useStore();
+  } = useWorkflowStore();
 
-  const isValid = useStore((state) => !!state.definition?.isValid);
-  const isInitialized = useStore((state) => !!state.workflowId);
-
-  useEffect(() => {
-    setFileContents(null);
-    setFileName("");
-  }, []);
+  const isValid = useWorkflowStore((state) => !!state.definition?.isValid);
+  const isInitialized = useWorkflowStore((state) => !!state.workflowId);
 
   function loadWorkflow() {
-    document.getElementById("workflowFile")?.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   }
 
   function createNewWorkflow() {
@@ -226,14 +175,13 @@ export function WorkflowBuilderPageClient({
         workflow={workflow}
         workflowId={workflowId}
       />
-      <BuilderMetadataModal
-        workflow={
-          {
-            name: v2Properties?.name || "",
-            description: v2Properties?.description || "",
-          } as Workflow
-        }
+      <WorkflowTestRunModal workflowId={workflowId ?? ""} />
+      <WorkflowMetadataModal
         isOpen={isEditModalOpen}
+        workflow={{
+          name: v2Properties?.name || "",
+          description: v2Properties?.description || "",
+        }}
         onClose={() => setIsEditModalOpen(false)}
         onSubmit={handleMetadataSubmit}
       />

@@ -2,10 +2,10 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { showErrorToast } from "@/shared/ui";
-import { Definition } from "@/app/(keep)/workflows/builder/types";
-import { getWorkflowFromDefinition } from "@/app/(keep)/workflows/builder/utils";
+import { Definition } from "@/entities/workflows/model/types";
 import { stringify } from "yaml";
 import { useCallback } from "react";
+import { getWorkflowFromDefinition } from "@/entities/workflows/lib/parser";
 
 type UseWorkflowActionsReturn = {
   createWorkflow: (

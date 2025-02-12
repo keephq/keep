@@ -1,11 +1,17 @@
 import { act, renderHook, RenderHookResult } from "@testing-library/react";
-import useStore from "../builder-store";
+import {
+  useWorkflowStore,
+  FlowNode,
+  ToolboxConfiguration,
+  V2Step,
+} from "@/entities/workflows";
 import { v4 as uuidv4 } from "uuid";
-import { FlowNode, ToolboxConfiguration, V2Step } from "../types";
 import { Connection } from "@xyflow/react";
-import { ConditionsGroup } from "../utils";
-import { MiscGroup } from "../utils";
-import { TriggersGroup } from "../utils";
+import {
+  ConditionsGroup,
+  MiscGroup,
+  TriggersGroup,
+} from "@/features/workflows/builder/lib/utils";
 
 // Mock uuid to return predictable values
 jest.mock("uuid", () => ({
@@ -16,10 +22,10 @@ const mockToolboxConfiguration: ToolboxConfiguration = {
   groups: [TriggersGroup, MiscGroup, ConditionsGroup],
 };
 
-describe("useStore", () => {
+describe("useWorkflowStore", () => {
   beforeEach(() => {
     // Reset the store before each test
-    const { result } = renderHook(() => useStore());
+    const { result } = renderHook(() => useWorkflowStore());
     act(() => {
       result.current.reset();
     });
@@ -27,7 +33,7 @@ describe("useStore", () => {
 
   describe("addNodeBetween", () => {
     it("should add a node between trigger_start and trigger_end for trigger components", () => {
-      const { result } = renderHook(() => useStore());
+      const { result } = renderHook(() => useWorkflowStore());
       const mockUuid = "test-uuid";
       (uuidv4 as jest.Mock).mockReturnValue(mockUuid);
 
@@ -76,7 +82,7 @@ describe("useStore", () => {
     });
 
     it("should not add trigger component if one already exists", () => {
-      const { result } = renderHook(() => useStore());
+      const { result } = renderHook(() => useWorkflowStore());
 
       // Setup initial state with existing trigger
       act(() => {
@@ -127,7 +133,7 @@ describe("useStore", () => {
 
   describe("deleteNodes", () => {
     it("should delete a node and reconnect its edges", () => {
-      const { result } = renderHook(() => useStore());
+      const { result } = renderHook(() => useWorkflowStore());
 
       // Setup initial state
       act(() => {
@@ -172,7 +178,7 @@ describe("useStore", () => {
     });
 
     it("should clean up v2Properties when deleting trigger nodes", () => {
-      const { result } = renderHook(() => useStore());
+      const { result } = renderHook(() => useWorkflowStore());
 
       // Setup initial state with trigger node
       act(() => {
@@ -200,7 +206,7 @@ describe("useStore", () => {
 
   describe("onConnect", () => {
     it("should allow connection from switch node to multiple targets", () => {
-      const { result } = renderHook(() => useStore());
+      const { result } = renderHook(() => useWorkflowStore());
 
       // Setup initial state with switch node
       act(() => {
@@ -251,7 +257,7 @@ describe("useStore", () => {
     });
 
     it("should only allow one connection from regular nodes", () => {
-      const { result } = renderHook(() => useStore());
+      const { result } = renderHook(() => useWorkflowStore());
 
       // Setup initial state
       act(() => {
@@ -305,7 +311,7 @@ describe("useStore", () => {
 
   describe("updateSelectedNodeData", () => {
     it("should update data for selected node", () => {
-      const { result } = renderHook(() => useStore());
+      const { result } = renderHook(() => useWorkflowStore());
 
       // Setup initial state
       act(() => {
@@ -331,7 +337,7 @@ describe("useStore", () => {
     });
 
     it("should remove property when value is null", () => {
-      const { result } = renderHook(() => useStore());
+      const { result } = renderHook(() => useWorkflowStore());
 
       // Setup initial state
       act(() => {
@@ -358,7 +364,7 @@ describe("useStore", () => {
 
   describe("updateDefinition", () => {
     it("should validate a correct workflow without errors", () => {
-      const { result } = renderHook(() => useStore());
+      const { result } = renderHook(() => useWorkflowStore());
 
       // Setup a valid workflow definition
       act(() => {
@@ -395,7 +401,7 @@ describe("useStore", () => {
     });
 
     it("should capture validation errors for an invalid workflow", () => {
-      const { result } = renderHook(() => useStore());
+      const { result } = renderHook(() => useWorkflowStore());
 
       // Setup an invalid workflow definition
       act(() => {
@@ -419,7 +425,7 @@ describe("useStore", () => {
     });
 
     it("should validate each step and capture errors", () => {
-      const { result } = renderHook(() => useStore());
+      const { result } = renderHook(() => useWorkflowStore());
 
       // Setup a workflow with an invalid step
       act(() => {
@@ -457,7 +463,7 @@ describe("useStore", () => {
     });
 
     it("should allow deployment if only provider errors exist", () => {
-      const { result } = renderHook(() => useStore());
+      const { result } = renderHook(() => useWorkflowStore());
 
       // Setup a workflow with provider-related errors
       act(() => {

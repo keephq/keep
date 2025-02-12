@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import NodeMenu from "./NodeMenu";
-import useStore from "./builder-store";
+import { useWorkflowStore } from "@/entities/workflows";
 import Image from "next/image";
 import { GoPlus } from "react-icons/go";
 import { MdNotStarted } from "react-icons/md";
@@ -9,7 +9,7 @@ import { GoSquareFill } from "react-icons/go";
 import { PiDiamondsFourFill, PiSquareLogoFill } from "react-icons/pi";
 import { BiSolidError } from "react-icons/bi";
 import { toast } from "react-toastify";
-import { FlowNode } from "@/app/(keep)/workflows/builder/types";
+import { FlowNode } from "@/entities/workflows/model/types";
 import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
 import { DynamicImageProviderIcon } from "@/components/ui";
 
@@ -26,14 +26,14 @@ function IconUrlProvider(data: FlowNode["data"]) {
     ?.replace("condition-", "")}-icon.png`;
 }
 
-function CustomNode({ id, data }: FlowNode) {
+function WorkflowNode({ id, data }: FlowNode) {
   const {
     selectedNode,
     setSelectedNode,
     setOpneGlobalEditor,
     synced,
     validationErrors,
-  } = useStore();
+  } = useWorkflowStore();
   const type = data?.type
     ?.replace("step-", "")
     ?.replace("action-", "")
@@ -210,4 +210,4 @@ function CustomNode({ id, data }: FlowNode) {
   );
 }
 
-export default memo(CustomNode);
+export default memo(WorkflowNode);

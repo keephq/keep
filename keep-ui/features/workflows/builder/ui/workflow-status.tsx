@@ -3,11 +3,11 @@ import {
   CheckCircleIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
-import useStore from "./builder-store";
+import { useWorkflowStore } from "@/entities/workflows";
 import clsx from "clsx";
 
 export const WorkflowStatus = ({ className }: { className?: string }) => {
-  const { validationErrors, canDeploy, setSelectedNode } = useStore();
+  const { validationErrors, canDeploy, setSelectedNode } = useWorkflowStore();
   return Object.keys(validationErrors).length > 0 ? (
     <Callout
       className={clsx("rounded p-2", className)}

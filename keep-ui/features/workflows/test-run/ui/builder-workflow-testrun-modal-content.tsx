@@ -12,14 +12,12 @@ interface Props {
   closeModal: () => void;
   workflowId: string;
   workflowExecution: WorkflowExecutionDetail | WorkflowExecutionFailure | null;
-  workflowRaw: string;
 }
 
-export default function BuilderWorkflowTestRunModalContent({
+export function BuilderWorkflowTestRunModalContent({
   closeModal,
   workflowId,
   workflowExecution,
-  workflowRaw,
 }: Props) {
   return (
     <div className="flex flex-col gap-4">

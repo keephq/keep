@@ -1,33 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Callout, Card } from "@tremor/react";
+import { useCallback, useEffect, useMemo } from "react";
+import { Card } from "@tremor/react";
 import { Provider } from "../../providers/providers";
-import {
-  parseWorkflow,
-  generateWorkflow,
-  getWorkflowFromDefinition,
-  wrapDefinitionV2,
-  getToolboxConfiguration,
-} from "./utils";
+import { getToolboxConfiguration } from "@/features/workflows/builder/lib/utils";
 import { stringify } from "yaml";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
-import {
-  WorkflowExecutionDetail,
-  WorkflowExecutionFailure,
-} from "@/shared/api/workflow-executions";
-import ReactFlowBuilder from "./ReactFlowBuilder";
+import ReactFlowBuilder from "@/features/workflows/builder/ui/ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
-import useStore from "./builder-store";
-import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/api";
-import { ResizableColumns, showErrorToast } from "@/shared/ui";
+import { useWorkflowStore } from "@/entities/workflows";
+import { ResizableColumns, showErrorToast, KeepLoader } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
-import Modal from "@/components/ui/Modal";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import Loading from "../../loading";
 import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import Skeleton from "react-loading-skeleton";
+import {
+  generateWorkflow,
+  getWorkflowFromDefinition,
+  parseWorkflow,
+  wrapDefinitionV2,
+} from "@/entities/workflows/lib/parser";
+
 interface Props {
   loadedAlertFile: string | null;
   providers: Provider[];
@@ -43,11 +35,6 @@ function Builder({
   workflowId,
   installedProviders,
 }: Props) {
-  const api = useApi();
-  const [testRunModalOpen, setTestRunModalOpen] = useState(false);
-  const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<
-    WorkflowExecutionDetail | WorkflowExecutionFailure | null
-  >(null);
   const { createWorkflow, updateWorkflow } = useWorkflowActions();
   const {
     // Definition
@@ -57,42 +44,15 @@ function Builder({
     setIsLoading,
     // UI State
     saveRequestCount,
-    runRequestCount,
     setIsSaving,
     synced,
     reset,
     canDeploy,
     initializeWorkflow,
-  } = useStore();
+  } = useWorkflowStore();
   const router = useRouter();
 
   const searchParams = useSearchParams();
-
-  const testRunWorkflow = () => {
-    if (!definition?.value) {
-      showErrorToast(new Error("Workflow is not initialized"));
-      return;
-    }
-    setTestRunModalOpen(true);
-    const body = stringify(getWorkflowFromDefinition(definition.value));
-    api
-      .request(`/workflows/test`, {
-        method: "POST",
-        body,
-        headers: { "Content-Type": "text/html" },
-      })
-      .then((data) => {
-        setRunningWorkflowExecution({
-          ...data,
-        });
-      })
-      .catch((error) => {
-        setRunningWorkflowExecution({
-          error:
-            error instanceof KeepApiError ? error.message : "Unknown error",
-        });
-      });
-  };
 
   const toolboxConfiguration = useMemo(
     () => getToolboxConfiguration(providers ?? []),
@@ -158,19 +118,13 @@ function Builder({
     },
     [loadedAlertFile, workflow, searchParams, providers]
   );
+
   const workflowYaml = useMemo(() => {
     if (!definition?.value) {
       return null;
     }
     return stringify({ workflow: getWorkflowFromDefinition(definition.value) });
   }, [definition?.value]);
-
-  useEffect(() => {
-    if (runRequestCount) {
-      testRunWorkflow();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runRequestCount]);
 
   // TODO: move to useWorkflowInitialization or somewhere upper
   const saveWorkflow = useCallback(async () => {
@@ -241,15 +195,10 @@ function Builder({
   if (isLoading) {
     return (
       <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
-        <Loading loadingText="Loading workflow..." />
+        <KeepLoader loadingText="Loading workflow..." />
       </Card>
     );
   }
-
-  const closeWorkflowExecutionResultsModal = () => {
-    setTestRunModalOpen(false);
-    setRunningWorkflowExecution(null);
-  };
 
   return (
     <>
@@ -259,6 +208,7 @@ function Builder({
             leftChild={
               workflowYaml ? (
                 <MonacoYAMLEditor
+                  // TODO: do not re-render editor on every workflowYaml change, handle updates inside the editor
                   key={workflowYaml}
                   workflowRaw={workflowYaml}
                   filename={workflowId ?? "workflow"}
@@ -286,18 +236,6 @@ function Builder({
           />
         </Card>
       </div>
-      <Modal
-        isOpen={testRunModalOpen}
-        onClose={closeWorkflowExecutionResultsModal}
-        className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
-      >
-        <BuilderWorkflowTestRunModalContent
-          closeModal={closeWorkflowExecutionResultsModal}
-          workflowExecution={runningWorkflowExecution}
-          workflowRaw={workflow ?? ""}
-          workflowId={workflowId ?? ""}
-        />
-      </Modal>
     </>
   );
 }

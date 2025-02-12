@@ -3,10 +3,10 @@ import { Disclosure } from "@headlessui/react";
 import { Subtitle } from "@tremor/react";
 import { IoChevronUp, IoClose } from "react-icons/io5";
 import { IoIosArrowDown } from "react-icons/io";
-import useStore from "./builder-store";
+import { useWorkflowStore } from "@/entities/workflows";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import clsx from "clsx";
-import { V2Step } from "@/app/(keep)/workflows/builder/types";
+import { V2Step } from "@/entities/workflows/model/types";
 import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
 import { DynamicImageProviderIcon } from "@/components/ui";
 
@@ -22,7 +22,7 @@ const GroupedMenu = ({
   isDraggable?: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(!!searchTerm || isDraggable);
-  const { selectedNode, selectedEdge, addNodeBetween } = useStore();
+  const { selectedNode, selectedEdge, addNodeBetween } = useWorkflowStore();
 
   useEffect(() => {
     setIsOpen(!!searchTerm || !isDraggable);
@@ -137,7 +137,7 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [open, setOpen] = useState(false);
   const { toolboxConfiguration, selectedNode, selectedEdge, nodes } =
-    useStore();
+    useWorkflowStore();
 
   useEffect(() => {
     setOpen(

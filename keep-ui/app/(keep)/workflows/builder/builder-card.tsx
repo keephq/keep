@@ -5,8 +5,8 @@ import { Suspense, useEffect, useState } from "react";
 import { EmptyBuilderState } from "./empty-builder-state";
 import { Provider } from "../../providers/providers";
 import { useProviders } from "utils/hooks/useProviders";
-import useStore from "./builder-store";
-import Loading from "../../loading";
+import { useWorkflowStore } from "@/entities/workflows";
+import { KeepLoader } from "@/shared/ui";
 
 const Builder = dynamic(() => import("./builder"), {
   ssr: false, // Prevents server-side rendering
@@ -23,7 +23,7 @@ export function BuilderCard({ fileContents, workflow, workflowId }: Props) {
   const [installedProviders, setInstalledProviders] = useState<
     Provider[] | null
   >(null);
-  const { setButtonsEnabled } = useStore();
+  const { setButtonsEnabled } = useWorkflowStore();
 
   const { data, error, isLoading } = useProviders();
 
@@ -38,7 +38,7 @@ export function BuilderCard({ fileContents, workflow, workflowId }: Props) {
   if (!providers || isLoading)
     return (
       <Card className="mt-2 p-4 mx-auto">
-        <Loading loadingText="Loading providers..." />
+        <KeepLoader loadingText="Loading providers..." />
       </Card>
     );
 
@@ -66,7 +66,9 @@ export function BuilderCard({ fileContents, workflow, workflowId }: Props) {
   }
 
   return (
-    <Suspense fallback={<Loading loadingText="Loading workflow builder..." />}>
+    <Suspense
+      fallback={<KeepLoader loadingText="Loading workflow builder..." />}
+    >
       <Builder
         providers={providers}
         installedProviders={installedProviders}

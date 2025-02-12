@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { IoMdSettings, IoMdClose } from "react-icons/io";
-import useStore from "./builder-store";
+import { useWorkflowStore } from "@/entities/workflows";
 import { GlobalEditorV2, StepEditorV2 } from "./editors";
 import { Divider } from "@tremor/react";
 import { Provider } from "@/app/(keep)/providers/providers";
+
 const ReactFlowEditor = ({
   providers,
   installedProviders,
@@ -11,7 +12,7 @@ const ReactFlowEditor = ({
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
 }) => {
-  const { selectedNode, setOpneGlobalEditor, synced, getNodeById } = useStore();
+  const { selectedNode, setOpneGlobalEditor, getNodeById } = useWorkflowStore();
   const [isOpen, setIsOpen] = useState(false);
   const stepEditorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);

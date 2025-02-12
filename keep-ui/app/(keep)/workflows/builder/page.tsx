@@ -1,6 +1,6 @@
 import { WorkflowBuilderPageClient } from "./page.client";
 import { Suspense } from "react";
-import Loading from "@/app/(keep)/loading";
+import { KeepLoader } from "@/shared/ui";
 import { Metadata } from "next";
 
 type PageProps = {
@@ -13,7 +13,7 @@ export default function WorkflowBuilderPage({
   searchParams,
 }: PageProps) {
   return (
-    <Suspense fallback={<Loading />}>
+    <Suspense fallback={<KeepLoader />}>
       <WorkflowBuilderPageClient
         workflowRaw={params.workflow}
         workflowId={params.workflowId}

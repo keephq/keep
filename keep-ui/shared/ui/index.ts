@@ -18,6 +18,7 @@ export { YAMLCodeblock } from "./YAMLCodeblock";
 export { getCommonPinningStylesAndClassNames } from "./utils/table-utils";
 export { ThemeScript, WatchUpdateTheme, ThemeControl } from "./theme";
 export { ResizableColumns } from "./ResizableColumns";
+export { KeepLoader } from "./KeepLoader/KeepLoader";
 
 export { showErrorToast } from "./utils/showErrorToast";
 export { showSuccessToast } from "./utils/showSuccessToast";

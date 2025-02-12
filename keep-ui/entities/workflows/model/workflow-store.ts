@@ -6,7 +6,6 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   Edge,
-  Position,
 } from "@xyflow/react";
 import {
   createCustomEdgeMeta,
@@ -14,8 +13,7 @@ import {
   getTriggerStep,
   reConstructWorklowToDefinition,
 } from "utils/reactFlow";
-import { createDefaultNodeV2 } from "../../../../utils/reactFlow";
-import { wrapDefinitionV2 } from "./utils";
+import { createDefaultNodeV2 } from "../../../utils/reactFlow";
 import {
   V2Step,
   StoreSet,
@@ -25,9 +23,10 @@ import {
   FlowNode,
   Definition,
   ToolboxConfiguration,
-} from "./types";
-import { validateGlobalPure, validateStepPure } from "./builder-validators";
-import dagre, { graphlib } from "@dagrejs/dagre";
+} from "@/entities/workflows";
+import { validateStepPure, validateGlobalPure } from "./validation";
+import { getLayoutedWorkflowElements } from "../lib/getLayoutedWorkflowElements";
+import { wrapDefinitionV2 } from "@/entities/workflows/lib/parser";
 
 function addNodeBetween(
   nodeOrEdgeId: string,
@@ -186,7 +185,7 @@ const defaultState: FlowStateValues = {
   validationErrors: {},
 };
 
-const useStore = create<FlowState>()(
+export const useWorkflowStore = create<FlowState>()(
   devtools((set, get) => ({
     ...defaultState,
     setDefinition: (def) => set({ definition: def }),
@@ -527,11 +526,8 @@ function onLayout(
   const ns = useInitialNodes ? initialNodes : get().nodes || [];
   const es = useInitialNodes ? initialEdges : get().edges || [];
 
-  const { nodes: _layoutedNodes, edges: _layoutedEdges } = getLayoutedElements(
-    ns,
-    es,
-    opts
-  );
+  const { nodes: _layoutedNodes, edges: _layoutedEdges } =
+    getLayoutedWorkflowElements(ns, es, opts);
   const layoutedEdges = _layoutedEdges.map((edge: Edge) => {
     return {
       ...edge,
@@ -602,76 +598,3 @@ async function initializeWorkflow(
   get().onLayout({ direction: "DOWN" });
   get().updateDefinition();
 }
-
-const getLayoutedElements = (
-  nodes: FlowNode[],
-  edges: Edge[],
-  options: { "elk.direction"?: string } = {}
-) => {
-  const isHorizontal = options["elk.direction"] === "RIGHT";
-  const dagreGraph = new graphlib.Graph();
-  dagreGraph.setDefaultEdgeLabel(() => ({}));
-
-  // Set graph direction and spacing
-  dagreGraph.setGraph({
-    rankdir: isHorizontal ? "LR" : "TB",
-    nodesep: 80,
-    ranksep: 80,
-    edgesep: 80,
-  });
-
-  // Add nodes to dagre graph
-  nodes.forEach((node) => {
-    const type = node?.data?.type
-      ?.replace("step-", "")
-      ?.replace("action-", "")
-      ?.replace("condition-", "")
-      ?.replace("__end", "");
-
-    let width = ["start", "end"].includes(type) ? 80 : 280;
-    let height = 80;
-
-    // Special case for trigger start and end nodes, which act as section headers
-    if (node.id === "trigger_start" || node.id === "trigger_end") {
-      width = 150;
-      height = 40;
-    }
-
-    dagreGraph.setNode(node.id, { width, height });
-  });
-
-  // Add edges to dagre graph
-  edges.forEach((edge) => {
-    dagreGraph.setEdge(edge.source, edge.target);
-  });
-
-  // Run the layout
-  dagre.layout(dagreGraph);
-
-  // Get the positioned nodes and edges
-  const layoutedNodes = nodes.map((node) => {
-    const dagreNode = dagreGraph.node(node.id);
-    return {
-      ...node,
-      targetPosition: isHorizontal ? Position.Left : Position.Top,
-      sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
-      style: {
-        ...node.style,
-        width: dagreNode.width as number,
-        height: dagreNode.height as number,
-      },
-      // Dagre provides positions with the center of the node as origin
-      position: {
-        x: dagreNode.x - dagreNode.width / 2,
-        y: dagreNode.y - dagreNode.height / 2,
-      },
-    };
-  });
-
-  return {
-    nodes: layoutedNodes,
-    edges,
-  };
-};
-
-export default useStore;

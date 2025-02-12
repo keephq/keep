@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import Loading from "@/app/(keep)/loading";
+import { KeepLoader } from "@/shared/ui";
 import { WorkflowBuilderPageClient } from "../../builder/page.client";
 import { Subtitle } from "@tremor/react";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
@@ -34,7 +34,7 @@ export default function PageWithId({
         template
       </Subtitle>
       <div className="flex-1 h-full">
-        {!workflowPreviewData && <Loading />}
+        {!workflowPreviewData && <KeepLoader />}
         {workflowPreviewData && workflowPreviewData.name === key && (
           <WorkflowBuilderPageClient
             workflowRaw={workflowPreviewData.workflow_raw || ""}

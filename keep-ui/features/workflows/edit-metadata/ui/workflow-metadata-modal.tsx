@@ -1,9 +1,9 @@
 import Modal from "@/components/ui/Modal";
-import { Workflow } from "@/shared/api/workflows";
 import { EditWorkflowMetadataForm } from "./edit-workflow-metadata-form";
+import { WorkflowMetadata } from "@/entities/workflows";
 
 interface Props {
-  workflow: Workflow;
+  workflow: WorkflowMetadata;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: ({
@@ -15,7 +15,7 @@ interface Props {
   }) => void;
 }
 
-export default function BuilderMetadataModal({
+export function WorkflowMetadataModal({
   workflow,
   isOpen,
   onClose,
