@@ -624,7 +624,7 @@ class EnrichmentsBl:
 
     def _track_enrichment_event(
         self,
-        alert_id: UUID,
+        alert_id: UUID | None,
         status: EnrichmentStatus,
         enrichment_type: EnrichmentType,
         rule_id: int | None,
@@ -633,13 +633,15 @@ class EnrichmentsBl:
         """
         Track an enrichment event in the database
         """
-        if not alert_id:
+
+        if alert_id is None:
             self.__logs = []
             self.logger.warning(
                 "Cannot track enrichment event without alert_id",
-                extra={"tenant_id": self.tenant_id},
+                extra={"tenant_id": self.tenant_id, "rule_id": rule_id},
             )
             return
+
         try:
             enrichment_event = EnrichmentEvent(
                 tenant_id=self.tenant_id,
