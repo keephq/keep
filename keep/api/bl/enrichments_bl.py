@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 import re
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import celpy
 import chevron
@@ -103,7 +103,9 @@ class EnrichmentsBl:
             else getattr(event, "fingerprint", None)
         )
         event_id = (
-            event.get("id") if isinstance(event, dict) else getattr(event, "id", None)
+            event.get("id", uuid4())
+            if isinstance(event, dict)
+            else getattr(event, "id", uuid4())
         )
         self._add_enrichment_log(
             "Running extraction rules for incoming event",
