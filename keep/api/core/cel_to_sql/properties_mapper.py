@@ -111,22 +111,9 @@ class PropertiesMapper:
         if not isinstance(comparison_node.first_operand, PropertyAccessNode):
             return comparison_node
 
-        property_metadata = self.properties_metadata.get_property_metadata(
-            comparison_node.first_operand.get_property_path()
+        first_operand, property_metadata = self._map_property(
+            comparison_node.first_operand
         )
-
-        if not property_metadata:
-            raise PropertiesMappingException(
-                f'Missing mapping configuration for property "{comparison_node.first_operand.get_property_path()}" '
-                f'while processing the comparison node: "{comparison_node}".'
-            )
-
-        result = []
-
-        for mapping in property_metadata.field_mappings:
-            property_access_node = self._create_property_access_node(mapping, None)
-            result.append(property_access_node)
-        first_operand = MultipleFieldsNode(result) if len(result) > 1 else result[0]
         comparison_node = ComparisonNode(
             first_operand,
             comparison_node.operator,
@@ -144,7 +131,7 @@ class PropertiesMapper:
             # in case expression is just property access node
             # it will behave like !!property in JS
             # converting queried property to boolean and evaluate as boolean
-            mapped_prop = self._map_property(member_access_node)
+            mapped_prop, _ = self._map_property(member_access_node)
             return LogicalNode(
                 left=ComparisonNode(
                     mapped_prop,
@@ -302,7 +289,9 @@ class PropertiesMapper:
 
         raise NotImplementedError(f"Mapping type {type(mapping).__name__} is not supported yet")
 
-    def _map_property(self, property_access_node: PropertyAccessNode) -> Node:
+    def _map_property(
+        self, property_access_node: PropertyAccessNode
+    ) -> tuple[MultipleFieldsNode, PropertyMetadataInfo]:
         property_metadata = self.properties_metadata.get_property_metadata(
             property_access_node.get_property_path()
         )
@@ -317,4 +306,6 @@ class PropertiesMapper:
         for mapping in property_metadata.field_mappings:
             property_access_node = self._create_property_access_node(mapping, None)
             result.append(property_access_node)
-        return MultipleFieldsNode(result) if len(result) > 1 else result[0]
+        return (
+            MultipleFieldsNode(result) if len(result) > 1 else result[0]
+        ), property_metadata
