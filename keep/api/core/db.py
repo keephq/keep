@@ -3884,7 +3884,10 @@ def add_alerts_to_incident(
                 # If incident has alerts already, use the max severity between existing and new alerts,
                 # otherwise use the new alerts max severity
                 incident.severity = (
-                    max(incident.severity, alerts_data_for_incident["max_severity"].order)
+                    max(
+                        incident.severity,
+                        alerts_data_for_incident["max_severity"].order,
+                    )
                     if incident.alerts_count
                     else alerts_data_for_incident["max_severity"].order
                 )
@@ -4381,6 +4384,7 @@ def update_incident_severity(
         session.refresh(incident)
 
         return incident
+
 
 def get_topology_data_by_dynamic_matcher(
     tenant_id: str, matchers_value: dict[str, str]
@@ -5065,6 +5069,7 @@ def set_last_alert(
                     )
                     last_alert.timestamp = alert.timestamp
                     last_alert.alert_id = alert.id
+                    last_alert.alert_hash = alert.alert_hash
                     session.add(last_alert)
 
                 elif not last_alert:

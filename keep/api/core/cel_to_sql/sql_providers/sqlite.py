@@ -68,9 +68,3 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         return (
             f"{property_path} IS NOT NULL AND {property_path} GLOB {processed_literal}"
         )
-
-    def _get_default_value_for_type(self, type):
-        if type is datetime:
-            return "'0000-00-00 00:00:00'"
-
-        return super()._get_default_value_for_type(type)
