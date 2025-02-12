@@ -33,6 +33,15 @@ from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 
 
+def is_valid_uuid(uuid_str):
+    try:
+        # UUID() will convert string to UUID object if valid
+        uuid.UUID(uuid_str)
+        return True
+    except ValueError:
+        return False
+
+
 def get_nested_attribute(obj: AlertDto, attr_path: str):
     """
     Recursively get a nested attribute
@@ -623,14 +632,6 @@ class EnrichmentsBl:
                 "enrichments disposed", extra={"fingerprint": fingerprint}
             )
 
-    def is_valid_uuid(uuid_str):
-        try:
-            # UUID() will convert string to UUID object if valid
-            uuid.UUID(uuid_str)
-            return True
-        except ValueError:
-            return False
-
     def _track_enrichment_event(
         self,
         alert_id: UUID | None,
@@ -643,7 +644,7 @@ class EnrichmentsBl:
         Track an enrichment event in the database
         """
 
-        if alert_id is None or not self.is_valid_uuid(alert_id):
+        if alert_id is None or not is_valid_uuid(alert_id):
             self.__logs = []
             self.logger.warning(
                 "Cannot track enrichment event without a valid alert_id",
