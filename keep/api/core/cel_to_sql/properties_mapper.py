@@ -123,9 +123,9 @@ class PropertiesMapper:
         for mapping in property_metadata.field_mappings:
             property_access_node = self._create_property_access_node(mapping, None)
             result.append(property_access_node)
-
+        first_operand = MultipleFieldsNode(result) if len(result) > 1 else result[0]
         comparison_node = ComparisonNode(
-            MultipleFieldsNode(result),
+            first_operand,
             comparison_node.operator,
             comparison_node.second_operand,
         )

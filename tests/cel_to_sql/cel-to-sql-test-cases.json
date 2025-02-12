@@ -12,27 +12,27 @@
     "input_cel": "name != 'Payments incident'",
     "description": "Queried field refers to multipl columns",
     "expected_sql_dialect_based": {
-      "mysql": "COALESCE(CAST(user_generated_name as CHAR), CAST(ai_generated_name as CHAR), '__@NULL@__') != 'Payments incident'",
-      "postgresql": "COALESCE(user_generated_name::TEXT, ai_generated_name::TEXT, '__@NULL@__') != 'Payments incident'",
-      "sqlite": "COALESCE(CAST(user_generated_name as TEXT), CAST(ai_generated_name as TEXT), '__@NULL@__') != 'Payments incident'"
+      "mysql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') != 'Payments incident'",
+      "postgresql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') != 'Payments incident'",
+      "sqlite": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') != 'Payments incident'"
     }
   },
   {
     "input_cel": "!(name in ['Payments incident', 'API incident', 'Network incident', null])",
     "description": "IN operator along with NOT",
     "expected_sql_dialect_based": {
-      "mysql": "NOT (COALESCE(CAST(user_generated_name as CHAR), CAST(ai_generated_name as CHAR), '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
-      "postgresql": "NOT (COALESCE(user_generated_name::TEXT, ai_generated_name::TEXT, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
-      "sqlite": "NOT (COALESCE(CAST(user_generated_name as TEXT), CAST(ai_generated_name as TEXT), '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))"
+      "mysql": "NOT (COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
+      "postgresql": "NOT (COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
+      "sqlite": "NOT (COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))"
     }
   },
   {
     "input_cel": "alert.provider_type == 'grafana'",
     "description": "Queried field refers to one column",
     "expected_sql_dialect_based": {
-      "mysql": "CAST(incident_alert_provider_type as CHAR) = 'grafana'",
-      "sqlite": "CAST(incident_alert_provider_type as TEXT) = 'grafana'",
-      "postgresql": "incident_alert_provider_type::TEXT = 'grafana'"
+      "mysql": "incident_alert_provider_type = 'grafana'",
+      "sqlite": "incident_alert_provider_type = 'grafana'",
+      "postgresql": "incident_alert_provider_type = 'grafana'"
     }
   },
   {
@@ -60,6 +60,15 @@
       "sqlite": "created_at >= datetime('2025-01-30 10:00:09')",
       "mysql": "created_at >= CAST('2025-01-30 10:00:09' as DATETIME)",
       "postgresql": "created_at >= CAST('2025-01-30 10:00:09' as TIMESTAMP)"
+    }
+  },
+  {
+    "input_cel": "alert.randomDate >= '2025-01-30T10:00:09.553Z'",
+    "description": "Comparison operator with dates for a JSON multiple columns",
+    "expected_sql_dialect_based": {
+      "sqlite": "COALESCE(json_extract(alert_enrichments, '$.randomDate'), json_extract(alert_event, '$.randomDate'), NULL) >= datetime('2025-01-30 10:00:09')",
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.randomDate')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.randomDate')), NULL) >= CAST('2025-01-30 10:00:09' as DATETIME)",
+      "postgresql": "COALESCE(((alert_enrichments) ->> 'randomDate')::TIMESTAMP, ((alert_event) ->> 'randomDate')::TIMESTAMP, NULL) >= CAST('2025-01-30 10:00:09' as TIMESTAMP)"
     }
   },
   {
