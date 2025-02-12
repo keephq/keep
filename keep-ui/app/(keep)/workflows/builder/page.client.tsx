@@ -165,6 +165,7 @@ export function WorkflowBuilderPageClient({
             icon={ArrowUpOnSquareIcon}
             disabled={!canDeploy || isSaving}
             onClick={() => triggerSave()}
+            data-testid="wf-builder-main-save-deploy-button"
           >
             {isSaving ? "Saving..." : "Save & Deploy"}
           </Button>

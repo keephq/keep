@@ -753,6 +753,7 @@ export function StepEditorV2({
       <button
         className="sticky bottom-[-10px] mt-4 bg-orange-500 text-white p-2 rounded"
         onClick={handleSubmit}
+        data-testid="wf-editor-save-deploy-button"
       >
         Save & Deploy
       </button>
