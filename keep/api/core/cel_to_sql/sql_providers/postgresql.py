@@ -28,7 +28,7 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         elif to_type is NoneType:
             return exp
         elif to_type is datetime:
-            return exp
+            return f"({exp})::TIMESTAMP"
         else:
             raise ValueError(f"Unsupported type: {type}")
 
