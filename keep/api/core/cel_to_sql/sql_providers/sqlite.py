@@ -17,19 +17,19 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
 
         return f"COALESCE({', '.join(coalesce_args)})"
 
-    def cast(self, exp, to_type):
+    def cast(self, expression_to_cast: str, to_type):
         if to_type is str:
             to_type_str = "TEXT"
         elif to_type is NoneType:
-            return exp
+            return expression_to_cast
         elif to_type is int or to_type is float:
             to_type_str = "REAL"
         elif to_type is datetime:
-            return exp
+            return expression_to_cast
         else:
             raise ValueError(f"Unsupported type: {type}")
 
-        return f"CAST({exp} as {to_type_str})"
+        return f"CAST({expression_to_cast} as {to_type_str})"
 
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):

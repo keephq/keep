@@ -78,6 +78,9 @@ class PropertiesMapper:
         self.properties_metadata = properties_metadata
 
     def map_props_in_ast(self, abstract_node: Node) -> Node:
+        return self.__visit_nodes(abstract_node)
+
+    def __visit_nodes(self, abstract_node: Node) -> Node:
         if isinstance(abstract_node, ParenthesisNode):
             return self.map_props_in_ast(abstract_node.expression)
 
@@ -134,6 +137,49 @@ class PropertiesMapper:
         )
 
     def _visit_member_access_node(self, member_access_node: MemberAccessNode) -> Node:
+        if (
+            isinstance(member_access_node, PropertyAccessNode)
+            and not member_access_node.is_function_call()
+        ):
+            # in case expression is just property access node
+            # it will behave like !!property in JS
+            # converting queried property to boolean and evaluate as boolean
+            mapped_prop = self._map_property(member_access_node)
+            # return ComparisonNode(
+            #     mapped_prop,
+            #     ComparisonNode.NE,
+            #     ConstantNode("true"),
+            # )
+            return LogicalNode(
+                left=ComparisonNode(
+                    mapped_prop,
+                    ComparisonNode.NE,
+                    ConstantNode(None),
+                ),
+                operator=LogicalNode.AND,
+                right=LogicalNode(
+                    left=ComparisonNode(
+                        mapped_prop,
+                        ComparisonNode.NE,
+                        ConstantNode("0"),
+                    ),
+                    operator=LogicalNode.AND,
+                    right=LogicalNode(
+                        left=ComparisonNode(
+                            mapped_prop,
+                            ComparisonNode.NE,
+                            ConstantNode(False),
+                        ),
+                        operator=LogicalNode.AND,
+                        right=ComparisonNode(
+                            mapped_prop,
+                            ComparisonNode.NE,
+                            ConstantNode(""),
+                        ),
+                    ),
+                ),
+            )
+
         if (
             isinstance(member_access_node, PropertyAccessNode)
             and member_access_node.is_function_call()
@@ -260,3 +306,20 @@ class PropertiesMapper:
             return PropertyAccessNode(mapping.map_to, method_access_node)
 
         raise NotImplementedError(f"Mapping type {type(mapping).__name__} is not supported yet")
+
+    def _map_property(self, property_access_node: PropertyAccessNode) -> Node:
+        property_metadata = self.properties_metadata.get_property_metadata(
+            property_access_node.get_property_path()
+        )
+
+        if not property_metadata:
+            raise PropertiesMappingException(
+                f'Missing mapping configuration for property "{property_access_node.get_property_path()}"'
+            )
+
+        result = []
+
+        for mapping in property_metadata.field_mappings:
+            property_access_node = self._create_property_access_node(mapping, None)
+            result.append(property_access_node)
+        return MultipleFieldsNode(result) if len(result) > 1 else result[0]

@@ -167,7 +167,7 @@ class BaseCelToSqlProvider:
     def coalesce(self, args: List[str]) -> str:
         raise NotImplementedError("COALESCE is not implemented. Must be implemented in the child class.")
 
-    def cast(self, exp: str, to_type: type) -> str:
+    def cast(self, expression_to_cast: str, to_type: type) -> str:
         raise NotImplementedError("CAST is not implemented. Must be implemented in the child class.")
 
     def _visit_parentheses(self, node: str) -> str:
@@ -188,10 +188,10 @@ class BaseCelToSqlProvider:
         )
 
     def _visit_logical_and(self, left: str, right: str) -> str:
-        return f"{left} AND {right}"
+        return f"({left} AND {right})"
 
     def _visit_logical_or(self, left: str, right: str) -> str:
-        return f"{left} OR {right}"
+        return f"({left} OR {right})"
 
     # endregion
 
