@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navigation } from 'lucide-react';
+import { useRouter } from "next/navigation";
 
 interface PresetLinkButtonProps {
     routePath: string;
@@ -8,9 +9,11 @@ interface PresetLinkButtonProps {
 const PresetLinkButton: React.FC<PresetLinkButtonProps> = ({
     routePath
 }) => {
+    const router = useRouter();
+
     const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
-        window.location.href = routePath;
+        router.push(routePath);
     };
 
     return (
@@ -19,7 +22,7 @@ const PresetLinkButton: React.FC<PresetLinkButtonProps> = ({
                 <div>
                     <button
                         onClick={handleClick}
-                        className="inline-flex justify-center items-center hover:bg-gray-100 w-8 h-8 "
+                        className="inline-flex justify-center items-center hover:bg-gray-100 w-8 h-8"
                     >
                         <Navigation color='gray' />
                     </button>
