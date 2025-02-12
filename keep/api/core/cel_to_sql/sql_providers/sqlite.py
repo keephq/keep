@@ -26,6 +26,20 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
             to_type_str = "REAL"
         elif to_type is datetime:
             return expression_to_cast
+        elif to_type is bool:
+            cast_conditions = {
+                # f"{expression_to_cast} is NULL": "FALSE",
+                f"{expression_to_cast} = 'true'": "TRUE",
+                f"{expression_to_cast} = 'false'": "FALSE",
+                f"{expression_to_cast} = ''": "FALSE",
+                f"CAST({expression_to_cast} AS SIGNED) >= 1": "TRUE",
+                f"CAST({expression_to_cast} AS SIGNED) <= 0": "FALSE",
+            }
+            result = " ".join(
+                [f"WHEN {key} THEN {value}" for key, value in cast_conditions.items()]
+            )
+            result = f"CASE {result} ELSE NULL END"
+            return result
         else:
             raise ValueError(f"Unsupported type: {type}")
 
