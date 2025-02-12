@@ -28,7 +28,7 @@ export interface TimeFrame {
 interface TimePreset {
   badge: string;
   label: string;
-  value: TimeFrame;
+  value: () => TimeFrame;
 }
 
 interface CategoryPreset {
@@ -113,6 +113,7 @@ export default function EnhancedDateRangePicker({
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState<TimePreset | null>(null);
   const [calendarRange, setCalendarRange] = useState<DateRange | undefined>(
     timeFrame.start && timeFrame.end
       ? {
@@ -123,89 +124,90 @@ export default function EnhancedDateRangePicker({
   );
 
   const quickPresets = useMemo(
-    () => [
-      {
-        badge: "15m",
-        label: "Past 15 minutes",
-        value: {
-          start: new Date(Date.now() - 15 * ONE_MINUTE),
-          end: new Date(),
+    () =>
+      [
+        {
+          badge: "15m",
+          label: "Past 15 minutes",
+          value: () => ({
+            start: new Date(Date.now() - 15 * ONE_MINUTE),
+            end: new Date(),
+          }),
         },
-      },
-      {
-        badge: "1h",
-        label: "Past hour",
-        value: {
-          start: new Date(Date.now() - ONE_HOUR),
-          end: new Date(),
+        {
+          badge: "1h",
+          label: "Past hour",
+          value: () => ({
+            start: new Date(Date.now() - ONE_HOUR),
+            end: new Date(),
+          }),
         },
-      },
-      {
-        badge: "4h",
-        label: "Past 4 hours",
-        value: {
-          start: new Date(Date.now() - 4 * ONE_HOUR),
-          end: new Date(),
+        {
+          badge: "4h",
+          label: "Past 4 hours",
+          value: () => ({
+            start: new Date(Date.now() - 4 * ONE_HOUR),
+            end: new Date(),
+          }),
         },
-      },
-      {
-        badge: "1d",
-        label: "Past day",
-        value: {
-          start: new Date(Date.now() - ONE_DAY),
-          end: new Date(),
+        {
+          badge: "1d",
+          label: "Past day",
+          value: () => ({
+            start: new Date(Date.now() - ONE_DAY),
+            end: new Date(),
+          }),
         },
-      },
-      {
-        badge: "2d",
-        label: "Past 2 days",
-        value: {
-          start: new Date(Date.now() - 2 * ONE_DAY),
-          end: new Date(),
+        {
+          badge: "2d",
+          label: "Past 2 days",
+          value: () => ({
+            start: new Date(Date.now() - 2 * ONE_DAY),
+            end: new Date(),
+          }),
         },
-      },
-      {
-        badge: "3d",
-        label: "Past 3 days",
-        value: {
-          start: new Date(Date.now() - 3 * ONE_DAY),
-          end: new Date(),
+        {
+          badge: "3d",
+          label: "Past 3 days",
+          value: () => ({
+            start: new Date(Date.now() - 3 * ONE_DAY),
+            end: new Date(),
+          }),
         },
-      },
-      {
-        badge: "7d",
-        label: "Past 7 days",
-        value: {
-          start: new Date(Date.now() - 7 * ONE_DAY),
-          end: new Date(),
+        {
+          badge: "7d",
+          label: "Past 7 days",
+          value: () => ({
+            start: new Date(Date.now() - 7 * ONE_DAY),
+            end: new Date(),
+          }),
         },
-      },
-      {
-        badge: "15d",
-        label: "Past 15 days",
-        value: {
-          start: new Date(Date.now() - 15 * ONE_DAY),
-          end: new Date(),
+        {
+          badge: "15d",
+          label: "Past 15 days",
+          value: () => ({
+            start: new Date(Date.now() - 15 * ONE_DAY),
+            end: new Date(),
+          }),
         },
-      },
-      {
-        badge: "30d",
-        label: "Past 30 days",
-        value: {
-          start: new Date(Date.now() - 30 * ONE_DAY),
-          end: new Date(),
+        {
+          badge: "30d",
+          label: "Past 30 days",
+          value: () => ({
+            start: new Date(Date.now() - 30 * ONE_DAY),
+            end: new Date(),
+          }),
         },
-      },
-      {
-        badge: "all",
-        label: "All time",
-        value: {
-          start: null,
-          end: null,
-          paused: true,
+        {
+          badge: "all",
+          label: "All time",
+          value: () => ({
+            start: null,
+            end: null,
+            paused: true,
+          }),
         },
-      },
-    ],
+      ] as TimePreset[],
     []
   );
 
@@ -217,50 +219,50 @@ export default function EnhancedDateRangePicker({
           {
             badge: "30m",
             label: "Past 30 minutes",
-            value: {
+            value: () => ({
               start: new Date(Date.now() - 30 * ONE_MINUTE),
               end: new Date(),
-            },
+            }),
           },
           {
             badge: "45m",
             label: "Past 45 minutes",
-            value: {
+            value: () => ({
               start: new Date(Date.now() - 45 * ONE_MINUTE),
               end: new Date(),
-            },
+            }),
           },
           {
             badge: "2h",
             label: "Past 2 hours",
-            value: {
+            value: () => ({
               start: new Date(Date.now() - 2 * ONE_HOUR),
               end: new Date(),
-            },
+            }),
           },
           {
             badge: "6h",
             label: "Past 6 hours",
-            value: {
+            value: () => ({
               start: new Date(Date.now() - 6 * ONE_HOUR),
               end: new Date(),
-            },
+            }),
           },
           {
             badge: "6d",
             label: "Past 6 days",
-            value: {
+            value: () => ({
               start: new Date(Date.now() - 6 * ONE_DAY),
               end: new Date(),
-            },
+            }),
           },
           {
             badge: "60d",
             label: "Past 60 days",
-            value: {
+            value: () => ({
               start: new Date(Date.now() - 60 * ONE_DAY),
               end: new Date(),
-            },
+            }),
           },
         ],
       },
@@ -270,20 +272,20 @@ export default function EnhancedDateRangePicker({
           {
             badge: "today",
             label: "Today",
-            value: {
+            value: () => ({
               start: new Date(new Date().setHours(0, 0, 0, 0)),
               end: new Date(),
-            },
+            }),
           },
           {
             badge: "week",
             label: "This Week",
-            value: {
+            value: () => ({
               start: new Date(
                 new Date().setDate(new Date().getDate() - new Date().getDay())
               ),
               end: new Date(),
-            },
+            }),
           },
         ],
       },
@@ -291,9 +293,19 @@ export default function EnhancedDateRangePicker({
     []
   );
 
+  useEffect(() => {
+    setTimeout(() => {
+      handlePresetSelect(
+        quickPresets.find((preset) => preset.badge === "all") as TimePreset
+      );
+      setIsPaused(false);
+    }, 100);
+  }, []);
+
   const handlePresetSelect = (preset: TimePreset) => {
+    setSelectedPreset(preset);
     setTimeFrame({
-      ...preset.value,
+      ...preset.value(),
       paused: true,
       isFromCalendar: false,
     });
@@ -393,6 +405,37 @@ export default function EnhancedDateRangePicker({
     }
   };
 
+  const getSelectedOptionText = () => {
+    if (!selectedPreset) {
+      return quickPresets.find((preset) => preset.badge === "15m")?.label;
+    }
+
+    if (!isPaused && selectedPreset) {
+      return selectedPreset.label;
+    }
+
+    if (!timeFrame.start || !timeFrame.end) {
+      return "All time";
+    }
+
+    return `${format(
+      timeFrame.start,
+      "MMM d, yyyy HH:mm"
+    )} - ${format(timeFrame.end, "MMM d, yyyy HH:mm")}`;
+  };
+
+  const getSelectedBadgeText = () => {
+    if (!isPaused || !selectedPreset) {
+      return "Live";
+    }
+
+    if (!timeFrame.start || !timeFrame.end) {
+      return "All";
+    }
+
+    return formatDuration(timeFrame.start, timeFrame.end);
+  };
+
   return (
     <div className="flex items-center">
       <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
@@ -404,22 +447,14 @@ export default function EnhancedDateRangePicker({
             disabled={disabled}
           >
             <div className="flex items-center w-full">
-              <Badge color="gray" className="mr-2 min-w-[4rem] justify-center">
-                {!timeFrame.start || !timeFrame.end
-                  ? "All"
-                  : timeFrame.paused
-                    ? formatDuration(timeFrame.start, timeFrame.end)
-                    : "Live"}
+              <Badge
+                color="green"
+                className={`mr-2 min-w-[4rem] justify-center ${isPaused ? "hover:bg-gray-200" : "bg-green-700"}`}
+              >
+                {getSelectedBadgeText()}
               </Badge>
               <span className="text-gray-900 text-left translate-y-[1px] min-w-[300px]">
-                <Text>
-                  {!timeFrame.start || !timeFrame.end
-                    ? "All time"
-                    : `${format(
-                        timeFrame.start,
-                        "MMM d, yyyy HH:mm"
-                      )} - ${format(timeFrame.end, "MMM d, yyyy HH:mm")}`}
-                </Text>
+                <Text>{getSelectedOptionText()}</Text>
               </span>
               <ChevronDown className="w-4 h-4 ml-auto text-gray-500" />
             </div>
@@ -502,7 +537,7 @@ export default function EnhancedDateRangePicker({
                             <Badge
                               key={optionIndex}
                               color="gray"
-                              className="cursor-pointer hover:bg-gray-200 transition-colors text-sm"
+                              className="cursor-pointer transition-colors text-sm"
                               onClick={() => handlePresetSelect(option)}
                             >
                               {option.badge}
