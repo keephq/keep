@@ -102,9 +102,18 @@ class EnrichmentsBl:
             if isinstance(event, dict)
             else getattr(event, "fingerprint", None)
         )
-        self.logger.info(
+        event_id = (
+            event.get("id") if isinstance(event, dict) else getattr(event, "id", None)
+        )
+        self._add_enrichment_log(
             "Running extraction rules for incoming event",
-            extra={"tenant_id": self.tenant_id, "fingerprint": fingerprint},
+            "info",
+            {
+                "tenant_id": self.tenant_id,
+                "fingerprint": fingerprint,
+                "event_id": event_id,
+                "pre": pre,
+            },
         )
         rules: list[ExtractionRule] = (
             self.db_session.query(ExtractionRule)
@@ -116,7 +125,19 @@ class EnrichmentsBl:
         )
 
         if not rules:
-            self.logger.debug("No extraction rules found for tenant")
+            self._add_enrichment_log(
+                "No extraction rules found for tenant",
+                "debug",
+                {
+                    "tenant_id": self.tenant_id,
+                    "fingerprint": fingerprint,
+                    "event_id": event_id,
+                    "pre": pre,
+                },
+            )
+            self._track_enrichment_event(
+                event_id, EnrichmentStatus.SKIPPED, EnrichmentType.EXTRACT, 0, {}
+            )
             return event
 
         is_alert_dto = False
@@ -135,16 +156,25 @@ class EnrichmentsBl:
             attribute_value = chevron.render(attribute, event)
 
             if not attribute_value:
-                self.logger.info(
+                self._add_enrichment_log(
                     "Attribute value is empty, skipping extraction",
-                    extra={"rule_id": rule.id},
+                    "info",
+                    {"rule_id": rule.id},
+                )
+                self._track_enrichment_event(
+                    event_id,
+                    EnrichmentStatus.SKIPPED,
+                    EnrichmentType.EXTRACT,
+                    rule.id,
+                    {},
                 )
                 continue
 
             if rule.condition is None or rule.condition == "*" or rule.condition == "":
-                self.logger.info(
+                self._add_enrichment_log(
                     "No condition specified for the rule, enriching...",
-                    extra={
+                    "info",
+                    {
                         "rule_id": rule.id,
                         "tenant_id": self.tenant_id,
                         "fingerprint": fingerprint,
@@ -157,39 +187,50 @@ class EnrichmentsBl:
                 activation = celpy.json_to_cel(event)
                 relevant = prgm.evaluate(activation)
                 if not relevant:
-                    self.logger.debug(
-                        "Condition did not match, skipping extraction",
-                        extra={"rule_id": rule.id},
+                    self._add_enrichment_log(
+                        f"Condition did not match, skipping extraction for rule {rule.id} with condition {rule.condition}",
+                        "debug",
+                        {"rule_id": rule.id},
                     )
                     continue
             match_result = re.search(rule.regex, attribute_value)
             if match_result:
                 match_dict = match_result.groupdict()
-
-                # handle source as a special case
-                if "source" in match_dict:
-                    source = match_dict.pop("source")
-                    if source and isinstance(source, str):
-                        event["source"] = [source]
-
+                # we don't override source
+                match_dict.pop("source", None)
                 event.update(match_dict)
-                self.logger.info(
+                self._add_enrichment_log(
                     "Event enriched with extraction rule",
-                    extra={
+                    "info",
+                    {
                         "rule_id": rule.id,
                         "tenant_id": self.tenant_id,
                         "fingerprint": fingerprint,
                     },
                 )
-
+                self._track_enrichment_event(
+                    event_id,
+                    EnrichmentStatus.SUCCESS,
+                    EnrichmentType.EXTRACT,
+                    rule.id,
+                    match_dict,
+                )
             else:
-                self.logger.info(
+                self._add_enrichment_log(
                     "Regex did not match, skipping extraction",
-                    extra={
+                    "info",
+                    {
                         "rule_id": rule.id,
                         "tenant_id": self.tenant_id,
                         "fingerprint": fingerprint,
                     },
+                )
+                self._track_enrichment_event(
+                    event_id,
+                    EnrichmentStatus.SKIPPED,
+                    EnrichmentType.EXTRACT,
+                    rule.id,
+                    {},
                 )
 
         return AlertDto(**event) if is_alert_dto else event
