@@ -442,14 +442,11 @@ function WorkflowEditorV2() {
                             Object.keys(properties.alert as {}).map(
                               (filter) => {
                                 return (
-                                  <>
+                                  <div key={filter}>
                                     <Subtitle className="mt-2.5">
                                       {filter}
                                     </Subtitle>
-                                    <div
-                                      className="flex items-center mt-1"
-                                      key={filter}
-                                    >
+                                    <div className="flex items-center mt-1">
                                       <TextInput
                                         key={filter}
                                         placeholder={`Set alert ${filter}`}
@@ -472,7 +469,7 @@ function WorkflowEditorV2() {
                                         onClick={() => deleteFilter(filter)}
                                       />
                                     </div>
-                                  </>
+                                  </div>
                                 );
                               }
                             )}
