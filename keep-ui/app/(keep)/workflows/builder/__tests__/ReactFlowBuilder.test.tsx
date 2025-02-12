@@ -1,4 +1,4 @@
-import { render, renderHook } from "@testing-library/react";
+import { act, render, renderHook } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import ReactFlowBuilder from "../ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
@@ -35,12 +35,14 @@ describe("ReactFlowBuilder", () => {
   it("renders successfully", () => {
     const { result } = renderHook(() => useStore());
 
-    result.current.setDefinition({
-      value: {
-        sequence: [],
-        properties: {},
-      },
-      isValid: true,
+    act(() => {
+      result.current.setDefinition({
+        value: {
+          sequence: [],
+          properties: {},
+        },
+        isValid: true,
+      });
     });
 
     const { getByTestId } = render(
