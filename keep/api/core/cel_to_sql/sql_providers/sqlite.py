@@ -22,6 +22,8 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
             to_type_str = "TEXT"
         elif to_type is NoneType:
             return exp
+        elif to_type is int or to_type is float:
+            to_type_str = "REAL"
         elif to_type is datetime:
             return exp
         else:

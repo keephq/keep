@@ -23,16 +23,16 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
     def cast(self, exp, to_type):
         if to_type is str:
             to_type_str = "TEXT"
-        elif to_type is int:
-            to_type_str = "INTEGER"
+        elif to_type is int or to_type is float:
+            to_type_str = "FLOAT"
         elif to_type is NoneType:
             return exp
         elif to_type is datetime:
-            return f"({exp})::TIMESTAMP"
+            to_type_str = "TIMESTAMP"
         else:
             raise ValueError(f"Unsupported type: {type}")
 
-        return f"{exp}::{to_type_str}"
+        return f"({exp})::{to_type_str}"
 
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):
