@@ -250,7 +250,7 @@ def test_run_mapping_rules_applies(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name"],
+        matchers=[["name"]],
         rows=[{"name": "Test Alert", "service": "new_service"}],
         disabled=False,
         type="csv",
@@ -272,7 +272,7 @@ def test_run_mapping_rules_with_regex_match(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name"],
+        matchers=[["name"]],
         rows=[
             {"name": "^(keep-)?backend-service$", "service": "backend_service"},
             {"name": "frontend-service", "service": "frontend_service"},
@@ -316,7 +316,7 @@ def test_run_mapping_rules_no_match(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name"],
+        matchers=[["name"]],
         rows=[
             {"name": "^(keep-)?backend-service$", "service": "backend_service"},
             {"name": "frontend-service", "service": "frontend_service"},
@@ -345,7 +345,7 @@ def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name && severity"],
+        matchers=[["name", "severity"]],
         rows=[{"name": "Test Alert", "severity": "high", "service": "new_service"}],
         disabled=False,
         type="csv",
@@ -360,7 +360,7 @@ def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
     mock_alert_dto.name = "Test Alert"
     mock_alert_dto.severity = "high"
     matcher_exist = enrichment_bl._check_matcher(
-        mock_alert_dto, rule.rows[0], "name && severity"
+        mock_alert_dto, rule.rows[0], ["name", "severity"]
     )
     assert matcher_exist
     enrichment_bl.run_mapping_rules(mock_alert_dto)
@@ -370,7 +370,7 @@ def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
     mock_alert_dto.name = "Other Alert"
     mock_alert_dto.severity = "low"
     result = enrichment_bl._check_matcher(
-        mock_alert_dto, rule.rows[0], "name && severity"
+        mock_alert_dto, rule.rows[0], ["name", "severity"]
     )
     assert not hasattr(mock_alert_dto, "service")
     assert result is False
@@ -382,7 +382,7 @@ def test_check_matcher_with_or_condition(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name", "severity"],
+        matchers=[["name"], ["severity"]],
         rows=[
             {"name": "Test Alert", "service": "new_service"},
             {"severity": "high", "service": "high_severity_service"},
@@ -438,7 +438,7 @@ def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts):
         id=1,
         tenant_id=SINGLE_TENANT_UUID,
         priority=1,
-        matchers=["name", "severity"],
+        matchers=[["name"], ["severity"]],
         rows=[
             {"name": "Test Alert", "service": "new_service"},
             {"severity": "high", "service": "high_severity_service"},
@@ -465,7 +465,7 @@ def test_enrichment(db_session, client, test_app, mock_alert_dto, elastic_client
         id=1,
         tenant_id=SINGLE_TENANT_UUID,
         priority=1,
-        matchers=["name", "severity"],
+        matchers=[["name"], ["severity"]],
         rows=[
             {"name": "Test Alert", "service": "new_service"},
             {"severity": "high", "service": "high_severity_service"},
