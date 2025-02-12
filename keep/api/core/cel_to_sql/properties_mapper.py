@@ -261,7 +261,7 @@ class PropertiesMapper:
                 if start_index and start_index >= len(mapping.enum_values):
                     return ComparisonNode(
                         first_operand=comparison_node.first_operand,
-                        operator=ComparisonNode.EQ,
+                        operator=ComparisonNode.NE,
                         second_operand=ConstantNode("not_valid_value"),
                     )
 
