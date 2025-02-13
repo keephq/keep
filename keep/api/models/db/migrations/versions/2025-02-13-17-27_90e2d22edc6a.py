@@ -20,7 +20,7 @@ def upgrade() -> None:
     conn = op.get_bind()
     
     try:
-        conn.execute(text("COMMIT"))  # Close existing transaction
+        conn.execute(text("COMMIT"))  # Close existing transaction, otherwise it will fail on PG on the next step
     except Exception:
         pass # No transaction to commit
     
