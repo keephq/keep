@@ -661,8 +661,13 @@ export function StepEditorV2({
     properties?: V2Properties;
     type?: string;
   }>(initialFormData);
-  const { updateSelectedNodeData, setSynced, triggerSave, validationErrors } =
-    useWorkflowStore();
+  const {
+    updateSelectedNodeData,
+    setSynced,
+    triggerSave,
+    validationErrors,
+    synced,
+  } = useWorkflowStore();
 
   const saveFormDataToStoreDebounced = useCallback(
     debounce((formData: any) => {
@@ -750,13 +755,16 @@ export function StepEditorV2({
           updateProperty={handlePropertyChange}
         />
       ) : null}
-      <button
-        className="sticky bottom-[-10px] mt-4 bg-orange-500 text-white p-2 rounded"
+      <Button
+        variant="primary"
+        color="orange"
+        className="sticky bottom-0 mt-2.5"
         onClick={handleSubmit}
         data-testid="wf-editor-save-deploy-button"
+        disabled={!synced}
       >
         Save & Deploy
-      </button>
+      </Button>
     </EditorLayout>
   );
 }
