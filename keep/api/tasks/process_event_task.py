@@ -86,7 +86,7 @@ def __internal_prepartion(
             logger.exception(
                 "failed to parse source",
                 extra={
-                    "alert": alert.dict(),
+                    "alert": alerts,
                 },
             )
             raise
