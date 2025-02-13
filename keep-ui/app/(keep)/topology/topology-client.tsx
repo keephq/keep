@@ -3,7 +3,7 @@
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
 import { TopologyMap } from "./ui/map";
 import { ApplicationsList } from "./ui/applications/applications-list";
-import { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { TopologySearchContext } from "./TopologySearchContext";
 import { TopologyApplication, TopologyService } from "./model";
 import { Button } from "@/components/ui";
