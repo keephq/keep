@@ -120,20 +120,21 @@ function Summary({
     );
   }
 
-  return summary || generatedSummary ? (
-    <div>{formatedSummary}</div>
-  ) : (
-    <Button
-      variant="secondary"
-      onClick={executeTask}
-      className="mt-2.5"
-      disabled={generatingSummary}
-      loading={generatingSummary}
-      icon={TbSparkles}
-      size="xs"
-    >
-      AI Summary
-    </Button>
+  return (
+    <div>
+      {formatedSummary}
+      <Button
+        variant="secondary"
+        onClick={executeTask}
+        className="mt-2.5"
+        disabled={generatingSummary}
+        loading={generatingSummary}
+        icon={TbSparkles}
+        size="xs"
+      >
+        AI Summary
+      </Button>
+    </div>
   );
 }
 
