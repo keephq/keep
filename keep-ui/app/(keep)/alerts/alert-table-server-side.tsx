@@ -67,7 +67,7 @@ interface PresetTab {
 interface Props {
   refreshToken: string | null;
   alerts: AlertDto[];
-  initalFacets: FacetDto[];
+  initialFacets: FacetDto[];
   alertsTotalCount: number;
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
@@ -91,7 +91,7 @@ export function AlertTableServerSide({
   alerts,
   alertsTotalCount,
   columns,
-  initalFacets,
+  initialFacets,
   isAsyncLoading = false,
   presetName,
   presetStatic = false,
@@ -266,7 +266,7 @@ export function AlertTableServerSide({
 
   let showSkeleton = isAsyncLoading;
   let showEmptyState =
-    !!alertsQuery.cel && table.getPageCount() === 0 && !isAsyncLoading;
+    !alertsQuery.cel && table.getPageCount() === 0 && !isAsyncLoading;
 
   const handleRowClick = (alert: AlertDto) => {
     // if presetName is alert-history, do not open sidebar
@@ -409,7 +409,7 @@ export function AlertTableServerSide({
               entityName={"alerts"}
               facetOptionsCel={mainCelQuery}
               clearFiltersToken={clearFiltersToken}
-              initialFacetsData={{ facets: initalFacets, facetOptions: null }}
+              initialFacetsData={{ facets: initialFacets, facetOptions: null }}
               onCelChange={(cel) => setFilterCel(cel)}
               renderFacetOptionIcon={renderFacetOptionIcon}
               renderFacetOptionLabel={renderFacetOptionLabel}
@@ -436,7 +436,7 @@ export function AlertTableServerSide({
                 <div ref={a11yContainerRef} className="sr-only" />
 
                 {/* Make table wrapper scrollable */}
-                <div className="flex-grow">
+                <div data-testid="alerts-table" className="flex-grow">
                   <Table className="[&>table]:table-fixed [&>table]:w-full">
                     <AlertsTableHeaders
                       columns={columns}

@@ -1,6 +1,7 @@
 import enum
 import logging
 
+from keep.api.core.alerts import query_last_alerts
 from keep.api.core.db import get_last_alerts
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
@@ -96,12 +97,12 @@ class SearchEngine:
             list[AlertDto]: The list of alerts that match the query
         """
         self.logger.info("Searching alerts by CEL")
-        # if alerts are not provided
-        if alerts is None:
-            # get the alerts
-            alerts = self._get_last_alerts(limit=limit, timeframe=timeframe)
-        # filter the alerts
-        filtered_alerts = self.rule_engine.filter_alerts(alerts, cel_query)
+        db_alerts, _ = query_last_alerts(
+            tenant_id=self.tenant_id,
+            limit=limit,
+            cel=cel_query,
+        )
+        filtered_alerts = convert_db_alerts_to_dto_alerts(db_alerts)
         self.logger.info("Finished searching alerts by CEL")
         return filtered_alerts
 

@@ -61,6 +61,7 @@ from keep.api.models.db.action import Action
 from keep.api.models.db.ai_external import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.enrichment_event import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.extraction import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.maintenance_window import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-import
@@ -93,6 +94,9 @@ ALLOWED_INCIDENT_FILTERS = [
     "assignee",
 ]
 KEEP_AUDIT_EVENTS_ENABLED = config("KEEP_AUDIT_EVENTS_ENABLED", cast=bool, default=True)
+
+INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT = timedelta(minutes=60)
+WORKFLOWS_TIMEOUT = timedelta(minutes=120)
 
 
 def dispose_session():
@@ -200,16 +204,14 @@ def create_workflow_execution(
             raise
 
 
-def get_mapping_rule_by_id(tenant_id: str, rule_id: str) -> MappingRule | None:
-    rule = None
-    with Session(engine) as session:
-        rule: MappingRule | None = (
-            session.query(MappingRule)
-            .filter(MappingRule.tenant_id == tenant_id)
-            .filter(MappingRule.id == rule_id)
-            .first()
+def get_mapping_rule_by_id(
+    tenant_id: str, rule_id: str, session: Optional[Session] = None
+) -> MappingRule | None:
+    with existed_or_new_session(session) as session:
+        query = select(MappingRule).where(
+            MappingRule.tenant_id == tenant_id, MappingRule.id == rule_id
         )
-    return rule
+        return session.exec(query).first()
 
 
 def get_last_completed_execution(
@@ -226,6 +228,26 @@ def get_last_completed_execution(
         .order_by(WorkflowExecution.execution_number.desc())
         .limit(1)
     ).first()
+
+
+def get_timeouted_workflow_exections():
+    with Session(engine) as session:
+        logger.debug("Checking for timeouted workflows")
+        timeouted_workflows = []
+        try:
+            result = session.exec(
+                select(WorkflowExecution)
+                .filter(WorkflowExecution.status == "in_progress")
+                .filter(
+                    WorkflowExecution.started <= datetime.utcnow() - WORKFLOWS_TIMEOUT
+                )
+            )
+            timeouted_workflows = result.all()
+        except Exception as e:
+            logger.exception("Failed to get timeouted workflows: ", e)
+
+        logger.debug(f"Found {len(timeouted_workflows)} timeouted workflows")
+        return timeouted_workflows
 
 
 def get_workflows_that_should_run():
@@ -318,8 +340,11 @@ def get_workflows_that_should_run():
                 # if this completed, error, than that's ok - the service who locked the execution is done
                 elif ongoing_execution.status != "in_progress":
                     continue
-                # if the ongoing execution runs more than 60 minutes, than its timeout
-                elif ongoing_execution.started + timedelta(minutes=60) <= current_time:
+                # if the ongoing execution runs more than timeout minutes, relaunch it
+                elif (
+                    ongoing_execution.started + INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT
+                    <= current_time
+                ):
                     ongoing_execution.status = "timeout"
                     session.commit()
                     # re-create the execution and try to get the lock
@@ -1485,15 +1510,17 @@ def get_alert_by_fingerprint_and_event_id(
     return alert
 
 
-def get_alert_by_event_id(tenant_id: str, event_id: str) -> Alert:
-    with Session(engine) as session:
+def get_alert_by_event_id(
+    tenant_id: str, event_id: str, session: Optional[Session] = None
+) -> Alert:
+    with existed_or_new_session(session) as session:
         query = (
-            session.query(Alert)
+            select(Alert)
             .filter(Alert.tenant_id == tenant_id)
             .filter(Alert.id == uuid.UUID(event_id))
         )
         query = query.options(subqueryload(Alert.alert_enrichment))
-        alert = query.first()
+        alert = session.exec(query).first()
     return alert
 
 
@@ -1688,6 +1715,7 @@ def create_rule(
     require_approve=False,
     resolve_on=ResolveOn.NEVER.value,
     create_on=CreateIncidentOn.ANY.value,
+    incident_name_template=None,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -1705,6 +1733,7 @@ def create_rule(
             require_approve=require_approve,
             resolve_on=resolve_on,
             create_on=create_on,
+            incident_name_template=incident_name_template,
         )
         session.add(rule)
         session.commit()
@@ -1836,14 +1865,18 @@ def get_incident_for_grouping_rule(
 
 
 def create_incident_for_grouping_rule(
-    tenant_id, rule, rule_fingerprint, session: Optional[Session] = None
+    tenant_id,
+    rule,
+    rule_fingerprint,
+    incident_name: str = None,
+    session: Optional[Session] = None,
 ):
 
     with existed_or_new_session(session) as session:
         # Create and add a new incident if it doesn't exist
         incident = Incident(
             tenant_id=tenant_id,
-            user_generated_name=f"{rule.name}",
+            user_generated_name=incident_name or f"{rule.name}",
             rule_id=rule.id,
             rule_fingerprint=rule_fingerprint,
             is_predicted=False,
@@ -2337,12 +2370,16 @@ def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
 
 def is_linked_provider(tenant_id: str, provider_id: str) -> bool:
     with Session(engine) as session:
+        query = session.query(Alert.provider_id)
+
+        # Add FORCE INDEX hint only for MySQL
+        if engine.dialect.name == "mysql":
+            query = query.with_hint(Alert, "FORCE INDEX (idx_alert_tenant_provider)")
+
         linked_provider = (
-            session.query(Alert.provider_id)
-            .outerjoin(Provider, Alert.provider_id == Provider.id)
+            query.outerjoin(Provider, Alert.provider_id == Provider.id)
             .filter(
                 Alert.tenant_id == tenant_id,
-                Alert.provider_type != "group",
                 Alert.provider_id == provider_id,
                 Provider.id == None,
             )
@@ -3850,12 +3887,17 @@ def add_alerts_to_incident(
                 set(incident.affected_services if incident.affected_services else [])
                 | set(alerts_data_for_incident["services"])
             )
-            # If incident has alerts already, use the max severity between existing and new alerts, otherwise use the new alerts max severity
-            incident.severity = (
-                max(incident.severity, alerts_data_for_incident["max_severity"].order)
-                if incident.alerts_count
-                else alerts_data_for_incident["max_severity"].order
-            )
+            if not incident.forced_severity:
+                # If incident has alerts already, use the max severity between existing and new alerts,
+                # otherwise use the new alerts max severity
+                incident.severity = (
+                    max(
+                        incident.severity,
+                        alerts_data_for_incident["max_severity"].order,
+                    )
+                    if incident.alerts_count
+                    else alerts_data_for_incident["max_severity"].order
+                )
             if not override_count:
                 incident.alerts_count += alerts_data_for_incident["count"]
             else:
@@ -4103,11 +4145,12 @@ def remove_alerts_to_incident_by_incident_id(
         ]
 
         incident.alerts_count -= alerts_data_for_incident["count"]
-        incident.severity = (
-            max(updated_severities)
-            if updated_severities
-            else IncidentSeverity.LOW.order
-        )
+        if not incident.forced_severity:
+            incident.severity = (
+                max(updated_severities)
+                if updated_severities
+                else IncidentSeverity.LOW.order
+            )
         incident.start_time = started_at
         incident.last_seen_time = last_seen_at
 
@@ -4316,6 +4359,34 @@ def update_incident_name(tenant_id: str, incident_id: UUID, name: str) -> Incide
             return
 
         incident.ai_generated_name = name
+        session.commit()
+        session.refresh(incident)
+
+        return incident
+
+
+def update_incident_severity(
+    tenant_id: str, incident_id: UUID, severity: IncidentSeverity
+) -> Optional[Incident]:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
+    with Session(engine) as session:
+        incident = session.exec(
+            select(Incident)
+            .where(Incident.tenant_id == tenant_id)
+            .where(Incident.id == incident_id)
+        ).first()
+
+        if not incident:
+            logger.error(
+                f"Incident not found for tenant {tenant_id} and incident {incident_id}",
+                extra={"tenant_id": tenant_id},
+            )
+            return
+
+        incident.severity = severity.order
+        incident.forced_severity = True
+        session.add(incident)
         session.commit()
         session.refresh(incident)
 
@@ -5005,6 +5076,7 @@ def set_last_alert(
                     )
                     last_alert.timestamp = alert.timestamp
                     last_alert.alert_id = alert.id
+                    last_alert.alert_hash = alert.alert_hash
                     session.add(last_alert)
 
                 elif not last_alert:

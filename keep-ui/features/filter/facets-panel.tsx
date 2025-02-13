@@ -31,6 +31,7 @@ function buildCel(
 
   const cel = Object.values(facets)
     .filter((facet) => facet.id in facetsState)
+    .filter((facet) => facetOptions[facet.id])
     .map((facet) => {
       const notSelectedOptions = Object.values(facetOptions[facet.id])
         .filter((facetOption) =>
@@ -249,6 +250,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     <section
       id={`${panelId}-facets`}
       className={"min-w-52 max-w-52 " + className}
+      data-testid="facets-panel"
     >
       <div className="space-y-2">
         <div className="flex justify-between">

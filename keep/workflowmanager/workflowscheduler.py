@@ -11,7 +11,7 @@ from threading import Lock
 from sqlalchemy.exc import IntegrityError
 
 from keep.api.core.config import config
-from keep.api.core.db import create_workflow_execution
+from keep.api.core.db import create_workflow_execution, get_timeouted_workflow_exections
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
 from keep.api.core.db import get_enrichment, get_previous_execution_id
 from keep.api.core.db import get_workflow as get_workflow_db
@@ -405,6 +405,28 @@ class WorkflowScheduler:
             WorkflowScheduler.MAX_SIZE_SIGNED_INT + 1
         )
 
+    def _timeout_workflows(self):
+        """
+        Record timeout for workflows that are running for too long.
+        """
+        workflow_executions = get_timeouted_workflow_exections()
+        for workflow_execution in workflow_executions:
+            self.logger.info(
+                "Timeout workflow execution detected",
+                extra={
+                    "workflow_id": workflow_execution.workflow_id,
+                    "workflow_execution_id": workflow_execution.id,
+                    "tenant_id": workflow_execution.tenant_id,
+                },
+            )
+            self._finish_workflow_execution(
+                tenant_id=workflow_execution.tenant_id,
+                workflow_id=workflow_execution.workflow_id,
+                workflow_execution_id=workflow_execution.id,
+                status=WorkflowStatus.ERROR,
+                error="Workflow execution timed out, may happen because of the worker restart. Please check backend logs.",
+            )
+
     def _handle_event_workflows(self):
         # TODO - event workflows should be in DB too, to avoid any state problems.
 
@@ -649,6 +671,7 @@ class WorkflowScheduler:
             try:
                 self._handle_interval_workflows()
                 self._handle_event_workflows()
+                self._timeout_workflows()
             except Exception:
                 # This is the "mainloop" of the scheduler, we don't want to crash it
                 # But any exception here should be investigated

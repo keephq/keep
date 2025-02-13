@@ -20,23 +20,26 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
 
         return f"COALESCE({', '.join(args)})"
 
-    def cast(self, exp, to_type):
+    def cast(self, expression_to_cast: str, to_type):
         if to_type is str:
             to_type_str = "TEXT"
-        elif to_type is int:
-            to_type_str = "INTEGER"
+        elif to_type is int or to_type is float:
+            to_type_str = "FLOAT"
         elif to_type is NoneType:
-            return exp
+            return expression_to_cast
         elif to_type is datetime:
-            return exp
+            to_type_str = "TIMESTAMP"
+        elif to_type is bool:
+            to_type_str = "BOOLEAN"
         else:
             raise ValueError(f"Unsupported type: {type}")
 
-        return f"{exp}::{to_type_str}"
+        return f"({expression_to_cast})::{to_type_str}"
 
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):
-            date_exp = f"CAST('{value.strftime('%Y-%m-%d %H:%M:%S')}' as TIMESTAMP)"
+            date_str = self.literal_proc(value.strftime("%Y-%m-%d %H:%M:%S"))
+            date_exp = f"CAST({date_str} as TIMESTAMP)"
             return date_exp
 
         return super()._visit_constant_node(value)
@@ -47,20 +50,24 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.contains accepts 1 argument but got {len(method_args)}')
 
-        return f"{property_path} IS NOT NULL AND {property_path} LIKE '%{method_args[0].value}%'"
+        processed_literal = self.literal_proc(method_args[0].value)
+        unquoted_literal = processed_literal[1:-1]
+        return f"{property_path} IS NOT NULL AND {property_path} LIKE '%{unquoted_literal}%'"
 
     def _visit_starts_with_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.startsWith accepts 1 argument but got {len(method_args)}')
-
-        return f"{property_path} IS NOT NULL AND {property_path} LIKE '{method_args[0].value}%'"
+        processed_literal = self.literal_proc(method_args[0].value)
+        unquoted_literal = processed_literal[1:-1]
+        return f"{property_path} IS NOT NULL AND {property_path} LIKE '{unquoted_literal}%'"
 
     def _visit_ends_with_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.endsWith accepts 1 argument but got {len(method_args)}')
-
-        return f"{property_path} IS NOT NULL AND {property_path} LIKE '%{method_args[0].value}'"
+        processed_literal = self.literal_proc(method_args[0].value)
+        unquoted_literal = processed_literal[1:-1]
+        return f"{property_path} IS NOT NULL AND {property_path} LIKE '%{unquoted_literal}'"

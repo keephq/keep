@@ -1,12 +1,17 @@
 import datetime
 import logging
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
+from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import get_session
+from keep.api.models.db.enrichment_event import EnrichmentEventWithLogs
 from keep.api.models.db.mapping import MappingRule, MappingRuleDtoIn, MappingRuleDtoOut
 from keep.api.models.db.topology import TopologyService
+from keep.api.utils.pagination import EnrichmentEventPaginatedResultsDto
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
@@ -40,10 +45,7 @@ def get_rules(
                 attributes = [
                     key
                     for key in rule.rows[0].keys()
-                    if not any(
-                        key in matcher.replace(" ", "").split("&&")
-                        for matcher in rule.matchers
-                    )
+                    if not any(key in matcher for matcher in rule.matchers)
                 ]
             elif rule_dto.type == "topology":
                 attributes = [
@@ -78,6 +80,12 @@ def create_rule(
         tenant_id=authenticated_entity.tenant_id,
         created_by=authenticated_entity.email,
     )
+
+    if not new_rule.name or not new_rule.matchers:
+        raise HTTPException(
+            status_code=400, detail="Rule name and matchers are required"
+        )
+
     session.add(new_rule)
     session.commit()
     session.refresh(new_rule)
@@ -102,6 +110,7 @@ def delete_rule(
     )
     if rule is None:
         raise HTTPException(status_code=404, detail="Rule not found")
+
     session.delete(rule)
     session.commit()
     logger.info("Deleted a mapping rule", extra={"rule_id": rule_id})
@@ -145,3 +154,114 @@ def update_rule(
             key for key in existing_rule.rows[0].keys() if key not in rule.matchers
         ]
     return response
+
+
+# todo: we can make it generic for all enrichment events, not only mapping
+@router.get("/{rule_id}/executions", description="Get all executions for a rule")
+def get_enrichment_events(
+    rule_id: int,
+    limit: int = Query(20),
+    offset: int = Query(0),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:rules"])
+    ),
+) -> EnrichmentEventPaginatedResultsDto:
+    logger.info(
+        "Getting enrichment events",
+        extra={
+            "rule_id": rule_id,
+            "limit": limit,
+            "offset": offset,
+            "tenant_id": authenticated_entity.tenant_id,
+        },
+    )
+    enrichment_bl = EnrichmentsBl(tenant_id=authenticated_entity.tenant_id)
+    events = enrichment_bl.get_enrichment_events(rule_id, limit, offset)
+    total_count = enrichment_bl.get_total_enrichment_events(rule_id)
+    logger.info(
+        "Got enrichment events",
+        extra={"events_count": len(events)},
+    )
+    return EnrichmentEventPaginatedResultsDto(
+        count=total_count,
+        items=events,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get(
+    "/{rule_id}/executions/{enrichment_event_id}",
+    description="Get an execution for a rule",
+)
+def get_enrichment_event_logs(
+    rule_id: int,
+    enrichment_event_id: UUID,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:rules"])
+    ),
+) -> EnrichmentEventWithLogs:
+    logger.info(
+        "Getting enrichment event logs",
+        extra={
+            "rule_id": rule_id,
+            "enrichment_event_id": enrichment_event_id,
+            "tenant_id": authenticated_entity.tenant_id,
+        },
+    )
+    enrichment_bl = EnrichmentsBl(tenant_id=authenticated_entity.tenant_id)
+    enrichment_event = enrichment_bl.get_enrichment_event(enrichment_event_id)
+    logs = enrichment_bl.get_enrichment_event_logs(enrichment_event_id)
+    if not logs:
+        raise HTTPException(status_code=404, detail="Logs not found")
+    logger.info(
+        "Got enrichment event logs",
+        extra={"logs_count": len(logs)},
+    )
+    return EnrichmentEventWithLogs(
+        enrichment_event=enrichment_event,
+        logs=logs,
+    )
+
+
+@router.post(
+    "/{rule_id}/execute/{alert_id}",
+    description="Execute a mapping rule against an alert",
+    responses={
+        200: {"description": "Mapping rule executed successfully"},
+        400: {"description": "Mapping rule failed to execute"},
+        404: {"description": "Mapping rule or alert not found"},
+        403: {"description": "User does not have permission to execute mapping rule"},
+    },
+)
+def execute_rule(
+    rule_id: int,
+    alert_id: UUID,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:rules"])
+    ),
+):
+    logger.info(
+        "Executing a mapping rule against an alert",
+        extra={
+            "rule_id": rule_id,
+            "alert_id": alert_id,
+            "tenant_id": authenticated_entity.tenant_id,
+        },
+    )
+    enrichment_bl = EnrichmentsBl(tenant_id=authenticated_entity.tenant_id)
+    enriched = enrichment_bl.run_mapping_rule_by_id(rule_id, alert_id)
+    if enriched:
+        logger.info(
+            "Mapping rule executed successfully",
+            extra={"rule_id": rule_id, "alert_id": alert_id},
+        )
+    else:
+        logger.error(
+            "Mapping rule failed to execute",
+            extra={"rule_id": rule_id, "alert_id": alert_id},
+        )
+    return JSONResponse(
+        status_code=200,
+        content={"enrichment_event_id": str(enrichment_bl.enrichment_event_id)},
+    )

@@ -17,23 +17,40 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
 
         return f"COALESCE({', '.join(coalesce_args)})"
 
-    def cast(self, exp, to_type):
+    def cast(self, expression_to_cast: str, to_type):
         if to_type is str:
             to_type_str = "TEXT"
         elif to_type is NoneType:
-            return exp
+            return expression_to_cast
+        elif to_type is int or to_type is float:
+            to_type_str = "REAL"
         elif to_type is datetime:
-            return exp
+            return expression_to_cast
+        elif to_type is bool:
+            cast_conditions = {
+                # f"{expression_to_cast} is NULL": "FALSE",
+                f"{expression_to_cast} = 'true'": "TRUE",
+                f"{expression_to_cast} = 'false'": "FALSE",
+                f"{expression_to_cast} = ''": "FALSE",
+                f"CAST({expression_to_cast} AS SIGNED) >= 1": "TRUE",
+                f"CAST({expression_to_cast} AS SIGNED) <= 0": "FALSE",
+            }
+            result = " ".join(
+                [f"WHEN {key} THEN {value}" for key, value in cast_conditions.items()]
+            )
+            result = f"CASE {result} ELSE NULL END"
+            return result
         else:
             raise ValueError(f"Unsupported type: {type}")
 
-        return f"CAST({exp} as {to_type_str})"
+        return f"CAST({expression_to_cast} as {to_type_str})"
 
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):
-            date_exp = f"datetime('{value.strftime('%Y-%m-%d %H:%M:%S')}')"
+            date_str = self.literal_proc(value.strftime("%Y-%m-%d %H:%M:%S"))
+            date_exp = f"datetime({date_str})"
             return date_exp
-        
+
         return super()._visit_constant_node(value)
 
     def _visit_contains_method_calling(
@@ -42,15 +59,20 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.contains accepts 1 argument but got {len(method_args)}')
 
-        return f"{property_path} IS NOT NULL AND {property_path} GLOB '*{method_args[0].value}*'"
+        processed_literal = self.literal_proc(f"*{method_args[0].value}*")
+        return (
+            f"{property_path} IS NOT NULL AND {property_path} GLOB {processed_literal}"
+        )
 
     def _visit_starts_with_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.startsWith accepts 1 argument but got {len(method_args)}')
-
-        return f"{property_path} IS NOT NULL AND {property_path} GLOB '{method_args[0].value}*'"
+        processed_literal = self.literal_proc(f"{method_args[0].value}*")
+        return (
+            f"{property_path} IS NOT NULL AND {property_path} GLOB {processed_literal}"
+        )
 
     def _visit_ends_with_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
@@ -58,10 +80,7 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.endsWith accepts 1 argument but got {len(method_args)}')
 
-        return f"{property_path} IS NOT NULL AND {property_path} GLOB '*{method_args[0].value}'"
-    
-    def _get_default_value_for_type(self, type):
-        if type is datetime:
-            return "'0000-00-00 00:00:00'"
-
-        return super()._get_default_value_for_type(type)
+        processed_literal = self.literal_proc(f"*{method_args[0].value}")
+        return (
+            f"{property_path} IS NOT NULL AND {property_path} GLOB {processed_literal}"
+        )

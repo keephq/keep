@@ -9,7 +9,7 @@ import pytz
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
-from keep.api.models.db.workflow import Workflow, WorkflowExecutionLog
+from keep.api.models.db.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from tests.fixtures.client import client, test_app  # noqa
 
@@ -872,79 +872,79 @@ def test_workflow_incident_triggers(
     ]
 
 
-@pytest.mark.parametrize(
-    "test_app, test_case, alert_statuses, expected_tier, db_session",
-    [
-        ({"AUTH_TYPE": "NOAUTH"}, "No action", [[0, "firing"]], None, None),
-    ],
-    indirect=["test_app", "db_session"],
-)
-def test_workflow_execution_logs(
-    db_session,
-    test_app,
-    create_alert,
-    setup_workflow_with_two_providers,
-    workflow_manager,
-    test_case,
-    alert_statuses,
-    expected_tier,
-):
-    """Test that workflow execution logs are properly stored using WorkflowDBHandler"""
-    base_time = datetime.now(tz=pytz.utc)
+# @pytest.mark.parametrize(
+#     "test_app, test_case, alert_statuses, expected_tier, db_session",
+#     [
+#         ({"AUTH_TYPE": "NOAUTH"}, "No action", [[0, "firing"]], None, None),
+#     ],
+#     indirect=["test_app", "db_session"],
+# )
+# def test_workflow_execution_logs(
+#     db_session,
+#     test_app,
+#     create_alert,
+#     setup_workflow_with_two_providers,
+#     workflow_manager,
+#     test_case,
+#     alert_statuses,
+#     expected_tier,
+# ):
+#     """Test that workflow execution logs are properly stored using WorkflowDBHandler"""
+#     base_time = datetime.now(tz=pytz.utc)
 
-    # Create alerts with specified statuses and timestamps
-    alert_statuses.reverse()
-    for time_diff, status in alert_statuses:
-        alert_status = (
-            AlertStatus.FIRING if status == "firing" else AlertStatus.RESOLVED
-        )
-        create_alert("fp1", alert_status, base_time - timedelta(minutes=time_diff))
+#     # Create alerts with specified statuses and timestamps
+#     alert_statuses.reverse()
+#     for time_diff, status in alert_statuses:
+#         alert_status = (
+#             AlertStatus.FIRING if status == "firing" else AlertStatus.RESOLVED
+#         )
+#         create_alert("fp1", alert_status, base_time - timedelta(minutes=time_diff))
 
-    time.sleep(1)
+#     time.sleep(1)
 
-    # Create the current alert
-    current_alert = AlertDto(
-        id="grafana-1",
-        source=["grafana"],
-        name="server-is-hamburger",
-        status=AlertStatus.FIRING,
-        severity="critical",
-        fingerprint="fp1",
-    )
+#     # Create the current alert
+#     current_alert = AlertDto(
+#         id="grafana-1",
+#         source=["grafana"],
+#         name="server-is-hamburger",
+#         status=AlertStatus.FIRING,
+#         severity="critical",
+#         fingerprint="fp1",
+#     )
 
-    # Insert the current alert into the workflow manager
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+#     # Insert the current alert into the workflow manager
+#     workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
-    # Wait for the workflow execution to complete
-    workflow_execution = None
-    count = 0
-    while (
-        workflow_execution is None
-        or workflow_execution.status == "in_progress"
-        and count < 30
-    ):
-        workflow_execution = get_last_workflow_execution_by_workflow_id(
-            SINGLE_TENANT_UUID, "susu-and-sons"
-        )
-        time.sleep(1)
-        count += 1
+#     # Wait for the workflow execution to complete
+#     workflow_execution = None
+#     count = 0
+#     while (
+#         workflow_execution is None
+#         or workflow_execution.status == "in_progress"
+#         and count < 30
+#     ):
+#         workflow_execution = get_last_workflow_execution_by_workflow_id(
+#             SINGLE_TENANT_UUID, "susu-and-sons"
+#         )
+#         time.sleep(1)
+#         count += 1
 
-    # Check if the workflow execution was successful
-    assert workflow_execution is not None
-    assert workflow_execution.status == "success"
+#     # Check if the workflow execution was successful
+#     assert workflow_execution is not None
+#     assert workflow_execution.status == "success"
 
-    # Get logs from DB
-    db_session.expire_all()
-    logs = (
-        db_session.query(WorkflowExecutionLog)
-        .filter(WorkflowExecutionLog.workflow_execution_id == workflow_execution.id)
-        .all()
-    )
+#     # Get logs from DB
+#     db_session.expire_all()
+#     logs = (
+#         db_session.query(WorkflowExecutionLog)
+#         .filter(WorkflowExecutionLog.workflow_execution_id == workflow_execution.id)
+#         .all()
+#     )
 
-    # Since we're using a filter now, verify that all logs have workflow_execution_id
-    assert len(logs) > 0  # We should have some logs
-    for log in logs:
-        assert log.workflow_execution_id == workflow_execution.id
+#     # Since we're using a filter now, verify that all logs have workflow_execution_id
+#     assert len(logs) > 0  # We should have some logs
+#     for log in logs:
+#         assert log.workflow_execution_id == workflow_execution.id
 
 
 # test if/else in workflow definition

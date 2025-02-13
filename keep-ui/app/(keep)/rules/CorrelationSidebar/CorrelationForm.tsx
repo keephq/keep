@@ -24,9 +24,11 @@ export const CorrelationForm = ({
   alertsFound = [],
   isLoading,
 }: CorrelationFormProps) => {
-  const { control, register, formState } =
-    useFormContext<CorrelationFormType>();
-  const { errors } = formState;
+  const {
+    control,
+    register,
+    formState: { errors, isSubmitted },
+  } = useFormContext<CorrelationFormType>();
 
   const getNestedKeys = (obj: any, prefix = ""): string[] => {
     return Object.entries(obj).reduce<string[]>((acc, [key, value]) => {
@@ -49,16 +51,16 @@ export const CorrelationForm = ({
     <div className="flex flex-col gap-y-4 flex-1">
       <fieldset className="grid grid-cols-2">
         <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong">
-          Correlation name
+          Correlation name <span className="text-red-500">*</span>
           <TextInput
             type="text"
-            placeholder="Choose name"
+            placeholder="Correlation rule name"
             className="mt-2"
             {...register("name", {
               required: { message: "Name is required", value: true },
             })}
-            error={!!get(errors, "name.message")}
-            errorMessage={get(errors, "name.message")}
+            error={isSubmitted && !!get(errors, "name.message")}
+            errorMessage={isSubmitted && get(errors, "name.message")}
           />
         </label>
 
@@ -96,6 +98,38 @@ export const CorrelationForm = ({
           />
         </span>
       </fieldset>
+      <fieldset className="grid grid-cols-1">
+        <div>
+          <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong flex items-center">
+            Incident name template
+            <Button
+              className="cursor-default ml-2"
+              type="button"
+              tooltip="You can use alert fields in the template by wrapping them in curly braces, e.g. 'Incident on hosts {{ alert.host }}'. With two alerts from hosts 'host1' and 'host2', the incident name would be 'Incident on hosts host1, host2'. Default: correlation rule name will be used."
+              icon={QuestionMarkCircleIcon}
+              size="xs"
+              variant="light"
+              color="slate"
+            />
+          </label>
+          <TextInput
+            type="text"
+            placeholder="Use Keep's expressions to create the incident name, for example: 'Incident on hosts {{ alert.host }}' will create an incident name like 'Incident on hosts host1, host2'. Default: correlation rule name will be used."
+            className="mt-2"
+            {...register("incidentNameTemplate", {
+              required: {
+                message: "Incident name template is required",
+                value: true,
+              },
+            })}
+            error={isSubmitted && !!get(errors, "incidentNameTemplate.message")}
+            errorMessage={
+              isSubmitted && get(errors, "incidentNameTemplate.message")
+            }
+          />
+        </div>
+      </fieldset>
+
       <fieldset className="grid grid-cols-3">
         <div className="mr-10">
           <label
@@ -149,9 +183,15 @@ export const CorrelationForm = ({
             render={({ field: { value, onChange } }) => (
               <Select value={value} onValueChange={onChange} className="mt-2">
                 <SelectItem value="never">No auto-resolution</SelectItem>
-                <SelectItem value="all_resolved">All alerts resolved</SelectItem>
-                <SelectItem value="first_resolved">First alert resolved</SelectItem>
-                <SelectItem value="last_resolved">Last alert resolved</SelectItem>
+                <SelectItem value="all_resolved">
+                  All alerts resolved
+                </SelectItem>
+                <SelectItem value="first_resolved">
+                  First alert resolved
+                </SelectItem>
+                <SelectItem value="last_resolved">
+                  Last alert resolved
+                </SelectItem>
               </Select>
             )}
           />
