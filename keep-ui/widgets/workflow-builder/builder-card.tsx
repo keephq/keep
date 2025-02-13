@@ -43,10 +43,10 @@ export function BuilderCard({
   }, [data, providers, installedProviders, setButtonsEnabled]);
 
   const cardClassName = clsx(
-    "mt-2 p-0 overflow-hidden h-full",
+    "mt-2 p-0 overflow-hidden",
     standalone
       ? "h-[calc(100vh-150px)]"
-      : "rounded-none border-t border-gray-200 shadow-none ring-0"
+      : "h-full rounded-none border-t border-gray-200 shadow-none ring-0"
   );
 
   if (!providers || isLoading)
