@@ -661,8 +661,11 @@ class WorkflowScheduler:
         )
 
     def _start(self):
+        RUN_TIMEOUT_CHECKS_EVERY = 10
         self.logger.info("Starting workflows scheduler")
+        runs = 0
         while not self._stop:
+            runs += 1
             # get all workflows that should run now
             self.logger.debug(
                 "Starting workflow scheduler iteration",
@@ -671,7 +674,8 @@ class WorkflowScheduler:
             try:
                 self._handle_interval_workflows()
                 self._handle_event_workflows()
-                self._timeout_workflows()
+                if runs % RUN_TIMEOUT_CHECKS_EVERY == 0:
+                    self._timeout_workflows()
             except Exception:
                 # This is the "mainloop" of the scheduler, we don't want to crash it
                 # But any exception here should be investigated
