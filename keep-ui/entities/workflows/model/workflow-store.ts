@@ -160,6 +160,8 @@ function addNodeBetween(
 
   get().onLayout({ direction: "DOWN" });
   get().updateDefinition();
+
+  return newNodeId;
 }
 
 // TODO: break down the state into smaller pieces
@@ -209,7 +211,10 @@ export const useWorkflowStore = create<FlowState>()(
       step: V2Step,
       type: "node" | "edge"
     ) => {
-      addNodeBetween(nodeOrEdgeId, step, type, set, get);
+      const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
+      if (newNodeId) {
+        get().setSelectedNode(newNodeId);
+      }
     },
     setToolBoxConfig: (config: ToolboxConfiguration) =>
       set({ toolboxConfiguration: config }),

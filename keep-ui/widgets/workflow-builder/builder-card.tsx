@@ -42,16 +42,23 @@ export function BuilderCard({
     }
   }, [data, providers, installedProviders, setButtonsEnabled]);
 
+  const cardClassName = clsx(
+    "mt-2 p-0 overflow-hidden h-full",
+    standalone
+      ? "h-[calc(100vh-150px)]"
+      : "rounded-none border-t border-gray-200 shadow-none ring-0"
+  );
+
   if (!providers || isLoading)
     return (
-      <Card className="mt-2 p-4 mx-auto">
+      <Card className={cardClassName}>
         <KeepLoader loadingText="Loading providers..." />
       </Card>
     );
 
   if (error) {
     return (
-      <Card className="mt-2 p-4 mx-auto">
+      <Card className={cardClassName}>
         <Callout
           className="mt-4"
           title="Error"
@@ -66,7 +73,7 @@ export function BuilderCard({
 
   if (fileContents == "" && !workflow) {
     return (
-      <Card className="mt-2 p-4 mx-auto h-[95%]">
+      <Card className={cardClassName}>
         <EmptyBuilderState />
       </Card>
     );
@@ -76,14 +83,7 @@ export function BuilderCard({
     <Suspense
       fallback={<KeepLoader loadingText="Loading workflow builder..." />}
     >
-      <Card
-        className={clsx(
-          "mt-2 p-0 overflow-hidden h-full",
-          standalone
-            ? "h-[calc(100vh-150px)]"
-            : "rounded-none border-t border-gray-200 shadow-none ring-0"
-        )}
-      >
+      <Card className={cardClassName}>
         <Builder
           providers={providers}
           installedProviders={installedProviders}

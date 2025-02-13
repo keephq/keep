@@ -118,7 +118,7 @@ export default function WorkflowDetailPage({
             {!workflow ? (
               <Skeleton className="w-full h-full" />
             ) : (
-              <Card className="h-[calc(100vh-150px)]">
+              <Card className="h-[calc(100vh-210px)] p-0 overflow-hidden">
                 <WorkflowBuilderWidget
                   workflowRaw={workflow.workflow_raw}
                   workflowId={workflow.id}
