@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertsQuery, useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "@/entities/presets/model/usePresets";
 import { AlertHistory } from "./alert-history";
@@ -94,9 +94,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     isLoading: isAsyncLoading,
     mutate: mutateAlerts,
     error: alertsError,
-  } = useLastAlerts(alertsQueryState, undefined, {
-    revalidateOnMount: false,
-  });
+  } = useLastAlerts(alertsQueryState);
 
   useEffect(() => {
     if (isLiveUpdateEnabled) {
@@ -150,15 +148,22 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     return <NotFound />;
   }
 
+  const alertsQueryStateRef = useRef(alertsQueryState);
+
   const setAlertsQueryCallback = useCallback(
     (alertsQuery: AlertsQuery) => {
-      if (JSON.stringify(alertsQuery) === JSON.stringify(alertsQueryState)) {
+      if (
+        JSON.stringify(alertsQuery) ===
+        JSON.stringify(alertsQueryStateRef.current)
+      ) {
         mutateAlerts();
+        return;
       }
 
       setAlertsQueryState(alertsQuery);
+      alertsQueryStateRef.current = alertsQuery;
     },
-    [setAlertsQueryState, alertsQueryState]
+    [setAlertsQueryState]
   );
 
   return (

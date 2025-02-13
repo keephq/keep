@@ -127,7 +127,6 @@ export const useAlerts = () => {
 
   const useLastAlerts = (
     query: AlertsQuery | undefined,
-    refreshToken?: string | null,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     const filtersParams = new URLSearchParams();

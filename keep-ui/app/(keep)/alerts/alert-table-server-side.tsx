@@ -201,9 +201,8 @@ export function AlertTableServerSide({
   );
 
   useEffect(() => {
-    console.log("Ihor foooooooooo", alertsQuery);
     onQueryChange && onQueryChange(alertsQuery);
-  }, [alertsQuery.cel, onQueryChange]);
+  }, [alertsQuery, onQueryChange]);
 
   const [tabs, setTabs] = useState([
     { name: "All", filter: (alert: AlertDto) => true },
@@ -435,7 +434,7 @@ export function AlertTableServerSide({
         ) : (
           <AlertPresetManager
             presetName={presetName}
-            onCelChanges={(searchCel) => setSearchCel(searchCel)}
+            onCelChanges={setSearchCel}
           />
         )}
       </div>
@@ -452,7 +451,7 @@ export function AlertTableServerSide({
               facetOptionsCel={mainCelQuery}
               clearFiltersToken={clearFiltersToken}
               initialFacetsData={{ facets: initialFacets, facetOptions: null }}
-              onCelChange={(cel) => setFilterCel(cel)}
+              onCelChange={setFilterCel}
               renderFacetOptionIcon={renderFacetOptionIcon}
               renderFacetOptionLabel={renderFacetOptionLabel}
               revalidationToken={refreshToken}
