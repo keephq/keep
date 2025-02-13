@@ -281,9 +281,13 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           </TabPanels>
         </TabGroup>
       </div>
-      <Subtitle className="mt-2.5">Mapping Schema</Subtitle>
+      <Subtitle className="mt-2.5">Mapping Configuration</Subtitle>
       <div className="mt-2.5">
-        <Text>Select attributes to match against the uploaded CSV</Text>
+        If alert will match the atributes, it will be enriched with the rest of
+        the fields{" "}
+        {mappingType === "csv"
+          ? "from matched row in the CVS."
+          : "from matching node in the topology."}
         <div className="flex flex-col gap-4 mt-2">
           {attributeGroups.map((group, index) => (
             <div key={index} className="flex items-center space-x-2">
