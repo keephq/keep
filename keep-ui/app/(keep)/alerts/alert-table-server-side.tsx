@@ -364,8 +364,10 @@ export function AlertTableServerSide({
   );
 
   useEffect(() => {
-    // when refresh token comes, this code allows polling for certain time and then stops
-    // will start polling again when new refresh token comes
+    // When refresh token comes, this code allows polling for certain time and then stops.
+    // Will start polling again when new refresh token comes.
+    // Why? Because events are throttled on BE side but we want to refresh the data frequently
+    // when keep gets ingested with data, and it requires control when to refresh from the UI side.
     if (refreshToken) {
       setShouldRefreshDate(true);
       const timeout = setTimeout(() => {
@@ -411,6 +413,7 @@ export function AlertTableServerSide({
         <TitleAndFilters
           table={table}
           alerts={alerts}
+          timeframeRefreshInterval={2000}
           liveUpdateOptionEnabled={true}
           presetName={presetName}
           onThemeChange={handleThemeChange}

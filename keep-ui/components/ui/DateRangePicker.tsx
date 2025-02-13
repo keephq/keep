@@ -40,6 +40,7 @@ interface EnhancedDateRangePickerProps {
   timeFrame: TimeFrame;
   setTimeFrame: (timeFrame: TimeFrame) => void;
   className?: string;
+  timeframeRefreshInterval?: number;
   disabled?: boolean;
   hasPlay?: boolean;
   hasRewind?: boolean;
@@ -101,6 +102,7 @@ export default function EnhancedDateRangePicker({
   timeFrame,
   setTimeFrame,
   className = "",
+  timeframeRefreshInterval = 1000,
   disabled = false,
   hasPlay = true,
   hasRewind = true,
@@ -380,10 +382,10 @@ export default function EnhancedDateRangePicker({
           end: new Date(),
           paused: false,
         });
-      }, 1000);
+      }, timeframeRefreshInterval);
     }
     return () => clearInterval(interval);
-  }, [isPaused, timeFrame, setTimeFrame]);
+  }, [isPaused, timeFrame, setTimeFrame, timeframeRefreshInterval]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -453,8 +455,8 @@ export default function EnhancedDateRangePicker({
           >
             <div className="flex items-center w-full">
               <Badge
-                color="green"
-                className={`mr-2 min-w-[4rem] justify-center ${isPaused ? "hover:bg-gray-200" : "bg-green-700"}`}
+                color={isPaused ? "gray" : "green"}
+                className={`mr-2 min-w-[4rem] justify-center ${isPaused ? "" : "bg-green-700"}`}
               >
                 {getSelectedBadgeText()}
               </Badge>

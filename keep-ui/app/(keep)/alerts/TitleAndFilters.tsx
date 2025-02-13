@@ -17,6 +17,7 @@ type TableHeaderProps = {
   alerts: AlertDto[];
   table: Table<AlertDto>;
   liveUpdateOptionEnabled: boolean;
+  timeframeRefreshInterval?: number;
   onThemeChange: (newTheme: Theme) => void;
   onTimeframeChange?: (timeFrame: TimeFrame | null) => void;
 };
@@ -25,6 +26,7 @@ export const TitleAndFilters = ({
   presetName,
   table,
   liveUpdateOptionEnabled,
+  timeframeRefreshInterval = 1000,
   onThemeChange,
   onTimeframeChange,
 }: TableHeaderProps) => {
@@ -111,6 +113,7 @@ export const TitleAndFilters = ({
         <EnhancedDateRangePicker
           timeFrame={timeFrame}
           setTimeFrame={handleTimeFrameChange}
+          timeframeRefreshInterval={timeframeRefreshInterval}
           hasPlay={liveUpdateOptionEnabled}
           hasRewind={false}
           hasForward={false}
