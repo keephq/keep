@@ -29,6 +29,10 @@ const nextConfig = {
     config.ignoreWarnings = [
       ...(config.ignoreWarnings || []),
       {
+        module: /require-in-the-middle/,
+        message: /Critical dependency/,
+      },
+      {
         module: /@opentelemetry\/instrumentation/,
         message: /Critical dependency/,
       },
