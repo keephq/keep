@@ -198,8 +198,7 @@ export const useWorkflowStore = create<FlowState>()(
     setIsSaving: (state: boolean) => set({ isSaving: state }),
     setCanDeploy: (deploy) => set({ canDeploy: deploy }),
     setSynced: (sync) => set({ synced: sync }),
-    setSelectedEdge: (id) =>
-      set({ selectedEdge: id, selectedNode: null, openGlobalEditor: true }),
+    setSelectedEdge: (id) => set({ selectedEdge: id, selectedNode: null }),
     setIsLayouted: (isLayouted) => set({ isLayouted }),
     addNodeBetween: (
       nodeOrEdgeId: string,
