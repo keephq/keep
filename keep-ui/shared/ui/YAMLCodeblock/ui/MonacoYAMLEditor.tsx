@@ -10,6 +10,7 @@ import yaml from "js-yaml";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import "./MonacoYAMLEditor.css";
 import { useWorkflowDetail } from "@/utils/hooks/useWorkflowDetail";
+import { useWorkflowsV2 } from "@/utils/hooks/useWorkflowsV2";
 
 interface Props {
   workflowRaw: string;
@@ -433,6 +434,7 @@ const MonacoYAMLEditor = ({
     }
   };
 
+  const { mutateWorkflows } = useWorkflowsV2();
   useEffect(() => {
     setOriginalContent(reorderWorkflowSections(workflowRaw));
   }, [workflowRaw]);
@@ -450,6 +452,7 @@ const MonacoYAMLEditor = ({
 
       setOriginalContent(content);
       setHasChanges(false);
+      mutateWorkflows();
     } catch (err) {
       console.error("Failed to save workflow:", err);
     }

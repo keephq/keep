@@ -3563,7 +3563,7 @@ def update_incident_from_dto_by_id(
 
         if issubclass(type(updated_incident_dto), IncidentDto):
             # We execute this when we update an incident received from the provider
-            updated_data = updated_incident_dto.to_db_incident().dict()
+            updated_data = updated_incident_dto.to_db_incident().model_dump()
         else:
             # When a user updates an Incident
             updated_data = updated_incident_dto.dict()
@@ -3573,9 +3573,9 @@ def update_incident_from_dto_by_id(
             if hasattr(incident, key) and getattr(incident, key) != value:
                 if isinstance(value, Enum):
                     setattr(incident, key, value.value)
-
                 else:
-                    setattr(incident, key, value)
+                    if value is not None:
+                        setattr(incident, key, value)
 
         if generated_by_ai:
             incident.generated_summary = updated_incident_dto.user_summary

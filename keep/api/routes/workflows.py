@@ -262,6 +262,18 @@ def run_workflow(
     }
 
 
+@router.get("/{workflow_id}/run", description="Run a workflow")
+def run_workflow_with_query_params(
+    workflow_id: str,
+    request: Request,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:workflows"])
+    ),
+):
+    params = dict(request.query_params)
+    return run_workflow(workflow_id, None, None, params, authenticated_entity)
+
+
 @router.post(
     "/test",
     description="Test run a workflow from a definition",

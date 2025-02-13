@@ -176,16 +176,16 @@ class BaseProvider(metaclass=abc.ABCMeta):
         results = self._notify(**kwargs)
         self.results.append(results)
         # if the alert should be enriched, enrich it
-        enrich_alert = kwargs.get("enrich_alert", [])
-        if not enrich_alert or results is None:
+        enrich_event = kwargs.get("enrich_alert", kwargs.get("enrich_incident", []))
+        if not enrich_event or results is None:
             return results if results else None
 
         audit_enabled = bool(kwargs.get("audit_enabled", True))
 
-        self._enrich_alert(enrich_alert, results, audit_enabled=audit_enabled)
+        self._enrich(enrich_event, results, audit_enabled=audit_enabled)
         return results
 
-    def _enrich_alert(self, enrichments, results, audit_enabled=True):
+    def _enrich(self, enrichments, results, audit_enabled=True):
         """
         Enrich alert with provider specific data.
 
@@ -217,6 +217,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
             # Alert DTO
             else:
                 fingerprint = self.context_manager.event_context.fingerprint
+        elif self.context_manager.incident_context:
+            fingerprint = str(self.context_manager.incident_context.id)
         else:
             fingerprint = None
 
@@ -332,7 +334,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         enrich_alert = kwargs.get("enrich_alert", [])
         if enrich_alert:
             audit_enabled = bool(kwargs.get("audit_enabled", True))
-            self._enrich_alert(enrich_alert, results, audit_enabled=audit_enabled)
+            self._enrich(enrich_alert, results, audit_enabled=audit_enabled)
         # and return the results
         return results
 

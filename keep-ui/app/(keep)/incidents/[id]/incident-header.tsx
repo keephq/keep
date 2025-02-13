@@ -62,7 +62,7 @@ export function IncidentHeader({
 
   return (
     <CopilotKit runtimeUrl="/api/copilotkit">
-      <header className="flex flex-col gap-4">
+      <header className="flex flex-col mb-1">
         <div className="flex flex-row justify-between items-end">
           <div>
             <Subtitle className="text-sm">
