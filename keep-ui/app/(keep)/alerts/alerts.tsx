@@ -150,8 +150,9 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
 
   const alertsQueryStateRef = useRef(alertsQueryState);
 
-  const setAlertsQueryCallback = useCallback(
+  const reloadAlerts = useCallback(
     (alertsQuery: AlertsQuery) => {
+      // if the query is the same as the last one, just refetch
       if (
         JSON.stringify(alertsQuery) ===
         JSON.stringify(alertsQueryStateRef.current)
@@ -160,6 +161,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         return;
       }
 
+      // if the query is different, update the state
       setAlertsQueryState(alertsQuery);
       alertsQueryStateRef.current = alertsQuery;
     },
@@ -182,7 +184,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         setDismissModalAlert={setDismissModalAlert}
         setChangeStatusAlert={setChangeStatusAlert}
         mutateAlerts={mutateAlerts}
-        onQueryChange={setAlertsQueryCallback}
+        onReload={reloadAlerts}
         onLiveUpdateStateChange={setIsLiveUpdateEnabled}
       />
       <AlertHistory alerts={alerts || []} presetName={selectedPreset.name} />

@@ -72,9 +72,8 @@ interface Props {
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
   setChangeStatusAlert?: (alert: AlertDto) => void;
-  onQueryChange?: (query: AlertsQuery) => void;
+  onReload?: (query: AlertsQuery) => void;
   onLiveUpdateStateChange?: (isLiveUpdateEnabled: boolean) => void;
-  onRefresh?: () => void;
 }
 
 export function AlertTableServerSide({
@@ -94,9 +93,8 @@ export function AlertTableServerSide({
   setRunWorkflowModalAlert,
   setDismissModalAlert,
   setChangeStatusAlert,
-  onQueryChange,
+  onReload,
   onLiveUpdateStateChange,
-  onRefresh,
 }: Props) {
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
@@ -152,10 +150,6 @@ export function AlertTableServerSide({
   });
 
   useEffect(() => {
-    onLiveUpdateStateChange && onLiveUpdateStateChange(!dateRange?.paused);
-  }, [dateRange?.paused, onLiveUpdateStateChange]);
-
-  useEffect(() => {
     const filterArray = [];
 
     if (dateRange?.start) {
@@ -171,7 +165,7 @@ export function AlertTableServerSide({
     // makes alerts to refresh when not paused and all time is selected
     if (!dateRange?.start && !dateRange?.end && !dateRange?.paused) {
       setTimeout(() => {
-        onQueryChange && onQueryChange(alertsQuery);
+        onReload && onReload(alertsQuery);
       }, 100);
     }
   }, [dateRange]);
@@ -201,8 +195,8 @@ export function AlertTableServerSide({
   );
 
   useEffect(() => {
-    onQueryChange && onQueryChange(alertsQuery);
-  }, [alertsQuery, onQueryChange]);
+    onReload && onReload(alertsQuery);
+  }, [alertsQuery, onReload]);
 
   const [tabs, setTabs] = useState([
     { name: "All", filter: (alert: AlertDto) => true },
@@ -370,6 +364,8 @@ export function AlertTableServerSide({
   );
 
   useEffect(() => {
+    // when refresh token comes, this code allows polling for certain time and then stops
+    // will start polling again when new refresh token comes
     if (refreshToken) {
       setShouldRefreshDate(true);
       const timeout = setTimeout(() => {
@@ -386,6 +382,10 @@ export function AlertTableServerSide({
         return;
       }
 
+      if (timeframe?.paused != dateRange?.paused) {
+        onLiveUpdateStateChange && onLiveUpdateStateChange(!timeframe.paused);
+      }
+
       const currentDiff =
         (dateRange?.end?.getTime() || 0) - (dateRange?.start?.getTime() || 0);
       const newDiff =
@@ -400,7 +400,7 @@ export function AlertTableServerSide({
 
       setDateRange(timeframe);
     },
-    [dateRange, shouldRefreshDate]
+    [dateRange, shouldRefreshDate, onLiveUpdateStateChange]
   );
 
   return (
@@ -507,7 +507,7 @@ export function AlertTableServerSide({
           table={table}
           isRefreshing={isAsyncLoading}
           isRefreshAllowed={isRefreshAllowed}
-          onRefresh={() => onRefresh && onRefresh()}
+          onRefresh={() => onReload && onReload(alertsQuery)}
         />
       </div>
 
