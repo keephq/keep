@@ -11,7 +11,7 @@ export default async function Layout({
 }) {
   const workflow = await getWorkflowWithRedirectSafe(params.workflow_id);
   return (
-    <div className="flex flex-col mb-4 h-full gap-6">
+    <div className="flex flex-col h-full gap-4">
       <WorkflowBreadcrumbs workflowId={params.workflow_id} />
       <WorkflowDetailHeader
         workflowId={params.workflow_id}

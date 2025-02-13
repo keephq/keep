@@ -11,7 +11,7 @@ export default function Layout({
   params: { workflow_id: string };
 }) {
   return (
-    <div className="flex flex-col mb-4 h-full gap-6">
+    <div className="flex flex-col h-full gap-4">
       <Subtitle className="text-sm">
         <Link href="/workflows">All Workflows</Link>{" "}
         <Icon icon={ArrowRightIcon} color="gray" size="xs" /> Workflow Builder
