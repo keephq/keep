@@ -3,8 +3,8 @@
     "input_cel": "alert.severity == 'HIGH'",
     "description": "Queried field refers to multiple JSON columns",
     "expected_sql_dialect_based": {
-      "mysql": "COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.severity')) as CHAR), CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.severity')) as CHAR), '__@NULL@__') = 'HIGH'",
-      "postgresql": "COALESCE((alert_enrichments) ->> 'severity'::TEXT, (alert_event) ->> 'severity'::TEXT, '__@NULL@__') = 'HIGH'",
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.severity')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.severity')), '__@NULL@__') = 'HIGH'",
+      "postgresql": "COALESCE(((alert_enrichments) ->> 'severity')::TEXT, ((alert_event) ->> 'severity')::TEXT, '__@NULL@__') = 'HIGH'",
       "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.severity') as TEXT), CAST(json_extract(alert_event, '$.severity') as TEXT), '__@NULL@__') = 'HIGH'"
     }
   },
@@ -48,9 +48,9 @@
     "input_cel": "alert.some_json_prop.contains('lorem')",
     "description": "Contains operator with field refering to multiple JSON columns",
     "expected_sql_dialect_based": {
-      "sqlite": "json_extract(alert_enrichments, '$.some_json_prop') IS NOT NULL AND json_extract(alert_enrichments, '$.some_json_prop') GLOB '*lorem*' OR json_extract(alert_event, '$.some_json_prop') IS NOT NULL AND json_extract(alert_event, '$.some_json_prop') GLOB '*lorem*'",
-      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) LIKE '%lorem%' OR JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) LIKE '%lorem%'",
-      "postgresql": "(alert_enrichments) ->> 'some_json_prop' IS NOT NULL AND (alert_enrichments) ->> 'some_json_prop' LIKE '%lorem%' OR (alert_event) ->> 'some_json_prop' IS NOT NULL AND (alert_event) ->> 'some_json_prop' LIKE '%lorem%'"
+      "sqlite": "(json_extract(alert_enrichments, '$.some_json_prop') IS NOT NULL AND json_extract(alert_enrichments, '$.some_json_prop') GLOB '*lorem*' OR json_extract(alert_event, '$.some_json_prop') IS NOT NULL AND json_extract(alert_event, '$.some_json_prop') GLOB '*lorem*')",
+      "mysql": "(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) LIKE '%lorem%' OR JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) LIKE '%lorem%')",
+      "postgresql": "((alert_enrichments) ->> 'some_json_prop' IS NOT NULL AND (alert_enrichments) ->> 'some_json_prop' LIKE '%lorem%' OR (alert_event) ->> 'some_json_prop' IS NOT NULL AND (alert_event) ->> 'some_json_prop' LIKE '%lorem%')"
     }
   },
   {
@@ -72,12 +72,21 @@
     }
   },
   {
+    "input_cel": "alert.count > 7.84",
+    "description": "Greater than with float",
+    "expected_sql_dialect_based": {
+      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.count') as REAL), CAST(json_extract(alert_event, '$.count') as REAL), NULL) > 7.84",
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.count')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.count')), NULL) > 7.84",
+      "postgresql": "COALESCE(((alert_enrichments) ->> 'count')::FLOAT, ((alert_event) ->> 'count')::FLOAT, NULL) > 7.84"
+    }
+  },
+  {
     "input_cel": "severity >= 'medium'",
     "description": "Greater than or equal comparison operator with enum",
     "expected_sql_dialect_based": {
       "sqlite": "CAST(severity as TEXT) in ('medium', 'high', 'critical')",
-      "mysql": "CAST(severity as CHAR) in ('medium', 'high', 'critical')",
-      "postgresql": "severity::TEXT in ('medium', 'high', 'critical')"
+      "mysql": "severity in ('medium', 'high', 'critical')",
+      "postgresql": "(severity)::TEXT in ('medium', 'high', 'critical')"
     }
   },
   {
@@ -85,8 +94,53 @@
     "description": "Greater than comparison operator with enum",
     "expected_sql_dialect_based": {
       "sqlite": "CAST(severity as TEXT) in ('high', 'critical')",
-      "mysql": "CAST(severity as CHAR) in ('high', 'critical')",
-      "postgresql": "severity::TEXT in ('high', 'critical')"
+      "mysql": "severity in ('high', 'critical')",
+      "postgresql": "(severity)::TEXT in ('high', 'critical')"
+    }
+  },
+  {
+    "input_cel": "severity <= 'critical'",
+    "description": "Less than than comparison operator with enum when constat is the last value in enum",
+    "expected_sql_dialect_based": {
+      "sqlite": "",
+      "mysql": "",
+      "postgresql": ""
+    }
+  },
+  {
+    "input_cel": "name == 'Payments incident' && severity <= 'critical'",
+    "description": "AND with less than than comparison operator with enum when constat is the last value in enum",
+    "expected_sql_dialect_based": {
+      "sqlite": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident'",
+      "mysql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident'",
+      "postgresql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident'"
+    }
+  },
+  {
+    "input_cel": "severity > 'critical'",
+    "description": "Greater than comparison operator with enum when constat is the last value in enum",
+    "expected_sql_dialect_based": {
+      "sqlite": "false",
+      "mysql": "FALSE",
+      "postgresql": "false"
+    }
+  },
+  {
+    "input_cel": "name == 'Payments incident' && severity > 'critical'",
+    "description": "AND with greater than comparison operator with enum when constat is the last value in enum",
+    "expected_sql_dialect_based": {
+      "sqlite": "(COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident' AND false)",
+      "mysql": "(COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident' AND FALSE)",
+      "postgresql": "(COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident' AND false)"
+    }
+  },
+  {
+    "input_cel": "alert.count <= 100",
+    "description": "Less than or equal with integer",
+    "expected_sql_dialect_based": {
+      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.count') as REAL), CAST(json_extract(alert_event, '$.count') as REAL), NULL) <= 100",
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.count')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.count')), NULL) <= 100",
+      "postgresql": "COALESCE(((alert_enrichments) ->> 'count')::FLOAT, ((alert_event) ->> 'count')::FLOAT, NULL) <= 100"
     }
   },
   {
@@ -94,8 +148,8 @@
     "description": "Less than comparison operator with enum",
     "expected_sql_dialect_based": {
       "sqlite": "NOT (CAST(severity as TEXT) in ('medium', 'high', 'critical'))",
-      "mysql": "NOT (CAST(severity as CHAR) in ('medium', 'high', 'critical'))",
-      "postgresql": "NOT (severity::TEXT in ('medium', 'high', 'critical'))"
+      "mysql": "NOT (severity in ('medium', 'high', 'critical'))",
+      "postgresql": "NOT ((severity)::TEXT in ('medium', 'high', 'critical'))"
     }
   },
   {
@@ -103,8 +157,8 @@
     "description": "Less than or equal comparison operator with enum",
     "expected_sql_dialect_based": {
       "sqlite": "NOT (CAST(severity as TEXT) in ('high', 'critical'))",
-      "mysql": "NOT (CAST(severity as CHAR) in ('high', 'critical'))",
-      "postgresql": "NOT (severity::TEXT in ('high', 'critical'))"
+      "mysql": "NOT (severity in ('high', 'critical'))",
+      "postgresql": "NOT ((severity)::TEXT in ('high', 'critical'))"
     }
   },
   {
@@ -112,8 +166,8 @@
     "description": "Prop is inside JSON column and nested",
     "expected_sql_dialect_based": {
       "sqlite": "CAST(json_extract(alert_event, '$.tagsContainer.tagKey') as TEXT) = 'tag value'",
-      "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = 'tag value'",
-      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = 'tag value'"
+      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) = 'tag value'",
+      "postgresql": "((alert_event -> 'tagsContainer') ->> 'tagKey')::TEXT = 'tag value'"
     }
   },
   {
@@ -121,8 +175,8 @@
     "description": "When literal is with double-quoted substring",
     "expected_sql_dialect_based": {
       "sqlite": "CAST(json_extract(alert_event, '$.tagsContainer.tagKey') as TEXT) = 'with \"double-quotes\"'",
-      "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = 'with \"double-quotes\"'",
-      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = 'with \"double-quotes\"'"
+      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) = 'with \"double-quotes\"'",
+      "postgresql": "((alert_event -> 'tagsContainer') ->> 'tagKey')::TEXT = 'with \"double-quotes\"'"
     }
   },
   {
@@ -130,8 +184,8 @@
     "description": "When literal is with quoted substring",
     "expected_sql_dialect_based": {
       "sqlite": "CAST(json_extract(alert_event, '$.tagsContainer.tagKey') as TEXT) = 'with ''double-quotes'''",
-      "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = 'with ''double-quotes'''",
-      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = 'with ''double-quotes'''"
+      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) = 'with ''double-quotes'''",
+      "postgresql": "((alert_event -> 'tagsContainer') ->> 'tagKey')::TEXT = 'with ''double-quotes'''"
     }
   },
   {
@@ -139,8 +193,8 @@
     "description": "When literal contains SQL injection",
     "expected_sql_dialect_based": {
       "sqlite": "CAST(json_extract(alert_event, '$.tagsContainer.tagKey') as TEXT) = ''' OR alert.provider_type == ''grafana'' OR'''",
-      "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) as CHAR) = ''' OR alert.provider_type == ''grafana'' OR'''",
-      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey'::TEXT = ''' OR alert.provider_type == ''grafana'' OR'''"
+      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) = ''' OR alert.provider_type == ''grafana'' OR'''",
+      "postgresql": "((alert_event -> 'tagsContainer') ->> 'tagKey')::TEXT = ''' OR alert.provider_type == ''grafana'' OR'''"
     }
   },
   {

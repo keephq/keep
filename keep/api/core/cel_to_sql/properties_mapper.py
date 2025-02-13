@@ -78,14 +78,26 @@ class PropertiesMapper:
         self.properties_metadata = properties_metadata
 
     def map_props_in_ast(self, abstract_node: Node) -> Node:
+        return self.__visit_nodes(abstract_node)
+
+    def __visit_nodes(self, abstract_node: Node) -> Node:
         if isinstance(abstract_node, ParenthesisNode):
             return self.map_props_in_ast(abstract_node.expression)
 
         if isinstance(abstract_node, LogicalNode):
+            left = self.map_props_in_ast(abstract_node.left)
+            right = self.map_props_in_ast(abstract_node.right)
+
+            if left is None:
+                return right
+
+            if right is None:
+                return left
+
             return LogicalNode(
-                left=self.map_props_in_ast(abstract_node.left),
+                left=left,
                 operator=abstract_node.operator,
-                right=self.map_props_in_ast(abstract_node.right),
+                right=right,
             )
 
         if isinstance(abstract_node, ComparisonNode):
@@ -95,6 +107,11 @@ class PropertiesMapper:
             return self._visit_member_access_node(abstract_node)
 
         if isinstance(abstract_node, UnaryNode):
+            operand = self.map_props_in_ast(abstract_node.operand)
+
+            if operand is None:
+                return UnaryNode(abstract_node.operator, ConstantNode(True))
+
             return UnaryNode(abstract_node.operator, self.map_props_in_ast(abstract_node.operand))
 
         if isinstance(abstract_node, ConstantNode):
@@ -108,22 +125,9 @@ class PropertiesMapper:
         if not isinstance(comparison_node.first_operand, PropertyAccessNode):
             return comparison_node
 
-        property_metadata = self.properties_metadata.get_property_metadata(
-            comparison_node.first_operand.get_property_path()
+        first_operand, property_metadata = self._map_property(
+            comparison_node.first_operand
         )
-
-        if not property_metadata:
-            raise PropertiesMappingException(
-                f'Missing mapping configuration for property "{comparison_node.first_operand.get_property_path()}" '
-                f'while processing the comparison node: "{comparison_node}".'
-            )
-
-        result = []
-
-        for mapping in property_metadata.field_mappings:
-            property_access_node = self._create_property_access_node(mapping, None)
-            result.append(property_access_node)
-        first_operand = MultipleFieldsNode(result) if len(result) > 1 else result[0]
         comparison_node = ComparisonNode(
             first_operand,
             comparison_node.operator,
@@ -134,6 +138,44 @@ class PropertiesMapper:
         )
 
     def _visit_member_access_node(self, member_access_node: MemberAccessNode) -> Node:
+        if (
+            isinstance(member_access_node, PropertyAccessNode)
+            and not member_access_node.is_function_call()
+        ):
+            # in case expression is just property access node
+            # it will behave like !!property in JS
+            # converting queried property to boolean and evaluate as boolean
+            mapped_prop, _ = self._map_property(member_access_node)
+            return LogicalNode(
+                left=ComparisonNode(
+                    mapped_prop,
+                    ComparisonNode.NE,
+                    ConstantNode(None),
+                ),
+                operator=LogicalNode.AND,
+                right=LogicalNode(
+                    left=ComparisonNode(
+                        mapped_prop,
+                        ComparisonNode.NE,
+                        ConstantNode("0"),
+                    ),
+                    operator=LogicalNode.AND,
+                    right=LogicalNode(
+                        left=ComparisonNode(
+                            mapped_prop,
+                            ComparisonNode.NE,
+                            ConstantNode(False),
+                        ),
+                        operator=LogicalNode.AND,
+                        right=ComparisonNode(
+                            mapped_prop,
+                            ComparisonNode.NE,
+                            ConstantNode(""),
+                        ),
+                    ),
+                ),
+            )
+
         if (
             isinstance(member_access_node, PropertyAccessNode)
             and member_access_node.is_function_call()
@@ -230,12 +272,22 @@ class PropertiesMapper:
 
                 start_index, end_index = ranges[comparison_node.operator]
 
-                if start_index and start_index >= len(mapping.enum_values):
-                    return ComparisonNode(
-                        first_operand=comparison_node.first_operand,
-                        operator=ComparisonNode.EQ,
-                        second_operand=ConstantNode("not_valid_value"),
-                    )
+                if (
+                    comparison_node.operator == ComparisonNode.LE
+                    and start_index >= len(mapping.enum_values)
+                ):
+                    # it handles the case when queried value is the last in enum
+                    # and hence any value is applicable
+                    # and there is no need to even do filtering
+                    return None
+
+                if (
+                    comparison_node.operator == ComparisonNode.GT
+                    and start_index >= len(mapping.enum_values)
+                ):
+                    # nothig could be greater than the last value in enum
+                    # so it will always return False
+                    return ConstantNode(False)
 
                 result = ComparisonNode(
                     comparison_node.first_operand,
@@ -260,3 +312,24 @@ class PropertiesMapper:
             return PropertyAccessNode(mapping.map_to, method_access_node)
 
         raise NotImplementedError(f"Mapping type {type(mapping).__name__} is not supported yet")
+
+    def _map_property(
+        self, property_access_node: PropertyAccessNode
+    ) -> tuple[MultipleFieldsNode, PropertyMetadataInfo]:
+        property_metadata = self.properties_metadata.get_property_metadata(
+            property_access_node.get_property_path()
+        )
+
+        if not property_metadata:
+            raise PropertiesMappingException(
+                f'Missing mapping configuration for property "{property_access_node.get_property_path()}"'
+            )
+
+        result = []
+
+        for mapping in property_metadata.field_mappings:
+            property_access_node = self._create_property_access_node(mapping, None)
+            result.append(property_access_node)
+        return (
+            MultipleFieldsNode(result) if len(result) > 1 else result[0]
+        ), property_metadata

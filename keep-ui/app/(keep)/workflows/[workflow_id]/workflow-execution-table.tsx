@@ -15,6 +15,7 @@ import {
   CheckCircleIcon,
   EllipsisHorizontalIcon,
   XCircleIcon,
+  NoSymbolIcon,
 } from "@heroicons/react/20/solid";
 import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
 import { formatDistanceToNowStrict } from "date-fns";
@@ -96,6 +97,11 @@ export function getIcon(status: string) {
   switch (status) {
     case "success":
       icon = <CheckCircleIcon className="size-6 cover text-green-500" />;
+      break;
+    case "skipped":
+      icon = (
+        <NoSymbolIcon className="size-6 cover text-slate-500" title="Skipped" />
+      );
       break;
     case "failed":
     case "fail":

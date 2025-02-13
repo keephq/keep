@@ -1,22 +1,9 @@
 import logging
 from typing import Tuple
 
-from sqlalchemy import (
-    and_,
-    asc,
-    desc,
-    func,
-    literal_column,
-    select,
-)
+from sqlalchemy import and_, asc, desc, func, literal_column, select
 from sqlmodel import Session, text
 
-# This import is required to create the tables
-from keep.api.core.facets import get_facet_options, get_facets
-from keep.api.models.db.alert import Alert, AlertEnrichment, AlertField, Incident, LastAlert, LastAlertToIncident
-from keep.api.models.db.facet import FacetType
-from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
-from keep.api.core.db import engine
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     JsonFieldMapping,
@@ -26,6 +13,20 @@ from keep.api.core.cel_to_sql.properties_metadata import (
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
 )
+from keep.api.core.db import engine
+
+# This import is required to create the tables
+from keep.api.core.facets import get_facet_options, get_facets
+from keep.api.models.db.alert import (
+    Alert,
+    AlertEnrichment,
+    AlertField,
+    Incident,
+    LastAlert,
+    LastAlertToIncident,
+)
+from keep.api.models.db.facet import FacetType
+from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 
 logger = logging.getLogger(__name__)
 
@@ -76,29 +77,29 @@ static_facets = [
         property_path="severity",
         name="Severity",
         is_static=True,
-        type=FacetType.str
+        type=FacetType.str,
     ),
     FacetDto(
         id="5dd1519c-6277-4109-ad95-c19d2f4f15e3",
         property_path="status",
         name="Status",
         is_static=True,
-        type=FacetType.str
+        type=FacetType.str,
     ),
     FacetDto(
         id="461bef05-fc20-4363-b427-9d26fe064e7f",
         property_path="source",
         name="Source",
         is_static=True,
-        type=FacetType.str
+        type=FacetType.str,
     ),
     FacetDto(
         id="6afa12d7-21df-4694-8566-fd56d5ee2266",
         property_path="incident.name",
         name="Incident",
         is_static=True,
-        type=FacetType.str
-    )
+        type=FacetType.str,
+    ),
 ]
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
@@ -194,8 +195,8 @@ def build_alerts_query(
     base = __build_query_for_filtering(tenant_id).cte("alerts_query")
 
     if not sort_by:
-        sort_by = 'lastReceived'
-        sort_dir = 'desc'
+        sort_by = "lastReceived"
+        sort_dir = "desc"
 
     metadata = properties_metadata.get_property_metadata(sort_by)
     group_by_exp = []
@@ -203,7 +204,9 @@ def build_alerts_query(
     for item in metadata.field_mappings:
         if isinstance(item, JsonFieldMapping):
             group_by_exp.append(
-                cel_to_sql_instance.json_extract_as_text(item.json_prop, item.prop_in_json)
+                cel_to_sql_instance.json_extract_as_text(
+                    item.json_prop, item.prop_in_json
+                )
             )
         elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
             group_by_exp.append(alias_column_mapping[item.map_to])
@@ -261,14 +264,14 @@ def build_alerts_query(
 
 
 def query_last_alerts(
-    tenant_id,
-    limit=1000,
-    offset=0,
-    cel=None,
-    sort_by=None,
-    sort_dir=None
+    tenant_id, limit=1000, offset=0, cel=None, sort_by=None, sort_dir=None
 ) -> Tuple[list[Alert], int]:
     with Session(engine) as session:
+        # Shahar: this happens when the frontend query builder fails to build a query
+        if cel == "1 == 1":
+            logger.warning("Failed to build query for alerts")
+            cel = ""
+
         total_count_query = build_total_alerts_query(
             tenant_id=tenant_id,
             cel=cel,
@@ -306,14 +309,8 @@ def get_alert_facets_data(
 
     base_query = select(
         # here it creates aliases for table columns that will be used in filtering and faceting
-        text(
-            ",".join(
-                ['entity_id'] + [key for key in alias_column_mapping.keys()]
-            )
-        )
-    ).select_from(
-        __build_query_for_filtering(tenant_id).cte("alerts_query")
-    )
+        text(",".join(["entity_id"] + [key for key in alias_column_mapping.keys()]))
+    ).select_from(__build_query_for_filtering(tenant_id).cte("alerts_query"))
 
     return get_facet_options(
         base_query=base_query,
@@ -322,7 +319,10 @@ def get_alert_facets_data(
         properties_metadata=properties_metadata,
     )
 
-def get_alert_facets(tenant_id: str, facet_ids_to_load: list[str] = None) -> list[FacetDto]:
+
+def get_alert_facets(
+    tenant_id: str, facet_ids_to_load: list[str] = None
+) -> list[FacetDto]:
     not_static_facet_ids = []
     facets = []
 
@@ -341,6 +341,7 @@ def get_alert_facets(tenant_id: str, facet_ids_to_load: list[str] = None) -> lis
         facets += get_facets(tenant_id, "alert", not_static_facet_ids)
 
     return facets
+
 
 def get_alert_potential_facet_fields(tenant_id: str) -> list[str]:
     with Session(engine) as session:

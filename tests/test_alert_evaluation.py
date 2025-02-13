@@ -1,5 +1,4 @@
 # Tests for Keep Rule Evaluation Engine
-
 from datetime import timedelta
 
 import pytest

@@ -13,6 +13,7 @@ export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationFormType = {
   requireApprove: false,
   resolveOn: "never",
   createOn: "any",
+  incidentNameTemplate: "",
   query: {
     combinator: "or",
     rules: [
