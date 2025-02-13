@@ -1,10 +1,10 @@
 import { useEffect, useRef, useMemo } from "react";
-import { IoMdSettings, IoMdClose } from "react-icons/io";
 import { useWorkflowStore } from "@/entities/workflows";
 import { GlobalEditorV2, StepEditorV2 } from "./editors";
 import { Divider } from "@tremor/react";
 import { Provider } from "@/app/(keep)/providers/providers";
 import clsx from "clsx";
+import { Cog8ToothIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 const ReactFlowEditor = ({
   providers,
@@ -69,7 +69,7 @@ const ReactFlowEditor = ({
             onClick={() => setGlobalEditorOpen(true)}
             data-testid="wf-open-editor-button"
           >
-            <IoMdSettings className="text-2xl" />
+            <Cog8ToothIcon className="size-5" />
           </button>
         ) : (
           <div className="flex gap-0.5 h-full">
@@ -78,7 +78,7 @@ const ReactFlowEditor = ({
               onClick={() => setGlobalEditorOpen(false)}
               data-testid="wf-close-editor-button"
             >
-              <IoMdClose className="text-2xl" />
+              <XMarkIcon className="size-5" />
             </button>
           </div>
         )}

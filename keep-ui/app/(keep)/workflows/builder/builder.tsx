@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@tremor/react";
 import { Provider } from "../../providers/providers";
 import { getToolboxConfiguration } from "@/features/workflows/builder/lib/utils";
@@ -19,6 +19,8 @@ import {
   parseWorkflow,
   wrapDefinitionV2,
 } from "@/entities/workflows/lib/parser";
+import clsx from "clsx";
+import { CodeBracketIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -51,6 +53,8 @@ function Builder({
     initializeWorkflow,
   } = useWorkflowStore();
   const router = useRouter();
+
+  const [isYamlEditorOpen, setIsYamlEditorOpen] = useState(true);
 
   const searchParams = useSearchParams();
 
@@ -205,25 +209,49 @@ function Builder({
       <div className="h-full">
         <Card className="mt-2 p-0 h-full overflow-hidden">
           <ResizableColumns
+            key={isYamlEditorOpen ? "yaml-editor-open" : "yaml-editor-closed"}
             leftChild={
-              workflowYaml ? (
-                <MonacoYAMLEditor
-                  // TODO: do not re-render editor on every workflowYaml change, handle updates inside the editor
-                  key={workflowYaml}
-                  workflowRaw={workflowYaml}
-                  filename={workflowId ?? "workflow"}
-                  workflowId={workflowId}
-                  // TODO: support readOnly for not yet deployed workflows
-                  readOnly={!workflowId}
-                />
-              ) : (
-                <Skeleton className="w-full h-full" />
-              )
+              isYamlEditorOpen ? (
+                workflowYaml ? (
+                  <MonacoYAMLEditor
+                    // TODO: do not re-render editor on every workflowYaml change, handle updates inside the editor
+                    key={workflowYaml}
+                    workflowRaw={workflowYaml}
+                    filename={workflowId ?? "workflow"}
+                    workflowId={workflowId}
+                    // TODO: support readOnly for not yet deployed workflows
+                    readOnly={!workflowId}
+                  />
+                ) : (
+                  <Skeleton className="w-full h-full" />
+                )
+              ) : null
             }
-            initialLeftWidth={33}
+            initialLeftWidth={isYamlEditorOpen ? 33 : 0}
             rightChild={
               <div className="flex h-full">
                 <div className="flex-1 h-full relative">
+                  <div className={clsx("absolute top-0 left-0 w-10 h-10 z-50")}>
+                    {!isYamlEditorOpen ? (
+                      <button
+                        className="flex justify-center items-center bg-white w-full h-full border-b border-r rounded-br-lg shadow-md"
+                        onClick={() => setIsYamlEditorOpen(true)}
+                        data-testid="wf-open-editor-button"
+                      >
+                        <CodeBracketIcon className="size-5" />
+                      </button>
+                    ) : (
+                      <div className="flex gap-0.5 h-full">
+                        <button
+                          className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md"
+                          onClick={() => setIsYamlEditorOpen(false)}
+                          data-testid="wf-close-editor-button"
+                        >
+                          <XMarkIcon className="size-5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <ReactFlowProvider>
                     <ReactFlowBuilder
                       providers={providers}

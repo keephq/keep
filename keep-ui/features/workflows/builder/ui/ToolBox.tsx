@@ -191,14 +191,16 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
   return (
     <div
       className={clsx(
-        "w-60 2xl:w-64 border-r border-gray-300 bg-white transition-transform z-50 shrink-0",
+        "w-60 2xl:w-64 border-r border-gray-300 bg-white transition-transform z-40 shrink-0",
         isVisible ? "h-full" : "shadow-lg"
       )}
     >
       <div className="relative h-full flex flex-col">
         {/* Sticky header */}
-        <div className="sticky top-0 left-0 z-10">
-          <h1 className="p-3 font-bold">Toolbox</h1>
+        <div className="sticky top-10 left-0 z-10">
+          <h1 className="p-3 font-bold">
+            Add {showTriggers ? "Trigger" : "Step"}
+          </h1>
           <div className="flex items-center justify-between p-2 pt-0 bg-white">
             <input
               type="text"
