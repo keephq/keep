@@ -697,7 +697,12 @@ def __save_error_alerts(
         return
 
     try:
-        logger.info("Getting database session")
+        logger.info(
+            "Getting database session",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
         session = get_session_sync()
 
         # Convert to list if single dict
@@ -712,10 +717,19 @@ def __save_error_alerts(
                 logger.info("Converting AlertDto to dict")
                 raw_event = raw_event.dict()
 
+            # TODO: change to debug
+            logger.info(
+                "Creating AlertRaw object",
+                extra={
+                    "tenant_id": tenant_id,
+                    "raw_event": raw_event,
+                },
+            )
             alert = AlertRaw(
                 tenant_id=tenant_id, raw_alert=raw_event, provider_type=provider_type
             )
             session.add(alert)
+            logger.info("AlertRaw object created")
         session.commit()
         logger.info("Successfully saved error alerts")
     except Exception:

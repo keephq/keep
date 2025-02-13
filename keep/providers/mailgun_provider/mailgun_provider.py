@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import logging
 import os
 import re
 import typing
@@ -122,6 +123,9 @@ class MailgunProvider(BaseProvider):
         event: dict, provider_instance: "MailgunProvider" = None
     ) -> AlertDto:
         # We receive FormData here, convert it to simple dict.
+        logging.getLogger(__name__).info(
+            "Received alert from mail",
+        )
         event = dict(event)
 
         name = event["subject"]
@@ -138,6 +142,7 @@ class MailgunProvider(BaseProvider):
         event.pop("signature", "")
         event.pop("token", "")
 
+        logging.getLogger(__name__).info("Basic formatting done")
         alert = AlertDto(
             name=name,
             source=[source],
@@ -148,10 +153,19 @@ class MailgunProvider(BaseProvider):
             status=status,
             raw_email={**event},
         )
+        logging.getLogger(__name__).info(
+            "Alert formatted",
+        )
 
         if provider_instance:
+            logging.getLogger(__name__).info(
+                "Provider instance found",
+            )
             extraction_rules = provider_instance.authentication_config.extraction
             if extraction_rules:
+                logging.getLogger(__name__).info(
+                    "Extraction rules found",
+                )
                 for rule in extraction_rules:
                     key = rule.get("key")
                     regex = rule.get("value")
@@ -165,14 +179,16 @@ class MailgunProvider(BaseProvider):
                                 ) in match.groupdict().items():
                                     setattr(alert, group_name, group_value)
                         except Exception as e:
-                            logging.error(
+                            logging.getLogger(__name__).exception(
                                 f"Error extracting key {key} with regex {regex}: {e}",
                                 extra={
                                     "provider_id": provider_instance.provider_id,
                                     "tenant_id": provider_instance.context_manager.tenant_id,
                                 },
                             )
-
+        logging.getLogger(__name__).info(
+            "Alert extracted",
+        )
         return alert
 
 
