@@ -413,6 +413,7 @@ class WorkflowScheduler:
         """
         Record timeout for workflows that are running for too long.
         """
+        is_running_in_keep_cloud = "keephq.dev" in config("KEEP_API_URL")
         workflow_executions = get_timeouted_workflow_exections()
         for workflow_execution in workflow_executions:
             self.logger.info(
@@ -423,12 +424,24 @@ class WorkflowScheduler:
                     "tenant_id": workflow_execution.tenant_id,
                 },
             )
+            timeout_message = "Workflow execution timed out. "
+
+            if is_running_in_keep_cloud:
+                timeout_message += (
+                    "Please contact Keep support for help with this issue."
+                )
+            else:
+                timeout_message += (
+                    "Most probably it's caused by worker restart or crash "
+                    "during long workflow execution. Check backend logs."
+                )
+
             self._finish_workflow_execution(
                 tenant_id=workflow_execution.tenant_id,
                 workflow_id=workflow_execution.workflow_id,
                 workflow_execution_id=workflow_execution.id,
                 status=WorkflowStatus.ERROR,
-                error="Workflow execution timed out, may happen because of the worker restart. Please check backend logs.",
+                error=timeout_message,
             )
 
     def _handle_event_workflows(self):
@@ -665,7 +678,7 @@ class WorkflowScheduler:
         )
 
     def _start(self):
-        RUN_TIMEOUT_CHECKS_EVERY = 10
+        RUN_TIMEOUT_CHECKS_EVERY = 100
         self.logger.info("Starting workflows scheduler")
         runs = 0
         while not self._stop:
