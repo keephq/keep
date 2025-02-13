@@ -7,7 +7,7 @@ Create Date: 2025-02-13 17:27:56.350500
 """
 
 from alembic import op
-from sqlalchemy import exc, text
+from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
 revision = "90e2d22edc6a"
