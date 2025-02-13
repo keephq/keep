@@ -7,6 +7,7 @@ import {
   WorkflowExecutionFailure,
 } from "@/shared/api/workflow-executions";
 import { WorkflowExecutionResults } from "@/features/workflow-execution-results";
+import { IoClose } from "react-icons/io5";
 
 interface Props {
   closeModal: () => void;
@@ -26,15 +27,9 @@ export function BuilderWorkflowTestRunModalContent({
           <Title>Workflow Execution Results</Title>
         </div>
         <div>
-          <Button
-            color="orange"
-            className="w-36"
-            icon={XMarkIcon}
-            onClick={closeModal}
-            size="xs"
-          >
-            Close
-          </Button>
+          <button onClick={closeModal}>
+            <IoClose size={20} />
+          </button>
         </div>
       </div>
       <div className="flex flex-col">

@@ -32,6 +32,7 @@ export interface Action extends Step {
 
 export interface LegacyWorkflow {
   id: string;
+  disabled?: boolean;
   description?: string;
   owners?: string[];
   services?: string[];

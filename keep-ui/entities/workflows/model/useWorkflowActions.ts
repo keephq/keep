@@ -41,7 +41,7 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
           {
             method: "POST",
             body,
-            headers: { "Content-Type": "text/html" },
+            headers: { "Content-Type": "application/yaml" },
           }
         );
         showSuccessToast("Workflow created successfully");
@@ -71,7 +71,7 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
           {
             method: "PUT",
             body,
-            headers: { "Content-Type": "text/html" },
+            headers: { "Content-Type": "application/yaml" },
           }
         );
         showSuccessToast("Workflow updated successfully");
