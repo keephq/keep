@@ -224,7 +224,7 @@ export default function IncidentAlerts({ incident }: Props) {
         header: "",
         maxSize: 110,
         cell: (context) => (
-          <div className="opacity-0 group-hover:opacity-100">
+          <div className="opacity-0 group-hover/row:opacity-100">
             <IncidentAlertActionTray
               alert={context.row.original}
               onViewAlert={setViewAlertModal}
@@ -335,7 +335,10 @@ export default function IncidentAlerts({ incident }: Props) {
           {alerts && alerts?.items?.length > 0 && (
             <TableBody>
               {table.getRowModel().rows.map((row, index) => (
-                <TableRow key={`row-${row.id}-${index}`}>
+                <TableRow
+                  key={`row-${row.id}-${index}`}
+                  className="group/row hover:bg-gray-50"
+                >
                   {row.getVisibleCells().map((cell, index) => {
                     const { style, className } =
                       getCommonPinningStylesAndClassNames(
@@ -363,24 +366,8 @@ export default function IncidentAlerts({ incident }: Props) {
               ))}
             </TableBody>
           )}
-          {isLoading && (
-            <IncidentAlertsTableBodySkeleton
-              table={table}
-              pageSize={pagination.pageSize - 10}
-            />
-          )}
         </Table>
       </Card>
-
-      <div className="mt-4 mb-8">
-        <TablePagination table={table} />
-      </div>
-
-      <ViewAlertModal
-        alert={viewAlertModal}
-        handleClose={() => setViewAlertModal(null)}
-        mutate={mutateAlerts}
-      />
     </>
   );
 }
