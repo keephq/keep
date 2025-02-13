@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback } from "react";
 import {
   ReactFlow,
   Background,
@@ -6,8 +6,6 @@ import {
   EdgeTypes as EdgeTypesType,
   useReactFlow,
   FitViewOptions,
-  ReactFlowInstance,
-  Edge,
 } from "@xyflow/react";
 import WorkflowNode from "./WorkflowNode";
 import CustomEdge from "./WorkflowEdge";
@@ -15,7 +13,7 @@ import DragAndDropSidebar from "./ToolBox";
 import { Provider } from "@/app/(keep)/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
 import "@xyflow/react/dist/style.css";
-import { FlowNode, useWorkflowStore } from "@/entities/workflows";
+import { useWorkflowStore } from "@/entities/workflows";
 import { KeepLoader } from "@/shared/ui";
 
 const nodeTypes = { custom: WorkflowNode as any };
@@ -45,8 +43,6 @@ const ReactFlowBuilder = ({
     onConnect,
     onDragOver,
     onDrop,
-    openGlobalEditor,
-    selectedEdge,
   } = useWorkflowStore();
 
   const { screenToFlowPosition } = useReactFlow();
@@ -60,29 +56,10 @@ const ReactFlowBuilder = ({
     [screenToFlowPosition]
   );
 
-  const reactFlowInstanceRef = useRef<ReactFlowInstance<FlowNode, Edge> | null>(
-    null
-  );
-  useEffect(
-    function fitViewOnLayoutAndEditorOpen() {
-      if (!isLayouted) {
-        return;
-      }
-      reactFlowInstanceRef.current?.fitView();
-    },
-    [isLayouted, openGlobalEditor]
-  );
-  useEffect(
-    function fitViewOnToolboxOpenClose() {
-      reactFlowInstanceRef.current?.fitView();
-    },
-    [selectedEdge]
-  );
-
   return (
     <div className="h-[inherit] rounded-lg">
       <div className="h-full sqd-theme-light sqd-layout-desktop flex">
-        <DragAndDropSidebar isDraggable={false} />
+        <DragAndDropSidebar isDraggable={true} />
         {isLayouted ? (
           <ReactFlow
             fitView
@@ -97,9 +74,6 @@ const ReactFlowBuilder = ({
             onDragOver={onDragOver}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
-            onInit={(instance) => {
-              reactFlowInstanceRef.current = instance;
-            }}
           >
             <Controls orientation="horizontal" />
             <Background />
