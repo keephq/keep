@@ -42,20 +42,12 @@ import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import AlertPaginationServerSide from "./alert-pagination-server-side";
 import { FacetDto } from "@/features/filter";
 import { TimeFrame } from "@/components/ui/DateRangePicker";
+import { AlertsQuery } from "@/utils/hooks/useAlerts";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
 };
-
-export interface AlertsQuery {
-  cel: string;
-  pageIndex: number;
-  offset: number;
-  limit: number;
-  sortBy: string;
-  sortDirection: "ASC" | "DESC";
-}
 
 interface PresetTab {
   name: string;
@@ -109,8 +101,10 @@ export function AlertTableServerSide({
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
+  const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
   const [filterCel, setFilterCel] = useState<string>("");
   const [searchCel, setSearchCel] = useState<string>("");
+  const [dateRangeCel, setDateRangeCel] = useState<string>("");
   const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
 
   const a11yContainerRef = useRef<HTMLDivElement>(null);
@@ -157,15 +151,11 @@ export function AlertTableServerSide({
     pageSize: 20,
   });
 
-  const rangeDiff =
-    (dateRange?.start?.getTime() || 0) - (dateRange?.end?.getTime() || 0);
-  const dateRangeRefreshToken = dateRange?.paused ? "paused" : refreshToken;
-
   useEffect(() => {
     onLiveUpdateStateChange && onLiveUpdateStateChange(!dateRange?.paused);
   }, [dateRange?.paused, onLiveUpdateStateChange]);
 
-  const dateRangeCelQuery = useMemo(() => {
+  useEffect(() => {
     const filterArray = [];
 
     if (dateRange?.start) {
@@ -176,13 +166,20 @@ export function AlertTableServerSide({
       filterArray.push(`lastReceived <= '${dateRange.end.toISOString()}'`);
     }
 
-    return filterArray.filter(Boolean).join(" && ");
-  }, [dateRangeRefreshToken, rangeDiff]);
+    setDateRangeCel(filterArray.filter(Boolean).join(" && "));
+
+    // makes alerts to refresh when not paused and all time is selected
+    if (!dateRange?.start && !dateRange?.end && !dateRange?.paused) {
+      setTimeout(() => {
+        onQueryChange && onQueryChange(alertsQuery);
+      }, 100);
+    }
+  }, [dateRange]);
 
   const mainCelQuery = useMemo(() => {
-    const filterArray = [dateRangeCelQuery, searchCel];
+    const filterArray = [dateRangeCel, searchCel];
     return filterArray.filter(Boolean).join(" && ");
-  }, [searchCel, dateRangeCelQuery]);
+  }, [searchCel, dateRangeCel]);
 
   const alertsQuery = useMemo(
     function whenQueryChange() {
@@ -192,7 +189,6 @@ export function AlertTableServerSide({
       const offset = limit * paginationState.pageIndex;
       const alertsQuery: AlertsQuery = {
         cel: resultCel,
-        pageIndex: paginationState.pageIndex,
         offset,
         limit,
         sortBy: sorting[0]?.id,
@@ -204,10 +200,10 @@ export function AlertTableServerSide({
     [filterCel, mainCelQuery, paginationState, sorting]
   );
 
-  useEffect(
-    () => onQueryChange && onQueryChange(alertsQuery),
-    [alertsQuery, onQueryChange]
-  );
+  useEffect(() => {
+    console.log("Ihor foooooooooo", alertsQuery);
+    onQueryChange && onQueryChange(alertsQuery);
+  }, [alertsQuery.cel, onQueryChange]);
 
   const [tabs, setTabs] = useState([
     { name: "All", filter: (alert: AlertDto) => true },
@@ -374,6 +370,40 @@ export function AlertTableServerSide({
     []
   );
 
+  useEffect(() => {
+    if (refreshToken) {
+      setShouldRefreshDate(true);
+      const timeout = setTimeout(() => {
+        setShouldRefreshDate(false);
+      }, 10000);
+      return () => clearTimeout(timeout);
+    }
+  }, [refreshToken]);
+
+  const timeframeChanged = useCallback(
+    (timeframe: TimeFrame | null) => {
+      if (!timeframe) {
+        setDateRange(null);
+        return;
+      }
+
+      const currentDiff =
+        (dateRange?.end?.getTime() || 0) - (dateRange?.start?.getTime() || 0);
+      const newDiff =
+        (timeframe?.end?.getTime() || 0) - (timeframe?.start?.getTime() || 0);
+
+      if (!timeframe?.paused && currentDiff === newDiff) {
+        if (shouldRefreshDate) {
+          setDateRange(timeframe);
+        }
+        return;
+      }
+
+      setDateRange(timeframe);
+    },
+    [dateRange, shouldRefreshDate]
+  );
+
   return (
     // Add h-screen to make it full height and remove the default flex-col gap
     <div className="h-screen flex flex-col gap-4">
@@ -385,7 +415,7 @@ export function AlertTableServerSide({
           liveUpdateOptionEnabled={true}
           presetName={presetName}
           onThemeChange={handleThemeChange}
-          onTimeframeChange={setDateRange}
+          onTimeframeChange={timeframeChanged}
         />
       </div>
 

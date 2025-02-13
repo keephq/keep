@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useAlerts } from "utils/hooks/useAlerts";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertsQuery, useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "@/entities/presets/model/usePresets";
 import { AlertHistory } from "./alert-history";
 import AlertAssignTicketModal from "./alert-assign-ticket-modal";
@@ -21,7 +21,6 @@ import Loading from "../loading";
 import { Preset } from "@/entities/presets/model/types";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
-import { AlertsQuery } from "./alert-table-server-side";
 import { FacetDto } from "@/features/filter";
 import { v4 as uuidV4 } from "uuid";
 
@@ -88,20 +87,16 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
 
-  const { data: pollAlerts } = useAlertPolling(isLiveUpdateEnabled);
+  const { data: pollAlerts } = useAlertPolling(true);
   const {
     data: fetchedAlerts = [],
     totalCount,
     isLoading: isAsyncLoading,
     mutate: mutateAlerts,
     error: alertsError,
-  } = useLastAlerts(
-    alertsQueryState?.cel,
-    alertsQueryState?.limit,
-    alertsQueryState?.offset,
-    alertsQueryState?.sortBy,
-    alertsQueryState?.sortDirection
-  );
+  } = useLastAlerts(alertsQueryState, undefined, {
+    revalidateOnMount: false,
+  });
 
   useEffect(() => {
     if (isLiveUpdateEnabled) {
@@ -155,6 +150,17 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     return <NotFound />;
   }
 
+  const setAlertsQueryCallback = useCallback(
+    (alertsQuery: AlertsQuery) => {
+      if (JSON.stringify(alertsQuery) === JSON.stringify(alertsQueryState)) {
+        mutateAlerts();
+      }
+
+      setAlertsQueryState(alertsQuery);
+    },
+    [setAlertsQueryState, alertsQueryState]
+  );
+
   return (
     <>
       <AlertTableTabPanelServerSide
@@ -171,7 +177,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         setDismissModalAlert={setDismissModalAlert}
         setChangeStatusAlert={setChangeStatusAlert}
         mutateAlerts={mutateAlerts}
-        onQueryChange={(alertsQuery) => setAlertsQueryState(alertsQuery)}
+        onQueryChange={setAlertsQueryCallback}
         onLiveUpdateStateChange={setIsLiveUpdateEnabled}
       />
       <AlertHistory alerts={alerts || []} presetName={selectedPreset.name} />

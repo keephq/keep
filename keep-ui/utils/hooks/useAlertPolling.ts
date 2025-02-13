@@ -3,7 +3,7 @@ import { useWebsocket } from "@/utils/hooks/usePusher";
 import { Observable, throttleTime } from "rxjs";
 import { v4 as generateGuid } from "uuid";
 
-const ALERT_POLLING_INTERVAL = 1000 * 5; // Once per 5 seconds.
+const ALERT_POLLING_INTERVAL = 1000 * 2; // Once per 5 seconds.
 
 export const useAlertPolling = (isEnabled: boolean) => {
   const { bind, unbind } = useWebsocket();

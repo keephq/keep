@@ -367,6 +367,11 @@ export default function EnhancedDateRangePicker({
     if (!isPaused) {
       interval = setInterval(() => {
         if (!timeFrame.start || !timeFrame.end) {
+          setTimeFrame({
+            start: null,
+            end: null,
+            paused: false,
+          });
           return;
         }
         const duration = timeFrame.end.getTime() - timeFrame.start.getTime();

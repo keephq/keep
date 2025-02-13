@@ -1,5 +1,5 @@
 import { FacetDto } from "@/features/filter";
-import { AlertsQuery, AlertTableServerSide } from "./alert-table-server-side";
+import { AlertTableServerSide } from "./alert-table-server-side";
 import { useAlertTableCols } from "./alert-table-utils";
 import {
   AlertDto,
@@ -7,6 +7,7 @@ import {
   getTabsFromPreset,
 } from "@/entities/alerts/model";
 import { Preset } from "@/entities/presets/model/types";
+import { AlertsQuery } from "@/utils/hooks/useAlerts";
 
 interface Props {
   refreshToken: string | null;
