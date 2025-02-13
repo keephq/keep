@@ -49,7 +49,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   {/* Add the banner here, before the navbar */}
                   {config.READ_ONLY && <ReadOnlyBanner />}
                   <div className="flex-1">
-                    <div>{children}</div>
+                    {children}
                     {/** footer */}
                     {process.env.GIT_COMMIT_HASH &&
                       process.env.SHOW_BUILD_INFO !== "false" && (

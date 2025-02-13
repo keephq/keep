@@ -50,7 +50,18 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   <main className="page-container flex flex-col col-start-3 overflow-auto">
                     {/* Add the banner here, before the navbar */}
                     {config.READ_ONLY && <ReadOnlyBanner />}
-                    <div className="flex-1">{children}</div>
+                    <div className="flex-1">
+                      {children}
+                      {/** footer */}
+                      {process.env.GIT_COMMIT_HASH &&
+                        process.env.SHOW_BUILD_INFO !== "false" && (
+                          <div className="pointer-events-none opacity-80 w-full p-2 text-slate-400 text-xs">
+                            <span className="w-full text-right">
+                              Version: {process.env.KEEP_VERSION} | Build: {process.env.GIT_COMMIT_HASH.slice(0, 6)}
+                            </span>
+                          </div>
+                        )}
+                    </div>
                     <ToastContainer />
                   </main>
                 </FrigadeProvider>
@@ -59,16 +70,6 @@ export default async function RootLayout({ children }: RootLayoutProps) {
           </PHProvider>
         </ConfigProvider>
         <WatchUpdateTheme />
-
-        {/** footer */}
-        {process.env.GIT_COMMIT_HASH &&
-          process.env.SHOW_BUILD_INFO !== "false" && (
-            <div className="pointer-events-none fixed right-2.5 bottom-2.5 text-slate-400 opacity-80 text-xs">
-              Build: {process.env.GIT_COMMIT_HASH}
-              <br />
-              Version: {process.env.KEEP_VERSION}
-            </div>
-          )}
       </body>
     </html>
   );
