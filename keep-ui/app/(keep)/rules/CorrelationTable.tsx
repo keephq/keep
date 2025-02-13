@@ -82,6 +82,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         createOn: selectedRule.create_on,
         query: queryInGroup,
         incidents: selectedRule.incidents,
+        incidentNameTemplate: selectedRule.incident_name_template || "",
       };
     }
 
@@ -111,6 +112,10 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
     () => [
       columnHelper.accessor("name", {
         header: "Correlation Name",
+      }),
+      columnHelper.accessor("incident_name_template", {
+        header: "Incident Name Template",
+        cell: (context) => <Badge color="orange">{context.getValue()}</Badge>,
       }),
       columnHelper.accessor("definition_cel", {
         header: "Description",

@@ -10,7 +10,8 @@ from playwright.sync_api import expect
 # Dear developer, thank you for checking E2E tests!
 # For instructions, please check test_end_to_end.py.
 
-os.environ["PLAYWRIGHT_HEADLESS"] = "false"
+# NOTE 2: to run the tests with a browser, uncomment this:
+# os.environ["PLAYWRIGHT_HEADLESS"] = "false"
 
 
 def test_pulling_prometheus_alerts_to_provider(browser):

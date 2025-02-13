@@ -1319,7 +1319,7 @@ def test_alerts_enrichment_in_search(db_session, client, test_app, elastic_clien
         id=1,
         tenant_id=SINGLE_TENANT_UUID,
         priority=1,
-        matchers=["name", "severity"],
+        matchers=[["name"], ["severity"]],
         rows=[
             {"severity": "low", "status": "dismissed"},
             {"severity": "high", "service": "high_severity_service"},

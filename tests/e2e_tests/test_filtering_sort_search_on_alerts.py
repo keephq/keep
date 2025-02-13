@@ -1,14 +1,13 @@
-import os
 import time
 from datetime import datetime, timedelta
-import uuid
 
 import pytest
 import requests
 from playwright.sync_api import expect, Browser
 
-
-os.environ["PLAYWRIGHT_HEADLESS"] = "false"
+# NOTE 2: to run the tests with a browser, uncomment this two lines:
+# import os
+# os.environ["PLAYWRIGHT_HEADLESS"] = "false"
 
 GRAFANA_HOST = "http://grafana:3000"
 GRAFANA_HOST_LOCAL = "http://localhost:3002"
