@@ -4,7 +4,7 @@ import { GlobalEditorV2, StepEditorV2 } from "./editors";
 import { Divider } from "@tremor/react";
 import { Provider } from "@/app/(keep)/providers/providers";
 import clsx from "clsx";
-import { Cog8ToothIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ChevronRightIcon, Cog8ToothIcon } from "@heroicons/react/24/outline";
 
 const ReactFlowEditor = ({
   providers,
@@ -68,6 +68,7 @@ const ReactFlowEditor = ({
             className="flex justify-center items-center bg-white w-full h-full border-b border-l rounded-bl-lg shadow-md"
             onClick={() => setGlobalEditorOpen(true)}
             data-testid="wf-open-editor-button"
+            title="Show step editor"
           >
             <Cog8ToothIcon className="size-5" />
           </button>
@@ -77,8 +78,9 @@ const ReactFlowEditor = ({
               className="flex justify-center bg-white items-center w-full h-full border-b border-l rounded-bl-lg shadow-md"
               onClick={() => setGlobalEditorOpen(false)}
               data-testid="wf-close-editor-button"
+              title="Hide step editor"
             >
-              <XMarkIcon className="size-5" />
+              <ChevronRightIcon className="size-5" />
             </button>
           </div>
         )}

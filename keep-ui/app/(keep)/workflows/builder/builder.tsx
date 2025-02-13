@@ -20,7 +20,7 @@ import {
   wrapDefinitionV2,
 } from "@/entities/workflows/lib/parser";
 import clsx from "clsx";
-import { CodeBracketIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ChevronLeftIcon, CodeBracketIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -237,6 +237,7 @@ function Builder({
                         className="flex justify-center items-center bg-white w-full h-full border-b border-r rounded-br-lg shadow-md"
                         onClick={() => setIsYamlEditorOpen(true)}
                         data-testid="wf-open-editor-button"
+                        title="Show YAML editor"
                       >
                         <CodeBracketIcon className="size-5" />
                       </button>
@@ -246,8 +247,9 @@ function Builder({
                           className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md"
                           onClick={() => setIsYamlEditorOpen(false)}
                           data-testid="wf-close-editor-button"
+                          title="Hide YAML editor"
                         >
-                          <XMarkIcon className="size-5" />
+                          <ChevronLeftIcon className="size-5" />
                         </button>
                       </div>
                     )}

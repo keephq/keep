@@ -9,7 +9,7 @@ import {
 } from "@xyflow/react";
 import WorkflowNode from "./WorkflowNode";
 import CustomEdge from "./WorkflowEdge";
-import DragAndDropSidebar from "./ToolBox";
+import { WorkflowToolbox } from "./WorkflowToolbox";
 import { Provider } from "@/app/(keep)/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
 import "@xyflow/react/dist/style.css";
@@ -59,7 +59,7 @@ const ReactFlowBuilder = ({
   return (
     <div className="h-[inherit] rounded-lg">
       <div className="h-full sqd-theme-light sqd-layout-desktop flex">
-        <DragAndDropSidebar isDraggable={true} />
+        <WorkflowToolbox isDraggable={false} />
         {isLayouted ? (
           <ReactFlow
             fitView

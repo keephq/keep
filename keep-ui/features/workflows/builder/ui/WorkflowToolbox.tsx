@@ -131,7 +131,7 @@ const GroupedMenu = ({
   );
 };
 
-const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
+export const WorkflowToolbox = ({ isDraggable }: { isDraggable?: boolean }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isVisible, setIsVisible] = useState(false);
   const [open, setOpen] = useState(false);
@@ -243,5 +243,3 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
     </div>
   );
 };
-
-export default DragAndDropSidebar;
