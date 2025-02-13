@@ -232,6 +232,7 @@ def get_last_completed_execution(
 
 
 def get_timeouted_workflow_exections():
+    CUTOUT_TO_IGNORE_TOO_OLD_WORKFLOWS = timedelta(days=1)
     with Session(engine) as session:
         logger.debug("Checking for timeouted workflows")
         timeouted_workflows = []
@@ -240,7 +241,8 @@ def get_timeouted_workflow_exections():
                 select(WorkflowExecution)
                 .filter(WorkflowExecution.status == "in_progress")
                 .filter(
-                    WorkflowExecution.started <= datetime.utcnow() - WORKFLOWS_TIMEOUT
+                    WorkflowExecution.started <= datetime.utcnow() - WORKFLOWS_TIMEOUT,
+                    WorkflowExecution.started >= datetime.utcnow() - CUTOUT_TO_IGNORE_TOO_OLD_WORKFLOWS,
                 )
             )
             timeouted_workflows = result.all()
