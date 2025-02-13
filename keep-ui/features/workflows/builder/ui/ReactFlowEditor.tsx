@@ -12,7 +12,7 @@ const ReactFlowEditor = ({
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
 }) => {
-  const { selectedNode, setOpneGlobalEditor, getNodeById } = useWorkflowStore();
+  const { selectedNode, setGlobalEditorOpen, getNodeById } = useWorkflowStore();
   const [isOpen, setIsOpen] = useState(false);
   const stepEditorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -25,7 +25,7 @@ const ReactFlowEditor = ({
     if (selectedNode) {
       const timer = setTimeout(() => {
         if (isTrigger) {
-          setOpneGlobalEditor(true);
+          setGlobalEditorOpen(true);
           return;
         }
         if (containerRef.current && stepEditorRef.current) {

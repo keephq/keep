@@ -210,7 +210,7 @@ export const useWorkflowStore = create<FlowState>()(
     },
     setToolBoxConfig: (config: ToolboxConfiguration) =>
       set({ toolboxConfiguration: config }),
-    setOpneGlobalEditor: (open) => set({ openGlobalEditor: open }),
+    setGlobalEditorOpen: (open) => set({ openGlobalEditor: open }),
     updateSelectedNodeData: (key, value) => {
       const currentSelectedNode = get().selectedNode;
       if (currentSelectedNode) {

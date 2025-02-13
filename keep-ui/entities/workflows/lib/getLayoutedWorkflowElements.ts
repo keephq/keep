@@ -22,11 +22,16 @@ export const getLayoutedWorkflowElements = (
 
   // Add nodes to dagre graph
   nodes.forEach((node) => {
-    const type = node?.data?.type
-      ?.replace("step-", "")
-      ?.replace("action-", "")
-      ?.replace("condition-", "")
-      ?.replace("__end", "");
+    const TYPE_PREFIXES = ["step-", "action-", "condition-"];
+    const TYPE_SUFFIXES = ["__end"];
+
+    let type = node?.data?.type ?? "";
+    TYPE_PREFIXES.forEach((prefix) => {
+      type = type.replace(prefix, "");
+    });
+    TYPE_SUFFIXES.forEach((suffix) => {
+      type = type.replace(suffix, "");
+    });
 
     let width = ["start", "end"].includes(type) ? 80 : 280;
     let height = 80;

@@ -103,8 +103,8 @@ export function getToolboxConfiguration(
       const step = {
         componentType: "task",
         properties: {
-          stepParams: provider.query_params!,
-          actionParams: provider.notify_params!,
+          stepParams: provider.query_params ?? {},
+          actionParams: provider.notify_params ?? {},
         },
       } as Partial<V2Step>;
       if (provider.can_query)
