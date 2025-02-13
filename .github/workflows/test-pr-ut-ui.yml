@@ -1,0 +1,52 @@
+name: Frontend Tests
+on:
+  push:
+    paths:
+      - "keep-ui/**"
+  pull_request:
+    paths:
+      - "keep-ui/**"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 20
+
+jobs:
+  frontend-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: keep-ui/package-lock.json
+
+      - name: Install dependencies
+        working-directory: keep-ui
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: keep-ui
+        run: npm run test
+
+      # Optional: Add coverage reporting if your test setup supports it
+      # Uncomment and adjust if you have coverage reporting configured
+      # - name: Upload coverage reports to Codecov
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     fail_ci_if_error: false
+      #     directory: keep-ui/coverage
+      #     flags: frontend
+      #     verbose: true 
