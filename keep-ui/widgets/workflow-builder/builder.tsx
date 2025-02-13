@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@tremor/react";
-import { Provider } from "../../providers/providers";
+import { Provider } from "@/app/(keep)/providers/providers";
 import { getToolboxConfiguration } from "@/features/workflows/builder/lib/utils";
 import { stringify } from "yaml";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -205,68 +205,60 @@ function Builder({
   }
 
   return (
-    <>
-      <div className="h-full">
-        <Card className="mt-2 p-0 h-full overflow-hidden">
-          <ResizableColumns
-            key={isYamlEditorOpen ? "yaml-editor-open" : "yaml-editor-closed"}
-            leftChild={
-              isYamlEditorOpen ? (
-                workflowYaml ? (
-                  <MonacoYAMLEditor
-                    // TODO: do not re-render editor on every workflowYaml change, handle updates inside the editor
-                    key={workflowYaml}
-                    workflowRaw={workflowYaml}
-                    filename={workflowId ?? "workflow"}
-                    workflowId={workflowId}
-                    // TODO: support readOnly for not yet deployed workflows
-                    readOnly={!workflowId}
-                  />
-                ) : (
-                  <Skeleton className="w-full h-full" />
-                )
-              ) : null
-            }
-            initialLeftWidth={isYamlEditorOpen ? 33 : 0}
-            rightChild={
-              <div className="flex h-full">
-                <div className="flex-1 h-full relative">
-                  <div className={clsx("absolute top-0 left-0 w-10 h-10 z-50")}>
-                    {!isYamlEditorOpen ? (
-                      <button
-                        className="flex justify-center items-center bg-white w-full h-full border-b border-r rounded-br-lg shadow-md"
-                        onClick={() => setIsYamlEditorOpen(true)}
-                        data-testid="wf-open-editor-button"
-                        title="Show YAML editor"
-                      >
-                        <CodeBracketIcon className="size-5" />
-                      </button>
-                    ) : (
-                      <div className="flex gap-0.5 h-full">
-                        <button
-                          className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md"
-                          onClick={() => setIsYamlEditorOpen(false)}
-                          data-testid="wf-close-editor-button"
-                          title="Hide YAML editor"
-                        >
-                          <ChevronLeftIcon className="size-5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <ReactFlowProvider>
-                    <ReactFlowBuilder
-                      providers={providers}
-                      installedProviders={installedProviders}
-                    />
-                  </ReactFlowProvider>
-                </div>
+    <ResizableColumns
+      key={isYamlEditorOpen ? "yaml-editor-open" : "yaml-editor-closed"}
+      leftChild={
+        isYamlEditorOpen ? (
+          workflowYaml ? (
+            <MonacoYAMLEditor
+              // TODO: do not re-render editor on every workflowYaml change, handle updates inside the editor
+              key={workflowYaml}
+              workflowRaw={workflowYaml}
+              filename={workflowId ?? "workflow"}
+              workflowId={workflowId}
+              // TODO: support readOnly for not yet deployed workflows
+              readOnly={!workflowId}
+            />
+          ) : (
+            <Skeleton className="w-full h-full" />
+          )
+        ) : null
+      }
+      initialLeftWidth={isYamlEditorOpen ? 33 : 0}
+      rightChild={
+        <div className="relative h-full">
+          <div className={clsx("absolute top-0 left-0 w-10 h-10 z-50")}>
+            {!isYamlEditorOpen ? (
+              <button
+                className="flex justify-center items-center bg-white w-full h-full border-b border-r rounded-br-lg shadow-md"
+                onClick={() => setIsYamlEditorOpen(true)}
+                data-testid="wf-open-editor-button"
+                title="Show YAML editor"
+              >
+                <CodeBracketIcon className="size-5" />
+              </button>
+            ) : (
+              <div className="flex gap-0.5 h-full">
+                <button
+                  className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md"
+                  onClick={() => setIsYamlEditorOpen(false)}
+                  data-testid="wf-close-editor-button"
+                  title="Hide YAML editor"
+                >
+                  <ChevronLeftIcon className="size-5" />
+                </button>
               </div>
-            }
-          />
-        </Card>
-      </div>
-    </>
+            )}
+          </div>
+          <ReactFlowProvider>
+            <ReactFlowBuilder
+              providers={providers}
+              installedProviders={installedProviders}
+            />
+          </ReactFlowProvider>
+        </div>
+      }
+    />
   );
 }
 

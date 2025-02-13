@@ -15,9 +15,8 @@ import {
   WrenchIcon,
 } from "@heroicons/react/24/outline";
 import { Workflow } from "@/shared/api/workflows";
-import { WorkflowBuilderPageClient } from "../builder/page.client";
+import { WorkflowBuilderWidget } from "@/widgets/workflow-builder";
 import WorkflowOverview from "./workflow-overview";
-import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "utils/hooks/useConfig";
 import { AiOutlineSwap } from "react-icons/ai";
 import { ErrorComponent, TabNavigationLink } from "@/shared/ui";
@@ -120,7 +119,7 @@ export default function WorkflowDetailPage({
               <Skeleton className="w-full h-full" />
             ) : (
               <Card className="h-[calc(100vh-150px)]">
-                <WorkflowBuilderPageClient
+                <WorkflowBuilderWidget
                   workflowRaw={workflow.workflow_raw}
                   workflowId={workflow.id}
                 />

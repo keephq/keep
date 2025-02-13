@@ -5,6 +5,7 @@ import { Divider } from "@tremor/react";
 import { Provider } from "@/app/(keep)/providers/providers";
 import clsx from "clsx";
 import { ChevronRightIcon, Cog8ToothIcon } from "@heroicons/react/24/outline";
+import { WorkflowToolbox } from "./WorkflowToolbox";
 
 const ReactFlowEditor = ({
   providers,
@@ -13,8 +14,13 @@ const ReactFlowEditor = ({
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
 }) => {
-  const { selectedNode, setGlobalEditorOpen, getNodeById, openGlobalEditor } =
-    useWorkflowStore();
+  const {
+    selectedNode,
+    selectedEdge,
+    setGlobalEditorOpen,
+    getNodeById,
+    openGlobalEditor,
+  } = useWorkflowStore();
   const stepEditorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isTrigger = ["interval", "manual", "alert", "incident"].includes(
@@ -23,7 +29,7 @@ const ReactFlowEditor = ({
 
   useEffect(() => {
     setGlobalEditorOpen(true);
-    if (!selectedNode) {
+    if (!selectedNode && !selectedEdge) {
       return;
     }
     // Scroll the StepEditorV2 into view when the editor is opened
@@ -44,7 +50,7 @@ const ReactFlowEditor = ({
       }
     }, 100);
     return () => clearTimeout(timer); // Cleanup the timer on unmount
-  }, [selectedNode]);
+  }, [selectedNode, selectedEdge]);
 
   const initialFormData = useMemo(() => {
     if (!selectedNode) {
@@ -86,11 +92,11 @@ const ReactFlowEditor = ({
         )}
       </div>
       {openGlobalEditor && (
-        <div className="relative flex-1 p-2 bg-white border-l overflow-y-auto h-full">
+        <div className="relative flex-1 bg-white border-l overflow-y-auto h-full">
           <div className="w-80 2xl:w-96">
             <GlobalEditorV2 />
             {!selectedNode?.includes("empty") && !isTrigger && (
-              <Divider ref={stepEditorRef} />
+              <Divider ref={stepEditorRef} className="my-2" />
             )}
             {!selectedNode?.includes("empty") &&
               !isTrigger &&
@@ -102,6 +108,7 @@ const ReactFlowEditor = ({
                   initialFormData={initialFormData}
                 />
               )}
+            <WorkflowToolbox isDraggable={false} />
           </div>
         </div>
       )}

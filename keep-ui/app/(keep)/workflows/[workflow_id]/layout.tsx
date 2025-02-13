@@ -17,7 +17,7 @@ export default async function Layout({
         workflowId={params.workflow_id}
         initialData={workflow}
       />
-      <div className="flex-1 h-full">{children}</div>
+      <div className="flex-1 flex flex-col">{children}</div>
     </div>
   );
 }

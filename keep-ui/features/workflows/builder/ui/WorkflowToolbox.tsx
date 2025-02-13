@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Disclosure } from "@headlessui/react";
-import { Subtitle } from "@tremor/react";
+import { Subtitle, Title } from "@tremor/react";
 import { IoChevronUp } from "react-icons/io5";
 import { useWorkflowStore } from "@/entities/workflows";
 import { PiDiamondsFourFill } from "react-icons/pi";
@@ -133,8 +133,8 @@ const GroupedMenu = ({
 
 export const WorkflowToolbox = ({ isDraggable }: { isDraggable?: boolean }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [isVisible, setIsVisible] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [open, setOpen] = useState(true);
   const { toolboxConfiguration, selectedNode, selectedEdge, nodes } =
     useWorkflowStore();
 
@@ -190,16 +190,14 @@ export const WorkflowToolbox = ({ isDraggable }: { isDraggable?: boolean }) => {
   return (
     <div
       className={clsx(
-        "w-60 2xl:w-64 border-r border-gray-300 bg-white transition-transform z-40 shrink-0",
+        "bg-white transition-transform z-40 shrink-0",
         isVisible ? "h-full" : "shadow-lg"
       )}
     >
       <div className="relative h-full flex flex-col">
         {/* Sticky header */}
-        <div className="sticky top-10 left-0 z-10">
-          <h1 className="p-3 font-bold">
-            Add {showTriggers ? "Trigger" : "Step"}
-          </h1>
+        <div className="sticky top-0 left-0 z-10 bg-white">
+          <Title className="p-2">Add {showTriggers ? "trigger" : "step"}</Title>
           <div className="flex items-center justify-between p-2 pt-0 bg-white">
             <input
               type="text"
@@ -208,19 +206,6 @@ export const WorkflowToolbox = ({ isDraggable }: { isDraggable?: boolean }) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            {/* <button
-              className="p-2 text-gray-500"
-              onClick={() => {
-                setIsVisible(!isVisible);
-                setSearchTerm("");
-              }}
-            >
-              {isVisible || checkForSearchResults ? (
-                <IoClose size={20} />
-              ) : (
-                <IoIosArrowDown size={20} />
-              )}
-            </button> */}
           </div>
         </div>
 

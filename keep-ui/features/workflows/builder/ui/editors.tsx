@@ -25,7 +25,7 @@ import debounce from "lodash.debounce";
 import { WorkflowStatus } from "./workflow-status";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-col m-2.5">{children}</div>;
+  return <div className="flex flex-col mx-4 my-2.5">{children}</div>;
 }
 
 function EditorField({
@@ -397,13 +397,13 @@ function WorkflowEditorV2() {
   let renderDivider = false;
   return (
     <>
-      <Title className="flex items-baseline justify-between">
+      <Subtitle className="font-medium flex items-baseline justify-between">
         Workflow Settings{" "}
         {/* TODO: remove since user don't need to know about 'sync', it should just work */}
         <span className="text-gray-500 text-sm">
           {synced ? "Synced" : "Not Synced"}
         </span>
-      </Title>
+      </Subtitle>
       <WorkflowStatus className="my-2" />
       <div className="flex flex-col gap-2">
         {propertyKeys.map((key, index) => {
@@ -755,7 +755,9 @@ export function StepEditorV2({
 
   return (
     <EditorLayout>
-      <Title className="capitalize">{providerType} Editor</Title>
+      <Subtitle className="font-medium capitalize">
+        {providerType} Editor
+      </Subtitle>
       <Text className="mt-1">Unique Identifier</Text>
       <TextInput
         className="mb-2.5"
@@ -794,7 +796,7 @@ export function StepEditorV2({
       <Button
         variant="primary"
         color="orange"
-        className="sticky bottom-0 mt-2.5"
+        className="sticky bottom-2.5 mt-2.5"
         onClick={handleSubmit}
         data-testid="wf-editor-save-deploy-button"
         disabled={!synced}

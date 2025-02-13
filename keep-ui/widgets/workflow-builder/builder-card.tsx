@@ -3,10 +3,11 @@ import { Card, Callout } from "@tremor/react";
 import dynamic from "next/dynamic";
 import { Suspense, useEffect, useState } from "react";
 import { EmptyBuilderState } from "./empty-builder-state";
-import { Provider } from "../../providers/providers";
-import { useProviders } from "utils/hooks/useProviders";
+import { Provider } from "@/app/(keep)/providers/providers";
+import { useProviders } from "@/utils/hooks/useProviders";
 import { useWorkflowStore } from "@/entities/workflows";
 import { KeepLoader } from "@/shared/ui";
+import clsx from "clsx";
 
 const Builder = dynamic(() => import("./builder"), {
   ssr: false, // Prevents server-side rendering
@@ -16,9 +17,15 @@ interface Props {
   fileContents: string | null;
   workflow?: string;
   workflowId?: string;
+  standalone?: boolean;
 }
 
-export function BuilderCard({ fileContents, workflow, workflowId }: Props) {
+export function BuilderCard({
+  fileContents,
+  workflow,
+  workflowId,
+  standalone = false,
+}: Props) {
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const [installedProviders, setInstalledProviders] = useState<
     Provider[] | null
@@ -69,13 +76,22 @@ export function BuilderCard({ fileContents, workflow, workflowId }: Props) {
     <Suspense
       fallback={<KeepLoader loadingText="Loading workflow builder..." />}
     >
-      <Builder
-        providers={providers}
-        installedProviders={installedProviders}
-        loadedAlertFile={fileContents}
-        workflow={workflow}
-        workflowId={workflowId}
-      />
+      <Card
+        className={clsx(
+          "mt-2 p-0 overflow-hidden h-full",
+          standalone
+            ? "h-[calc(100vh-150px)]"
+            : "rounded-none border-t border-gray-200 shadow-none ring-0"
+        )}
+      >
+        <Builder
+          providers={providers}
+          installedProviders={installedProviders}
+          loadedAlertFile={fileContents}
+          workflow={workflow}
+          workflowId={workflowId}
+        />
+      </Card>
     </Suspense>
   );
 }
