@@ -4,26 +4,37 @@
 # 1. Running the tests locally
 # 2. Running the tests in GitHub Actions
 
+# Running the tests in GitHub Actions:
+# - Look at the test-pr-e2e.yml file in the .github/workflows directory.
+
 # Running the tests locally:
 # 1. Spin up the environment using docker-compose.
 #   for mysql: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mysql.yml up -d
 #   for postgres: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml up -d
 # 2. Run the tests using pytest.
 # e.g. poetry run coverage run --branch -m pytest -s tests/e2e_tests/
+
 # NOTE: to clean the database, run
 # docker compose stop
 # docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mysql.yml down --volumes
 # docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml down --volumes
-# NOTE 2: to run the tests with a browser, uncomment this:
-# import os
-
-# os.environ["PLAYWRIGHT_HEADLESS"] = "false"
-
-# Running the tests in GitHub Actions:
-# - Look at the test-pr-e2e.yml file in the .github/workflows directory.
 
 import os
 import random
+import string
+import sys
+import re
+from datetime import datetime
+from tests.e2e_tests.utils import trigger_alert
+
+from playwright.sync_api import expect
+
+from tests.e2e_tests.utils import install_webhook_provider, delete_provider, assert_connected_provider_count, assert_scope_text_count
+
+
+# SHAHAR: you can uncomment locally, but keep in github actions
+# NOTE 2: to run the tests with a browser, uncomment this two lines:
+# os.environ["PLAYWRIGHT_HEADLESS"] = "false"
 
 # Adding a new test:
 # 1. Manually:
@@ -33,22 +44,6 @@ import random
 #    - Spin up the environment using docker-compose.
 #    - Run "playwright codegen localhost:3000"
 #    - Copy the generated code to a new test function.
-import string
-import sys
-import re
-from datetime import datetime
-import requests
-from tests.e2e_tests.utils import trigger_alert
-
-from playwright.sync_api import expect
-
-from tests.e2e_tests.utils import install_webhook_provider, delete_provider, assert_connected_provider_count, assert_scope_text_count
-
-# Running the tests in GitHub Actions:
-# - Look at the test-pr-e2e.yml file in the .github/workflows directory.
-
-
-# os.environ["PLAYWRIGHT_HEADLESS"] = "false"
 
 
 def setup_console_listener(page, log_entries):
@@ -320,7 +315,7 @@ def test_add_workflow(browser):
         page.locator(".react-flow__node:has-text('console-action')").click()
         page.get_by_placeholder("message").click()
         page.get_by_placeholder("message").fill("Hello world!")
-        page.get_by_role("button", name="Save & Deploy").click()
+        page.get_by_test_id("wf-editor-save-deploy-button").click()
         page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
         expect(page.get_by_test_id("wf-name")).to_contain_text(
             "Example Console Workflow"

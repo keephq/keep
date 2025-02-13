@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import Loading from "@/app/(keep)/loading";
-import { WorkflowBuilderPageClient } from "../../builder/page.client";
+import { KeepLoader } from "@/shared/ui";
+import { WorkflowBuilderWidget } from "@/widgets/workflow-builder";
 import { Subtitle } from "@tremor/react";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { Icon } from "@tremor/react";
@@ -27,17 +27,20 @@ export default function PageWithId({
   }, [key]);
 
   return (
-    <div className="flex flex-col mb-4 h-full gap-6">
+    <div className="flex flex-col h-full gap-4">
       <Subtitle className="text-sm">
         <Link href="/workflows">All Workflows</Link>{" "}
         <Icon icon={ArrowRightIcon} color="gray" size="xs" /> Preview workflow
         template
       </Subtitle>
       <div className="flex-1 h-full">
-        {!workflowPreviewData && <Loading />}
+        {!workflowPreviewData && (
+          <KeepLoader loadingText="Loading workflow preview..." />
+        )}
         {workflowPreviewData && workflowPreviewData.name === key && (
-          <WorkflowBuilderPageClient
+          <WorkflowBuilderWidget
             workflowRaw={workflowPreviewData.workflow_raw || ""}
+            standalone={true}
           />
         )}
         {workflowPreviewData && workflowPreviewData.name !== key && (

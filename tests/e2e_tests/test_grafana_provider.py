@@ -1,7 +1,5 @@
 import os
-import re
 import sys
-import time
 from datetime import datetime
 
 import requests
@@ -10,7 +8,8 @@ from playwright.sync_api import expect
 from tests.e2e_tests.utils import trigger_alert, assert_scope_text_count, open_connected_provider, delete_provider, assert_connected_provider_count
 
 
-os.environ["PLAYWRIGHT_HEADLESS"] = "false"
+# NOTE 2: to run the tests with a browser, uncomment this:
+# os.environ["PLAYWRIGHT_HEADLESS"] = "false"
 
 GRAFANA_HOST = "http://grafana:3000"
 GRAFANA_HOST_LOCAL = "http://localhost:3002"

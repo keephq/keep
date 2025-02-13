@@ -11,9 +11,13 @@ from threading import Lock
 from sqlalchemy.exc import IntegrityError
 
 from keep.api.core.config import config
-from keep.api.core.db import create_workflow_execution, get_timeouted_workflow_exections
+from keep.api.core.db import create_workflow_execution
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
-from keep.api.core.db import get_enrichment, get_previous_execution_id
+from keep.api.core.db import (
+    get_enrichment,
+    get_previous_execution_id,
+    get_timeouted_workflow_exections,
+)
 from keep.api.core.db import get_workflow as get_workflow_db
 from keep.api.core.db import get_workflows_that_should_run
 from keep.api.core.metrics import (
@@ -248,7 +252,7 @@ class WorkflowScheduler:
             workflows_running.labels(tenant_id=tenant_id).dec()
             self._update_queue_metrics()
 
-        if any(errors):
+        if errors is not None and any(errors):
             self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
             self._finish_workflow_execution(
                 tenant_id=tenant_id,
@@ -309,7 +313,7 @@ class WorkflowScheduler:
 
         status = "success"
         error = None
-        if any(errors):
+        if errors is not None and any(errors):
             error = "\n".join(str(e) for e in errors)
             status = "error"
 

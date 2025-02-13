@@ -57,6 +57,7 @@ export default function Mapping() {
         <SidePanel
           isOpen={isSidePanelOpen}
           onClose={() => handleSidePanelExit(null)}
+          panelWidth="w-1/3"
         >
           <h2 className="text-lg">Configure</h2>
           <p className="text-slate-400">

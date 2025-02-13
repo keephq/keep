@@ -58,13 +58,15 @@ export default function AlertRunWorkflowModal({ alert, handleClose }: Props) {
           value={selectedWorkflowId}
           onValueChange={setSelectedWorkflowId}
         >
-          {workflows.map((workflow) => {
-            return (
-              <SelectItem key={workflow.id} value={workflow.id}>
-                {workflow.description}
-              </SelectItem>
-            );
-          })}
+          {workflows
+            .filter((workflow) => !workflow.disabled)
+            .map((workflow) => {
+              return (
+                <SelectItem key={workflow.id} value={workflow.id}>
+                  {workflow.description}
+                </SelectItem>
+              );
+            })}
         </Select>
       )}
       <Button
