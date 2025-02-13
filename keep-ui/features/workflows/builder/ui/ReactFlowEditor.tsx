@@ -14,13 +14,8 @@ const ReactFlowEditor = ({
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
 }) => {
-  const {
-    selectedNode,
-    selectedEdge,
-    setGlobalEditorOpen,
-    getNodeById,
-    openGlobalEditor,
-  } = useWorkflowStore();
+  const { selectedNode, selectedEdge, setEditorOpen, getNodeById, editorOpen } =
+    useWorkflowStore();
   const stepEditorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isTrigger = ["interval", "manual", "alert", "incident"].includes(
@@ -28,7 +23,7 @@ const ReactFlowEditor = ({
   );
 
   useEffect(() => {
-    setGlobalEditorOpen(true);
+    setEditorOpen(true);
     if (!selectedNode && !selectedEdge) {
       return;
     }
@@ -66,13 +61,13 @@ const ReactFlowEditor = ({
       <div
         className={clsx(
           "absolute top-0 w-10 h-10",
-          openGlobalEditor ? "left-0 -translate-x-[calc(100%-3px)]" : "right-0"
+          editorOpen ? "left-0 -translate-x-[calc(100%-3px)]" : "right-0"
         )}
       >
-        {!openGlobalEditor ? (
+        {!editorOpen ? (
           <button
             className="flex justify-center items-center bg-white w-full h-full border-b border-l rounded-bl-lg shadow-md"
-            onClick={() => setGlobalEditorOpen(true)}
+            onClick={() => setEditorOpen(true)}
             data-testid="wf-open-editor-button"
             title="Show step editor"
           >
@@ -82,7 +77,7 @@ const ReactFlowEditor = ({
           <div className="flex gap-0.5 h-full">
             <button
               className="flex justify-center bg-white items-center w-full h-full border-b border-l rounded-bl-lg shadow-md"
-              onClick={() => setGlobalEditorOpen(false)}
+              onClick={() => setEditorOpen(false)}
               data-testid="wf-close-editor-button"
               title="Hide step editor"
             >
@@ -91,7 +86,7 @@ const ReactFlowEditor = ({
           </div>
         )}
       </div>
-      {openGlobalEditor && (
+      {editorOpen && (
         <div className="relative flex-1 bg-white border-l overflow-y-auto h-full">
           <div className="w-80 2xl:w-96">
             <GlobalEditorV2 />

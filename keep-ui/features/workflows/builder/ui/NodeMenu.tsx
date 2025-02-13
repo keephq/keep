@@ -20,8 +20,7 @@ export default function NodeMenu({
     data?.type?.includes("empty") ||
     id?.includes("end") ||
     id?.includes("start");
-  const { deleteNodes, setSelectedNode, setStepEditorOpenForNode } =
-    useWorkflowStore();
+  const { deleteNodes, setSelectedNode } = useWorkflowStore();
 
   return (
     <>
@@ -68,7 +67,6 @@ export default function NodeMenu({
                       onClick={(e) => {
                         stopPropagation(e);
                         setSelectedNode(id);
-                        setStepEditorOpenForNode(id);
                       }}
                       className={`${
                         active ? "bg-slate-200" : "text-gray-900"

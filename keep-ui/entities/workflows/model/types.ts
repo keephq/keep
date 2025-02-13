@@ -82,8 +82,7 @@ export interface FlowStateValues {
   validationErrors: Record<string, string>;
 
   // UI
-  openGlobalEditor: boolean;
-  stepEditorOpenForNode: string | null;
+  editorOpen: boolean;
   buttonsEnabled: boolean;
   saveRequestCount: number;
   runRequestCount: number;
@@ -104,11 +103,10 @@ export interface FlowState extends FlowStateValues {
     type: "node" | "edge"
   ) => void;
   setToolBoxConfig: (config: ToolboxConfiguration) => void;
-  setGlobalEditorOpen: (open: boolean) => void;
+  setEditorOpen: (open: boolean) => void;
   updateSelectedNodeData: (key: string, value: any) => void;
   updateV2Properties: (properties: Record<string, any>) => void;
   setSelectedNode: (id: string | null) => void;
-  setStepEditorOpenForNode: (nodeId: string | null) => void;
   onNodesChange: (changes: any) => void;
   onEdgesChange: (changes: any) => void;
   onConnect: (connection: any) => void;

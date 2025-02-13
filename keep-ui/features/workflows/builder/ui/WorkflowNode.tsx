@@ -31,7 +31,7 @@ function WorkflowNode({ id, data }: FlowNode) {
   const {
     selectedNode,
     setSelectedNode,
-    setGlobalEditorOpen,
+    setEditorOpen,
     synced,
     validationErrors,
   } = useWorkflowStore();
@@ -68,13 +68,10 @@ function WorkflowNode({ id, data }: FlowNode) {
     if (data?.notClickable) {
       return;
     }
-    if (specialNodeCheck || id?.includes("end") || id?.includes("empty")) {
-      if (id?.includes("empty")) {
-        setSelectedNode(id);
-      }
-      setGlobalEditorOpen(true);
+    if (specialNodeCheck || id?.includes("end")) {
       return;
     }
+    setEditorOpen(true);
     setSelectedNode(id);
   }
 
@@ -165,7 +162,7 @@ function WorkflowNode({ id, data }: FlowNode) {
               return;
             }
             if (specialNodeCheck || id?.includes("end")) {
-              setGlobalEditorOpen(true);
+              setEditorOpen(true);
               return;
             }
             setSelectedNode(id);

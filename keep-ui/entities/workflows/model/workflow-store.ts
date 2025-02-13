@@ -166,7 +166,7 @@ function addNodeBetween(
 
 // TODO: break down the state into smaller pieces
 // - core worfklow state (definition, nodes, edges, selectedNode, etc)
-// - editor state (openGlobalEditor, stepEditorOpenForNode)
+// - editor state (editorOpen, stepEditorOpenForNode)
 // - builder state (toolbox, selectedEdge, selectedNode, isLayouted, etc)
 const defaultState: FlowStateValues = {
   workflowId: null,
@@ -174,8 +174,7 @@ const defaultState: FlowStateValues = {
   edges: [],
   selectedNode: null,
   v2Properties: {},
-  openGlobalEditor: true,
-  stepEditorOpenForNode: null,
+  editorOpen: true,
   toolboxConfiguration: null,
   isLayouted: false,
   selectedEdge: null,
@@ -218,7 +217,7 @@ export const useWorkflowStore = create<FlowState>()(
     },
     setToolBoxConfig: (config: ToolboxConfiguration) =>
       set({ toolboxConfiguration: config }),
-    setGlobalEditorOpen: (open) => set({ openGlobalEditor: open }),
+    setEditorOpen: (open) => set({ editorOpen: open }),
     updateSelectedNodeData: (key, value) => {
       const currentSelectedNode = get().selectedNode;
       if (currentSelectedNode) {
@@ -298,13 +297,8 @@ export const useWorkflowStore = create<FlowState>()(
     setSelectedNode: (id) => {
       set({
         selectedNode: id || null,
-        openGlobalEditor: false,
         selectedEdge: null,
       });
-    },
-    setStepEditorOpenForNode: (nodeId) => {
-      set({ openGlobalEditor: false });
-      set({ stepEditorOpenForNode: nodeId });
     },
     onNodesChange: (changes) =>
       set({ nodes: applyNodeChanges(changes, get().nodes) }),
@@ -495,7 +489,7 @@ export const useWorkflowStore = create<FlowState>()(
         selectedNode: null,
         isLayouted: false,
         changes: get().changes + 1,
-        openGlobalEditor: true,
+        editorOpen: true,
       });
       get().onLayout({ direction: "DOWN" });
       get().updateDefinition();
