@@ -3,7 +3,7 @@ import Modal from "@/components/ui/Modal"; // Ensure this path matches your proj
 import { Button, Switch, Text } from "@tremor/react";
 import { toast } from "react-toastify";
 import "./ViewAlertModal.css";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import Editor, { Monaco } from "@monaco-editor/react";
@@ -79,8 +79,20 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
       }
     });
 
+    // Listen for content changes and update decorations
+    editor.onDidChangeModelContent(() => {
+      updateDecorations(editor);
+    });
+
     updateDecorations(editor);
   };
+
+  // Update decorations whenever showHighlightedOnly changes
+  useEffect(() => {
+    if (editorRef.current) {
+      updateDecorations(editorRef.current);
+    }
+  }, [showHighlightedOnly]);
 
   const updateDecorations = (editor: monaco.editor.IStandaloneCodeEditor) => {
     if (!alert?.enriched_fields || !editor) return;
@@ -207,7 +219,15 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
                       null,
                       2
                     )
-                  : JSON.stringify(alert, null, 2)
+                  : JSON.stringify(
+                      Object.fromEntries(
+                        Object.entries(alert).filter(
+                          ([key]) => key !== "enriched_fields"
+                        )
+                      ),
+                      null,
+                      2
+                    )
               }
               options={editorOptions}
               onMount={handleEditorDidMount}
