@@ -366,8 +366,24 @@ export default function IncidentAlerts({ incident }: Props) {
               ))}
             </TableBody>
           )}
+          {isLoading && (
+            <IncidentAlertsTableBodySkeleton
+              table={table}
+              pageSize={pagination.pageSize - 10}
+            />
+          )}
         </Table>
       </Card>
+
+      <div className="mt-4 mb-8">
+        <TablePagination table={table} />
+      </div>
+
+      <ViewAlertModal
+        alert={viewAlertModal}
+        handleClose={() => setViewAlertModal(null)}
+        mutate={mutateAlerts}
+      />
     </>
   );
 }
