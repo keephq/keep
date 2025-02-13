@@ -1,12 +1,14 @@
 import {
   Badge,
   Button,
+  Icon,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeaderCell,
   TableRow,
+  Text,
 } from "@tremor/react";
 import { MappingRule } from "./models";
 import {
@@ -15,15 +17,16 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
-  ExpandedState,
 } from "@tanstack/react-table";
-import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
+import { MdRemoveCircle, MdModeEdit, MdPlayArrow } from "react-icons/md";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";
-import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
-
+import { FaFileCsv, FaFileCode, FaNetworkWired } from "react-icons/fa";
+import { Fragment, useState } from "react";
+import { useRouter } from "next/navigation";
+import RunMappingModal from "./run-mapping-modal";
 const columnHelper = createColumnHelper<MappingRule>();
 
 interface Props {
@@ -31,34 +34,73 @@ interface Props {
   editCallback: (rule: MappingRule) => void;
 }
 
+const getTypeIcon = (type: string) => {
+  switch (type) {
+    case "csv":
+      return <Icon icon={FaFileCsv} tooltip="CSV" className="text-green-500" />;
+    case "json":
+      return (
+        <Icon icon={FaFileCode} tooltip="JSON" className="text-blue-500" />
+      );
+    case "topology":
+      return (
+        <Icon
+          icon={FaNetworkWired}
+          tooltip="Topology"
+          className="text-purple-500"
+        />
+      );
+    default:
+      return null;
+  }
+};
+
+const formattedMatchers = (matchers: string[][]) => {
+  return (
+    <div className="inline-flex items-center">
+      {matchers.map((matcher, index) => (
+        <Fragment key={index}>
+          <div className="p-2 bg-gray-50 border rounded space-x-2">
+            {matcher.map((attribute, index) => (
+              <Fragment key={attribute}>
+                <span className="space-x-2">
+                  <b>{attribute}</b>{" "}
+                  {index < matcher.length - 1 && <span>+</span>}
+                </span>
+              </Fragment>
+            ))}
+          </div>
+          {index < matchers.length - 1 && (
+            <Text className="mx-1" color="slate">
+              OR
+            </Text>
+          )}
+        </Fragment>
+      ))}
+    </div>
+  );
+};
+
 export default function RulesTable({ mappings, editCallback }: Props) {
   const api = useApi();
   const { mutate } = useMappings();
-  const [expanded, setExpanded] = useState<ExpandedState>({});
+  const router = useRouter();
+  const [runModalRule, setRunModalRule] = useState<number | null>(null);
 
   const columns = [
-    columnHelper.display({
-      id: "delete",
-      header: "",
-      cell: (context) => (
-        <div className={"space-x-1 flex flex-row items-center justify-center"}>
-          {/*If user wants to edit the mapping. We use the callback to set the data in mapping.tsx which is then passed to the create-new-mapping.tsx form*/}
-          <Button
-            color="orange"
-            size="xs"
-            variant="secondary"
-            icon={MdModeEdit}
-            onClick={() => editCallback(context.row.original!)}
-          />
-          <Button
-            color="red"
-            size="xs"
-            variant="secondary"
-            icon={MdRemoveCircle}
-            onClick={() => deleteRule(context.row.original.id!)}
-          />
-        </div>
-      ),
+    columnHelper.accessor("name", {
+      header: "Name",
+      cell: (context) => {
+        return (
+          <div className="flex items-center space-x-2">
+            {getTypeIcon(context.row.original.type)} {context.row.original.name}
+          </div>
+        );
+      },
+    }),
+    columnHelper.accessor("description", {
+      header: "Description",
+      cell: (info) => info.getValue(),
     }),
     columnHelper.display({
       id: "priority",
@@ -66,33 +108,13 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       cell: (context) => context.row.original.priority,
     }),
     columnHelper.display({
-      id: "name",
-      header: "Name",
-      cell: (context) => context.row.original.name,
-    }),
-    columnHelper.display({
-      id: "type",
-      header: "Type",
-      cell: (context) => context.row.original.type,
-    }),
-    columnHelper.display({
-      id: "description",
-      header: "Description",
-      cell: (context) => context.row.original.description,
-    }),
-    columnHelper.display({
-      id: "fileName",
-      header: "Original File Name",
-      cell: (context) => context.row.original.file_name,
-    }),
-    columnHelper.display({
       id: "matchers",
       header: "Matchers",
-      cell: (context) => context.row.original.matchers.join(","),
+      cell: (context) => formattedMatchers(context.row.original.matchers),
     }),
     columnHelper.display({
       id: "attributes",
-      header: "Attributes",
+      header: "Enriched With",
       cell: (context) => (
         <div className="flex flex-wrap">
           {context.row.original.attributes?.map((attr) => (
@@ -103,14 +125,55 @@ export default function RulesTable({ mappings, editCallback }: Props) {
         </div>
       ),
     }),
+    columnHelper.display({
+      id: "actions",
+      header: "",
+      cell: (context) => (
+        <div className="space-x-1 flex flex-row items-center justify-end opacity-0 group-hover:opacity-100 bg-slate-100 border-l">
+          <Button
+            color="orange"
+            size="xs"
+            icon={MdPlayArrow}
+            tooltip="Run"
+            onClick={(event) => {
+              event.stopPropagation();
+              setRunModalRule(context.row.original.id!);
+            }}
+          />
+          <Button
+            color="orange"
+            size="xs"
+            variant="secondary"
+            icon={MdModeEdit}
+            tooltip="Edit"
+            onClick={(event) => {
+              event.stopPropagation();
+              editCallback(context.row.original!);
+            }}
+          />
+          <Button
+            color="red"
+            size="xs"
+            variant="secondary"
+            icon={MdRemoveCircle}
+            tooltip="Delete"
+            onClick={(event) => {
+              event.stopPropagation();
+              deleteRule(context.row.original.id!);
+            }}
+          />
+        </div>
+      ),
+      meta: {
+        sticky: true,
+      },
+    }),
   ] as DisplayColumnDef<MappingRule>[];
 
   const table = useReactTable({
     columns,
     data: mappings.sort((a, b) => b.priority - a.priority),
-    state: { expanded },
     getCoreRowModel: getCoreRowModel(),
-    onExpandedChange: setExpanded,
   });
 
   const deleteRule = (ruleId: number) => {
@@ -128,17 +191,21 @@ export default function RulesTable({ mappings, editCallback }: Props) {
   };
 
   return (
-    <Table>
-      <TableHead>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow
-            className="border-b border-tremor-border dark:border-dark-tremor-border"
-            key={headerGroup.id}
-          >
-            {headerGroup.headers.map((header) => {
-              return (
+    <>
+      <Table>
+        <TableHead>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow
+              className="border-b border-tremor-border dark:border-dark-tremor-border"
+              key={headerGroup.id}
+            >
+              {headerGroup.headers.map((header) => (
                 <TableHeaderCell
-                  className="text-tremor-content-strong dark:text-dark-tremor-content-strong"
+                  className={`text-tremor-content-strong dark:text-dark-tremor-content-strong ${
+                    header.column.columnDef.meta?.sticky
+                      ? "sticky right-0 bg-white dark:bg-gray-800"
+                      : ""
+                  }`}
                   key={header.id}
                 >
                   {flexRender(
@@ -146,64 +213,41 @@ export default function RulesTable({ mappings, editCallback }: Props) {
                     header.getContext()
                   )}
                 </TableHeaderCell>
-              );
-            })}
-          </TableRow>
-        ))}
-      </TableHead>
-      <TableBody>
-        {table.getRowModel().rows.map((row) => (
-          <>
+              ))}
+            </TableRow>
+          ))}
+        </TableHead>
+        <TableBody>
+          {table.getRowModel().rows.map((row) => (
             <TableRow
-              className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100"
+              className="hover:bg-slate-100 group cursor-pointer"
               key={row.id}
-              onClick={() => row.toggleExpanded()}
+              onClick={() =>
+                router.push(`/mapping/${row.original.id}/executions`)
+              }
             >
               {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
+                <TableCell
+                  className={`${
+                    cell.column.columnDef.meta?.sticky
+                      ? "sticky right-0 bg-white dark:bg-gray-800 hover:bg-slate-100 group-hover:bg-slate-100"
+                      : ""
+                  }`}
+                  key={cell.id}
+                >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}
             </TableRow>
-            {row.getIsExpanded() && (
-              <TableRow className="pl-2.5">
-                <TableCell colSpan={columns.length}>
-                  <div className="flex space-x-2 divide-x">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-bold">Created At:</span>
-                      <span>
-                        {new Date(
-                          row.original.created_at + "Z"
-                        ).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2 pl-2.5">
-                      <span className="font-bold">Created By:</span>
-                      <span>{row.original.created_by}</span>
-                    </div>
-                    {row.original.last_updated_at && (
-                      <>
-                        <div className="flex items-center space-x-2 pl-2.5">
-                          <span className="font-bold">Updated At:</span>
-                          <span>
-                            {new Date(
-                              row.original.last_updated_at + "Z"
-                            ).toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2 pl-2.5">
-                          <span className="font-bold">Updated By:</span>
-                          <span>{row.original.updated_by}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </>
-        ))}
-      </TableBody>
-    </Table>
+          ))}
+        </TableBody>
+      </Table>
+
+      <RunMappingModal
+        ruleId={runModalRule!}
+        isOpen={runModalRule !== null}
+        onClose={() => setRunModalRule(null)}
+      />
+    </>
   );
 }

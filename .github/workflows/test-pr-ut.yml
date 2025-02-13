@@ -1,31 +1,36 @@
-name: Test docs
+name: Unit Tests
 on:
   push:
     paths:
-      - 'keep/providers/**'
-      - 'docs/**'
+      - "keep/**"
   pull_request:
     paths:
-      - 'keep/providers/**'
-      - 'docs/**'
+      - "keep/**"
   workflow_dispatch:
+
+permissions:
+  actions: write
+
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref }}-${{ github.job }}
+  group: ${{ github.workflow }}-${{ github.head_ref }}
   cancel-in-progress: true
+
 env:
   PYTHON_VERSION: 3.11
-  STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
+  SQLALCHEMY_WARN_20: 1
 
 jobs:
-  tests-docs:
+  unit-tests:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - uses: chartboost/ruff-action@v1
         with:
           src: "./keep"
+
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
@@ -46,19 +51,17 @@ jobs:
 
       - name: Install dependencies using poetry
         run: poetry install --no-interaction --no-root --with dev
-  
-      - name: Validate docs for providers
-        run: |
-          cd scripts;
-          poetry run python ./docs_get_providers_list.py --validate    
 
-      - name: Install deps and validate docs
+      - name: Run unit tests and report coverage
         run: |
-          npm i -g mintlify;
-          
-          cd docs && mintlify broken-links;
-          cd ../scripts;
-          ./docs_validate_navigation.sh;
+          poetry run coverage run --omit="*/test*" --branch -m pytest --timeout 20 -n auto --non-integration --ignore=tests/e2e_tests/
 
-          # Todo: validate if openapi schema is matching with the code
-  
+      - name: Convert coverage results to JSON
+        run: poetry run coverage json --omit="keep/providers/*"
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: false
+          files: coverage.json
+          verbose: true
