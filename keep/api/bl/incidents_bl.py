@@ -12,6 +12,7 @@ from sqlmodel import Session
 from keep.api.arq_pool import get_pool
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
+    add_audit,
     create_incident_from_dto,
     delete_incident_by_id,
     enrich_alerts_with_incidents,
@@ -19,11 +20,12 @@ from keep.api.core.db import (
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
     remove_alerts_to_incident_by_incident_id,
-    update_incident_from_dto_by_id, update_incident_severity, add_audit,
+    update_incident_from_dto_by_id,
+    update_incident_severity,
 )
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import IncidentDto, IncidentDtoIn, IncidentSeverity
-from keep.api.models.db.alert import Incident, ActionType
+from keep.api.models.db.alert import ActionType, Incident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
@@ -161,15 +163,21 @@ class IncidentBl:
                 "Pushing incident change to client",
                 extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
             )
-            self.pusher_client.trigger(
-                f"private-{self.tenant_id}",
-                "incident-change",
-                {"incident_id": str(incident_id) if incident_id else None},
-            )
-            self.logger.info(
-                "Incident change pushed to client",
-                extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
-            )
+            try:
+                self.pusher_client.trigger(
+                    f"private-{self.tenant_id}",
+                    "incident-change",
+                    {"incident_id": str(incident_id) if incident_id else None},
+                )
+                self.logger.info(
+                    "Incident change pushed to client",
+                    extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
+                )
+            except Exception:
+                self.logger.exception(
+                    "Failed to push incident change to client",
+                    extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
+                )
 
     def send_workflow_event(self, incident_dto: IncidentDto, action: str) -> None:
         try:
@@ -314,7 +322,9 @@ class IncidentBl:
             },
         )
         incident = update_incident_severity(
-            self.tenant_id, incident_id, severity,
+            self.tenant_id,
+            incident_id,
+            severity,
         )
 
         if comment:
@@ -327,7 +337,6 @@ class IncidentBl:
             )
 
         return self.__postprocess_incident_change(incident)
-
 
     def __postprocess_incident_change(self, incident):
         if not incident:

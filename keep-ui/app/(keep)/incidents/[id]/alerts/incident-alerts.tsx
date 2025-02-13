@@ -17,7 +17,6 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@tremor/react";
-import Image from "next/image";
 import { AlertDto } from "@/entities/alerts/model";
 import {
   useIncidentAlerts,
@@ -41,7 +40,9 @@ import clsx from "clsx";
 import { IncidentAlertsTableBodySkeleton } from "./incident-alert-table-body-skeleton";
 import { IncidentAlertsActions } from "./incident-alert-actions";
 import { DynamicImageProviderIcon } from "@/components/ui";
-
+import { ViewAlertModal } from "@/app/(keep)/alerts/ViewAlertModal";
+import { IncidentAlertActionTray } from "./incident-alert-action-tray";
+import { useApi } from "@/shared/lib/hooks/useApi";
 interface Props {
   incident: IncidentDto;
 }
@@ -64,10 +65,13 @@ export default function IncidentAlerts({ incident }: Props) {
     pageSize: 20,
   });
 
+  const api = useApi();
+
   const {
     data: alerts,
     isLoading: _alertsLoading,
     error: alertsError,
+    mutate: mutateAlerts,
   } = useIncidentAlerts(
     incident.id,
     alertsPagination.limit,
@@ -95,6 +99,9 @@ export default function IncidentAlerts({ incident }: Props) {
     }
   }, [alerts, pagination]);
   usePollIncidentAlerts(incident.id);
+
+  // Add new state for the ViewAlertModal
+  const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>(null);
 
   const columns = useMemo(
     () => [
@@ -138,7 +145,7 @@ export default function IncidentAlerts({ incident }: Props) {
         header: "Name",
         minSize: 100,
         cell: (context) => (
-          <div className="max-w-[300px]">
+          <div className="max-w-[300px] group relative">
             <AlertName alert={context.row.original} />
           </div>
         ),
@@ -213,19 +220,37 @@ export default function IncidentAlerts({ incident }: Props) {
           )),
       }),
       columnHelper.display({
-        id: "remove",
-        header: "Correlation",
+        id: "actions",
+        header: "",
         maxSize: 110,
-        cell: (context) =>
-          incident.is_confirmed && (
-            <IncidentAlertMenu
+        cell: (context) => (
+          <div className="opacity-0 group-hover:opacity-100">
+            <IncidentAlertActionTray
               alert={context.row.original}
-              incidentId={incident.id}
+              onViewAlert={setViewAlertModal}
+              onUnlink={(alert) => {
+                if (incident.is_confirmed) {
+                  if (confirm("Are you sure you want to unlink this alert?")) {
+                    api
+                      .post(`/incidents/${incident.id}/unlink`, {
+                        fingerprints: [alert.fingerprint],
+                      })
+                      .then(() => {
+                        mutateAlerts();
+                      });
+                  }
+                }
+              }}
+              isConfirmed={incident.is_confirmed}
             />
-          ),
+          </div>
+        ),
+        meta: {
+          tdClassName: "w-[110px] p-0",
+        },
       }),
     ],
-    [incident.id, incident.is_confirmed]
+    [incident.id, incident.is_confirmed, api, mutateAlerts]
   );
 
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -241,7 +266,7 @@ export default function IncidentAlerts({ incident }: Props) {
       pagination,
       columnPinning: {
         left: ["severity", "selected", "name"],
-        right: ["remove"],
+        right: ["actions"],
       },
     },
     onPaginationChange: setTablePagination,
@@ -273,8 +298,8 @@ export default function IncidentAlerts({ incident }: Props) {
         selectedFingerprints={selectedFingerprints}
         resetAlertsSelection={() => table.resetRowSelection()}
       />
-      <Card className="p-0 overflow-x-auto h-[calc(100vh-28rem)]">
-        <Table className="[&>table]:table-fixed">
+      <Card className="p-0 overflow-x-auto h-[calc(100vh-30rem)]">
+        <Table className="[&>table]:table-fixed group">
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
@@ -350,6 +375,12 @@ export default function IncidentAlerts({ incident }: Props) {
       <div className="mt-4 mb-8">
         <TablePagination table={table} />
       </div>
+
+      <ViewAlertModal
+        alert={viewAlertModal}
+        handleClose={() => setViewAlertModal(null)}
+        mutate={mutateAlerts}
+      />
     </>
   );
 }
