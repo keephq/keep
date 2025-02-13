@@ -153,7 +153,6 @@ const sentryConfig = {
 
   // Hides source maps from generated client bundles
   hideSourceMaps: true,
-  deleteSourcemapsAfterUpload: true,
   sourceMaps: {
     deleteSourcemapsAfterUpload: true,
   },
