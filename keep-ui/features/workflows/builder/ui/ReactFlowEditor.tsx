@@ -89,6 +89,7 @@ const ReactFlowEditor = ({
                 !isTrigger &&
                 initialFormData && (
                   <StepEditorV2
+                    key={selectedNode}
                     providers={providers}
                     installedProviders={installedProviders}
                     initialFormData={initialFormData}
