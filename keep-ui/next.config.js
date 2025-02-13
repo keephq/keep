@@ -1,4 +1,5 @@
 const { withSentryConfig } = require("@sentry/nextjs");
+const MonacoWebpackPlugin = require("monaco-editor-webpack-plugin");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -23,6 +24,12 @@ const nextConfig = {
         })
       );
     }
+
+    config.plugins.push(
+      new MonacoWebpackPlugin({
+        languages: ["yaml"],
+      })
+    );
 
     // Ignore warnings about critical dependencies, since they are not critical
     // https://github.com/getsentry/sentry-javascript/issues/12077#issuecomment-2407569917
