@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { AreaChart, Card } from "@tremor/react";
 import MenuButton from "./MenuButton";
+import PresetLinkButton from "./PresetLinkButton";
 import { WidgetData, WidgetType } from "./types";
 import AlertQuality from "@/app/(keep)/alerts/alert-quality-table";
 import { useSearchParams } from "next/navigation";
@@ -94,25 +95,30 @@ const GridItem: React.FC<GridItemProps> = ({
     >
       <div className="flex flex-col h-full">
         <div
-          className={`flex-none flex items-center justify-between p-2 ${
-            item.preset ? "h-1/5" : item.metric ? "h-1/5 mb-3" : "h-[10%]"
-          }`}
+          className={`flex-none flex items-center justify-between p-2 ${item.preset ? "h-1/5" : item.metric ? "h-1/5 mb-3" : "h-[10%]"
+            }`}
         >
           {/* For table view we need intract with table filter and pagination.so we aare dragging the widget here */}
           <span
-            className={`text-lg font-semibold truncate ${
-              item.preset ? "" : "grid-item__widget"
-            }`}
+            className={`text-lg font-semibold truncate ${item.preset ? "" : "grid-item__widget"
+              }`}
           >
             {item.name}
           </span>
-          <MenuButton
-            onEdit={handleEdit}
-            onDelete={() => onDelete(item.i)}
-            onSave={() => {
-              onSave(getUpdateItem());
-            }}
-          />
+          <div className="flex flex-col mt-7">
+            {item.preset &&
+              <PresetLinkButton
+                routePath={`/alerts/${item.preset?.name}`}>
+              </PresetLinkButton>
+            }
+            <MenuButton
+              onEdit={handleEdit}
+              onDelete={() => onDelete(item.i)}
+              onSave={() => {
+                onSave(getUpdateItem());
+              }}
+            />
+          </div>
         </div>
         {item.preset && (
           //We can remove drag and drop style and make it same as table view. if we want to maintain consistency.

@@ -25,7 +25,7 @@ const MenuButton: React.FC<MenuButtonProps> = ({
       <Menu as="div" className="relative inline-block text-left z-10">
         <div>
           <Menu.Button
-            className="inline-flex w-full justify-center rounded-md text-sm mt-2"
+            className="inline-flex w-full justify-center rounded-md text-sm"
             onClick={stopPropagation}
           >
             <Icon
