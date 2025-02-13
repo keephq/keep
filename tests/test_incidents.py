@@ -1535,7 +1535,7 @@ def test_correlation_with_mapping(db_session, create_alert):
         name="Service Mapping",
         description="Map service to additional attributes",
         type="csv",
-        matchers=["service"],
+        matchers=[["service"]],
         rows=mapping_data,
         file_name="service_mapping.csv",
         priority=1,

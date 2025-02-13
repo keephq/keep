@@ -1,4 +1,4 @@
-name: Tests
+name: Integration Tests
 on:
   push:
     paths:
@@ -7,12 +7,14 @@ on:
     paths:
       - "keep/**"
   workflow_dispatch:
+
 permissions:
   actions: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref }}
   cancel-in-progress: true
-# MySQL server and Elasticsearch for testing
+
 env:
   PYTHON_VERSION: 3.11
   STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
@@ -21,7 +23,7 @@ env:
   ELASTIC_PASSWORD: keeptests
 
 jobs:
-  tests:
+  integration-tests:
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -65,10 +67,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - uses: chartboost/ruff-action@v1
-        with:
-          src: "./keep"
-
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
@@ -90,16 +88,8 @@ jobs:
       - name: Install dependencies using poetry
         run: poetry install --no-interaction --no-root --with dev
 
-      - name: Run unit tests and report coverage
-        env:
-          # LOG_LEVEL: DEBUG
-          SQLALCHEMY_WARN_20: 1
-        run: |
-          poetry run coverage run --omit="*/test*" --branch -m pytest --timeout 20 -n auto --non-integration --ignore=tests/e2e_tests/
-
       - name: Run integration tests and report coverage
         run: |
-          # Add a step to wait for MySQL to be fully up and running
           until nc -z 127.0.0.1 3306; do
             echo "waiting for MySQL..."
             sleep 1
@@ -107,14 +97,12 @@ jobs:
           echo "MySQL is up and running!"
           poetry run coverage run --omit="*/test*" --branch -m pytest --integration --ignore=tests/e2e_tests/
 
-      - name: Convert coverage results to JSON (for CodeCov support)
-        # env:
-        #   LOG_LEVEL: DEBUG
+      - name: Convert coverage results to JSON
         run: poetry run coverage json --omit="keep/providers/*"
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
         with:
-          fail_ci_if_error: false # don't fail if we didn't manage to upload the coverage report
+          fail_ci_if_error: false
           files: coverage.json
           verbose: true

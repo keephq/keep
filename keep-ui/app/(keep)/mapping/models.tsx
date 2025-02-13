@@ -13,7 +13,7 @@ export interface MappingRule {
   override: boolean;
   type: "csv" | "topology";
   condition?: string;
-  matchers: string[];
+  matchers: string[][];
   rows: { [key: string]: any }[];
   attributes?: string[];
 }
