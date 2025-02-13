@@ -142,10 +142,10 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
   const showTriggers = selectedEdge?.startsWith("etrigger_start");
 
   useEffect(() => {
-    setOpen(
-      (!!selectedNode && selectedNode.includes("empty")) || !!selectedEdge
-    );
-    setIsVisible(!isDraggable);
+    const isOpen =
+      (!!selectedNode && selectedNode.includes("empty")) || !!selectedEdge;
+    setOpen(isOpen);
+    setIsVisible(isDraggable || isOpen);
   }, [selectedNode, selectedEdge, isDraggable]);
 
   const triggerNodeMap = nodes
@@ -190,16 +190,16 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
 
   return (
     <div
-      className={`absolute top-50 left-2 rounded border-2 broder-gray-300 bg-white transition-transform duration-300 z-50 ${
-        isVisible ? "h-[88%] border-b-0" : "shadow-lg"
-      }`}
-      style={{ width: "280px" }} // Set a fixed width
+      className={clsx(
+        "w-60 2xl:w-64 border-r border-gray-300 bg-white transition-transform z-50 shrink-0",
+        isVisible ? "h-full" : "shadow-lg"
+      )}
     >
       <div className="relative h-full flex flex-col">
         {/* Sticky header */}
         <div className="sticky top-0 left-0 z-10">
           <h1 className="p-3 font-bold">Toolbox</h1>
-          <div className="flex items-center justify-between p-2 pt-0 border-b-2 bg-white">
+          <div className="flex items-center justify-between p-2 pt-0 bg-white">
             <input
               type="text"
               placeholder="Search..."
@@ -207,7 +207,7 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <button
+            {/* <button
               className="p-2 text-gray-500"
               onClick={() => {
                 setIsVisible(!isVisible);
@@ -219,13 +219,13 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
               ) : (
                 <IoIosArrowDown size={20} />
               )}
-            </button>
+            </button> */}
           </div>
         </div>
 
         {/* Scrollable list */}
         {(isVisible || checkForSearchResults) && (
-          <div className="flex-1 overflow-y-auto pt-6 space-y-4 overflow-hidden">
+          <div className="flex-1 overflow-y-auto pt-2 space-y-4 overflow-hidden">
             {filteredGroups.length > 0 &&
               filteredGroups.map((group: Record<string, any>) => (
                 <GroupedMenu
