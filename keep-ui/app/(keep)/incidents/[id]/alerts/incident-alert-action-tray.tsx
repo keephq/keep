@@ -17,7 +17,7 @@ export function IncidentAlertActionTray({
 }: Props) {
   return (
     <div className="flex items-center h-full border-l border-gray-200 bg-white pl-2">
-      <div className="flex items-center gap-1 transition-all duration-200 transform translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100">
+      <div className="flex items-center gap-1 transition-all duration-200 transform translate-x-2 opacity-0 group-hover/row:translate-x-0 group-hover/row:opacity-100">
         <button
           onClick={(e) => {
             e.stopPropagation();
