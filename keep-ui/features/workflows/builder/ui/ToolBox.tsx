@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Disclosure } from "@headlessui/react";
 import { Subtitle } from "@tremor/react";
-import { IoChevronUp, IoClose } from "react-icons/io5";
-import { IoIosArrowDown } from "react-icons/io";
+import { IoChevronUp } from "react-icons/io5";
 import { useWorkflowStore } from "@/entities/workflows";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import clsx from "clsx";

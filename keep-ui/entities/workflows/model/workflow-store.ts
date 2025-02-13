@@ -162,6 +162,10 @@ function addNodeBetween(
   get().updateDefinition();
 }
 
+// TODO: break down the state into smaller pieces
+// - core worfklow state (definition, nodes, edges, selectedNode, etc)
+// - editor state (openGlobalEditor, stepEditorOpenForNode)
+// - builder state (toolbox, selectedEdge, selectedNode, isLayouted, etc)
 const defaultState: FlowStateValues = {
   workflowId: null,
   nodes: [],
