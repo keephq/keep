@@ -55,7 +55,7 @@ const ResizableColumns = ({
       </div>
 
       <div
-        className="w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize transition-colors"
+        className="w-1 bg-gray-200 hover:bg-orange-500 cursor-col-resize transition-colors mt-2.5"
         onMouseDown={startDragging}
       />
 
