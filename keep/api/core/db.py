@@ -61,6 +61,7 @@ from keep.api.models.db.action import Action
 from keep.api.models.db.ai_external import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.enrichment_event import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.extraction import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.maintenance_window import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-import
@@ -203,16 +204,14 @@ def create_workflow_execution(
             raise
 
 
-def get_mapping_rule_by_id(tenant_id: str, rule_id: str) -> MappingRule | None:
-    rule = None
-    with Session(engine) as session:
-        rule: MappingRule | None = (
-            session.query(MappingRule)
-            .filter(MappingRule.tenant_id == tenant_id)
-            .filter(MappingRule.id == rule_id)
-            .first()
+def get_mapping_rule_by_id(
+    tenant_id: str, rule_id: str, session: Optional[Session] = None
+) -> MappingRule | None:
+    with existed_or_new_session(session) as session:
+        query = select(MappingRule).where(
+            MappingRule.tenant_id == tenant_id, MappingRule.id == rule_id
         )
-    return rule
+        return session.exec(query).first()
 
 
 def get_last_completed_execution(
@@ -1511,15 +1510,17 @@ def get_alert_by_fingerprint_and_event_id(
     return alert
 
 
-def get_alert_by_event_id(tenant_id: str, event_id: str) -> Alert:
-    with Session(engine) as session:
+def get_alert_by_event_id(
+    tenant_id: str, event_id: str, session: Optional[Session] = None
+) -> Alert:
+    with existed_or_new_session(session) as session:
         query = (
-            session.query(Alert)
+            select(Alert)
             .filter(Alert.tenant_id == tenant_id)
             .filter(Alert.id == uuid.UUID(event_id))
         )
         query = query.options(subqueryload(Alert.alert_enrichment))
-        alert = query.first()
+        alert = session.exec(query).first()
     return alert
 
 
