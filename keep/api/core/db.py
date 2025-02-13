@@ -1714,6 +1714,7 @@ def create_rule(
     require_approve=False,
     resolve_on=ResolveOn.NEVER.value,
     create_on=CreateIncidentOn.ANY.value,
+    incident_name_template=None,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -1731,6 +1732,7 @@ def create_rule(
             require_approve=require_approve,
             resolve_on=resolve_on,
             create_on=create_on,
+            incident_name_template=incident_name_template,
         )
         session.add(rule)
         session.commit()
@@ -1862,14 +1864,18 @@ def get_incident_for_grouping_rule(
 
 
 def create_incident_for_grouping_rule(
-    tenant_id, rule, rule_fingerprint, session: Optional[Session] = None
+    tenant_id,
+    rule,
+    rule_fingerprint,
+    incident_name: str = None,
+    session: Optional[Session] = None,
 ):
 
     with existed_or_new_session(session) as session:
         # Create and add a new incident if it doesn't exist
         incident = Incident(
             tenant_id=tenant_id,
-            user_generated_name=f"{rule.name}",
+            user_generated_name=incident_name or f"{rule.name}",
             rule_id=rule.id,
             rule_fingerprint=rule_fingerprint,
             is_predicted=False,
