@@ -5,11 +5,6 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { useWorkflowStore } from "@/entities/workflows";
 
 // Mock the hooks and components
-jest.mock("../ToolBox", () => ({
-  __esModule: true,
-  default: () => <div data-testid="toolbox">Toolbox</div>,
-}));
-
 jest.mock("../ReactFlowEditor", () => ({
   __esModule: true,
   default: () => <div data-testid="flow-editor">Flow Editor</div>,
@@ -52,7 +47,6 @@ describe("ReactFlowBuilder", () => {
     );
 
     // Check if main components are rendered using test IDs
-    expect(getByTestId("toolbox")).toBeInTheDocument();
     expect(getByTestId("flow-editor")).toBeInTheDocument();
   });
 });
