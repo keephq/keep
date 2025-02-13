@@ -12,6 +12,7 @@ import { toast } from "react-toastify";
 import { FlowNode } from "@/entities/workflows/model/types";
 import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import clsx from "clsx";
 
 function IconUrlProvider(data: FlowNode["data"]) {
   const { componentType, type } = data || {};
@@ -80,7 +81,7 @@ function WorkflowNode({ id, data }: FlowNode) {
   if (data.id === "trigger_start" || data.id === "trigger_end") {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <span className="rounded-full bg-orange-50 border border-orange-500 px-4 py-2 flex items-center justify-center relative">
+        <span className="rounded-full bg-gray-50 border border-gray-500 px-4 py-2 flex items-center justify-center relative">
           {data.name}
           {isError && (
             <BiSolidError className="size-10  text-red-500 absolute right-[-20px] top-[-20px]" />
@@ -96,14 +97,18 @@ function WorkflowNode({ id, data }: FlowNode) {
     <>
       {!specialNodeCheck && (
         <div
-          className={`flex shadow-md rounded-md bg-white border-2 w-full h-full ${
-            id === selectedNode ? "border-orange-500" : "border-stone-400"
-          }`}
+          className={clsx(
+            "flex shadow-md rounded-md border-2 w-full h-full cursor-pointer transition-colors",
+            id === selectedNode
+              ? "border-orange-500 bg-orange-50"
+              : "border-stone-400 bg-white",
+            id !== selectedNode && "hover:bg-gray-50",
+            id !== selectedNode && isError && "border-red-500"
+          )}
           onClick={handleNodeClick}
           style={{
             opacity: data.isLayouted ? 1 : 0,
             borderStyle: isEmptyNode ? "dashed" : "",
-            borderColor: isError ? "red" : "",
           }}
         >
           {isEmptyNode && (

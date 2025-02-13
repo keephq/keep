@@ -2,9 +2,10 @@ import React from "react";
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath } from "@xyflow/react";
 import type { EdgeProps } from "@xyflow/react";
 import { useWorkflowStore } from "@/entities/workflows";
-import { PlusIcon } from "@radix-ui/react-icons";
 import { Button } from "@tremor/react";
 import "@xyflow/react/dist/style.css";
+import { PlusIcon } from "@heroicons/react/24/outline";
+import clsx from "clsx";
 
 interface WorkflowEdgeProps extends EdgeProps {
   label?: string;
@@ -127,12 +128,13 @@ const CustomEdge: React.FC<WorkflowEdgeProps> = ({
             }
           >
             <PlusIcon
-              className={`size-7 hover:text-black rounded text-sm bg-white border text-gray-700 ${
+              className={clsx(
+                "size-7 rounded text-sm border text-black",
                 selectedEdge === id
-                  ? "border-2 border-orange-500"
-                  : "border-gray-700"
-              }`}
-            />{" "}
+                  ? "border-orange-500 bg-orange-50"
+                  : "border-gray-700 hover:bg-gray-50 bg-white"
+              )}
+            />
           </Button>
         )}
       </EdgeLabelRenderer>

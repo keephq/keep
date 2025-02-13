@@ -101,7 +101,7 @@ const GroupedMenu = ({
                   steps.map((step: any) => (
                     <li
                       key={step.type}
-                      className="dndnode p-2 my-1 border border-gray-300 rounded cursor-pointer truncate flex justify-start gap-2 items-center"
+                      className="dndnode p-2 my-1 border border-gray-300 rounded cursor-pointer truncate flex justify-start gap-2 items-center hover:bg-gray-50 transition-colors"
                       onDragStart={(event) =>
                         handleDragStart(event, { ...step })
                       }
@@ -139,6 +139,8 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
   const { toolboxConfiguration, selectedNode, selectedEdge, nodes } =
     useWorkflowStore();
 
+  const showTriggers = selectedEdge?.startsWith("etrigger_start");
+
   useEffect(() => {
     setOpen(
       (!!selectedNode && selectedNode.includes("empty")) || !!selectedEdge
@@ -159,17 +161,24 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
     );
 
   const filteredGroups = useMemo(() => {
+    if (!toolboxConfiguration) {
+      return [];
+    }
     return (
-      toolboxConfiguration?.groups?.map((group: any) => ({
-        ...group,
-        steps: group?.steps?.filter(
-          (step: any) =>
-            step?.name?.toLowerCase().includes(searchTerm?.toLowerCase()) &&
-            !triggerNodeMap[step?.id]
-        ),
-      })) || []
+      toolboxConfiguration.groups
+        .filter((group: any) =>
+          showTriggers ? group?.name === "Triggers" : group?.name !== "Triggers"
+        )
+        .map((group: any) => ({
+          ...group,
+          steps: group?.steps?.filter(
+            (step: any) =>
+              step?.name?.toLowerCase().includes(searchTerm?.toLowerCase()) &&
+              !triggerNodeMap[step?.id]
+          ),
+        })) || []
     );
-  }, [toolboxConfiguration, searchTerm, nodes?.length]);
+  }, [toolboxConfiguration, showTriggers, searchTerm, triggerNodeMap]);
 
   const checkForSearchResults =
     searchTerm &&

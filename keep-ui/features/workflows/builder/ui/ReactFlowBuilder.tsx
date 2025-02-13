@@ -5,6 +5,7 @@ import {
   Controls,
   EdgeTypes as EdgeTypesType,
   useReactFlow,
+  FitViewOptions,
 } from "@xyflow/react";
 import WorkflowNode from "./WorkflowNode";
 import CustomEdge from "./WorkflowEdge";
@@ -18,6 +19,11 @@ import { KeepLoader } from "@/shared/ui";
 const nodeTypes = { custom: WorkflowNode as any };
 const edgeTypes: EdgeTypesType = {
   "custom-edge": CustomEdge as React.ComponentType<any>,
+};
+
+const defaultFitViewOptions: FitViewOptions = {
+  padding: 0.1,
+  minZoom: 0.3,
 };
 
 const ReactFlowBuilder = ({
@@ -58,6 +64,8 @@ const ReactFlowBuilder = ({
           <ReactFlow
             nodes={nodes}
             edges={edges}
+            fitViewOptions={defaultFitViewOptions}
+            maxZoom={0.8}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}

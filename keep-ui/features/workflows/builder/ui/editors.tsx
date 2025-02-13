@@ -1,7 +1,6 @@
 import {
   Title,
   Text,
-  TextInput,
   Select,
   SelectItem,
   Subtitle,
@@ -21,12 +20,49 @@ import React, { useCallback } from "react";
 import { useWorkflowStore } from "@/entities/workflows";
 import { useState } from "react";
 import { V2Properties } from "@/entities/workflows/model/types";
-import { DynamicImageProviderIcon } from "@/components/ui";
+import { DynamicImageProviderIcon, Textarea, TextInput } from "@/components/ui";
 import debounce from "lodash.debounce";
 import { WorkflowStatus } from "./workflow-status";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col m-2.5">{children}</div>;
+}
+
+function EditorField({
+  name,
+  value,
+  onChange,
+}: {
+  name: string;
+  value: string;
+  onChange: (e: any) => void;
+}) {
+  if (name === "code") {
+    return (
+      <div>
+        <Text className="capitalize mb-1.5">{name}</Text>
+        <Textarea
+          id={`${name}`}
+          placeholder={name}
+          onChange={onChange}
+          className="mb-2.5 min-h-[100px] text-xs font-mono"
+          value={value || ""}
+        />
+      </div>
+    );
+  }
+  return (
+    <div>
+      <Text className="capitalize mb-1.5">{name}</Text>
+      <TextInput
+        id={`${name}`}
+        placeholder={name}
+        onChange={onChange}
+        className="mb-2.5"
+        value={value || ""}
+      />
+    </div>
+  );
 }
 
 export function GlobalEditorV2() {
@@ -229,19 +265,19 @@ function KeepStepEditor({
           .map((key, index) => {
             let currentPropertyValue = ((properties.with as any) ?? {})[key];
             if (typeof currentPropertyValue === "object") {
-              currentPropertyValue = JSON.stringify(currentPropertyValue);
+              currentPropertyValue = JSON.stringify(
+                currentPropertyValue,
+                null,
+                2
+              );
             }
             return (
-              <div key={index}>
-                <Text>{key}</Text>
-                <TextInput
-                  id={`${key}`}
-                  placeholder={key}
-                  onChange={propertyChanged}
-                  className="mb-2.5"
-                  value={currentPropertyValue || ""}
-                />
-              </div>
+              <EditorField
+                key={key}
+                name={key}
+                value={currentPropertyValue}
+                onChange={propertyChanged}
+              />
             );
           })}
       </section>
