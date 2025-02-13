@@ -78,8 +78,18 @@ def __internal_prepartion(
         api_key_name (str | None): API key name to set on the alerts (that were used to push them)
     """
     for alert in alerts:
-        if not alert.source:
-            alert.source = ["keep"]
+        try:
+            if not alert.source:
+                alert.source = ["keep"]
+        # weird bug on Mailgun where source is int
+        except Exception:
+            logger.exception(
+                "failed to parse source",
+                extra={
+                    "alert": alert.dict(),
+                },
+            )
+            raise
 
         if fingerprint is not None:
             alert.fingerprint = fingerprint
