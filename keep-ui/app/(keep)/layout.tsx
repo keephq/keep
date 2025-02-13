@@ -9,7 +9,7 @@ import { getConfig } from "@/shared/lib/server/getConfig";
 import { ConfigProvider } from "../config-provider";
 import { PHProvider } from "../posthog-provider";
 import dynamic from "next/dynamic";
-import ReadOnlyBanner from "../read-only-banner";
+import ReadOnlyBanner from "@/components/banners/read-only-banner";
 import { auth } from "@/auth";
 import { ThemeScript, WatchUpdateTheme } from "@/shared/ui";
 import "@/app/globals.css";
