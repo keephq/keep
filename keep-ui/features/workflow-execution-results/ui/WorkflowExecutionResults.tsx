@@ -12,11 +12,20 @@ import {
   isWorkflowExecution,
 } from "@/shared/api/workflow-executions";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
 import { setFavicon } from "@/shared/ui/utils/favicon";
 import ResizableColumns from "@/components/ui/ResizableColumns";
+import Skeleton from "react-loading-skeleton";
+import dynamic from "next/dynamic";
+
+const LazyMonacoYAMLEditor = dynamic(
+  () => import("@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor"),
+  {
+    loading: () => <Skeleton className="w-full h-full" />,
+    ssr: false,
+  }
+);
 
 const convertWorkflowStatusToFaviconStatus = (
   status: WorkflowExecutionDetail["status"]
@@ -187,7 +196,7 @@ export function WorkflowExecutionResultsInternal({
       name: "Workflow Definition",
       content: (
         <div className="h-[calc(100vh-300px)]">
-          <MonacoYAMLEditor
+          <LazyMonacoYAMLEditor
             workflowRaw={workflowRaw ?? ""}
             workflowId={workflowId}
             executionLogs={logs}

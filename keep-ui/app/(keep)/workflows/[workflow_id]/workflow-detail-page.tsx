@@ -21,11 +21,19 @@ import WorkflowOverview from "./workflow-overview";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "utils/hooks/useConfig";
 import { AiOutlineSwap } from "react-icons/ai";
-import { ErrorComponent, TabNavigationLink, YAMLCodeblock } from "@/shared/ui";
-import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
+import { ErrorComponent, TabNavigationLink } from "@/shared/ui";
 import Skeleton from "react-loading-skeleton";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useWorkflowDetail } from "@/utils/hooks/useWorkflowDetail";
+import dynamic from "next/dynamic";
+
+const LazyMonacoYAMLEditor = dynamic(
+  () => import("@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor"),
+  {
+    loading: () => <Skeleton className="w-full h-full" />,
+    ssr: false,
+  }
+);
 
 export default function WorkflowDetailPage({
   params,
@@ -56,18 +64,6 @@ export default function WorkflowDetailPage({
     params.workflow_id,
     initialData
   );
-
-  // Set initial tab based on URL query param
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab === "yaml") {
-      setTabIndex(2);
-    } else if (tab === "builder") {
-      setTabIndex(1);
-    } else {
-      setTabIndex(0);
-    }
-  }, [searchParams]);
 
   const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
 
@@ -134,7 +130,7 @@ export default function WorkflowDetailPage({
               <Skeleton className="w-full h-full" />
             ) : (
               <Card className="h-[calc(100vh-200px)]">
-                <MonacoYAMLEditor
+                <LazyMonacoYAMLEditor
                   workflowRaw={workflow.workflow_raw!}
                   filename={workflow.id ?? "workflow"}
                   workflowId={workflow.id}
