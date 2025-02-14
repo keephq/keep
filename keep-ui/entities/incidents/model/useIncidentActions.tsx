@@ -166,7 +166,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
           source_incident_ids: sourceIncidents.map((incident) => incident.id),
           destination_incident_id: destinationIncident.id,
         });
-        toast.success("Incidents merged successfully!");
+        toast.info(result.message);
         mutateIncidentsList();
         return result;
       } catch (error) {
