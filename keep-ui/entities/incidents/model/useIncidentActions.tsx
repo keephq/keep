@@ -1,9 +1,9 @@
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui";
 import { useCallback } from "react";
 import { toast } from "react-toastify";
 import { useSWRConfig } from "swr";
-import {IncidentDto, Severity, Status} from "./models";
-import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui";
+import { IncidentDto, Severity, Status } from "./models";
 
 type UseIncidentActionsValue = {
   addIncident: (incident: IncidentCreateDto) => Promise<IncidentDto>;
@@ -152,21 +152,27 @@ export function useIncidentActions(): UseIncidentActionsValue {
   );
 
   const mergeIncidents = useCallback(
-    async (
-      sourceIncidents: IncidentDto[],
-      destinationIncident: IncidentDto
-    ) => {
+    async (sourceIncidents: IncidentDto[], destinationIncident: IncidentDto) => {
       if (!sourceIncidents.length || !destinationIncident) {
         showErrorToast(new Error("Please select incidents to merge."));
         return;
       }
-
+  
       try {
         const result = await api.post("/incidents/merge", {
           source_incident_ids: sourceIncidents.map((incident) => incident.id),
           destination_incident_id: destinationIncident.id,
         });
-        toast.success("Incidents merged successfully!");
+  
+        // Validate response before showing success toast
+        if (result.merged_incident_ids && result.merged_incident_ids.length > 0) {
+          toast.success("Incidents merged successfully!");
+        } else if (result.skipped_incident_ids && result.skipped_incident_ids.length > 0) {
+          toast.warn(`Some incidents were skipped: ${result.skipped_incident_ids.join(", ")}`);
+        } else {
+          toast.error("No incidents were merged. Please check the selection.");
+        }
+  
         mutateIncidentsList();
         return result;
       } catch (error) {
@@ -175,6 +181,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
     },
     [api, mutateIncidentsList]
   );
+  
 
   const deleteIncident = useCallback(
     async (incidentId: string, skipConfirmation = false) => {
