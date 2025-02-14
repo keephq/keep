@@ -1,0 +1,34 @@
+workflow:
+  id: c84cc193-75d0-4eb3-92e7-1218c4909f21
+  name: Example for Mustache
+  description: Example that shows how to extract different paths with Mustache
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps:
+    - name: step-with-dict
+      provider:
+        config: "{{ providers.default-python }}"
+        type: python
+        with:
+          code: "{'hello': 'world', 'nested': {'bye': 'bye'}, 'nested_list': ['a','b','c', {'in': 'list'}]}"
+    - name: step-with-list
+      provider:
+        config: "{{ providers.default-python }}"
+        type: python
+        with:
+          code: "[{'hello': 'world', 'nested': {'bye': 'bye'}, 'nested_list': ['a','b','c', {'in': 'list'}]}]"
+    - name: console-step-with-dict
+      provider:
+        type: console
+        with:
+          message: "{{ steps.step-with-dict.results.hello }}"
+    - name: console-step-with-list
+      provider:
+        type: console
+        with:
+          message: "{{ steps.step-with-list.results.0.nested.bye }}"
+  actions: []
