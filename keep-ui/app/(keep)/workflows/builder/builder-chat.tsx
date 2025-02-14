@@ -13,11 +13,7 @@ import Image from "next/image";
 import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
 import { generateStepDefinition } from "./_actions/getStepJson";
-import {
-  ADD_TRIGGER_AFTER_EDGE_ID,
-  ADD_STEPS_AFTER_EDGE_ID,
-  GENERAL_INSTRUCTIONS,
-} from "./_constants";
+import { GENERAL_INSTRUCTIONS } from "./_constants";
 import { CheckCircleIcon } from "@heroicons/react/20/solid";
 import {
   CursorArrowRaysIcon,
@@ -30,8 +26,6 @@ import { DebugJSON } from "@/shared/ui";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import clsx from "clsx";
 import { WF_DEBUG_INFO } from "./debug-info";
-
-const debug = true;
 
 function IconUrlProvider(data: V2Step) {
   const { type } = data || {};
@@ -201,7 +195,6 @@ type AddTriggerUIProps =
     };
 
 const AddTriggerUI = ({ status, args, respond, result }: AddTriggerUIProps) => {
-  console.log("AddTriggerUI", { status, args, respond, result });
   const [isAddingTrigger, setIsAddingTrigger] = useState(false);
   const { nodes, addNodeBetween, getNextEdge } = useStore();
   const { triggerType, triggerProperties } = args;
@@ -299,8 +292,10 @@ const AddTriggerUI = ({ status, args, respond, result }: AddTriggerUIProps) => {
   if (status === "complete") {
     return (
       <div className="flex flex-col gap-1">
-        {debug && <DebugArgs args={{ args, result, status }} nodes={nodes} />}
-        {debug && (
+        {WF_DEBUG_INFO && (
+          <DebugArgs args={{ args, result, status }} nodes={nodes} />
+        )}
+        {WF_DEBUG_INFO && (
           <DebugJSON name="triggerDefinition" json={triggerDefinition} />
         )}
         <StepPreview step={triggerDefinition} />
@@ -310,8 +305,12 @@ const AddTriggerUI = ({ status, args, respond, result }: AddTriggerUIProps) => {
   }
   return (
     <div>
-      {debug && <DebugArgs args={{ args, result, status }} nodes={nodes} />}
-      {debug && <DebugJSON name="triggerDefinition" json={triggerDefinition} />}
+      {WF_DEBUG_INFO && (
+        <DebugArgs args={{ args, result, status }} nodes={nodes} />
+      )}
+      {WF_DEBUG_INFO && (
+        <DebugJSON name="triggerDefinition" json={triggerDefinition} />
+      )}
       <p>Do you want to add this trigger to the workflow?</p>
       <div className="flex flex-col gap-2">
         <StepPreview step={triggerDefinition} />
@@ -387,7 +386,14 @@ export function BuilderChat({
       convert: (description, value) => {
         return value
           ?.map(
-            (s) =>
+            (s: {
+              name: string;
+              type: string;
+              properties?: {
+                stepParams?: string[];
+                actionParams?: string[];
+              };
+            }) =>
               `${s.name} - ${s.type}, stepParams: ${s.properties?.stepParams?.join(", ") ?? "none"}, actionParams: ${s.properties?.actionParams?.join(", ") ?? "none"}`
           )
           ?.join(", ");
@@ -666,7 +672,7 @@ export function BuilderChat({
         if (status === "complete") {
           return (
             <div className="flex flex-col gap-1">
-              {debug && (
+              {WF_DEBUG_INFO && (
                 <DebugArgs
                   args={{ isStart, addAfterNodeIdOrName }}
                   nodes={nodes}
@@ -692,13 +698,13 @@ export function BuilderChat({
               <div>
                 Do you want to add this step after <b>{addAfterNodeIdOrName}</b>
                 <pre>{step.name}</pre>
-                {debug && (
+                {WF_DEBUG_INFO && (
                   <DebugArgs
                     args={{ isStart, addAfterNodeIdOrName }}
                     nodes={nodes}
                   />
                 )}
-                {debug && (
+                {WF_DEBUG_INFO && (
                   <DebugJSON
                     name="stepDefinitionJSON"
                     json={JSON.parse(stepDefinitionJSON ?? "")}
@@ -714,7 +720,7 @@ export function BuilderChat({
                 onClick={async () => {
                   try {
                     addNodeAfterNode(
-                      addAfterNodeIdOrName,
+                      addAfterNodeIdOrName ?? "",
                       step,
                       !!isStart,
                       respond

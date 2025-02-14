@@ -446,7 +446,7 @@ function Builder({
             rightChild={
               <BuilderChat
                 definition={definition}
-                installedProviders={installedProviders}
+                installedProviders={installedProviders ?? []}
               />
             }
             initialLeftWidth={60}

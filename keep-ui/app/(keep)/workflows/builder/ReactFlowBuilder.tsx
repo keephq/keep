@@ -16,6 +16,7 @@ import "@xyflow/react/dist/style.css";
 import {
   Definition,
   ReactFlowDefinition,
+  ToolboxConfiguration,
   V2Step,
 } from "@/app/(keep)/workflows/builder/types";
 
@@ -34,7 +35,7 @@ const ReactFlowBuilder = ({
 }: {
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
-  toolboxConfiguration: Record<string, any>;
+  toolboxConfiguration: ToolboxConfiguration;
   definition: any;
   validatorConfiguration: {
     step: (

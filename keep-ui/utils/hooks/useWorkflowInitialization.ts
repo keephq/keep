@@ -6,6 +6,7 @@ import { processWorkflowV2, getTriggerStep } from "utils/reactFlow";
 import {
   FlowNode,
   ReactFlowDefinition,
+  ToolboxConfiguration,
   V2Step,
 } from "@/app/(keep)/workflows/builder/types";
 
@@ -83,7 +84,7 @@ const getLayoutedElements = (
 
 const useWorkflowInitialization = (
   definition: ReactFlowDefinition,
-  toolboxConfiguration: Record<string, any>
+  toolboxConfiguration: ToolboxConfiguration
 ) => {
   const {
     changes,

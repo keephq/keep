@@ -8,7 +8,7 @@ export function EditWorkflowMetadataForm({
   onCancel,
   onSubmit,
 }: {
-  workflow: Workflow;
+  workflow: Pick<Workflow, "id" | "name" | "description">;
   onCancel: () => void;
   onSubmit: (
     workflowId: string,

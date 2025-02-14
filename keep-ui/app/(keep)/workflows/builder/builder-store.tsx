@@ -104,7 +104,7 @@ export type FlowState = {
   updateV2Properties: (properties: V2Properties) => void;
   setStepEditorOpenForNode: (nodeId: string | null) => void;
   updateEdge: (id: string, key: string, value: any) => void;
-  setToolBoxConfig: (config: Record<string, any>) => void;
+  setToolBoxConfig: (config: ToolboxConfiguration) => void;
   addNodeBetween: (
     nodeOrEdge: string | null,
     step: V2Step,
