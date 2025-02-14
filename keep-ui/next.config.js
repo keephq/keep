@@ -29,6 +29,10 @@ const nextConfig = {
     config.ignoreWarnings = [
       ...(config.ignoreWarnings || []),
       {
+        module: /require-in-the-middle/,
+        message: /Critical dependency/,
+      },
+      {
         module: /@opentelemetry\/instrumentation/,
         message: /Critical dependency/,
       },
@@ -39,7 +43,9 @@ const nextConfig = {
     ];
     return config;
   },
-  transpilePackages: ["next-auth"],
+  // @auth/core is ESM-only and jest fails to transpile it.
+  // https://github.com/nextauthjs/next-auth/issues/6822
+  transpilePackages: ["next-auth", "@auth/core"],
   images: {
     remotePatterns: [
       {

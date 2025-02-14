@@ -4,7 +4,7 @@ import {
   NodeData,
   V2Properties,
   V2Step,
-} from "@/app/(keep)/workflows/builder/types";
+} from "@/entities/workflows/model/types";
 
 function getKeyBasedSquence(step: V2Step, id: string, type: string) {
   return `${step.type}__${id}__empty_${type}`;

@@ -1,6 +1,4 @@
-import { WorkflowBuilderPageClient } from "./page.client";
-import { Suspense } from "react";
-import Loading from "@/app/(keep)/loading";
+import { WorkflowBuilderWidget } from "@/widgets/workflow-builder";
 import { Metadata } from "next";
 
 type PageProps = {
@@ -13,12 +11,11 @@ export default function WorkflowBuilderPage({
   searchParams,
 }: PageProps) {
   return (
-    <Suspense fallback={<Loading />}>
-      <WorkflowBuilderPageClient
-        workflowRaw={params.workflow}
-        workflowId={params.workflowId}
-      />
-    </Suspense>
+    <WorkflowBuilderWidget
+      workflowRaw={params.workflow}
+      workflowId={params.workflowId}
+      standalone={true}
+    />
   );
 }
 

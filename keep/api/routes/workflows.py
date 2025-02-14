@@ -320,6 +320,7 @@ async def run_workflow_from_definition(
         "Workflow ran successfully",
         extra={"workflow_execution": workflow_execution},
     )
+    # TODO: return the workflow execution DTO, or at least logs, so results can be shown in the UI
     return workflow_execution
 
 
