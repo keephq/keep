@@ -1,0 +1,22 @@
+To address the formatting trouble in Algora's incident summaries, follow those steps:
+
+Identify the Problem: Currently, the incident summaries are displayed as plain textual content, which diminishes the clarity of vital records. This is specially complex whilst AI-generated summaries are worried.
+
+Propose a Solution: The preferred answer is to ensure that the text in the Summary subject keeps its formatting at some stage in the introduction and updating of incidents. This consists of permitting formatted textual content from AI responses to be displayed successfully.
+
+Implementation Steps:
+
+Review the Code: Examine the section of the code responsible for rendering the Summary area. Look for any features that strip formatting from the text.
+Modify Rendering Logic: Update the rendering logic to aid HTML or Markdown formatting. For example, if the use of React, you would possibly use a library like react-markdown to render formatted textual content:
+
+language-javascript
+
+import ReactMarkdown from 'react-markdown';
+
+const SummaryDisplay = ({ summary }) => {
+    return <ReactMarkdown>{summary}</ReactMarkdown>;
+};
+
+Test the Changes: After imposing the modifications, conduct thorough testing to make sure that both manually entered and AI-generated summaries display efficiently.
+Documentation: Update the documentation to reflect the adjustments made and provide steerage on how to format text inside the Summary discipline.
+
