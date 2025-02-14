@@ -32,4 +32,4 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Validate Workflows
-        run: poetry run python keep/parser/parser.py -f .github/workflows
+        run: poetry run python keep/validation/fields.py -f .github/workflows
