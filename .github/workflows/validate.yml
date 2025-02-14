@@ -1,0 +1,35 @@
+name: Validate Workflows
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  
+env:
+  PYTHON_VERSION: 3.11
+  SQLALCHEMY_WARN_20: 1
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Validate Workflows
+        run: poetry run python keep/parser/parser.py -f .github/workflows
