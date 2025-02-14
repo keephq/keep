@@ -41,8 +41,38 @@ const nextConfig = {
         message: /Critical dependency/,
       },
     ];
+
+    // Development optimizations to reduce resource consumption
+    if (dev) {
+      // Essential file watching settings
+      config.watchOptions = {
+        poll: 3000,
+        aggregateTimeout: 1000,
+        ignored: '**/node_modules/**'
+      };
+
+      // Minimal optimization settings
+      config.optimization = {
+        removeAvailableModules: false,
+        removeEmptyChunks: false,
+        splitChunks: false,
+        runtimeChunk: false
+      };
+
+      // Simple cache configuration
+      config.cache = {
+        type: 'filesystem',
+        compression: false
+      };
+    }
+
     return config;
   },
+  // Disable non-essential features
+  swcMinify: true,
+  productionBrowserSourceMaps: false,
+  optimizeFonts: false,
+  poweredByHeader: false,
   // @auth/core is ESM-only and jest fails to transpile it.
   // https://github.com/nextauthjs/next-auth/issues/6822
   transpilePackages: ["next-auth", "@auth/core"],
