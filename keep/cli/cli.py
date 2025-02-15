@@ -557,6 +557,40 @@ def run_workflow(info: Info, workflow_id: str, fingerprint: str):
             )
         )
 
+@workflow.command(name="validate")
+@click.option(
+    "--file",
+    "-f",
+    type=click.Path(exists=True),
+    help="Path to the workflow YAML file to validate",
+    required=True,
+)
+@pass_info
+def validate_workflow(info: Info, file: str):
+    """Validate workflow syntax and structure"""
+    try:
+        with open(file, "r") as f:
+            workflow_config = cyaml.safe_load(f)
+            
+        required_fields = ["id", "name", "triggers", "steps"]
+        for field in required_fields:
+            if field not in workflow_config:
+                raise ValueError(f"Missing required field: {field}")
+
+        triggers = workflow_config.get("triggers", [])
+        if not isinstance(triggers, list) or len(triggers) == 0:
+            raise ValueError("Workflow must contain at least one trigger")
+            
+        steps = workflow_config.get("steps", [])
+        if not isinstance(steps, list) or len(steps) == 0:
+            raise ValueError("Workflow must contain at least one step")
+
+        click.echo(click.style("Workflow syntax is valid", fg="green", bold=True))
+        
+    except Exception as e:
+        click.echo(click.style(f"Invalid workflow: {str(e)}", fg="red", bold=True))
+        sys.exit(1)
+
 
 @workflow.group(name="runs")
 @pass_info
