@@ -575,69 +575,81 @@ def validate_workflow(info: Info, file: str):
         # ----------------------------------------------------------------------
         # Validate top-level structure
         # ----------------------------------------------------------------------
-        required_top_fields = ["id", "name", "triggers", "steps"]
+        required_top_fields = ["id", "description", "triggers"]
         for field in required_top_fields:
-            if field not in workflow_config:
+            if field not in workflow_config.get("workflow", {}):
                 raise ValueError(f"Missing required top-level field: {field}")
 
+        # Allow "steps" OR "actions" at the top level (not both required)
+        if "steps" not in workflow_config["workflow"] and "actions" not in workflow_config["workflow"]:
+            raise ValueError("Workflow must contain at least one of: `steps` or `actions`")
+
+        # Validate optional fields like "strategy"
+        if "strategy" in workflow_config["workflow"] and not isinstance(workflow_config["workflow"]["strategy"], str):
+            raise ValueError("`strategy` must be a string (e.g., 'parallel')")
+
         # ----------------------------------------------------------------------
-        # Validate triggers (syntax only)
+        # Validate triggers
         # ----------------------------------------------------------------------
-        triggers = workflow_config.get("triggers", [])
+        triggers = workflow_config["workflow"].get("triggers", [])
         if not isinstance(triggers, list):
             raise ValueError("Triggers must be a list")
         
         for trigger in triggers:
             if "type" not in trigger:
                 raise ValueError("Trigger missing required field: type")
-            if not isinstance(trigger.get("filters", []), list):
+            if "filters" in trigger and not isinstance(trigger["filters"], list):
                 raise ValueError("Trigger filters must be a list")
-            
-            # Validate filter structure if present
-            for filt in trigger.get("filters", []):
-                if "key" not in filt or "value" not in filt:
-                    raise ValueError("Filter must contain 'key' and 'value' fields")
 
         # ----------------------------------------------------------------------
-        # Validate steps (syntax only)
+        # Validate steps (if present)
         # ----------------------------------------------------------------------
-        steps = workflow_config.get("steps", [])
-        if not isinstance(steps, list):
-            raise ValueError("Steps must be a list")
+        steps = workflow_config["workflow"].get("steps", [])
+        if steps:
+            if not isinstance(steps, list):
+                raise ValueError("Steps must be a list")
 
-        for step in steps:
-            # Required step fields
-            required_step_fields = ["name", "provider", "actions"]
-            for field in required_step_fields:
-                if field not in step:
-                    raise ValueError(f"Step missing required field: {field}")
+            for step in steps:
+                if "name" not in step:
+                    raise ValueError("Step missing required field: name")
+                if "provider" not in step:
+                    raise ValueError("Step missing required field: provider")
 
-            # Validate provider structure
-            provider = step.get("provider", {})
-            if "type" not in provider:
-                raise ValueError("Provider missing required field: type")
-            if "config" not in provider:
-                raise ValueError("Provider missing required field: config")
+                # Validate provider structure
+                provider = step["provider"]
+                if "type" not in provider:
+                    raise ValueError("Provider missing required field: type")
+                if "config" not in provider:
+                    raise ValueError("Provider missing required field: config")
 
-            # Validate actions
-            actions = step.get("actions", [])
+        # ----------------------------------------------------------------------
+        # Validate actions (if present at top level or under steps)
+        # ----------------------------------------------------------------------
+        actions = workflow_config["workflow"].get("actions", [])
+        if actions:
             if not isinstance(actions, list):
                 raise ValueError("Actions must be a list")
-            
+
             for action in actions:
                 if "name" not in action:
                     raise ValueError("Action missing required field: name")
-                if "config" not in action:
-                    raise ValueError("Action missing required field: config")
+                if "provider" not in action:
+                    raise ValueError("Action missing required field: provider")
 
-        # ----------------------------------------------------------------------
-        # Validate optional fields syntax
-        # ----------------------------------------------------------------------
-        if "description" in workflow_config and not isinstance(workflow_config["description"], str):
-            raise ValueError("Description must be a string")
+                # Validate provider in actions
+                provider = action["provider"]
+                if "type" not in provider:
+                    raise ValueError("Action provider missing required field: type")
+                if "config" not in provider:
+                    raise ValueError("Action provider missing required field: config")
 
-        if "interval" in workflow_config and not isinstance(workflow_config["interval"], int):
-            raise ValueError("Interval must be an integer")
+                # Validate "condition" if present
+                if "condition" in action:
+                    for condition in action["condition"]:
+                        if "type" not in condition:
+                            raise ValueError("Condition missing required field: type")
+                        if "assert" not in condition:
+                            raise ValueError("Condition missing required field: assert")
 
         click.echo(click.style("✓ Workflow syntax is valid", fg="green", bold=True))
 
