@@ -8,9 +8,7 @@ import React, { useState } from "react";
 import { useIncident, useIncidentAlerts } from "@/utils/hooks/useIncidents";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronDown } from "react-icons/io5";
-import remarkRehype from "remark-rehype";
-import rehypeRaw from "rehype-raw";
-import Markdown from "react-markdown";
+import DOMpurify from 'isomorphic-dompurify';
 import { Badge, Callout } from "@tremor/react";
 import { Button, DynamicImageProviderIcon, Link } from "@/components/ui";
 import { IncidentChangeStatusSelect } from "@/features/change-incident-status";
@@ -94,9 +92,12 @@ function Summary({
   };
 
   const formatedSummary = (
-    <Markdown remarkPlugins={[remarkRehype]} rehypePlugins={[rehypeRaw]}>
-      {summary ?? generatedSummary}
-    </Markdown>
+    <div 
+      className="prose max-w-none [&_pre]:!p-2 [&_pre]:!my-2 [&_code]:!text-sm [&_pre]:!bg-gray-800 [&_pre]:!text-gray-100 [&_pre]:!rounded [&_pre]:!border [&_pre]:!border-gray-700"
+      dangerouslySetInnerHTML={{ 
+        __html: DOMpurify.sanitize(summary ?? generatedSummary)
+      }} 
+    />
   );
 
   if (collapsable) {
