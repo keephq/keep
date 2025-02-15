@@ -35,17 +35,11 @@ function getOAuth2HeaderConfig(): OAuth2ProxyHeaderConfig {
   };
 }
 
-/**
- * Creates an API client configured for server-side usage
- * @throws {Error} If authentication fails or configuration cannot be loaded
- * @returns {Promise<ApiClient>} Configured API client instance
- */
 export async function createServerApiClient(): Promise<ApiClient> {
   try {
     const session = await auth();
     const config = getConfig();
 
-    // Only process OAuth2Proxy headers if AUTH_TYPE matches
     if (process.env.AUTH_TYPE === AuthType.OAUTH2PROXY) {
       console.log("Using OAuth2Proxy headers");
       const headersList = headers();
@@ -53,25 +47,25 @@ export async function createServerApiClient(): Promise<ApiClient> {
       const headerConfig = getOAuth2HeaderConfig();
       console.log("OAuth2Proxy header config:", headerConfig);
 
-      // Map of target header names to their configured source header names
-      const headerMappings: Record<string, string> = {
-        "x-forwarded-user": headerConfig.userHeader,
-        "x-forwarded-email": headerConfig.emailHeader,
-        "x-forwarded-access-token": headerConfig.accessTokenHeader,
-        "x-forwarded-groups": headerConfig.groupsHeader,
-      };
+      // Get header values using configured names but keep the original names
+      const value = headersList.get(headerConfig.userHeader);
+      if (value) {
+        oauth2Headers[headerConfig.userHeader] = value;
+      }
 
-      // Extract headers using the configured names but store with standard names
-      for (const [standardName, configuredName] of Object.entries(
-        headerMappings
-      )) {
-        // Use get() method directly on headersList
-        const value = headersList.get(configuredName);
-        console.log(`Extracted ${configuredName} header:`, value);
-        if (value) {
-          console.log(`Storing ${standardName} header:`, value);
-          oauth2Headers[standardName] = value;
-        }
+      const emailValue = headersList.get(headerConfig.emailHeader);
+      if (emailValue) {
+        oauth2Headers[headerConfig.emailHeader] = emailValue;
+      }
+
+      const tokenValue = headersList.get(headerConfig.accessTokenHeader);
+      if (tokenValue) {
+        oauth2Headers[headerConfig.accessTokenHeader] = tokenValue;
+      }
+
+      const groupsValue = headersList.get(headerConfig.groupsHeader);
+      if (groupsValue) {
+        oauth2Headers[headerConfig.groupsHeader] = groupsValue;
       }
 
       console.log("OAuth2Proxy headers:", oauth2Headers);
