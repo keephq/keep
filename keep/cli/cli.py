@@ -641,9 +641,6 @@ def validate_workflow(info: Info, file: str):
 
         click.echo(click.style("✓ Workflow syntax is valid", fg="green", bold=True))
 
-    except yaml.YAMLError as ye:
-        click.echo(click.style(f"Invalid YAML syntax: {str(ye)}", fg="red", bold=True))
-        sys.exit(1)
     except Exception as e:
         click.echo(click.style(f"Invalid workflow structure: {str(e)}", fg="red", bold=True))
         sys.exit(1)
