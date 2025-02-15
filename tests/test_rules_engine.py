@@ -24,6 +24,7 @@ from keep.api.models.alert import (
 from keep.api.models.db.alert import Alert, Incident
 from keep.api.models.db.rule import CreateIncidentOn, ResolveOn
 from keep.rulesengine.rulesengine import RulesEngine
+from tests.fixtures.client import client, test_app  # noqa
 
 
 @pytest.fixture(autouse=True)
@@ -1522,7 +1523,8 @@ def test_incident_created_only_for_firing_alerts(db_session):
     assert results[0].alerts[0].name == "Firing alert"
 
 
-def test_same_incident_in_the_past_id_set(db_session):
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_same_incident_in_the_past_id_set(db_session, client, test_app):
     """Test that same_incident_in_the_past_id is set if a new incident for the same rule is created."""
     rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
 
@@ -1568,10 +1570,19 @@ def test_same_incident_in_the_past_id_set(db_session):
     assert incident1.same_incident_in_the_past_id is None
     
     # Set the status of the first incident to resolved
-    incident1.status = IncidentStatus.RESOLVED
-    db_session.commit()
-    
-    
+    response_resolved = client.post(
+        "/incidents/{}/status".format(incident1.id),
+        headers={"x-api-key": "some-key"},
+        json={
+            "status": IncidentStatus.RESOLVED.value,
+        },
+    )
+
+    assert response_resolved.status_code == 200
+    data = response_resolved.json()
+    assert data["id"] == str(incident1.id)
+    assert data["status"] == IncidentStatus.RESOLVED.value
+
 
     # Second alert with the same rule creates a new incident after timeframe expiration
     sleep(1)
