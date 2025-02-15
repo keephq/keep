@@ -567,28 +567,85 @@ def run_workflow(info: Info, workflow_id: str, fingerprint: str):
 )
 @pass_info
 def validate_workflow(info: Info, file: str):
-    """Validate workflow syntax and structure"""
+    """Validate workflow YAML syntax and structure"""
     try:
         with open(file, "r") as f:
             workflow_config = cyaml.safe_load(f)
-            
-        required_fields = ["id", "name", "triggers", "steps"]
-        for field in required_fields:
+
+        # ----------------------------------------------------------------------
+        # Validate top-level structure
+        # ----------------------------------------------------------------------
+        required_top_fields = ["id", "name", "triggers", "steps"]
+        for field in required_top_fields:
             if field not in workflow_config:
-                raise ValueError(f"Missing required field: {field}")
+                raise ValueError(f"Missing required top-level field: {field}")
 
+        # ----------------------------------------------------------------------
+        # Validate triggers (syntax only)
+        # ----------------------------------------------------------------------
         triggers = workflow_config.get("triggers", [])
-        if not isinstance(triggers, list) or len(triggers) == 0:
-            raise ValueError("Workflow must contain at least one trigger")
-            
-        steps = workflow_config.get("steps", [])
-        if not isinstance(steps, list) or len(steps) == 0:
-            raise ValueError("Workflow must contain at least one step")
-
-        click.echo(click.style("Workflow syntax is valid", fg="green", bold=True))
+        if not isinstance(triggers, list):
+            raise ValueError("Triggers must be a list")
         
+        for trigger in triggers:
+            if "type" not in trigger:
+                raise ValueError("Trigger missing required field: type")
+            if not isinstance(trigger.get("filters", []), list):
+                raise ValueError("Trigger filters must be a list")
+            
+            # Validate filter structure if present
+            for filt in trigger.get("filters", []):
+                if "key" not in filt or "value" not in filt:
+                    raise ValueError("Filter must contain 'key' and 'value' fields")
+
+        # ----------------------------------------------------------------------
+        # Validate steps (syntax only)
+        # ----------------------------------------------------------------------
+        steps = workflow_config.get("steps", [])
+        if not isinstance(steps, list):
+            raise ValueError("Steps must be a list")
+
+        for step in steps:
+            # Required step fields
+            required_step_fields = ["name", "provider", "actions"]
+            for field in required_step_fields:
+                if field not in step:
+                    raise ValueError(f"Step missing required field: {field}")
+
+            # Validate provider structure
+            provider = step.get("provider", {})
+            if "type" not in provider:
+                raise ValueError("Provider missing required field: type")
+            if "config" not in provider:
+                raise ValueError("Provider missing required field: config")
+
+            # Validate actions
+            actions = step.get("actions", [])
+            if not isinstance(actions, list):
+                raise ValueError("Actions must be a list")
+            
+            for action in actions:
+                if "name" not in action:
+                    raise ValueError("Action missing required field: name")
+                if "config" not in action:
+                    raise ValueError("Action missing required field: config")
+
+        # ----------------------------------------------------------------------
+        # Validate optional fields syntax
+        # ----------------------------------------------------------------------
+        if "description" in workflow_config and not isinstance(workflow_config["description"], str):
+            raise ValueError("Description must be a string")
+
+        if "interval" in workflow_config and not isinstance(workflow_config["interval"], int):
+            raise ValueError("Interval must be an integer")
+
+        click.echo(click.style("✓ Workflow syntax is valid", fg="green", bold=True))
+
+    except yaml.YAMLError as ye:
+        click.echo(click.style(f"Invalid YAML syntax: {str(ye)}", fg="red", bold=True))
+        sys.exit(1)
     except Exception as e:
-        click.echo(click.style(f"Invalid workflow: {str(e)}", fg="red", bold=True))
+        click.echo(click.style(f"Invalid workflow structure: {str(e)}", fg="red", bold=True))
         sys.exit(1)
 
 
