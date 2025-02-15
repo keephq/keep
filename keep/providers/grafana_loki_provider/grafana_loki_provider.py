@@ -76,7 +76,7 @@ class GrafanaLokiProvider(BaseProvider):
             return {"valid_instance": True}
         
         except Exception as e:
-            self.logger.exception(f"Failed to validate scopes", extra={"error": e})
+            self.logger.exception("Failed to validate scopes", extra={"error": e})
             return {"valid_instance": str(e)}
         
     def _query(self, query="", limit="", time="", direction="", start="", end="", since="", step="", interval="", queryType="", **kwargs: dict):
@@ -102,7 +102,7 @@ class GrafanaLokiProvider(BaseProvider):
                 response.raise_for_status()
                 return response.json()
             except Exception as e:
-                self.logger.error(f"Failed to query logs from Grafana Loki", extra={"error": e})
+                self.logger.error("Failed to query logs from Grafana Loki", extra={"error": e})
                 raise Exception("Could not query logs from Grafana Loki with query")
             
         elif queryType == "query_range":
@@ -129,11 +129,11 @@ class GrafanaLokiProvider(BaseProvider):
                 return response.json()
             
             except Exception as e:
-                self.logger.error(f"Failed to query logs from Grafana Loki", extra={"error": e})
+                self.logger.error("Failed to query logs from Grafana Loki", extra={"error": e})
                 raise Exception("Could not query logs from Grafana Loki with query_range")
             
         else:
-            self.logger.error(f"Invalid query type")
+            self.logger.error("Invalid query type")
             raise Exception("Invalid query type")
         
 if __name__ == "__main__":
