@@ -557,6 +557,7 @@ def run_workflow(info: Info, workflow_id: str, fingerprint: str):
             )
         )
 
+
 @workflow.command(name="validate")
 @click.option(
     "--file",
@@ -569,32 +570,49 @@ def run_workflow(info: Info, workflow_id: str, fingerprint: str):
 def validate_workflow(info: Info, file: str):
     """Validate workflow YAML syntax and structure"""
     try:
+        import re
+        from jinja2 import TemplateSyntaxError, meta
+        import jinja2
+
         with open(file, "r") as f:
-            workflow_config = cyaml.safe_load(f)
+            content = f.read()
+            yaml_content = cyaml.safe_load(content)
+
+        # ----------------------------------------------------------------------
+        # Determine the root context
+        # ----------------------------------------------------------------------
+        root_context = None
+        workflow_data = {}
+
+        if "workflow" in yaml_content:
+            root_context = "workflow"
+            workflow_data = yaml_content["workflow"]
+        elif "alert" in yaml_content:
+            root_context = "alert"
+            workflow_data = yaml_content["alert"]
+        else:
+            root_context = "root"
+            workflow_data = yaml_content
 
         # ----------------------------------------------------------------------
         # Validate top-level structure
         # ----------------------------------------------------------------------
-        required_top_fields = ["id", "description", "triggers"]
+        required_top_fields = ["id", "triggers"]
         for field in required_top_fields:
-            if field not in workflow_config.get("workflow", {}):
-                raise ValueError(f"Missing required top-level field: {field}")
+            if field not in workflow_data:
+                raise ValueError(f"Missing required field: {field} (root context: {root_context})")
 
-        # Allow "steps" OR "actions" at the top level (not both required)
-        if "steps" not in workflow_config["workflow"] and "actions" not in workflow_config["workflow"]:
+        # Allow "steps" OR "actions"
+        if "steps" not in workflow_data and "actions" not in workflow_data:
             raise ValueError("Workflow must contain at least one of: `steps` or `actions`")
-
-        # Validate optional fields like "strategy"
-        if "strategy" in workflow_config["workflow"] and not isinstance(workflow_config["workflow"]["strategy"], str):
-            raise ValueError("`strategy` must be a string (e.g., 'parallel')")
 
         # ----------------------------------------------------------------------
         # Validate triggers
         # ----------------------------------------------------------------------
-        triggers = workflow_config["workflow"].get("triggers", [])
+        triggers = workflow_data.get("triggers", [])
         if not isinstance(triggers, list):
             raise ValueError("Triggers must be a list")
-        
+
         for trigger in triggers:
             if "type" not in trigger:
                 raise ValueError("Trigger missing required field: type")
@@ -604,57 +622,56 @@ def validate_workflow(info: Info, file: str):
         # ----------------------------------------------------------------------
         # Validate steps (if present)
         # ----------------------------------------------------------------------
-        steps = workflow_config["workflow"].get("steps", [])
+        steps = workflow_data.get("steps", [])
+        step_names = set()
         if steps:
-            if not isinstance(steps, list):
-                raise ValueError("Steps must be a list")
-
             for step in steps:
                 if "name" not in step:
                     raise ValueError("Step missing required field: name")
-                if "provider" not in step:
-                    raise ValueError("Step missing required field: provider")
-
-                # Validate provider structure
-                provider = step["provider"]
+                step_names.add(step["name"])
+                provider = step.get("provider", {})
                 if "type" not in provider:
-                    raise ValueError("Provider missing required field: type")
+                    raise ValueError("Step provider missing required field: type")
                 if "config" not in provider:
-                    raise ValueError("Provider missing required field: config")
+                    raise ValueError("Step provider missing required field: config")
 
         # ----------------------------------------------------------------------
-        # Validate actions (if present at top level or under steps)
+        # Validate actions
         # ----------------------------------------------------------------------
-        actions = workflow_config["workflow"].get("actions", [])
-        if actions:
-            if not isinstance(actions, list):
-                raise ValueError("Actions must be a list")
+        actions = workflow_data.get("actions", [])
+        for action in actions:
+            if "name" not in action:
+                raise ValueError("Action missing required field: name")
+            provider = action.get("provider", {})
+            if "type" not in provider:
+                raise ValueError("Action provider missing required field: type")
+            if "config" not in provider:
+                raise ValueError("Action provider missing required field: config")
 
-            for action in actions:
-                if "name" not in action:
-                    raise ValueError("Action missing required field: name")
-                if "provider" not in action:
-                    raise ValueError("Action missing required field: provider")
+            # Validate templates with relaxed checks for complex patterns
+            with_fields = provider.get("with", {})
+            template_fields = ["message", "query", "body", "url", "prompt", "blocks"]
+            for field in template_fields:
+                if field in with_fields:
+                    try:
+                        env = jinja2.Environment()
+                        parsed_content = env.parse(str(with_fields[field]))
+                        meta.find_undeclared_variables(parsed_content)
+                    except TemplateSyntaxError as e:
+                        raise ValueError(f"Invalid template syntax in '{field}': {str(e)}")
 
-                # Validate provider in actions
-                provider = action["provider"]
-                if "type" not in provider:
-                    raise ValueError("Action provider missing required field: type")
-                if "config" not in provider:
-                    raise ValueError("Action provider missing required field: config")
-
-                # Validate "condition" if present
-                if "condition" in action:
-                    for condition in action["condition"]:
-                        if "type" not in condition:
-                            raise ValueError("Condition missing required field: type")
-                        if "assert" not in condition:
-                            raise ValueError("Condition missing required field: assert")
+            # Allow function calls in templates (e.g., keep.len())
+            if "condition" in action:
+                for condition in action["condition"]:
+                    if "value" in condition:
+                        value_expr = condition["value"]
+                        if not re.match(r"^{{\s*[\w\.\(\)]+\s*}}$", value_expr):
+                            raise ValueError(f"Invalid condition value syntax: {value_expr}")
 
         click.echo(click.style("✓ Workflow syntax is valid", fg="green", bold=True))
 
     except Exception as e:
-        click.echo(click.style(f"Invalid workflow structure: {str(e)}", fg="red", bold=True))
+        click.echo(click.style(f"Invalid workflow: {str(e)}", fg="red", bold=True))
         sys.exit(1)
 
 
