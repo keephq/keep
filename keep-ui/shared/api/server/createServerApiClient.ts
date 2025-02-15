@@ -35,6 +35,11 @@ function getOAuth2HeaderConfig(): OAuth2ProxyHeaderConfig {
   };
 }
 
+/**
+ * Creates an API client configured for server-side usage
+ * @throws {Error} If authentication fails or configuration cannot be loaded
+ * @returns {Promise<ApiClient>} Configured API client instance
+ */
 export async function createServerApiClient(): Promise<ApiClient> {
   try {
     const session = await auth();
