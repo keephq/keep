@@ -47,10 +47,12 @@ export async function createServerApiClient(): Promise<ApiClient> {
 
     // Only process OAuth2Proxy headers if AUTH_TYPE matches
     if (process.env.AUTH_TYPE === AuthType.OAUTH2PROXY) {
+      console.log("Using OAuth2Proxy headers");
       const headersList = headers();
+      console.log("Headers list:", headersList);
       const oauth2Headers: Record<string, string> = {};
       const headerConfig = getOAuth2HeaderConfig();
-
+      console.log("OAuth2Proxy header config:", headerConfig);
       // Map of target header names to their configured source header names
       const headerMappings: Record<string, string> = {
         "x-forwarded-user": headerConfig.userHeader,
@@ -63,12 +65,15 @@ export async function createServerApiClient(): Promise<ApiClient> {
       Object.entries(headerMappings).forEach(
         ([standardName, configuredName]) => {
           const value = headersList.get(configuredName);
+          console.log(`Extracted ${configuredName} header:`, value);
           if (value) {
+            console.log(`Storing ${standardName} header:`, value);
             oauth2Headers[standardName] = value;
           }
         }
       );
 
+      console.log("OAuth2Proxy headers:", oauth2Headers);
       return new ApiClient(session, config, { headers: oauth2Headers });
     }
 
