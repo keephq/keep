@@ -4,10 +4,12 @@ AxiomProvider is a class that allows to ingest/digest data from Axiom.
 
 import dataclasses
 from typing import Optional
+from datetime import datetime
 
 import pydantic
 import requests
 
+from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -35,6 +37,23 @@ class AxiomProviderAuthConfig:
 
 class AxiomProvider(BaseProvider):
     """Enrich alerts with data from Axiom."""
+
+    webhook_description = ""
+    webhook_template = ""
+    webhook_markdown = """
+    💡 For more details on how to configure Axiom to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/axiom-provider).
+
+    To send alerts from Axiom to Keep, Use the following webhook url to configure Axiom send alerts to Keep:
+
+    1. In Axiom, go to the Monitors tab in the Axiom dashboard.
+    2. Click on Notifiers in the left sidebar and create a new webhook.
+    3. Give it a name and select Custom Webhook as kind of notifier with webhook url as {keep_webhook_api_url}.
+    4. Add 'X-API-KEY' as the request header with the value as {api_key}.
+    5. Save the webhook.
+    6. Go to Monitors tab and click on the Monitors in the left sidebar and create a new monitor.
+    7. Create a new monitor and select the notifier created in the previous step as per your requirement. Refer [Axiom Monitors](https://axiom.co/docs/monitor-data/monitors) to create a new monitor.
+    8. Save the monitor. Now, you will receive alerts in Keep.
+    """
 
     PROVIDER_DISPLAY_NAME = "Axiom"
     PROVIDER_CATEGORY = ["Monitoring"]
@@ -106,7 +125,53 @@ class AxiomProvider(BaseProvider):
 
         # Todo: log response details for better error handling
         return response.json()
+    
+    @staticmethod
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto | list[AlertDto]:
+        
+        action = event.get("action")
+        axiom_event = event.get("event")
+        monitorId = axiom_event.get("monitorID")
+        body = axiom_event.get("body", "Unable to fetch body")
+        description = axiom_event.get("description", "Unable to fetch description")
 
+        queryEndTime = axiom_event.get("queryEndTime")
+        queryStartTime = axiom_event.get("queryStartTime")
+        timestamp = axiom_event.get("timestamp")
+        
+        title = axiom_event.get("title", "Unable to fetch title")
+        value = axiom_event.get("value", "Unable to fetch value")
+        matchedEvent = axiom_event.get("matchedEvent", {})
+
+        def convert_to_iso_format(date_str):
+            dt = datetime.strptime(date_str[:19], "%Y-%m-%d %H:%M:%S")
+            return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        queryEndTime = convert_to_iso_format(queryEndTime)
+        queryStartTime = convert_to_iso_format(queryStartTime)
+        timestamp = convert_to_iso_format(timestamp)
+        
+        alert = AlertDto(
+            action=action,
+            id=monitorId,
+            name=title,
+            body=body,
+            description=description,
+            queryEndTime=queryEndTime,
+            queryStartTime=queryStartTime,
+            timestamp=timestamp,
+            title=title,
+            value=value,
+            matchedEvent=matchedEvent,
+            startedAt=queryStartTime,
+            lastReceived=timestamp,
+            monitorId=monitorId,
+            source=["axiom"],
+        )
+
+        return alert
 
 if __name__ == "__main__":
     # Output debug messages

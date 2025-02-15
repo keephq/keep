@@ -41,6 +41,76 @@ To access datasets, you need to provide the organization ID. You can find your o
 - The `startTime` and `endTime` parameters use ISO-8601 format.
 - The `query` function returns the response in JSON format from the Axiom API.
 
+## Webhook Integration
+
+1. In Axiom, go to the `Monitors` tab in the Axiom dashboad.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/axiom-provider_1.png" />
+</Frame>
+
+2. Click on `Notifiers` in the left sidebar and create a new notifier.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/axiom-provider_2.png" />
+</Frame>
+
+3. Give it a name and select `Custom Webhook` as kind of notifier. Enter the webhook url as [https://api.keephq.dev/alerts/event/axiom](https://api.keephq.dev/alerts/event/axiom).
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/axiom-provider_3.png" />
+</Frame>
+
+4. Follow the below steps to create a new API key in Keep.
+
+5. Go to Keep dashboard and click on the profile icon in the botton left corner and click `Settings`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-1.png" />
+</Frame>
+
+6. Select `Users and Access` tab and then select `API Keys` tab and create a new API key.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-2.png" />
+</Frame>
+
+7. Give name and select the role as `webhook` and click on `Create API Key`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-3.png" />
+</Frame>
+
+8. Copy the API key.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-4.png" />
+</Frame>
+
+9. Add a new header with key as `X-API-KEY` and create a new API key in Keep and paste it as the value and save the webhook.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/axiom-provider_4.png" />
+</Frame>
+
+10. Go to `Monitors` tab and click on the `Monitors` in the left sidebar and create a new monitor.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/axiom-provider_5.png" />
+</Frame>
+
+11. Create a new monitor and select the notifier created in the previous step as per your requirement. Refer [Axiom Monitors](https://axiom.co/docs/monitor-data/monitors) to create a new monitor.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/axiom-provider_6.png" />
+</Frame>
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/axiom-provider_7.png" />
+</Frame>
+
+12. Save the monitor. Now, you will receive the alerts in Keep.
+
 ## Useful Links
 
 - [Axiom API Documentation](https://axiom.co/docs/restapi/introduction)
