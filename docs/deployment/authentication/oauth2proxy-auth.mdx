@@ -18,6 +18,8 @@ To start Keep with Oauth2Proxy authentication, set the following environment var
 | Environment Variable | Description | Required | Default Value |
 |--------------------|-----------|:--------:|:-------------:|
 | AUTH_TYPE | Set to 'OAUTH2PROXY' for OAUTH2PROXY authentication | Yes | - |
+| KEEP_OAUTH2_PROXY_USER_HEADER | Header for the authenticated user's email | Yes | x-forwarded-email |
+| KEEP_OAUTH2_PROXY_ROLE_HEADER | Header for the authenticated user's role | Yes | x-forwarded-groups |
 
 #### Backend Environment Variables
 

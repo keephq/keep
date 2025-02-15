@@ -127,53 +127,54 @@ class RulesEngine:
                         session=session,
                         event=event,
                     )
-                    incident = assign_alert_to_incident(
-                        fingerprint=event.fingerprint,
-                        incident=incident,
-                        tenant_id=self.tenant_id,
-                        session=session,
-                    )
-
-                    if not incident.is_confirmed:
-
-                        self.logger.info(
-                            f"No existing incidents for rule {rule.name}. Checking incident creation conditions"
+                    if incident:
+                        incident = assign_alert_to_incident(
+                            fingerprint=event.fingerprint,
+                            incident=incident,
+                            tenant_id=self.tenant_id,
+                            session=session,
                         )
 
-                        rule_groups = self._extract_subrules(rule.definition_cel)
+                        if not incident.is_confirmed:
 
-                        if rule.create_on == "any" or (
-                            rule.create_on == "all"
-                            and len(rule_groups) == len(matched_rules)
-                        ):
                             self.logger.info(
-                                "Single event is enough, so creating incident"
-                            )
-                            incident.is_confirmed = True
-                        elif rule.create_on == "all":
-                            incident = self._process_event_for_history_based_rule(
-                                incident, rule, session
+                                f"No existing incidents for rule {rule.name}. Checking incident creation conditions"
                             )
 
-                        send_created_event = incident.is_confirmed
+                            rule_groups = self._extract_subrules(rule.definition_cel)
 
-                    incident = self._resolve_incident_if_require(
-                        rule, incident, session
-                    )
-                    session.add(incident)
-                    session.commit()
+                            if rule.create_on == "any" or (
+                                rule.create_on == "all"
+                                and len(rule_groups) == len(matched_rules)
+                            ):
+                                self.logger.info(
+                                    "Single event is enough, so creating incident"
+                                )
+                                incident.is_confirmed = True
+                            elif rule.create_on == "all":
+                                incident = self._process_event_for_history_based_rule(
+                                    incident, rule, session
+                                )
 
-                    incident_dto = IncidentDto.from_db_incident(incident)
-                    if send_created_event:
-                        RulesEngine.send_workflow_event(
-                            self.tenant_id, session, incident_dto, "created"
+                            send_created_event = incident.is_confirmed
+
+                        incident = self._resolve_incident_if_require(
+                            rule, incident, session
                         )
-                    elif incident.is_confirmed:
-                        RulesEngine.send_workflow_event(
-                            self.tenant_id, session, incident_dto, "updated"
-                        )
+                        session.add(incident)
+                        session.commit()
 
-                    incidents_dto[incident.id] = incident_dto
+                        incident_dto = IncidentDto.from_db_incident(incident)
+                        if send_created_event:
+                            RulesEngine.send_workflow_event(
+                                self.tenant_id, session, incident_dto, "created"
+                            )
+                        elif incident.is_confirmed:
+                            RulesEngine.send_workflow_event(
+                                self.tenant_id, session, incident_dto, "updated"
+                            )
+
+                        incidents_dto[incident.id] = incident_dto
 
                 else:
                     self.logger.info(
@@ -211,7 +212,13 @@ class RulesEngine:
         regex = r"\{\{\s*([^}]+)\s*\}\}"
         return re.findall(regex, incident_name_template)
 
-    def _get_or_create_incident(self, rule: Rule, rule_fingerprint, session, event):
+    def _get_or_create_incident(
+            self,
+            rule: Rule,
+            rule_fingerprint,
+            session,
+            event
+    ) -> Optional[Incident]:
         incident = get_incident_for_grouping_rule(
             self.tenant_id,
             rule,
@@ -265,30 +272,35 @@ class RulesEngine:
                 },
             )
             return incident
-        # else, this is the first time
-        if rule.incident_name_template:
-            incident_name = copy.copy(rule.incident_name_template)
-            vairables = self.get_vaiables(rule.incident_name_template)
-            if not vairables:
-                self.logger.warning(
-                    f"Failed to fetch the appropriate labels from the event {event.id} and rule {rule.name}"
-                )
-                incident_name = None
-            for var in vairables:
-                value = self.get_value_from_event(event, var)
-                pattern = r"\{\{\s*" + re.escape(var) + r"\s*\}\}"
-                incident_name = re.sub(pattern, value, incident_name)
-        else:
-            incident_name = None
 
-        incident = create_incident_for_grouping_rule(
-            tenant_id=self.tenant_id,
-            rule=rule,
-            rule_fingerprint=rule_fingerprint,
-            session=session,
-            incident_name=incident_name,
-        )
-        return incident
+        # else, this is the first time
+        # Starting new incident ONLY if alert is firing
+        # https://github.com/keephq/keep/issues/3418
+        if event.status == AlertStatus.FIRING.value:
+            if rule.incident_name_template:
+                incident_name = copy.copy(rule.incident_name_template)
+                vairables = self.get_vaiables(rule.incident_name_template)
+                if not vairables:
+                    self.logger.warning(
+                        f"Failed to fetch the appropriate labels from the event {event.id} and rule {rule.name}"
+                    )
+                    incident_name = None
+                for var in vairables:
+                    value = self.get_value_from_event(event, var)
+                    pattern = r"\{\{\s*" + re.escape(var) + r"\s*\}\}"
+                    incident_name = re.sub(pattern, value, incident_name)
+            else:
+                incident_name = None
+
+            incident = create_incident_for_grouping_rule(
+                tenant_id=self.tenant_id,
+                rule=rule,
+                rule_fingerprint=rule_fingerprint,
+                session=session,
+                incident_name=incident_name,
+            )
+            return incident
+        return None
 
     def _process_event_for_history_based_rule(
         self, incident: Incident, rule: Rule, session: Session
