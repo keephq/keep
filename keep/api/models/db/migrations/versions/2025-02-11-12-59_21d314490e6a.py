@@ -98,7 +98,8 @@ def upgrade() -> None:
     result = connection.execute(sa.text("SELECT id, matchers FROM mappingrule"))
     for row in result:
         old_matchers = row.matchers
-        old_matchers = json.loads(old_matchers)
+        if isinstance(old_matchers, str):
+            old_matchers = json.loads(old_matchers)
         new_matchers = []
         for matcher in old_matchers:
             m = matcher.split("&&") if isinstance(matcher, str) else matcher

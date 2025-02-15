@@ -1457,6 +1457,70 @@ def test_multiple_incidents_name_template_with_updates(db_session):
             assert False, "Unexpected incident found"
 
 
+def test_incident_created_only_for_firing_alerts(db_session):
+    # Insert alerts with different statuses
+    alerts = [
+        AlertDto(
+            id="grafana-1",
+            source=["grafana"],
+            name="Non-firing alert",
+            status=AlertStatus.RESOLVED,  # Non-firing status
+            severity=AlertSeverity.CRITICAL,
+            lastReceived=datetime.datetime.now().isoformat(),
+            fingerprint="Non-firing alert"
+        ),
+        AlertDto(
+            id="grafana-2",
+            source=["grafana"],
+            name="Firing alert",
+            status=AlertStatus.FIRING,  # Firing status
+            severity=AlertSeverity.CRITICAL,
+            lastReceived=datetime.datetime.now().isoformat(),
+            fingerprint="Firing alert"
+        ),
+    ]
+
+    # Create a simple rule
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={"sql": "N/A", "params": {}},
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='source == "grafana" && severity == "critical"',
+        created_by="test@keephq.dev",
+    )
+
+    # Add the alerts to the database
+    alert_entities = [
+        Alert(
+            tenant_id=SINGLE_TENANT_UUID,
+            provider_type="test",
+            provider_id="test",
+            event=alert.dict(),
+            fingerprint=alert.fingerprint,
+        )
+        for alert in alerts
+    ]
+    db_session.add_all(alert_entities)
+    db_session.commit()
+    for alert_entity in alert_entities:
+        set_last_alert(SINGLE_TENANT_UUID, alert_entity, db_session)
+
+    for i, alert in enumerate(alerts):
+        alert.event_id = alert_entities[i].id
+
+    # Run the rules engine
+    results = rules_engine.run_rules(alerts, session=db_session)
+
+    # Verify that only one incident is created for the firing alert
+    assert results is not None
+    assert len(results) == 1
+    assert results[0].alerts_count == 1
+    assert results[0].status == IncidentStatus.FIRING
+    assert results[0].alerts[0].name == "Firing alert"
+
 # Next steps:
 #   - test that alerts in the same group are being updated correctly
 #   - test group are being updated correctly
