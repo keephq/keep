@@ -6,6 +6,7 @@ import { UserInfo } from "@/components/navbar/UserInfo";
 import { Menu } from "@/components/navbar/Menu";
 import { MinimizeMenuButton } from "@/components/navbar/MinimizeMenuButton";
 import { DashboardLinks } from "@/components/navbar/DashboardLinks";
+import { AutomationLinks } from "@/components/navbar/AutomationLinks";
 import { IncidentsLinks } from "@/components/navbar/IncidentLinks";
 import { OverviewLinks } from "./OverviewLink";
 import { SetSentryUser } from "./SetSentryUser";
@@ -21,6 +22,7 @@ export default async function NavbarInner() {
           <OverviewLinks session={session} />
           <IncidentsLinks session={session} />
           <AlertsLinks session={session} />
+          <AutomationLinks session={session} />
           <NoiseReductionLinks session={session} />
           {/*<DashboardLinks />*/}
         </div>
