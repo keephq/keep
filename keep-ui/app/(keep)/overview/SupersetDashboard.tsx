@@ -90,7 +90,7 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full h-screen bg-white rounded-lg shadow-lg"
+      className="w-full h-full bg-white rounded-lg shadow-lg"
     />
   );
 }

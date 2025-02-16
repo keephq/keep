@@ -28,7 +28,7 @@ export default function DashboardPage({ params: { id } }: Props) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
           <span className="text-gray-600">Loading dashboard...</span>
@@ -39,7 +39,7 @@ export default function DashboardPage({ params: { id } }: Props) {
 
   if (error || !dashboardId) {
     return (
-      <div className="h-screen">
+      <div className="h-full">
         <EmptyStateImage
           message={error ? error.message : "Dashboard not found"}
           documentationURL="https://your-docs-url/dashboards"
@@ -53,7 +53,7 @@ export default function DashboardPage({ params: { id } }: Props) {
   }
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full h-full">
       <SupersetDashboard dashboardId={dashboardId} />
     </div>
   );
