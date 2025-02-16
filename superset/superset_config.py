@@ -20,7 +20,11 @@ GUEST_TOKEN_JWT_EXP_SECONDS = 300  # 5 minutes
 
 # ENABLE_PROXY_FIX = True
 
-FEATURE_FLAGS = {"EMBEDDED_SUPERSET": True}
+FEATURE_FLAGS = {
+    "EMBEDDED_SUPERSET": True,
+    "HORIZONTAL_FILTER_BAR": True,
+    "ENABLE_TEMPLATE_PROCESSING": True,
+}
 # allow sqlite to be used for superset
 PREVENT_UNSAFE_DB_CONNECTIONS = False
 SQLALCHEMY_DATABASE_URI = "sqlite:////app/pythonpath/superset.db"
