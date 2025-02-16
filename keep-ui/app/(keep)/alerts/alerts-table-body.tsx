@@ -8,6 +8,9 @@ import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
+import { Row } from "@tanstack/react-table";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { GroupedRow } from "./alert-grouped-row";
 
 interface Props {
   table: Table<AlertDto>;
@@ -95,41 +98,15 @@ export function AlertsTableBody({
 
   return (
     <TableBody>
-      {table.getRowModel().rows.map((row) => {
-        // Assuming the severity can be accessed like this, adjust if needed
-        const severity = row.original.severity || "info";
-        const rowBgColor = theme[severity] || "bg-white"; // Fallback to 'bg-white' if no theme color
-        return (
-          <TableRow
-            id={`alert-row-${row.original.fingerprint}`}
-            key={row.id}
-            className="cursor-pointer relative group"
-            onClick={(e) => handleRowClick(e, row.original)}
-          >
-            {row.getVisibleCells().map((cell) => {
-              const { style, className } = getCommonPinningStylesAndClassNames(
-                cell.column,
-                table.getState().columnPinning.left?.length,
-                table.getState().columnPinning.right?.length
-              );
-              return (
-                <TableCell
-                  key={cell.id}
-                  className={clsx(
-                    cell.column.columnDef.meta?.tdClassName,
-                    className,
-                    rowBgColor,
-                    "group-hover:bg-orange-100"
-                  )}
-                  style={style}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              );
-            })}
-          </TableRow>
-        );
-      })}
+      {table.getRowModel().rows.map((row) => (
+        <GroupedRow
+          key={row.id}
+          row={row}
+          table={table}
+          theme={theme}
+          onRowClick={onRowClick}
+        />
+      ))}
     </TableBody>
   );
 }

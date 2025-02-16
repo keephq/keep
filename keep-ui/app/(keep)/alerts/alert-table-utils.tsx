@@ -125,6 +125,27 @@ export const useAlertTableCols = (
       id: colName,
       header: colName,
       minSize: 100,
+      enableGrouping: true,
+      getGroupingValue: (row) => {
+        const keys = colName.split(".");
+        let value: any = row;
+        for (const key of keys) {
+          if (value && typeof value === "object" && key in value) {
+            value = value[key as keyof typeof value];
+          } else {
+            value = undefined;
+            break;
+          }
+        }
+        return value;
+      },
+      aggregatedCell: ({ getValue }) => {
+        const value = getValue();
+        if (typeof value === "object" && value !== null) {
+          return "Multiple Objects";
+        }
+        return `${String(value ?? "N/A")}`;
+      },
       cell: (context) => {
         const keys = colName.split(".");
         let alertValue: any = context.row.original;
@@ -256,6 +277,8 @@ export const useAlertTableCols = (
       minSize: 40,
       maxSize: 40,
       enableSorting: false,
+      enableGrouping: true,
+      getGroupingValue: (row) => row.source,
       enableResizing: false,
       cell: (context) => (
         <div className="flex items-center justify-center">
@@ -314,6 +337,8 @@ export const useAlertTableCols = (
     columnHelper.accessor("status", {
       id: "status",
       header: "Status",
+      enableGrouping: true,
+      getGroupingValue: (row) => row.status,
       maxSize: 100,
       size: 100,
       cell: (context) => (
@@ -348,6 +373,8 @@ export const useAlertTableCols = (
     columnHelper.accessor("assignee", {
       id: "assignee",
       header: "Assignee",
+      enableGrouping: true,
+      getGroupingValue: (row) => row.assignee,
       minSize: 100,
       cell: (context) => <AlertAssignee assignee={context.getValue()} />,
     }),
