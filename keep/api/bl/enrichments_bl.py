@@ -688,7 +688,7 @@ class EnrichmentsBl:
 
         if alert_id is None or not is_valid_uuid(alert_id):
             self.__logs = []
-            self.logger.warning(
+            self.logger.debug(
                 "Cannot track enrichment event without a valid alert_id",
                 extra={"tenant_id": self.tenant_id, "rule_id": rule_id},
             )
