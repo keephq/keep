@@ -125,7 +125,8 @@ export function getToolboxConfiguration(
         type: `step-${provider.type}`,
         name: `${provider.type}-step`,
         properties: {
-          stepParams: provider.query_params ?? [],
+          stepParams:
+            provider.query_params?.filter((p) => p !== "kwargs") ?? [],
         },
       });
     }
@@ -135,7 +136,8 @@ export function getToolboxConfiguration(
         type: `action-${provider.type}`,
         name: `${provider.type}-action`,
         properties: {
-          actionParams: provider.notify_params ?? [],
+          actionParams:
+            provider.notify_params?.filter((p) => p !== "kwargs") ?? [],
         },
       });
     }

@@ -34,6 +34,8 @@ import { validateStepPure, validateGlobalPure } from "./validation";
 import { getLayoutedWorkflowElements } from "../lib/getLayoutedWorkflowElements";
 import { wrapDefinitionV2 } from "@/entities/workflows/lib/parser";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { ZodError } from "zod";
+import { fromError } from "zod-validation-error";
 class WorkflowBuilderError extends Error {
   constructor(message: string) {
     super(message);
@@ -267,8 +269,15 @@ export const useWorkflowStore = create<FlowState>()(
       try {
         addNodeBetween(nodeOrEdgeId, step, type, set, get);
       } catch (error) {
-        showErrorToast(error);
-        console.error(error);
+        if (error instanceof ZodError) {
+          // TODO: extract meaningful error from ZodError
+          const validationError = fromError(error);
+          showErrorToast(validationError);
+          console.error(error);
+        } else {
+          showErrorToast(error);
+          console.error(error);
+        }
       }
     },
     setToolBoxConfig: (config: ToolboxConfiguration) =>

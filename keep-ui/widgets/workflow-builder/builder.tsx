@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@tremor/react";
 import { Provider } from "@/app/(keep)/providers/providers";
 import { getToolboxConfiguration } from "@/features/workflows/builder/lib/utils";
@@ -19,11 +19,11 @@ import {
   parseWorkflow,
   wrapDefinitionV2,
 } from "@/entities/workflows/lib/parser";
-import { ChevronLeftIcon, CodeBracketIcon } from "@heroicons/react/24/outline";
+import { CodeBracketIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { BuilderChat } from "@/features/workflows/builder/ui/BuilderChat/builder-chat";
 import { CopilotKit } from "@copilotkit/react-core";
-import { Bar, ColumnResizer, Container, Section } from "@column-resizer/react";
 import clsx from "clsx";
+import { ResizebleColumns } from "@/shared/ui";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -57,7 +57,9 @@ function Builder({
   } = useWorkflowStore();
   const router = useRouter();
 
-  const [isYamlEditorOpen, setIsYamlEditorOpen] = useState(true);
+  const [leftColumnMode, setLeftColumnMode] = useState<"yaml" | "chat" | null>(
+    "chat"
+  );
 
   const searchParams = useSearchParams();
 
@@ -199,17 +201,6 @@ function Builder({
     [reset]
   );
 
-  const columnResizerRef = useRef<ColumnResizer>(null);
-
-  useEffect(() => {
-    const resizer = columnResizerRef.current?.getResizer();
-    if (isYamlEditorOpen) {
-      resizer?.resizeSection(0, { toSize: 400 });
-    } else {
-      resizer?.resizeSection(0, { toSize: 0 });
-    }
-  }, [isYamlEditorOpen]);
-
   if (isLoading) {
     return (
       <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
@@ -218,34 +209,48 @@ function Builder({
     );
   }
 
-  return (
-    <Container className="h-full" columnResizerRef={columnResizerRef}>
-      <Section minSize={400}>
-        {workflowYaml ? (
-          <MonacoYAMLEditor
-            // TODO: do not re-render editor on every workflowYaml change, handle updates inside the editor
-            key={workflowYaml}
-            workflowRaw={workflowYaml}
-            filename={workflowId ?? "workflow"}
-            workflowId={workflowId}
-            // TODO: support readOnly for not yet deployed workflows
-            readOnly={!workflowId}
-          />
-        ) : (
-          <Skeleton className="w-full h-full" />
-        )}
-      </Section>
-      <Bar
-        size={5}
-        className="transition bg-gray-200 hover:bg-gray-300 cursor-col-resize"
+  const YamlEditor = () => {
+    if (!workflowYaml) {
+      return <Skeleton className="w-full h-full" />;
+    }
+    return (
+      <MonacoYAMLEditor
+        // TODO: do not re-render editor on every workflowYaml change, handle updates inside the editor
+        key={workflowYaml}
+        workflowRaw={workflowYaml}
+        filename={workflowId ?? "workflow"}
+        workflowId={workflowId}
+        // TODO: support write for not yet deployed workflows
+        readOnly={!workflowId}
       />
-      <Section>
+    );
+  };
+
+  return (
+    <ResizebleColumns
+      key={leftColumnMode}
+      initialLeftWidth={leftColumnMode !== null ? 33 : 0}
+    >
+      <>
+        {leftColumnMode === "yaml" && <YamlEditor />}
+        {leftColumnMode === "chat" && (
+          <CopilotKit runtimeUrl="/api/copilotkit">
+            {definition?.value && (
+              <BuilderChat
+                definition={definition}
+                installedProviders={installedProviders ?? []}
+              />
+            )}
+          </CopilotKit>
+        )}
+      </>
+      <>
         <div className="relative h-full">
           <div className={clsx("absolute top-0 left-0 w-10 h-10 z-50")}>
-            {!isYamlEditorOpen ? (
+            {leftColumnMode !== "yaml" ? (
               <button
                 className="flex justify-center items-center bg-white w-full h-full border-b border-r rounded-br-lg shadow-md"
-                onClick={() => setIsYamlEditorOpen(true)}
+                onClick={() => setLeftColumnMode("yaml")}
                 data-testid="wf-open-editor-button"
                 title="Show YAML editor"
               >
@@ -254,12 +259,35 @@ function Builder({
             ) : (
               <div className="flex gap-0.5 h-full">
                 <button
-                  className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md"
-                  onClick={() => setIsYamlEditorOpen(false)}
+                  className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md text-orange-500"
+                  onClick={() => setLeftColumnMode(null)}
                   data-testid="wf-close-editor-button"
                   title="Hide YAML editor"
                 >
-                  <ChevronLeftIcon className="size-5" />
+                  <CodeBracketIcon className="size-5" />
+                </button>
+              </div>
+            )}
+          </div>
+          <div className={clsx("absolute top-10 left-0 w-10 h-10 z-50")}>
+            {leftColumnMode !== "chat" ? (
+              <button
+                className="flex justify-center items-center bg-white w-full h-full border-b border-r rounded-br-lg shadow-md"
+                onClick={() => setLeftColumnMode("chat")}
+                data-testid="wf-open-chat-button"
+                title="Show AI Assistant"
+              >
+                <SparklesIcon className="size-5" />
+              </button>
+            ) : (
+              <div className="flex gap-0.5 h-full">
+                <button
+                  className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md text-orange-500"
+                  onClick={() => setLeftColumnMode(null)}
+                  data-testid="wf-close-chat-button"
+                  title="Hide AI Assistant"
+                >
+                  <SparklesIcon className="size-5" />
                 </button>
               </div>
             )}
@@ -268,22 +296,8 @@ function Builder({
             <ReactFlowBuilder />
           </ReactFlowProvider>
         </div>
-      </Section>
-      <Bar
-        size={5}
-        className="transition bg-gray-200 hover:bg-gray-300 cursor-col-resize"
-      />
-      <Section>
-        {definition?.value && toolboxConfiguration && (
-          <CopilotKit runtimeUrl="/api/copilotkit">
-            <BuilderChat
-              definition={definition}
-              installedProviders={installedProviders ?? []}
-            />
-          </CopilotKit>
-        )}
-      </Section>
-    </Container>
+      </>
+    </ResizebleColumns>
   );
 }
 

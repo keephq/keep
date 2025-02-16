@@ -3,15 +3,13 @@
 import React, { useState, useCallback, useEffect } from "react";
 
 interface ResizableColumnsProps {
-  leftChild: React.ReactNode;
-  rightChild: React.ReactNode;
   initialLeftWidth?: number;
+  children: React.ReactNode;
 }
 
-export const ResizableColumns = ({
-  leftChild,
-  rightChild,
+export const ResizebleColumns = ({
   initialLeftWidth = 50,
+  children,
 }: ResizableColumnsProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [leftWidth, setLeftWidth] = useState(initialLeftWidth);
@@ -46,6 +44,8 @@ export const ResizableColumns = ({
       document.removeEventListener("mouseleave", stopDragging);
     };
   }, [isDragging, stopDragging]);
+
+  const [leftChild, rightChild] = React.Children.toArray(children);
 
   return (
     <div

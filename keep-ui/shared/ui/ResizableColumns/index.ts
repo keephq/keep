@@ -1,1 +1,1 @@
-export { ResizableColumns } from "./ui/ResizebleColumns";
+export { ResizebleColumns } from "./ui/ResizebleColumns";

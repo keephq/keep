@@ -90,7 +90,7 @@ export default function WorkflowOverview({
       )}
       {data?.items && (
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <StatsCard>
               <Title>Total Executions</Title>
               <div>
@@ -133,10 +133,6 @@ export default function WorkflowOverview({
               <Title>Steps</Title>
               <WorkflowSteps workflow={parsedWorkflowFile} />
             </StatsCard>
-            <StatsCard>
-              <Title>Providers</Title>
-              {_workflow && <WorkflowProviders workflow={_workflow} />}
-            </StatsCard>
           </div>
           <Card>
             <Title>Executions Graph</Title>
@@ -147,6 +143,10 @@ export default function WorkflowOverview({
               showAll={true}
               size="sm"
             />
+          </Card>
+          <Card>
+            <Title>Providers</Title>
+            {_workflow && <WorkflowProviders workflow={_workflow} />}
           </Card>
           <h1 className="text-xl font-bold mt-4">Execution History</h1>
           <TableFilters workflowId={data.workflow.id} />
