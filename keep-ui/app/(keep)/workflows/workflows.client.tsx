@@ -1,14 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import useSWR from "swr";
 import { Subtitle } from "@tremor/react";
 import {
   ArrowUpOnSquareStackIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
-import { Workflow } from "@/shared/api/workflows";
-import Loading from "@/app/(keep)/loading";
+import { KeepLoader } from "@/shared/ui";
 import WorkflowsEmptyState from "./noworkflows";
 import WorkflowTile from "./workflow-tile";
 import { Button, Title } from "@tremor/react";
@@ -90,7 +88,7 @@ export default function WorkflowsPage() {
   }
 
   if (isLoading || !workflows) {
-    return <Loading />;
+    return <KeepLoader />;
   }
 
   const onDrop = async (files: any) => {

@@ -21,6 +21,7 @@ export type Rule = {
   create_on: "any" | "all";
   distribution: { [group: string]: { [timestamp: string]: number } };
   incidents: number;
+  incident_name_template: string | null;
 };
 
 export const useRules = (options?: SWRConfiguration) => {

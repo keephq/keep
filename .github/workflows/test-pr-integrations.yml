@@ -1,0 +1,108 @@
+name: Integration Tests
+on:
+  push:
+    paths:
+      - "keep/**"
+  pull_request:
+    paths:
+      - "keep/**"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: 3.11
+  STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
+  MYSQL_ROOT_PASSWORD: keep
+  MYSQL_DATABASE: keep
+  ELASTIC_PASSWORD: keeptests
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: ${{ env.MYSQL_DATABASE }}
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+      elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+        ports:
+          - 9200:9200
+        env:
+          ELASTIC_PASSWORD: ${{ env.ELASTIC_PASSWORD }}
+          bootstrap.memory_lock: "true"
+          discovery.type: "single-node"
+          ES_JAVA_OPTS: "-Xms2g -Xmx2g"
+          xpack.security.enabled: "true"
+      keycloak:
+        image: us-central1-docker.pkg.dev/keephq/keep/keep-keycloak-test
+        env:
+          KC_DB: dev-mem
+          KC_HTTP_RELATIVE_PATH: /auth
+          KEYCLOAK_ADMIN: keep_kc_admin
+          KEYCLOAK_ADMIN_PASSWORD: keep_kc_admin
+        ports:
+          - 8787:8080
+        options: >-
+          --health-cmd="/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user keep_kc_admin --password keep_kc_admin || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=4
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: cache deps
+        id: cache-deps
+        uses: actions/cache@v4.2.0
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies using poetry
+        run: poetry install --no-interaction --no-root --with dev
+
+      - name: Run integration tests and report coverage
+        run: |
+          until nc -z 127.0.0.1 3306; do
+            echo "waiting for MySQL..."
+            sleep 1
+          done
+          echo "MySQL is up and running!"
+          poetry run coverage run --omit="*/test*" --branch -m pytest --integration --ignore=tests/e2e_tests/
+
+      - name: Convert coverage results to JSON
+        run: poetry run coverage json --omit="keep/providers/*"
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: false
+          files: coverage.json
+          verbose: true

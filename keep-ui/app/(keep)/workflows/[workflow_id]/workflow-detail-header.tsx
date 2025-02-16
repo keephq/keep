@@ -4,38 +4,16 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { Workflow } from "@/shared/api/workflows";
 import useSWR from "swr";
 import Skeleton from "react-loading-skeleton";
-import { Button, Switch, Text } from "@tremor/react";
+import { Button, Text } from "@tremor/react";
 import { useWorkflowRun } from "@/utils/hooks/useWorkflowRun";
 import AlertTriggerModal from "../workflow-run-with-alert-modal";
-import { useRouter } from "next/navigation";
-import { useStore } from "../builder/builder-store";
+import { useWorkflowStore } from "@/entities/workflows";
 import { CloudIcon, ExclamationTriangleIcon } from "@heroicons/react/20/solid";
 import { Tooltip } from "@/shared/ui";
 
-function WorkflowSwitch() {
-  const { v2Properties, setV2Properties } = useStore();
-  return (
-    <div className="flex items-center gap-2 px-2">
-      <Switch
-        color="orange"
-        id="enabled"
-        checked={v2Properties.disabled !== "true"}
-        onChange={() => {
-          setV2Properties({
-            ...v2Properties,
-            disabled: v2Properties.disabled === "true" ? "false" : "true",
-          });
-        }}
-      />
-      <label htmlFor="enabled" className="font-medium">
-        Enabled
-      </label>
-    </div>
-  );
-}
-
 function WorkflowSyncStatus() {
-  const { synced } = useStore();
+  // TODO: show saved vs unsaved, add properity to workflowstore to track this
+  const { synced } = useWorkflowStore();
   return synced ? (
     <Tooltip content="Saved to Keep">
       <CloudIcon className="w-4 h-4 text-gray-500" />
@@ -55,7 +33,6 @@ export default function WorkflowDetailHeader({
   initialData?: Workflow;
 }) {
   const api = useApi();
-  const router = useRouter();
   const {
     data: workflow,
     isLoading,
@@ -113,17 +90,6 @@ export default function WorkflowDetailHeader({
         </div>
 
         <div className="flex gap-2">
-          <WorkflowSwitch />
-          <Button
-            color="orange"
-            size="xs"
-            variant="secondary"
-            onClick={() =>
-              router.push(`/workflows/${workflow.id}?tab=builder&edit=true`)
-            }
-          >
-            Edit
-          </Button>
           {!!workflow && (
             <Button
               size="xs"
