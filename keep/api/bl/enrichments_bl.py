@@ -16,13 +16,14 @@ from keep.api.core.db import enrich_entity as enrich_alert_db
 from keep.api.core.db import (
     get_alert_by_event_id,
     get_enrichment_with_session,
+    get_extraction_rule_by_id,
     get_mapping_rule_by_id,
     get_session_sync,
     get_topology_data_by_dynamic_matcher,
 )
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto
-from keep.api.models.db.alert import ActionType
+from keep.api.models.db.alert import ActionType, Alert
 from keep.api.models.db.enrichment_event import (
     EnrichmentEvent,
     EnrichmentLog,
@@ -100,8 +101,19 @@ class EnrichmentsBl:
             raise HTTPException(status_code=404, detail="Alert not found")
         return self._check_match_rule_and_enrich(alert, rule)
 
+    def run_extraction_rule_by_id(self, rule_id: int, alert: Alert) -> AlertDto:
+        rule = get_extraction_rule_by_id(
+            self.tenant_id, rule_id, session=self.db_session
+        )
+
+        # so we can track the enrichment event
+        alert.event["event_id"] = alert.id
+        if not rule:
+            raise HTTPException(status_code=404, detail="Extraction rule not found")
+        return self.run_extraction_rules(alert.event, pre=False, rules=[rule])
+
     def run_extraction_rules(
-        self, event: AlertDto | dict, pre=False
+        self, event: AlertDto | dict, pre=False, rules: list[ExtractionRule] = None
     ) -> AlertDto | dict:
         """
         Run the extraction rules for the event
@@ -116,7 +128,9 @@ class EnrichmentsBl:
             else getattr(event, "fingerprint", None)
         )
         event_id = (
-            event.get("id") if isinstance(event, dict) else getattr(event, "id", None)
+            event.get("event_id")
+            if isinstance(event, dict)
+            else getattr(event, "id", None)
         )
         self._add_enrichment_log(
             "Running extraction rules for incoming event",
@@ -128,7 +142,7 @@ class EnrichmentsBl:
                 "pre": pre,
             },
         )
-        rules: list[ExtractionRule] = (
+        rules: list[ExtractionRule] = rules or (
             self.db_session.query(ExtractionRule)
             .filter(ExtractionRule.tenant_id == self.tenant_id)
             .filter(ExtractionRule.disabled == False)
@@ -205,13 +219,29 @@ class EnrichmentsBl:
                         "debug",
                         {"rule_id": rule.id},
                     )
+                    self._track_enrichment_event(
+                        event_id,
+                        EnrichmentStatus.SKIPPED,
+                        EnrichmentType.EXTRACTION,
+                        rule.id,
+                        {},
+                    )
                     continue
+
             match_result = re.search(rule.regex, attribute_value)
             if match_result:
                 match_dict = match_result.groupdict()
                 # we don't override source
                 match_dict.pop("source", None)
                 event.update(match_dict)
+                self.enrich_entity(
+                    fingerprint,
+                    match_dict,
+                    action_type=ActionType.EXTRACTION_RULE_ENRICH,
+                    action_callee="system",
+                    action_description=f"Alert enriched with extraction from rule `{rule.name}`",
+                    should_exist=False,
+                )
                 self._add_enrichment_log(
                     "Event enriched with extraction rule",
                     "info",
@@ -551,10 +581,13 @@ class EnrichmentsBl:
             "alert enriched in elastic", extra={"fingerprint": fingerprint}
         )
 
-    def get_total_enrichment_events(self, rule_id: int):
+    def get_total_enrichment_events(
+        self, rule_id: int, _type: EnrichmentType = EnrichmentType.MAPPING
+    ):
         query = select(func.count(EnrichmentEvent.id)).where(
             EnrichmentEvent.rule_id == rule_id,
             EnrichmentEvent.tenant_id == self.tenant_id,
+            EnrichmentEvent.enrichment_type == _type.value,
         )
         return self.db_session.exec(query).one()
 
@@ -568,13 +601,20 @@ class EnrichmentsBl:
             raise HTTPException(status_code=404, detail="Enrichment event not found")
         return enrichment_event
 
-    def get_enrichment_events(self, rule_id: int, limit: int, offset: int):
+    def get_enrichment_events(
+        self,
+        rule_id: int,
+        limit: int,
+        offset: int,
+        _type: EnrichmentType = EnrichmentType.MAPPING,
+    ):
         # todo: easy to make async
         query = (
             select(EnrichmentEvent)
             .where(
                 EnrichmentEvent.rule_id == rule_id,
                 EnrichmentEvent.tenant_id == self.tenant_id,
+                EnrichmentEvent.enrichment_type == _type.value,
             )
             .order_by(EnrichmentEvent.timestamp.desc())
             .offset(offset)
@@ -649,7 +689,7 @@ class EnrichmentsBl:
 
         if alert_id is None or not is_valid_uuid(alert_id):
             self.__logs = []
-            self.logger.warning(
+            self.logger.debug(
                 "Cannot track enrichment event without a valid alert_id",
                 extra={"tenant_id": self.tenant_id, "rule_id": rule_id},
             )
