@@ -16,7 +16,7 @@ type TableHeaderProps = {
   presetName: string;
   alerts: AlertDto[];
   table: Table<AlertDto>;
-  liveUpdateOptionEnabled: boolean;
+  liveUpdateOptionEnabled?: boolean;
   timeframeRefreshInterval?: number;
   onThemeChange: (newTheme: Theme) => void;
   onTimeframeChange?: (timeFrame: TimeFrame | null) => void;
@@ -25,7 +25,7 @@ type TableHeaderProps = {
 export const TitleAndFilters = ({
   presetName,
   table,
-  liveUpdateOptionEnabled,
+  liveUpdateOptionEnabled = false,
   timeframeRefreshInterval = 1000,
   onThemeChange,
   onTimeframeChange,
@@ -115,6 +115,7 @@ export const TitleAndFilters = ({
           setTimeFrame={handleTimeFrameChange}
           timeframeRefreshInterval={timeframeRefreshInterval}
           hasPlay={liveUpdateOptionEnabled}
+          pausedByDefault={liveUpdateOptionEnabled}
           hasRewind={false}
           hasForward={false}
           hasZoomOut={false}

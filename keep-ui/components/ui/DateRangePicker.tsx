@@ -47,6 +47,7 @@ interface EnhancedDateRangePickerProps {
   hasForward?: boolean;
   hasZoomOut?: boolean;
   enableYearNavigation?: boolean;
+  pausedByDefault?: boolean;
 }
 
 export function isQuickPresetRange(timeFrame: TimeFrame): boolean {
@@ -108,9 +109,10 @@ export default function EnhancedDateRangePicker({
   hasRewind = true,
   hasForward = true,
   hasZoomOut = false,
+  pausedByDefault = true,
   enableYearNavigation = false,
 }: EnhancedDateRangePickerProps) {
-  const [isPaused, setIsPaused] = useState(timeFrame.paused ?? true);
+  const [isPaused, setIsPaused] = useState(timeFrame.paused ?? pausedByDefault);
   const [showCalendar, setShowCalendar] = useState(false);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -414,7 +416,7 @@ export default function EnhancedDateRangePicker({
 
   const getSelectedOptionText = () => {
     if (!selectedPreset) {
-      return quickPresets.find((preset) => preset.badge === "15m")?.label;
+      return quickPresets.find((preset) => preset.badge === "all")?.label;
     }
 
     if (!isPaused && selectedPreset) {

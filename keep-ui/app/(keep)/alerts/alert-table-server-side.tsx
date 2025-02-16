@@ -43,7 +43,7 @@ import AlertPaginationServerSide from "./alert-pagination-server-side";
 import { FacetDto } from "@/features/filter";
 import { TimeFrame } from "@/components/ui/DateRangePicker";
 import { AlertsQuery } from "@/utils/hooks/useAlerts";
-
+import { v4 as uuidV4 } from "uuid";
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
@@ -372,7 +372,7 @@ export function AlertTableServerSide({
       setShouldRefreshDate(true);
       const timeout = setTimeout(() => {
         setShouldRefreshDate(false);
-      }, 10000);
+      }, 15000);
       return () => clearTimeout(timeout);
     }
   }, [refreshToken]);
