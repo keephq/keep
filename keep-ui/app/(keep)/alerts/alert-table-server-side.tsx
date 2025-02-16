@@ -99,6 +99,9 @@ export function AlertTableServerSide({
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
+  const [facetsPanelRefreshToken, setFacetsPanelRefreshToken] = useState<
+    string | null
+  >(null);
   const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
   const [filterCel, setFilterCel] = useState<string>("");
   const [searchCel, setSearchCel] = useState<string>("");
@@ -166,6 +169,7 @@ export function AlertTableServerSide({
     if (!dateRange?.start && !dateRange?.end && !dateRange?.paused) {
       setTimeout(() => {
         onReload && onReload(alertsQuery);
+        setFacetsPanelRefreshToken(uuidV4());
       }, 100);
     }
   }, [dateRange]);
@@ -457,7 +461,7 @@ export function AlertTableServerSide({
               onCelChange={setFilterCel}
               renderFacetOptionIcon={renderFacetOptionIcon}
               renderFacetOptionLabel={renderFacetOptionLabel}
-              revalidationToken={refreshToken}
+              revalidationToken={facetsPanelRefreshToken}
             />
           </div>
 
