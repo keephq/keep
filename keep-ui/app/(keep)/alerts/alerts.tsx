@@ -87,7 +87,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
 
-  const { data: pollAlerts } = useAlertPolling(true);
+  const { data: pollAlertsRefreshToken } = useAlertPolling(true);
   const {
     data: fetchedAlerts = [],
     totalCount,
@@ -127,11 +127,11 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
 
   useEffect(
     function setNewRefreshToken() {
-      if (pollAlerts) {
-        setRefreshToken(pollAlerts);
+      if (pollAlertsRefreshToken) {
+        setRefreshToken(pollAlertsRefreshToken);
       }
     },
-    [setRefreshToken, pollAlerts]
+    [setRefreshToken, pollAlertsRefreshToken]
   );
 
   // if we don't have presets data yet, just show loading

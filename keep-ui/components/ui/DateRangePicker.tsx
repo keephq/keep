@@ -297,6 +297,7 @@ export default function EnhancedDateRangePicker({
     []
   );
 
+  // set initial preset and notify parent
   useEffect(() => {
     setTimeout(() => {
       handlePresetSelect(

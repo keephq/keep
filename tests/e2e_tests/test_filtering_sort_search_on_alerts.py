@@ -511,10 +511,7 @@ def test_alerts_stream(browser):
     test_id = "test_alerts_stream"
     cel_to_filter_alerts = f"testId == '{test_id}'"
 
-    browser.goto(
-        f"{KEEP_UI_URL}/alerts/feed?cel={cel_to_filter_alerts}",
-        timeout=10000,
-    )
+    browser.goto(f"{KEEP_UI_URL}/alerts/feed?cel={cel_to_filter_alerts}")
     expect(browser.locator("[data-testid='alerts-table']")).to_be_visible()
     expect(browser.locator("[data-testid='facets-panel']")).to_be_visible()
     simulated_alerts = []
