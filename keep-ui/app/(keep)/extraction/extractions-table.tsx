@@ -60,46 +60,6 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
 
   const columns = [
     columnHelper.display({
-      id: "actions",
-      header: "",
-      cell: (context) => (
-        <div className="space-x-1 flex flex-row items-center justify-center opacity-0 group-hover:opacity-100 bg-slate-100 border-l">
-          <Button
-            color="orange"
-            size="xs"
-            icon={MdPlayArrow}
-            tooltip="Run"
-            onClick={(event) => {
-              event.stopPropagation();
-              setRunModalRule(context.row.original.id!);
-            }}
-          />
-          <Button
-            color="orange"
-            size="xs"
-            variant="secondary"
-            icon={MdModeEdit}
-            tooltip="Edit"
-            onClick={(event) => {
-              event.stopPropagation();
-              editCallback(context.row.original!);
-            }}
-          />
-          <Button
-            color="red"
-            size="xs"
-            variant="secondary"
-            icon={MdRemoveCircle}
-            tooltip="Delete"
-            onClick={(event) => {
-              event.stopPropagation();
-              deleteExtraction(context.row.original.id!);
-            }}
-          />
-        </div>
-      ),
-    }),
-    columnHelper.display({
       id: "priority",
       header: "Priority",
       cell: (context) => context.row.original.priority,
@@ -117,15 +77,12 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
     columnHelper.display({
       id: "pre",
       header: "Pre-formatting",
-      cell: (context) => (
-        <div className="flex justify-center">
-          {context.row.original.pre ? (
-            <Icon icon={IoCheckmark} size="md" color="orange" />
-          ) : (
-            <Icon icon={HiMiniXMark} size="md" color="orange" />
-          )}
-        </div>
-      ),
+      cell: (context) =>
+        context.row.original.pre ? (
+          <Icon icon={IoCheckmark} size="md" color="orange" />
+        ) : (
+          <Icon icon={HiMiniXMark} size="md" color="orange" />
+        ),
     }),
     columnHelper.display({
       id: "attribute",
@@ -188,6 +145,49 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
           ))}
         </div>
       ),
+    }),
+    columnHelper.display({
+      id: "actions",
+      header: "",
+      cell: (context) => (
+        <div className="space-x-1 flex flex-row items-center justify-end opacity-0 group-hover:opacity-100 bg-slate-100 border-l">
+          <Button
+            color="orange"
+            size="xs"
+            icon={MdPlayArrow}
+            tooltip="Run"
+            onClick={(event) => {
+              event.stopPropagation();
+              setRunModalRule(context.row.original.id!);
+            }}
+          />
+          <Button
+            color="orange"
+            size="xs"
+            variant="secondary"
+            icon={MdModeEdit}
+            tooltip="Edit"
+            onClick={(event) => {
+              event.stopPropagation();
+              editCallback(context.row.original!);
+            }}
+          />
+          <Button
+            color="red"
+            size="xs"
+            variant="secondary"
+            icon={MdRemoveCircle}
+            tooltip="Delete"
+            onClick={(event) => {
+              event.stopPropagation();
+              deleteExtraction(context.row.original.id!);
+            }}
+          />
+        </div>
+      ),
+      meta: {
+        sticky: true,
+      },
     }),
   ] as DisplayColumnDef<ExtractionRule>[];
 
