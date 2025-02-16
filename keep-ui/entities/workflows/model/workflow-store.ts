@@ -10,7 +10,7 @@ import {
 import {
   createCustomEdgeMeta,
   processWorkflowV2,
-  getTriggerStep,
+  getTriggerSteps,
   reConstructWorklowToDefinition,
 } from "utils/reactFlow";
 import { createDefaultNodeV2 } from "@/utils/reactFlow";
@@ -632,7 +632,7 @@ async function initializeWorkflow(
   const name =
     parsedWorkflow?.properties?.name || parsedWorkflow?.properties?.id;
 
-  const sequences = [
+  const fullSequence = [
     {
       id: "start",
       type: "start",
@@ -641,7 +641,7 @@ async function initializeWorkflow(
       isLayouted: false,
       name: "start",
     } as V2StartStep,
-    ...getTriggerStep(parsedWorkflow?.properties),
+    ...getTriggerSteps(parsedWorkflow?.properties),
     ...(parsedWorkflow?.sequence || []),
     {
       id: "end",
@@ -653,7 +653,7 @@ async function initializeWorkflow(
     } as V2EndStep,
   ];
   const initialPosition = { x: 0, y: 50 };
-  let { nodes, edges } = processWorkflowV2(sequences, initialPosition, true);
+  let { nodes, edges } = processWorkflowV2(fullSequence, initialPosition, true);
   set({
     workflowId,
     selectedNode: null,

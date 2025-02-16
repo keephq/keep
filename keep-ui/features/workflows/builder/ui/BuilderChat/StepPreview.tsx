@@ -1,10 +1,10 @@
-import { V2Step } from "@/entities/workflows";
+import { V2Step, V2StepTrigger } from "@/entities/workflows";
 import { CursorArrowRaysIcon } from "@heroicons/react/20/solid";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import clsx from "clsx";
 import Image from "next/image";
 
-function getStepIcon(data: V2Step) {
+function getStepIcon(data: V2Step | V2StepTrigger) {
   const { type } = data || {};
   if (type === "alert" || type === "workflow" || type === "trigger" || !type)
     return "/keep.png";
@@ -21,7 +21,7 @@ export const StepPreview = ({
   step,
   className,
 }: {
-  step: V2Step;
+  step: V2Step | V2StepTrigger;
   className?: string;
 }) => {
   const type = step?.type

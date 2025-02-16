@@ -5,6 +5,7 @@ import {
   V2Properties,
   FlowNode,
   ToolboxConfiguration,
+  V2StepStep,
 } from "@/entities/workflows/model/types";
 import { CopilotChat, CopilotKitCSSProperties } from "@copilotkit/react-ui";
 import { useWorkflowStore } from "@/entities/workflows";
@@ -22,6 +23,7 @@ import { AddTriggerUI } from "./AddTriggerUI";
 import { AddStepUI } from "./AddStepUI";
 import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
+import { useTestStep } from "../StepTestRunButton";
 
 export function BuilderChat({
   definition,
@@ -46,7 +48,20 @@ export function BuilderChat({
   } = useWorkflowStore();
 
   const steps = useMemo(() => {
-    return toolboxConfiguration?.groups?.map((g) => g.steps).flat();
+    if (!toolboxConfiguration || !toolboxConfiguration.groups) {
+      return [];
+    }
+    const result = [];
+    for (const group of toolboxConfiguration.groups) {
+      if (group.name !== "Triggers") {
+        // Type guard to filter out triggers
+        const nonTriggerSteps = group.steps.filter(
+          (step): step is Omit<V2Step, "id"> => step.componentType !== "trigger"
+        );
+        result.push(...nonTriggerSteps);
+      }
+    }
+    return result;
   }, [toolboxConfiguration]);
 
   useCopilotReadable(
@@ -207,9 +222,7 @@ export function BuilderChat({
         name: string;
         aim: string;
       }) => {
-        const step = steps?.find(
-          (step: any) => step.type === stepType
-        ) as V2Step;
+        const step = steps?.find((step: any) => step.type === stepType);
         if (!step) {
           return;
         }
@@ -303,6 +316,67 @@ export function BuilderChat({
     [steps, selectedNode, selectedEdge, addNodeBetween]
   );
 
+  const testStep = useTestStep();
+
+  // TODO: add this action
+  // useCopilotAction({
+  //   name: "testRunStep",
+  //   description: "Test run a step with given parameters",
+  //   parameters: [
+  //     {
+  //       name: "providerId",
+  //       description: "The id of the provider to test",
+  //       type: "string",
+  //       required: true,
+  //     },
+  //     {
+  //       name: "providerType",
+  //       description: "The type of the provider to test",
+  //       type: "string",
+  //       required: true,
+  //     },
+  //     {
+  //       name: "stepType",
+  //       description: "The type of the step to test: 'action' or 'step'",
+  //       type: "string",
+  //       required: true,
+  //     },
+  //     {
+  //       name: "stepParams",
+  //       description: "The parameters of the step to test",
+  //       type: "object[]",
+  //       required: true,
+  //     },
+  //   ],
+  //   render: ({
+  //     status,
+  //     args: { providerId, stepParams, stepType, providerType },
+  //     result,
+  //   }) => {
+  //     if (status === "inProgress") {
+  //       return <div>Loading...</div>;
+  //     }
+  //     const step = steps?.find((step: any) => step.type === stepType) as V2Step;
+  //     if (!step) {
+  //       return <div>Step not found</div>;
+  //     }
+  //     const method = stepType === "action" ? "_notify" : "_query";
+  //     try {
+  //       const result = await testStep(
+  //         {
+  //           provider_id: providerId,
+  //           provider_type: providerType,
+  //         },
+  //         method,
+  //         stepParams
+  //       );
+  //       return <div>{JSON.stringify(result, null, 2)}</div>;
+  //     } catch (e) {
+  //       return <div>Failed to test step: {e.toString()}</div>;
+  //     }
+  //   },
+  // });
+
   const [debugInfoVisible, setDebugInfoVisible] = useState(false);
   const chatInstructions = useMemo(() => {
     return (
@@ -346,8 +420,8 @@ export function BuilderChat({
               onClick={async () => {
                 try {
                   const step = steps.find(
-                    (step: any) => step.type === "step-python"
-                  ) as V2Step;
+                    (step) => step.type === "step-python"
+                  ) as V2StepStep;
                   if (!step) {
                     return;
                   }

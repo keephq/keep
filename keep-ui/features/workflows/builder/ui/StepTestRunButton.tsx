@@ -1,10 +1,31 @@
 import { Button, TextInput } from "@/components/ui";
 import Modal from "@/components/ui/Modal";
-import { KeepApiError } from "@/shared/api";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { ResultJsonCard } from "@/shared/ui";
 import { Callout, Subtitle, Title, Text } from "@tremor/react";
 import { useState } from "react";
+
+export function useTestStep() {
+  const api = useApi();
+  async function testStep(
+    providerInfo: { provider_id: string; provider_type: string },
+    method: "_query" | "_notify",
+    methodParams: Record<string, any>
+  ) {
+    return await api.post(
+      `/providers/${providerInfo.provider_id}/invoke/${method}`,
+      {
+        ...methodParams,
+        providerInfo: {
+          provider_id: providerInfo.provider_id,
+          provider_type: providerInfo.provider_type,
+        },
+      }
+    );
+  }
+
+  return testStep;
+}
 
 export function StepTestRunButton({
   providerInfo,
@@ -17,7 +38,7 @@ export function StepTestRunButton({
   methodParams: Record<string, any>;
   updateProperty: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
-  const api = useApi();
+  const testStep = useTestStep();
   const [isOpen, setIsOpen] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [result, setResult] = useState<any>(null);
@@ -27,33 +48,20 @@ export function StepTestRunButton({
     e: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>
   ) {
     e.preventDefault();
-    async function invokeMethod() {
+    const handleTestStep = async () => {
       try {
         setIsLoading(true);
-        setErrors({});
-        const responseObject = await api.post(
-          `/providers/${providerInfo.provider_id}/invoke/${method}`,
-          {
-            ...methodParams,
-            providerInfo: {
-              provider_id: providerInfo.provider_id,
-              provider_type: providerInfo.provider_type,
-            },
-          }
-        );
-        setResult(responseObject);
-      } catch (e: any) {
+        const result = await testStep(providerInfo, method, methodParams);
+        setResult(result);
+      } catch (e) {
         setErrors({
-          [e.message]:
-            e instanceof KeepApiError
-              ? [e.responseJson?.error_msg, e.proposedResolution].join(".\n")
-              : "Unknown error invoking method",
+          error: "Failed to test step",
         });
       } finally {
         setIsLoading(false);
       }
-    }
-    invokeMethod();
+    };
+    handleTestStep();
   }
 
   return (

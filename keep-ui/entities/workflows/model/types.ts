@@ -71,6 +71,9 @@ export const V2StepTriggerSchema = z.union([
   V2StepIncidentTriggerSchema,
 ]);
 
+export type V2StepTrigger = z.infer<typeof V2StepTriggerSchema>;
+export type TriggerType = V2StepTrigger["type"];
+
 export const V2ActionSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -79,8 +82,13 @@ export const V2ActionSchema = z.object({
   properties: z.object({
     actionParams: z.array(z.string()),
     config: z.string().optional(),
+    if: z.string().optional(),
+    vars: z.record(z.string(), z.string()).optional(),
     with: z
-      .record(z.string(), z.any())
+      .record(
+        z.string(),
+        z.union([z.string(), z.number(), z.boolean(), z.object({})])
+      )
       .superRefine((withObj, ctx) => {
         console.log(withObj, ctx);
         // const actionParams = ctx.path[0].properties.actionParams;
@@ -111,18 +119,18 @@ export const V2StepStepSchema = z.object({
   properties: z.object({
     stepParams: z.array(z.string()),
     config: z.string().optional(),
+    vars: z.record(z.string(), z.string()).optional(),
+    if: z.string().optional(),
     with: z
-      .record(z.string(), z.any())
-      .superRefine((withObj, ctx) => {
-        console.log(withObj, ctx);
-      })
+      .record(
+        z.string(),
+        z.union([z.string(), z.number(), z.boolean(), z.object({})])
+      )
       .optional(),
   }),
 });
 
 export type V2StepStep = z.infer<typeof V2StepStepSchema>;
-
-export type V2StepTrigger = z.infer<typeof V2StepTriggerSchema>;
 
 export const V2ActionOrStepSchema = z.union([V2ActionSchema, V2StepStepSchema]);
 
@@ -193,25 +201,37 @@ export const V2StepTemplateSchema = z.union([
 
 export type V2StepTemplate = z.infer<typeof V2StepTemplateSchema>;
 
-export const V2StartStepSchema = z.object({
-  id: z.literal("start"),
-  type: z.literal("start"),
-  componentType: z.literal("start"),
-  properties: z.object({}),
-  name: z.literal("start"),
-});
+export type V2StartStep = {
+  id: "start";
+  type: "start";
+  componentType: "start";
+  properties: {};
+  name: "start";
+};
 
-export type V2StartStep = z.infer<typeof V2StartStepSchema>;
+export type V2EndStep = {
+  id: "end";
+  type: "end";
+  componentType: "end";
+  properties: {};
+  name: "end";
+};
 
-export const V2EndStepSchema = z.object({
-  id: z.literal("end"),
-  type: z.literal("end"),
-  componentType: z.literal("end"),
-  properties: z.object({}),
-  name: z.literal("end"),
-});
+export type TriggerStartLabelStep = {
+  id: "trigger_start";
+  name: "Triggers";
+  type: "trigger";
+  componentType: "trigger";
+};
 
-export type V2EndStep = z.infer<typeof V2EndStepSchema>;
+export type TriggerEndLabelStep = {
+  id: "trigger_end";
+  name: "Workflow steps";
+  type: "";
+  componentType: "trigger";
+  cantDelete: true;
+  notClickable: true;
+};
 
 export type V2Step = z.infer<typeof V2StepSchema>;
 
@@ -233,6 +253,32 @@ export type V2Step = z.infer<typeof V2StepSchema>;
 //   edgeTarget?: string;
 //   notClickable?: boolean;
 // };
+
+export type V2StepTempNode = V2Step & {
+  type: "temp_node";
+  componentType: "temp_node";
+};
+
+type UIProps = {
+  edgeNotNeeded?: boolean;
+  edgeLabel?: string;
+  edgeColor?: string;
+  edgeSource?: string;
+  edgeTarget?: string | string[];
+};
+
+export type V2StepUI = V2Step & UIProps;
+
+export type V2StepTriggerUI = V2StepTrigger & UIProps;
+
+export type EmptyNode = {
+  id: string;
+  type: string;
+  componentType: string;
+  properties: {};
+  name: string;
+  isNested?: boolean;
+};
 
 export type NodeData = Node["data"] & Record<string, any>;
 export type NodeStepMeta = { id: string; label?: string };
@@ -328,8 +374,14 @@ export interface FlowState extends FlowStateValues {
   updateDefinition: () => void;
 }
 export type ToolboxConfiguration = {
-  groups: {
-    name: string;
-    steps: Omit<V2Step, "id">[] | V2StepTrigger[];
-  }[];
+  groups: (
+    | {
+        name: "Triggers";
+        steps: V2StepTrigger[];
+      }
+    | {
+        name: string;
+        steps: Omit<V2Step, "id">[];
+      }
+  )[];
 };

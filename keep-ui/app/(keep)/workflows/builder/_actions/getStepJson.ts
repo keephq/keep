@@ -4,9 +4,8 @@ import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { GENERAL_INSTRUCTIONS } from "../_constants";
 import { z } from "zod";
+import { V2Step } from "@/entities/workflows/model/types";
 
-// TEMPORARY
-// TODO: Remove this
 const openai = new OpenAI({
   organization: process.env.OPEN_AI_ORGANIZATION_ID,
   apiKey: process.env.OPEN_AI_API_KEY,
@@ -20,16 +19,16 @@ export async function generateStepDefinition({
 }: {
   name: string;
   stepType: string;
-  stepProperties: {
-    actionParams?: string[];
-    stepParams?: string[];
-  };
+  stepProperties: V2Step["properties"];
   aim: string;
 }) {
-  const combinedParams = [
-    ...(stepProperties?.actionParams ?? []),
-    ...(stepProperties?.stepParams ?? []),
-  ];
+  const combinedParams = [] as string[];
+  if ("actionParams" in stepProperties) {
+    combinedParams.push(...(stepProperties.actionParams ?? []));
+  }
+  if ("stepParams" in stepProperties) {
+    combinedParams.push(...(stepProperties.stepParams ?? []));
+  }
   const zodSchema = z
     .object(
       Object.fromEntries(combinedParams.map((key: string) => [key, z.string()]))
