@@ -15,16 +15,14 @@ import {
   WrenchIcon,
 } from "@heroicons/react/24/outline";
 import { Workflow } from "@/shared/api/workflows";
-import useSWR from "swr";
-import { WorkflowBuilderPageClient } from "../builder/page.client";
+import { WorkflowBuilderWidget } from "@/widgets/workflow-builder";
 import WorkflowOverview from "./workflow-overview";
-import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "utils/hooks/useConfig";
 import { AiOutlineSwap } from "react-icons/ai";
-import { ErrorComponent, TabNavigationLink, YAMLCodeblock } from "@/shared/ui";
+import { ErrorComponent, TabNavigationLink } from "@/shared/ui";
 import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import Skeleton from "react-loading-skeleton";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useWorkflowDetail } from "@/utils/hooks/useWorkflowDetail";
 
 export default function WorkflowDetailPage({
@@ -34,7 +32,6 @@ export default function WorkflowDetailPage({
   params: { workflow_id: string };
   initialData?: Workflow;
 }) {
-  const api = useApi();
   const { data: configData } = useConfig();
   const [tabIndex, setTabIndex] = useState(0);
   const searchParams = useSearchParams();
@@ -121,8 +118,8 @@ export default function WorkflowDetailPage({
             {!workflow ? (
               <Skeleton className="w-full h-full" />
             ) : (
-              <Card className="h-[calc(100vh-150px)]">
-                <WorkflowBuilderPageClient
+              <Card className="h-[calc(100vh-210px)] p-0 overflow-hidden">
+                <WorkflowBuilderWidget
                   workflowRaw={workflow.workflow_raw}
                   workflowId={workflow.id}
                 />
@@ -135,6 +132,7 @@ export default function WorkflowDetailPage({
             ) : (
               <Card className="h-[calc(100vh-200px)]">
                 <MonacoYAMLEditor
+                  key={workflow.workflow_raw!}
                   workflowRaw={workflow.workflow_raw!}
                   filename={workflow.id ?? "workflow"}
                   workflowId={workflow.id}

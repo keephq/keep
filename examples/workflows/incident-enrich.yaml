@@ -1,0 +1,29 @@
+id: incident-enrich
+name: Incident enrich
+description: Enrich incident from workflow
+disabled: false
+triggers:
+  - type: manual
+  - events:
+      - created
+      - updated
+    type: incident
+consts: {}
+owners: []
+services: []
+steps: []
+actions:
+  - name: console-log
+    provider:
+      type: console
+      with:
+        message: "Incident name: {{ incident.user_generated_name }} | severity: {{ incident.severity }}"
+        enrich_incident:
+          - key: environment
+            value: "prod-de-prod"
+          - key: incident_id
+            value: "1234567890"
+          - key: incident_url
+            value: "https://keephq.dev/incident/1234567890"
+          - key: incident_provider
+            value: "jira"

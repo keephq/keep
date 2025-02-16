@@ -922,3 +922,42 @@ def test_dict_filter_by_prefix():
         "prefix_list": [1, 2, 3],
         "prefix_dict": {"key": "value"},
     }
+
+
+def test_dict_pop_prefix():
+    """
+    Test removing dictionary keys by prefix
+    """
+    # Test with regular dictionary
+    data = {"prefix_a": 1, "prefix_b": 2, "other_c": 3, "prefix_d": 4}
+    expected = {"other_c": 3}
+    assert functions.dict_pop_prefix(data, "prefix_") == expected
+
+    # Test with JSON string input
+    json_data = '{"prefix_x": 1, "prefix_y": 2, "other": 3}'
+    expected = {"other": 3}
+    assert functions.dict_pop_prefix(json_data, "prefix_") == expected
+
+    # Test with empty dictionary
+    assert functions.dict_pop_prefix({}, "prefix_") == {}
+
+    # Test with no matching prefixes
+    data = {"a": 1, "b": 2, "c": 3}
+    expected = {"a": 1, "b": 2, "c": 3}
+    assert functions.dict_pop_prefix(data, "prefix_") == expected
+
+    # Test with empty prefix (should remove nothing)
+    data = {"a": 1, "b": 2, "c": 3}
+    expected = {}
+    assert functions.dict_pop_prefix(data, "") == expected
+
+    # Test with different value types
+    data = {
+        "prefix_int": 42,
+        "prefix_str": "hello",
+        "prefix_list": [1, 2, 3],
+        "prefix_dict": {"key": "value"},
+        "other": True,
+    }
+    expected = {"other": True}
+    assert functions.dict_pop_prefix(data, "prefix_") == expected

@@ -535,9 +535,10 @@ def keycloak_token(request):
 def browser():
     from playwright.sync_api import sync_playwright
 
-    # SHAHAR: you can remove locally, but keep in github actions
-    # headless = os.getenv("PLAYWRIGHT_HEADLESS", "true") == "true"
-    headless = True
+    # Force headless mode if running in CI environment
+    is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
+    headless = is_ci or os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true"
+    
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
         context = browser.new_context()
