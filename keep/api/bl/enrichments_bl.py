@@ -106,6 +106,7 @@ class EnrichmentsBl:
             self.tenant_id, rule_id, session=self.db_session
         )
 
+        # so we can track the enrichment event
         alert.event["event_id"] = alert.id
         if not rule:
             raise HTTPException(status_code=404, detail="Extraction rule not found")
@@ -234,7 +235,7 @@ class EnrichmentsBl:
                 match_dict.pop("source", None)
                 event.update(match_dict)
                 self.enrich_entity(
-                    event.get("fingerprint"),
+                    fingerprint,
                     match_dict,
                     action_type=ActionType.EXTRACTION_RULE_ENRICH,
                     action_callee="system",
