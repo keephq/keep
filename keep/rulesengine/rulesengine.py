@@ -219,27 +219,27 @@ class RulesEngine:
             session,
             event
     ) -> Optional[Incident]:
-        incident = get_incident_for_grouping_rule(
+        existed_incident, expired = get_incident_for_grouping_rule(
             self.tenant_id,
             rule,
             rule_fingerprint,
             session=session,
         )
         # if not incident name template, return the incident
-        if incident and not rule.incident_name_template:
-            return incident
+        if existed_incident and not expired and not rule.incident_name_template:
+            return existed_incident
         # if incident name template, merge
-        elif incident:
+        elif existed_incident and not expired:
             incident_name = copy.copy(rule.incident_name_template)
-            current_name = incident.user_generated_name
+            current_name = existed_incident.user_generated_name
             self.logger.info(
                 "Updating the incident name based on the new event",
                 extra={
-                    "incident_id": incident.id,
+                    "incident_id": existed_incident.id,
                     "incident_name": current_name,
                 },
             )
-            alerts = incident.alerts
+            alerts = existed_incident.alerts
             vairables = self.get_vaiables(rule.incident_name_template)
             values = set()
             for var in vairables:
@@ -262,16 +262,16 @@ class RulesEngine:
                 # note that it will be commited later, when the incident is commited
                 incident_name = re.sub(pattern, var_to_replace, incident_name)
             # we are done
-            incident.user_generated_name = incident_name
+            existed_incident.user_generated_name = incident_name
             self.logger.info(
                 "Incident name updated",
                 extra={
-                    "incident_id": incident.id,
+                    "incident_id": existed_incident.id,
                     "old_incident_name": current_name,
-                    "new_incident_name": incident.user_generated_name,
+                    "new_incident_name": existed_incident.user_generated_name,
                 },
             )
-            return incident
+            return existed_incident
 
         # else, this is the first time
         # Starting new incident ONLY if alert is firing
@@ -298,6 +298,7 @@ class RulesEngine:
                 rule_fingerprint=rule_fingerprint,
                 session=session,
                 incident_name=incident_name,
+                past_incident=existed_incident,
             )
             return incident
         return None

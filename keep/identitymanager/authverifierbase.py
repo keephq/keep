@@ -257,7 +257,13 @@ class AuthVerifierBase:
             try:
                 scheme, _, credentials = auth_header.partition(" ")
             except Exception:
-                self.logger.error("Failed to parse Authorization header")
+                self.logger.error(
+                    "Failed to parse Authorization header",
+                    extra={
+                        "url": str(request.url),
+                        "user-agent": request.headers.get("user-agent"),
+                    },
+                )
                 raise HTTPException(status_code=401, detail="Missing API Key")
             if scheme.lower() == "basic":
                 api_key = authorization.password
