@@ -134,20 +134,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     [setRefreshToken, pollAlertsRefreshToken]
   );
 
-  // if we don't have presets data yet, just show loading
-  if (!selectedPreset && isPresetsLoading) {
-    return <Loading />;
-  }
-
-  // if we have an error, throw it, error.tsx will catch it
-  if (alertsError) {
-    throw alertsError;
-  }
-
-  if (!selectedPreset) {
-    return <NotFound />;
-  }
-
   const alertsQueryStateRef = useRef(alertsQueryState);
 
   const reloadAlerts = useCallback(
@@ -167,6 +153,20 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     },
     [setAlertsQueryState]
   );
+
+  // if we don't have presets data yet, just show loading
+  if (!selectedPreset && isPresetsLoading) {
+    return <Loading />;
+  }
+
+  // if we have an error, throw it, error.tsx will catch it
+  if (alertsError) {
+    throw alertsError;
+  }
+
+  if (!selectedPreset) {
+    return <NotFound />;
+  }
 
   return (
     <>
