@@ -131,7 +131,7 @@ class AxiomProvider(BaseProvider):
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto | list[AlertDto]:
         
-        action = event.get("action")
+        action = event.get("action", "Unable to fetch action")
         axiom_event = event.get("event")
         monitorId = axiom_event.get("monitorID")
         body = axiom_event.get("body", "Unable to fetch body")
@@ -146,8 +146,18 @@ class AxiomProvider(BaseProvider):
         matchedEvent = axiom_event.get("matchedEvent", {})
 
         def convert_to_iso_format(date_str):
-            dt = datetime.strptime(date_str[:19], "%Y-%m-%d %H:%M:%S")
-            return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+            try:
+                dt = datetime.strptime(date_str[:19], "%Y-%m-%d %H:%M:%S")
+
+                if len(date_str) > 19 and date_str[19] == ".":
+                    milliseconds = date_str[20:23].ljust(3, "0")
+                else:
+                    milliseconds = "000"
+
+                return dt.strftime(f"%Y-%m-%dT%H:%M:%S.{milliseconds}Z")
+
+            except (ValueError, IndexError):
+                return None
 
         queryEndTime = convert_to_iso_format(queryEndTime)
         queryStartTime = convert_to_iso_format(queryStartTime)
