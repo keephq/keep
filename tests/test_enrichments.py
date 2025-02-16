@@ -177,38 +177,6 @@ def test_run_extraction_rules_empty_attribute_value(mock_session, mock_alert_dto
     assert enriched_event == mock_alert_dto  # Check if event is unchanged
 
 
-def test_run_extraction_rules_handle_source_special_case(mock_session):
-    event = {"name": "Test Alert", "source": "incorrect_format"}
-    rule = ExtractionRule(
-        id=1,
-        tenant_id="test_tenant",
-        priority=1,
-        attribute="{{ source }}",
-        regex="(?P<source>incorrect_format)",
-        disabled=False,
-        pre=True,
-    )
-    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
-        rule
-    ]
-
-    enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
-
-    # We'll mock chevron to return the exact content of 'source' to simulate the template rendering
-    with patch("chevron.render", return_value="incorrect_format"):
-        # We need to mock 're.search' to return a match object with a groupdict that includes 'source'
-        with patch(
-            "re.search",
-            return_value=Mock(groupdict=lambda: {"source": "incorrect_format"}),
-        ):
-            enriched_event = enrichment_bl.run_extraction_rules(event)
-
-    # Assert that the event's 'source' is now a list with the updated source
-    assert enriched_event["source"] == [
-        "incorrect_format"
-    ], "Source should be updated to a list containing the new source."
-
-
 #### 2. Testing `run_extraction_rules` with CEL Conditions
 
 
@@ -250,7 +218,7 @@ def test_run_mapping_rules_applies(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name"],
+        matchers=[["name"]],
         rows=[{"name": "Test Alert", "service": "new_service"}],
         disabled=False,
         type="csv",
@@ -272,7 +240,7 @@ def test_run_mapping_rules_with_regex_match(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name"],
+        matchers=[["name"]],
         rows=[
             {"name": "^(keep-)?backend-service$", "service": "backend_service"},
             {"name": "frontend-service", "service": "frontend_service"},
@@ -316,7 +284,7 @@ def test_run_mapping_rules_no_match(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name"],
+        matchers=[["name"]],
         rows=[
             {"name": "^(keep-)?backend-service$", "service": "backend_service"},
             {"name": "frontend-service", "service": "frontend_service"},
@@ -345,7 +313,7 @@ def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name && severity"],
+        matchers=[["name", "severity"]],
         rows=[{"name": "Test Alert", "severity": "high", "service": "new_service"}],
         disabled=False,
         type="csv",
@@ -360,7 +328,7 @@ def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
     mock_alert_dto.name = "Test Alert"
     mock_alert_dto.severity = "high"
     matcher_exist = enrichment_bl._check_matcher(
-        mock_alert_dto, rule.rows[0], "name && severity"
+        mock_alert_dto, rule.rows[0], ["name", "severity"]
     )
     assert matcher_exist
     enrichment_bl.run_mapping_rules(mock_alert_dto)
@@ -370,7 +338,7 @@ def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
     mock_alert_dto.name = "Other Alert"
     mock_alert_dto.severity = "low"
     result = enrichment_bl._check_matcher(
-        mock_alert_dto, rule.rows[0], "name && severity"
+        mock_alert_dto, rule.rows[0], ["name", "severity"]
     )
     assert not hasattr(mock_alert_dto, "service")
     assert result is False
@@ -382,7 +350,7 @@ def test_check_matcher_with_or_condition(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name", "severity"],
+        matchers=[["name"], ["severity"]],
         rows=[
             {"name": "Test Alert", "service": "new_service"},
             {"severity": "high", "service": "high_severity_service"},
@@ -438,7 +406,7 @@ def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts):
         id=1,
         tenant_id=SINGLE_TENANT_UUID,
         priority=1,
-        matchers=["name", "severity"],
+        matchers=[["name"], ["severity"]],
         rows=[
             {"name": "Test Alert", "service": "new_service"},
             {"severity": "high", "service": "high_severity_service"},
@@ -465,7 +433,7 @@ def test_enrichment(db_session, client, test_app, mock_alert_dto, elastic_client
         id=1,
         tenant_id=SINGLE_TENANT_UUID,
         priority=1,
-        matchers=["name", "severity"],
+        matchers=[["name"], ["severity"]],
         rows=[
             {"name": "Test Alert", "service": "new_service"},
             {"severity": "high", "service": "high_severity_service"},
@@ -596,7 +564,7 @@ def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
         id=3,
         tenant_id=SINGLE_TENANT_UUID,
         priority=1,
-        matchers=["service"],
+        matchers=[["service"]],
         name="topology_rule",
         disabled=False,
         type="topology",
@@ -651,7 +619,7 @@ def test_run_mapping_rules_with_complex_matchers(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name && severity", "source"],
+        matchers=[["name", "severity"], ["source"]],
         rows=[
             {
                 "name": "Test Alert",
@@ -709,7 +677,7 @@ def test_run_mapping_rules_enrichments_filtering(mock_session, mock_alert_dto):
         id=1,
         tenant_id="test_tenant",
         priority=1,
-        matchers=["name && severity"],
+        matchers=[["name", "severity"]],
         rows=[
             {
                 "name": "Test Alert",

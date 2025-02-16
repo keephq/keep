@@ -1,15 +1,13 @@
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 import { NextAuthProvider } from "../auth-provider";
 import { Mulish } from "next/font/google";
 import { ToastContainer } from "react-toastify";
-import Navbar from "components/navbar/Navbar";
-import { TopologyPollingContextProvider } from "@/app/(keep)/topology/model/TopologyPollingContext";
 import { FrigadeProvider } from "../frigade-provider";
 import { getConfig } from "@/shared/lib/server/getConfig";
 import { ConfigProvider } from "../config-provider";
 import { PHProvider } from "../posthog-provider";
 import dynamic from "next/dynamic";
-import ReadOnlyBanner from "../read-only-banner";
+import ReadOnlyBanner from "@/components/banners/read-only-banner";
 import { auth } from "@/auth";
 import { ThemeScript, WatchUpdateTheme } from "@/shared/ui";
 import "@/app/globals.css";
@@ -49,6 +47,16 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   {/* Add the banner here, before the navbar */}
                   {config.READ_ONLY && <ReadOnlyBanner />}
                   <div className="flex-1">{children}</div>
+                  {/** footer */}
+                  {process.env.GIT_COMMIT_HASH &&
+                    process.env.SHOW_BUILD_INFO !== "false" && (
+                      <div className="pointer-events-none opacity-80 w-full p-2 text-slate-400 text-xs">
+                        <div className="w-full text-right">
+                          Version: {process.env.KEEP_VERSION} | Build:{" "}
+                          {process.env.GIT_COMMIT_HASH.slice(0, 6)}
+                        </div>
+                      </div>
+                    )}
                   <ToastContainer />
                 </main>
               </FrigadeProvider>
@@ -56,16 +64,6 @@ export default async function RootLayout({ children }: RootLayoutProps) {
           </PHProvider>
         </ConfigProvider>
         <WatchUpdateTheme />
-
-        {/** footer */}
-        {process.env.GIT_COMMIT_HASH &&
-          process.env.SHOW_BUILD_INFO !== "false" && (
-            <div className="pointer-events-none fixed right-2.5 bottom-2.5 text-slate-400 opacity-80 text-xs">
-              Build: {process.env.GIT_COMMIT_HASH}
-              <br />
-              Version: {process.env.KEEP_VERSION}
-            </div>
-          )}
       </body>
     </html>
   );

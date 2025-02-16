@@ -1,0 +1,20 @@
+workflow:
+  id: e3199504-6439-424b-82a2-e6b0e4d516cc
+  name: query-grafana-loki
+  description: Query logs from Grafana Loki
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps:
+    - name: grafana_loki-step
+      provider:
+        type: grafana_loki
+        config: "{{ providers.loki }}"
+        with:
+          query: sum(rate({job="varlogs"}[10m])) by (level)
+          queryType: query_range
+          step: 300
+  actions: []

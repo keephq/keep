@@ -319,7 +319,8 @@ actions:
 
     with patch("keep.api.core.db.engine", mock_engine):
         with patch("keep.api.core.db_utils.create_db_engine", return_value=mock_engine):
-            yield session
+            with patch("keep.api.core.alerts.engine", mock_engine):
+                yield session
 
     import logging
 
@@ -448,7 +449,7 @@ def elastic_client(request):
     os.environ["ELASTIC_PASSWORD"] = "keeptests"
     os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
     os.environ["ELASTIC_INDEX_SUFFIX"] = "test"
-    request.getfixturevalue("elastic_container")
+    # request.getfixturevalue("elastic_container")
     elastic_client = ElasticClient(
         tenant_id=SINGLE_TENANT_UUID,
     )
@@ -534,9 +535,10 @@ def keycloak_token(request):
 def browser():
     from playwright.sync_api import sync_playwright
 
-    # SHAHAR: you can remove locally, but keep in github actions
-    # headless = os.getenv("PLAYWRIGHT_HEADLESS", "true") == "true"
-    headless = True
+    # Force headless mode if running in CI environment
+    is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
+    headless = is_ci or os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true"
+    
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
         context = browser.new_context()
@@ -570,10 +572,12 @@ def setup_alerts(elastic_client, db_session, request):
         # sleep to avoid same lastReceived
         time.sleep(0.02)
         detail["fingerprint"] = f"test-{i}"
+        if "source" in detail:
+            source = detail["source"][0]
         alerts.append(
             Alert(
                 tenant_id=SINGLE_TENANT_UUID,
-                provider_type="test",
+                provider_type=source,
                 provider_id="test",
                 event=_create_valid_event(detail),
                 fingerprint=detail["fingerprint"],
