@@ -168,6 +168,7 @@
             "providers/documentation/google_chat-provider",
             "providers/documentation/grafana-provider",
             "providers/documentation/grafana_incident-provider",
+            "providers/documentation/grafana_loki-provider",
             "providers/documentation/grafana_oncall-provider",
             "providers/documentation/graylog-provider",
             "providers/documentation/grok-provider",

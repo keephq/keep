@@ -224,10 +224,27 @@ class AlertDto(BaseModel):
     def validate_last_received(cls, last_received):
         def convert_to_iso_format(date_string):
             try:
-                dt = datetime.datetime.fromisoformat(date_string)
+                # Normalize the string to uppercase for T and Z
+                if isinstance(date_string, str):
+                    date_string = date_string.replace("t", "T").replace("z", "Z")
+                dt = datetime.datetime.fromisoformat(date_string.rstrip("Z"))
                 dt_utc = dt.astimezone(pytz.UTC)
                 return dt_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
             except ValueError:
+                return None
+
+        def parse_unix_timestamp(timestamp_string):
+            try:
+                # Remove trailing 'Z' if present
+                timestamp_string = timestamp_string.rstrip("Z")
+                # Convert string to float
+                timestamp = float(timestamp_string)
+                # Create datetime from timestamp
+                dt = datetime.datetime.fromtimestamp(
+                    timestamp, tz=datetime.timezone.utc
+                )
+                return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            except (ValueError, TypeError):
                 return None
 
         if not last_received:
@@ -235,8 +252,14 @@ class AlertDto(BaseModel):
 
         # Try to convert the date to iso format
         # see: https://github.com/keephq/keep/issues/1397
-        if convert_to_iso_format(last_received):
-            return convert_to_iso_format(last_received)
+        iso_date = convert_to_iso_format(last_received)
+        if iso_date:
+            return iso_date
+
+        # Try to parse as UNIX timestamp
+        unix_date = parse_unix_timestamp(last_received)
+        if unix_date:
+            return unix_date
 
         raise ValueError(f"Invalid date format: {last_received}")
 
