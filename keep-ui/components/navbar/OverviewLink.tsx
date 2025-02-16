@@ -18,9 +18,33 @@ export const OverviewLinks = ({ session }: OverviewLinksProps) => {
 
   if (error) {
     return (
-      <Text className="text-xs max-w-[200px] px-2">
-        Dashboards will appear here when saved.
-      </Text>
+      <Disclosure as="div" className="space-y-1" defaultOpen>
+        {({ open }) => (
+          <>
+            <Disclosure.Button className="w-full flex justify-between items-center p-2">
+              <div className="flex items-center relative group">
+                <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
+                  ANALYTICS
+                </Subtitle>
+              </div>
+              <IoChevronUp
+                className={clsx("mr-2 text-slate-400", {
+                  "rotate-180": open,
+                })}
+              />
+            </Disclosure.Button>
+
+            <Disclosure.Panel
+              as="ul"
+              className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4"
+            >
+              <Text className="text-xs max-w-[200px] px-2">
+                Dashboards will appear here when saved.
+              </Text>
+            </Disclosure.Panel>
+          </>
+        )}
+      </Disclosure>
     );
   }
 

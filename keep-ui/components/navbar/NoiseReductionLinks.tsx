@@ -2,7 +2,7 @@
 
 import { Subtitle } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
-import { Mapping, Rules, Workflows, ExportIcon } from "components/icons";
+import { Mapping, Rules, ExportIcon } from "components/icons";
 import { Session } from "next-auth";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";

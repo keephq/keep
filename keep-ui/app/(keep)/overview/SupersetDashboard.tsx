@@ -41,7 +41,7 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
             hideChartControls: false,
             filters: {
               visible: true,
-              expanded: false,
+              expanded: true,
             },
           },
         });
