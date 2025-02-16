@@ -64,6 +64,11 @@ class CheckmkProvider(BaseProvider):
 
     @staticmethod
     def convert_to_utc_isoformat(long_date_time: str, default: str) -> str:
+        # Early return if long_date_time is None
+        if long_date_time is None:
+            logger.warning("Received None as long_date_time, returning default value")
+            return default
+
         logger.info(f"Converting {long_date_time} to UTC ISO format")
         formats = [
             "%a %b %d %H:%M:%S %Z %Y",  # For timezone names (e.g., CEST, UTC)
