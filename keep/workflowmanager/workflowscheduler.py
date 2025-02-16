@@ -10,6 +10,7 @@ from threading import Lock
 
 from sqlalchemy.exc import IntegrityError
 
+from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.core.db import create_workflow_execution
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
@@ -413,7 +414,6 @@ class WorkflowScheduler:
         """
         Record timeout for workflows that are running for too long.
         """
-        is_running_in_keep_cloud = "keephq.dev" in config("KEEP_API_URL")
         workflow_executions = get_timeouted_workflow_exections()
         for workflow_execution in workflow_executions:
             self.logger.info(
@@ -426,7 +426,7 @@ class WorkflowScheduler:
             )
             timeout_message = "Workflow execution timed out. "
 
-            if is_running_in_keep_cloud:
+            if RUNNING_IN_CLOUD_RUN:
                 timeout_message += (
                     "Please contact Keep support for help with this issue."
                 )
