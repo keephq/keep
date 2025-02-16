@@ -65,20 +65,39 @@ class CheckmkProvider(BaseProvider):
     @staticmethod
     def convert_to_utc_isoformat(long_date_time: str, default: str) -> str:
         logger.info(f"Converting {long_date_time} to UTC ISO format")
-        try:
-            # Parse the short_date_time string to a datetime object
-            local_dt = datetime.strptime(long_date_time, "%a %b %d %H:%M:%S %Z %Y")
+        formats = [
+            "%a %b %d %H:%M:%S %Z %Y",  # For timezone names (e.g., CEST, UTC)
+            "%a %b %d %H:%M:%S %z %Y",  # For timezone offsets (e.g., +0700, -0500)
+            "%a %b %d %H:%M:%S %z%z %Y",  # For space-separated offsets (e.g., +07 00)
+        ]
 
-            # Convert to UTC
-            # Note: The original code assumes the input is in local time, but your input includes a timezone (CEST).
-            # You might need to handle timezone conversion if necessary.
-            utc_dt = local_dt.astimezone(timezone.utc)
+        for date_format in formats:
+            try:
+                # Handle special case where timezone offset has a space
+                if "+" in long_date_time or "-" in long_date_time:
+                    # Remove space in timezone offset if present (e.g., '+07 00' -> '+0700')
+                    parts = long_date_time.split()
+                    if len(parts) == 7:  # If offset is split into two parts
+                        offset = parts[-3] + parts[-2]
+                        long_date_time = " ".join(parts[:-3] + [offset] + parts[-1:])
 
-            # Return the ISO 8601 format
-            return utc_dt.isoformat()
-        except Exception:
-            logger.exception(f"Error converting {long_date_time} to UTC ISO format")
-            return default
+                # Parse the datetime string
+                local_dt = datetime.strptime(long_date_time, date_format)
+
+                # Convert to UTC if it has timezone info, otherwise assume UTC
+                if local_dt.tzinfo is None:
+                    local_dt = local_dt.replace(tzinfo=timezone.utc)
+                utc_dt = local_dt.astimezone(timezone.utc)
+
+                # Return the ISO 8601 format
+                return utc_dt.isoformat()
+
+            except ValueError:
+                continue
+
+        # If none of the formats match
+        logger.exception(f"Error converting {long_date_time} to UTC ISO format")
+        return default
 
     @staticmethod
     def _format_alert(
