@@ -1,7 +1,6 @@
 "use server";
 
 import OpenAI from "openai";
-import { V2Properties } from "../types";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { GENERAL_INSTRUCTIONS } from "../_constants";
 import { z } from "zod";
@@ -21,7 +20,10 @@ export async function generateStepDefinition({
 }: {
   name: string;
   stepType: string;
-  stepProperties: V2Properties;
+  stepProperties: {
+    actionParams?: string[];
+    stepParams?: string[];
+  };
   aim: string;
 }) {
   const combinedParams = [
