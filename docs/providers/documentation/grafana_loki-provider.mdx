@@ -1,0 +1,47 @@
+---
+title: 'Grafana Loki'
+sidebarTitle: 'Grafana Loki Provider'
+description: 'Grafana Loki provider allows you to query logs from Grafana Loki.'
+---
+
+## Overview
+
+Grafana Loki is a log aggregation system designed to store and query logs from all your applications and infrastructure. The easiest way to get started is with Grafana Cloud, our fully composable observability stack.
+
+## Authentication Parameters
+
+The Grafana Loki provider requires the following authentication parameters:
+
+- `Grafana Loki Host URL`: The URL of the Grafana Loki instance.
+
+## Connecting with the Grafana Loki provider
+
+1. Obtain the required authentication parameters.
+2. Add Grafana Loki provider to your keep account and configure with the above authentication parameters.
+
+## Querying Grafana Loki
+
+The Grafana Loki provider allows you to query logs from Grafana Loki through the `query` and `query_range` types. The following are the parameters available for querying:
+
+1. `query` type:
+
+    - `query`: The [LogQL](https://grafana.com/docs/loki/latest/query/) query to perform. Requests that do not use valid LogQL syntax will return errors.
+    - `limit`: The max number of entries to return. It defaults to `100`. Only applies to query types which produce a stream (log lines) response.
+    - `time`: The evaluation time for the query as a nanosecond Unix epoch or another [supported format](https://grafana.com/docs/loki/latest/reference/loki-http-api/#timestamps). Defaults to now.
+    - `direction`: Determines the sort order of logs. Supported values are `forward` or `backward`. Defaults to `backward`.
+
+2. `query_range` type:
+
+    - `query`: The [LogQL](https://grafana.com/docs/loki/latest/query/) query to perform.
+    - `limit`: The max number of entries to return. It defaults to `100`. Only applies to query types which produce a stream (log lines) response.
+    - `start`: The start time for the query as a nanosecond Unix epoch or another [supported format](https://grafana.com/docs/loki/latest/reference/loki-http-api/#timestamps). Defaults to one hour ago. Loki returns results with timestamp greater or equal to this value.
+    - `end`: The end time for the query as a nanosecond Unix epoch or another [supported format](https://grafana.com/docs/loki/latest/reference/loki-http-api/#timestamps). Defaults to now. Loki returns results with timestamp lower than this value.
+    - `since`: A `duration` used to calculate `start` relative to `end`. If `end` is in the future, `start` is calculated as this duration before now. Any value specified for `start` supersedes this parameter.
+    - `step`: Query resolution step width in `duration` format or float number of seconds. `duration` refers to Prometheus duration strings of the form `[0-9]+[smhdwy]`. For example, 5m refers to a duration of 5 minutes. Defaults to a dynamic value based on `start` and `end`. Only applies to query types which produce a matrix response.
+    - `interval`: Only return entries at (or greater than) the specified interval, can be a `duration` format or float number of seconds. Only applies to queries which produce a stream response. Not to be confused with step, see the explanation under [Step versus interval](https://grafana.com/docs/loki/latest/reference/loki-http-api/#step-versus-interval).
+    - `direction`: Determines the sort order of logs. Supported values are `forward` or `backward`. Defaults to `backward`.
+
+## Useful Links
+
+- [Grafana Loki](https://grafana.com/oss/loki/)
+- [Grafana Loki Authentication](https://grafana.com/docs/loki/latest/operations/authentication/)

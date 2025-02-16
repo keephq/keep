@@ -547,19 +547,15 @@ class KeepProvider(BaseProvider):
         workflow_store = WorkflowStore()
         workflows = workflow_store.get_all_workflows(self.context_manager.tenant_id)
         for workflow in workflows:
-            self.logger.info(f"Deleting workflow {workflow['id']}")
+            self.logger.info(f"Deleting workflow {workflow.id}")
             try:
                 workflow_store.delete_workflow(
                     self.context_manager.tenant_id, workflow.id
                 )
-                self.logger.info(f"Deleted workflow {workflow['id']}")
+                self.logger.info(f"Deleted workflow {workflow.id}")
             except Exception as e:
-                self.logger.exception(
-                    f"Failed to delete workflow {workflow['id']}: {e}"
-                )
-                raise ProviderException(
-                    f"Failed to delete workflow {workflow['id']}: {e}"
-                )
+                self.logger.exception(f"Failed to delete workflow {workflow.id}: {e}")
+                raise ProviderException(f"Failed to delete workflow {workflow.id}: {e}")
         self.logger.info("Deleted all workflows")
 
     def _notify(self, **kwargs):
