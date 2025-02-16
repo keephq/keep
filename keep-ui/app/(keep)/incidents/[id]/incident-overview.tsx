@@ -34,6 +34,8 @@ import { AlertDto } from "@/entities/alerts/model";
 import { useRouter } from "next/navigation";
 import { RootCauseAnalysis } from "@/components/ui/RootCauseAnalysis";
 import { IncidentChangeSeveritySelect } from "@/features/change-incident-severity";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Props {
   incident: IncidentDto;
@@ -94,9 +96,17 @@ function Summary({
   };
 
   const formatedSummary = (
-    <Markdown remarkPlugins={[remarkRehype]} rehypePlugins={[rehypeRaw]}>
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm, remarkRehype]}
+      className="prose prose-slate max-w-2xl 
+                prose-headings:my-2 prose-p:my-1 
+                prose-ul:my-1 prose-ol:my-1 
+                prose-a:text-blue-600 
+                prose-blockquote:border-l-4 prose-blockquote:pl-4 
+                prose-pre:bg-gray-800 prose-pre:text-white"
+    >
       {summary ?? generatedSummary}
-    </Markdown>
+    </ReactMarkdown>
   );
 
   if (collapsable) {
