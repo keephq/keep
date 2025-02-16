@@ -77,8 +77,8 @@ class EnrichmentLog(SQLModel, table=True):
             UUIDType(binary=False),
             ForeignKey("enrichmentevent.id", ondelete="CASCADE"),
             nullable=False,
-            default_factory=uuid4,
-        )
+        ),
+        default_factory=lambda: uuid4(),
     )
     timestamp: datetime = Field(
         sa_column=Column(datetime_column_type, nullable=False),

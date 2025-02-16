@@ -78,8 +78,18 @@ def __internal_prepartion(
         api_key_name (str | None): API key name to set on the alerts (that were used to push them)
     """
     for alert in alerts:
-        if not alert.source:
-            alert.source = ["keep"]
+        try:
+            if not alert.source:
+                alert.source = ["keep"]
+        # weird bug on Mailgun where source is int
+        except Exception:
+            logger.exception(
+                "failed to parse source",
+                extra={
+                    "alert": alerts,
+                },
+            )
+            raise
 
         if fingerprint is not None:
             alert.fingerprint = fingerprint
@@ -697,7 +707,12 @@ def __save_error_alerts(
         return
 
     try:
-        logger.info("Getting database session")
+        logger.info(
+            "Getting database session",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
         session = get_session_sync()
 
         # Convert to list if single dict
@@ -706,16 +721,34 @@ def __save_error_alerts(
             raw_events = [raw_events]
 
         logger.info(f"Saving {len(raw_events)} error alerts")
+
+        if len(raw_events) > 5:
+            logger.info(
+                "Raw Alert Payload",
+                extra={
+                    "tenant_id": tenant_id,
+                    "raw_events": raw_events,
+                },
+            )
         for raw_event in raw_events:
             # Convert AlertDto to dict if needed
             if isinstance(raw_event, AlertDto):
                 logger.info("Converting AlertDto to dict")
                 raw_event = raw_event.dict()
 
+            # TODO: change to debug
+            logger.debug(
+                "Creating AlertRaw object",
+                extra={
+                    "tenant_id": tenant_id,
+                    "raw_event": raw_event,
+                },
+            )
             alert = AlertRaw(
                 tenant_id=tenant_id, raw_alert=raw_event, provider_type=provider_type
             )
             session.add(alert)
+            logger.info("AlertRaw object created")
         session.commit()
         logger.info("Successfully saved error alerts")
     except Exception:

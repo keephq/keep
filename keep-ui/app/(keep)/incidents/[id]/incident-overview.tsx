@@ -120,20 +120,21 @@ function Summary({
     );
   }
 
-  return summary || generatedSummary ? (
-    <div>{formatedSummary}</div>
-  ) : (
-    <Button
-      variant="secondary"
-      onClick={executeTask}
-      className="mt-2.5"
-      disabled={generatingSummary}
-      loading={generatingSummary}
-      icon={TbSparkles}
-      size="xs"
-    >
-      AI Summary
-    </Button>
+  return (
+    <div>
+      {formatedSummary}
+      <Button
+        variant="secondary"
+        onClick={executeTask}
+        className="mt-2.5"
+        disabled={generatingSummary}
+        loading={generatingSummary}
+        icon={TbSparkles}
+        size="xs"
+      >
+        AI Summary
+      </Button>
+    </div>
   );
 }
 
@@ -220,7 +221,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
 
   return (
     // Adding padding bottom to visually separate from the tabs
-    <div className="flex max-h-56 gap-6 items-start w-full text-tremor-default">
+    <div className="flex gap-6 items-start w-full text-tremor-default">
       <div className="basis-2/3 grow">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <div className="max-w-2xl">

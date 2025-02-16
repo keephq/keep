@@ -203,6 +203,12 @@ def dict_pop(data: str | dict, *args) -> dict:
     return dict_copy
 
 
+def dict_pop_prefix(data: str | dict, prefix: str) -> dict:
+    if isinstance(data, str):
+        data = json.loads(data)
+    return {k: v for k, v in data.items() if not k.startswith(prefix)}
+
+
 def dict_filter_by_prefix(data: str | dict, prefix: str) -> dict:
     """
     This function filters a dictionary and returns only keys with the given prefix.

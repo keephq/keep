@@ -28,6 +28,7 @@
       "@/utils/*": ["./utils/*"],
       "@/entities/*": ["./entities/*"],
       "@/features/*": ["./features/*"],
+      "@/widgets/*": ["./widgets/*"],
       "@/shared/*": ["./shared/*"],
       "@/types/*": ["./types/*"],
       "@/*": ["./*"]
