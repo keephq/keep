@@ -23,11 +23,14 @@ import {
   FlowNode,
   Definition,
   ToolboxConfiguration,
+  V2StepTemplateSchema,
+  V2EndStep,
+  V2StartStep,
 } from "@/entities/workflows";
 import { validateStepPure, validateGlobalPure } from "./validation";
 import { getLayoutedWorkflowElements } from "../lib/getLayoutedWorkflowElements";
 import { wrapDefinitionV2 } from "@/entities/workflows/lib/parser";
-
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 class WorkflowBuilderError extends Error {
   constructor(message: string) {
     super(message);
@@ -35,17 +38,33 @@ class WorkflowBuilderError extends Error {
   }
 }
 
+/**
+ * Add a node between two edges
+ * @param nodeOrEdgeId - The id of the node or edge to add the new node between
+ * @param rawStep - The step to add
+ * @param type - The type of the node or edge
+ * @param set - The set function
+ * @param get - The get function
+ * @returns The id of the new node
+ * @throws WorkflowBuilderError if the node or edge or step is not defined
+ * @throws ZodError if the step is not valid
+ */
 function addNodeBetween(
   nodeOrEdgeId: string,
-  step: V2Step,
+  rawStep: V2Step,
   type: "node" | "edge",
   set: StoreSet,
   get: StoreGet
 ) {
-  if (!nodeOrEdgeId || !step) {
-    console.error("addNodeBetween: Node or edge or step is not defined");
-    return;
+  if (!nodeOrEdgeId || !rawStep) {
+    throw new WorkflowBuilderError(
+      "addNodeBetween: Node or edge or step is not defined"
+    );
   }
+
+  console.log("rawStep", rawStep);
+  const step = V2StepTemplateSchema.parse(rawStep);
+
   let edge = {} as Edge;
   if (type === "node") {
     edge = get().edges.find((edge) => edge.target === nodeOrEdgeId) as Edge;
@@ -57,33 +76,41 @@ function addNodeBetween(
 
   let { source: sourceId, target: targetId } = edge || {};
   if (!sourceId || !targetId) {
-    console.error("addNodeBetween: Source or target is not defined");
-    return;
+    throw new WorkflowBuilderError(
+      "addNodeBetween: Source or target is not defined"
+    );
   }
 
   const isTriggerComponent = step.componentType === "trigger";
 
   if (sourceId !== "trigger_start" && isTriggerComponent) {
-    return;
+    throw new WorkflowBuilderError(
+      "addNodeBetween: Trigger is only allowed at the start of the workflow"
+    );
   }
 
   if (sourceId == "trigger_start" && !isTriggerComponent) {
-    return;
+    throw new WorkflowBuilderError(
+      "addNodeBetween: Only trigger can be added at the start of the workflow"
+    );
   }
 
   const nodes = get().nodes;
+  // Return if the trigger is already in the workflow
   if (
     sourceId === "trigger_start" &&
     isTriggerComponent &&
     nodes.find((node) => node && step.id === node.id)
   ) {
-    return;
+    throw new WorkflowBuilderError(
+      "addNodeBetween: This type of trigger is already in the workflow"
+    );
   }
 
   let targetIndex = nodes.findIndex((node) => node.id === targetId);
   const sourceIndex = nodes.findIndex((node) => node.id === sourceId);
   if (targetIndex == -1) {
-    return;
+    throw new WorkflowBuilderError("addNodeBetween: Target node not found");
   }
 
   if (sourceId === "trigger_start") {
@@ -152,15 +179,30 @@ function addNodeBetween(
   switch (newNodeId) {
     case "interval":
     case "manual": {
-      set({ v2Properties: { ...get().v2Properties, [newNodeId]: "" } });
+      set({
+        v2Properties: {
+          ...get().v2Properties,
+          [newNodeId]: newStep.properties?.[newNodeId] ?? "",
+        },
+      });
       break;
     }
     case "alert": {
-      set({ v2Properties: { ...get().v2Properties, [newNodeId]: {} } });
+      set({
+        v2Properties: {
+          ...get().v2Properties,
+          [newNodeId]: newStep.properties?.[newNodeId] ?? {},
+        },
+      });
       break;
     }
     case "incident": {
-      set({ v2Properties: { ...get().v2Properties, [newNodeId]: {} } });
+      set({
+        v2Properties: {
+          ...get().v2Properties,
+          [newNodeId]: newStep.properties?.[newNodeId] ?? {},
+        },
+      });
       break;
     }
   }
@@ -183,12 +225,12 @@ const defaultState: FlowStateValues = {
   v2Properties: {},
   editorOpen: true,
   toolboxConfiguration: null,
+  isInitialized: false,
   isLayouted: false,
   selectedEdge: null,
   changes: 0,
   synced: true,
   canDeploy: false,
-  buttonsEnabled: false,
   saveRequestCount: 0,
   runRequestCount: 0,
   isSaving: false,
@@ -202,7 +244,6 @@ export const useWorkflowStore = create<FlowState>()(
     ...defaultState,
     setDefinition: (def) => set({ definition: def }),
     setIsLoading: (loading) => set({ isLoading: loading }),
-    setButtonsEnabled: (state: boolean) => set({ buttonsEnabled: state }),
     triggerSave: () =>
       set((state) => ({ saveRequestCount: state.saveRequestCount + 1 })),
     triggerRun: () =>
@@ -217,9 +258,11 @@ export const useWorkflowStore = create<FlowState>()(
       step: V2Step,
       type: "node" | "edge"
     ) => {
-      const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
-      if (newNodeId) {
-        get().setSelectedNode(newNodeId);
+      try {
+        addNodeBetween(nodeOrEdgeId, step, type, set, get);
+      } catch (error) {
+        console.error(error);
+        showErrorToast(error);
       }
     },
     setToolBoxConfig: (config: ToolboxConfiguration) =>
@@ -591,7 +634,7 @@ async function initializeWorkflow(
       properties: {},
       isLayouted: false,
       name: "start",
-    } as V2Step,
+    } as V2StartStep,
     ...getTriggerStep(parsedWorkflow?.properties),
     ...(parsedWorkflow?.sequence || []),
     {
@@ -601,7 +644,7 @@ async function initializeWorkflow(
       properties: {},
       isLayouted: false,
       name: "end",
-    } as V2Step,
+    } as V2EndStep,
   ];
   const initialPosition = { x: 0, y: 50 };
   let { nodes, edges } = processWorkflowV2(sequences, initialPosition, true);
@@ -614,6 +657,7 @@ async function initializeWorkflow(
     v2Properties: { ...(parsedWorkflow?.properties ?? {}), name },
     toolboxConfiguration,
     isLoading: false,
+    isInitialized: true,
   });
   get().onLayout({ direction: "DOWN" });
   get().updateDefinition();

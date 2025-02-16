@@ -5,16 +5,45 @@ import { useWorkflowStore } from "@/entities/workflows";
 import { Button } from "@tremor/react";
 import "@xyflow/react/dist/style.css";
 import { PlusIcon } from "@heroicons/react/24/outline";
-import { DebugEdgeInfo } from "./debug-info";
 import clsx from "clsx";
+import { WF_DEBUG_INFO } from "./debug-settings";
 
-interface WorkflowEdgeProps extends EdgeProps {
+export function DebugEdgeInfo({
+  id,
+  source,
+  labelX,
+  labelY,
+  target,
+  isLayouted,
+}: Pick<WorkflowEdgeProps, "id" | "source" | "target"> & {
+  labelX: number;
+  labelY: number;
+  isLayouted: boolean;
+}) {
+  if (!WF_DEBUG_INFO) {
+    return null;
+  }
+  return (
+    <div
+      className={`absolute bg-black text-green-500 font-mono text-[10px] px-1 py-1`}
+      style={{
+        transform: `translate(0, -50%) translate(${labelX + 30}px, ${labelY}px)`,
+        pointerEvents: "none",
+        opacity: isLayouted ? 1 : 0,
+      }}
+    >
+      {id}
+    </div>
+  );
+}
+
+export interface WorkflowEdgeProps extends EdgeProps {
   label?: string;
   type?: string;
   data?: any;
 }
 
-const CustomEdge: React.FC<WorkflowEdgeProps> = ({
+export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
   id,
   sourceX,
   sourceY,
@@ -150,5 +179,3 @@ const CustomEdge: React.FC<WorkflowEdgeProps> = ({
     </>
   );
 };
-
-export default CustomEdge;

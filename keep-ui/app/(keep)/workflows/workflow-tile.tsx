@@ -4,16 +4,11 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
 import { KeepLoader } from "@/shared/ui";
-import { Trigger, Provider, Workflow } from "@/shared/api/workflows";
-import { Button, Text, Card, Icon, ListItem, List, Badge } from "@tremor/react";
-import ProviderForm from "@/app/(keep)/providers/provider-form";
-import SlidingPanel from "react-sliding-side-panel";
-import { useFetchProviders } from "@/app/(keep)/providers/page.client";
-import { Provider as FullProvider } from "@/app/(keep)/providers/providers";
+import { Trigger, Workflow } from "@/shared/api/workflows";
+import { Button, Card, Icon, ListItem, List, Badge } from "@tremor/react";
 import {
   CheckCircleIcon,
   CursorArrowRaysIcon,
-  XCircleIcon,
 } from "@heroicons/react/24/outline";
 import AlertTriggerModal from "./workflow-run-with-alert-modal";
 import { formatDistanceToNowStrict } from "date-fns";
@@ -21,16 +16,12 @@ import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
 import WorkflowGraph from "./workflow-graph";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import Modal from "@/components/ui/Modal";
-import {
-  MdOutlineKeyboardArrowRight,
-  MdOutlineKeyboardArrowLeft,
-} from "react-icons/md";
 import { HiBellAlert } from "react-icons/hi2";
 import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import "./workflow-tile.css";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useToggleWorkflow } from "utils/hooks/useWorkflowToggle";
+import "./workflow-tile.css";
 
 function TriggerTile({ trigger }: { trigger: Trigger }) {
   return (
@@ -57,108 +48,9 @@ function TriggerTile({ trigger }: { trigger: Trigger }) {
   );
 }
 
-export const ProvidersCarousel = ({
-  providers,
-  onConnectClick,
-}: {
-  providers: FullProvider[];
-  onConnectClick: (provider: FullProvider) => void;
-}) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const providersPerPage = 3;
-
-  const nextIcons = () => {
-    if (currentIndex + providersPerPage < providers.length) {
-      setCurrentIndex(currentIndex + providersPerPage);
-    }
-  };
-
-  const prevIcons = () => {
-    if (currentIndex - providersPerPage >= 0) {
-      setCurrentIndex(currentIndex - providersPerPage);
-    }
-  };
-
-  const displayedProviders = providers.slice(
-    currentIndex,
-    currentIndex + providersPerPage
-  );
-
-  return (
-    <div className="contianer flex flex-row justify-around items-center">
-      <button
-        className={`bg-transparent border-none text-2xl cursor-pointer ${
-          currentIndex === 0 ? "opacity-50 cursor-not-allowed" : ""
-        }`}
-        onClick={prevIcons}
-        disabled={currentIndex === 0}
-      >
-        <MdOutlineKeyboardArrowLeft size="2rem" />
-      </button>
-      <div className="container flex items-center justify-around overflow-hidden p-2">
-        {displayedProviders.map((provider, index) => (
-          <div
-            key={index}
-            className="relative p-2 hover:grayscale-0 text-2xl h-full shadow-md"
-          >
-            {provider.installed ? (
-              <Icon
-                icon={CheckCircleIcon}
-                className="absolute top-[-15px] right-[-15px]"
-                color="green"
-                size="sm"
-                tooltip="Connected"
-              />
-            ) : (
-              <Icon
-                icon={XCircleIcon}
-                className="absolute top-[-15px] right-[-15px]"
-                color="red"
-                size="sm"
-                tooltip="Disconnected"
-              />
-            )}
-            <Button
-              onClick={() => onConnectClick(provider)}
-              disabled={provider.installed}
-              className="bg-transparent border-none hover:bg-transparent p-0"
-            >
-              <DynamicImageProviderIcon
-                src={`/icons/${provider.type}-icon.png`}
-                width={30}
-                height={30}
-                alt={provider.type}
-                className={`${
-                  provider.installed ? "" : "grayscale hover:grayscale-0"
-                }`}
-              />
-            </Button>
-          </div>
-        ))}
-      </div>
-      <button
-        className={`bg-transparent border-none text-2xl cursor-pointer ${
-          currentIndex + providersPerPage >= providers.length
-            ? "opacity-50 cursor-not-allowed"
-            : ""
-        }`}
-        onClick={nextIcons}
-        disabled={currentIndex + providersPerPage >= providers.length}
-      >
-        <MdOutlineKeyboardArrowRight size="2rem" />
-      </button>
-    </div>
-  );
-};
-
 function WorkflowTile({ workflow }: { workflow: Workflow }) {
   // Create a set to keep track of unique providers
   const router = useRouter();
-  const [openPanel, setOpenPanel] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<FullProvider | null>(
-    null
-  );
 
   const [openTriggerModal, setOpenTriggerModal] = useState<boolean>(false);
   const alertSource = workflow?.triggers
@@ -167,7 +59,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const [fallBackIcon, setFallBackIcon] = useState(false);
   const { toggleWorkflow, isToggling } = useToggleWorkflow(workflow.id);
 
-  const { providers, mutate } = useFetchProviders();
   const { deleteWorkflow } = useWorkflowActions();
   const {
     isRunning,
@@ -176,17 +67,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     isRunButtonDisabled,
     message,
   } = useWorkflowRun(workflow!);
-
-  const handleConnectProvider = (provider: FullProvider) => {
-    setSelectedProvider(provider);
-    // prepopulate it with the name
-    setOpenPanel(true);
-  };
-
-  const handleCloseModal = () => {
-    setOpenPanel(false);
-    setSelectedProvider(null);
-  };
 
   const handleDeleteClick = async () => {
     deleteWorkflow(workflow.id);
@@ -203,13 +83,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     router.push(`/workflows/${workflow.id}`);
   };
 
-  const handleConnecting = (isConnecting: boolean, isConnected: boolean) => {
-    if (isConnected) {
-      handleCloseModal();
-      // refresh the page to show the changes
-      window.location.reload();
-    }
-  };
   const handleDownloadClick = async () => {
     try {
       // Use the raw workflow data directly, as it is already in YAML format
@@ -244,34 +117,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     router.push(`/workflows/builder/${workflow.id}`);
   };
 
-  const workflowProvidersMap = new Map(
-    workflow.providers.map((p) => [p.type, p])
-  );
-
-  const uniqueProviders: FullProvider[] = Array.from(
-    new Set(workflow.providers.map((p) => p.type))
-  )
-    .map((type) => {
-      let fullProvider =
-        providers.find((fp) => fp.type === type) || ({} as FullProvider);
-      let workflowProvider =
-        workflowProvidersMap.get(type) || ({} as FullProvider);
-
-      // Merge properties
-      const mergedProvider: FullProvider = {
-        ...fullProvider,
-        ...workflowProvider,
-        installed: workflowProvider.installed || fullProvider.installed,
-        details: {
-          authentication: {},
-          name: (workflowProvider as Provider).name || fullProvider.id,
-        },
-        id: fullProvider.type,
-      };
-
-      return mergedProvider;
-    })
-    .filter(Boolean) as FullProvider[];
   const triggerTypes = workflow.triggers.map((trigger) => trigger.type);
 
   const lastExecutions = workflow?.last_executions?.slice(0, 15) || [];
@@ -518,33 +363,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               </div>
             </div>
           </div>
-        </div>
-        <div className="container p-2 hidden">
-          <Card className="mt-2.5 p-2">
-            <Text className="">Providers:</Text>
-            <ProvidersCarousel
-              providers={uniqueProviders}
-              onConnectClick={handleConnectProvider}
-            />
-          </Card>
-          <SlidingPanel
-            type={"right"}
-            isOpen={openPanel}
-            size={30}
-            backdropClicked={handleCloseModal}
-            panelContainerClassName="bg-white z-[2000]"
-          >
-            {selectedProvider && (
-              <ProviderForm
-                provider={selectedProvider}
-                onConnectChange={handleConnecting}
-                closeModal={handleCloseModal}
-                installedProvidersMode={selectedProvider.installed}
-                isProviderNameDisabled={true}
-                mutate={mutate}
-              />
-            )}
-          </SlidingPanel>
         </div>
       </Card>
 

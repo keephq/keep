@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@tremor/react";
 import { Provider } from "@/app/(keep)/providers/providers";
 import { getToolboxConfiguration } from "@/features/workflows/builder/lib/utils";
@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import ReactFlowBuilder from "@/features/workflows/builder/ui/ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useWorkflowStore } from "@/entities/workflows";
-import { ResizableColumns, showErrorToast, KeepLoader } from "@/shared/ui";
+import { showErrorToast, KeepLoader } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
@@ -19,17 +19,11 @@ import {
   parseWorkflow,
   wrapDefinitionV2,
 } from "@/entities/workflows/lib/parser";
-import clsx from "clsx";
 import { ChevronLeftIcon, CodeBracketIcon } from "@heroicons/react/24/outline";
-import { BuilderChat } from "@/features/workflows/builder/ui/builder-chat";
+import { BuilderChat } from "@/features/workflows/builder/ui/BuilderChat/builder-chat";
 import { CopilotKit } from "@copilotkit/react-core";
-import {
-  Bar,
-  ColumnResizer,
-  Container,
-  Resizer,
-  Section,
-} from "@column-resizer/react";
+import { Bar, ColumnResizer, Container, Section } from "@column-resizer/react";
+import clsx from "clsx";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -72,7 +66,7 @@ function Builder({
     [providers]
   );
 
-  // TODO: move to useWorkflowInitialization
+  // TODO: move to workflow initialization
   useEffect(
     function updateDefinitionFromInput() {
       setIsLoading(true);
@@ -139,7 +133,7 @@ function Builder({
     return stringify({ workflow: getWorkflowFromDefinition(definition.value) });
   }, [definition?.value]);
 
-  // TODO: move to useWorkflowInitialization or somewhere upper
+  // TODO: move to workflow initialization or somewhere upper
   const saveWorkflow = useCallback(async () => {
     if (!definition?.value) {
       showErrorToast(new Error("Workflow is not initialized"));
@@ -205,6 +199,17 @@ function Builder({
     [reset]
   );
 
+  const columnResizerRef = useRef<ColumnResizer>(null);
+
+  useEffect(() => {
+    const resizer = columnResizerRef.current?.getResizer();
+    if (isYamlEditorOpen) {
+      resizer?.resizeSection(0, { toSize: 400 });
+    } else {
+      resizer?.resizeSection(0, { toSize: 0 });
+    }
+  }, [isYamlEditorOpen]);
+
   if (isLoading) {
     return (
       <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
@@ -214,7 +219,7 @@ function Builder({
   }
 
   return (
-    <Container className="h-full">
+    <Container className="h-full" columnResizerRef={columnResizerRef}>
       <Section minSize={400}>
         {workflowYaml ? (
           <MonacoYAMLEditor
@@ -260,10 +265,7 @@ function Builder({
             )}
           </div>
           <ReactFlowProvider>
-            <ReactFlowBuilder
-              providers={providers}
-              installedProviders={installedProviders}
-            />
+            <ReactFlowBuilder />
           </ReactFlowProvider>
         </div>
       </Section>

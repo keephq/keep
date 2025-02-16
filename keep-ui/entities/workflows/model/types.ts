@@ -1,27 +1,8 @@
 import { Edge, Node } from "@xyflow/react";
 import { Workflow } from "@/shared/api/workflows";
+import { z } from "zod";
 
 export type WorkflowMetadata = Pick<Workflow, "name" | "description">;
-
-export type V2PropertiesManualTrigger = {
-  manual: "true";
-};
-
-export type V2PropertiesIntervalTrigger = {
-  interval: string;
-};
-
-export type V2PropertiesAlertTrigger = {
-  alert: {
-    source: string;
-  } & Record<string, any>;
-};
-
-export type V2PropertiesIncidentTrigger = {
-  incident: {
-    events: string[];
-  };
-};
 
 export type V2PropertiesCondition = {
   value: string;
@@ -29,11 +10,11 @@ export type V2PropertiesCondition = {
 };
 
 export type V2PropertiesStep = {
-  stepParams: string[];
+  stepParams: Record<string, any>;
 };
 
 export type V2PropertiesAction = {
-  actionParams: string[];
+  actionParams: Record<string, any>;
 };
 
 export type V2StepProperties =
@@ -57,52 +38,208 @@ export type DefinitionV2 = {
   isValid: boolean;
 };
 
-export type V2StepTrigger = {
-  id: string;
-  name: string;
-  componentType: "trigger";
-  type: string;
-  properties:
-    | V2PropertiesManualTrigger
-    | V2PropertiesIntervalTrigger
-    | V2PropertiesAlertTrigger
-    | V2PropertiesIncidentTrigger;
-};
+export const V2StepManualTriggerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  componentType: z.literal("trigger"),
+  type: z.literal("manual"),
+  properties: z.object({
+    manual: z.literal("true"),
+  }),
+});
 
-export type V2StepAction = {
-  id: string;
-  name: string;
-  componentType: "action";
-  type: string;
-  properties: V2PropertiesAction;
-};
+export const V2StepIntervalTriggerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  componentType: z.literal("trigger"),
+  type: z.literal("interval"),
+  properties: z.object({
+    interval: z.string(),
+  }),
+});
 
-export type V2StepSwitch = {
-  id: string;
-  name: string;
-  componentType: "switch";
-  type: string;
-  properties: V2PropertiesCondition;
-  branches: {
-    true: V2Step[];
-    false: V2Step[];
-  };
-};
+export const V2StepAlertTriggerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  componentType: z.literal("trigger"),
+  type: z.literal("alert"),
+  properties: z.object({
+    alert: z.record(z.string(), z.any()),
+  }),
+});
 
-export type V2StepForeach = {
-  id: string;
-  name: string;
-  componentType: "foreach";
-  type: string;
-  properties: Record<string, any>;
-  sequence: V2Step[];
-};
+export const IncidentEventEnum = z.enum(["created", "updated", "deleted"]);
 
-export type V2Step =
-  | V2StepTrigger
-  | V2StepAction
-  | V2StepSwitch
-  | V2StepForeach;
+export const V2StepIncidentTriggerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  componentType: z.literal("trigger"),
+  type: z.literal("incident"),
+  properties: z.object({
+    incident: z.object({
+      events: z.array(IncidentEventEnum),
+    }),
+  }),
+});
+
+export const V2StepTriggerSchema = z.union([
+  V2StepManualTriggerSchema,
+  V2StepIntervalTriggerSchema,
+  V2StepAlertTriggerSchema,
+  V2StepIncidentTriggerSchema,
+]);
+
+export const V2ActionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  componentType: z.literal("task"),
+  type: z.string().startsWith("action"),
+  properties: z.object({
+    actionParams: z.array(z.string()),
+    config: z.string().optional(),
+    with: z
+      .record(z.string(), z.any())
+      .superRefine((withObj, ctx) => {
+        console.log(withObj, ctx);
+        // const actionParams = ctx.path[0].properties.actionParams;
+        // const withKeys = Object.keys(withObj);
+
+        // // Check if all keys in 'with' are present in actionParams
+        // const validKeys = withKeys.every((key) => actionParams.includes(key));
+
+        // if (!validKeys) {
+        //   ctx.addIssue({
+        //     code: z.ZodIssueCode.custom,
+        //     message: "All keys in 'with' must be listed in actionParams",
+        //     path: ["with"],
+        //   });
+        // }
+      })
+      .optional(),
+  }),
+});
+
+export type V2ActionStep = z.infer<typeof V2ActionSchema>;
+
+export const V2StepStepSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  componentType: z.literal("task"),
+  type: z.string().startsWith("step"),
+  properties: z.object({
+    stepParams: z.array(z.string()),
+    config: z.string().optional(),
+    with: z
+      .record(z.string(), z.any())
+      .superRefine((withObj, ctx) => {
+        console.log(withObj, ctx);
+      })
+      .optional(),
+  }),
+});
+
+export type V2StepStep = z.infer<typeof V2StepStepSchema>;
+
+export type V2StepTrigger = z.infer<typeof V2StepTriggerSchema>;
+
+export const FlatV2StepSchema = z.union([
+  V2StepTriggerSchema,
+  V2ActionSchema,
+  V2StepStepSchema,
+]);
+
+export type FlatV2Step = z.infer<typeof FlatV2StepSchema>;
+
+export const V2StepConditionAssertSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  componentType: z.literal("switch"),
+  type: z.literal("condition-assert"),
+  properties: z.object({
+    value: z.string(),
+    compare_to: z.string(),
+  }),
+  branches: z.object({
+    true: z.array(FlatV2StepSchema),
+    false: z.array(FlatV2StepSchema),
+  }),
+});
+
+export type V2StepConditionAssert = z.infer<typeof V2StepConditionAssertSchema>;
+
+export const V2StepConditionThresholdSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  componentType: z.literal("switch"),
+  type: z.literal("condition-threshold"),
+  properties: z.object({
+    value: z.string(),
+    compare_to: z.string(),
+  }),
+  branches: z.object({
+    true: z.array(FlatV2StepSchema),
+    false: z.array(FlatV2StepSchema),
+  }),
+});
+
+export type V2StepConditionThreshold = z.infer<
+  typeof V2StepConditionThresholdSchema
+>;
+
+export const V2StepForeachSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  componentType: z.literal("container"),
+  type: z.literal("foreach"),
+  properties: z.object({
+    value: z.string(),
+  }),
+  sequence: z.array(FlatV2StepSchema),
+});
+
+export type V2StepForeach = z.infer<typeof V2StepForeachSchema>;
+
+export const V2StepSchema = z.union([
+  V2StepTriggerSchema,
+  V2ActionSchema,
+  V2StepStepSchema,
+  V2StepConditionAssertSchema,
+  V2StepConditionThresholdSchema,
+  V2StepForeachSchema,
+]);
+
+export const V2StepTemplateSchema = z.union([
+  V2StepTriggerSchema,
+  V2ActionSchema.partial({ id: true }),
+  V2StepStepSchema.partial({ id: true }),
+  V2StepConditionAssertSchema.partial({ id: true }),
+  V2StepConditionThresholdSchema.partial({ id: true }),
+  V2StepForeachSchema.partial({ id: true }),
+]);
+
+export type V2StepTemplate = z.infer<typeof V2StepTemplateSchema>;
+
+export const V2StartStepSchema = z.object({
+  id: z.literal("start"),
+  type: z.literal("start"),
+  componentType: z.literal("start"),
+  properties: z.object({}),
+  name: z.literal("start"),
+});
+
+export type V2StartStep = z.infer<typeof V2StartStepSchema>;
+
+export const V2EndStepSchema = z.object({
+  id: z.literal("end"),
+  type: z.literal("end"),
+  componentType: z.literal("end"),
+  properties: z.object({}),
+  name: z.literal("end"),
+});
+
+export type V2EndStep = z.infer<typeof V2EndStepSchema>;
+
+export type V2Step = z.infer<typeof V2StepSchema>;
 
 // export type V2Step = {
 //   id: string;
@@ -157,6 +294,7 @@ export interface FlowStateValues {
   v2Properties: Record<string, any>;
   toolboxConfiguration: ToolboxConfiguration | null;
   isLayouted: boolean;
+  isInitialized: boolean;
 
   // Lifecycle
   changes: number;
@@ -168,13 +306,11 @@ export interface FlowStateValues {
 
   // UI
   editorOpen: boolean;
-  buttonsEnabled: boolean;
   saveRequestCount: number;
   runRequestCount: number;
 }
 
 export interface FlowState extends FlowStateValues {
-  setButtonsEnabled: (state: boolean) => void;
   triggerSave: () => void;
   triggerRun: () => void;
   setIsSaving: (state: boolean) => void;
@@ -220,6 +356,6 @@ export interface FlowState extends FlowStateValues {
 export type ToolboxConfiguration = {
   groups: {
     name: string;
-    steps: Partial<V2Step>[];
+    steps: Omit<V2Step, "id">[];
   }[];
 };

@@ -9,7 +9,9 @@ export const GENERAL_INSTRUCTIONS = `
 
   Available triggers are manual (user starts the workflow), interval (workflow runs on a regular interval), alert (workflow runs when an alert is triggered and property matches condition), incident (workflow runs when an incident is created or updated).
 
-  Triggers JSON definition looks like this: ${`
+  Triggers JSON definition looks like this: ${
+    // TODO: replace with zod schema
+    `
     {
       type: "manual",
       componentType: "trigger",
@@ -33,7 +35,7 @@ export const GENERAL_INSTRUCTIONS = `
       componentType: "trigger",
       name: "Alert",
       id: "alert",
-      properties: {
+      properties: { // if user asks to trigger alert from specific source, add source to properties
         alert: {
           source: "",
         },
@@ -50,7 +52,16 @@ export const GENERAL_INSTRUCTIONS = `
         },
       },
     },
-  `}
+  `
+  }
+
+  There are 5 types of steps:
+  - step: fetch data from a provider
+  - action: send data to a provider
+  - assert: check a condition and fail if it's not met
+  - threshold: check a condition and fail if it's not met
+  - foreach: iterate over a list
+
   
   Step JSON definition looks like: ${`
     {
@@ -59,7 +70,6 @@ export const GENERAL_INSTRUCTIONS = `
       "type": "step-type",
       "properties": {
         "stepParams": ["query-param1", "query-param2"],
-        "actionParams": ["notify-param1", "notify-param2"],
         "with": {
           "query-param1": "value1",
           "query-param2": "value2"
@@ -68,7 +78,68 @@ export const GENERAL_INSTRUCTIONS = `
     }
     `}
 
-    To access the results of a previous steps, use the following syntax: {{ steps.step-id.results }}
+  Action JSON definition looks like: ${`
+    {
+      "id": "action-id",
+      "name": "action-name",
+      "type": "action-type",
+      "properties": {
+        "actionParams": ["notify-param1", "notify-param2"],
+        "with": {
+          "notify-param1": "value1",
+          "notify-param2": "value2"
+        }
+      }
+  `}
+
+  Assert JSON definition looks like: ${`
+    {
+      "id": "assert-id",
+      "name": "assert-name",
+      "type": "assert-type",
+      "properties": {
+        "value": "value",
+        "compare_to": "value"
+      },
+      "branches": {
+        "true": StepJSON[],
+        "false": StepJSON[]
+      }
+    }
+  `}
+
+  Threshold JSON definition looks like: ${`
+    {
+      "id": "threshold-id",
+      "name": "threshold-name",
+      "type": "threshold-type",
+      "properties": {
+        "value": "value",
+        "compare_to": "value"
+      },
+      "branches": {
+        "true": StepJSON[],
+        "false": StepJSON[]
+      }
+    }
+  `}
+
+  Foreach JSON definition looks like: ${`
+    {
+      "id": "foreach-id",
+      "name": "foreach-name",
+      "type": "foreach-type",
+      "properties": {
+        "value": "value",
+        "with": {
+          "query-param1": "value1",
+          "query-param2": "value2"
+        }
+      },
+    }
+  `}
+
+  To access the results of a previous steps, use the following syntax: {{ steps.step-id.results }}
 
     Example of a workflow definition with two steps: [
     {

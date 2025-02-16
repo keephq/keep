@@ -1,94 +1,84 @@
 import { Provider } from "@/app/(keep)/providers/providers";
-import { ToolboxConfiguration, V2Step } from "@/entities/workflows/model/types";
+import {
+  ToolboxConfiguration,
+  V2StepConditionThreshold,
+  V2StepConditionAssert,
+  V2StepForeach,
+  V2StepTrigger,
+  V2StepStep,
+  V2ActionStep,
+} from "@/entities/workflows/model/types";
 
-export const triggerTemplates = {
-  manual: {
-    type: "manual",
-    componentType: "trigger",
-    name: "Manual",
-    id: "manual",
-    properties: {
-      manual: "true",
-    },
+const manualTriggerTemplate: V2StepTrigger = {
+  type: "manual",
+  componentType: "trigger",
+  name: "Manual",
+  id: "manual",
+  properties: {
+    manual: "true",
   },
-  alert: {
-    type: "alert",
-    componentType: "trigger",
-    name: "Alert",
-    id: "alert",
-    properties: {
-      alert: {
-        source: "",
-      },
-    },
-  },
-  incident: {
-    type: "incident",
-    componentType: "trigger",
-    name: "Incident",
-    id: "incident",
-    properties: {
-      incident: {
-        events: [],
-      },
-    },
-  },
-  interval: {
-    type: "interval",
-    componentType: "trigger",
-    name: "Interval",
-    id: "interval",
-    properties: {
-      interval: "",
+};
+
+const alertTriggerTemplate: V2StepTrigger = {
+  type: "alert",
+  componentType: "trigger",
+  name: "Alert",
+  id: "alert",
+  properties: {
+    alert: {
+      source: "",
     },
   },
 };
-export const triggerTypes = Object.keys(triggerTemplates);
 
-export const TriggersGroup = {
-  name: "Triggers",
-  steps: [
-    {
-      type: "manual",
-      componentType: "trigger",
-      name: "Manual",
-      id: "manual",
-      properties: {
-        manual: "true",
-      },
+const incidentTriggerTemplate: V2StepTrigger = {
+  type: "incident",
+  componentType: "trigger",
+  name: "Incident",
+  id: "incident",
+  properties: {
+    incident: {
+      events: [],
     },
-    {
-      type: "interval",
-      componentType: "trigger",
-      name: "Interval",
-      id: "interval",
-      properties: {
-        interval: "",
-      },
-    },
-    {
-      type: "alert",
-      componentType: "trigger",
-      name: "Alert",
-      id: "alert",
-      properties: {
-        alert: {
-          source: "",
-        },
-      },
-    },
-    {
-      type: "incident",
-      componentType: "trigger",
-      name: "Incident",
-      id: "incident",
-      properties: {
-        incident: {
-          events: [],
-        },
-      },
-    },
-  ],
+  },
+};
+
+const intervalTriggerTemplate: V2StepTrigger = {
+  type: "interval",
+  componentType: "trigger",
+  name: "Interval",
+  id: "interval",
+  properties: {
+    interval: "",
+  },
+};
+
+export const getTriggerTemplate = (triggerType: string) => {
+  if (triggerType === "manual") {
+    return manualTriggerTemplate;
+  }
+  if (triggerType === "alert") {
+    return alertTriggerTemplate;
+  }
+  if (triggerType === "incident") {
+    return incidentTriggerTemplate;
+  }
+  if (triggerType === "interval") {
+    return intervalTriggerTemplate;
+  }
+  throw new Error(`Trigger type ${triggerType} is not supported`);
+};
+
+export const triggerTypes = ["manual", "alert", "incident", "interval"];
+
+const foreachTemplate: Omit<V2StepForeach, "id"> = {
+  type: "foreach",
+  componentType: "container",
+  name: "Foreach",
+  properties: {
+    value: "",
+  },
+  sequence: [],
 };
 
 export const MiscGroup = {
@@ -104,36 +94,32 @@ export const MiscGroup = {
   ],
 };
 
-export const ConditionsGroup = {
-  name: "Conditions",
-  steps: [
-    {
-      type: "condition-threshold",
-      componentType: "switch",
-      name: "Threshold",
-      properties: {
-        value: "",
-        compare_to: "",
-      },
-      branches: {
-        true: [],
-        false: [],
-      },
-    },
-    {
-      type: "condition-assert",
-      componentType: "switch",
-      name: "Assert",
-      properties: {
-        value: "",
-        compare_to: "",
-      },
-      branches: {
-        true: [],
-        false: [],
-      },
-    },
-  ],
+const conditionThresholdTemplate: Omit<V2StepConditionThreshold, "id"> = {
+  type: "condition-threshold",
+  componentType: "switch",
+  name: "Threshold",
+  properties: {
+    value: "",
+    compare_to: "",
+  },
+  branches: {
+    true: [],
+    false: [],
+  },
+};
+
+const conditionAssertTemplate: Omit<V2StepConditionAssert, "id"> = {
+  type: "condition-assert",
+  componentType: "switch",
+  name: "Assert",
+  properties: {
+    value: "",
+    compare_to: "",
+  },
+  branches: {
+    true: [],
+    false: [],
+  },
 };
 
 export function getToolboxConfiguration(
@@ -142,34 +128,43 @@ export function getToolboxConfiguration(
   /**
    * Generates the toolbox items
    */
-  const [steps, actions] = providers.reduce(
-    ([steps, actions], provider) => {
-      const step = {
+  const steps: Omit<V2StepStep, "id">[] = [];
+  const actions: Omit<V2ActionStep, "id">[] = [];
+
+  for (const provider of providers) {
+    if (provider.can_query) {
+      steps.push({
         componentType: "task",
+        type: `step-${provider.type}`,
+        name: `${provider.type}-step`,
         properties: {
-          stepParams: provider.query_params ?? {},
-          actionParams: provider.notify_params ?? {},
+          stepParams: provider.query_params ?? [],
         },
-      } as Partial<V2Step>;
-      if (provider.can_query)
-        steps.push({
-          ...step,
-          type: `step-${provider.type}`,
-          name: `${provider.type}-step`,
-        });
-      if (provider.can_notify)
-        actions.push({
-          ...step,
-          type: `action-${provider.type}`,
-          name: `${provider.type}-action`,
-        });
-      return [steps, actions];
-    },
-    [[] as Partial<V2Step>[], [] as Partial<V2Step>[]]
-  );
+      });
+    }
+    if (provider.can_notify) {
+      actions.push({
+        componentType: "task",
+        type: `action-${provider.type}`,
+        name: `${provider.type}-action`,
+        properties: {
+          actionParams: provider.notify_params ?? [],
+        },
+      });
+    }
+  }
+
   return {
     groups: [
-      TriggersGroup,
+      {
+        name: "Triggers",
+        steps: [
+          manualTriggerTemplate,
+          alertTriggerTemplate,
+          incidentTriggerTemplate,
+          intervalTriggerTemplate,
+        ],
+      },
       {
         name: "Steps",
         steps: steps,
@@ -178,9 +173,15 @@ export function getToolboxConfiguration(
         name: "Actions",
         steps: actions,
       },
-      MiscGroup,
+      {
+        name: "Misc",
+        steps: [foreachTemplate],
+      },
       // TODO: get conditions from API,
-      ConditionsGroup,
+      {
+        name: "Conditions",
+        steps: [conditionThresholdTemplate, conditionAssertTemplate],
+      },
     ],
   };
 }

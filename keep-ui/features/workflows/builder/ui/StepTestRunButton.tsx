@@ -66,6 +66,12 @@ export function StepTestRunButton({
           setIsOpen(true);
           handleRun(e);
         }}
+        disabled={
+          isLoading ||
+          !Object.keys(methodParams).length ||
+          !providerInfo.provider_id ||
+          !providerInfo.provider_type
+        }
       >
         Test step
       </Button>

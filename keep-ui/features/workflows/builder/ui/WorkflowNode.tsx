@@ -11,9 +11,30 @@ import { BiSolidError } from "react-icons/bi";
 import { toast } from "react-toastify";
 import { FlowNode } from "@/entities/workflows/model/types";
 import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
-import { DebugNodeInfo } from "./debug-info";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import clsx from "clsx";
+import { WF_DEBUG_INFO } from "./debug-settings";
+
+export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
+  if (!WF_DEBUG_INFO) {
+    return null;
+  }
+  return (
+    <div className="flex flex-col absolute top-0 bottom-0 my-auto right-0 translate-x-[calc(100%+20px)]">
+      <div
+        className={`h-fit bg-black text-pink-500 font-mono text-[10px] px-1 py-1`}
+      >
+        {id}
+      </div>
+      <details className="bg-black text-pink-500 font-mono text-[10px] px-1 py-1">
+        <summary>data=</summary>
+        <pre className="text-xs leading-none text-gray-500">
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      </details>
+    </div>
+  );
+}
 
 function IconUrlProvider(data: FlowNode["data"]) {
   const { componentType, type } = data || {};

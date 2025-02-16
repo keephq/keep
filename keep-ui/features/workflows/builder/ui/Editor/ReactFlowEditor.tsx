@@ -1,19 +1,13 @@
 import { useEffect, useRef, useMemo } from "react";
 import { useWorkflowStore } from "@/entities/workflows";
-import { GlobalEditorV2, StepEditorV2 } from "./editors";
+import { StepEditorV2 } from "./editors";
 import { Divider } from "@tremor/react";
-import { Provider } from "@/app/(keep)/providers/providers";
 import clsx from "clsx";
 import { ChevronRightIcon, Cog8ToothIcon } from "@heroicons/react/24/outline";
-import { WorkflowToolbox } from "./WorkflowToolbox";
+import { WorkflowToolbox } from "../WorkflowToolbox";
+import { GlobalEditorV2 } from "@/features/workflows/builder/ui/Editor/GlobalEditorV2";
 
-const ReactFlowEditor = ({
-  providers,
-  installedProviders,
-}: {
-  providers: Provider[] | undefined | null;
-  installedProviders: Provider[] | undefined | null;
-}) => {
+const ReactFlowEditor = () => {
   const { selectedNode, selectedEdge, setEditorOpen, getNodeById, editorOpen } =
     useWorkflowStore();
   const stepEditorRef = useRef<HTMLDivElement>(null);
@@ -98,8 +92,6 @@ const ReactFlowEditor = ({
               initialFormData && (
                 <StepEditorV2
                   key={selectedNode}
-                  providers={providers}
-                  installedProviders={installedProviders}
                   initialFormData={initialFormData}
                 />
               )}

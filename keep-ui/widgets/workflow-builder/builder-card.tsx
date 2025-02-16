@@ -1,9 +1,8 @@
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { Card, Callout } from "@tremor/react";
 import dynamic from "next/dynamic";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense } from "react";
 import { EmptyBuilderState } from "./empty-builder-state";
-import { Provider } from "@/app/(keep)/providers/providers";
 import { useProviders } from "@/utils/hooks/useProviders";
 import { useWorkflowStore } from "@/entities/workflows";
 import { KeepLoader } from "@/shared/ui";
@@ -26,21 +25,11 @@ export function BuilderCard({
   workflowId,
   standalone = false,
 }: Props) {
-  const [providers, setProviders] = useState<Provider[] | null>(null);
-  const [installedProviders, setInstalledProviders] = useState<
-    Provider[] | null
-  >(null);
-  const { setButtonsEnabled } = useWorkflowStore();
-
-  const { data, error, isLoading } = useProviders();
-
-  useEffect(() => {
-    if (data && !providers && !installedProviders) {
-      setProviders(data.providers);
-      setInstalledProviders(data.installed_providers);
-      setButtonsEnabled(true);
-    }
-  }, [data, providers, installedProviders, setButtonsEnabled]);
+  const {
+    data: { providers, installed_providers: installedProviders } = {},
+    error,
+    isLoading,
+  } = useProviders();
 
   const cardClassName = clsx(
     "mt-2 p-0 overflow-hidden",

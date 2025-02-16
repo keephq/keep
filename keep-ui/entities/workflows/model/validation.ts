@@ -2,6 +2,8 @@ import { Definition, V2Step } from "./types";
 
 export type ValidationResult = [string, string];
 
+export const PROVIDERS_WITH_NO_CONFIG = ["console", "bash"];
+
 export function validateGlobalPure(definition: Definition): ValidationResult[] {
   const errors: ValidationResult[] = [];
   const workflowName = definition?.properties?.name;
@@ -114,8 +116,9 @@ export function validateStepPure(step: V2Step): string | null {
     if (!step?.name) {
       return "Step name cannot be empty.";
     }
+    const providerType = step?.type.split("-")[1];
     const providerConfig = (step?.properties.config as string)?.trim();
-    if (!providerConfig) {
+    if (!providerConfig && !PROVIDERS_WITH_NO_CONFIG.includes(providerType)) {
       return "No provider selected";
     }
     if (

@@ -2,7 +2,9 @@ import { Edge } from "@xyflow/react";
 import {
   FlowNode,
   NodeData,
+  V2EndStep,
   V2Properties,
+  V2StartStep,
   V2Step,
 } from "@/entities/workflows/model/types";
 
@@ -546,7 +548,7 @@ export const processStepV2 = (
 };
 
 export const processWorkflowV2 = (
-  sequence: V2Step[],
+  sequence: (V2Step | V2StartStep | V2EndStep)[],
   position: FlowNode["position"],
   isFirstRender = false,
   isNested = false
