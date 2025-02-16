@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { SupersetDashboard } from "../SupersetDashboard";
 import { useSupersetDashboards } from "@/utils/hooks/useSupersetDashboards";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { EmptyStateImage } from "@/components/ui/EmptyStateImage";
 
 type Props = {
   params: {
@@ -38,10 +39,15 @@ export default function DashboardPage({ params: { id } }: Props) {
 
   if (error || !dashboardId) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-lg text-red-500">
-          Error: {error ? error.message : "Dashboard not found"}
-        </div>
+      <div className="h-screen">
+        <EmptyStateImage
+          message={error ? error.message : "Dashboard not found"}
+          documentationURL="https://your-docs-url/dashboards"
+          imageURL="/dashboardempty.png"
+          icon={AlertCircle}
+          grayed={true}
+          showMessage={false}
+        />
       </div>
     );
   }

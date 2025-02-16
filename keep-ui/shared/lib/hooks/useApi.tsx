@@ -10,7 +10,9 @@ export function useApi() {
   const api = useMemo(() => {
     const session = status === "unauthenticated" ? {
       accessToken: "unauthenticated"
-    } as GuestSession : user_session
+    } as GuestSession : user_session;
+
+    console.log('Created session:', session);
 
     return new ApiClient(session, config);
   }, [status, user_session?.accessToken, config]);
