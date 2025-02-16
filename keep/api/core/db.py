@@ -1835,7 +1835,7 @@ def delete_rule(tenant_id, rule_id):
 
 def get_incident_for_grouping_rule(
     tenant_id, rule, rule_fingerprint, session: Optional[Session] = None
-) -> Optional[Incident]:
+) -> (Optional[Incident], bool):
     # checks if incident with the incident criteria exists, if not it creates it
     #   and then assign the alert to the incident
     with existed_or_new_session(session) as session:
@@ -1844,24 +1844,24 @@ def get_incident_for_grouping_rule(
             .where(Incident.tenant_id == tenant_id)
             .where(Incident.rule_id == rule.id)
             .where(Incident.rule_fingerprint == rule_fingerprint)
-            .where(Incident.status != IncidentStatus.RESOLVED.value)
-            .where(Incident.status != IncidentStatus.DELETED.value)
             .order_by(Incident.creation_time.desc())
         ).first()
 
         # if the last alert in the incident is older than the timeframe, create a new incident
         is_incident_expired = False
-        if incident and incident.alerts_count > 0:
+        if incident and incident.status in [IncidentStatus.RESOLVED.value, IncidentStatus.DELETED.value]:
+            is_incident_expired = True
+        elif incident and incident.alerts_count > 0:
             enrich_incidents_with_alerts(tenant_id, [incident], session)
             is_incident_expired = max(
                 alert.timestamp for alert in incident._alerts
             ) < datetime.utcnow() - timedelta(seconds=rule.timeframe)
 
         # if there is no incident with the rule_fingerprint, create it or existed is already expired
-        if not incident or is_incident_expired:
-            return None
+        if not incident:
+            return None, None
 
-    return incident
+    return incident, is_incident_expired
 
 
 def create_incident_for_grouping_rule(
@@ -1869,6 +1869,7 @@ def create_incident_for_grouping_rule(
     rule,
     rule_fingerprint,
     incident_name: str = None,
+    past_incident: Optional[Incident] = None,
     session: Optional[Session] = None,
 ):
 
@@ -1883,6 +1884,7 @@ def create_incident_for_grouping_rule(
             is_confirmed=rule.create_on == CreateIncidentOn.ANY.value
             and not rule.require_approve,
             incident_type=IncidentType.RULE.value,
+            same_incident_in_the_past_id=past_incident.id if past_incident else None,
         )
         session.add(incident)
         session.commit()

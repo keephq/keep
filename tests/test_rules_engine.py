@@ -24,6 +24,7 @@ from keep.api.models.alert import (
 from keep.api.models.db.alert import Alert, Incident
 from keep.api.models.db.rule import CreateIncidentOn, ResolveOn
 from keep.rulesengine.rulesengine import RulesEngine
+from tests.fixtures.client import client, test_app  # noqa
 
 
 @pytest.fixture(autouse=True)
@@ -1520,6 +1521,102 @@ def test_incident_created_only_for_firing_alerts(db_session):
     assert results[0].alerts_count == 1
     assert results[0].status == IncidentStatus.FIRING
     assert results[0].alerts[0].name == "Firing alert"
+
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_same_incident_in_the_past_id_set(db_session, client, test_app):
+    """Test that same_incident_in_the_past_id is set if a new incident for the same rule is created."""
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+
+    # Create a rule that generates incidents based on severity
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={"sql": "N/A", "params": {}},
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='severity == "critical"',
+        created_by="test@keephq.dev",
+    )
+
+    # First alert creates an incident
+    alert1 = AlertDto(
+        id="alert-1",
+        source=["grafana"],
+        name="First critical alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+    )
+
+    alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert1.dict(),
+        fingerprint=alert1.fingerprint,
+    )
+    db_session.add(alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
+
+    alert1.event_id = alert.id
+    results = rules_engine.run_rules([alert1], session=db_session)
+    assert len(results) == 1
+    incident1 = results[0]
+
+    # Ensure the first incident is created
+    assert incident1.user_generated_name == "test-rule"
+    assert incident1.same_incident_in_the_past_id is None
+    
+    # Set the status of the first incident to resolved
+    response_resolved = client.post(
+        "/incidents/{}/status".format(incident1.id),
+        headers={"x-api-key": "some-key"},
+        json={
+            "status": IncidentStatus.RESOLVED.value,
+        },
+    )
+
+    assert response_resolved.status_code == 200
+    data = response_resolved.json()
+    assert data["id"] == str(incident1.id)
+    assert data["status"] == IncidentStatus.RESOLVED.value
+
+
+    # Second alert with the same rule creates a new incident after timeframe expiration
+    sleep(1)
+    alert2 = AlertDto(
+        id="alert-2",
+        source=["grafana"],
+        name="Second critical alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+    )
+
+    alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert2.dict(),
+        fingerprint=alert2.fingerprint,
+    )
+    db_session.add(alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
+
+    alert2.event_id = alert.id
+    results = rules_engine.run_rules([alert2], session=db_session)
+    assert len(results) == 1
+    incident2 = results[0]
+
+    # Ensure the second incident references the first incident's ID
+    assert incident2.id != incident1.id
+    assert incident2.rule_fingerprint == incident1.rule_fingerprint
+    assert incident2.user_generated_name == "test-rule"
+    assert incident2.same_incident_in_the_past_id == incident1.id
+
 
 # Next steps:
 #   - test that alerts in the same group are being updated correctly
