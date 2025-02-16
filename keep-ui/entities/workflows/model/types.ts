@@ -4,24 +4,6 @@ import { z } from "zod";
 
 export type WorkflowMetadata = Pick<Workflow, "name" | "description">;
 
-export type V2PropertiesCondition = {
-  value: string;
-  compare_to: string;
-};
-
-export type V2PropertiesStep = {
-  stepParams: Record<string, any>;
-};
-
-export type V2PropertiesAction = {
-  actionParams: Record<string, any>;
-};
-
-export type V2StepProperties =
-  | V2PropertiesCondition
-  | V2PropertiesStep
-  | V2PropertiesAction;
-
 export type V2Properties = Record<string, any>;
 
 export type Definition = {
@@ -142,13 +124,7 @@ export type V2StepStep = z.infer<typeof V2StepStepSchema>;
 
 export type V2StepTrigger = z.infer<typeof V2StepTriggerSchema>;
 
-export const FlatV2StepSchema = z.union([
-  V2StepTriggerSchema,
-  V2ActionSchema,
-  V2StepStepSchema,
-]);
-
-export type FlatV2Step = z.infer<typeof FlatV2StepSchema>;
+export const V2ActionOrStepSchema = z.union([V2ActionSchema, V2StepStepSchema]);
 
 export const V2StepConditionAssertSchema = z.object({
   id: z.string(),
@@ -160,8 +136,8 @@ export const V2StepConditionAssertSchema = z.object({
     compare_to: z.string(),
   }),
   branches: z.object({
-    true: z.array(FlatV2StepSchema),
-    false: z.array(FlatV2StepSchema),
+    true: z.array(V2ActionOrStepSchema),
+    false: z.array(V2ActionOrStepSchema),
   }),
 });
 
@@ -177,8 +153,8 @@ export const V2StepConditionThresholdSchema = z.object({
     compare_to: z.string(),
   }),
   branches: z.object({
-    true: z.array(FlatV2StepSchema),
-    false: z.array(FlatV2StepSchema),
+    true: z.array(V2ActionOrStepSchema),
+    false: z.array(V2ActionOrStepSchema),
   }),
 });
 
@@ -194,13 +170,12 @@ export const V2StepForeachSchema = z.object({
   properties: z.object({
     value: z.string(),
   }),
-  sequence: z.array(FlatV2StepSchema),
+  sequence: z.array(V2ActionOrStepSchema),
 });
 
 export type V2StepForeach = z.infer<typeof V2StepForeachSchema>;
 
 export const V2StepSchema = z.union([
-  V2StepTriggerSchema,
   V2ActionSchema,
   V2StepStepSchema,
   V2StepConditionAssertSchema,
@@ -209,7 +184,6 @@ export const V2StepSchema = z.union([
 ]);
 
 export const V2StepTemplateSchema = z.union([
-  V2StepTriggerSchema,
   V2ActionSchema.partial({ id: true }),
   V2StepStepSchema.partial({ id: true }),
   V2StepConditionAssertSchema.partial({ id: true }),
@@ -320,7 +294,7 @@ export interface FlowState extends FlowStateValues {
   setIsLayouted: (isLayouted: boolean) => void;
   addNodeBetween: (
     nodeOrEdgeId: string,
-    step: V2Step,
+    step: V2StepTemplate | V2StepTrigger,
     type: "node" | "edge"
   ) => void;
   setToolBoxConfig: (config: ToolboxConfiguration) => void;
@@ -356,6 +330,6 @@ export interface FlowState extends FlowStateValues {
 export type ToolboxConfiguration = {
   groups: {
     name: string;
-    steps: Omit<V2Step, "id">[];
+    steps: Omit<V2Step, "id">[] | V2StepTrigger[];
   }[];
 };

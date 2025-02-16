@@ -13,7 +13,7 @@ import {
   getTriggerStep,
   reConstructWorklowToDefinition,
 } from "utils/reactFlow";
-import { createDefaultNodeV2 } from "../../../utils/reactFlow";
+import { createDefaultNodeV2 } from "@/utils/reactFlow";
 import {
   V2Step,
   StoreSet,
@@ -26,6 +26,9 @@ import {
   V2StepTemplateSchema,
   V2EndStep,
   V2StartStep,
+  V2StepTrigger,
+  V2StepTemplate,
+  V2StepTriggerSchema,
 } from "@/entities/workflows";
 import { validateStepPure, validateGlobalPure } from "./validation";
 import { getLayoutedWorkflowElements } from "../lib/getLayoutedWorkflowElements";
@@ -51,19 +54,23 @@ class WorkflowBuilderError extends Error {
  */
 function addNodeBetween(
   nodeOrEdgeId: string,
-  rawStep: V2Step,
+  rawStep: V2StepTemplate | V2StepTrigger,
   type: "node" | "edge",
   set: StoreSet,
   get: StoreGet
 ) {
   if (!nodeOrEdgeId || !rawStep) {
-    throw new WorkflowBuilderError(
-      "addNodeBetween: Node or edge or step is not defined"
-    );
+    throw new WorkflowBuilderError("Node or edge or step is not defined");
   }
 
-  console.log("rawStep", rawStep);
-  const step = V2StepTemplateSchema.parse(rawStep);
+  const isTriggerComponent = rawStep.componentType === "trigger";
+  let step: V2StepTemplate | V2StepTrigger;
+
+  if (isTriggerComponent) {
+    step = V2StepTriggerSchema.parse(rawStep);
+  } else {
+    step = V2StepTemplateSchema.parse(rawStep);
+  }
 
   let edge = {} as Edge;
   if (type === "node") {
@@ -74,43 +81,42 @@ function addNodeBetween(
     edge = get().edges.find((edge) => edge.id === nodeOrEdgeId) as Edge;
   }
 
-  let { source: sourceId, target: targetId } = edge || {};
-  if (!sourceId || !targetId) {
-    throw new WorkflowBuilderError(
-      "addNodeBetween: Source or target is not defined"
-    );
+  if (!edge) {
+    throw new WorkflowBuilderError("Edge not found");
   }
 
-  const isTriggerComponent = step.componentType === "trigger";
+  let { source: sourceId, target: targetId } = edge || {};
+  if (!sourceId) {
+    throw new WorkflowBuilderError("Source is not defined");
+  }
+  if (!targetId) {
+    throw new WorkflowBuilderError("Target is not defined");
+  }
 
   if (sourceId !== "trigger_start" && isTriggerComponent) {
     throw new WorkflowBuilderError(
-      "addNodeBetween: Trigger is only allowed at the start of the workflow"
+      "Trigger is only allowed at the start of the workflow"
     );
   }
 
   if (sourceId == "trigger_start" && !isTriggerComponent) {
     throw new WorkflowBuilderError(
-      "addNodeBetween: Only trigger can be added at the start of the workflow"
+      "Only trigger can be added at the start of the workflow"
     );
   }
 
   const nodes = get().nodes;
   // Return if the trigger is already in the workflow
-  if (
-    sourceId === "trigger_start" &&
-    isTriggerComponent &&
-    nodes.find((node) => node && step.id === node.id)
-  ) {
+  if (isTriggerComponent && nodes.find((node) => node && step.id === node.id)) {
     throw new WorkflowBuilderError(
-      "addNodeBetween: This type of trigger is already in the workflow"
+      "This type of trigger is already in the workflow"
     );
   }
 
   let targetIndex = nodes.findIndex((node) => node.id === targetId);
   const sourceIndex = nodes.findIndex((node) => node.id === sourceId);
   if (targetIndex == -1) {
-    throw new WorkflowBuilderError("addNodeBetween: Target node not found");
+    throw new WorkflowBuilderError("Target node not found");
   }
 
   if (sourceId === "trigger_start") {
@@ -255,14 +261,14 @@ export const useWorkflowStore = create<FlowState>()(
     setIsLayouted: (isLayouted) => set({ isLayouted }),
     addNodeBetween: (
       nodeOrEdgeId: string,
-      step: V2Step,
+      step: V2StepTemplate | V2StepTrigger,
       type: "node" | "edge"
     ) => {
       try {
         addNodeBetween(nodeOrEdgeId, step, type, set, get);
       } catch (error) {
-        console.error(error);
         showErrorToast(error);
+        console.error(error);
       }
     },
     setToolBoxConfig: (config: ToolboxConfiguration) =>

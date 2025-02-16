@@ -11,7 +11,6 @@ import {
 } from "@xyflow/react";
 import WorkflowNode from "./WorkflowNode";
 import { WorkflowEdge } from "./WorkflowEdge";
-import { Provider } from "@/app/(keep)/providers/providers";
 import ReactFlowEditor from "./Editor/ReactFlowEditor";
 import { FlowNode, useWorkflowStore } from "@/entities/workflows";
 import { KeepLoader } from "@/shared/ui";

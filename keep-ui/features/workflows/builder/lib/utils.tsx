@@ -81,19 +81,6 @@ const foreachTemplate: Omit<V2StepForeach, "id"> = {
   sequence: [],
 };
 
-export const MiscGroup = {
-  name: "Misc",
-  steps: [
-    {
-      type: "foreach",
-      componentType: "container",
-      name: "Foreach",
-      properties: {},
-      sequence: [],
-    },
-  ],
-};
-
 const conditionThresholdTemplate: Omit<V2StepConditionThreshold, "id"> = {
   type: "condition-threshold",
   componentType: "switch",
