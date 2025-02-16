@@ -20,6 +20,7 @@ from keep.api.arq_pool import get_pool
 from keep.api.bl.ai_suggestion_bl import AISuggestionBl
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.bl.incidents_bl import IncidentBl
+from keep.api.bl.incident_reports import IncidentReports
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, REDIS
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.db import (
@@ -310,6 +311,40 @@ def fetch_alert_facet_fields(
         },
     )
     return fields
+
+
+@router.get(
+    "/report",
+    description="Get incidents report",
+)
+def get_incidents_report(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+    cel: str = Query(None),
+) -> IncidentsPaginatedResultsDto:
+    tenant_id = authenticated_entity.tenant_id
+    reports_bl = IncidentReports(tenant_id)
+
+    # get all preset ids that the user has access to
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        authenticated_entity.tenant_id
+    )
+    # Note: if no limitations (allowed_preset_ids is []), then all presets are allowed
+    allowed_incident_ids = identity_manager.get_user_permission_on_resource_type(
+        resource_type="incident",
+        authenticated_entity=authenticated_entity,
+    )
+
+    try:
+        return reports_bl.get_incident_reports(
+            incidents_query_cel=cel, allowed_incident_ids=allowed_incident_ids
+        )
+    except CelToSqlException as e:
+        logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
+        raise HTTPException(
+            status_code=400, detail=f"Error parsing CEL expression: {cel}"
+        )
 
 
 @router.get(
