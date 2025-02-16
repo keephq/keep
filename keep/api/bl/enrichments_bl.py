@@ -1,4 +1,5 @@
 import datetime
+import html
 import json
 import logging
 import re
@@ -153,7 +154,7 @@ class EnrichmentsBl:
 
         if not rules:
             self._add_enrichment_log(
-                "No extraction rules found for tenant",
+                f"No extraction rules found (pre: {pre})",
                 "debug",
                 {
                     "tenant_id": self.tenant_id,
@@ -181,10 +182,11 @@ class EnrichmentsBl:
                 # Wrap the attribute in {{ }} to make it a valid chevron template
                 attribute = f"{{{{ {attribute} }}}}"
             attribute_value = chevron.render(attribute, event)
+            attribute_value = html.unescape(attribute_value)
 
             if not attribute_value:
                 self._add_enrichment_log(
-                    "Attribute value is empty, skipping extraction",
+                    f"Attribute ({rule.attribute}) value is empty, skipping extraction",
                     "info",
                     {"rule_id": rule.id},
                 )
@@ -199,7 +201,7 @@ class EnrichmentsBl:
 
             if rule.condition is None or rule.condition == "*" or rule.condition == "":
                 self._add_enrichment_log(
-                    "No condition specified for the rule, enriching...",
+                    f"No condition specified for rule {rule.name}, enriching...",
                     "info",
                     {
                         "rule_id": rule.id,
@@ -215,7 +217,7 @@ class EnrichmentsBl:
                 relevant = prgm.evaluate(activation)
                 if not relevant:
                     self._add_enrichment_log(
-                        f"Condition did not match, skipping extraction for rule {rule.id} with condition {rule.condition}",
+                        f"Condition did not match, skipping extraction for rule {rule.name} with condition {rule.condition}",
                         "debug",
                         {"rule_id": rule.id},
                     )
