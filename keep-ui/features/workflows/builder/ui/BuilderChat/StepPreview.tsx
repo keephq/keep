@@ -43,7 +43,7 @@ export const StepPreview = ({
   return (
     <div
       className={clsx(
-        "max-w-[250px] flex shadow-md rounded-md bg-white border-2 border-stone-400 p-2 flex-1 flex-row items-center justify-between gap-2 flex-wrap",
+        "max-w-[250px] flex shadow-md rounded-md bg-white border-2 border-stone-400 p-2 flex-1 flex-row items-center justify-between gap-2 flex-wrap text-sm",
         className
       )}
     >
@@ -58,7 +58,7 @@ export const StepPreview = ({
         />
       )}
       <div className="flex-1 flex-col gap-2 flex-wrap truncate">
-        <div className="text-lg font-bold truncate">{step.name}</div>
+        <div className="font-bold truncate">{step.name}</div>
         <div className="text-gray-500 truncate">{type}</div>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { SuggestionStatus } from "./SuggestionStatus";
 import clsx from "clsx";
 import { DebugJSON } from "@/shared/ui";
 import { useCallback } from "react";
+import { triggerTypes } from "../../lib/utils";
 
 type SuggestionStatus = "complete" | "error" | "declined";
 type SuggestionResult = {
@@ -36,6 +37,23 @@ type AddStepUIProps =
       respond: (response: SuggestionResult) => void;
       result: undefined;
     };
+
+function getComponentType(stepType: string) {
+  if (stepType.startsWith("step-")) return "task";
+  if (stepType.startsWith("action-")) return "task";
+  if (stepType.startsWith("condition-")) return "switch";
+  if (stepType === "foreach") return "container";
+  if (triggerTypes.includes(stepType)) return "trigger";
+  return "task";
+}
+
+function parseAndAutoCorrectStepDefinition(stepDefinitionJSON: string) {
+  const step = JSON.parse(stepDefinitionJSON);
+  return {
+    ...step,
+    componentType: getComponentType(step.type),
+  };
+}
 
 export const AddStepUI = ({
   status,
@@ -116,7 +134,7 @@ export const AddStepUI = ({
   if (definition?.value.sequence.length === 0) {
     isStart = true;
   }
-  let step = JSON.parse(stepDefinitionJSON);
+  let step = parseAndAutoCorrectStepDefinition(stepDefinitionJSON);
 
   if (status === "complete") {
     return (

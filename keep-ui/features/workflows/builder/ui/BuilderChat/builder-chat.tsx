@@ -91,7 +91,7 @@ export function BuilderChat({
           );
           group.steps.forEach((step) => {
             result.push(
-              `${step.name}, properties: ${JSON.stringify(step.properties)}`
+              `${step.type}, properties: ${JSON.stringify(step.properties)}`
             );
           });
         });
@@ -146,7 +146,7 @@ export function BuilderChat({
     parameters: [
       {
         name: "stepType",
-        description: "The type of step to add",
+        description: "The type of step to remove",
         type: "string",
         required: true,
       },
@@ -195,7 +195,8 @@ export function BuilderChat({
       parameters: [
         {
           name: "stepType",
-          description: "The type of step to add",
+          description:
+            "The type of step to add e.g. action-slack, step-python, condition-assert, etc",
           type: "string",
           required: true,
         },
@@ -287,7 +288,8 @@ export function BuilderChat({
       parameters: [
         {
           name: "stepDefinitionJSON",
-          description: "The step definition to add",
+          description:
+            "The step definition to add, use the 'generateStepDefinition' action to generate a step definition.",
           type: "string",
           required: true,
         },
