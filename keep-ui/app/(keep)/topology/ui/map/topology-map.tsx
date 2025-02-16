@@ -1,5 +1,6 @@
 "use client";
 import React, {
+  ElementType,
   useCallback,
   useEffect,
   useMemo,
@@ -24,7 +25,12 @@ import {
 } from "@xyflow/react";
 import { ServiceNode } from "./service-node";
 import { Button, Card, MultiSelect, MultiSelectItem } from "@tremor/react";
-import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowUpRightIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+  EllipsisVerticalIcon,
+} from "@heroicons/react/24/outline";
 import {
   edgeLabelBgStyleNoHover,
   edgeMarkerEndNoHover,
@@ -57,6 +63,8 @@ import { EdgeBase, Connection } from "@xyflow/system";
 import { AddEditNodeSidePanel } from "./AddEditNodeSidePanel";
 import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { DropdownMenu } from "@/shared/ui";
+import { downloadFileFromString } from "@/shared/ui/YAMLCodeblock/ui/YAMLCodeblock";
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
@@ -73,6 +81,12 @@ type TopologyMapProps = {
   isVisible?: boolean;
   standalone?: boolean;
 };
+
+interface MenuItem {
+  icon: ElementType;
+  label: string;
+  onClick: () => void;
+}
 
 export function TopologyMap({
   topologyServices: initialTopologyServices,
@@ -97,7 +111,7 @@ export function TopologyMap({
     environment,
     initialData: initialTopologyServices,
   });
-  const { applications } = useTopologyApplications({
+  const { applications, mutate: mutateApplications } = useTopologyApplications({
     initialData: initialTopologyApplications,
   });
   const router = useRouter();
@@ -143,6 +157,55 @@ export function TopologyMap({
     );
   }, []);
 
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (!event.target.files) {
+      return;
+    }
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.set("file", file);
+
+    try {
+      const response = await api.request("/topology/import", {
+        method: "POST",
+        body: formData,
+      });
+      toast.success("Topology imported Successfully!");
+      mutateApplications();
+      mutateTopologyData();
+    } catch (error) {
+      toast.error(`Error uploading file: ${error}`);
+    }
+  };
+
+  const menuItems: MenuItem[] = [
+    {
+      label: "Import",
+      icon: ArrowUpTrayIcon,
+      onClick: () => document.getElementById("fileInput")?.click(),
+    },
+    {
+      label: "Export",
+      icon: ArrowDownTrayIcon,
+      onClick: async () => {
+        try {
+          const response = await api.get("/topology/export", {
+            headers: {
+              Accept: "application/x-yaml",
+            },
+          });
+          downloadFileFromString(response, "topology-export.yaml");
+        } catch (error) {
+          console.log(error);
+        }
+      },
+    },
+  ];
+
   const fitViewToServices = useCallback((serviceIds: string[]) => {
     const nodesToFit: TopologyNode[] = [];
     for (const id of serviceIds) {
@@ -182,7 +245,10 @@ export function TopologyMap({
     async (params: EdgeBase | Connection) => {
       const sourceService = getServiceById(params.source);
       const targetService = getServiceById(params.target);
-      if (sourceService?.is_manual === true && targetService?.is_manual === true) {
+      if (
+        sourceService?.is_manual === true &&
+        targetService?.is_manual === true
+      ) {
         setEdges((eds) => addEdge(params, eds));
         try {
           const response = await api.post("/topology/dependency", {
@@ -197,7 +263,8 @@ export function TopologyMap({
             `Error while adding connection from ${params.source} to ${params.target}: ${error}`
           );
         }
-      }},
+      }
+    },
     [api, getServiceById, mutateTopologyData]
   );
 
@@ -330,8 +397,6 @@ export function TopologyMap({
     },
     [isVisible, initiallyFitted]
   );
-
-  
 
   useEffect(() => {
     if (!isVisible || !selectedObjectId || selectedObjectId === "") {
@@ -484,7 +549,7 @@ export function TopologyMap({
   return (
     <>
       <div className="flex flex-col gap-4 h-full">
-        <div className="flex justify-between items-baseline gap-4">
+        <div className="flex justify-between  gap-4 items-center">
           <TopologySearchAutocomplete
             wrapperClassName="w-full flex-1"
             includeApplications={true}
@@ -510,6 +575,32 @@ export function TopologyMap({
             </MultiSelect>
           </div>
           <Button onClick={() => setIsSidePanelOpen(true)}>+ Add Node</Button>
+
+          <div className="h-full">
+            <DropdownMenu.Menu
+              icon={EllipsisVerticalIcon}
+              label=""
+              className="!h-full"
+            >
+              {menuItems.map((item, index) => (
+                <DropdownMenu.Item
+                  key={item.label + index}
+                  icon={item.icon}
+                  label={item.label}
+                  onClick={item.onClick}
+                />
+              ))}
+            </DropdownMenu.Menu>
+          </div>
+
+          <input
+            type="file"
+            id="fileInput"
+            className="hidden"
+            onChange={handleFileUpload}
+            accept=".yaml,.json,.csv"
+          />
+
           {!standalone ? (
             <div>
               <Link
