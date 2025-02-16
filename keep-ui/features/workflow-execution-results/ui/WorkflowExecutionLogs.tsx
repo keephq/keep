@@ -20,7 +20,7 @@ import formatDistance from "date-fns/formatDistance";
 import { differenceInSeconds } from "date-fns";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { ResultJsonCard } from "@/shared/ui";
+import Editor from "@monaco-editor/react";
 
 function getStepIcon(status: string) {
   switch (status) {
@@ -185,7 +185,37 @@ function LogGroupAccordion({
               >
                 {log.timestamp}: {log.message}
               </p>
-              {result && <ResultJsonCard result={result} />}
+              {result && (
+                <div className="bg-gray-100 rounded-md overflow-hidden text-xs my-2">
+                  <div className="text-gray-500 bg-gray-50 p-2 flex justify-between items-center">
+                    <span>output</span>
+                  </div>
+                  <div
+                    className="overflow-auto"
+                    style={{
+                      height: Math.min(
+                        JSON.stringify(result, null, 2).split("\n").length * 18,
+                        192
+                      ),
+                    }}
+                  >
+                    <Editor
+                      value={JSON.stringify(result, null, 2)}
+                      language="json"
+                      theme="vs-light"
+                      options={{
+                        readOnly: true,
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        fontSize: 12,
+                        lineNumbers: "off",
+                        folding: true,
+                        wordWrap: "on",
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -123,6 +123,7 @@ export interface Provider {
   methods?: ProviderMethod[];
   tags: TProviderLabels[];
   last_pull_time?: Date;
+  pulling_available: boolean;
   pulling_enabled: boolean;
   alertsDistribution?: AlertDistritbuionData[];
   alertExample?: { [key: string]: string };
@@ -147,6 +148,7 @@ export const defaultProvider: Provider = {
   type: "",
   tags: [],
   validatedScopes: {},
+  pulling_available: false,
   pulling_enabled: true,
   categories: ["Others"],
   coming_soon: false,
