@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile
 from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
@@ -34,6 +34,7 @@ from keep.topologies.topologies_service import (
     DependencyNotFoundException,
     ServiceNotManualException,
 )
+from keep.functions import cyaml
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -432,7 +433,9 @@ def delete_dependency(
 ):
     try:
         TopologiesService.delete_dependency(
-            dependency_id=dependency_id, session=session, tenant_id=authenticated_entity.tenant_id
+            dependency_id=dependency_id,
+            session=session,
+            tenant_id=authenticated_entity.tenant_id,
         )
         return JSONResponse(
             status_code=200, content={"message": "Dependency deleted successfully"}
@@ -447,4 +450,77 @@ def delete_dependency(
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to delete Dependency: {str(e)}"
+        )
+
+
+@router.get(
+    "/export",
+    description="Exporting the topology map as a YAML",
+)
+async def export_topology_yaml(
+    services: Optional[str] = None,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:topology"])
+    ),
+    session: Session = Depends(get_session),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Getting topology data", extra={tenant_id: tenant_id})
+    topology_data = TopologiesService.get_topology_services(
+        tenant_id, session, None, services, None
+    )
+    full_data = {"applications": {}, "services": [], "dependencies": []}
+
+    for data in topology_data:
+        services_dict = data.model_dump()
+        del services_dict["updated_at"]
+        del services_dict["tenant_id"]
+        services_dict["is_manual"] = True if services_dict["is_manual"] is True else False
+        full_data["services"].append(services_dict)
+        for application in data.applications:
+            application_dict = application.model_dump()
+            del application_dict["tenant_id"]
+            application_dict["id"] = str(application_dict["id"])
+            if application_dict["id"] in full_data["applications"]:
+                full_data["applications"][application_dict["id"]]["services"].append(data.id)
+            else:
+                application_dict["services"] = [data.id]
+                full_data["applications"][application_dict["id"]] = application_dict
+        for dependency in data.dependencies:
+            dependency_dict = dependency.model_dump()
+            del dependency_dict["updated_at"]
+            full_data["dependencies"].append(dependency_dict)
+    full_data["applications"] = list(full_data["applications"].values())
+    export_yaml = cyaml.dump(full_data, width=99999)
+
+    return Response(content=export_yaml, media_type="application/x-yaml")
+
+
+@router.post(
+    "/import",
+    description="Import the topology map from YAML",
+)
+async def import_topology_yaml(
+    file: UploadFile,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:topology"])
+    ),
+    session: Session = Depends(get_session),
+):
+    try:
+        tenant_id = authenticated_entity.tenant_id
+        topology_yaml = await file.read()
+        topology_data: dict = cyaml.safe_load(topology_yaml)
+        TopologiesService.import_to_db(topology_data, session, tenant_id)
+        return JSONResponse(
+            status_code=200, content={"message": "Topology imported successfully"}
+        )
+
+    except cyaml.YAMLError:
+        logger.exception("Invalid YAML format")
+        raise HTTPException(status_code=400, detail="Invalid YAML format")
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to import topology: {str(e)}"
         )

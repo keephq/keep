@@ -276,3 +276,9 @@ class TopologyServiceDependencyUpdateRequestDto(
 
 class DeleteServicesRequest(BaseModel, extra="ignore"):
     service_ids: List[int]
+
+
+class TopologyServiceYAML(TopologyServiceCreateRequestDTO, extra="ignore"):
+    id: int
+    source_provider_id: Optional[str] = None
+    is_manual: Optional[bool] = None

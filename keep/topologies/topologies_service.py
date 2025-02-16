@@ -22,6 +22,7 @@ from keep.api.models.db.topology import (
     TopologyServiceDependencyCreateRequestDto,
     TopologyServiceDependencyUpdateRequestDto,
     TopologyServiceDependencyDto,
+    TopologyServiceYAML,
 )
 
 logger = logging.getLogger(__name__)
@@ -113,14 +114,13 @@ def validate_non_manual_exists(
 
 class TopologiesService:
     @staticmethod
-    def get_all_topology_data(
+    def get_topology_services(
         tenant_id: str,
         session: Session,
         provider_ids: Optional[str] = None,
         services: Optional[str] = None,
         environment: Optional[str] = None,
-        include_empty_deps: Optional[bool] = False,
-    ) -> List[TopologyServiceDtoOut]:
+    ) -> list[TopologyService]:
         query = select(TopologyService).where(TopologyService.tenant_id == tenant_id)
 
         # @tb: let's filter by service only for now and take care of it when we handle multiple
@@ -151,6 +151,20 @@ class TopologiesService:
                     )
                 )
             ).all()
+        return services
+
+    @staticmethod
+    def get_all_topology_data(
+        tenant_id: str,
+        session: Session,
+        provider_ids: Optional[str] = None,
+        services: Optional[str] = None,
+        environment: Optional[str] = None,
+        include_empty_deps: Optional[bool] = False,
+    ) -> List[TopologyServiceDtoOut]:
+        services = TopologiesService.get_topology_services(
+            tenant_id, session, provider_ids, services, environment
+        )
 
         # Fetch application IDs for all services in a single query
         service_ids = [service.id for service in services if service.id is not None]
@@ -238,6 +252,68 @@ class TopologiesService:
         session.expire(new_application, ["services"])
 
         return TopologyApplicationDtoOut.from_orm(new_application)
+
+    @staticmethod
+    def create_applications_by_tenant_id(
+        tenant_id: str, applications: List[TopologyApplicationDtoIn], session: Session
+    ) -> None:
+        """Creates multiple applications for a given tenant in a single transaction."""
+
+        try:
+            new_applications = []
+            new_links = []
+
+            for application in applications:
+                service_ids = [service.id for service in application.services]
+                if not service_ids:
+                    raise InvalidApplicationDataException(
+                        "Each application must have at least one service"
+                    )
+
+                # Fetch existing services
+                services_to_add = session.exec(
+                    select(TopologyService)
+                    .where(TopologyService.tenant_id == tenant_id)
+                    .where(TopologyService.id.in_(service_ids))
+                ).all()
+
+                if len(services_to_add) != len(service_ids):
+                    raise ServiceNotFoundException("One or more services not found")
+
+                new_application = TopologyApplication(
+                    tenant_id=tenant_id,
+                    name=application.name,
+                    description=application.description,
+                )
+
+                if application.id:
+                    new_application.id = application.id  # Preserve ID if provided
+
+                session.add(new_application)
+                new_applications.append(new_application)
+
+            session.flush()  # Assigns IDs to new applications
+
+            for new_application, application in zip(new_applications, applications):
+                new_links.extend(
+                    [
+                        TopologyServiceApplication(
+                            service_id=service.id, application_id=new_application.id
+                        )
+                        for service in application.services
+                        if service.id
+                    ]
+                )
+
+            session.add_all(new_links)
+            session.commit()
+
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error while creating applications: {e}")
+            raise e
+        finally:
+            session.close()
 
     @staticmethod
     def update_application_by_id(
@@ -391,6 +467,28 @@ class TopologiesService:
             session.close()
 
     @staticmethod
+    def create_services(
+        services: List[TopologyServiceYAML],
+        tenant_id: str,
+        session: Session,
+    ) -> None:
+        """Creates multiple services in a single transaction without returning them."""
+
+        try:
+            for service in services:
+                db_service = TopologyService(**service.dict(), tenant_id=tenant_id)
+                session.add(db_service)
+
+            session.commit()
+
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error while creating services: {e}")
+            raise e
+        finally:
+            session.close()
+
+    @staticmethod
     def update_service(
         service: TopologyServiceUpdateRequestDTO, tenant_id: str, session: Session
     ) -> TopologyService:
@@ -476,10 +574,11 @@ class TopologiesService:
         dependency: TopologyServiceDependencyCreateRequestDto,
         tenant_id: str,
         session: Session,
+        enforce_manual: bool = True,
     ) -> TopologyServiceDependencyDto:
         try:
-           # Enforcing is_manual on the service_id and depends_on_service_id
-            if validate_non_manual_exists(
+            # Enforcing is_manual on the service_id and depends_on_service_id
+            if enforce_manual and validate_non_manual_exists(
                 service_ids=[dependency.service_id, dependency.depends_on_service_id],
                 session=session,
                 tenant_id=tenant_id,
@@ -494,6 +593,43 @@ class TopologiesService:
         except Exception as e:
             session.rollback()
             logger.error(f"Error while creating/updating the Dependency manually: {e}")
+            raise e
+        finally:
+            session.close()
+
+    @staticmethod
+    def create_dependencies(
+        dependencies: List[TopologyServiceDependencyCreateRequestDto],
+        tenant_id: str,
+        session: Session,
+        enforce_manual: bool = True,
+    ) -> None:
+        """Creates multiple dependencies in a single transaction."""
+
+        try:
+            db_dependencies = []
+
+            for dependency in dependencies:
+                # Enforcing is_manual on the service_id and depends_on_service_id
+                if enforce_manual and validate_non_manual_exists(
+                    service_ids=[
+                        dependency.service_id,
+                        dependency.depends_on_service_id,
+                    ],
+                    session=session,
+                    tenant_id=tenant_id,
+                ):
+                    raise ServiceNotManualException()
+
+                db_dependency = TopologyServiceDependency(**dependency.dict())
+                session.add(db_dependency)
+                db_dependencies.append(db_dependency)
+
+            session.commit()
+
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error while creating dependencies: {e}")
             raise e
         finally:
             session.close()
@@ -568,3 +704,47 @@ class TopologiesService:
             raise e
         finally:
             session.close()
+
+    @staticmethod
+    def import_to_db(topology_data: dict, session: Session, tenant_id: str):
+        all_services: list[TopologyServiceYAML] = []
+        all_applications: list[TopologyApplicationDtoIn] = []
+        all_dependencies: list[TopologyServiceDependencyCreateRequestDto] = []
+        try:
+            for service in topology_data["services"]:
+                all_services.append(TopologyServiceYAML(**service))
+
+            for application in topology_data["applications"]:
+                application["services"] = [
+                    {"id": _id} for _id in application["services"]
+                ]
+                all_applications.append(TopologyApplicationDtoIn(**application))
+
+            for dependency in topology_data["dependencies"]:
+                all_dependencies.append(
+                    TopologyServiceDependencyCreateRequestDto(**dependency)
+                )
+
+            TopologiesService.create_services(
+                services=all_services,
+                tenant_id=tenant_id,
+                session=session,
+            )
+
+            TopologiesService.create_applications_by_tenant_id(
+                tenant_id=tenant_id,
+                applications=all_applications,
+                session=session,
+            )
+
+            TopologiesService.create_dependencies(
+                dependencies=all_dependencies,
+                tenant_id=tenant_id,
+                session=session,
+                enforce_manual=False,
+            )
+
+        except Exception as e:
+            logger.error(f"Error while importing topology: {e}")
+            session.rollback()
+            raise e
