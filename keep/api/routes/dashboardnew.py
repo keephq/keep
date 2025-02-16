@@ -75,20 +75,26 @@ class SupersetClient:
     def get_cookies(self):
         return {"session": self.session_cookie}
 
-    def get_dashboards(self):
+    def get_dashboards(self, tenant_id: str = None):
         import requests
 
         if not self.access_token:
             self.authenticate()
 
-        # First get the list of dashboards
+        # filter only the dashboards that are tagged with the tenant_id
+        q = f"(filters:!((col:tags,opr:dashboard_tags,value:tenant_id_{tenant_id})))"
         dashboards_response = requests.get(
-            f"{self.base_url}/api/v1/dashboard/",
+            f"{self.base_url}/api/v1/dashboard/?q=" + q,
             headers=self.get_headers(),
             cookies=self.get_cookies(),
         )
         dashboards_response.raise_for_status()
         dashboards = dashboards_response.json()["result"]
+
+        # if not dashboards, it may be that the tag for the tenant_id is not set
+        if not dashboards:
+            pass
+            # TODO
 
         # For each dashboard, get the embedded data
         for dashboard in dashboards:
