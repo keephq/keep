@@ -24,6 +24,7 @@ FEATURE_FLAGS = {
     "EMBEDDED_SUPERSET": True,
     "HORIZONTAL_FILTER_BAR": True,
     "ENABLE_TEMPLATE_PROCESSING": True,
+    "TAGGING_SYSTEM": True,
 }
 # allow sqlite to be used for superset
 PREVENT_UNSAFE_DB_CONNECTIONS = False
