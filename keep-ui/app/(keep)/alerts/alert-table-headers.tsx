@@ -140,6 +140,31 @@ const DraggableHeaderCell = ({
     table.setColumnVisibility(newVisibility);
   };
 
+  const getGroupedColumnName = () => {
+    const grouping = table.getState().grouping;
+    if (grouping.length > 0) {
+      // Find the column that's currently grouped
+      const groupedColumn = table
+        .getAllColumns()
+        .find((col) => col.id === grouping[0]);
+      return groupedColumn?.columnDef?.header?.toString() || grouping[0];
+    }
+    return null;
+  };
+
+  const isRightmostColumn = () => {
+    const visibleColumns = table.getVisibleLeafColumns();
+    return column.id === visibleColumns[visibleColumns.length - 1].id;
+  };
+
+  const isLeftmostUnpinnedColumn = () => {
+    const visibleColumns = table.getVisibleLeafColumns();
+    const firstUnpinnedIndex = visibleColumns.findIndex(
+      (col) => !col.getIsPinned()
+    );
+    return column.id === visibleColumns[firstUnpinnedIndex]?.id;
+  };
+
   return (
     <TableHeaderCell
       className={clsx(
@@ -214,6 +239,16 @@ const DraggableHeaderCell = ({
                   <DropdownMenu.Item
                     icon={ArrowsUpDownIcon}
                     label={column.getIsGrouped() ? "Ungroup" : "Group by"}
+                    disabled={
+                      !column.getIsGrouped() &&
+                      table.getState().grouping.length > 0
+                    }
+                    title={
+                      !column.getIsGrouped() &&
+                      table.getState().grouping.length > 0
+                        ? `Only one column can be grouped by at any single time. You should ungroup "${getGroupedColumnName()}"`
+                        : undefined
+                    }
                     onClick={() => {
                       console.log("Can group:", column.getCanGroup());
                       console.log("Is grouped:", column.getIsGrouped());
@@ -238,11 +273,23 @@ const DraggableHeaderCell = ({
                   icon={ArrowLeftIcon}
                   label="Move column left"
                   onClick={() => moveColumn("left")}
+                  disabled={isLeftmostUnpinnedColumn()}
+                  title={
+                    isLeftmostUnpinnedColumn()
+                      ? "This is the leftmost unpinned column"
+                      : undefined
+                  }
                 />
                 <DropdownMenu.Item
                   icon={ArrowRightIcon}
                   label="Move column right"
                   onClick={() => moveColumn("right")}
+                  disabled={isRightmostColumn()}
+                  title={
+                    isRightmostColumn()
+                      ? "This is the rightmost column"
+                      : undefined
+                  }
                 />
               </>
             )}
