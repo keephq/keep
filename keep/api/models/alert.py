@@ -224,10 +224,7 @@ class AlertDto(BaseModel):
     def validate_last_received(cls, last_received):
         def convert_to_iso_format(date_string):
             try:
-                # Normalize the string to uppercase for T and Z
-                if isinstance(date_string, str):
-                    date_string = date_string.replace("t", "T").replace("z", "Z")
-                dt = datetime.datetime.fromisoformat(date_string.rstrip("Z"))
+                dt = datetime.datetime.fromisoformat(date_string)
                 dt_utc = dt.astimezone(pytz.UTC)
                 return dt_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
             except ValueError:

@@ -160,5 +160,6 @@ export function useTopologyApplications(
     removeApplication: deleteApplication,
     error,
     isLoading,
+    mutate,
   };
 }

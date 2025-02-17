@@ -19,7 +19,7 @@ interface Props {
   onClose: () => void;
 }
 
-export default function RunMappingModal({ ruleId, isOpen, onClose }: Props) {
+export default function RunExtractionModal({ ruleId, isOpen, onClose }: Props) {
   const { useLastAlerts } = useAlerts();
   const { data: alerts = [] } = useLastAlerts({
     cel: "",
@@ -42,13 +42,13 @@ export default function RunMappingModal({ ruleId, isOpen, onClose }: Props) {
     setIsLoading(true);
     try {
       const response = await api.post(
-        `/mapping/${ruleId}/execute/${selectedAlertId}`
+        `/extraction/${ruleId}/execute/${selectedAlertId}`
       );
       const { enrichment_event_id } = response;
-      router.push(`/mapping/${ruleId}/executions/${enrichment_event_id}`);
+      router.push(`/extraction/${ruleId}/executions/${enrichment_event_id}`);
       clearAndClose();
     } catch (error) {
-      showErrorToast(error, "Failed to run mapping rule");
+      showErrorToast(error, "Failed to run extraction rule");
     } finally {
       setIsLoading(false);
     }
@@ -57,7 +57,9 @@ export default function RunMappingModal({ ruleId, isOpen, onClose }: Props) {
   return (
     <Dialog open={isOpen} onClose={clearAndClose} static={true}>
       <DialogPanel>
-        <Title className="mb-1">Select alert to run mapping rule against</Title>
+        <Title className="mb-1">
+          Select alert to run extraction rule against
+        </Title>
 
         {alerts.length > 0 ? (
           <Select
