@@ -16,6 +16,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
   const isNOCRole = session?.userRole === "noc";
   const { data: incidents, mutate } = useIncidents(
     true,
+    null,
     25,
     0,
     { id: "creation_time", desc: false },
