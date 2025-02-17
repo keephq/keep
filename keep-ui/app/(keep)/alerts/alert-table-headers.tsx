@@ -17,6 +17,7 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   ColumnDef,
   ColumnOrderState,
+  VisibilityState,
   flexRender,
   Header,
   Table,
@@ -42,6 +43,7 @@ import { BsSortAlphaDownAlt } from "react-icons/bs";
 import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import { DropdownMenu } from "@/shared/ui";
+import { DEFAULT_COLS, DEFAULT_COLS_VISIBILITY } from "./alert-table-utils";
 
 interface DraggableHeaderCellProps {
   header: Header<AlertDto, unknown>;
@@ -65,6 +67,12 @@ const DraggableHeaderCell = ({
     `column-order-${presetName}`,
     getColumnsIds(table.getAllLeafColumns().map((col) => col.columnDef))
   );
+
+  const [columnVisibility, setColumnVisibility] =
+    useLocalStorage<VisibilityState>(
+      `column-visibility-${presetName}`,
+      DEFAULT_COLS_VISIBILITY
+    );
 
   const {
     attributes,
@@ -121,6 +129,19 @@ const DraggableHeaderCell = ({
     column.id !== "source" &&
     column.id !== "severity" &&
     column.id !== "alertMenu";
+
+  const handleColumnVisibilityChange = (
+    columnId: string,
+    isVisible: boolean
+  ) => {
+    const newVisibility = {
+      ...columnVisibility,
+      [columnId]: isVisible,
+    };
+    setColumnVisibility(newVisibility);
+    // Update the table's state as well
+    table.setColumnVisibility(newVisibility);
+  };
 
   return (
     <TableHeaderCell
@@ -231,7 +252,9 @@ const DraggableHeaderCell = ({
             <DropdownMenu.Item
               icon={XMarkIcon}
               label="Remove column"
-              onClick={() => column.toggleVisibility(false)}
+              onClick={() =>
+                handleColumnVisibilityChange(header.column.id, false)
+              }
               variant="destructive"
             />
           </DropdownMenu.Menu>

@@ -121,12 +121,9 @@ export const useAlertTableCols = (
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
-    columnHelper.display({
-      id: colName,
-      header: colName,
-      minSize: 100,
-      enableGrouping: true,
-      getGroupingValue: (row) => {
+    columnHelper.accessor(
+      (row) => {
+        // Extract value using the dot notation path
         const keys = colName.split(".");
         let value: any = row;
         for (const key of keys) {
@@ -139,49 +136,59 @@ export const useAlertTableCols = (
         }
         return value;
       },
-      aggregatedCell: ({ getValue }) => {
-        const value = getValue();
-        if (typeof value === "object" && value !== null) {
-          return "Multiple Objects";
-        }
-        return `${String(value ?? "N/A")}`;
-      },
-      cell: (context) => {
-        const keys = colName.split(".");
-        let alertValue: any = context.row.original;
-        for (const key of keys) {
-          if (
-            alertValue &&
-            typeof alertValue === "object" &&
-            key in alertValue
-          ) {
-            alertValue = alertValue[key as keyof typeof alertValue];
-          } else {
-            alertValue = undefined;
-            break;
+      {
+        id: colName,
+        header: colName,
+        minSize: 100,
+        enableGrouping: true,
+        getGroupingValue: (row) => {
+          const keys = colName.split(".");
+          let value: any = row;
+          for (const key of keys) {
+            if (value && typeof value === "object" && key in value) {
+              value = value[key as keyof typeof value];
+            } else {
+              value = undefined;
+              break;
+            }
           }
-        }
 
-        if (typeof alertValue === "object" && alertValue !== null) {
-          return (
-            <Accordion>
-              <AccordionHeader>Value</AccordionHeader>
-              <AccordionBody>
-                <pre className="overflow-scroll max-w-lg">
-                  {JSON.stringify(alertValue, null, 2)}
-                </pre>
-              </AccordionBody>
-            </Accordion>
-          );
-        }
+          if (typeof value === "object" && value !== null) {
+            return "object"; // Group all objects together
+          }
+          return value;
+        },
+        aggregatedCell: ({ getValue }) => {
+          const value = getValue();
+          if (typeof value === "object" && value !== null) {
+            return "Multiple Objects";
+          }
+          return `${String(value ?? "N/A")}`;
+        },
+        cell: (context) => {
+          const value = context.getValue();
 
-        if (alertValue && alertValue !== null) {
-          return <div className="truncate">{alertValue.toString()}</div>;
-        }
+          if (typeof value === "object" && value !== null) {
+            return (
+              <Accordion>
+                <AccordionHeader>Value</AccordionHeader>
+                <AccordionBody>
+                  <pre className="overflow-scroll max-w-lg">
+                    {JSON.stringify(value, null, 2)}
+                  </pre>
+                </AccordionBody>
+              </Accordion>
+            );
+          }
 
-        return "";
-      },
-    })
+          if (value !== undefined && value !== null) {
+            return <div className="truncate">{String(value)}</div>;
+          }
+
+          return "";
+        },
+      }
+    )
   ) as ColumnDef<AlertDto>[];
 
   return [
@@ -307,9 +314,14 @@ export const useAlertTableCols = (
       },
     }),
     // Name column butted up against source
-    columnHelper.display({
+    columnHelper.accessor("name", {
       id: "name",
       header: "Name",
+      enableGrouping: true,
+      getGroupingValue: (row) => {
+        console.log("Grouping value for row:", row.name);
+        return row.name;
+      },
       cell: (context) => (
         <div>
           <AlertName
