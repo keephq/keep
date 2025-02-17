@@ -32,7 +32,7 @@ class GrafanaLokiProviderAuthConfig:
     )
 
     authentication_type: typing.Literal["NoAuth", "Basic", "X-Scope-OrgID"] = dataclasses.field(
-        default=typing.Literal["NoAuth"],
+        default=typing.cast(typing.Literal["NoAuth", "Basic", "X-Scope-OrgID"], "NoAuth"),
         metadata={
             "required": True,
             "description": "Authentication Type",
