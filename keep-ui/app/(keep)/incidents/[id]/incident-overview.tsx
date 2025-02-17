@@ -98,8 +98,9 @@ function Summary({
     <Markdown 
     remarkPlugins={[remarkGfm, remarkRehype]} 
     rehypePlugins={[rehypeRaw]}
-    className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1"
+    className="whitespace-pre-wrap prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1"
     >
+
       {summary ?? generatedSummary}
     </Markdown>
   );

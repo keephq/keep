@@ -1,5 +1,6 @@
 "use client";
 import React, {
+  ElementType,
   useCallback,
   useEffect,
   useMemo,
@@ -19,10 +20,17 @@ import {
   NodeChange,
   EdgeChange,
   FitViewOptions,
+  addEdge,
+  reconnectEdge,
 } from "@xyflow/react";
 import { ServiceNode } from "./service-node";
-import { Card, MultiSelect, MultiSelectItem } from "@tremor/react";
-import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
+import { Button, Card, MultiSelect, MultiSelectItem } from "@tremor/react";
+import {
+  ArrowUpRightIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+  EllipsisVerticalIcon,
+} from "@heroicons/react/24/outline";
 import {
   edgeLabelBgStyleNoHover,
   edgeMarkerEndNoHover,
@@ -51,6 +59,12 @@ import { areSetsEqual } from "@/utils/helpers";
 import { getLayoutedElements } from "@/app/(keep)/topology/ui/map/getLayoutedElements";
 import { getNodesAndEdgesFromTopologyData } from "@/app/(keep)/topology/ui/map/getNodesAndEdgesFromTopologyData";
 import { useIncidents } from "@/utils/hooks/useIncidents";
+import { EdgeBase, Connection } from "@xyflow/system";
+import { AddEditNodeSidePanel } from "./AddEditNodeSidePanel";
+import { toast } from "react-toastify";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { DropdownMenu } from "@/shared/ui";
+import { downloadFileFromString } from "@/shared/ui/YAMLCodeblock/ui/YAMLCodeblock";
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
@@ -68,6 +82,12 @@ type TopologyMapProps = {
   standalone?: boolean;
 };
 
+interface MenuItem {
+  icon: ElementType;
+  label: string;
+  onClick: () => void;
+}
+
 export function TopologyMap({
   topologyServices: initialTopologyServices,
   topologyApplications: initialTopologyApplications,
@@ -80,13 +100,18 @@ export function TopologyMap({
 }: TopologyMapProps) {
   const [initiallyFitted, setInitiallyFitted] = useState(false);
 
-  const { topologyData, isLoading, error } = useTopology({
+  const {
+    topologyData,
+    isLoading,
+    error,
+    mutate: mutateTopologyData,
+  } = useTopology({
     providerIds,
     services,
     environment,
     initialData: initialTopologyServices,
   });
-  const { applications } = useTopologyApplications({
+  const { applications, mutate: mutateApplications } = useTopologyApplications({
     initialData: initialTopologyApplications,
   });
   const router = useRouter();
@@ -104,6 +129,8 @@ export function TopologyMap({
       setSelectedApplicationIds(initialSelectedApplicationIds);
     }
   }, [initialSelectedApplicationIds, setSelectedApplicationIds]);
+
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState<boolean>(false);
 
   const applicationMap = useMemo(() => {
     const map = new Map<string, TopologyApplication>();
@@ -130,6 +157,55 @@ export function TopologyMap({
     );
   }, []);
 
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (!event.target.files) {
+      return;
+    }
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.set("file", file);
+
+    try {
+      const response = await api.request("/topology/import", {
+        method: "POST",
+        body: formData,
+      });
+      toast.success("Topology imported Successfully!");
+      mutateApplications();
+      mutateTopologyData();
+    } catch (error) {
+      toast.error(`Error uploading file: ${error}`);
+    }
+  };
+
+  const menuItems: MenuItem[] = [
+    {
+      label: "Import",
+      icon: ArrowUpTrayIcon,
+      onClick: () => document.getElementById("fileInput")?.click(),
+    },
+    {
+      label: "Export",
+      icon: ArrowDownTrayIcon,
+      onClick: async () => {
+        try {
+          const response = await api.get("/topology/export", {
+            headers: {
+              Accept: "application/x-yaml",
+            },
+          });
+          downloadFileFromString(response, "topology-export.yaml");
+        } catch (error) {
+          console.log(error);
+        }
+      },
+    },
+  ];
+
   const fitViewToServices = useCallback((serviceIds: string[]) => {
     const nodesToFit: TopologyNode[] = [];
     for (const id of serviceIds) {
@@ -152,6 +228,125 @@ export function TopologyMap({
   const onNodesChange = useCallback((changes: NodeChange<TopologyNode>[]) => {
     setNodes((nds) => applyNodeChanges(changes, nds));
   }, []);
+
+  const getServiceById = useCallback(
+    (_id: string) => {
+      return topologyData?.find((service) => {
+        return service.id === _id;
+      });
+    },
+    [topologyData]
+  );
+
+  const api = useApi();
+  const edgeReconnectSuccessful = useRef(true);
+
+  const onConnect = useCallback(
+    async (params: EdgeBase | Connection) => {
+      const sourceService = getServiceById(params.source);
+      const targetService = getServiceById(params.target);
+      if (
+        sourceService?.is_manual === true &&
+        targetService?.is_manual === true
+      ) {
+        setEdges((eds) => addEdge(params, eds));
+        try {
+          const response = await api.post("/topology/dependency", {
+            service_id: sourceService.id,
+            depends_on_service_id: targetService.id,
+          });
+          mutateTopologyData();
+        } catch (error) {
+          const edgeIdToRevert = `xy-edge__${sourceService.id}right-${targetService.id}left`;
+          setEdges((eds) => eds.filter((e) => e.id !== edgeIdToRevert));
+          toast.error(
+            `Error while adding connection from ${params.source} to ${params.target}: ${error}`
+          );
+        }
+      }
+    },
+    [api, getServiceById, mutateTopologyData]
+  );
+
+  const onReconnectStart = useCallback(() => {
+    edgeReconnectSuccessful.current = false;
+  }, []);
+
+  const onReconnect = useCallback(
+    async (oldEdge: EdgeBase, newConnection: Connection) => {
+      edgeReconnectSuccessful.current = true;
+      if (
+        getServiceById(oldEdge.source)?.is_manual === false ||
+        getServiceById(oldEdge.target)?.is_manual === false ||
+        getServiceById(newConnection.source)?.is_manual === false ||
+        getServiceById(newConnection.target)?.is_manual === false
+      ) {
+        return;
+      }
+      if (
+        oldEdge.source === newConnection.source &&
+        oldEdge.target === newConnection.target
+      ) {
+        return;
+      } else {
+        setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
+        try {
+          const response = await api.put("/topology/dependency", {
+            id: oldEdge.id,
+            service_id: newConnection.source,
+            depends_on_service_id: newConnection.target,
+          });
+          mutateTopologyData();
+        } catch (error) {
+          setEdges((eds) => eds.filter((e) => e.id !== oldEdge.id));
+          setEdges((eds) => addEdge(oldEdge, eds));
+          toast.error(
+            `Error while adding (re)connection from ${newConnection.source} to ${newConnection.target}: ${error}`
+          );
+        }
+      }
+    },
+    [api, mutateTopologyData, getServiceById]
+  );
+
+  const getEdgeIdBySourceTarget = useCallback(
+    (source: string, target: string) => {
+      const sourceNode = topologyData?.find((node) => node.id === source);
+      const edge = sourceNode?.dependencies.find(
+        (deps) => deps.serviceId === target
+      );
+      return edge?.id;
+    },
+    [topologyData]
+  );
+
+  const onReconnectEnd = useCallback(
+    async (_: MouseEvent | TouchEvent, edge: Edge) => {
+      if (
+        getServiceById(edge.source)?.is_manual === false ||
+        getServiceById(edge.target)?.is_manual === false
+      ) {
+        return;
+      }
+
+      if (!edgeReconnectSuccessful.current) {
+        setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+        try {
+          const edgeId = getEdgeIdBySourceTarget(edge.source, edge.target);
+          const response = await api.delete(`/topology/dependency/${edgeId}`);
+          mutateTopologyData();
+          // setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+        } catch (error) {
+          setEdges((eds) => addEdge(edge, eds));
+          toast.error(
+            `Failed to delete connection from ${edge.source} to ${edge.target}: ${error}`
+          );
+        }
+      }
+      edgeReconnectSuccessful.current = true;
+    },
+    [mutateTopologyData, getEdgeIdBySourceTarget, api, getServiceById]
+  );
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) =>
@@ -180,7 +375,7 @@ export function TopologyMap({
       value: TopologyServiceMinimal | TopologyApplicationMinimal;
     }) => {
       if ("service" in value) {
-        setSelectedObjectId(value.service);
+        setSelectedObjectId(value.id);
       } else {
         const application = applicationMap.get(value.id);
         if (application) {
@@ -244,7 +439,8 @@ export function TopologyMap({
       const { nodeMap, edgeMap } = getNodesAndEdgesFromTopologyData(
         topologyData,
         applicationMap,
-        allIncidents?.items ?? []
+        allIncidents?.items ?? [],
+        mutateTopologyData
       );
 
       const newNodes = Array.from(nodeMap.values());
@@ -275,7 +471,7 @@ export function TopologyMap({
       setNodes(layoutedElements.nodes);
       setEdges(layoutedElements.edges);
     },
-    [topologyData, applicationMap, allIncidents]
+    [topologyData, applicationMap, allIncidents, mutateTopologyData]
   );
 
   useEffect(
@@ -289,7 +485,7 @@ export function TopologyMap({
       const selectedServiceNodesIds = new Set(
         applications.flatMap((app) =>
           selectedApplicationIds.includes(app.id)
-            ? app.services.map((s) => s.service.toString())
+            ? app.services.map((s) => s.id.toString())
             : []
         )
       );
@@ -351,90 +547,133 @@ export function TopologyMap({
   }
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-      <div className="flex justify-between items-baseline gap-4">
-        <TopologySearchAutocomplete
-          wrapperClassName="w-full flex-1"
-          includeApplications={true}
-          providerIds={providerIds}
-          services={services}
-          environment={environment}
-          placeholder="Search for a service or application"
-          onSelect={handleSelectFromSearch}
-        />
-        {/* Using z-index to overflow the manage selection component */}
-        <div className="basis-1/3 relative z-30">
-          <MultiSelect
-            placeholder="Show application"
-            value={selectedApplicationIds}
-            onValueChange={setSelectedApplicationIds}
-            disabled={!applications.length}
-          >
-            {applications.map((app) => (
-              <MultiSelectItem key={app.id} value={app.id}>
-                {app.name}
-              </MultiSelectItem>
-            ))}
-          </MultiSelect>
-        </div>
-        {!standalone ? (
-          <div>
-            <Link
-              icon={ArrowUpRightIcon}
-              iconPosition="right"
-              className="mr-2"
-              href="/topology"
+    <>
+      <div className="flex flex-col gap-4 h-full">
+        <div className="flex justify-between  gap-4 items-center">
+          <TopologySearchAutocomplete
+            wrapperClassName="w-full flex-1"
+            includeApplications={true}
+            providerIds={providerIds}
+            services={services}
+            environment={environment}
+            placeholder="Search for a service or application"
+            onSelect={handleSelectFromSearch}
+          />
+          {/* Using z-index to overflow the manage selection component */}
+          <div className="basis-1/3 relative z-30">
+            <MultiSelect
+              placeholder="Show application"
+              value={selectedApplicationIds}
+              onValueChange={setSelectedApplicationIds}
+              disabled={!applications.length}
             >
-              Full topology map
-            </Link>
+              {applications.map((app) => (
+                <MultiSelectItem key={app.id} value={app.id}>
+                  {app.name}
+                </MultiSelectItem>
+              ))}
+            </MultiSelect>
           </div>
-        ) : null}
-      </div>
-      <Card className="p-0 h-full mx-auto relative overflow-hidden flex flex-col">
-        <ReactFlowProvider>
-          <ManageSelection />
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            minZoom={0.1}
-            snapToGrid
-            fitView
-            fitViewOptions={defaultFitViewOptions}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            zoomOnDoubleClick={true}
-            onEdgeMouseEnter={(_event, edge) => onEdgeHover("enter", edge)}
-            onEdgeMouseLeave={(_event, edge) => onEdgeHover("leave", edge)}
-            nodeTypes={{
-              service: ServiceNode,
-              application: ApplicationNode,
-            }}
-            onInit={(instance) => {
-              reactFlowInstanceRef.current = instance;
-            }}
-          >
-            <Background variant={BackgroundVariant.Lines} />
-            <Controls />
-          </ReactFlow>
-        </ReactFlowProvider>
-        {!topologyData ||
-          (topologyData?.length === 0 && (
-            <>
-              <div className="absolute top-0 right-0 bg-gray-200 opacity-30 h-full w-full" />
-              <div className="absolute top-0 right-0 h-full w-full p-4 md:p-10">
-                <div className="relative w-full h-full flex flex-col justify-center mb-20">
-                  <EmptyStateCard
-                    className="mb-20"
-                    title="No Topology Available"
-                    description="Seems like no topology data is available, start by connecting providers that support topology."
-                    buttonText="Connect Providers"
-                    onClick={() => router.push("/providers?labels=topology")}
-                  />
+          <Button onClick={() => setIsSidePanelOpen(true)}>+ Add Node</Button>
+
+          <div className="h-full">
+            <DropdownMenu.Menu
+              icon={EllipsisVerticalIcon}
+              label=""
+              className="!h-full"
+            >
+              {menuItems.map((item, index) => (
+                <DropdownMenu.Item
+                  key={item.label + index}
+                  icon={item.icon}
+                  label={item.label}
+                  onClick={item.onClick}
+                />
+              ))}
+            </DropdownMenu.Menu>
+          </div>
+
+          <input
+            type="file"
+            id="fileInput"
+            className="hidden"
+            onChange={handleFileUpload}
+            accept=".yaml,.json,.csv"
+          />
+
+          {!standalone ? (
+            <div>
+              <Link
+                icon={ArrowUpRightIcon}
+                iconPosition="right"
+                className="mr-2"
+                href="/topology"
+              >
+                Full topology map
+              </Link>
+            </div>
+          ) : null}
+        </div>
+        <Card className="p-0 h-full mx-auto relative overflow-hidden flex flex-col">
+          <ReactFlowProvider>
+            <ManageSelection
+              topologyMutator={mutateTopologyData}
+              getServiceById={getServiceById}
+            />
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              minZoom={0.1}
+              snapToGrid
+              fitView
+              fitViewOptions={defaultFitViewOptions}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onReconnect={onReconnect}
+              onReconnectStart={onReconnectStart}
+              onReconnectEnd={onReconnectEnd}
+              onConnect={onConnect}
+              zoomOnDoubleClick={true}
+              onEdgeMouseEnter={(_event, edge) => onEdgeHover("enter", edge)}
+              onEdgeMouseLeave={(_event, edge) => onEdgeHover("leave", edge)}
+              nodeTypes={{
+                service: ServiceNode,
+                application: ApplicationNode,
+              }}
+              onInit={(instance) => {
+                reactFlowInstanceRef.current = instance;
+              }}
+            >
+              <Background variant={BackgroundVariant.Lines} />
+              <Controls />
+            </ReactFlow>
+          </ReactFlowProvider>
+          {!topologyData ||
+            (topologyData?.length === 0 && (
+              <>
+                <div className="absolute top-0 right-0 bg-gray-200 opacity-30 h-full w-full" />
+                <div className="absolute top-0 right-0 h-full w-full p-4 md:p-10">
+                  <div className="relative w-full h-full flex flex-col justify-center mb-20">
+                    <EmptyStateCard
+                      className="mb-20"
+                      title="No Topology Available"
+                      description="Seems like no topology data is available, start by connecting providers that support topology."
+                      buttonText="Connect Providers"
+                      onClick={() => router.push("/providers?labels=topology")}
+                    />
+                  </div>
                 </div>
-              </div>
-            </>
-          ))}
-      </Card>
-    </div>
+              </>
+            ))}
+        </Card>
+      </div>
+      <AddEditNodeSidePanel
+        isOpen={isSidePanelOpen}
+        topologyMutator={mutateTopologyData}
+        handleClose={() => {
+          setIsSidePanelOpen(false);
+        }}
+      />
+    </>
   );
 }
