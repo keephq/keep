@@ -172,8 +172,10 @@ def get_all_incidents(
         authenticated_entity=authenticated_entity,
     )
 
+    incident_bl = IncidentBl(tenant_id, session=None, pusher_client=None)
+
     try:
-        incidents, total_count = get_last_incidents_by_cel(
+        result = incident_bl.query_incidents(
             tenant_id=tenant_id,
             is_confirmed=confirmed,
             limit=limit,
@@ -182,30 +184,22 @@ def get_all_incidents(
             cel=cel,
             allowed_incident_ids=allowed_incident_ids,
         )
+        logger.info(
+            "Fetched incidents from DB",
+            extra={
+                "tenant_id": tenant_id,
+                "limit": limit,
+                "offset": offset,
+                "sorting": sorting,
+                "filters": filters,
+            },
+        )
+        return result
     except CelToSqlException as e:
         logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
         raise HTTPException(
             status_code=400, detail=f"Error parsing CEL expression: {cel}"
         )
-
-    incidents_dto = []
-    for incident in incidents:
-        incidents_dto.append(IncidentDto.from_db_incident(incident))
-
-    logger.info(
-        "Fetched incidents from DB",
-        extra={
-            "tenant_id": tenant_id,
-            "limit": limit,
-            "offset": offset,
-            "sorting": sorting,
-            "filters": filters,
-        },
-    )
-
-    return IncidentsPaginatedResultsDto(
-        limit=limit, offset=offset, count=total_count, items=incidents_dto
-    )
 
 
 @router.post(

@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import os
 import pathlib
@@ -24,9 +25,16 @@ from keep.api.core.db import (
     update_incident_severity,
 )
 from keep.api.core.elastic import ElasticClient
-from keep.api.models.alert import IncidentDto, IncidentDtoIn, IncidentSeverity
+from keep.api.core.incidents import get_last_incidents_by_cel
+from keep.api.models.alert import (
+    IncidentDto,
+    IncidentDtoIn,
+    IncidentSeverity,
+    IncidentSorting,
+)
 from keep.api.models.db.alert import ActionType, Incident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.api.utils.pagination import IncidentsPaginatedResultsDto
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION = int(
@@ -355,3 +363,40 @@ class IncidentBl:
             extra={"incident_id": incident.id},
         )
         return new_incident_dto
+
+    def query_incidents(
+        self,
+        tenant_id: str,
+        limit: int = 25,
+        offset: int = 0,
+        timeframe: int = None,
+        upper_timestamp: datetime = None,
+        lower_timestamp: datetime = None,
+        is_confirmed: bool = False,
+        sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
+        with_alerts: bool = False,
+        is_predicted: bool = None,
+        cel: str = None,
+        allowed_incident_ids: Optional[List[str]] = None,
+    ):
+        incidents, total_count = get_last_incidents_by_cel(
+            tenant_id=tenant_id,
+            limit=limit,
+            offset=offset,
+            timeframe=timeframe,
+            upper_timestamp=upper_timestamp,
+            lower_timestamp=lower_timestamp,
+            is_confirmed=is_confirmed,
+            sorting=sorting,
+            with_alerts=with_alerts,
+            is_predicted=is_predicted,
+            cel=cel,
+            allowed_incident_ids=allowed_incident_ids,
+        )
+        incidents_dto = []
+        for incident in incidents:
+            incidents_dto.append(IncidentDto.from_db_incident(incident))
+
+        return IncidentsPaginatedResultsDto(
+            limit=limit, offset=offset, count=total_count, items=incidents_dto
+        )
