@@ -29,10 +29,7 @@ import { getColumnsIds } from "./alert-table-utils";
 import { FaArrowUp, FaArrowDown, FaArrowRight } from "react-icons/fa";
 import {
   ChevronDownIcon,
-  EyeIcon,
   ArrowsUpDownIcon,
-  ChevronDoubleRightIcon,
-  ChevronDoubleLeftIcon,
   XMarkIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -43,7 +40,7 @@ import { BsSortAlphaDownAlt } from "react-icons/bs";
 import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import { DropdownMenu } from "@/shared/ui";
-import { DEFAULT_COLS, DEFAULT_COLS_VISIBILITY } from "./alert-table-utils";
+import { DEFAULT_COLS_VISIBILITY } from "./alert-table-utils";
 
 interface DraggableHeaderCellProps {
   header: Header<AlertDto, unknown>;

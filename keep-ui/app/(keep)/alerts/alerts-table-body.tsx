@@ -2,14 +2,10 @@ import { TableBody, TableRow, TableCell } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { Table, flexRender } from "@tanstack/react-table";
+import { Table } from "@tanstack/react-table";
 import React, { useState } from "react";
 import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
-import clsx from "clsx";
-import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
-import { Row } from "@tanstack/react-table";
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { GroupedRow } from "./alert-grouped-row";
 
 interface Props {
