@@ -44,6 +44,11 @@ import { Icon } from "@tremor/react";
 import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import AlertPaginationServerSide from "./alert-pagination-server-side";
 import { FacetDto } from "@/features/filter";
+import {
+  GroupingState,
+  getGroupedRowModel,
+  getExpandedRowModel,
+} from "@tanstack/react-table";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -109,6 +114,7 @@ export function AlertTableServerSide({
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
+  const [grouping, setGrouping] = useState<GroupingState>([]);
   const [filterCel, setFilterCel] = useState<string>("");
   const [searchCel, setSearchCel] = useState<string>("");
   const [dateRange, setDateRange] = useState<DateRange | null>(null);
@@ -230,11 +236,13 @@ export function AlertTableServerSide({
         right: ["alertMenu"],
       },
       sorting: sorting,
+      grouping: grouping,
       pagination: {
         pageIndex: paginationState.pageIndex,
         pageSize: paginationState.pageSize,
       },
     },
+    enableGrouping: true,
     manualSorting: true,
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
@@ -244,6 +252,7 @@ export function AlertTableServerSide({
     globalFilterFn: ({ original }, _id, value) => {
       return evalWithContext(original, value);
     },
+    getGroupedRowModel: getGroupedRowModel(),
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -256,6 +265,7 @@ export function AlertTableServerSide({
     manualPagination: true,
     pageCount: Math.ceil(alertsTotalCount / paginationState.pageSize),
     onPaginationChange: setPaginationState,
+    onGroupingChange: setGrouping,
   });
 
   const selectedRowIds = Object.entries(

@@ -1,5 +1,7 @@
-import { AlertDto } from "@/entities/alerts/model"; // Adjust the import path as needed
-import Modal from "@/components/ui/Modal"; // Ensure this path matches your project structure
+"use client";
+
+import { AlertDto } from "@/entities/alerts/model";
+import Modal from "@/components/ui/Modal";
 import { Button, Switch, Text } from "@tremor/react";
 import { toast } from "react-toastify";
 import "./ViewAlertModal.css";
