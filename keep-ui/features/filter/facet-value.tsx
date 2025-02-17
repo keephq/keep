@@ -82,9 +82,11 @@ export const FacetValue: React.FC<FacetValueProps> = ({
           {isExclusivelySelected ? "All" : "Only"}
         </button>
         {
-          <Text className="text-xs text-gray-500 group-hover:hidden">
-            <ShortNumber value={count}></ShortNumber>
-          </Text>
+          <span data-testid="facet-value-count">
+            <Text className="text-xs text-gray-500 group-hover:hidden">
+              <ShortNumber value={count}></ShortNumber>
+            </Text>
+          </span>
         }
       </div>
     </div>

@@ -15,11 +15,11 @@ export const AlertsCountBadge: React.FC<AlertsCountBadgeProps> = ({
 }) => {
   console.log("AlertsCountBadge::presetCEL", presetCEL);
   const { useLastAlerts } = useAlerts();
-  const { totalCount, isLoading: isSearching } = useLastAlerts(
-    presetCEL,
-    20,
-    0
-  );
+  const { totalCount, isLoading: isSearching } = useLastAlerts({
+    cel: presetCEL,
+    limit: 20,
+    offset: 0,
+  });
 
   console.log("AlertsCountBadge::swr", totalCount);
 
