@@ -7,6 +7,23 @@ import Skeleton from "react-loading-skeleton";
 import { Button, Text } from "@tremor/react";
 import { useWorkflowRun } from "@/utils/hooks/useWorkflowRun";
 import AlertTriggerModal from "../workflow-run-with-alert-modal";
+import { useWorkflowStore } from "@/entities/workflows";
+import { CloudIcon, ExclamationTriangleIcon } from "@heroicons/react/20/solid";
+import { Tooltip } from "@/shared/ui";
+
+function WorkflowSyncStatus() {
+  // TODO: show saved vs unsaved, add properity to workflowstore to track this
+  const { synced } = useWorkflowStore();
+  return synced ? (
+    <Tooltip content="Saved to Keep">
+      <CloudIcon className="w-4 h-4 text-gray-500" />
+    </Tooltip>
+  ) : (
+    <Tooltip content="Not saved">
+      <ExclamationTriangleIcon className="w-4 h-4 text-gray-500" />
+    </Tooltip>
+  );
+}
 
 export default function WorkflowDetailHeader({
   workflowId: workflow_id,
@@ -58,8 +75,12 @@ export default function WorkflowDetailHeader({
     <div>
       <div className="flex justify-between items-end text-sm gap-2">
         <div>
-          <h1 className="text-2xl line-clamp-2 font-bold" data-testid="wf-name">
+          <h1
+            className="text-2xl line-clamp-2 font-bold flex items-baseline gap-2"
+            data-testid="wf-name"
+          >
             {workflow.name}
+            <WorkflowSyncStatus />
           </h1>
           {workflow.description && (
             <Text className="line-clamp-5">
@@ -67,21 +88,25 @@ export default function WorkflowDetailHeader({
             </Text>
           )}
         </div>
-        {!!workflow && (
-          <Button
-            color="orange"
-            disabled={isRunning || isRunButtonDisabled}
-            className="p-2 px-4"
-            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.stopPropagation();
-              e.preventDefault();
-              handleRunClick?.();
-            }}
-            tooltip={message}
-          >
-            {isRunning ? "Running..." : "Run now"}
-          </Button>
-        )}
+
+        <div className="flex gap-2">
+          {!!workflow && (
+            <Button
+              size="xs"
+              color="orange"
+              disabled={isRunning || isRunButtonDisabled}
+              className="p-2 px-4"
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleRunClick?.();
+              }}
+              tooltip={message}
+            >
+              {isRunning ? "Running..." : "Run now"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {!!workflow && !!getTriggerModalProps && (

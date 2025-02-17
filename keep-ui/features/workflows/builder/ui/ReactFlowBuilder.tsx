@@ -10,31 +10,22 @@ import {
   Edge,
 } from "@xyflow/react";
 import WorkflowNode from "./WorkflowNode";
-import CustomEdge from "./WorkflowEdge";
-import { Provider } from "@/app/(keep)/providers/providers";
-import ReactFlowEditor from "./ReactFlowEditor";
+import { WorkflowEdge } from "./WorkflowEdge";
+import ReactFlowEditor from "./Editor/ReactFlowEditor";
 import { FlowNode, useWorkflowStore } from "@/entities/workflows";
 import { KeepLoader } from "@/shared/ui";
 import "@xyflow/react/dist/style.css";
 
 const nodeTypes = { custom: WorkflowNode as any };
 const edgeTypes: EdgeTypesType = {
-  "custom-edge": CustomEdge as React.ComponentType<any>,
+  "custom-edge": WorkflowEdge as React.ComponentType<any>,
 };
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
-  minZoom: 0.1,
 };
 
-const ReactFlowBuilder = ({
-  providers,
-  installedProviders,
-}: {
-  // TODO: move providers from props to ReactFlowEditor itself
-  providers: Provider[] | undefined | null;
-  installedProviders: Provider[] | undefined | null;
-}) => {
+const ReactFlowBuilder = () => {
   const {
     nodes,
     edges,
@@ -117,10 +108,7 @@ const ReactFlowBuilder = ({
       ) : (
         <KeepLoader loadingText="Initializing workflow builder..." />
       )}
-      <ReactFlowEditor
-        providers={providers}
-        installedProviders={installedProviders}
-      />
+      <ReactFlowEditor />
     </div>
   );
 };

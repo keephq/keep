@@ -1,29 +1,33 @@
-import { act, renderHook, RenderHookResult } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import {
   useWorkflowStore,
   FlowNode,
-  ToolboxConfiguration,
-  V2Step,
+  V2StepTrigger,
 } from "@/entities/workflows";
 import { v4 as uuidv4 } from "uuid";
 import { Connection } from "@xyflow/react";
-import {
-  ConditionsGroup,
-  MiscGroup,
-  TriggersGroup,
-} from "@/features/workflows/builder/lib/utils";
+import { getToolboxConfiguration } from "@/features/workflows/builder/lib/utils";
 
 // Mock uuid to return predictable values
 jest.mock("uuid", () => ({
   v4: jest.fn(),
 }));
 
-const mockToolboxConfiguration: ToolboxConfiguration = {
-  groups: [TriggersGroup, MiscGroup, ConditionsGroup],
-};
+// First declare the mock function
+const showErrorToastMock = jest.fn();
+
+// Mock the entire module path
+jest.mock("../../../../shared/ui/utils/showErrorToast", () => ({
+  showErrorToast: () => showErrorToastMock(),
+}));
+
+const mockToolboxConfiguration = getToolboxConfiguration([]);
 
 describe("useWorkflowStore", () => {
   beforeEach(() => {
+    // Reset all mocks before each test
+    jest.clearAllMocks();
+
     // Reset the store before each test
     const { result } = renderHook(() => useWorkflowStore());
     act(() => {
@@ -68,9 +72,11 @@ describe("useWorkflowStore", () => {
             id: "interval",
             componentType: "trigger",
             type: "interval",
-            properties: {},
+            properties: {
+              interval: "5m",
+            },
             name: "Interval Trigger",
-          } as V2Step,
+          } as V2StepTrigger,
           "edge"
         );
       });
@@ -78,7 +84,7 @@ describe("useWorkflowStore", () => {
       // Verify the node was added correctly
       expect(result.current.nodes).toHaveLength(3);
       expect(result.current.edges).toHaveLength(2);
-      expect(result.current.v2Properties).toHaveProperty("interval", "");
+      expect(result.current.v2Properties).toHaveProperty("interval", "5m");
     });
 
     it("should not add trigger component if one already exists", () => {
@@ -86,48 +92,42 @@ describe("useWorkflowStore", () => {
 
       // Setup initial state with existing trigger
       act(() => {
-        result.current.setNodes([
-          {
-            id: "trigger_start",
-            type: "trigger",
-            position: { x: 0, y: 0 },
-            data: { type: "trigger" },
-            isNested: false,
-          } as FlowNode,
-          {
-            id: "interval",
-            type: "trigger",
-            position: { x: 50, y: 50 },
-            data: { type: "trigger" },
-            isNested: false,
-          } as FlowNode,
-          {
-            id: "trigger_end",
-            type: "trigger",
-            position: { x: 100, y: 100 },
-            data: { type: "trigger" },
-            isNested: false,
-          } as FlowNode,
-        ]);
+        result.current.setDefinition({
+          value: {
+            sequence: [],
+            properties: {
+              interval: "5m",
+            },
+          },
+          isValid: true,
+        });
+        result.current.initializeWorkflow(null, mockToolboxConfiguration);
       });
+
+      expect(result.current.nodes).toHaveLength(5);
 
       // Try to add another trigger
       act(() => {
+        const edges = result.current.edges;
         result.current.addNodeBetween(
-          "trigger_end",
+          edges[1].id,
           {
             id: "interval",
             componentType: "trigger",
             type: "interval",
-            properties: {},
+            properties: {
+              interval: "6m",
+            },
             name: "Interval Trigger",
-          } as V2Step,
-          "node"
+          } as V2StepTrigger,
+          "edge"
         );
       });
 
       // Verify no new node was added
-      expect(result.current.nodes).toHaveLength(3);
+      expect(showErrorToastMock).toHaveBeenCalled();
+      expect(result.current.nodes).toHaveLength(5);
+      expect(result.current.v2Properties).toHaveProperty("interval", "5m");
     });
   });
 
@@ -377,6 +377,7 @@ describe("useWorkflowStore", () => {
                 type: "step",
                 componentType: "task",
                 properties: {
+                  stepParams: ["param1"],
                   config: "test",
                   with: {
                     param1: "value1",
@@ -437,14 +438,18 @@ describe("useWorkflowStore", () => {
                 name: "Step 1",
                 type: "step",
                 componentType: "task",
-                properties: {},
+                properties: {
+                  stepParams: [],
+                },
               },
               {
                 id: "step2",
                 name: "",
                 type: "step",
                 componentType: "task",
-                properties: {},
+                properties: {
+                  stepParams: [],
+                },
               },
             ],
             properties: {
@@ -474,8 +479,10 @@ describe("useWorkflowStore", () => {
                 id: "step1",
                 name: "Step 1",
                 type: "step",
-                componentType: "step",
-                properties: {},
+                componentType: "task",
+                properties: {
+                  stepParams: [],
+                },
               },
             ],
             properties: {

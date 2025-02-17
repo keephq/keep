@@ -112,7 +112,10 @@ export default function WorkflowDetailPage({
         </TabList>
         <TabPanels>
           <TabPanel>
-            <WorkflowOverview workflow_id={params.workflow_id} />
+            <WorkflowOverview
+              workflow={workflow ?? null}
+              workflow_id={params.workflow_id}
+            />
           </TabPanel>
           <TabPanel>
             {!workflow ? (

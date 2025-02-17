@@ -31,17 +31,16 @@ export function WorkflowBuilderWidget({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const {
-    canDeploy,
-    buttonsEnabled,
     triggerSave,
     triggerRun,
+    updateV2Properties,
+    isInitialized,
+    canDeploy,
     isSaving,
     v2Properties,
-    updateV2Properties,
   } = useWorkflowStore();
 
   const isValid = useWorkflowStore((state) => !!state.definition?.isValid);
-  const isInitialized = useWorkflowStore((state) => !!state.workflowId);
 
   function loadWorkflow() {
     if (fileInputRef.current) {
@@ -111,7 +110,7 @@ export function WorkflowBuilderWidget({
                   icon={PlusIcon}
                   className="min-w-28"
                   variant="secondary"
-                  disabled={!buttonsEnabled}
+                  disabled={!isInitialized}
                 >
                   New
                 </Button>
@@ -122,7 +121,7 @@ export function WorkflowBuilderWidget({
                   className="min-w-28"
                   variant="secondary"
                   icon={ArrowUpOnSquareIcon}
-                  disabled={!buttonsEnabled}
+                  disabled={!isInitialized}
                 >
                   Load
                 </Button>

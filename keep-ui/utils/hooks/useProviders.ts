@@ -2,7 +2,6 @@ import { SWRConfiguration } from "swr";
 import { ProvidersResponse } from "@/app/(keep)/providers/providers";
 import useSWRImmutable from "swr/immutable";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import {ApiClient} from "@/shared/api";
 
 export const useProviders = (
   options: SWRConfiguration = { revalidateOnFocus: false }
@@ -27,4 +26,3 @@ export const useProvidersWithHealthCheck = (
     options
   );
 };
-
