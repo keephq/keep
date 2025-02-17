@@ -773,15 +773,9 @@ def change_incident_status(
         end_time = (
             datetime.utcnow() if change.status == IncidentStatus.RESOLVED else None
         )
-        result = change_incident_status_by_id(
+        change_incident_status_by_id(
             tenant_id, incident_id, change.status, end_time
         )
-        if not result:
-            raise HTTPException(
-                status_code=500, detail="Error changing incident status"
-            )
-        # TODO: same this change to audit table with the comment
-
         if change.status == IncidentStatus.RESOLVED:
             for alert in incident._alerts:
                 _enrich_alert(
