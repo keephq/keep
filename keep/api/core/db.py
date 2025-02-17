@@ -4589,9 +4589,8 @@ def change_incident_status_by_id(
                 end_time=end_time,
             )
         )
-        updated = session.execute(stmt)
+        session.exec(stmt)
         session.commit()
-        return updated.rowcount > 0
 
 
 def get_workflow_executions_for_incident_or_alert(
