@@ -11,6 +11,8 @@ Example Issue: https://github.com/keephq/keep/issues/3512
 
 Usage:
     python scripts/dev_create_gh_issue_for_a_pr.py <pr_number>
+    
+Uses local GitHub CLI (gh) for making API requests: https://cli.github.com/
 """
 
 import re
