@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import { EmptyBuilderState } from "./empty-builder-state";
 import { useProviders } from "@/utils/hooks/useProviders";
-import { useWorkflowStore } from "@/entities/workflows";
 import { KeepLoader } from "@/shared/ui";
 import clsx from "clsx";
 

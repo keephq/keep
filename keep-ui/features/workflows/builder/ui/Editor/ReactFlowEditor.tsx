@@ -1,11 +1,12 @@
 import { useEffect, useRef, useMemo } from "react";
 import { useWorkflowStore } from "@/entities/workflows";
-import { StepEditorV2 } from "./editors";
+import { StepEditorV2 } from "./StepEditor";
 import { Divider } from "@tremor/react";
 import clsx from "clsx";
 import { ChevronRightIcon, Cog8ToothIcon } from "@heroicons/react/24/outline";
 import { WorkflowToolbox } from "../WorkflowToolbox";
-import { GlobalEditorV2 } from "@/features/workflows/builder/ui/Editor/GlobalEditorV2";
+import { WorkflowEditorV2 } from "./WorkflowEditor";
+import { TriggerEditor } from "./TriggerEditor";
 
 const ReactFlowEditor = () => {
   const { selectedNode, selectedEdge, setEditorOpen, getNodeById, editorOpen } =
@@ -50,6 +51,9 @@ const ReactFlowEditor = () => {
     return { name, type, properties };
   }, [selectedNode]);
 
+  const isStepEditor =
+    !selectedNode?.includes("empty") && !isTrigger && initialFormData;
+
   return (
     <div className="transition-transform relative z-50" ref={containerRef}>
       <div
@@ -83,18 +87,17 @@ const ReactFlowEditor = () => {
       {editorOpen && (
         <div className="relative flex-1 bg-white border-l overflow-y-auto h-full">
           <div className="w-80 2xl:w-96">
-            <GlobalEditorV2 />
-            {!selectedNode?.includes("empty") && !isTrigger && (
+            <WorkflowEditorV2 />
+            {(isStepEditor || isTrigger) && (
               <Divider ref={stepEditorRef} className="my-2" />
             )}
-            {!selectedNode?.includes("empty") &&
-              !isTrigger &&
-              initialFormData && (
-                <StepEditorV2
-                  key={selectedNode}
-                  initialFormData={initialFormData}
-                />
-              )}
+            {isTrigger && <TriggerEditor />}
+            {isStepEditor && (
+              <StepEditorV2
+                key={selectedNode}
+                initialFormData={initialFormData}
+              />
+            )}
             <WorkflowToolbox isDraggable={false} />
           </div>
         </div>

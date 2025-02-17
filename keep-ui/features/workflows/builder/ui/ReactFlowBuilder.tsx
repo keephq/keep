@@ -23,7 +23,6 @@ const edgeTypes: EdgeTypesType = {
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
-  minZoom: 0.1,
 };
 
 const ReactFlowBuilder = () => {

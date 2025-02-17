@@ -2,6 +2,7 @@ import { FlowNode } from "../model/types";
 import { Edge } from "@xyflow/react";
 import dagre, { graphlib } from "@dagrejs/dagre";
 import { Position } from "@xyflow/react";
+import { triggerTypes } from "@/features/workflows/builder/lib/utils";
 
 export const getLayoutedWorkflowElements = (
   nodes: FlowNode[],
@@ -33,8 +34,12 @@ export const getLayoutedWorkflowElements = (
       type = type.replace(suffix, "");
     });
 
-    let width = ["start", "end"].includes(type) ? 80 : 280;
+    let width = 280;
     let height = 80;
+
+    if (triggerTypes.includes(type)) {
+      width = 200;
+    }
 
     // We want to remove start, but for now just hide it
     if (node.id === "start") {

@@ -47,7 +47,7 @@ export function validateGlobalPure(definition: Definition): ValidationResult[] {
     definition.properties["alert"] &&
     alertSources.length == 0
   ) {
-    errors.push(["alert", "Workflow alert trigger cannot be empty."]);
+    errors.push(["alert", "Alert trigger should have at least one filter."]);
   }
 
   const incidentActions = Object.values(

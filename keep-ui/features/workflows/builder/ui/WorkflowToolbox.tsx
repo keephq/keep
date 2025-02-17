@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { V2Step } from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
+import { triggerTypes } from "../lib/utils";
 
 const GroupedMenu = ({
   name,
@@ -89,7 +90,10 @@ const GroupedMenu = ({
                   steps.map((step: any) => (
                     <li
                       key={step.type}
-                      className="dndnode p-2 my-1 border border-gray-300 rounded cursor-pointer truncate flex justify-start gap-2 items-center hover:bg-gray-50 transition-colors"
+                      className={clsx(
+                        "dndnode p-2 my-1 border border-gray-300 rounded cursor-pointer truncate flex justify-start gap-2 items-center hover:bg-gray-50 transition-colors",
+                        triggerTypes.includes(step.type) && "rounded-full"
+                      )}
                       onDragStart={(event) =>
                         handleDragStart(event, { ...step })
                       }

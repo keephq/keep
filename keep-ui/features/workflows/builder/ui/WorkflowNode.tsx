@@ -15,6 +15,7 @@ import { WF_DEBUG_INFO } from "./debug-settings";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Tooltip } from "@/shared/ui/Tooltip";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
+import { triggerTypes } from "../lib/utils";
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
   if (!WF_DEBUG_INFO) {
@@ -70,6 +71,7 @@ function WorkflowNode({ id, data }: FlowNode) {
   const errorMessage =
     validationErrors?.[data?.name] || validationErrors?.[data?.id];
   const isError = !!errorMessage;
+  const isTrigger = triggerTypes.includes(type);
 
   function handleNodeClick(e: React.MouseEvent<HTMLDivElement>) {
     e.stopPropagation();
@@ -102,7 +104,12 @@ function WorkflowNode({ id, data }: FlowNode) {
         )}
       >
         <DebugNodeInfo id={id} data={data} />
-        <div className="rounded-lg bg-gray-50 border border-gray-500 px-3 py-1 relative capitalize text-center flex items-center justify-center gap-1">
+        <div
+          className={clsx(
+            "bg-gray-50 border border-gray-500 px-3 py-1 relative capitalize text-center flex items-center justify-center gap-1",
+            data.id === "trigger_start" ? "rounded-full" : "rounded-md"
+          )}
+        >
           {data.name}
           {isError && (
             <Tooltip
@@ -128,12 +135,13 @@ function WorkflowNode({ id, data }: FlowNode) {
       {!specialNodeCheck && (
         <div
           className={clsx(
-            "flex shadow-md rounded-md border-2 w-full h-full cursor-pointer transition-colors",
+            "flex shadow-md border-2 w-full h-full cursor-pointer transition-colors",
             id === selectedNode
               ? "border-orange-500 bg-orange-50"
               : "border-stone-400 bg-white",
             id !== selectedNode && "hover:bg-gray-50",
-            id !== selectedNode && isError && "border-red-500"
+            id !== selectedNode && isError && "border-red-500",
+            isTrigger ? "rounded-full" : "rounded-md"
           )}
           onClick={handleNodeClick}
           style={{
@@ -153,7 +161,7 @@ function WorkflowNode({ id, data }: FlowNode) {
             </div>
           )}
           {!isEmptyNode && (
-            <div className="container p-2 flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
+            <div className="container px-4 py-2 flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
               {/* FIX: not updating when the trigger is changed */}
               {data.componentType === "trigger" ? (
                 <NodeTriggerIcon
