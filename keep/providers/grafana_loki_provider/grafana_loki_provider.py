@@ -114,7 +114,7 @@ class GrafanaLokiProvider(BaseProvider):
                 "Authorization": f"Basic {encoded_credentials}"
             }
         
-        if self.authentication_config.authentication_type == "XScopeOrgID":
+        if self.authentication_config.authentication_type == "X-Scope-OrgID":
             return {
                 "X-Scope-OrgID": self.authentication_config.x_scope_orgid
             }
