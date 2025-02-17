@@ -18,15 +18,17 @@ depends_on = None
 
 def upgrade() -> None:
     conn = op.get_bind()
-    
+
     try:
-        conn.execute(text("COMMIT"))  # Close existing transaction, otherwise it will fail on PG on the next step
+        conn.execute(
+            text("COMMIT")
+        )  # Close existing transaction, otherwise it will fail on PG on the next step
     except Exception:
-        pass # No transaction to commit
-    
+        pass  # No transaction to commit
+
     try:
         op.create_index(
-            "idx_status_started", "workflowexecution", ["status", "started"]
+            "idx_status_started", "workflowexecution", [("status", 64), "started"]
         )
     except Exception as e:
         if "already exists" not in str(e):
