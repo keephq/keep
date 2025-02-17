@@ -158,8 +158,20 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
         <ServiceDetailsTooltip data={data} />
       </NodeToolbar>
 
-      <Handle type="source" position={Position.Right} id="right" />
-      <Handle type="target" position={Position.Left} id="left" />
+      <>
+        <Handle
+          type="source"
+          className={clsx(data.is_manual === true && "!opacity-100")}
+          position={Position.Right}
+          id="right"
+        />
+        <Handle
+          type="target"
+          className={clsx(data.is_manual === true && "!opacity-100")}
+          position={Position.Left}
+          id="left"
+        />
+      </>
     </>
   );
 }
