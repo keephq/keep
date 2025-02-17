@@ -115,6 +115,11 @@ const DraggableHeaderCell = ({
         : "grab",
   };
 
+  const shouldShowMenu =
+    column.id !== "checkbox" &&
+    column.id !== "source" &&
+    column.id !== "severity";
+
   return (
     <TableHeaderCell
       className={clsx(
@@ -127,8 +132,8 @@ const DraggableHeaderCell = ({
       ref={setNodeRef}
     >
       <div
-        className={`flex items-center justify-between ${
-          column.id === "checkbox" ? "justify-center" : ""
+        className={`flex items-center ${
+          column.id === "checkbox" ? "justify-center" : "justify-between"
         }`}
       >
         <div className="flex items-center" {...listeners} {...attributes}>
@@ -166,79 +171,69 @@ const DraggableHeaderCell = ({
           )}
         </div>
 
-        <DropdownMenu.Menu
-          icon={ChevronDownIcon}
-          label=""
-          className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
-          iconClassName="group-hover:text-orange-500 transition-colors"
-        >
-          {column.getCanSort() && (
-            <>
-              <DropdownMenu.Item
-                icon={BsSortAlphaDown}
-                label="Sort ascending"
-                onClick={() => column.toggleSorting(false)}
-              />
-              <DropdownMenu.Item
-                icon={BsSortAlphaDownAlt}
-                label="Sort descending"
-                onClick={() => column.toggleSorting(true)}
-              />
-              {column.getCanGroup() !== false && (
+        {shouldShowMenu && (
+          <DropdownMenu.Menu
+            icon={ChevronDownIcon}
+            label=""
+            className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            iconClassName="group-hover:text-orange-500 transition-colors"
+          >
+            {column.getCanSort() && (
+              <>
                 <DropdownMenu.Item
-                  icon={ArrowsUpDownIcon}
-                  label={column.getIsGrouped() ? "Ungroup" : "Group by"}
-                  onClick={() => {
-                    console.log("Can group:", column.getCanGroup());
-                    console.log("Is grouped:", column.getIsGrouped());
-                    console.log(
-                      "Current grouping state:",
-                      table.getState().grouping
-                    );
-                    console.log("Column ID:", column.id);
-                    column.toggleGrouping();
-                    console.log(
-                      "New grouping state:",
-                      table.getState().grouping
-                    );
-                  }}
+                  icon={BsSortAlphaDown}
+                  label="Sort ascending"
+                  onClick={() => column.toggleSorting(false)}
                 />
-              )}
-            </>
-          )}
-          {column.getCanPin() && (
-            <>
-              <DropdownMenu.Item
-                icon={ChevronDoubleLeftIcon}
-                label={column.getIsPinned() ? "Unpin column" : "Pin column"}
-                onClick={() =>
-                  column.pin(column.getIsPinned() ? false : "left")
-                }
-              />
-              <DropdownMenu.Item
-                icon={ArrowLeftIcon}
-                label="Move column left"
-                onClick={() => moveColumn("left")}
-              />
-              <DropdownMenu.Item
-                icon={ArrowRightIcon}
-                label="Move column right"
-                onClick={() => moveColumn("right")}
-              />
-            </>
-          )}
-          <DropdownMenu.Item
-            icon={EyeIcon}
-            label="Hide column"
-            onClick={() => column.toggleVisibility(false)}
-          />
-          <DropdownMenu.Item
-            icon={XMarkIcon}
-            label="Remove column"
-            onClick={() => column.toggleVisibility(false)}
-            variant="destructive"
-          />
-        </DropdownMenu.Menu>
+                <DropdownMenu.Item
+                  icon={BsSortAlphaDownAlt}
+                  label="Sort descending"
+                  onClick={() => column.toggleSorting(true)}
+                />
+                {column.getCanGroup() !== false && (
+                  <DropdownMenu.Item
+                    icon={ArrowsUpDownIcon}
+                    label={column.getIsGrouped() ? "Ungroup" : "Group by"}
+                    onClick={() => {
+                      console.log("Can group:", column.getCanGroup());
+                      console.log("Is grouped:", column.getIsGrouped());
+                      console.log(
+                        "Current grouping state:",
+                        table.getState().grouping
+                      );
+                      console.log("Column ID:", column.id);
+                      column.toggleGrouping();
+                      console.log(
+                        "New grouping state:",
+                        table.getState().grouping
+                      );
+                    }}
+                  />
+                )}
+              </>
+            )}
+            {column.getCanPin() && (
+              <>
+                <DropdownMenu.Item
+                  icon={ArrowLeftIcon}
+                  label="Move column left"
+                  onClick={() => moveColumn("left")}
+                />
+                <DropdownMenu.Item
+                  icon={ArrowRightIcon}
+                  label="Move column right"
+                  onClick={() => moveColumn("right")}
+                />
+              </>
+            )}
+            <DropdownMenu.Item
+              icon={XMarkIcon}
+              label="Remove column"
+              onClick={() => column.toggleVisibility(false)}
+              variant="destructive"
+            />
+          </DropdownMenu.Menu>
+        )}
       </div>
 
       {column.getIsPinned() === false && (
