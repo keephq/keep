@@ -55,7 +55,7 @@ export const GroupedRow = ({
               <span className="font-medium">{String(groupValue)}</span>
               <span className="text-gray-500 text-sm">
                 ({row.subRows.length}{" "}
-                {row.subRows.length === 1 ? "item" : "items"})
+                {row.subRows.length === 1 ? "alert" : "alerts"})
               </span>
             </div>
           </TableCell>

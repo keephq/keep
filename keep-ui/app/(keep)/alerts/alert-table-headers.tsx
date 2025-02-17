@@ -170,7 +170,8 @@ const DraggableHeaderCell = ({
       className={clsx(
         "relative group",
         column.columnDef.meta?.thClassName,
-        column.getIsPinned() === false && "hover:bg-orange-200",
+        (column.getIsPinned() === false || column.id == "name") &&
+          "hover:bg-orange-200",
         className
       )}
       style={{ ...dragStyle, ...style }}
