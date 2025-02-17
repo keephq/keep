@@ -2,6 +2,8 @@
 GrafanaLokiProvider is a class that allows you to query logs from Grafana Loki.
 """
 
+import typing
+import base64
 import dataclasses
 from urllib.parse import urljoin
 
@@ -29,14 +31,57 @@ class GrafanaLokiProviderAuthConfig:
         }
     )
 
+    authentication_type: typing.Literal["NoAuth", "Basic", "X-Scope-OrgID"] = dataclasses.field(
+        default=typing.Literal["NoAuth"],
+        metadata={
+            "required": True,
+            "description": "Authentication Type",
+            "type": "select",
+            "options": ["NoAuth", "Basic", "X-Scope-OrgID"],
+        },
+    )
+
+    username: typing.Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "HTTP basic authentication - Username",
+            "sensitive": False,
+            "config_sub_group": "basic_authentication",
+            "config_main_group": "authentication",
+        },
+    )
+
+    password: typing.Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "HTTP basic authentication - Password",
+            "sensitive": True,
+            "config_sub_group": "basic_authentication",
+            "config_main_group": "authentication",
+        },
+    )
+
+    x_scope_orgid: typing.Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "X-Scope-OrgID Header Authentication",
+            "sensitive": False,
+            "config_sub_group": "x_scope_orgid",
+            "config_main_group": "authentication",
+        },
+    )
+
 class GrafanaLokiProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Grafana Loki"
     PROVIDER_TAGS = ["alert"]
 
     PROVIDER_SCOPES = [
         ProviderScope(
-            name="valid_instance",
-            description="This is a valid Grafana Loki instance",
+            name="authenticated",
+            description="Instance is valid and user is authenticated",
         ),
     ]
 
@@ -58,6 +103,24 @@ class GrafanaLokiProvider(BaseProvider):
             **self.config.authentication
         )
 
+    def generate_auth_headers(self):
+        """
+        Generate the authentication headers.
+        """
+        if self.authentication_config.authentication_type == "Basic":
+            credentials = f"{self.authentication_config.username}:{self.authentication_config.password}".encode("utf-8")
+            encoded_credentials = base64.b64encode(credentials).decode("utf-8")
+            return {
+                "Authorization": f"Basic {encoded_credentials}"
+            }
+        
+        if self.authentication_config.authentication_type == "XScopeOrgID":
+            return {
+                "X-Scope-OrgID": self.authentication_config.x_scope_orgid
+            }
+        
+        return {}
+
     def validate_scopes(self):
         """
         Validate the scopes of the provider.
@@ -65,6 +128,7 @@ class GrafanaLokiProvider(BaseProvider):
         try:
             response = requests.get(
                 urljoin(self.authentication_config.host_url, "/loki/api/v1/status/buildinfo"),
+                headers=self.generate_auth_headers(),
                 timeout=5,
             )
 
@@ -73,11 +137,11 @@ class GrafanaLokiProvider(BaseProvider):
 
             self.logger.info("Successfully validated scopes", extra={"response": response.json()})
 
-            return {"valid_instance": True}
+            return {"authenticated": True}
         
         except Exception as e:
             self.logger.exception("Failed to validate scopes", extra={"error": e})
-            return {"valid_instance": str(e)}
+            return {"authenticated": str(e)}
         
     def _query(self, query="", limit="", time="", direction="", start="", end="", since="", step="", interval="", queryType="", **kwargs: dict):
         """
@@ -95,6 +159,7 @@ class GrafanaLokiProvider(BaseProvider):
 
             response = requests.get(
               f"{self.authentication_config.host_url}/loki/api/v1/query",
+              headers=self.generate_auth_headers(),
               params=params
             )
 
@@ -121,6 +186,7 @@ class GrafanaLokiProvider(BaseProvider):
 
             response = requests.get(
               f"{self.authentication_config.host_url}/loki/api/v1/query_range",
+              headers=self.generate_auth_headers(),
               params=params
             )
 

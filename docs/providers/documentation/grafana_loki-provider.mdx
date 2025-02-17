@@ -13,6 +13,14 @@ Grafana Loki is a log aggregation system designed to store and query logs from a
 The Grafana Loki provider requires the following authentication parameters:
 
 - `Grafana Loki Host URL`: The URL of the Grafana Loki instance.
+- `Authentication Type` : The type of authentication to use. Supported values are `NoAuth`, `Basic`, and `X-Scope-OrgID`.
+
+### HTTP basic authentication
+- `HTTP basic authentication - Username`: The username to use for HTTP basic authentication.
+- `HTTP basic authentication - Password`: The password to use for HTTP basic authentication.
+
+### X-Scope-OrgID
+- `X-Scope-OrgID`: The organization ID to use for Grafana Loki Multi-tenancy support.
 
 ## Connecting with the Grafana Loki provider
 
