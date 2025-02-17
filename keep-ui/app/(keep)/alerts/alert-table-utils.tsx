@@ -327,6 +327,7 @@ export const useAlertTableCols = (
     columnHelper.accessor("description", {
       id: "description",
       header: "Description",
+      enableGrouping: true,
       minSize: 100,
       cell: (context) => (
         <div title={context.getValue()}>
@@ -339,8 +340,8 @@ export const useAlertTableCols = (
       header: "Status",
       enableGrouping: true,
       getGroupingValue: (row) => row.status,
-      maxSize: 100,
-      size: 100,
+      maxSize: 150,
+      size: 150,
       cell: (context) => (
         <span className="flex items-center gap-1 capitalize">
           <Icon

@@ -115,10 +115,12 @@ const DraggableHeaderCell = ({
         : "grab",
   };
 
+  // Hide menu for checkbox, source, severity and alertMenu columns
   const shouldShowMenu =
     column.id !== "checkbox" &&
     column.id !== "source" &&
-    column.id !== "severity";
+    column.id !== "severity" &&
+    column.id !== "alertMenu";
 
   return (
     <TableHeaderCell
