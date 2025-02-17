@@ -73,6 +73,8 @@ interface Props {
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
   setChangeStatusAlert?: (alert: AlertDto) => void;
   onReload?: (query: AlertsQuery) => void;
+  onPoll?: () => void;
+  onQueryChange?: () => void;
   onLiveUpdateStateChange?: (isLiveUpdateEnabled: boolean) => void;
 }
 
@@ -94,6 +96,8 @@ export function AlertTableServerSide({
   setDismissModalAlert,
   setChangeStatusAlert,
   onReload,
+  onPoll,
+  onQueryChange,
   onLiveUpdateStateChange,
 }: Props) {
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
@@ -197,6 +201,10 @@ export function AlertTableServerSide({
     },
     [filterCel, mainCelQuery, paginationState, sorting]
   );
+
+  useEffect(() => {
+    onQueryChange && onQueryChange();
+  }, [filterCel, searchCel, paginationState, sorting, onQueryChange]);
 
   useEffect(() => {
     onReload && onReload(alertsQuery);
@@ -399,11 +407,13 @@ export function AlertTableServerSide({
 
       if (!timeframe?.paused && currentDiff === newDiff) {
         if (shouldRefreshDate) {
+          onPoll && onPoll();
           setDateRange(timeframe);
         }
         return;
       }
 
+      onQueryChange && onQueryChange();
       setDateRange(timeframe);
     },
     [dateRange, shouldRefreshDate, onLiveUpdateStateChange]

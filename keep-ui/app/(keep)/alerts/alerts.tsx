@@ -48,6 +48,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     AlertsQuery | undefined
   >();
   const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(false);
+  const [isSilentLoading, setIsSilentLoading] = useState(false);
   const [alerts, setAlerts] = useState<AlertDto[] | undefined>(undefined);
   const { useLastAlerts } = useAlerts();
   const { data: providersData = { installed_providers: [] } } = useProviders();
@@ -154,6 +155,9 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     [setAlertsQueryState]
   );
 
+  const handleOnPoll = useCallback(() => setIsSilentLoading(true), []);
+  const handleOnQueryChange = useCallback(() => setIsSilentLoading(false), []);
+
   // if we don't have presets data yet, just show loading
   if (!selectedPreset && isPresetsLoading) {
     return <Loading />;
@@ -177,7 +181,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         preset={selectedPreset}
         alerts={alerts || []}
         alertsTotalCount={totalCount}
-        isAsyncLoading={!alerts}
+        isAsyncLoading={!isSilentLoading && isAsyncLoading}
         setTicketModalAlert={setTicketModalAlert}
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
@@ -185,6 +189,8 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         setChangeStatusAlert={setChangeStatusAlert}
         mutateAlerts={mutateAlerts}
         onReload={reloadAlerts}
+        onPoll={handleOnPoll}
+        onQueryChange={handleOnQueryChange}
         onLiveUpdateStateChange={setIsLiveUpdateEnabled}
       />
       <AlertHistory alerts={alerts || []} presetName={selectedPreset.name} />

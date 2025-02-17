@@ -23,6 +23,8 @@ interface Props {
   setChangeStatusAlert: (alert: AlertDto | null) => void;
   mutateAlerts: () => void;
   onReload?: (query: AlertsQuery) => void;
+  onPoll?: () => void;
+  onQueryChange?: () => void;
   onLiveUpdateStateChange?: (isLiveUpdateEnabled: boolean) => void;
 }
 
@@ -40,6 +42,8 @@ export default function AlertTableTabPanelServerSide({
   setChangeStatusAlert,
   mutateAlerts,
   onReload,
+  onPoll,
+  onQueryChange,
   onLiveUpdateStateChange,
 }: Props) {
   const additionalColsToGenerate = [
@@ -97,6 +101,8 @@ export default function AlertTableTabPanelServerSide({
       setDismissModalAlert={setDismissModalAlert}
       setChangeStatusAlert={setChangeStatusAlert}
       onReload={onReload}
+      onPoll={onPoll}
+      onQueryChange={onQueryChange}
       onLiveUpdateStateChange={onLiveUpdateStateChange}
     />
   );
