@@ -104,7 +104,7 @@ export function AlertsTableBody({
           row={row}
           table={table}
           theme={theme}
-          onRowClick={onRowClick}
+          onRowClick={handleRowClick}
         />
       ))}
     </TableBody>

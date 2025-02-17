@@ -120,7 +120,7 @@ const DraggableHeaderCell = ({
       className={clsx(
         "relative group",
         column.columnDef.meta?.thClassName,
-        column.getIsPinned() === false && "hover:bg-orange-100",
+        column.getIsPinned() === false && "hover:bg-orange-200",
         className
       )}
       style={{ ...dragStyle, ...style }}
@@ -170,6 +170,7 @@ const DraggableHeaderCell = ({
           icon={ChevronDownIcon}
           label=""
           className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          iconClassName="group-hover:text-orange-500 transition-colors"
         >
           {column.getCanSort() && (
             <>
