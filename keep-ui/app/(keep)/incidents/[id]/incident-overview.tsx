@@ -94,7 +94,7 @@ function Summary({
   };
 
   const formatedSummary = (
-    <Markdown remarkPlugins={[remarkRehype]} rehypePlugins={[rehypeRaw]}>
+    <Markdown remarkPlugins={[remarkRehype]} rehypePlugins={[rehypeRaw]} className="whitespace-pre-wrap">
       {summary ?? generatedSummary}
     </Markdown>
   );
