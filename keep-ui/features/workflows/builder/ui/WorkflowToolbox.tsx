@@ -3,11 +3,10 @@ import { Disclosure } from "@headlessui/react";
 import { Subtitle, Title } from "@tremor/react";
 import { IoChevronUp } from "react-icons/io5";
 import { useWorkflowStore } from "@/entities/workflows";
-import { PiDiamondsFourFill } from "react-icons/pi";
 import clsx from "clsx";
 import { V2Step } from "@/entities/workflows/model/types";
-import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
-import { DynamicImageProviderIcon } from "@/components/ui";
+import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
+import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 
 const GroupedMenu = ({
   name,
@@ -49,16 +48,6 @@ const GroupedMenu = ({
       ?.replace("step-", "")
       ?.replace("action-", "")
       ?.replace("condition-", "")}-icon.png`;
-  }
-
-  function getTriggerIcon(step: any) {
-    const { type } = step;
-    switch (type) {
-      case "manual":
-        return <CursorArrowRaysIcon className="size-8" />;
-      case "interval":
-        return <PiDiamondsFourFill size={32} />;
-    }
   }
 
   const handleDragStart = (
@@ -108,17 +97,17 @@ const GroupedMenu = ({
                       title={step.name}
                       onClick={(e) => handleAddNode(e, step)}
                     >
-                      {getTriggerIcon(step)}
-                      {!!step &&
-                        !["interval", "manual"].includes(step.type) && (
-                          <DynamicImageProviderIcon
-                            src={IconUrlProvider(step) || "/keep.png"}
-                            alt={step?.type}
-                            className="object-contain aspect-auto"
-                            width={32}
-                            height={32}
-                          />
-                        )}
+                      {step.componentType === "trigger" ? (
+                        <NodeTriggerIcon nodeData={step} />
+                      ) : (
+                        <DynamicImageProviderIcon
+                          src={IconUrlProvider(step) || "/keep.png"}
+                          alt={step?.type}
+                          className="object-contain aspect-auto"
+                          width={32}
+                          height={32}
+                        />
+                      )}
                       <Subtitle className="truncate">{step.name}</Subtitle>
                     </li>
                   ))}
@@ -194,15 +183,17 @@ export const WorkflowToolbox = ({ isDraggable }: { isDraggable?: boolean }) => {
         isVisible ? "h-full" : "shadow-lg"
       )}
     >
-      <div className="relative h-full flex flex-col">
+      <div className="relative h-full flex flex-col px-2">
         {/* Sticky header */}
         <div className="sticky top-0 left-0 z-10 bg-white">
-          <Title className="p-2">Add {showTriggers ? "trigger" : "step"}</Title>
+          <Subtitle className="font-medium p-2">
+            Add {showTriggers ? "trigger" : "step"}
+          </Subtitle>
           <div className="flex items-center justify-between p-2 pt-0 bg-white">
-            <input
+            <TextInput
               type="text"
               placeholder="Search..."
-              className="p-2 border border-gray-300 rounded w-full"
+              className="w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />

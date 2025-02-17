@@ -6,15 +6,15 @@ import Image from "next/image";
 import { GoPlus } from "react-icons/go";
 import { MdNotStarted } from "react-icons/md";
 import { GoSquareFill } from "react-icons/go";
-import { PiDiamondsFourFill, PiSquareLogoFill } from "react-icons/pi";
+import { PiSquareLogoFill } from "react-icons/pi";
 import { toast } from "react-toastify";
 import { FlowNode } from "@/entities/workflows/model/types";
-import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import clsx from "clsx";
 import { WF_DEBUG_INFO } from "./debug-settings";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Tooltip } from "@/shared/ui/Tooltip";
+import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
   if (!WF_DEBUG_INFO) {
@@ -70,16 +70,6 @@ function WorkflowNode({ id, data }: FlowNode) {
   const errorMessage =
     validationErrors?.[data?.name] || validationErrors?.[data?.id];
   const isError = !!errorMessage;
-
-  function getTriggerIcon(step: any) {
-    const { type } = step;
-    switch (type) {
-      case "manual":
-        return <CursorArrowRaysIcon className="size-8" />;
-      case "interval":
-        return <PiDiamondsFourFill size={32} />;
-    }
-  }
 
   function handleNodeClick(e: React.MouseEvent<HTMLDivElement>) {
     e.stopPropagation();
@@ -164,8 +154,13 @@ function WorkflowNode({ id, data }: FlowNode) {
           )}
           {!isEmptyNode && (
             <div className="container p-2 flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
-              {getTriggerIcon(data)}
-              {!!data && !["interval", "manual"].includes(data.type) && (
+              {/* FIX: not updating when the trigger is changed */}
+              {data.componentType === "trigger" ? (
+                <NodeTriggerIcon
+                  key={data?.properties?.source}
+                  nodeData={data}
+                />
+              ) : (
                 <DynamicImageProviderIcon
                   src={IconUrlProvider(data) || "/keep.png"}
                   alt={data?.type}

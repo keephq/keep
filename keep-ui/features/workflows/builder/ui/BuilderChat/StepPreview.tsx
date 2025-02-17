@@ -1,8 +1,7 @@
 import { V2Step, V2StepTrigger } from "@/entities/workflows";
-import { CursorArrowRaysIcon } from "@heroicons/react/20/solid";
-import { PiDiamondsFourFill } from "react-icons/pi";
 import clsx from "clsx";
 import Image from "next/image";
+import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 
 function getStepIcon(data: V2Step | V2StepTrigger) {
   const { type } = data || {};
@@ -31,15 +30,6 @@ export const StepPreview = ({
     ?.replace("__end", "")
     ?.replace("trigger_", "");
 
-  function getTriggerIcon(step: any) {
-    const { type } = step;
-    switch (type) {
-      case "manual":
-        return <CursorArrowRaysIcon className="size-8" />;
-      case "interval":
-        return <PiDiamondsFourFill size={32} />;
-    }
-  }
   return (
     <div
       className={clsx(
@@ -47,8 +37,9 @@ export const StepPreview = ({
         className
       )}
     >
-      {getTriggerIcon(step)}
-      {!!type && !["interval", "manual"].includes(type) && (
+      {step.componentType === "trigger" ? (
+        <NodeTriggerIcon nodeData={step} />
+      ) : (
         <Image
           src={getStepIcon(step)}
           alt={step?.type}

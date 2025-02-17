@@ -20,11 +20,14 @@ import {
 import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Menu, Transition } from "@headlessui/react";
-import { Button, Icon } from "@tremor/react";
-import { PiDiamondsFourFill } from "react-icons/pi";
+import { Badge, Icon } from "@tremor/react";
 import { HiBellAlert } from "react-icons/hi2";
 import { useRouter } from "next/navigation";
-import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
+import {
+  ClockIcon,
+  CursorArrowRaysIcon,
+  QuestionMarkCircleIcon,
+} from "@heroicons/react/24/outline";
 
 interface Pagination {
   limit: number;
@@ -121,35 +124,35 @@ export function getIcon(status: string) {
 
 export function getTriggerIcon(triggered_by: string) {
   switch (triggered_by) {
-    case "Manual":
+    case "manual":
       return CursorArrowRaysIcon;
-    case "Scheduler":
-      return PiDiamondsFourFill;
-    case "Alert":
+    case "interval":
+      return ClockIcon;
+    case "alert":
       return HiBellAlert;
-    case "Incident":
+    case "incident":
       return HiBellAlert;
     default:
-      return PiDiamondsFourFill;
+      return QuestionMarkCircleIcon;
   }
 }
 
 export function extractTriggerValue(triggered_by: string | undefined): string {
-  if (!triggered_by) return "Others";
+  if (!triggered_by) return "others";
 
   if (triggered_by.startsWith("scheduler")) {
-    return "Scheduler";
+    return "interval";
   } else if (triggered_by.startsWith("type:alert")) {
-    return "Alert";
+    return "alert";
   } else if (triggered_by.startsWith("manual")) {
-    return "Manual";
+    return "manual";
   } else if (triggered_by.startsWith("type:incident:")) {
     const incidentType = triggered_by
       .substring("type:incident:".length)
       .split(" ")[0];
-    return `Incident ${incidentType}`;
+    return `incident ${incidentType}`;
   } else {
-    return "Others";
+    return "others";
   }
 }
 
@@ -219,14 +222,14 @@ export function ExecutionTable({ executions, setPagination }: Props) {
         const valueToShow = extractTriggerValue(triggered_by);
 
         return triggered_by ? (
-          <Button
-            className="px-3 py-0.5 bg-white text-black rounded-xl border-2 border-gray-400 inline-flex items-center gap-2 font-bold hover:bg-white border-gray-400"
-            variant="secondary"
+          <Badge
+            color="gray"
+            className="capitalize"
             tooltip={triggered_by ?? ""}
             icon={getTriggerIcon(valueToShow)}
           >
-            <div>{valueToShow}</div>
-          </Button>
+            {valueToShow}
+          </Badge>
         ) : null;
       },
     }),

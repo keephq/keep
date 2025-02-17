@@ -71,7 +71,7 @@ function WorkflowEditorV2() {
   return (
     <>
       <Subtitle className="font-medium flex items-baseline justify-between">
-        Workflow Settings{" "}
+        Workflow Settings
         {/* TODO: remove since user don't need to know about 'sync', it should just work */}
         <span className="text-gray-500 text-sm">
           {synced ? "Synced" : "Not Synced"}

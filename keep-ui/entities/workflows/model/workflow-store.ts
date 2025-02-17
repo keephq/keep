@@ -174,15 +174,6 @@ function addNodeBetween(
     isLayouted: false,
     changes: get().changes + 1,
   });
-  if (type == "edge") {
-    set({
-      selectedEdge: edges[edges.length - 1]?.id,
-    });
-  }
-
-  if (type === "node") {
-    set({ selectedNode: nodeOrEdgeId });
-  }
 
   switch (newNodeId) {
     case "interval":
@@ -267,7 +258,8 @@ export const useWorkflowStore = create<FlowState>()(
       type: "node" | "edge"
     ) => {
       try {
-        addNodeBetween(nodeOrEdgeId, step, type, set, get);
+        const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
+        set({ selectedNode: newNodeId, selectedEdge: null });
       } catch (error) {
         if (error instanceof ZodError) {
           // TODO: extract meaningful error from ZodError
