@@ -28,7 +28,9 @@ def upgrade() -> None:
 
     try:
         op.create_index(
-            "idx_status_started", "workflowexecution", [("status", 64), "started"]
+            "idx_status_started", 
+            "workflowexecution", 
+            [("status", text("255")), "started"]
         )
     except Exception as e:
         if "already exists" not in str(e):
