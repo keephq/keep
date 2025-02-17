@@ -307,7 +307,9 @@ export const useAlertTableCols = (
       minSize: 100,
       cell: (context) => (
         <div title={context.getValue()}>
-          <div className="truncate">{context.getValue()}</div>
+          <div className="truncate line-clamp-3 whitespace-pre-wrap">
+            {context.getValue()}
+          </div>
         </div>
       ),
     }),
