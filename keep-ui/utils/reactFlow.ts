@@ -653,7 +653,7 @@ export function getTriggerSteps(properties: V2Properties) {
     ...steps,
     {
       id: "trigger_end",
-      name: "Workflow steps",
+      name: "Steps",
       type: "",
       componentType: "trigger",
       cantDelete: true,

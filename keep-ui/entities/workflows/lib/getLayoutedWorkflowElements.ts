@@ -36,10 +36,20 @@ export const getLayoutedWorkflowElements = (
     let width = ["start", "end"].includes(type) ? 80 : 280;
     let height = 80;
 
+    // We want to remove start, but for now just hide it
+    if (node.id === "start") {
+      width = 0;
+      height = 0;
+    }
+
     // Special case for trigger start and end nodes, which act as section headers
-    if (node.id === "trigger_start" || node.id === "trigger_end") {
+    if (
+      node.id === "trigger_start" ||
+      node.id === "trigger_end" ||
+      node.id === "end"
+    ) {
       width = 150;
-      height = 40;
+      height = 32;
     }
 
     dagreGraph.setNode(node.id, { width, height });

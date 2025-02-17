@@ -7,7 +7,7 @@ interface ResizableColumnsProps {
   children: React.ReactNode;
 }
 
-export const ResizebleColumns = ({
+export const ResizableColumns = ({
   initialLeftWidth = 50,
   children,
 }: ResizableColumnsProps) => {

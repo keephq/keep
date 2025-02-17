@@ -231,7 +231,7 @@ const defaultState: FlowStateValues = {
   edges: [],
   selectedNode: null,
   v2Properties: {},
-  editorOpen: true,
+  editorOpen: false,
   toolboxConfiguration: null,
   isInitialized: false,
   isLayouted: false,
@@ -673,6 +673,8 @@ async function initializeWorkflow(
     toolboxConfiguration,
     isLoading: false,
     isInitialized: true,
+    // If it's a new workflow (workflowId = null), we want to open the editor because metadata fields in there
+    editorOpen: !workflowId,
   });
   get().onLayout({ direction: "DOWN" });
   get().updateDefinition();

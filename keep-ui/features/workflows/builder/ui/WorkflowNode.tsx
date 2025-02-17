@@ -7,13 +7,14 @@ import { GoPlus } from "react-icons/go";
 import { MdNotStarted } from "react-icons/md";
 import { GoSquareFill } from "react-icons/go";
 import { PiDiamondsFourFill, PiSquareLogoFill } from "react-icons/pi";
-import { BiSolidError } from "react-icons/bi";
 import { toast } from "react-toastify";
 import { FlowNode } from "@/entities/workflows/model/types";
 import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import clsx from "clsx";
 import { WF_DEBUG_INFO } from "./debug-settings";
+import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
+import { Tooltip } from "@/shared/ui/Tooltip";
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
   if (!WF_DEBUG_INFO) {
@@ -66,8 +67,9 @@ function WorkflowNode({ id, data }: FlowNode) {
 
   const isEmptyNode = !!data?.type?.includes("empty");
   const specialNodeCheck = ["start", "end"].includes(type);
-  const isError =
-    !!validationErrors?.[data?.name] || !!validationErrors?.[data?.id];
+  const errorMessage =
+    validationErrors?.[data?.name] || validationErrors?.[data?.id];
+  const isError = !!errorMessage;
 
   function getTriggerIcon(step: any) {
     const { type } = step;
@@ -97,18 +99,36 @@ function WorkflowNode({ id, data }: FlowNode) {
     setSelectedNode(id);
   }
 
-  if (data.id === "trigger_start" || data.id === "trigger_end") {
+  if (
+    data.id === "trigger_start" ||
+    data.id === "trigger_end" ||
+    data.id === "end"
+  ) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
+      <div
+        className={clsx(
+          "w-full h-full flex items-center justify-center",
+          data.id === "end" && "opacity-0"
+        )}
+      >
         <DebugNodeInfo id={id} data={data} />
-        <span className="rounded-full bg-gray-50 border border-gray-500 px-4 py-2 flex items-center justify-center relative">
+        <div className="rounded-lg bg-gray-50 border border-gray-500 px-3 py-1 relative capitalize text-center flex items-center justify-center gap-1">
           {data.name}
           {isError && (
-            <BiSolidError className="size-10  text-red-500 absolute right-[-20px] top-[-20px]" />
+            <Tooltip
+              content={errorMessage}
+              className="text-center max-w-48 text-sm"
+            >
+              <ExclamationCircleIcon className="size-5 text-red-500" />
+            </Tooltip>
           )}
-        </span>
-        <Handle type="target" position={Position.Top} className="w-32" />
-        <Handle type="source" position={Position.Bottom} className="w-32" />
+        </div>
+        {data.id !== "trigger_start" && (
+          <Handle type="target" position={Position.Top} className="w-32" />
+        )}
+        {data.id !== "end" && (
+          <Handle type="source" position={Position.Bottom} className="w-32" />
+        )}
       </div>
     );
   }
@@ -142,9 +162,6 @@ function WorkflowNode({ id, data }: FlowNode) {
               )}
             </div>
           )}
-          {isError && (
-            <BiSolidError className="size-16  text-red-500 absolute right-[-40px] top-[-40px]" />
-          )}
           {!isEmptyNode && (
             <div className="container p-2 flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
               {getTriggerIcon(data)}
@@ -158,7 +175,17 @@ function WorkflowNode({ id, data }: FlowNode) {
                 />
               )}
               <div className="flex-1 flex-col gap-2 flex-wrap truncate">
-                <div className="text-lg font-bold truncate">{data?.name}</div>
+                <div className="text-lg font-bold truncate flex items-center gap-1">
+                  {data?.name}
+                  {isError && (
+                    <Tooltip
+                      content={errorMessage}
+                      className="text-center max-w-48 text-sm"
+                    >
+                      <ExclamationCircleIcon className="size-5 text-red-500" />
+                    </Tooltip>
+                  )}
+                </div>
                 <div className="text-gray-500 truncate">{type}</div>
               </div>
               <div>

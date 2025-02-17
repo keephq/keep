@@ -23,7 +23,7 @@ import { CodeBracketIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { BuilderChat } from "@/features/workflows/builder/ui/BuilderChat/builder-chat";
 import { CopilotKit } from "@copilotkit/react-core";
 import clsx from "clsx";
-import { ResizebleColumns } from "@/shared/ui";
+import { ResizableColumns } from "@/shared/ui";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -227,7 +227,7 @@ function Builder({
   };
 
   return (
-    <ResizebleColumns
+    <ResizableColumns
       key={leftColumnMode}
       initialLeftWidth={leftColumnMode !== null ? 33 : 0}
     >
@@ -297,7 +297,7 @@ function Builder({
           </ReactFlowProvider>
         </div>
       </>
-    </ResizebleColumns>
+    </ResizableColumns>
   );
 }
 

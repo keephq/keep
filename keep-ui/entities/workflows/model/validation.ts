@@ -63,7 +63,7 @@ export function validateGlobalPure(definition: Definition): ValidationResult[] {
 
   const anyStepOrAction = definition?.sequence?.length > 0;
   if (!anyStepOrAction) {
-    errors.push(["trigger_end", "At least 1 step/action is required."]);
+    errors.push(["trigger_end", "At least one step or action is required."]);
   }
   const firstStep = definition?.sequence?.[0];
   const firstStepSequence =

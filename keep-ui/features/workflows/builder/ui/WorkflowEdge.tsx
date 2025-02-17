@@ -119,7 +119,7 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
         path={edgePath}
         className="stroke-gray-700 stroke-2"
         style={{
-          markerEnd: `url(#arrow-${id})`,
+          markerEnd: target !== "end" ? `url(#arrow-${id})` : undefined,
           opacity: isLayouted ? 1 : 0,
         }} // Add arrowhead
       />
@@ -155,7 +155,7 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
               opacity: isLayouted ? 1 : 0,
             }}
             className={`p-0 m-0 bg-transparent text-transparent border-none`}
-            // tooltip="Add node"
+            title={source === "trigger_start" ? "Add trigger" : "Add step"}
             onClick={(e) => {
               setSelectedEdge(id);
             }}
