@@ -644,7 +644,7 @@ export function StepEditorV2({
                   handleSubmit();
                   setTabIndex(1);
                 }}
-                data-testid="wf-editor-save-deploy-button"
+                data-testid="wf-editor-setup-save-button"
                 disabled={saveButtonDisabled}
               >
                 {saveButtonText}
@@ -689,7 +689,7 @@ export function StepEditorV2({
                   handleSubmit();
                   setTabIndex(2);
                 }}
-                data-testid="wf-editor-save-deploy-button"
+                data-testid="wf-editor-configure-save-button"
                 disabled={saveButtonDisabled}
               >
                 {saveButtonText}

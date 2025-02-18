@@ -315,7 +315,7 @@ def test_add_workflow(browser):
         page.locator(".react-flow__node:has-text('console-action')").click()
         page.get_by_placeholder("message", exact=True).click()
         page.get_by_placeholder("message", exact=True).fill("Hello world!")
-        page.get_by_test_id("wf-editor-save-deploy-button").click()
+        page.get_by_test_id("wf-editor-configure-save-button").click()
         page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
         expect(page.get_by_test_id("wf-name")).to_contain_text(
             "Example Console Workflow"
