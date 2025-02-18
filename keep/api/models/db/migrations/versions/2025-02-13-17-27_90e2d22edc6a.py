@@ -18,6 +18,7 @@ depends_on = None
 
 def upgrade() -> None:
     conn = op.get_bind()
+    dialect_name = op.get_context().dialect.name
 
     try:
         conn.execute(
@@ -27,11 +28,16 @@ def upgrade() -> None:
         pass  # No transaction to commit
 
     try:
-        op.create_index(
-            "idx_status_started", 
-            "workflowexecution", 
-            [("status", text("255")), "started"]
-        )
+        if dialect_name == "mysql":
+            # MySQL allows/requires length for string columns in indexes
+            op.create_index(
+                "idx_status_started", "workflowexecution", [("status", 255), "started"]
+            )
+        else:
+            # PostgreSQL and SQLite don't need/support length specifications
+            op.create_index(
+                "idx_status_started", "workflowexecution", ["status", "started"]
+            )
     except Exception as e:
         if "already exists" not in str(e):
             raise e
