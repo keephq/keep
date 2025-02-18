@@ -5,6 +5,7 @@ import {
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Trigger } from "@/shared/api/workflows";
+import clsx from "clsx";
 
 export function TriggerIcon({
   trigger,
@@ -25,12 +26,13 @@ export function TriggerIcon({
       )?.value;
       if (alertSource) {
         return (
-          <DynamicImageProviderIcon
-            providerType={alertSource!}
-            height="16"
-            width="16"
-            className={className}
-          />
+          <div className={clsx("flex items-center justify-center", className)}>
+            <DynamicImageProviderIcon
+              providerType={alertSource!}
+              height="16"
+              width="16"
+            />
+          </div>
         );
       }
       return (

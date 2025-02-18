@@ -167,7 +167,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         </div>
       )}
       <Card
-        className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full border-2 border-transparent hover:border-orange-400 overflow-hidden cursor-pointer"
+        className="relative flex flex-col justify-between p-4 h-full border-2 border-transparent hover:border-orange-400 overflow-hidden cursor-pointer"
         onClick={handleWorkflowClick}
       >
         <div className="absolute top-0 right-0 mt-2 mr-2 mb-2 flex items-center flex-wrap">
