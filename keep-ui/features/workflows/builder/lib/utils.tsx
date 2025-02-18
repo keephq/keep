@@ -174,3 +174,12 @@ export function getToolboxConfiguration(
     ],
   };
 }
+
+export const normalizeStepType = (type: string) => {
+  return type
+    ?.replace("step-", "")
+    ?.replace("action-", "")
+    ?.replace("__end", "")
+    ?.replace("condition-", "")
+    ?.replace("trigger_", "");
+};

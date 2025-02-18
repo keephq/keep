@@ -15,7 +15,7 @@ import { WF_DEBUG_INFO } from "./debug-settings";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Tooltip } from "@/shared/ui/Tooltip";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
-import { triggerTypes } from "../lib/utils";
+import { normalizeStepType, triggerTypes } from "../lib/utils";
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
   if (!WF_DEBUG_INFO) {
@@ -39,16 +39,12 @@ export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
 }
 
 function IconUrlProvider(data: FlowNode["data"]) {
-  const { componentType, type } = data || {};
+  const { type } = data || {};
   if (type === "alert" || type === "workflow" || type === "trigger" || !type)
     return "/keep.png";
   if (type === "incident" || type === "workflow" || type === "trigger" || !type)
     return "/keep.png";
-  return `/icons/${type
-    ?.replace("step-", "")
-    ?.replace("action-", "")
-    ?.replace("__end", "")
-    ?.replace("condition-", "")}-icon.png`;
+  return `/icons/${normalizeStepType(type)}-icon.png`;
 }
 
 function WorkflowNode({ id, data }: FlowNode) {
@@ -59,12 +55,7 @@ function WorkflowNode({ id, data }: FlowNode) {
     synced,
     validationErrors,
   } = useWorkflowStore();
-  const type = data?.type
-    ?.replace("step-", "")
-    ?.replace("action-", "")
-    ?.replace("condition-", "")
-    ?.replace("__end", "")
-    ?.replace("trigger_", "");
+  const type = normalizeStepType(data?.type ?? "");
 
   const isEmptyNode = !!data?.type?.includes("empty");
   const specialNodeCheck = ["start", "end"].includes(type);
@@ -162,7 +153,6 @@ function WorkflowNode({ id, data }: FlowNode) {
           )}
           {!isEmptyNode && (
             <div className="container px-4 py-2 flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
-              {/* FIX: not updating when the trigger is changed */}
               {data.componentType === "trigger" ? (
                 <NodeTriggerIcon
                   key={data?.properties?.source}
