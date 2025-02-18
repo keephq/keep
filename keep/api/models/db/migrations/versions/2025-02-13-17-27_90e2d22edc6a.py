@@ -31,7 +31,9 @@ def upgrade() -> None:
         if dialect_name == "mysql":
             # MySQL allows/requires length for string columns in indexes
             op.create_index(
-                "idx_status_started", "workflowexecution", [("status", 255), "started"]
+                "idx_status_started",
+                "workflowexecution",
+                [(text("status(255)")), "started"],
             )
         else:
             # PostgreSQL and SQLite don't need/support length specifications
