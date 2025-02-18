@@ -3,18 +3,11 @@ import { useWorkflowStore, V2Step } from "@/entities/workflows";
 import { WF_DEBUG_INFO } from "../debug-settings";
 import { DebugArgs } from "./debug-args";
 import { StepPreview } from "./StepPreview";
-import { SuggestionStatus } from "./SuggestionStatus";
+import { SuggestionResult, SuggestionStatus } from "./SuggestionStatus";
 import clsx from "clsx";
 import { DebugJSON } from "@/shared/ui";
 import { useCallback } from "react";
 import { triggerTypes } from "../../lib/utils";
-
-type SuggestionStatus = "complete" | "error" | "declined";
-type SuggestionResult = {
-  status: SuggestionStatus;
-  message: string;
-  error?: any;
-};
 
 type AddStepUIProps =
   | {

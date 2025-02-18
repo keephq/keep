@@ -4,11 +4,18 @@ import {
   NoSymbolIcon,
 } from "@heroicons/react/24/outline";
 
+export type SuggestionStatus = "complete" | "error" | "declined";
+export type SuggestionResult = {
+  status: SuggestionStatus;
+  message: string;
+  error?: any;
+};
+
 export const SuggestionStatus = ({
   status,
   message,
 }: {
-  status: "complete" | "error" | "declined";
+  status: SuggestionStatus;
   message: string;
 }) => {
   if (status === "complete") {

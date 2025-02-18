@@ -210,7 +210,7 @@ export type V2StartStep = {
   id: "start";
   type: "start";
   componentType: "start";
-  properties: {};
+  properties: Record<string, never>;
   name: "start";
 };
 
@@ -218,7 +218,7 @@ export type V2EndStep = {
   id: "end";
   type: "end";
   componentType: "end";
-  properties: {};
+  properties: Record<string, never>;
   name: "end";
 };
 
@@ -280,7 +280,7 @@ export type EmptyNode = {
   id: string;
   type: string;
   componentType: string;
-  properties: {};
+  properties: Record<string, never>;
   name: string;
   isNested?: boolean;
 };

@@ -6,7 +6,7 @@ import { getTriggerTemplate } from "@/features/workflows/builder/lib/utils";
 import { DebugArgs } from "./debug-args";
 import { DebugJSON } from "@/shared/ui";
 import { StepPreview } from "./StepPreview";
-import { SuggestionStatus } from "./SuggestionStatus";
+import { SuggestionResult, SuggestionStatus } from "./SuggestionStatus";
 
 /**
  * Get the definition of a trigger
@@ -28,13 +28,6 @@ function getTriggerDefinition(triggerType: string, triggerProperties: string) {
   };
   return V2StepTriggerSchema.parse(triggerDefinition);
 }
-
-type SuggestionStatus = "complete" | "error" | "declined";
-type SuggestionResult = {
-  status: SuggestionStatus;
-  message: string;
-  error?: any;
-};
 
 type AddTriggerUIProps =
   | {
