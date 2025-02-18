@@ -393,7 +393,7 @@
             <img width="40" src="keep-ui/public/icons/postgres-icon.png" alt="PostgreSQL"/><br/>
             PostgreSQL
         </a>
-  </td>
+    </td>
 </tr>
 <tr>
     <td align="center" width="150">
