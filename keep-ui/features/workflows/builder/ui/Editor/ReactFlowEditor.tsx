@@ -7,6 +7,7 @@ import { ChevronRightIcon, Cog8ToothIcon } from "@heroicons/react/24/outline";
 import { WorkflowToolbox } from "../WorkflowToolbox";
 import { WorkflowEditorV2 } from "./WorkflowEditor";
 import { TriggerEditor } from "./TriggerEditor";
+import { WorkflowStatus } from "../workflow-status";
 
 const ReactFlowEditor = () => {
   const { selectedNode, selectedEdge, setEditorOpen, getNodeById, editorOpen } =
@@ -85,21 +86,20 @@ const ReactFlowEditor = () => {
         )}
       </div>
       {editorOpen && (
-        <div className="relative flex-1 bg-white border-l overflow-y-auto h-full">
-          <div className="w-80 2xl:w-96">
-            <WorkflowEditorV2 />
-            {(isStepEditor || isTrigger) && (
-              <Divider ref={stepEditorRef} className="my-2" />
-            )}
-            {isTrigger && <TriggerEditor />}
-            {isStepEditor && (
-              <StepEditorV2
-                key={selectedNode}
-                initialFormData={initialFormData}
-              />
-            )}
-            <WorkflowToolbox isDraggable={false} />
-          </div>
+        <div className="relative flex-1 flex flex-col bg-white border-l overflow-y-auto h-full w-80 2xl:w-96">
+          <WorkflowStatus className="m-2" />
+          <WorkflowEditorV2 />
+          {(isStepEditor || isTrigger) && (
+            <Divider ref={stepEditorRef} className="my-2" />
+          )}
+          {isTrigger && <TriggerEditor />}
+          {isStepEditor && (
+            <StepEditorV2
+              key={selectedNode}
+              initialFormData={initialFormData}
+            />
+          )}
+          <WorkflowToolbox isDraggable={false} />
         </div>
       )}
     </div>

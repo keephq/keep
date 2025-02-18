@@ -16,6 +16,7 @@ import { loadWorkflowYAML } from "@/entities/workflows/lib/parser";
 import { WorkflowMetadataModal } from "@/features/workflows/edit-metadata";
 import { WorkflowTestRunModal } from "@/features/workflows/test-run";
 import { WorkflowEnabledSwitch } from "@/features/workflows/enable-disable";
+import { WorkflowSyncStatus } from "@/app/(keep)/workflows/[workflow_id]/workflow-sync-status";
 
 export function WorkflowBuilderWidget({
   workflowRaw: workflow,
@@ -99,7 +100,12 @@ export function WorkflowBuilderWidget({
     <>
       <main className="mx-auto max-w-full flex flex-col h-full">
         <div className="flex items-baseline justify-between p-2">
-          <Title className="mx-2">{workflowId ? "Edit" : "New"} Workflow</Title>
+          <div className="flex items-center gap-2">
+            <Title className="mx-2">
+              {workflowId ? "Edit" : "New"} Workflow
+            </Title>
+            <WorkflowSyncStatus />
+          </div>
           <div className="flex gap-2">
             {!workflow && (
               <>
@@ -161,13 +167,13 @@ export function WorkflowBuilderWidget({
             <Button
               color="orange"
               size="md"
-              className="min-w-28"
+              className="min-w-28 relative"
               icon={ArrowUpOnSquareIcon}
               disabled={!canDeploy || isSaving}
               onClick={() => triggerSave()}
               data-testid="wf-builder-main-save-deploy-button"
             >
-              {isSaving ? "Saving..." : "Save & Deploy"}
+              {isSaving ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>

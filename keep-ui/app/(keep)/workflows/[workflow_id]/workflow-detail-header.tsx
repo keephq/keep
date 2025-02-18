@@ -7,23 +7,6 @@ import Skeleton from "react-loading-skeleton";
 import { Button, Text } from "@tremor/react";
 import { useWorkflowRun } from "@/utils/hooks/useWorkflowRun";
 import AlertTriggerModal from "../workflow-run-with-alert-modal";
-import { useWorkflowStore } from "@/entities/workflows";
-import { CloudIcon, ExclamationTriangleIcon } from "@heroicons/react/20/solid";
-import { Tooltip } from "@/shared/ui";
-
-function WorkflowSyncStatus() {
-  // TODO: show saved vs unsaved, add properity to workflowstore to track this
-  const { synced } = useWorkflowStore();
-  return synced ? (
-    <Tooltip content="Saved to Keep">
-      <CloudIcon className="w-4 h-4 text-gray-500" />
-    </Tooltip>
-  ) : (
-    <Tooltip content="Not saved">
-      <ExclamationTriangleIcon className="w-4 h-4 text-gray-500" />
-    </Tooltip>
-  );
-}
 
 export default function WorkflowDetailHeader({
   workflowId: workflow_id,
@@ -80,7 +63,6 @@ export default function WorkflowDetailHeader({
             data-testid="wf-name"
           >
             {workflow.name}
-            <WorkflowSyncStatus />
           </h1>
           {workflow.description && (
             <Text className="line-clamp-5">

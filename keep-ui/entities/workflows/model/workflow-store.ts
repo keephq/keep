@@ -228,7 +228,9 @@ const defaultState: FlowStateValues = {
   isLayouted: false,
   selectedEdge: null,
   changes: 0,
-  synced: true,
+  isEditorSyncedWithNodes: true,
+  lastChangedAt: 0,
+  lastDeployedAt: 0,
   canDeploy: false,
   saveRequestCount: 0,
   runRequestCount: 0,
@@ -249,7 +251,8 @@ export const useWorkflowStore = create<FlowState>()(
       set((state) => ({ runRequestCount: state.runRequestCount + 1 })),
     setIsSaving: (state: boolean) => set({ isSaving: state }),
     setCanDeploy: (deploy) => set({ canDeploy: deploy }),
-    setSynced: (sync) => set({ synced: sync }),
+    setEditorSynced: (sync) => set({ isEditorSyncedWithNodes: sync }),
+    setLastDeployedAt: (deployedAt) => set({ lastDeployedAt: deployedAt }),
     setSelectedEdge: (id) => set({ selectedEdge: id, selectedNode: null }),
     setIsLayouted: (isLayouted) => set({ isLayouted }),
     addNodeBetween: (
@@ -293,6 +296,7 @@ export const useWorkflowStore = create<FlowState>()(
         set({
           nodes: updatedNodes,
           changes: get().changes + 1,
+          lastChangedAt: Date.now(),
         });
         get().updateDefinition();
       }
@@ -343,7 +347,7 @@ export const useWorkflowStore = create<FlowState>()(
         }),
         validationErrors,
         canDeploy,
-        synced: true,
+        isEditorSyncedWithNodes: true,
       });
     },
     updateV2Properties: (properties) => {

@@ -323,11 +323,14 @@ export interface FlowStateValues {
 
   // Lifecycle
   changes: number;
-  synced: boolean;
+  isEditorSyncedWithNodes: boolean;
   canDeploy: boolean;
   isSaving: boolean;
   isLoading: boolean;
   validationErrors: Record<string, string>;
+
+  lastChangedAt: number;
+  lastDeployedAt: number;
 
   // UI
   editorOpen: boolean;
@@ -340,7 +343,8 @@ export interface FlowState extends FlowStateValues {
   triggerRun: () => void;
   setIsSaving: (state: boolean) => void;
   setCanDeploy: (deploy: boolean) => void;
-  setSynced: (sync: boolean) => void;
+  setEditorSynced: (sync: boolean) => void;
+  setLastDeployedAt: (deployedAt: number) => void;
   setSelectedEdge: (id: string | null) => void;
   setIsLayouted: (isLayouted: boolean) => void;
   addNodeBetween: (

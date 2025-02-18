@@ -52,7 +52,7 @@ function WorkflowNode({ id, data }: FlowNode) {
     selectedNode,
     setSelectedNode,
     setEditorOpen,
-    synced,
+    isEditorSyncedWithNodes: synced,
     validationErrors,
   } = useWorkflowStore();
   const type = normalizeStepType(data?.type ?? "");

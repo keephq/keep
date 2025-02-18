@@ -1,7 +1,6 @@
 import React from "react";
 import { useWorkflowStore } from "@/entities/workflows";
 import { Button, Divider, Icon, Subtitle, Text } from "@tremor/react";
-import { WorkflowStatus } from "@/features/workflows/builder/ui/workflow-status";
 import { BackspaceIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { TextInput } from "@/components/ui";
 import { EditorLayout } from "./StepEditor";
@@ -12,7 +11,7 @@ export function WorkflowEditorV2() {
     updateV2Properties,
     selectedNode,
     validationErrors,
-    synced,
+    isEditorSyncedWithNodes: synced,
   } = useWorkflowStore();
   const isDeployed = useWorkflowStore((state) => state.workflowId !== null);
 
@@ -54,7 +53,6 @@ export function WorkflowEditorV2() {
           {synced ? "Synced" : "Not Synced"}
         </span>
       </Subtitle>
-      <WorkflowStatus className="my-2" />
       <div className="flex flex-col gap-2">
         {propertyKeys.map((key, index) => {
           const isTrigger = [

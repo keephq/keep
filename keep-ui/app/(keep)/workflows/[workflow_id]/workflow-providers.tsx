@@ -8,6 +8,7 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 import SlidingPanel from "react-sliding-side-panel";
 import { useFetchProviders } from "../../providers/page.client";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
+import { PROVIDERS_WITH_NO_CONFIG } from "@/entities/workflows/model/validation";
 
 export const ProvidersCarousel = ({
   providers,
@@ -108,6 +109,10 @@ export function WorkflowProviders({ workflow }: { workflow: Workflow }) {
         },
         id: fullProvider.type,
       };
+
+      if (PROVIDERS_WITH_NO_CONFIG.includes(mergedProvider.type)) {
+        mergedProvider.installed = true;
+      }
 
       return mergedProvider;
     })

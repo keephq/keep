@@ -54,18 +54,6 @@ export default function WorkflowDetailPage({
     initialData
   );
 
-  // Set initial tab based on URL query param
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab === "yaml") {
-      setTabIndex(2);
-    } else if (tab === "builder") {
-      setTabIndex(1);
-    } else {
-      setTabIndex(0);
-    }
-  }, [searchParams]);
-
   const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
 
   if (error) {

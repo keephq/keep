@@ -17,7 +17,7 @@ export { ErrorComponent } from "./ErrorComponent";
 export { YAMLCodeblock } from "./YAMLCodeblock";
 export { getCommonPinningStylesAndClassNames } from "./utils/table-utils";
 export { ThemeScript, WatchUpdateTheme, ThemeControl } from "./theme";
-export { ResultJsonCard } from "./ResultJsonCard";
+export { JsonCard } from "./JsonCard";
 export { ResizableColumns } from "./ResizableColumns";
 export { KeepLoader } from "./KeepLoader/KeepLoader";
 

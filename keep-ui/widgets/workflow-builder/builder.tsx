@@ -50,7 +50,8 @@ function Builder({
     // UI State
     saveRequestCount,
     setIsSaving,
-    synced,
+    setLastDeployedAt,
+    isEditorSyncedWithNodes: synced,
     reset,
     canDeploy,
     initializeWorkflow,
@@ -166,6 +167,7 @@ function Builder({
           router.push(`/workflows/${response.workflow_id}`);
         }
       }
+      setLastDeployedAt(Date.now());
     } catch (error) {
       console.error(error);
       showErrorToast(error);

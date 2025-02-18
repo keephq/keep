@@ -1,26 +1,44 @@
 import {
   Button,
+  Callout,
   Icon,
   Select,
   SelectItem,
   Subtitle,
+  Tab,
+  TabGroup,
+  TabList,
+  TabPanel,
+  TabPanels,
   Text,
 } from "@tremor/react";
 import { KeyIcon } from "@heroicons/react/20/solid";
 import { Provider } from "@/app/(keep)/providers/providers";
 import { BackspaceIcon, PlusIcon } from "@heroicons/react/24/outline";
+import {
+  ExclamationCircleIcon,
+  CheckCircleIcon,
+} from "@heroicons/react/20/solid";
 import React, { useCallback, useState } from "react";
 import { useWorkflowStore } from "@/entities/workflows";
 import { V2Properties } from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
 import debounce from "lodash.debounce";
-import { StepTestRunButton } from "../StepTestRunButton";
+import { TestRunStepForm } from "./StepTest";
 import { PROVIDERS_WITH_NO_CONFIG } from "@/entities/workflows/model/validation";
 import { EditorField } from "@/features/workflows/builder/ui/Editor/EditorField";
 import { useProviders } from "@/utils/hooks/useProviders";
 
-export function EditorLayout({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-col mx-4 my-2.5">{children}</div>;
+export function EditorLayout({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-col mx-4 my-2.5 ${className}`}>{children}</div>
+  );
 }
 
 export interface KeepEditorProps {
@@ -74,20 +92,106 @@ function validateProviderConfig(
   return "";
 }
 
-function KeepStepEditor({
+function KeepSetupProviderEditor({
   properties,
   updateProperty,
   providerType,
-  type,
   providerError,
-  parametersError,
 }: KeepEditorProps & {
   providerError?: string | null;
-  parametersError?: string | null;
 }) {
   const { data: { providers, installed_providers: installedProviders } = {} } =
     useProviders();
 
+  const installedProviderByType = installedProviders?.filter(
+    (p) => p.type === providerType
+  );
+  const providerConfig = getProviderConfig(providerType, properties);
+
+  const providerNameError = validateProviderConfig(
+    providerType,
+    providerConfig ?? "",
+    providers,
+    installedProviders
+  );
+
+  if (PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")) {
+    return (
+      <section>
+        <Callout color="teal" title="You're all set">
+          <span className="capitalize">{providerType}</span> provider does not
+          require configuration
+        </Callout>
+      </section>
+    );
+  }
+
+  const isSelectEnabled =
+    installedProviderByType &&
+    installedProviderByType?.length > 0 &&
+    !PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "");
+
+  return (
+    <section>
+      <div className="mb-2">
+        <Text className="font-bold">Select provider</Text>
+        {providerError && <Text className="text-red-500">{providerError}</Text>}
+      </div>
+      <Text className="mb-1.5">
+        Select from installed {providerType} providers
+      </Text>
+      <Select
+        className="mb-1.5"
+        placeholder="Select provider"
+        disabled={!isSelectEnabled}
+        onValueChange={(value) => updateProperty("config", value)}
+      >
+        {
+          installedProviderByType?.map((provider) => {
+            const providerName = provider.details?.name ?? provider.id;
+            return (
+              <SelectItem
+                icon={() => (
+                  <DynamicImageProviderIcon
+                    providerType={providerType!}
+                    width="24"
+                    height="24"
+                    className="mr-1.5"
+                  />
+                )}
+                key={providerName}
+                value={providerName}
+              >
+                {providerName}
+              </SelectItem>
+            );
+          })!
+        }
+      </Select>
+      {/* TODO: replace with select with "create new" option */}
+      <p className="text-sm text-gray-500 text-center mb-1.5">or</p>
+      <Text className="mb-1.5">Enter provider name manually</Text>
+      <TextInput
+        placeholder="Enter provider name"
+        onChange={(e: any) => updateProperty("config", e.target.value)}
+        className="mb-2.5"
+        value={providerConfig || ""}
+        error={!!providerNameError}
+        errorMessage={providerNameError ?? undefined}
+        disabled={PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")}
+      />
+    </section>
+  );
+}
+
+function KeepStepEditor({
+  properties,
+  updateProperty,
+  type,
+  parametersError,
+}: KeepEditorProps & {
+  parametersError?: string | null;
+}) {
   const stepParams =
     ((type?.includes("step-")
       ? properties.stepParams
@@ -103,81 +207,11 @@ function KeepStepEditor({
     updateProperty("with", { ...currentWith, [e.target.id]: e.target.value });
   }
 
-  const installedProviderByType = installedProviders?.filter(
-    (p) => p.type === providerType
-  );
-  const providerConfig = getProviderConfig(providerType, properties);
-
-  const providerNameError = validateProviderConfig(
-    providerType,
-    providerConfig ?? "",
-    providers,
-    installedProviders
-  );
-
-  const method = type?.includes("step-") ? "_query" : "_notify";
-  const methodParams = properties.with ?? {};
-
   return (
     <div className="flex flex-col gap-2">
       <section>
         <div className="mb-2">
-          <Text className="font-bold">Provider Name</Text>
-          {providerError && (
-            <Text className="text-red-500">{providerError}</Text>
-          )}
-        </div>
-        <Text className="mb-1.5">
-          Select from installed {providerType} providers
-        </Text>
-        <Select
-          className="mb-1.5"
-          placeholder="Select provider"
-          disabled={
-            installedProviderByType?.length === 0 ||
-            !installedProviderByType ||
-            PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")
-          }
-          onValueChange={(value) => updateProperty("config", value)}
-        >
-          {
-            installedProviderByType?.map((provider) => {
-              const providerName = provider.details?.name ?? provider.id;
-              return (
-                <SelectItem
-                  icon={() => (
-                    <DynamicImageProviderIcon
-                      providerType={providerType!}
-                      width="24"
-                      height="24"
-                      className="mr-1.5"
-                    />
-                  )}
-                  key={providerName}
-                  value={providerName}
-                >
-                  {providerName}
-                </SelectItem>
-              );
-            })!
-          }
-        </Select>
-        {/* TODO: replace with select with "create new" option */}
-        <p className="text-sm text-gray-500 text-center mb-1.5">or</p>
-        <Text className="mb-1.5">Enter provider name manually</Text>
-        <TextInput
-          placeholder="Enter provider name"
-          onChange={(e: any) => updateProperty("config", e.target.value)}
-          className="mb-2.5"
-          value={providerConfig || ""}
-          error={!!providerNameError}
-          errorMessage={providerNameError ?? undefined}
-          disabled={PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")}
-        />
-      </section>
-      <section>
-        <div className="mb-2">
-          <Text className="font-bold">Provider Parameters</Text>
+          <Text className="font-bold">Provider parameters</Text>
           {parametersError && (
             <Text className="text-red-500">{parametersError}</Text>
           )}
@@ -270,15 +304,6 @@ function KeepStepEditor({
           );
         })}
       </section>
-      <StepTestRunButton
-        providerInfo={{
-          provider_id: providerConfig ?? "",
-          provider_type: providerType ?? "",
-        }}
-        method={method}
-        methodParams={methodParams}
-        updateProperty={propertyChanged}
-      />
     </div>
   );
 }
@@ -359,10 +384,10 @@ export function StepEditorV2({
   }>(initialFormData);
   const {
     updateSelectedNodeData,
-    setSynced,
+    setEditorSynced,
     triggerSave,
     validationErrors,
-    synced,
+    isEditorSyncedWithNodes: synced,
   } = useWorkflowStore();
 
   const saveFormDataToStoreDebounced = useCallback(
@@ -379,7 +404,7 @@ export function StepEditorV2({
     console.log("handleInputChange", e.target.name, e.target.value);
     const updatedFormData = { ...formData, [e.target.name]: e.target.value };
     setFormData(updatedFormData);
-    setSynced(false);
+    setEditorSynced(false);
     saveFormDataToStoreDebounced(updatedFormData);
   };
 
@@ -390,7 +415,7 @@ export function StepEditorV2({
       properties: { ...formData.properties, [key]: value },
     };
     setFormData(updatedFormData);
-    setSynced(false);
+    setEditorSynced(false);
     saveFormDataToStoreDebounced(updatedFormData);
   };
 
@@ -413,54 +438,149 @@ export function StepEditorV2({
     providerError = error;
   }
 
+  const method = formData.type?.includes("step-") ? "_query" : "_notify";
+  const methodParams = formData.properties?.with ?? {};
+  const providerConfig = getProviderConfig(
+    providerType,
+    formData.properties ?? {}
+  );
+
+  const defaultTabIndex = providerError ? 0 : parametersError ? 1 : 2;
+
+  const [tabIndex, setTabIndex] = useState(defaultTabIndex);
+
+  const handleTabChange = (index: number) => {
+    setTabIndex(index);
+  };
+
   return (
-    <EditorLayout>
-      <Subtitle className="font-medium capitalize">
-        {providerType} Editor
-      </Subtitle>
-      <Text className="mt-1">Unique Identifier</Text>
-      <TextInput
-        className="mb-2.5"
-        icon={KeyIcon}
-        name="name"
-        value={formData.name || ""}
-        onChange={handleInputChange}
-      />
-      {type && formData.properties ? (
-        <KeepStepEditor
-          providerError={providerError}
-          parametersError={parametersError}
-          properties={formData.properties}
-          updateProperty={handlePropertyChange}
-          providerType={providerType}
-          type={formData.type}
+    <TabGroup
+      index={tabIndex}
+      onIndexChange={handleTabChange}
+      className="flex-1 flex flex-col"
+    >
+      <div className="pt-2.5 px-4">
+        <Subtitle className="font-medium capitalize">
+          {providerType} step
+        </Subtitle>
+        <Text className="mt-1">Unique Identifier</Text>
+        <TextInput
+          className="mb-2.5"
+          icon={KeyIcon}
+          name="name"
+          value={formData.name || ""}
+          onChange={handleInputChange}
         />
-      ) : formData.type === "condition-threshold" ? (
-        <KeepThresholdConditionEditor
-          properties={formData.properties!}
-          updateProperty={handlePropertyChange}
-        />
-      ) : formData.type?.includes("foreach") ? (
-        <KeepForeachEditor
-          properties={formData.properties!}
-          updateProperty={handlePropertyChange}
-        />
-      ) : formData.type === "condition-assert" ? (
-        <KeepAssertConditionEditor
-          properties={formData.properties!}
-          updateProperty={handlePropertyChange}
-        />
-      ) : null}
-      <Button
-        variant="primary"
-        color="orange"
-        className="sticky bottom-2.5 mt-2.5"
-        onClick={handleSubmit}
-        data-testid="wf-editor-save-deploy-button"
-        disabled={!synced}
-      >
-        Save & Deploy
-      </Button>
-    </EditorLayout>
+      </div>
+      <TabList className="px-4">
+        <Tab value="select">
+          <div className="flex items-center gap-1">
+            Setup{" "}
+            {providerError ? (
+              <ExclamationCircleIcon className="size-4 text-red-500" />
+            ) : (
+              <CheckCircleIcon className="size-4" />
+            )}
+          </div>
+        </Tab>
+        <Tab value="configure">
+          <div className="flex items-center gap-1">
+            Configure{" "}
+            {parametersError ? (
+              <ExclamationCircleIcon className="size-4 text-red-500" />
+            ) : (
+              <CheckCircleIcon className="size-4" />
+            )}
+          </div>
+        </Tab>
+        <Tab value="test">Test</Tab>
+      </TabList>
+      <TabPanels className="flex-1 flex flex-col">
+        <TabPanel className="flex-1">
+          <div className="h-full flex flex-col">
+            <EditorLayout className="flex-1">
+              {type && formData.properties ? (
+                <KeepSetupProviderEditor
+                  providerType={providerType}
+                  providerError={providerError}
+                  properties={formData.properties}
+                  updateProperty={handlePropertyChange}
+                />
+              ) : null}
+            </EditorLayout>
+            <div className="sticky flex justify-end bottom-0 px-4 py-2.5 bg-white border-t border-gray-200">
+              <Button
+                variant="primary"
+                color="orange"
+                className="w-full"
+                onClick={() => {
+                  handleSubmit();
+                  setTabIndex(1);
+                }}
+                data-testid="wf-editor-save-deploy-button"
+                disabled={!synced}
+              >
+                Save & Continue
+              </Button>
+            </div>
+          </div>
+        </TabPanel>
+        <TabPanel className="flex-1">
+          <div className="h-full flex flex-col">
+            <EditorLayout className="flex-1">
+              {type && formData.properties ? (
+                <KeepStepEditor
+                  parametersError={parametersError}
+                  properties={formData.properties}
+                  updateProperty={handlePropertyChange}
+                  providerType={providerType}
+                  type={formData.type}
+                />
+              ) : formData.type === "condition-threshold" ? (
+                <KeepThresholdConditionEditor
+                  properties={formData.properties!}
+                  updateProperty={handlePropertyChange}
+                />
+              ) : formData.type?.includes("foreach") ? (
+                <KeepForeachEditor
+                  properties={formData.properties!}
+                  updateProperty={handlePropertyChange}
+                />
+              ) : formData.type === "condition-assert" ? (
+                <KeepAssertConditionEditor
+                  properties={formData.properties!}
+                  updateProperty={handlePropertyChange}
+                />
+              ) : null}
+            </EditorLayout>
+            <div className="sticky flex justify-end bottom-0 px-4 py-2.5 bg-white border-t border-gray-200">
+              <Button
+                variant="primary"
+                color="orange"
+                className="w-full"
+                onClick={() => {
+                  handleSubmit();
+                  setTabIndex(2);
+                }}
+                data-testid="wf-editor-save-deploy-button"
+                disabled={!synced}
+              >
+                Save & Continue
+              </Button>
+            </div>
+          </div>
+        </TabPanel>
+        <TabPanel className="flex-1">
+          <TestRunStepForm
+            providerInfo={{
+              provider_id: providerConfig ?? "",
+              provider_type: providerType ?? "",
+            }}
+            method={method}
+            methodParams={methodParams}
+          />
+        </TabPanel>
+      </TabPanels>
+    </TabGroup>
   );
 }

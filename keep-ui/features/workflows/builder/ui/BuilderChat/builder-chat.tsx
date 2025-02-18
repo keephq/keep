@@ -23,7 +23,7 @@ import { AddTriggerUI } from "./AddTriggerUI";
 import { AddStepUI } from "./AddStepUI";
 import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
-import { useTestStep } from "../StepTestRunButton";
+import { useTestStep } from "../Editor/StepTest";
 
 export function BuilderChat({
   definition,
