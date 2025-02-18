@@ -163,8 +163,10 @@ function KeepSetupProviderEditor({
   updateProperty,
   providerType,
   providerError,
+  providerNameError,
 }: KeepEditorProps & {
   providerError?: string | null;
+  providerNameError?: string | null;
 }) {
   const { data: { providers, installed_providers: installedProviders } = {} } =
     useProviders();
@@ -176,13 +178,6 @@ function KeepSetupProviderEditor({
 
   const providerObject =
     providers?.find((p) => p.type === providerType) ?? null;
-
-  const providerNameError = validateProviderConfig(
-    providerType,
-    providerConfig ?? "",
-    providers,
-    installedProviders
-  );
 
   const isCustomConfig =
     installedProviderByType?.find((p) => p.details?.name === providerConfig) ===
@@ -231,11 +226,6 @@ function KeepSetupProviderEditor({
     );
   }
 
-  const isSelectEnabled =
-    installedProviderByType &&
-    installedProviderByType?.length > 0 &&
-    !PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "");
-
   return (
     <section>
       <div className="mb-2">
@@ -245,7 +235,6 @@ function KeepSetupProviderEditor({
       <Select
         className="mb-1.5"
         placeholder="Select provider"
-        disabled={!isSelectEnabled}
         value={selectValue}
         icon={getSelectIcon}
         onValueChange={handleSelectChange}
@@ -569,7 +558,18 @@ export function StepEditorV2({
     formData.properties ?? {}
   );
 
-  const defaultTabIndex = providerError ? 0 : parametersError ? 1 : 1;
+  const { data: { providers, installed_providers: installedProviders } = {} } =
+    useProviders();
+
+  const providerNameError = validateProviderConfig(
+    providerType,
+    providerConfig ?? "",
+    providers,
+    installedProviders
+  );
+
+  const defaultTabIndex =
+    providerError || providerNameError ? 0 : parametersError ? 1 : 1;
 
   const [tabIndex, setTabIndex] = useState(defaultTabIndex);
 
@@ -603,7 +603,7 @@ export function StepEditorV2({
         <Tab value="select">
           <div className="flex items-center gap-1">
             Setup{" "}
-            {providerError ? (
+            {providerError || providerNameError ? (
               <ExclamationCircleIcon className="size-4 text-red-500" />
             ) : (
               <CheckCircleIcon className="size-4" />
@@ -630,6 +630,7 @@ export function StepEditorV2({
                 <KeepSetupProviderEditor
                   providerType={providerType}
                   providerError={providerError}
+                  providerNameError={providerNameError}
                   properties={formData.properties}
                   updateProperty={handlePropertyChange}
                 />
