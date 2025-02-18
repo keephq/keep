@@ -82,6 +82,11 @@ class CheckmkProvider(BaseProvider):
                 if "+" in long_date_time or "-" in long_date_time:
                     # Remove space in timezone offset if present (e.g., '+07 00' -> '+0700')
                     parts = long_date_time.split()
+                    if (
+                        len(parts) == 6 and len(parts[4]) == 3
+                    ):  # If offset is +07, we need +0700
+                        parts[4] = parts[4] + "00"
+                        long_date_time = " ".join(parts)
                     if len(parts) == 7:  # If offset is split into two parts
                         offset = parts[-3] + parts[-2]
                         long_date_time = " ".join(parts[:-3] + [offset] + parts[-1:])
