@@ -404,6 +404,7 @@ export function AlertTableServerSide({
           <AlertPresetManager
             presetName={presetName}
             onCelChanges={(searchCel) => setSearchCel(searchCel)}
+            table={table}
           />
         )}
       </div>
