@@ -255,6 +255,7 @@ export const useWorkflowStore = create<FlowState>()(
     setLastDeployedAt: (deployedAt) => set({ lastDeployedAt: deployedAt }),
     setSelectedEdge: (id) => set({ selectedEdge: id, selectedNode: null }),
     setIsLayouted: (isLayouted) => set({ isLayouted }),
+    getEdgeById: (id) => get().edges.find((edge) => edge.id === id),
     addNodeBetween: (
       nodeOrEdgeId: string,
       step: V2StepTemplate | V2StepTrigger,
@@ -560,11 +561,16 @@ export const useWorkflowStore = create<FlowState>()(
       if (!node) {
         throw new WorkflowBuilderError("getNextEdge::Node not found");
       }
-      const edge = get().edges.find((e) => e.source === nodeId);
-      if (!edge) {
+      // TODO: handle multiple edges
+      const edges = get().edges.filter((e) => e.source === nodeId);
+      if (!edges.length) {
         throw new WorkflowBuilderError("getNextEdge::Edge not found");
       }
-      return edge;
+      if (node.data.componentType === "switch") {
+        // If the node is a switch, return the second edge, because "true" is the second edge
+        return edges[1];
+      }
+      return edges[0];
     },
     // used to reset the store to the initial state, on builder unmount
     reset: () => set(defaultState),
@@ -634,8 +640,7 @@ async function initializeWorkflow(
   }
   set({ isLoading: true });
   let parsedWorkflow = definition?.value;
-  const name =
-    parsedWorkflow?.properties?.name || parsedWorkflow?.properties?.id;
+  const name = parsedWorkflow?.properties?.name;
 
   const fullSequence = [
     {

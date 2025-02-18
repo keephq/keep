@@ -365,6 +365,7 @@ export interface FlowState extends FlowStateValues {
   setNodes: (nodes: FlowNode[]) => void;
   setEdges: (edges: Edge[]) => void;
   getNodeById: (id: string) => FlowNode | undefined;
+  getEdgeById: (id: string) => Edge | undefined;
   deleteNodes: (ids: string | string[]) => void;
   getNextEdge: (nodeId: string) => Edge | undefined;
   reset: () => void;

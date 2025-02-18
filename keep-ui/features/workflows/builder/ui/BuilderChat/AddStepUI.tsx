@@ -8,6 +8,7 @@ import clsx from "clsx";
 import { DebugJSON } from "@/shared/ui";
 import { useCallback } from "react";
 import { triggerTypes } from "../../lib/utils";
+import { Edge } from "@xyflow/react";
 
 type AddStepUIProps =
   | {
@@ -15,6 +16,7 @@ type AddStepUIProps =
       args: {
         stepDefinitionJSON?: string;
         addAfterNodeName?: string;
+        addAfterEdgeId?: string;
         isStart?: boolean;
       };
       respond: undefined;
@@ -25,6 +27,7 @@ type AddStepUIProps =
       args: {
         stepDefinitionJSON?: string;
         addAfterNodeName?: string;
+        addAfterEdgeId?: string;
         isStart?: boolean;
       };
       respond: (response: SuggestionResult) => void;
@@ -54,11 +57,18 @@ export const AddStepUI = ({
   respond,
   result,
 }: AddStepUIProps) => {
-  const { definition, nodes, getNodeById, getNextEdge, addNodeBetween } =
-    useWorkflowStore();
+  const {
+    definition,
+    nodes,
+    getNodeById,
+    getNextEdge,
+    addNodeBetween,
+    getEdgeById,
+  } = useWorkflowStore();
   let {
     stepDefinitionJSON,
     addAfterNodeName: addAfterNodeIdOrName,
+    addAfterEdgeId,
     isStart,
   } = args;
 
@@ -67,7 +77,8 @@ export const AddStepUI = ({
       nodeToAddAfterId: string,
       step: V2Step,
       isStart: boolean,
-      respond: (response: any) => void
+      respond: (response: any) => void,
+      addAfterEdgeId?: string
     ) => {
       if (
         nodeToAddAfterId === "alert" ||
@@ -94,7 +105,13 @@ export const AddStepUI = ({
           return;
         }
       }
-      const nextEdge = getNextEdge(node.id);
+      let nextEdge: Edge | null = null;
+      if (addAfterEdgeId) {
+        nextEdge = getEdgeById(addAfterEdgeId) ?? null;
+      }
+      if (!nextEdge) {
+        nextEdge = getNextEdge(node.id) ?? null;
+      }
       if (!nextEdge) {
         respond?.({
           status: "error",
@@ -175,7 +192,8 @@ export const AddStepUI = ({
                 addAfterNodeIdOrName ?? "",
                 step,
                 !!isStart,
-                respond
+                respond,
+                addAfterEdgeId
               );
             } catch (e) {
               console.error(e);

@@ -7,7 +7,11 @@ import {
   V2StepStep,
   DefinitionV2,
 } from "@/entities/workflows/model/types";
-import { CopilotChat, CopilotKitCSSProperties } from "@copilotkit/react-ui";
+import {
+  CopilotChat,
+  CopilotKitCSSProperties,
+  useCopilotChatSuggestions,
+} from "@copilotkit/react-ui";
 import { useWorkflowStore } from "@/entities/workflows";
 import {
   CopilotKit,
@@ -30,6 +34,7 @@ import { Title, Text } from "@tremor/react";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import BuilderChatPlaceholder from "./ai-workflow-placeholder.png";
 import Image from "next/image";
+import { Edge } from "@xyflow/react";
 
 interface BuilderChatProps {
   definition: DefinitionV2;
@@ -42,11 +47,13 @@ export function BuilderChat({
 }: BuilderChatProps) {
   const {
     nodes,
+    edges,
     toolboxConfiguration,
     addNodeBetween,
     selectedEdge,
     selectedNode,
     deleteNodes,
+    validationErrors,
   } = useWorkflowStore();
 
   const steps = useMemo(() => {
@@ -66,19 +73,39 @@ export function BuilderChat({
     return result;
   }, [toolboxConfiguration]);
 
+  // TODO: reduce the size of the nodes object, e.g. only id and data, or something like this
   useCopilotReadable(
     {
       description: "Current nodes representing the workflow",
       value: nodes,
       convert: (description, nodes: FlowNode[]) => {
         return JSON.stringify(
-          nodes.map((n) => ({ id: n.id, data: n.data })),
+          nodes.map((n) => ({
+            id: n.id,
+            componentType: n.data.componentType,
+            name: n.data.name,
+          })),
           null,
           2
         );
       },
     },
     [nodes]
+  );
+
+  useCopilotReadable(
+    {
+      description: "Current edges representing the workflow",
+      value: edges,
+      convert: (description, edges: Edge[]) => {
+        return JSON.stringify(
+          edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
+          null,
+          2
+        );
+      },
+    },
+    [edges]
   );
 
   useCopilotReadable(
@@ -101,6 +128,32 @@ export function BuilderChat({
       },
     },
     [steps]
+  );
+
+  useCopilotReadable(
+    {
+      description: "Selected node id",
+      value: selectedNode,
+    },
+    [selectedNode]
+  );
+
+  useCopilotReadable(
+    {
+      description: "Validation errors",
+      value: validationErrors,
+    },
+    [validationErrors]
+  );
+
+  useCopilotChatSuggestions(
+    {
+      instructions:
+        "Suggest the most relevant next actions. E.g. if workflow is empty ask what workflow user is trying to build, if workflow already has some steps, suggest either to explain or add a new step. If some step is selected, suggest to explain it or help to configure it. If there are validation errors, suggest to fix them. If you waiting for user to accept or reject the suggestion, suggest relevant short answers.",
+      minSuggestions: 1,
+      maxSuggestions: 3,
+    },
+    [nodes, steps, selectedNode]
   );
 
   const { setMessages } = useCopilotChat();
@@ -301,6 +354,13 @@ export function BuilderChat({
             "The 'name' of the step to add the new step after, get it from the workflow definition. If workflow is empty, use 'trigger_end'.",
           type: "string",
           required: true,
+        },
+        {
+          name: "addAfterEdgeId",
+          description:
+            "If you want to add the step after specific edge, use the edgeId.",
+          type: "string",
+          required: false,
         },
         {
           // TODO: replace with more accurate nodeOrEdgeId description
@@ -513,7 +573,7 @@ export function BuilderChatSafe({
   }
 
   return (
-    <CopilotKit showDevConsole={false} runtimeUrl="/api/copilotkit">
+    <CopilotKit showDevConsole={true} runtimeUrl="/api/copilotkit">
       <BuilderChat definition={definition} {...props} />
     </CopilotKit>
   );
