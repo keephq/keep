@@ -14,10 +14,11 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from opentelemetry import trace
 from sqlmodel import Session
 
+from keep.api.core.config import config
 from keep.api.core.db import (
     get_alert_by_event_id,
     get_installed_providers,
@@ -47,6 +48,8 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 router = APIRouter()
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
+
+PLATFORM_URL = config("KEEP_PLATFORM_URL", default="https://platform.keephq.dev")
 
 
 # Redesign the workflow Card
@@ -271,7 +274,16 @@ def run_workflow_with_query_params(
     ),
 ):
     params = dict(request.query_params)
-    return run_workflow(workflow_id, None, None, params, authenticated_entity)
+    response = run_workflow(workflow_id, None, None, params, authenticated_entity)
+    if response.get("status") == "success":
+        workflow_execution_id = response.get("workflow_execution_id")
+        return RedirectResponse(
+            url=f"{PLATFORM_URL}/workflows/{workflow_id}/runs/{workflow_execution_id}"
+        )
+    else:
+        return RedirectResponse(
+            url=f"{PLATFORM_URL}/workflows/{workflow_id}?error=failed_to_run_workflow"
+        )
 
 
 @router.post(
