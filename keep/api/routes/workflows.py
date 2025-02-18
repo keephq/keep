@@ -274,7 +274,18 @@ def run_workflow_with_query_params(
     ),
 ):
     params = dict(request.query_params)
-    response = run_workflow(workflow_id, None, None, params, authenticated_entity)
+
+    alert_id = params.get("alert", params.get("alert_id"))
+    if params.get("alert", params.get("alert_id")):
+        response = run_workflow(
+            workflow_id,
+            "alert",
+            alert_id,
+            params,
+            authenticated_entity,
+        )
+    else:
+        response = run_workflow(workflow_id, None, None, params, authenticated_entity)
     if response.get("status") == "success":
         workflow_execution_id = response.get("workflow_execution_id")
         return RedirectResponse(
