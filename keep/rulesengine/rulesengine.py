@@ -1,5 +1,7 @@
+import copy
 import json
 import logging
+import re
 from typing import List, Optional
 
 import celpy
@@ -34,6 +36,7 @@ from keep.api.models.alert import (
 from keep.api.models.db.alert import Incident
 from keep.api.models.db.rule import ResolveOn, Rule
 from keep.api.utils.cel_utils import preprocess_cel_expression
+from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
 # Shahar: this is performance enhancment https://github.com/cloud-custodian/cel-python/issues/68
 
@@ -114,62 +117,62 @@ class RulesEngine:
                         f"Rule {rule.name} on event {event.id} is relevant"
                     )
 
-                    send_created_event = False
-
                     rule_fingerprint = self._calc_rule_fingerprint(event, rule)
 
-                    incident = self._get_or_create_incident(
-                        rule,
-                        rule_fingerprint,
-                        session,
-                    )
-                    incident = assign_alert_to_incident(
-                        fingerprint=event.fingerprint,
-                        incident=incident,
-                        tenant_id=self.tenant_id,
+                    incident, send_created_event = self._get_or_create_incident(
+                        rule=rule,
+                        rule_fingerprint=rule_fingerprint,
                         session=session,
+                        event=event,
                     )
-
-                    if not incident.is_confirmed:
-
-                        self.logger.info(
-                            f"No existing incidents for rule {rule.name}. Checking incident creation conditions"
+                    if incident:
+                        incident = assign_alert_to_incident(
+                            fingerprint=event.fingerprint,
+                            incident=incident,
+                            tenant_id=self.tenant_id,
+                            session=session,
                         )
 
-                        rule_groups = self._extract_subrules(rule.definition_cel)
+                        if not incident.is_confirmed:
 
-                        if rule.create_on == "any" or (
-                            rule.create_on == "all"
-                            and len(rule_groups) == len(matched_rules)
-                        ):
                             self.logger.info(
-                                "Single event is enough, so creating incident"
-                            )
-                            incident.is_confirmed = True
-                        elif rule.create_on == "all":
-                            incident = self._process_event_for_history_based_rule(
-                                incident, rule, session
+                                f"No existing incidents for rule {rule.name}. Checking incident creation conditions"
                             )
 
-                        send_created_event = incident.is_confirmed
+                            rule_groups = self._extract_subrules(rule.definition_cel)
 
-                    incident = self._resolve_incident_if_require(
-                        rule, incident, session
-                    )
-                    session.add(incident)
-                    session.commit()
+                            if rule.create_on == "any" or (
+                                rule.create_on == "all"
+                                and len(rule_groups) == len(matched_rules)
+                            ):
+                                self.logger.info(
+                                    "Single event is enough, so creating incident"
+                                )
+                                incident.is_confirmed = True
+                            elif rule.create_on == "all":
+                                incident = self._process_event_for_history_based_rule(
+                                    incident, rule, session
+                                )
 
-                    incident_dto = IncidentDto.from_db_incident(incident)
-                    if send_created_event:
-                        RulesEngine.send_workflow_event(
-                            self.tenant_id, session, incident_dto, "created"
+                            send_created_event = incident.is_confirmed
+
+                        incident = self._resolve_incident_if_require(
+                            incident, session
                         )
-                    elif incident.is_confirmed:
-                        RulesEngine.send_workflow_event(
-                            self.tenant_id, session, incident_dto, "updated"
-                        )
+                        session.add(incident)
+                        session.commit()
 
-                    incidents_dto[incident.id] = incident_dto
+                        incident_dto = IncidentDto.from_db_incident(incident)
+                        if send_created_event:
+                            RulesEngine.send_workflow_event(
+                                self.tenant_id, session, incident_dto, "created"
+                            )
+                        elif incident.is_confirmed:
+                            RulesEngine.send_workflow_event(
+                                self.tenant_id, session, incident_dto, "updated"
+                            )
+
+                        incidents_dto[incident.id] = incident_dto
 
                 else:
                     self.logger.info(
@@ -185,21 +188,119 @@ class RulesEngine:
 
         return list(incidents_dto.values())
 
-    def _get_or_create_incident(self, rule, rule_fingerprint, session):
-        incident = get_incident_for_grouping_rule(
+    def get_value_from_event(self, event: AlertDto, var: str) -> str:
+        """
+        Extract value from event based on template variable
+        e.g., alert.labels.host -> event['labels']['host']
+            alert.service -> event['service']
+        """
+        # Remove 'alert.' prefix
+        path = var.replace("alert.", "").split(".")
+
+        current = event.dict()  # Convert to dict for easier access
+        try:
+            for part in path:
+                part = part.strip()
+                current = current.get(part)
+            return str(current) if current is not None else "N/A"
+        except (KeyError, AttributeError):
+            return "N/A"
+
+    def get_vaiables(self, incident_name_template):
+        regex = r"\{\{\s*([^}]+)\s*\}\}"
+        return re.findall(regex, incident_name_template)
+
+    def _get_or_create_incident(
+            self,
+            rule: Rule,
+            rule_fingerprint,
+            session,
+            event
+    ) -> (Optional[Incident], bool):
+
+        existed_incident, expired = get_incident_for_grouping_rule(
             self.tenant_id,
             rule,
             rule_fingerprint,
             session=session,
         )
-        if not incident:
-            incident = create_incident_for_grouping_rule(
-                self.tenant_id,
-                rule,
-                rule_fingerprint,
-                session=session,
+        # if not incident name template, return the incident
+        if existed_incident and not expired and not rule.incident_name_template:
+            return existed_incident, False
+        # if incident name template, merge
+        elif existed_incident and not expired:
+            incident_name = copy.copy(rule.incident_name_template)
+            current_name = existed_incident.user_generated_name
+            self.logger.info(
+                "Updating the incident name based on the new event",
+                extra={
+                    "incident_id": existed_incident.id,
+                    "incident_name": current_name,
+                },
             )
-        return incident
+            alerts = existed_incident.alerts
+            vairables = self.get_vaiables(rule.incident_name_template)
+            values = set()
+            for var in vairables:
+                var_to_replace = ""
+                alerts_dtos = convert_db_alerts_to_dto_alerts(alerts)
+                for alert in alerts_dtos:
+                    value = self.get_value_from_event(alert, var)
+                    # don't add twice the same value
+                    if value not in values:
+                        var_to_replace += value + ","
+                        values.add(value)
+                this_event_val = self.get_value_from_event(event, var)
+                if this_event_val not in values:
+                    var_to_replace += this_event_val
+                pattern = r"\{\{\s*" + re.escape(var) + r"\s*\}\}"
+                # it happens when the last value is already in the incident name so its skipped
+                if var_to_replace.endswith(","):
+                    var_to_replace = var_to_replace[:-1]
+                # update the incident name template
+                # note that it will be commited later, when the incident is commited
+                incident_name = re.sub(pattern, var_to_replace, incident_name)
+            # we are done
+            existed_incident.user_generated_name = incident_name
+            self.logger.info(
+                "Incident name updated",
+                extra={
+                    "incident_id": existed_incident.id,
+                    "old_incident_name": current_name,
+                    "new_incident_name": existed_incident.user_generated_name,
+                },
+            )
+            return existed_incident, False
+
+        # else, this is the first time
+        # Starting new incident ONLY if alert is firing
+        # https://github.com/keephq/keep/issues/3418
+        if event.status == AlertStatus.FIRING.value:
+            if rule.incident_name_template:
+                incident_name = copy.copy(rule.incident_name_template)
+                vairables = self.get_vaiables(rule.incident_name_template)
+                if not vairables:
+                    self.logger.warning(
+                        f"Failed to fetch the appropriate labels from the event {event.id} and rule {rule.name}"
+                    )
+                    incident_name = None
+                for var in vairables:
+                    value = self.get_value_from_event(event, var)
+                    pattern = r"\{\{\s*" + re.escape(var) + r"\s*\}\}"
+                    incident_name = re.sub(pattern, value, incident_name)
+            else:
+                incident_name = None
+
+            incident = create_incident_for_grouping_rule(
+                tenant_id=self.tenant_id,
+                rule=rule,
+                rule_fingerprint=rule_fingerprint,
+                session=session,
+                incident_name=incident_name,
+                past_incident=existed_incident,
+            )
+            return incident, True
+        return None, False
 
     def _process_event_for_history_based_rule(
         self, incident: Incident, rule: Rule, session: Session
@@ -238,24 +339,24 @@ class RulesEngine:
 
     @staticmethod
     def _resolve_incident_if_require(
-        rule: Rule, incident: Incident, session: Session
+        incident: Incident, session: Session
     ) -> Incident:
 
         should_resolve = False
 
-        if rule.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
+        if incident.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
             incident=incident, session=session
         ):
             should_resolve = True
 
         elif (
-            rule.resolve_on == ResolveOn.FIRST.value
+            incident.resolve_on == ResolveOn.FIRST.value
             and is_first_incident_alert_resolved(incident, session=session)
         ):
             should_resolve = True
 
         elif (
-            rule.resolve_on == ResolveOn.LAST.value
+            incident.resolve_on == ResolveOn.LAST.value
             and is_last_incident_alert_resolved(incident, session=session)
         ):
             should_resolve = True
@@ -340,6 +441,15 @@ class RulesEngine:
         #   https://github.com/google/cel-spec
         sub_rules_matched = []
         for sub_rule in sub_rules:
+            # Shahar: rules such as "(source != null)" causing an exception:
+            #           celpy.evaluation.CELEvalError: ("found no matching overload for 'relation_ne' applied to
+            #           '(<class 'celpy.celtypes.StringType'>, <class 'NoneType'>)'", <class 'TypeError'>,
+            #            ("no such overload:  <class 'celpy.celtypes.StringType'> != None <class 'NoneType'>",))
+            #          So we need to replace "null" with ""
+            #
+            #          TODO: it works for strings now, but we need to add support on list/dict when needed
+            if "null" in sub_rule:
+                sub_rule = sub_rule.replace("null", '""')
             ast = self.env.compile(sub_rule)
             prgm = self.env.program(ast)
             activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))

@@ -306,6 +306,7 @@ def _upgrade() -> None:
             ["tenant_id"],
             ["tenant.id"],
         ),
+        sa.UniqueConstraint("tenant_id", "reference_id"),
         sa.PrimaryKeyConstraint("key_hash"),
     )
     op.create_table(

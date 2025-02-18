@@ -8,15 +8,27 @@ import { signOut as signOutClient } from "next-auth/react";
 import { GuestSession } from "@/types/auth";
 
 const READ_ONLY_ALLOWED_METHODS = ["GET", "OPTIONS"];
-const READ_ONLY_ALWAYS_ALLOWED_URLS = ["/alerts/audit"];
+const READ_ONLY_ALWAYS_ALLOWED_URLS = [
+  "/alerts/audit",
+  "/alerts/facets/options",
+  "/incidents/facets/options",
+];
+
+interface ApiClientOptions {
+  headers?: Record<string, string>;
+}
 
 export class ApiClient {
   private readonly isServer: boolean;
+  private readonly additionalHeaders: Record<string, string>;
+
   constructor(
     private readonly session: Session | GuestSession | null,
-    private readonly config: InternalConfig | null
+    private readonly config: InternalConfig | null,
+    options: ApiClientOptions = {}
   ) {
     this.isServer = typeof window === "undefined";
+    this.additionalHeaders = options.headers || {};
   }
 
   isReady() {
@@ -29,10 +41,11 @@ export class ApiClient {
     }
     // Guest session
     if (this.session.accessToken === "unauthenticated") {
-      return {}
+      return this.additionalHeaders;
     }
     return {
       Authorization: `Bearer ${this.session.accessToken}`,
+      ...this.additionalHeaders,
     };
   }
 

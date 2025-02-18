@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import logging
 import os
 import re
 import typing
@@ -63,6 +64,108 @@ class MailgunProvider(BaseProvider):
     def dispose(self):
         pass
 
+    @staticmethod
+    def parse_event_raw_body(raw_body: bytes | dict) -> dict:
+        """
+        Parse the raw body of a Mailgun webhook event and create an ingestable dict.
+
+        Args:
+            raw_body (bytes | dict): The raw body from the webhook
+
+        Returns:
+            dict: Parsed event data in a format compatible with _format_alert
+        """
+        if not isinstance(raw_body, bytes):
+            return raw_body
+
+        logging.getLogger(__name__).info("Parsing Mail Body")
+        try:
+            # Use latin1 as it can handle any byte sequence
+            content = raw_body.decode("latin1", errors="replace")
+            parsed_data = {}
+
+            # Try to find body-plain content
+            if 'Content-Disposition: form-data; name="body-plain"' in content:
+                logging.getLogger(__name__).info("Mail Body Found")
+                # Extract body-plain content
+                parts = content.split(
+                    'Content-Disposition: form-data; name="body-plain"'
+                )
+                if len(parts) > 1:
+                    body_content = parts[1].split("\r\n\r\n", 1)[1].split("\r\n--")[0]
+
+                    # Convert the alert format to Mailgun expected format
+                    parsed_data = {
+                        "subject": "",  # Will be populated below
+                        "from": "",  # Will be populated from Source
+                        "stripped-text": "",  # Will be populated from message content
+                        "timestamp": "",  # Will be populated from Opened
+                    }
+
+                    # Parse the content line by line
+                    for line in body_content.strip().split("\r\n"):
+                        if ":" in line:
+                            key, value = line.split(":", 1)
+                            key = key.strip()
+                            value = value.strip()
+
+                            # Map the fields to what _format_alert expects
+                            if key == "Summary":
+                                parsed_data["subject"] = value
+                            elif key == "Source":
+                                parsed_data["from"] = value
+                            elif key in ["Alert Status", "Severity"]:
+                                parsed_data[key.lower()] = value
+                            elif key == "Opened":
+                                # Convert the date format to timestamp
+                                try:
+                                    dt = datetime.datetime.strptime(
+                                        value, "%d %b %Y %H:%M UTC"
+                                    )
+                                    parsed_data["timestamp"] = str(dt.timestamp())
+                                except ValueError:
+                                    parsed_data["timestamp"] = str(
+                                        datetime.datetime.now().timestamp()
+                                    )
+
+                    # Combine relevant fields for the message
+                    message_parts = []
+                    for key in [
+                        "Summary",
+                        "Alert Category",
+                        "Service Test",
+                        "Severity",
+                        "Alert Status",
+                    ]:
+                        if key in body_content:
+                            for line in body_content.split("\r\n"):
+                                if line.startswith(key + ":"):
+                                    message_parts.append(line)
+
+                    parsed_data["stripped-text"] = "\n".join(message_parts)
+
+                    # Store the full original content
+                    parsed_data["raw_content"] = body_content
+                    logging.getLogger(__name__).info(
+                        "Mail Body Parsed", extra={"parsed_data": parsed_data}
+                    )
+                    return parsed_data
+            logging.getLogger(__name__).info("Mail Body Not Found")
+            return {
+                "subject": "Unknown Alert",
+                "from": "system",
+                "stripped-text": content,
+            }
+
+        except Exception as e:
+            logging.getLogger(__name__).exception(f"Error parsing webhook body: {e}")
+            return {
+                "subject": "Error Processing Alert",
+                "from": "system",
+                "stripped-text": "Error processing the alert content",
+                "timestamp": str(datetime.datetime.now().timestamp()),
+            }
+
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ) -> dict[str, str]:
@@ -122,6 +225,9 @@ class MailgunProvider(BaseProvider):
         event: dict, provider_instance: "MailgunProvider" = None
     ) -> AlertDto:
         # We receive FormData here, convert it to simple dict.
+        logging.getLogger(__name__).info(
+            "Received alert from mail",
+        )
         event = dict(event)
 
         name = event["subject"]
@@ -138,6 +244,7 @@ class MailgunProvider(BaseProvider):
         event.pop("signature", "")
         event.pop("token", "")
 
+        logging.getLogger(__name__).info("Basic formatting done")
         alert = AlertDto(
             name=name,
             source=[source],
@@ -148,10 +255,19 @@ class MailgunProvider(BaseProvider):
             status=status,
             raw_email={**event},
         )
+        logging.getLogger(__name__).info(
+            "Alert formatted",
+        )
 
         if provider_instance:
+            logging.getLogger(__name__).info(
+                "Provider instance found",
+            )
             extraction_rules = provider_instance.authentication_config.extraction
             if extraction_rules:
+                logging.getLogger(__name__).info(
+                    "Extraction rules found",
+                )
                 for rule in extraction_rules:
                     key = rule.get("key")
                     regex = rule.get("value")
@@ -165,14 +281,16 @@ class MailgunProvider(BaseProvider):
                                 ) in match.groupdict().items():
                                     setattr(alert, group_name, group_value)
                         except Exception as e:
-                            logging.error(
+                            logging.getLogger(__name__).exception(
                                 f"Error extracting key {key} with regex {regex}: {e}",
                                 extra={
                                     "provider_id": provider_instance.provider_id,
                                     "tenant_id": provider_instance.context_manager.tenant_id,
                                 },
                             )
-
+        logging.getLogger(__name__).info(
+            "Alert extracted",
+        )
         return alert
 
 

@@ -26,6 +26,59 @@ Creating a rule involves defining the conditions under which an alert should be 
  - **Logical grouping**: Combine conditions using logical operators to form comprehensive rules.
  - **Manual approve**: Create Incident-candidate or full-fledged incident.
 
+## Dynamic Incident Naming
+
+The correlation engine supports dynamic incident naming based on alert attributes. This allows you to create more meaningful and context-aware incident names that reflect the actual alert data.
+
+### Template Variables
+
+You can use template variables in your incident name using the `{{ alert.attribute }}` syntax. These variables are replaced with actual values from the alerts. For example:
+- `{{alert.labels.host}}` - References the host from alert labels
+- `{{alert.service}}` - References the service name from the alert
+
+### Behavior with Multiple Alerts
+
+When an incident contains multiple alerts:
+
+- Values from all alerts are automatically concatenated with commas
+- Duplicate values are automatically deduplicated
+- If a new alert adds a unique value, the incident name is updated to include it
+
+#### Dynamic Name Example
+
+**Template:** "Service Issue on `{{alert.labels.host}}`"
+
+**First alert**
+```
+{
+  ...
+  {
+    "labels": {
+      "host": "host1"
+    }
+  }
+  ...
+}
+```
+
+**Second alert**
+
+```
+{
+  ...
+  {
+    "labels": {
+      "host": "host2"
+    }
+  }
+  ...
+}
+```
+
+**Incident Name**
+
+Service Issue on host1,host2
+
 ## Examples
 - **Metric-based alerts**: Construct a rule to pinpoint alerts associated with specific metrics, such as high CPU usage on servers. This can be achieved by grouping alerts that share a common attribute, like a 'CPU usage' tag, ensuring you quickly identify and address performance issues.
 - **Feature-related alerts**: Establish rules to create incident by specific features or services. For instance, you can start incident based on a 'service' or 'URL' tag. This approach is particularly useful for tracking and managing alerts related to distinct functionalities or components within your application.

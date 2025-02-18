@@ -68,7 +68,7 @@ def get_default_conf_file_path():
 
 def make_keep_request(method, url, **kwargs):
     if os.environ.get("KEEP_CLI_IGNORE_SSL", "false").lower() == "true":
-        kwargs['verify'] = False
+        kwargs["verify"] = False
     try:
         response = requests.request(method, url, **kwargs)
         if response.status_code == 401:
@@ -404,6 +404,26 @@ def list_workflows(info: Info):
     print(table)
 
 
+def get_workflows(info: Info):
+    """Get all workflows."""
+    resp = make_keep_request(
+        "GET",
+        info.keep_api_url + "/workflows",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+    return resp.json()
+
+
+def delete_workflow(workflow_id: str, info: Info):
+    """Delete a workflow."""
+    resp = make_keep_request(
+        "DELETE",
+        info.keep_api_url + f"/workflows/{workflow_id}",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+    return resp
+
+
 def apply_workflow(file: str, info: Info):
     """Helper function to apply a single workflow."""
     with open(file, "rb") as f:
@@ -426,10 +446,36 @@ def apply_workflow(file: str, info: Info):
     help="The workflow file or directory containing workflow files",
     required=True,
 )
+@click.option(
+    "--full-sync",
+    is_flag=True,
+    help="Delete all existing workflows and apply the new ones",
+    default=False,
+)
 @pass_info
-def apply(info: Info, file: str):
+def apply(info: Info, file: str, full_sync: bool):
     """Apply a workflow or multiple workflows from a directory."""
     if os.path.isdir(file):
+        if full_sync:
+            click.echo(click.style("Deleting all workflows", bold=True))
+            workflows = get_workflows(info)
+            for workflow in workflows:
+                click.echo(
+                    click.style(f"Deleting workflow {workflow['id']}", bold=True)
+                )
+                resp = delete_workflow(workflow["id"], info)
+                if resp.ok:
+                    click.echo(
+                        click.style(f"Deleted workflow {workflow['id']}", bold=True)
+                    )
+                else:
+                    click.echo(
+                        click.style(
+                            f"Error deleting workflow {workflow['id']}: {resp.text}",
+                            bold=True,
+                        )
+                    )
+            click.echo(click.style("Deleted all workflows", bold=True))
         for filename in os.listdir(file):
             if filename.endswith(".yml") or filename.endswith(".yaml"):
                 click.echo(click.style(f"Applying workflow {filename}", bold=True))

@@ -62,6 +62,7 @@ export function IncidentList({
     error: incidentsError,
   } = useIncidents(
     true,
+    null,
     incidentsPagination.limit,
     incidentsPagination.offset,
     incidentsSorting[0],
@@ -74,7 +75,7 @@ export function IncidentList({
   );
 
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
-    useIncidents(false);
+    useIncidents(false, true);
   const { incidentChangeToken } = usePollIncidents(mutateIncidents);
 
   const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
@@ -275,6 +276,7 @@ export function IncidentList({
                 <FacetsPanelServerSide
                   className="mt-14"
                   entityName={"incidents"}
+                  usePropertyPathsSuggestions={true}
                   clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}
                   uncheckedByDefaultOptionValues={

@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from arq import ArqRedis
 from fastapi import (
@@ -123,6 +123,7 @@ def get_incidents_meta(
 )
 def get_all_incidents(
     confirmed: bool = True,
+    predicted: Optional[bool] = None,
     limit: int = 25,
     offset: int = 0,
     sorting: IncidentSorting = IncidentSorting.creation_time,
@@ -175,6 +176,7 @@ def get_all_incidents(
         incidents, total_count = get_last_incidents_by_cel(
             tenant_id=tenant_id,
             is_confirmed=confirmed,
+            is_predicted=predicted,
             limit=limit,
             offset=offset,
             sorting=sorting,
@@ -771,15 +773,9 @@ def change_incident_status(
         end_time = (
             datetime.utcnow() if change.status == IncidentStatus.RESOLVED else None
         )
-        result = change_incident_status_by_id(
+        change_incident_status_by_id(
             tenant_id, incident_id, change.status, end_time
         )
-        if not result:
-            raise HTTPException(
-                status_code=500, detail="Error changing incident status"
-            )
-        # TODO: same this change to audit table with the comment
-
         if change.status == IncidentStatus.RESOLVED:
             for alert in incident._alerts:
                 _enrich_alert(

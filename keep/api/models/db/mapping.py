@@ -28,8 +28,9 @@ class MappingRule(SQLModel, table=True):
         ),
         max_length=255,
     )
-    # The attributes to match against (e.g. ["service","region"])
-    matchers: list[str] = Field(sa_column=Column(JSON))
+    # The attributes to match against (e.g. [["service","region"], ["pod"]])
+    # Within a list it's AND, between lists it's OR: (service AND pod) OR pod
+    matchers: list[list[str]] = Field(sa_column=Column(JSON))
     # The rows of the CSV file [{service: "service1", region: "region1", ...}, ...]
     rows: Optional[list[dict]] = Field(
         sa_column=Column(JSON),
@@ -43,7 +44,7 @@ class MappRuleDtoBase(BaseModel):
     description: Optional[str] = None
     file_name: Optional[str] = None
     priority: int = 0
-    matchers: list[str]
+    matchers: list[list[str]]
     type: Literal["csv", "topology"] = "csv"
 
 
@@ -54,6 +55,7 @@ class MappingRuleDtoOut(MappRuleDtoBase, extra="ignore"):
     attributes: list[str] = []
     updated_by: Optional[str] | None
     last_updated_at: Optional[datetime] | None
+    rows: Optional[list[dict]] = None
 
 
 class MappingRuleDtoIn(MappRuleDtoBase):

@@ -65,10 +65,7 @@ class PropertiesMetadata:
         field_mapping_config, mapping_key = self.__find_mapping_configuration(prop_path)
 
         if not field_mapping_config:
-            return PropertyMetadataInfo(
-                field_mappings=[SimpleFieldMapping(prop_path)],
-                enum_values=None,
-            )
+            return None
 
         field_mappings = []
 

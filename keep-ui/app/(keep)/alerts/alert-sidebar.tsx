@@ -87,6 +87,7 @@ const AlertSidebar = ({
                   setDismissModalAlert={setDismissModalAlert}
                   setChangeStatusAlert={setChangeStatusAlert}
                   setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
+                  toggleSidebar={toggle}
                 />
                 <Divider />
                 <Dialog.Title
@@ -131,7 +132,7 @@ const AlertSidebar = ({
                   </p>
                   <p>
                     <FieldHeader>Description</FieldHeader>
-                    <pre className="overflow-scroll">{alert.description}</pre>
+                    <pre className="whitespace-pre-wrap">{alert.description}</pre>
                   </p>
                   <p>
                     <FieldHeader className="flex items-center gap-1">

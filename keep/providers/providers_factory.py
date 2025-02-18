@@ -353,8 +353,14 @@ class ProvidersFactory:
                 )
                 oauth2_url = provider_class.__dict__.get("OAUTH2_URL")
                 docs = provider_class.__doc__
+
+                can_fetch_alerts = (
+                    issubclass(provider_class, BaseProvider)
+                    and provider_class.__dict__.get("_get_alerts") is not None
+                )
                 can_fetch_topology = issubclass(provider_class, BaseTopologyProvider)
                 can_fetch_incidents = issubclass(provider_class, BaseIncidentProvider)
+                pulling_available = can_fetch_alerts or can_fetch_topology or can_fetch_incidents
 
                 provider_tags = set(provider_class.PROVIDER_TAGS)
                 if can_fetch_topology:
@@ -423,6 +429,9 @@ class ProvidersFactory:
                         categories=provider_class.PROVIDER_CATEGORY,
                         coming_soon=provider_class.PROVIDER_COMING_SOON,
                         health=provider_class.has_health_report(),
+                        pulling_available=pulling_available,
+                        # pulling can't be enabled if it's not available
+                        pulling_enabled=pulling_available,
                     )
                 )
             except ModuleNotFoundError:

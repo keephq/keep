@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
-import Loading from "@/app/(keep)/loading";
+import { KeepLoader } from "@/shared/ui";
 import { Trigger, Provider, Workflow } from "@/shared/api/workflows";
 import { Button, Text, Card, Icon, ListItem, List, Badge } from "@tremor/react";
 import ProviderForm from "@/app/(keep)/providers/provider-form";
@@ -406,7 +406,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     <div>
       {isRunning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Loading />
+          <KeepLoader />
         </div>
       )}
       <Card

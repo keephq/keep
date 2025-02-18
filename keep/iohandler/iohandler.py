@@ -20,7 +20,9 @@ from keep.step.step_provider_parameter import StepProviderParameter
 
 
 class RenderException(Exception):
-    pass
+    def __init__(self, message, missing_keys=None):
+        self.missing_keys = missing_keys
+        super().__init__(message)
 
 
 class IOHandler:
@@ -439,8 +441,9 @@ class IOHandler:
                 missing_keys = list(set(missing_keys))
                 err = "Could not find keys: " + ", ".join(missing_keys)
             else:
+                missing_keys = [stderr_output.split("Could not find key")[1].strip()]
                 err = stderr_output.replace("\n", "")
-            raise RenderException(f"{err} in the context.")
+            raise RenderException(f"{err} in the context.", missing_keys=missing_keys)
         if not rendered:
             return default
 

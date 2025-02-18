@@ -12,7 +12,6 @@ import pytz
 from dateutil import parser
 from dateutil.parser import ParserError
 
-from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import get_alerts_by_fingerprint
 from keep.api.models.alert import AlertStatus
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
@@ -204,55 +203,26 @@ def dict_pop(data: str | dict, *args) -> dict:
     return dict_copy
 
 
-def run_mapping(
-    id: int, lst: str | list, search_key: str, matcher: str, key: str, **kwargs
-) -> list:
-    """
-    Run a mapping rule by ID
+def dict_pop_prefix(data: str | dict, prefix: str) -> dict:
+    if isinstance(data, str):
+        data = json.loads(data)
+    return {k: v for k, v in data.items() if not k.startswith(prefix)}
 
-    For example, given the following lst:
-    [
-        {"firstName": "John"},
-        {"firstName": "Jane"}
-    ]
-    and the following mapping rule rows:
-    [
-            {"name": "John", "age": 30},
-            {"name": "Jane", "age": 25}
-    ]
-    The following search_key, matcher and key:
-    search_key = "firstName"
-    matcher = "name"
-    key = "age"
-    The function will return: [30, 25]
+
+def dict_filter_by_prefix(data: str | dict, prefix: str) -> dict:
+    """
+    This function filters a dictionary and returns only keys with the given prefix.
 
     Args:
-        id (int): The rule ID from the database
-        lst (str | list): The list of dictionaries to search
-        search_key (str): The key to search in the list
-        matcher (str): The key to match in the mapping rule
-        key (str): The key to return from the mapping rule
+        data (str | dict): the dictionary to filter
+        prefix (str): the prefix to filter by
 
     Returns:
-        list: The list of values from the mapping rule
+        dict: the filtered dictionary
     """
-    if isinstance(lst, str):
-        lst = lst.strip()
-        from asteval import Interpreter
-
-        aeval = Interpreter()
-        lst = aeval(lst)
-
-    if not lst:
-        return []
-
-    tenant_id = kwargs.get("tenant_id")
-    if not tenant_id:
-        return []
-
-    enrichments_bl = EnrichmentsBl(tenant_id)
-    result = enrichments_bl.run_mapping_rule_by_id(id, lst, search_key, matcher, key)
-    return result
+    if isinstance(data, str):
+        data = json.loads(data)
+    return {k: v for k, v in data.items() if k.startswith(prefix)}
 
 
 def add_time_to_date(date, date_format, time_str):

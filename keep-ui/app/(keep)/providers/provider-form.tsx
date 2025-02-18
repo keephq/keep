@@ -574,24 +574,27 @@ const ProviderForm = ({
                     tooltip={`Whether to install Keep as a webhook integration in ${provider.type}. This allows Keep to asynchronously receive alerts from ${provider.type}. Please note that this will install a new integration in ${provider.type} and slightly modify your monitors/notification policy to include Keep.`}
                   />
                 </label>
-                <input
-                  type="checkbox"
-                  id="pulling_enabled"
-                  name="pulling_enabled"
-                  className="mr-2.5"
-                  onChange={handlePullingEnabledChange}
-                  checked={Boolean(formValues["pulling_enabled"])}
-                />
-                <label htmlFor="pulling_enabled" className="flex items-center">
-                  <Text className="capitalize">Pulling Enabled</Text>
-                  <Icon
-                    icon={QuestionMarkCircleIcon}
-                    variant="simple"
-                    color="gray"
-                    size="sm"
-                    tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
+                {provider.pulling_available && <>
+                    <input
+                    type="checkbox"
+                    id="pulling_enabled"
+                    name="pulling_enabled"
+                    className="mr-2.5"
+                    onChange={handlePullingEnabledChange}
+                    checked={Boolean(formValues["pulling_enabled"])}
                   />
-                </label>
+                  <label htmlFor="pulling_enabled" className="flex items-center">
+                    <Text className="capitalize">Pulling Enabled</Text>
+                    <Icon
+                      icon={QuestionMarkCircleIcon}
+                      variant="simple"
+                      color="gray"
+                      size="sm"
+                      tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
+                    />
+                  </label>
+                </>
+              }
               </div>
               {isLocalhost && (
                 <span className="text-sm">
@@ -619,6 +622,38 @@ const ProviderForm = ({
               )}
             </div>
           )}
+
+        {!isHealthCheck &&
+          !provider.can_setup_webhook &&
+          !installedProvidersMode && provider.pulling_available && (
+            <div
+              className={`${
+                isLocalhost ? "bg-gray-100 p-2 rounded-tremor-default" : ""
+              }`}
+            >
+              <div className="flex items-center">
+                    <input
+                    type="checkbox"
+                    id="pulling_enabled"
+                    name="pulling_enabled"
+                    className="mr-2.5"
+                    onChange={handlePullingEnabledChange}
+                    checked={Boolean(formValues["pulling_enabled"])}
+                  />
+                  <label htmlFor="pulling_enabled" className="flex items-center">
+                    <Text className="capitalize">Pulling Enabled</Text>
+                    <Icon
+                      icon={QuestionMarkCircleIcon}
+                      variant="simple"
+                      color="gray"
+                      size="sm"
+                      tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
+                    />
+                  </label>
+              </div>
+            </div>
+          )}
+
       </div>
 
       {!isHealthCheck &&

@@ -9,12 +9,11 @@ import { getStepStatus } from "@/shared/lib/logs-utils";
 import yaml from "js-yaml";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import "./MonacoYAMLEditor.css";
-import { useWorkflowDetail } from "@/utils/hooks/useWorkflowDetail";
 
 interface Props {
   workflowRaw: string;
+  workflowId?: string;
   filename?: string;
-  workflowId: string;
   executionLogs?: LogEntry[] | null;
   executionStatus?: string;
   hoveredStep?: string | null;
@@ -38,7 +37,6 @@ const MonacoYAMLEditor = ({
 }: Props) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const { updateWorkflow } = useWorkflowActions();
-  const { mutateWorkflowDetail } = useWorkflowDetail(workflowId || "");
 
   const findStepNameForPosition = (
     lineNumber: number,
@@ -438,7 +436,13 @@ const MonacoYAMLEditor = ({
   }, [workflowRaw]);
 
   const handleSaveWorkflow = async () => {
-    if (!editorRef.current) return;
+    if (!editorRef.current) {
+      return;
+    }
+    if (!workflowId) {
+      console.error("Workflow ID is required to save the workflow");
+      return;
+    }
 
     const content = editorRef.current.getValue();
     try {
@@ -550,7 +554,9 @@ const MonacoYAMLEditor = ({
       </div>
       <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200">
         <span className="text-sm text-gray-500">{filename}.yaml</span>
-        <span className="text-sm text-gray-500">{workflowId}</span>
+        {workflowId && (
+          <span className="text-sm text-gray-500">{workflowId}</span>
+        )}
       </div>
     </div>
   );

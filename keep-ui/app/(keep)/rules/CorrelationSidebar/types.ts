@@ -10,4 +10,5 @@ export type CorrelationFormType = {
   resolveOn: "all" | "first" | "last" | "never";
   createOn: "any" | "all";
   query: RuleGroupType;
+  incidentNameTemplate: string;
 };

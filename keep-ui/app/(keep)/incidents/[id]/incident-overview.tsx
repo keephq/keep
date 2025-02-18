@@ -34,6 +34,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import { useRouter } from "next/navigation";
 import { RootCauseAnalysis } from "@/components/ui/RootCauseAnalysis";
 import { IncidentChangeSeveritySelect } from "@/features/change-incident-severity";
+import remarkGfm from "remark-gfm";
 
 interface Props {
   incident: IncidentDto;
@@ -94,7 +95,11 @@ function Summary({
   };
 
   const formatedSummary = (
-    <Markdown remarkPlugins={[remarkRehype]} rehypePlugins={[rehypeRaw]}>
+    <Markdown 
+    remarkPlugins={[remarkGfm, remarkRehype]} 
+    rehypePlugins={[rehypeRaw]}
+    className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1"
+    >
       {summary ?? generatedSummary}
     </Markdown>
   );
@@ -120,20 +125,21 @@ function Summary({
     );
   }
 
-  return summary || generatedSummary ? (
-    <div>{formatedSummary}</div>
-  ) : (
-    <Button
-      variant="secondary"
-      onClick={executeTask}
-      className="mt-2.5"
-      disabled={generatingSummary}
-      loading={generatingSummary}
-      icon={TbSparkles}
-      size="xs"
-    >
-      AI Summary
-    </Button>
+  return (
+    <div>
+      {formatedSummary}
+      <Button
+        variant="secondary"
+        onClick={executeTask}
+        className="mt-2.5"
+        disabled={generatingSummary}
+        loading={generatingSummary}
+        icon={TbSparkles}
+        size="xs"
+      >
+        AI Summary
+      </Button>
+    </div>
   );
 }
 
@@ -220,7 +226,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
 
   return (
     // Adding padding bottom to visually separate from the tabs
-    <div className="flex max-h-56 gap-6 items-start w-full text-tremor-default">
+    <div className="flex gap-6 items-start w-full text-tremor-default">
       <div className="basis-2/3 grow">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <div className="max-w-2xl">

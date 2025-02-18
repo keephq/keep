@@ -4,7 +4,6 @@ import { Callout, Title, Card } from "@tremor/react";
 import { load, JSON_SCHEMA } from "js-yaml";
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import Loading from "@/app/(keep)/loading";
 import { WorkflowSteps } from "../mockworkflows";
 import { Workflow } from "@/shared/api/workflows";
 import WorkflowGraph from "../workflow-graph";
