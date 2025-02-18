@@ -2,19 +2,20 @@ import { useMemo, useState } from "react";
 import { Provider } from "@/app/(keep)/providers/providers";
 import {
   V2Step,
-  V2Properties,
   FlowNode,
   ToolboxConfiguration,
   V2StepStep,
+  DefinitionV2,
 } from "@/entities/workflows/model/types";
 import { CopilotChat, CopilotKitCSSProperties } from "@copilotkit/react-ui";
 import { useWorkflowStore } from "@/entities/workflows";
 import {
+  CopilotKit,
   useCopilotAction,
   useCopilotChat,
   useCopilotReadable,
 } from "@copilotkit/react-core";
-import { Button } from "@/components/ui";
+import { Button, Link } from "@/components/ui";
 import { generateStepDefinition } from "@/app/(keep)/workflows/builder/_actions/getStepJson";
 import { GENERAL_INSTRUCTIONS } from "@/app/(keep)/workflows/builder/_constants";
 import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
@@ -24,20 +25,21 @@ import { AddStepUI } from "./AddStepUI";
 import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
 import { useTestStep } from "../Editor/StepTest";
+import { useConfig } from "@/utils/hooks/useConfig";
+import { Title, Text } from "@tremor/react";
+import { SparklesIcon } from "@heroicons/react/24/outline";
+import BuilderChatPlaceholder from "./ai-workflow-placeholder.png";
+import Image from "next/image";
+
+interface BuilderChatProps {
+  definition: DefinitionV2;
+  installedProviders: Provider[];
+}
 
 export function BuilderChat({
   definition,
   installedProviders,
-}: {
-  definition: {
-    value: {
-      sequence: V2Step[];
-      properties: V2Properties;
-    };
-    isValid?: boolean;
-  };
-  installedProviders: Provider[];
-}) {
+}: BuilderChatProps) {
   const {
     nodes,
     toolboxConfiguration,
@@ -463,5 +465,56 @@ export function BuilderChat({
         className="h-full flex-1"
       />
     </div>
+  );
+}
+
+type BuilderChatSafeProps = Omit<BuilderChatProps, "definition"> & {
+  definition: DefinitionV2 | null;
+};
+
+export function BuilderChatSafe({
+  definition,
+  ...props
+}: BuilderChatSafeProps) {
+  const { data: config } = useConfig();
+
+  // If AI is not enabled, return null to collapse the chat section
+  if (!config?.OPEN_AI_API_KEY_SET || true) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full relative">
+        <Image
+          src={BuilderChatPlaceholder}
+          alt="Workflow AI Assistant"
+          width={400}
+          height={895}
+          className="w-full h-full object-cover object-top max-w-[500px] mx-auto absolute inset-0"
+        />
+        <div className="w-full h-full absolute inset-0 bg-white/80" />
+        <div className="flex flex-col items-center justify-center h-full z-10">
+          <div className="flex flex-col items-center justify-center bg-[radial-gradient(circle,white_50%,transparent)] p-8 rounded-lg aspect-square">
+            <SparklesIcon className="size-10 text-orange-500" />
+            <Title>AI is disabled</Title>
+            <Text>Contact us to enable AI for you.</Text>
+            <Link
+              href="https://slack.keephq.dev/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Contact us
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (definition == null) {
+    return null;
+  }
+
+  return (
+    <CopilotKit showDevConsole={false} runtimeUrl="/api/copilotkit">
+      <BuilderChat definition={definition} {...props} />
+    </CopilotKit>
   );
 }

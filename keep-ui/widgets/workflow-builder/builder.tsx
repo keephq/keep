@@ -20,10 +20,10 @@ import {
   wrapDefinitionV2,
 } from "@/entities/workflows/lib/parser";
 import { CodeBracketIcon, SparklesIcon } from "@heroicons/react/24/outline";
-import { BuilderChat } from "@/features/workflows/builder/ui/BuilderChat/builder-chat";
-import { CopilotKit } from "@copilotkit/react-core";
+import { BuilderChatSafe } from "@/features/workflows/builder/ui/BuilderChat/builder-chat";
 import clsx from "clsx";
 import { ResizableColumns } from "@/shared/ui";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -58,8 +58,11 @@ function Builder({
   } = useWorkflowStore();
   const router = useRouter();
 
+  const { data: configData } = useConfig();
+  const isAIEnabled = configData?.OPEN_AI_API_KEY_SET;
+
   const [leftColumnMode, setLeftColumnMode] = useState<"yaml" | "chat" | null>(
-    "chat"
+    isAIEnabled ? "chat" : "yaml"
   );
 
   const searchParams = useSearchParams();
@@ -236,14 +239,10 @@ function Builder({
       <>
         {leftColumnMode === "yaml" && <YamlEditor />}
         {leftColumnMode === "chat" && (
-          <CopilotKit runtimeUrl="/api/copilotkit">
-            {definition?.value && (
-              <BuilderChat
-                definition={definition}
-                installedProviders={installedProviders ?? []}
-              />
-            )}
-          </CopilotKit>
+          <BuilderChatSafe
+            definition={definition}
+            installedProviders={installedProviders ?? []}
+          />
         )}
       </>
       <>
