@@ -445,7 +445,7 @@ export function StepEditorV2({
     formData.properties ?? {}
   );
 
-  const defaultTabIndex = providerError ? 0 : parametersError ? 1 : 2;
+  const defaultTabIndex = providerError ? 0 : parametersError ? 1 : 1;
 
   const [tabIndex, setTabIndex] = useState(defaultTabIndex);
 

@@ -87,7 +87,7 @@ const ReactFlowEditor = () => {
       </div>
       {editorOpen && (
         <div className="relative flex-1 flex flex-col bg-white border-l overflow-y-auto h-full w-80 2xl:w-96">
-          <WorkflowStatus className="m-2" />
+          <WorkflowStatus className="m-2 shrink-0" />
           <WorkflowEditorV2 />
           {(isStepEditor || isTrigger) && (
             <Divider ref={stepEditorRef} className="my-2" />

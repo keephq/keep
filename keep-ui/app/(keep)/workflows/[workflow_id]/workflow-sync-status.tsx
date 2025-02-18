@@ -5,8 +5,12 @@ import { useEffect } from "react";
 import TimeAgo, { Formatter } from "react-timeago";
 
 export function WorkflowSyncStatus() {
-  const { lastChangedAt, lastDeployedAt, isEditorSyncedWithNodes } =
-    useWorkflowStore();
+  const {
+    lastChangedAt,
+    lastDeployedAt,
+    isEditorSyncedWithNodes,
+    isInitialized,
+  } = useWorkflowStore();
   const isChangesSaved =
     isEditorSyncedWithNodes && lastDeployedAt >= lastChangedAt;
 
@@ -35,6 +39,10 @@ export function WorkflowSyncStatus() {
     return nextFormatter?.();
   };
 
+  if (!isInitialized) {
+    return null;
+  }
+
   return (
     <Tooltip content={isChangesSaved ? "Saved to Keep" : "Not saved"}>
       <span className="flex items-center gap-1 text-sm">
@@ -53,7 +61,9 @@ export function WorkflowSyncStatus() {
         ) : (
           <>
             <ExclamationTriangleIcon className="size-5 text-yellow-500" />
-            <span className="text-yellow-500">Changes are not saved</span>
+            <span className="text-yellow-600 font-bold">
+              Changes are not saved
+            </span>
           </>
         )}
       </span>
