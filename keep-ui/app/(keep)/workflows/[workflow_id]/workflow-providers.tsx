@@ -7,6 +7,7 @@ import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import SlidingPanel from "react-sliding-side-panel";
 import { useFetchProviders } from "../../providers/page.client";
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 export const ProvidersCarousel = ({
   providers,
@@ -62,6 +63,7 @@ export function WorkflowProviders({ workflow }: { workflow: Workflow }) {
     null
   );
   const { providers, mutate } = useFetchProviders();
+  const revalidateMultiple = useRevalidateMultiple();
 
   const handleConnectProvider = (provider: FullProvider) => {
     setSelectedProvider(provider);
@@ -78,7 +80,7 @@ export function WorkflowProviders({ workflow }: { workflow: Workflow }) {
     if (isConnected) {
       handleCloseModal();
       // refresh the page to show the changes
-      window.location.reload();
+      revalidateMultiple(["/providers"], { isExact: true });
     }
   };
 
