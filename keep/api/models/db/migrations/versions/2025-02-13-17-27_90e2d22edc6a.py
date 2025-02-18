@@ -1,7 +1,7 @@
 """WF index
 
 Revision ID: 90e2d22edc6a
-Revises: 7fde94be79e4
+Revises: 8176d7153747
 Create Date: 2025-02-13 17:27:56.350500
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
 revision = "90e2d22edc6a"
-down_revision = "7fde94be79e4"
+down_revision = "8176d7153747"
 branch_labels = None
 depends_on = None
 
