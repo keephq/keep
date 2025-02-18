@@ -575,13 +575,14 @@ export const processStepV2 = (
 
 export const processWorkflowV2 = (
   sequence: (
-    | V2Step
     | V2StartStep
     | V2EndStep
-    | V2StepTempNode
-    | EmptyNode
     | TriggerStartLabelStep
     | TriggerEndLabelStep
+    | V2StepTriggerUI
+    | V2Step
+    | V2StepTempNode
+    | EmptyNode
   )[],
   position: FlowNode["position"],
   isFirstRender = false,
