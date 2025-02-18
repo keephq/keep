@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useAlerts } from "utils/hooks/useAlerts";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AlertsQuery, useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "@/entities/presets/model/usePresets";
 import { AlertHistory } from "./alert-history";
 import AlertAssignTicketModal from "./alert-assign-ticket-modal";
@@ -21,7 +21,6 @@ import Loading from "../loading";
 import { Preset } from "@/entities/presets/model/types";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
-import { AlertsQuery } from "./alert-table-server-side";
 import { FacetDto } from "@/features/filter";
 import { v4 as uuidV4 } from "uuid";
 
@@ -48,6 +47,9 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   const [alertsQueryState, setAlertsQueryState] = useState<
     AlertsQuery | undefined
   >();
+  const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(false);
+  const [isSilentLoading, setIsSilentLoading] = useState(false);
+  const [alerts, setAlerts] = useState<AlertDto[] | undefined>(undefined);
   const { useLastAlerts } = useAlerts();
   const { data: providersData = { installed_providers: [] } } = useProviders();
   const router = useRouter();
@@ -86,20 +88,26 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
 
-  const { data: pollAlerts } = useAlertPolling();
+  const { data: pollAlertsRefreshToken } = useAlertPolling(true);
   const {
-    data: alerts = [],
+    data: fetchedAlerts = [],
     totalCount,
     isLoading: isAsyncLoading,
     mutate: mutateAlerts,
     error: alertsError,
-  } = useLastAlerts(
-    alertsQueryState?.cel,
-    alertsQueryState?.limit,
-    alertsQueryState?.offset,
-    alertsQueryState?.sortBy,
-    alertsQueryState?.sortDirection
-  );
+  } = useLastAlerts(alertsQueryState);
+
+  useEffect(() => {
+    if (isLiveUpdateEnabled) {
+      if (!isAsyncLoading) {
+        setAlerts(fetchedAlerts);
+      }
+
+      return;
+    }
+
+    setAlerts(isAsyncLoading ? undefined : fetchedAlerts);
+  }, [isLiveUpdateEnabled, isAsyncLoading, fetchedAlerts]);
 
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
@@ -120,21 +128,35 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
 
   useEffect(
     function setNewRefreshToken() {
-      if (pollAlerts) {
-        setRefreshToken(uuidV4());
+      if (pollAlertsRefreshToken) {
+        setRefreshToken(pollAlertsRefreshToken);
       }
     },
-    [setRefreshToken, pollAlerts]
+    [setRefreshToken, pollAlertsRefreshToken]
   );
 
-  useEffect(
-    function refreshAlerts() {
-      if (refreshToken) {
+  const alertsQueryStateRef = useRef(alertsQueryState);
+
+  const reloadAlerts = useCallback(
+    (alertsQuery: AlertsQuery) => {
+      // if the query is the same as the last one, just refetch
+      if (
+        JSON.stringify(alertsQuery) ===
+        JSON.stringify(alertsQueryStateRef.current)
+      ) {
         mutateAlerts();
+        return;
       }
+
+      // if the query is different, update the state
+      setAlertsQueryState(alertsQuery);
+      alertsQueryStateRef.current = alertsQuery;
     },
-    [mutateAlerts, refreshToken]
+    [setAlertsQueryState]
   );
+
+  const handleOnPoll = useCallback(() => setIsSilentLoading(true), []);
+  const handleOnQueryChange = useCallback(() => setIsSilentLoading(false), []);
 
   // if we don't have presets data yet, just show loading
   if (!selectedPreset && isPresetsLoading) {
@@ -157,18 +179,21 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         key={selectedPreset.name}
         refreshToken={refreshToken}
         preset={selectedPreset}
-        alerts={alerts}
+        alerts={alerts || []}
         alertsTotalCount={totalCount}
-        isAsyncLoading={isAsyncLoading}
+        isAsyncLoading={!isSilentLoading && isAsyncLoading}
         setTicketModalAlert={setTicketModalAlert}
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
         setDismissModalAlert={setDismissModalAlert}
         setChangeStatusAlert={setChangeStatusAlert}
         mutateAlerts={mutateAlerts}
-        onQueryChange={setAlertsQueryState}
+        onReload={reloadAlerts}
+        onPoll={handleOnPoll}
+        onQueryChange={handleOnQueryChange}
+        onLiveUpdateStateChange={setIsLiveUpdateEnabled}
       />
-      <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
+      <AlertHistory alerts={alerts || []} presetName={selectedPreset.name} />
       <AlertDismissModal
         alert={dismissModalAlert}
         preset={selectedPreset.name}
@@ -179,7 +204,10 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         presetName={selectedPreset.name}
         handleClose={() => setChangeStatusAlert(null)}
       />
-      <AlertMethodModal alerts={alerts} presetName={selectedPreset.name} />
+      <AlertMethodModal
+        alerts={alerts || []}
+        presetName={selectedPreset.name}
+      />
       <AlertAssignTicketModal
         handleClose={() => setTicketModalAlert(null)}
         ticketingProviders={ticketingProviders}

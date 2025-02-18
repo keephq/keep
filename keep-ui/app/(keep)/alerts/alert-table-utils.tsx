@@ -155,7 +155,11 @@ export const useAlertTableCols = (
         }
 
         if (alertValue && alertValue !== null) {
-          return <div className="truncate">{alertValue.toString()}</div>;
+          return (
+            <div className="truncate whitespace-pre-wrap line-clamp-3">
+              {alertValue.toString()}
+            </div>
+          );
         }
 
         return "";
@@ -307,7 +311,9 @@ export const useAlertTableCols = (
       minSize: 100,
       cell: (context) => (
         <div title={context.getValue()}>
-          <div className="truncate">{context.getValue()}</div>
+          <div className="truncate line-clamp-3 whitespace-pre-wrap">
+            {context.getValue()}
+          </div>
         </div>
       ),
     }),

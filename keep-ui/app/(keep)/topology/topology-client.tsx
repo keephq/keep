@@ -1,9 +1,16 @@
 "use client";
 
-import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
+import {
+  Icon,
+  Tab,
+  TabGroup,
+  TabList,
+  TabPanel,
+  TabPanels,
+} from "@tremor/react";
 import { TopologyMap } from "./ui/map";
 import { ApplicationsList } from "./ui/applications/applications-list";
-import { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { TopologySearchContext } from "./TopologySearchContext";
 import { TopologyApplication, TopologyService } from "./model";
 import { Button } from "@/components/ui";
@@ -49,26 +56,22 @@ export function TopologyPageClient({
       onIndexChange={setTabIndex}
     >
       <TabList className="mb-2">
-        <Tab>
-          <div className="flex items-center gap-2 h-6">
-            <span className="inline-flex">
-              <Button
-                variant="secondary"
-                size="xs"
+        <Tab
+          className="items-center"
+          icon={() => {
+            return (
+              <Icon
+                icon={ArrowPathIcon}
+                className="h-4 w-4 mr-2.5"
                 onClick={handlePullTopology}
-                title="Pull latest topology"
-              >
-                <ArrowPathIcon className="h-4 w-4" />
-              </Button>
-            </span>
-            <span>Topology Map</span>
-          </div>
+                tooltip="Pull latest topology"
+              />
+            );
+          }}
+        >
+          Topology Map
         </Tab>
-        <Tab>
-          <div className="flex items-center h-6">
-            <span>Applications</span>
-          </div>
-        </Tab>
+        <Tab className="items-center">Applications</Tab>
       </TabList>
       <TabPanels className="flex-1 flex flex-col">
         <TabPanel className="h-[calc(100vh-10rem)]">
