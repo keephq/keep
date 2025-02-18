@@ -5,7 +5,7 @@ import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { usePathname } from "next/navigation";
 import Skeleton from "react-loading-skeleton";
 import { FacetValue } from "./facet-value";
-import { FacetOptionDto } from "./models";
+import { FacetConfig, FacetOptionDto } from "./models";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
 export interface FacetProps {
@@ -18,6 +18,7 @@ export interface FacetProps {
   showIcon?: boolean;
   facetKey: string;
   facetState: Set<string>;
+  facetConfig?: FacetConfig;
   renderOptionLabel?: (
     optionDisplayName: string
   ) => JSX.Element | string | undefined;
@@ -46,6 +47,7 @@ export const Facet: React.FC<FacetProps> = ({
   renderIcon,
   renderOptionLabel,
   isOpenByDefault,
+  facetConfig,
 }) => {
   const pathname = usePathname();
   // Get preset name from URL
@@ -115,9 +117,9 @@ export const Facet: React.FC<FacetProps> = ({
         isExclusivelySelected={checkIfOptionExclusievlySelected(
           facetOption.display_name
         )}
-        isSelected={
-          !facetState.has(facetOption.display_name) &&
-          facetOption.matches_count > 0
+        isSelected={!facetState.has(facetOption.display_name)}
+        isSelectable={
+          facetConfig?.canHitEmptyState || facetOption.matches_count > 0
         }
         renderLabel={() =>
           renderOptionLabel && renderOptionLabel(facetOption.display_name)
@@ -139,7 +141,7 @@ export const Facet: React.FC<FacetProps> = ({
       );
     }
 
-    const filteredOptions =
+    let optionsToRender =
       options
         ?.filter((facetOption) =>
           facetOption.display_name
@@ -148,7 +150,14 @@ export const Facet: React.FC<FacetProps> = ({
         )
         .sort((fst, scd) => scd.matches_count - fst.matches_count) || [];
 
-    if (!filteredOptions.length) {
+    if (facetConfig?.sortCallback) {
+      const sortCallback = facetConfig.sortCallback as any;
+      optionsToRender = optionsToRender.sort((fst, scd) =>
+        sortCallback(scd) > sortCallback(fst) ? 1 : -1
+      );
+    }
+
+    if (!optionsToRender.length) {
       return (
         <div className="px-2 py-1 text-sm text-gray-500 italic">
           No matching values found
@@ -156,7 +165,7 @@ export const Facet: React.FC<FacetProps> = ({
       );
     }
 
-    return filteredOptions.map((facetOption, index) =>
+    return optionsToRender.map((facetOption, index) =>
       renderFacetValue(facetOption, index)
     );
   }

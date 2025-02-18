@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Table, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
-import { AlertDto } from "@/entities/alerts/model";
+import {
+  AlertDto,
+  reverseSeverityMapping,
+  Severity,
+  Status,
+} from "@/entities/alerts/model";
 import {
   getCoreRowModel,
   useReactTable,
@@ -44,6 +49,7 @@ import { FacetDto } from "@/features/filter";
 import { TimeFrame } from "@/components/ui/DateRangePicker";
 import { AlertsQuery } from "@/utils/hooks/useAlerts";
 import { v4 as uuidV4 } from "uuid";
+import { FacetsConfig } from "@/features/filter/models";
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
@@ -419,6 +425,16 @@ export function AlertTableServerSide({
     [dateRange, shouldRefreshDate, onLiveUpdateStateChange]
   );
 
+  const facetsConfig: FacetsConfig = useMemo(() => {
+    return {
+      ["Severity"]: {
+        canHitEmptyState: true,
+        sortCallback: (facetOption) =>
+          reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
+      },
+    };
+  }, []);
+
   return (
     // Add h-screen to make it full height and remove the default flex-col gap
     <div className="h-screen flex flex-col gap-4">
@@ -468,6 +484,7 @@ export function AlertTableServerSide({
               facetOptionsCel={mainCelQuery}
               clearFiltersToken={clearFiltersToken}
               initialFacetsData={{ facets: initialFacets, facetOptions: null }}
+              facetsConfig={facetsConfig}
               onCelChange={setFilterCel}
               renderFacetOptionIcon={renderFacetOptionIcon}
               renderFacetOptionLabel={renderFacetOptionLabel}

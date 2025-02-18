@@ -1,3 +1,12 @@
+export interface FacetConfig {
+  sortCallback?: (facetOption: FacetOptionDto) => number;
+  canHitEmptyState?: boolean;
+}
+
+export interface FacetsConfig {
+  [facetName: string]: FacetConfig;
+}
+
 export interface FacetOptionDto {
   display_name: string;
   value: any;

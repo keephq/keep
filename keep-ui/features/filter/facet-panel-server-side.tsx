@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FacetOptionsQueries, FacetOptionsQuery } from "./models";
+import { FacetOptionsQueries, FacetOptionsQuery, FacetsConfig } from "./models";
 import { useFacetActions, useFacetOptions, useFacets } from "./hooks";
 import { InitialFacetsData } from "./api";
 import { FacetsPanel } from "./facets-panel";
@@ -32,6 +32,7 @@ export interface FacetsPanelProps {
    * Key is the facet name, value is the list of option values to uncheck.
    **/
   uncheckedByDefaultOptionValues?: { [key: string]: string[] };
+  facetsConfig?: FacetsConfig;
   renderFacetOptionLabel?: (
     facetName: string,
     optionDisplayName: string
@@ -54,6 +55,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   clearFiltersToken,
   onCelChange = undefined,
   uncheckedByDefaultOptionValues,
+  facetsConfig,
   renderFacetOptionIcon,
   renderFacetOptionLabel,
 }) => {
@@ -173,6 +175,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
         uncheckedByDefaultOptionValues={uncheckedByDefaultOptionValues}
         renderFacetOptionLabel={renderFacetOptionLabel}
         renderFacetOptionIcon={renderFacetOptionIcon}
+        facetsConfig={facetsConfig}
         onCelChange={(cel: string) => {
           onCelChange && onCelChange(cel);
         }}

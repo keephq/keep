@@ -5,6 +5,7 @@ import {
   FacetDto,
   FacetOptionDto,
   FacetOptionsQueries,
+  FacetsConfig,
 } from "./models";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
@@ -74,6 +75,7 @@ export interface FacetsPanelProps {
    * Key is the facet name, value is the list of option values to uncheck.
    **/
   uncheckedByDefaultOptionValues?: { [key: string]: string[] };
+  facetsConfig?: FacetsConfig;
   renderFacetOptionLabel?: (
     facetName: string,
     optionDisplayName: string
@@ -99,6 +101,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   uncheckedByDefaultOptionValues,
   renderFacetOptionIcon = undefined,
   renderFacetOptionLabel,
+  facetsConfig,
   onCelChange = undefined,
   onAddFacet = undefined,
   onDeleteFacet = undefined,
@@ -111,7 +114,26 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   const [celState, setCelState] = useState("");
   const [facetOptionQueries, setFacetOptionQueries] =
     useState<FacetOptionsQueries | null>(null);
+  const facetsByNameMap = useMemo(
+    () => new Map<string, FacetDto>(facets.map((facet) => [facet.name, facet])),
+    [facets]
+  );
+  const facetsConfigIdBased = useMemo(() => {
+    const result: FacetsConfig = {};
 
+    if (facets) {
+      facets.forEach((facet) => {
+        const x = facetsConfig?.[facet.name];
+        const canHitEmptyState = x?.canHitEmptyState || false;
+        const sortCallback =
+          x?.sortCallback ||
+          ((facetOption: FacetOptionDto) => facetOption.matches_count);
+        result[facet.id] = { canHitEmptyState, sortCallback };
+      });
+    }
+
+    return result;
+  }, [facetsConfig, facets]);
   function getFacetState(facetId: string): Set<string> {
     if (
       !defaultStateHandledForFacetIds.has(facetId) &&
@@ -181,19 +203,25 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   function toggleFacetOption(facetId: string, value: string) {
     setClickedFacetId(facetId);
     const facetState = getFacetState(facetId);
-    const facetOptionsWithMatches = facetOptions[facetId].filter(
-      (facetOption) => facetOption.matches_count
-    );
-    if (facetState.size === facetOptionsWithMatches.length - 1) {
-      facetOptionsWithMatches.forEach((facetOption) => {
-        facetState.delete(facetOption.display_name);
-      });
-    } else {
-      if (isOptionSelected(facetId, value)) {
-        facetState.add(value);
-      } else {
-        facetState.delete(value);
+    const facetConfig = facetsConfigIdBased?.[facetId];
+
+    if (!facetConfig?.canHitEmptyState) {
+      const facetOptionsWithMatches = facetOptions[facetId].filter(
+        (facetOption) => facetOption.matches_count
+      );
+      if (facetState.size === facetOptionsWithMatches.length - 1) {
+        facetOptionsWithMatches.forEach((facetOption) => {
+          facetState.delete(facetOption.display_name);
+        });
+        setFacetsState({ ...facetsState, [facetId]: facetState });
+        return;
       }
+    }
+
+    if (isOptionSelected(facetId, value)) {
+      facetState.add(value);
+    } else {
+      facetState.delete(value);
     }
 
     setFacetsState({ ...facetsState, [facetId]: facetState });
@@ -305,6 +333,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
               onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
               facetState={getFacetState(facet.id)}
               facetKey={facet.id}
+              facetConfig={facetsConfigIdBased[facet.id]}
               renderOptionLabel={(optionDisplayName) =>
                 renderFacetOptionLabel &&
                 renderFacetOptionLabel(facet.name, optionDisplayName)
