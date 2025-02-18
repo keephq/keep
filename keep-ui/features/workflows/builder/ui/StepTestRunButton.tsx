@@ -53,9 +53,9 @@ export function StepTestRunButton({
         setIsLoading(true);
         const result = await testStep(providerInfo, method, methodParams);
         setResult(result);
-      } catch (e) {
+      } catch (e: unknown) {
         setErrors({
-          error: "Failed to test step",
+          error: e instanceof Error ? e.message : "Failed to test step",
         });
       } finally {
         setIsLoading(false);
@@ -70,9 +70,8 @@ export function StepTestRunButton({
         variant="secondary"
         color="orange"
         size="sm"
-        onClick={(e) => {
+        onClick={() => {
           setIsOpen(true);
-          handleRun(e);
         }}
         disabled={
           isLoading ||
@@ -89,6 +88,9 @@ export function StepTestRunButton({
             <Title>Test Step</Title>
             <Subtitle>Test the step with chosen parameters</Subtitle>
           </div>
+          <Callout title="Step parameters">
+            Changing the parameters here will change properties of the step.
+          </Callout>
           {methodParams &&
             Object.entries(methodParams).map(([key, value]) => (
               <div key={key}>

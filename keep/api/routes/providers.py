@@ -626,9 +626,9 @@ def invoke_provider_method(
         provider_config = secret_manager.read_secret(
             provider.configuration_key, is_json=True
         )
-    except NoResultFound:
+    except NoResultFound as e:
         if not provider_id.startswith("default-"):
-            raise HTTPException(404, detail="Provider not found")
+            raise HTTPException(404, detail="Provider not found") from e
         else:
             provider_id = provider_info.pop("provider_id")
             provider_type = provider_info.pop("provider_type", None) or provider_id
