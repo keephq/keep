@@ -13,7 +13,7 @@ from sqlmodel import Session
 
 from keep.api.core.db_utils import get_json_extract_field
 from keep.api.models.alert import AlertStatus
-from keep.api.models.db.alert import AlertEnrichment, Alert
+from keep.api.models.db.alert import AlertEnrichment
 
 # revision identifiers, used by Alembic.
 revision = "876a424d8f06"
