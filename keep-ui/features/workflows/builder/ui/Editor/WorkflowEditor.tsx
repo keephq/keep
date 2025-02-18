@@ -11,7 +11,6 @@ export function WorkflowEditorV2() {
     updateV2Properties,
     selectedNode,
     validationErrors,
-    isEditorSyncedWithNodes: synced,
   } = useWorkflowStore();
   const isDeployed = useWorkflowStore((state) => state.workflowId !== null);
 
@@ -48,10 +47,6 @@ export function WorkflowEditorV2() {
     <EditorLayout>
       <Subtitle className="font-medium flex items-baseline justify-between">
         Workflow Settings
-        {/* TODO: remove since user don't need to know about 'sync', it should just work */}
-        <span className="text-gray-500 text-sm">
-          {synced ? "Synced" : "Not Synced"}
-        </span>
       </Subtitle>
       <div className="flex flex-col gap-2">
         {propertyKeys.map((key, index) => {

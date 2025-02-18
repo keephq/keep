@@ -36,6 +36,7 @@ export function WorkflowBuilderWidget({
     triggerRun,
     updateV2Properties,
     isInitialized,
+    isEditorSyncedWithNodes,
     canDeploy,
     isSaving,
     v2Properties,
@@ -157,7 +158,7 @@ export function WorkflowBuilderWidget({
             <Button
               color="orange"
               size="md"
-              className="min-w-28"
+              className="min-w-28 disabled:opacity-70"
               icon={PlayIcon}
               disabled={!isValid}
               onClick={() => triggerRun()}
@@ -167,9 +168,9 @@ export function WorkflowBuilderWidget({
             <Button
               color="orange"
               size="md"
-              className="min-w-28 relative"
+              className="min-w-28 relative disabled:opacity-70"
               icon={ArrowUpOnSquareIcon}
-              disabled={!canDeploy || isSaving}
+              disabled={!canDeploy || isSaving || !isEditorSyncedWithNodes}
               onClick={() => triggerSave()}
               data-testid="wf-builder-main-save-deploy-button"
             >

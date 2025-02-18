@@ -14,7 +14,11 @@ import {
 } from "@tremor/react";
 import { KeyIcon } from "@heroicons/react/20/solid";
 import { Provider } from "@/app/(keep)/providers/providers";
-import { BackspaceIcon, PlusIcon } from "@heroicons/react/24/outline";
+import {
+  BackspaceIcon,
+  PencilIcon,
+  PlusIcon,
+} from "@heroicons/react/24/outline";
 import {
   ExclamationCircleIcon,
   CheckCircleIcon,
@@ -28,6 +32,9 @@ import { TestRunStepForm } from "./StepTest";
 import { PROVIDERS_WITH_NO_CONFIG } from "@/entities/workflows/model/validation";
 import { EditorField } from "@/features/workflows/builder/ui/Editor/EditorField";
 import { useProviders } from "@/utils/hooks/useProviders";
+import ProviderForm from "@/app/(keep)/providers/provider-form";
+import { Drawer } from "@/shared/ui/Drawer";
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 export function EditorLayout({
   children,
@@ -92,6 +99,65 @@ function validateProviderConfig(
   return "";
 }
 
+function InstallProviderButton({ providerType }: { providerType: string }) {
+  const { data: { providers } = {} } = useProviders();
+  const revalidateMultiple = useRevalidateMultiple();
+  const providerObject = providers?.find((p) => p.type === providerType);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  if (!providerObject) {
+    return null;
+  }
+
+  const onConnectClick = () => {
+    setIsFormOpen(true);
+  };
+
+  return (
+    <>
+      <Button
+        onClick={onConnectClick}
+        disabled={providerObject.installed}
+        className="w-full text-black"
+        variant="secondary"
+        color="neutral"
+        size="sm"
+        icon={() => (
+          <DynamicImageProviderIcon
+            className="mr-1"
+            src={`/icons/${providerObject.type}-icon.png`}
+            width={24}
+            height={24}
+            alt={providerObject.type}
+          />
+        )}
+      >
+        Install {""}
+        <span className="text-sm capitalize">
+          {providerObject.display_name}
+        </span>
+      </Button>
+      <Drawer
+        title={`Connect to ${providerObject.display_name}`}
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+      >
+        <ProviderForm
+          provider={{ ...providerObject, id: providerObject.type }}
+          installedProvidersMode={false}
+          mutate={() => {
+            revalidateMultiple(["providers"], { isExact: true });
+          }}
+          closeModal={() => setIsFormOpen(false)}
+          isProviderNameDisabled={false}
+          isLocalhost={false}
+          isHealthCheck={false}
+        />
+      </Drawer>
+    </>
+  );
+}
+
 function KeepSetupProviderEditor({
   properties,
   updateProperty,
@@ -108,12 +174,51 @@ function KeepSetupProviderEditor({
   );
   const providerConfig = getProviderConfig(providerType, properties);
 
+  const providerObject =
+    providers?.find((p) => p.type === providerType) ?? null;
+
   const providerNameError = validateProviderConfig(
     providerType,
     providerConfig ?? "",
     providers,
     installedProviders
   );
+
+  const isCustomConfig =
+    installedProviderByType?.find((p) => p.details?.name === providerConfig) ===
+      undefined && providerConfig;
+
+  const [selectValue, setSelectValue] = useState(
+    isCustomConfig ? "enter-manually" : (providerConfig ?? "")
+  );
+
+  const handleSelectChange = (value: string) => {
+    setSelectValue(value);
+    if (value === "enter-manually" || value === "add-new") {
+      return;
+    }
+    updateProperty("config", value);
+  };
+
+  const getSelectIcon = () => {
+    if (selectValue === "add-new") {
+      return <PlusIcon className="size-4 mr-1.5" />;
+    }
+    if (selectValue === "enter-manually") {
+      return <PencilIcon className="size-4 mr-1.5" />;
+    }
+    if (!providerType) {
+      return <></>;
+    }
+    return (
+      <DynamicImageProviderIcon
+        providerType={providerType}
+        width="24"
+        height="24"
+        className="mr-1.5"
+      />
+    );
+  };
 
   if (PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")) {
     return (
@@ -137,49 +242,67 @@ function KeepSetupProviderEditor({
         <Text className="font-bold">Select provider</Text>
         {providerError && <Text className="text-red-500">{providerError}</Text>}
       </div>
-      <Text className="mb-1.5">
-        Select from installed {providerType} providers
-      </Text>
       <Select
         className="mb-1.5"
         placeholder="Select provider"
         disabled={!isSelectEnabled}
-        onValueChange={(value) => updateProperty("config", value)}
+        value={selectValue}
+        icon={getSelectIcon}
+        onValueChange={handleSelectChange}
       >
-        {
-          installedProviderByType?.map((provider) => {
-            const providerName = provider.details?.name ?? provider.id;
-            return (
-              <SelectItem
-                icon={() => (
-                  <DynamicImageProviderIcon
-                    providerType={providerType!}
-                    width="24"
-                    height="24"
-                    className="mr-1.5"
-                  />
-                )}
-                key={providerName}
-                value={providerName}
-              >
-                {providerName}
-              </SelectItem>
-            );
-          })!
-        }
+        {installedProviderByType?.map((provider) => {
+          const providerName = provider.details?.name ?? provider.id;
+          return (
+            <SelectItem
+              icon={() => (
+                <DynamicImageProviderIcon
+                  providerType={providerType!}
+                  width="24"
+                  height="24"
+                  className="mr-1.5"
+                />
+              )}
+              key={providerName}
+              value={providerName}
+            >
+              {providerName}
+            </SelectItem>
+          );
+        })}
+        <SelectItem
+          icon={() => <PencilIcon className="mx-0.5 size-5 mr-1.5" />}
+          value="enter-manually"
+        >
+          Manual provider name
+        </SelectItem>
+        {providerType && (
+          <SelectItem
+            icon={() => <PlusIcon className="mx-0.5 size-5 mr-1.5" />}
+            value="add-new"
+          >
+            Add {providerObject?.display_name ?? providerType} provider
+          </SelectItem>
+        )}
       </Select>
       {/* TODO: replace with select with "create new" option */}
-      <p className="text-sm text-gray-500 text-center mb-1.5">or</p>
-      <Text className="mb-1.5">Enter provider name manually</Text>
-      <TextInput
-        placeholder="Enter provider name"
-        onChange={(e: any) => updateProperty("config", e.target.value)}
-        className="mb-2.5"
-        value={providerConfig || ""}
-        error={!!providerNameError}
-        errorMessage={providerNameError ?? undefined}
-        disabled={PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")}
-      />
+      {/* <p className="text-sm text-gray-500 text-center mb-1.5">or</p> */}
+      {selectValue === "enter-manually" && (
+        <>
+          <Text className="mb-1.5">Enter provider name manually</Text>
+          <TextInput
+            placeholder="Enter provider name"
+            onChange={(e: any) => updateProperty("config", e.target.value)}
+            className="mb-2.5"
+            value={providerConfig || ""}
+            error={!!providerNameError}
+            errorMessage={providerNameError ?? undefined}
+            disabled={PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")}
+          />
+        </>
+      )}
+      {selectValue === "add-new" && providerType && (
+        <InstallProviderButton providerType={providerType} />
+      )}
     </section>
   );
 }
@@ -387,7 +510,8 @@ export function StepEditorV2({
     setEditorSynced,
     triggerSave,
     validationErrors,
-    isEditorSyncedWithNodes: synced,
+    isEditorSyncedWithNodes,
+    isSaving,
   } = useWorkflowStore();
 
   const saveFormDataToStoreDebounced = useCallback(
@@ -453,6 +577,9 @@ export function StepEditorV2({
     setTabIndex(index);
   };
 
+  const saveButtonDisabled = !isEditorSyncedWithNodes || isSaving;
+  const saveButtonText = isSaving ? "Saving..." : "Save & Continue";
+
   return (
     <TabGroup
       index={tabIndex}
@@ -512,15 +639,15 @@ export function StepEditorV2({
               <Button
                 variant="primary"
                 color="orange"
-                className="w-full"
+                className="w-full disabled:opacity-70"
                 onClick={() => {
                   handleSubmit();
                   setTabIndex(1);
                 }}
                 data-testid="wf-editor-save-deploy-button"
-                disabled={!synced}
+                disabled={saveButtonDisabled}
               >
-                Save & Continue
+                {saveButtonText}
               </Button>
             </div>
           </div>
@@ -557,15 +684,15 @@ export function StepEditorV2({
               <Button
                 variant="primary"
                 color="orange"
-                className="w-full"
+                className="w-full disabled:opacity-70"
                 onClick={() => {
                   handleSubmit();
                   setTabIndex(2);
                 }}
                 data-testid="wf-editor-save-deploy-button"
-                disabled={!synced}
+                disabled={saveButtonDisabled}
               >
-                Save & Continue
+                {saveButtonText}
               </Button>
             </div>
           </div>

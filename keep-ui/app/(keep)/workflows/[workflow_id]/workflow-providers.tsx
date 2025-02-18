@@ -127,7 +127,9 @@ export function WorkflowProviders({ workflow }: { workflow: Workflow }) {
       <SlidingPanel
         type={"right"}
         isOpen={openPanel}
-        size={30}
+        size={
+          window.innerWidth < 640 ? 100 : window.innerWidth < 1024 ? 80 : 40
+        }
         backdropClicked={handleCloseModal}
         panelContainerClassName="bg-white z-[2000]"
       >

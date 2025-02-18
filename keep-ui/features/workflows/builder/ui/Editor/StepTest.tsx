@@ -2,7 +2,7 @@ import { Button, TextInput } from "@/components/ui";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { JsonCard } from "@/shared/ui";
 import { Callout, Text } from "@tremor/react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { EditorLayout } from "./StepEditor";
 import { Editor } from "@monaco-editor/react";
 
@@ -86,6 +86,7 @@ export function TestRunStepForm({
     const handleTestStep = async () => {
       try {
         setIsLoading(true);
+        setErrors({});
         const result = await testStep(
           providerInfo,
           method,
@@ -93,8 +94,9 @@ export function TestRunStepForm({
         );
         setResult(result);
       } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : "Unknown error";
         setErrors({
-          error: e instanceof Error ? e.message : "Failed to test step",
+          "Failed to test step": errorMessage,
         });
       } finally {
         setIsLoading(false);
@@ -151,7 +153,14 @@ export function TestRunStepForm({
             The result of the test run will be displayed here.
           </Text>
           {result && (
-            <pre className="bg-gray-100 rounded-md overflow-hidden text-xs my-2">
+            <pre
+              className="bg-gray-100 rounded-md overflow-hidden text-xs my-2"
+              ref={(el) => {
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }}
+            >
               <div className="text-gray-500 bg-gray-50 p-2">Result</div>
               <div
                 className="overflow-auto bg-[#fffffe] break-words whitespace-pre-wrap py-2 border rounded-[inherit] rounded-t-none  border-gray-200"
@@ -184,7 +193,16 @@ export function TestRunStepForm({
         {errors &&
           Object.values(errors).length > 0 &&
           Object.entries(errors).map(([key, error]) => (
-            <Callout key={key} title={key} color="red">
+            <Callout
+              key={key}
+              title={key}
+              color="red"
+              ref={(el) => {
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }}
+            >
               {error}
             </Callout>
           ))}
