@@ -318,7 +318,7 @@ def get_incidents_report(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
     cel: str = Query(None),
-) -> IncidentsPaginatedResultsDto:
+):
     tenant_id = authenticated_entity.tenant_id
     reports_bl = IncidentReports(tenant_id)
 
