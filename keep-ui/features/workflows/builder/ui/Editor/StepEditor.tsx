@@ -522,7 +522,6 @@ export function StepEditorV2({
   };
 
   const handlePropertyChange = (key: string, value: any) => {
-    console.log("handlePropertyChange", key, value);
     const updatedFormData = {
       ...formData,
       properties: { ...formData.properties, [key]: value },

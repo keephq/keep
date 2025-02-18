@@ -479,7 +479,7 @@ export function BuilderChatSafe({
   const { data: config } = useConfig();
 
   // If AI is not enabled, return null to collapse the chat section
-  if (!config?.OPEN_AI_API_KEY_SET || true) {
+  if (!config?.OPEN_AI_API_KEY_SET) {
     return (
       <div className="flex flex-col items-center justify-center h-full relative">
         <Image
