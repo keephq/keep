@@ -1,5 +1,5 @@
 import { FacetDto } from "@/features/filter";
-import { AlertsQuery, AlertTableServerSide } from "./alert-table-server-side";
+import { AlertTableServerSide } from "./alert-table-server-side";
 import { useAlertTableCols } from "./alert-table-utils";
 import {
   AlertDto,
@@ -7,6 +7,7 @@ import {
   getTabsFromPreset,
 } from "@/entities/alerts/model";
 import { Preset } from "@/entities/presets/model/types";
+import { AlertsQuery } from "@/utils/hooks/useAlerts";
 
 interface Props {
   refreshToken: string | null;
@@ -21,7 +22,10 @@ interface Props {
   setDismissModalAlert: (alert: AlertDto[] | null) => void;
   setChangeStatusAlert: (alert: AlertDto | null) => void;
   mutateAlerts: () => void;
-  onQueryChange?: (query: AlertsQuery) => void;
+  onReload?: (query: AlertsQuery) => void;
+  onPoll?: () => void;
+  onQueryChange?: () => void;
+  onLiveUpdateStateChange?: (isLiveUpdateEnabled: boolean) => void;
 }
 
 export default function AlertTableTabPanelServerSide({
@@ -37,7 +41,10 @@ export default function AlertTableTabPanelServerSide({
   setDismissModalAlert,
   setChangeStatusAlert,
   mutateAlerts,
+  onReload,
+  onPoll,
   onQueryChange,
+  onLiveUpdateStateChange,
 }: Props) {
   const additionalColsToGenerate = [
     ...new Set(
@@ -93,8 +100,10 @@ export default function AlertTableTabPanelServerSide({
       setRunWorkflowModalAlert={setRunWorkflowModalAlert}
       setDismissModalAlert={setDismissModalAlert}
       setChangeStatusAlert={setChangeStatusAlert}
+      onReload={onReload}
+      onPoll={onPoll}
       onQueryChange={onQueryChange}
-      onRefresh={() => mutateAlerts()}
+      onLiveUpdateStateChange={onLiveUpdateStateChange}
     />
   );
 }

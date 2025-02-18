@@ -157,7 +157,7 @@ class RulesEngine:
                             send_created_event = incident.is_confirmed
 
                         incident = self._resolve_incident_if_require(
-                            rule, incident, session
+                            incident, session
                         )
                         session.add(incident)
                         session.commit()
@@ -339,24 +339,24 @@ class RulesEngine:
 
     @staticmethod
     def _resolve_incident_if_require(
-        rule: Rule, incident: Incident, session: Session
+        incident: Incident, session: Session
     ) -> Incident:
 
         should_resolve = False
 
-        if rule.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
+        if incident.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
             incident=incident, session=session
         ):
             should_resolve = True
 
         elif (
-            rule.resolve_on == ResolveOn.FIRST.value
+            incident.resolve_on == ResolveOn.FIRST.value
             and is_first_incident_alert_resolved(incident, session=session)
         ):
             should_resolve = True
 
         elif (
-            rule.resolve_on == ResolveOn.LAST.value
+            incident.resolve_on == ResolveOn.LAST.value
             and is_last_incident_alert_resolved(incident, session=session)
         ):
             should_resolve = True

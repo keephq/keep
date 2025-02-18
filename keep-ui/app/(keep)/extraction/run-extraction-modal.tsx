@@ -21,7 +21,11 @@ interface Props {
 
 export default function RunExtractionModal({ ruleId, isOpen, onClose }: Props) {
   const { useLastAlerts } = useAlerts();
-  const { data: alerts = [] } = useLastAlerts("", 20, 0, undefined);
+  const { data: alerts = [] } = useLastAlerts({
+    cel: "",
+    limit: 20,
+    offset: 0,
+  });
   const [selectedAlertId, setSelectedAlertId] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const api = useApi();

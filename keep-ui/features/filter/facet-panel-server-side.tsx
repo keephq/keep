@@ -88,6 +88,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   const facetActions = useFacetActions(entityName, initialFacetsData);
   const [facetQueriesState, setFacetQueriesState] =
     useState<FacetOptionsQueries | null>(null);
+  const [isSilentLoading, setIsSilentLoading] = useState<boolean>(false);
 
   const { data: facetsData } = useFacets(entityName, {
     revalidateOnFocus: false,
@@ -149,6 +150,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   useEffect(
     function watchRevalidationToken() {
       if (revalidationToken) {
+        setIsSilentLoading(true);
         mutateFacetOptions();
       }
     },
@@ -157,6 +159,8 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     [revalidationToken]
   );
 
+  useEffect(() => setIsSilentLoading(false), [facetQueriesState]);
+
   return (
     <>
       <FacetsPanel
@@ -164,7 +168,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
         className={className || ""}
         facets={facetsData as any}
         facetOptions={facetOptions as any}
-        areFacetOptionsLoading={isLoading}
+        areFacetOptionsLoading={!isSilentLoading && isLoading}
         clearFiltersToken={clearFiltersToken}
         uncheckedByDefaultOptionValues={uncheckedByDefaultOptionValues}
         renderFacetOptionLabel={renderFacetOptionLabel}
