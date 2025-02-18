@@ -23,6 +23,11 @@ const ReactFlowEditor = () => {
     if (!selectedNode && !selectedEdge) {
       return;
     }
+    // TODO: refactor to use ref callback function, e.g. ref={(el) => {
+    //   if (el) {
+    //     el.scrollIntoView({ behavior: "smooth", block: "start" });
+    //   }
+    // }}
     // Scroll the StepEditorV2 into view when the editor is opened
     const timer = setTimeout(() => {
       if (containerRef.current && stepEditorRef.current) {
