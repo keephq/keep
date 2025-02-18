@@ -94,9 +94,9 @@ function KeepStepEditor({
       : properties.actionParams) as string[]) ?? [];
   const existingParams = Object.keys((properties.with as object) ?? {});
   const params = [...stepParams, ...existingParams];
-  const uniqueParams = params.filter(
-    (item, pos) => params.indexOf(item) === pos
-  );
+  const uniqueParams = params
+    .filter((item, pos) => params.indexOf(item) === pos)
+    .filter((item) => item !== "kwargs");
 
   function propertyChanged(e: any) {
     const currentWith = (properties.with as object) ?? {};
@@ -251,26 +251,24 @@ function KeepStepEditor({
             Add Var
           </Button>
         </div>
-        {uniqueParams
-          ?.filter((key) => key !== "kwargs")
-          .map((key, index) => {
-            let currentPropertyValue = ((properties.with as any) ?? {})[key];
-            if (typeof currentPropertyValue === "object") {
-              currentPropertyValue = JSON.stringify(
-                currentPropertyValue,
-                null,
-                2
-              );
-            }
-            return (
-              <EditorField
-                key={key}
-                name={key}
-                value={currentPropertyValue}
-                onChange={propertyChanged}
-              />
+        {uniqueParams.map((key) => {
+          let currentPropertyValue = ((properties.with as any) ?? {})[key];
+          if (typeof currentPropertyValue === "object") {
+            currentPropertyValue = JSON.stringify(
+              currentPropertyValue,
+              null,
+              2
             );
-          })}
+          }
+          return (
+            <EditorField
+              key={key}
+              name={key}
+              value={currentPropertyValue}
+              onChange={propertyChanged}
+            />
+          );
+        })}
       </section>
       <StepTestRunButton
         providerInfo={{
