@@ -117,6 +117,7 @@ export function AlertTableServerSide({
   const [searchCel, setSearchCel] = useState<string>("");
   const [dateRangeCel, setDateRangeCel] = useState<string>("");
   const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
+  const alertsQueryRef = useRef<AlertsQuery | null>(null);
 
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
@@ -178,7 +179,7 @@ export function AlertTableServerSide({
     // makes alerts to refresh when not paused and all time is selected
     if (!dateRange?.start && !dateRange?.end && !dateRange?.paused) {
       setTimeout(() => {
-        onReload && onReload(alertsQuery);
+        onReload && onReload(alertsQueryRef.current as AlertsQuery);
         setFacetsPanelRefreshToken(uuidV4());
       }, 100);
     }
@@ -203,6 +204,7 @@ export function AlertTableServerSide({
         sortDirection: sorting[0]?.desc ? "DESC" : "ASC",
       };
 
+      alertsQueryRef.current = alertsQuery;
       return alertsQuery;
     },
     [filterCel, mainCelQuery, paginationState, sorting]
@@ -213,7 +215,7 @@ export function AlertTableServerSide({
   }, [filterCel, searchCel, paginationState, sorting, onQueryChange]);
 
   useEffect(() => {
-    onReload && onReload(alertsQuery);
+    onReload && onReload(alertsQueryRef.current as AlertsQuery);
   }, [alertsQuery, onReload]);
 
   const [tabs, setTabs] = useState([
@@ -283,8 +285,11 @@ export function AlertTableServerSide({
   }, []);
 
   let showSkeleton = isAsyncLoading;
-  let showEmptyState =
-    !alertsQuery.cel && table.getPageCount() === 0 && !isAsyncLoading;
+  const isTableEmpty = table.getPageCount() === 0;
+  let showEmptyState = !alertsQuery.cel && isTableEmpty && !isAsyncLoading;
+  const showFilterEmptyState = isTableEmpty && !!filterCel;
+  const showSearchEmptyState =
+    isTableEmpty && !!searchCel && !showFilterEmptyState;
 
   const handleRowClick = (alert: AlertDto) => {
     // if presetName is alert-history, do not open sidebar
@@ -523,6 +528,8 @@ export function AlertTableServerSide({
                       table={table}
                       showSkeleton={showSkeleton}
                       showEmptyState={showEmptyState}
+                      showFilterEmptyState={showFilterEmptyState}
+                      showSearchEmptyState={showSearchEmptyState}
                       theme={theme}
                       onRowClick={handleRowClick}
                       presetName={presetName}
@@ -541,7 +548,9 @@ export function AlertTableServerSide({
           table={table}
           isRefreshing={isAsyncLoading}
           isRefreshAllowed={isRefreshAllowed}
-          onRefresh={() => onReload && onReload(alertsQuery)}
+          onRefresh={() =>
+            onReload && onReload(alertsQueryRef.current as AlertsQuery)
+          }
         />
       </div>
 
