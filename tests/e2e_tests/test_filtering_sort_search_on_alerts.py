@@ -257,6 +257,9 @@ def select_one_facet_option(browser, facet_name, option_name):
 
 def assert_facet(browser, facet_name, alerts, alert_property_name: str):
     counters_dict = {}
+    expect(
+        browser.locator("[data-testid='facet']", has_text=facet_name)
+    ).to_be_visible()
     for alert in alerts:
         prop_value = None
         for prop in alert_property_name.split("."):
@@ -278,7 +281,9 @@ def assert_facet(browser, facet_name, alerts, alert_property_name: str):
             "[data-testid='facet-value']", has_text=facet_value
         )
         expect(facet_value_locator).to_be_visible()
-        expect(facet_value_locator).to_contain_text(str(count))
+        expect(
+            facet_value_locator.locator("[data-testid='facet-value-count']")
+        ).to_contain_text(str(count))
 
 
 def assert_alerts_by_column(
@@ -346,9 +351,6 @@ def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
             alert["status"] = "enriched status"
 
     init_test(browser, current_alerts)
-    expect(
-        browser.locator("[data-testid='facet']", has_text=facet_name)
-    ).to_be_visible()
 
     assert_facet(browser, facet_name, current_alerts, alert_property_name)
 
@@ -379,10 +381,6 @@ def test_adding_custom_facet(browser, setup_test_data):
     browser.locator("input[placeholder*='Search columns']").fill(facet_property_path)
     browser.locator("button", has_text=facet_property_path).click()
     browser.locator("button", has_text="Create").click()
-
-    expect(
-        browser.locator("[data-testid='facet']", has_text=facet_name)
-    ).to_be_visible()
 
     assert_facet(browser, facet_name, current_alerts, alert_property_name)
 
@@ -503,3 +501,44 @@ def test_sort_asc_dsc(browser, sort_test_case, setup_test_data):
             # 3 is index of "name" column
             column_locator = row_locator.locator("td").nth(3)
             expect(column_locator).to_have_text(alert["name"])
+
+
+def test_alerts_stream(browser):
+    facet_name = "source"
+    alert_property_name = "providerType"
+    value = "prometheus"
+    test_id = "test_alerts_stream"
+    cel_to_filter_alerts = f"testId == '{test_id}'"
+
+    browser.goto(f"{KEEP_UI_URL}/alerts/feed?cel={cel_to_filter_alerts}")
+    expect(browser.locator("[data-testid='alerts-table']")).to_be_visible()
+    expect(browser.locator("[data-testid='facets-panel']")).to_be_visible()
+    simulated_alerts = []
+    for alert_index, provider_type in enumerate(["prometheus"] * 20):
+        alert = create_fake_alert(alert_index, provider_type)
+        alert["testId"] = test_id
+        simulated_alerts.append((provider_type, alert))
+
+    for provider_type, alert in simulated_alerts:
+        url = f"{KEEP_API_URL}/alerts/event/{provider_type}"
+        requests.post(
+            url,
+            json=alert,
+            timeout=5,
+            headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+        ).raise_for_status()
+        time.sleep(1)
+
+    expect(
+        browser.locator("[data-testid='alerts-table'] table tbody tr")
+    ).to_have_count(len(simulated_alerts))
+    current_alerts = query_allerts(cell_query=cel_to_filter_alerts)["results"]
+    assert_facet(browser, facet_name, current_alerts, alert_property_name)
+
+    assert_alerts_by_column(
+        browser,
+        current_alerts,
+        lambda alert: alert[alert_property_name] == value,
+        alert_property_name,
+        None,
+    )
