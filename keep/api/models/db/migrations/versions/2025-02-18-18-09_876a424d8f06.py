@@ -6,13 +6,9 @@ Create Date: 2025-02-18 18:09:40.656808
 
 """
 
-import sqlalchemy as sa
-import sqlalchemy_utils
-import sqlmodel
 from alembic import op
-from sqlalchemy import select, func, and_, null
+from sqlalchemy import and_, null
 from sqlalchemy.orm.attributes import flag_modified
-# from sqlalchemy.orm import Session
 from sqlmodel import Session
 
 from keep.api.core.db_utils import get_json_extract_field
