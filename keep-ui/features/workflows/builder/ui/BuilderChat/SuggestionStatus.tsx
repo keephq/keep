@@ -8,7 +8,7 @@ export type SuggestionStatus = "complete" | "error" | "declined";
 export type SuggestionResult = {
   status: SuggestionStatus;
   message: string;
-  error?: any;
+  error?: unknown;
 };
 
 export const SuggestionStatus = ({

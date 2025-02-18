@@ -19,7 +19,7 @@ export function TriggerIcon({
       return <CursorArrowRaysIcon className={className} />;
     case "interval":
       return <ClockIcon className={className} />;
-    case "alert":
+    case "alert": {
       const alertSource = trigger.filters?.find(
         (f) => f.key === "source"
       )?.value;
@@ -41,6 +41,7 @@ export function TriggerIcon({
           className={className}
         />
       );
+    }
     case "incident":
       return (
         <DynamicImageProviderIcon

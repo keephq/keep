@@ -33,7 +33,7 @@ export function WorkflowTriggerBadge({
       break;
     case "alert":
       tooltipContent = `Source: ${
-        trigger.filters?.find((f) => f.key === "source")?.value
+        trigger.filters?.find((f) => f.key === "source")?.value ?? "Unknown"
       }`;
   }
 
