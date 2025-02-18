@@ -11,6 +11,10 @@ export const ResizableColumns = ({
   initialLeftWidth = 50,
   children,
 }: ResizableColumnsProps) => {
+  if (React.Children.count(children) !== 2) {
+    throw new Error("ResizableColumns must have exactly two children");
+  }
+  const [leftChild, rightChild] = React.Children.toArray(children);
   const [isDragging, setIsDragging] = useState(false);
   const [leftWidth, setLeftWidth] = useState(initialLeftWidth);
 
@@ -44,8 +48,6 @@ export const ResizableColumns = ({
       document.removeEventListener("mouseleave", stopDragging);
     };
   }, [isDragging, stopDragging]);
-
-  const [leftChild, rightChild] = React.Children.toArray(children);
 
   return (
     <div
