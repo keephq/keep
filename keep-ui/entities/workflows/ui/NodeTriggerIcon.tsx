@@ -18,7 +18,7 @@ export function NodeTriggerIcon({ nodeData }: { nodeData: FlowNode["data"] }) {
       if (alertSource) {
         return (
           <DynamicImageProviderIcon
-            providerType={alertSource!}
+            providerType={alertSource}
             height="32"
             width="32"
           />
