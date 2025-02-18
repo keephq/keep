@@ -589,6 +589,14 @@ async def install_provider_oauth2(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+def _get_default_provider_config(provider_info: dict) -> tuple[str, str, dict]:
+    provider_id = provider_info.pop("provider_id")
+    provider_type = provider_info.pop("provider_type", None) or provider_id
+    provider_config = {
+        "authentication": provider_info,
+    }
+    return provider_id, provider_type, provider_config
+
 @router.post(
     "/{provider_id}/invoke/{method}",
     description="Invoke provider special method",
@@ -630,11 +638,7 @@ def invoke_provider_method(
         if not provider_id.startswith("default-"):
             raise HTTPException(404, detail="Provider not found") from e
         else:
-            provider_id = provider_info.pop("provider_id")
-            provider_type = provider_info.pop("provider_type", None) or provider_id
-            provider_config = {
-                "authentication": provider_info,
-            }
+            provider_id, provider_type, provider_config = _get_default_provider_config(provider_info)
 
     try:
         provider_instance = ProvidersFactory.get_provider(
@@ -664,9 +668,13 @@ def invoke_provider_method(
             "Failed to initialize provider",
             extra={"provider_id": provider_id, "provider_type": provider_type},
         )
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except (ValueError, TypeError) as e:
+        logger.exception("Invalid request", extra={"provider_id": provider_id, "provider_type": provider_type})
+        raise HTTPException(status_code=400, detail=f"Invalid request: {str(e)}") from e
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception("Unexpected error while invoking provider method", extra={"provider_id": provider_id, "provider_type": provider_type})
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 # Webhook related endpoints
