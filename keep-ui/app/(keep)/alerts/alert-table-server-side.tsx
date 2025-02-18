@@ -433,7 +433,7 @@ export function AlertTableServerSide({
   const facetsConfig: FacetsConfig = useMemo(() => {
     return {
       ["Severity"]: {
-        canHitEmptyState: true,
+        canHitEmptyState: false,
         sortCallback: (facetOption) =>
           reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
       },
