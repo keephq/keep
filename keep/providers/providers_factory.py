@@ -81,7 +81,7 @@ class ProvidersFactory:
         context_manager: ContextManager,
         provider_id: str,
         provider_type: str,
-        provider_config: dict,
+        _provider_config: dict,
         **kwargs,
     ) -> BaseProvider | BaseTopologyProvider | BaseIncidentProvider:
         """
@@ -96,8 +96,8 @@ class ProvidersFactory:
         provider_class = ProvidersFactory.get_provider_class(provider_type)
         # we keep a copy of the auth config so we can check if the provider has changed it and we need to update it
         #   an example for that is the Datadog provider that uses OAuth and needs to save the fresh new refresh token.
-        provider_config_copy = copy.deepcopy(provider_config)
-        provider_config: ProviderConfig = ProviderConfig(**provider_config)
+        provider_config_copy = copy.deepcopy(_provider_config)
+        provider_config: ProviderConfig = ProviderConfig(**_provider_config)
 
         try:
             provider = provider_class(

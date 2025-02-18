@@ -27,7 +27,7 @@ from keep.providers.base.provider_exceptions import (
     GetAlertException,
     ProviderMethodException,
 )
-from keep.providers.providers_factory import ProvidersFactory
+from keep.providers.providers_factory import ProviderConfigurationException, ProvidersFactory
 from keep.providers.providers_service import ProvidersService
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -636,28 +636,37 @@ def invoke_provider_method(
                 "authentication": provider_info,
             }
 
-    provider_instance = ProvidersFactory.get_provider(
-        context_manager, provider_id, provider_type, provider_config
-    )
-
-    func: Callable = getattr(provider_instance, method, None)
-    if not func:
-        raise HTTPException(400, detail="Method not found")
-
     try:
-        response = func(**method_params)
-    except ProviderMethodException as e:
-        logger.exception(
-            "Failed to invoke method",
-            extra={"provider_id": provider_id, "method": method},
+        provider_instance = ProvidersFactory.get_provider(
+            context_manager, provider_id, provider_type, provider_config
         )
-        raise HTTPException(status_code=e.status_code, detail=e.message)
 
-    logger.info(
-        "Successfully invoked provider method",
-        extra={"provider_id": provider_id, "method": method},
-    )
-    return response
+        func: Callable | None = getattr(provider_instance, method, None)
+        if not func:
+            raise HTTPException(400, detail="Method not found")
+
+        try:
+            response = func(**method_params)
+        except ProviderMethodException as e:
+            logger.exception(
+                "Failed to invoke method",
+                extra={"provider_id": provider_id, "provider_type": provider_type, "method": method},
+            )
+            raise HTTPException(status_code=e.status_code, detail=e.message)
+
+        logger.info(
+            "Successfully invoked provider method",
+            extra={"provider_id": provider_id, "provider_type": provider_type, "method": method},
+        )
+        return response
+    except ProviderConfigurationException as e:
+        logger.exception(
+            "Failed to initialize provider",
+            extra={"provider_id": provider_id, "provider_type": provider_type},
+        )
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # Webhook related endpoints
