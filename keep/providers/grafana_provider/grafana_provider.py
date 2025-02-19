@@ -246,7 +246,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
             url = alert.get("generatorURL", None)
             image_url = alert.get("imageURL", None)
             dashboard_url = alert.get("dashboardURL", None)
-            panel_url = alert.get("panelU", None)
+            panel_url = alert.get("panelURL", None)
 
             alert_dto = AlertDto(
                 id=alert.get("fingerprint"),
