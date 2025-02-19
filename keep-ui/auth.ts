@@ -58,6 +58,17 @@ if (authType === AuthType.AZUREAD && proxyUrl) {
       const json = await response.clone().json();
       const tenantRe = /microsoftonline\.com\/(\w+)\/v2\.0/;
       const tenantId = provider.issuer?.match(tenantRe)?.[1] ?? "common";
+      if (!tenantId) {
+        console.error(
+          "Failed to extract tenant ID from issuer:",
+          provider.issuer
+        );
+        throw new Error("Failed to extract tenant ID from issuer");
+      }
+      if (!json.issuer) {
+        console.error("Failed to extract issuer from response:", json);
+        throw new Error("Failed to extract issuer from response");
+      }
       const issuer = json.issuer.replace("{tenantid}", tenantId);
       console.log("Modified issuer:", issuer);
       return Response.json({ ...json, issuer });

@@ -184,6 +184,7 @@ export const config = {
     baseProviderConfigs[AuthType.NOAUTH],
   pages: {
     signIn: "/signin",
+    error: "/error",
   },
   session: {
     strategy: "jwt" as const,
