@@ -186,7 +186,7 @@ export const useAlertTableCols = (
             return <AlertImage imageUrl={value as string} />;
           }
 
-          if (value && value !== null) {
+          if (value) {
             return (
               <div className="truncate whitespace-pre-wrap line-clamp-3">
                 {value.toString()}
