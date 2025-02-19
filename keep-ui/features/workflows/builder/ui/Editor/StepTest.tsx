@@ -2,7 +2,7 @@ import { Button, TextInput } from "@/components/ui";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { JsonCard } from "@/shared/ui";
 import { Callout, Text } from "@tremor/react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { EditorLayout } from "./StepEditor";
 import { Editor } from "@monaco-editor/react";
 
@@ -28,6 +28,8 @@ export function useTestStep() {
   return testStep;
 }
 
+const variablesRegex = /{{.*?}}/g;
+
 export function TestRunStepForm({
   providerInfo,
   method,
@@ -45,7 +47,7 @@ export function TestRunStepForm({
   // Todo: find {{variables}} in the formData with regex, and store them in a dict [variable_name: ""]
   const variables = useMemo(() => {
     return Object.values(methodParams)
-      .map((value) => value.toString().match(/{{.*?}}/g))
+      .map((value) => value.toString().match(variablesRegex))
       .filter((variable) => variable !== null)
       .map((variable) => variable[0].replace(/{{|}}/g, ""))
       .reduce((acc, key) => {
@@ -62,7 +64,7 @@ export function TestRunStepForm({
     () =>
       Object.fromEntries(
         Object.entries(methodParams).map(([key, value]) => {
-          const variableMatch = value.toString().match(/{{.*?}}/g);
+          const variableMatch = value.toString().match(variablesRegex);
           const variableName = variableMatch?.[0].replace(/{{|}}/g, "");
           if (variableName && variablesOverride[variableName]) {
             return [

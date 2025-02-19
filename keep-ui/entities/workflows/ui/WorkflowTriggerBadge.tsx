@@ -12,8 +12,12 @@ export function WorkflowTriggerBadge({
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
   let label = trigger.type;
-  let tooltipContent = trigger.type;
+  let tooltipContent = trigger.type as string;
   switch (trigger.type) {
+    case "manual": {
+      tooltipContent = "Run now button";
+      break;
+    }
     case "interval": {
       const duration = intervalToDuration({
         start: 0,
@@ -28,9 +32,14 @@ export function WorkflowTriggerBadge({
       break;
     }
     case "alert":
-      tooltipContent = `Source: ${
-        trigger.filters?.find((f) => f.key === "source")?.value ?? "Unknown"
-      }`;
+      tooltipContent = `${trigger.filters
+        .map((f) => `${f.key}=${f.value}`)
+        .join(", ")}`;
+      break;
+    case "incident": {
+      tooltipContent = `On incident ${trigger.events.join(", ")}`;
+      break;
+    }
   }
 
   return (

@@ -40,7 +40,7 @@ export function TriggerIcon({
           src="/keep.png"
           height="32"
           width="32"
-          className={className}
+          className={clsx("object-contain object-center", className)}
         />
       );
     }
@@ -50,7 +50,7 @@ export function TriggerIcon({
           src="/keep.png"
           height="32"
           width="32"
-          className={className}
+          className={clsx("object-contain object-center", className)}
         />
       );
     default:

@@ -14,20 +14,14 @@ import {
   Badge,
   Title,
 } from "@tremor/react";
-import {
-  CheckCircleIcon,
-  ClockIcon,
-  CursorArrowRaysIcon,
-} from "@heroicons/react/24/outline";
+import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import AlertTriggerModal from "./workflow-run-with-alert-modal";
 import { formatDistanceToNowStrict } from "date-fns";
 import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
 import WorkflowGraph from "./workflow-graph";
 import Modal from "@/components/ui/Modal";
-import { HiBellAlert } from "react-icons/hi2";
 import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import { DynamicImageProviderIcon } from "@/components/ui";
 import { useToggleWorkflow } from "utils/hooks/useWorkflowToggle";
 import "./workflow-tile.css";
 import { WorkflowTriggerBadge } from "@/entities/workflows/ui/WorkflowTriggerBadge";
@@ -61,10 +55,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const router = useRouter();
 
   const [openTriggerModal, setOpenTriggerModal] = useState<boolean>(false);
-  const alertSource = workflow?.triggers
-    ?.find((w) => w.type === "alert")
-    ?.filters?.find((f) => f.key === "source")?.value;
-  const [fallBackIcon, setFallBackIcon] = useState(false);
   const { toggleWorkflow } = useToggleWorkflow(workflow.id);
 
   const { deleteWorkflow } = useWorkflowActions();
@@ -125,8 +115,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     router.push(`/workflows/builder/${workflow.id}`);
   };
 
-  const triggerTypes = workflow.triggers.map((trigger) => trigger.type);
-
   const lastExecutions = workflow?.last_executions?.slice(0, 15) || [];
   const lastProviderConfigRequiredExec = lastExecutions.filter(
     (execution) => execution?.status === "providers_not_configured"
@@ -154,10 +142,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       .replace("second", "sec")
       .replace("hour", "hr");
   };
-
-  const isManualTriggerPresent = workflow?.triggers?.find(
-    (t) => t.type === "manual"
-  );
 
   return (
     <div>
