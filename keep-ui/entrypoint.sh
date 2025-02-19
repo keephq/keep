@@ -10,7 +10,7 @@ else
 fi
 
 # Check Azure AD environment variables if AUTH_TYPE is "azuread"
-if [ "${AUTH_TYPE}" = "azuread" ]; then
+if [ "${AUTH_TYPE}" = "azuread" ] || [ "${AUTH_TYPE}" = "AZUREAD" ]; then
     echo "Checking Azure AD configuration..."
 
     for var in KEEP_AZUREAD_CLIENT_ID KEEP_AZUREAD_CLIENT_SECRET KEEP_AZUREAD_TENANT_ID; do
