@@ -351,7 +351,7 @@ export interface FlowState extends FlowStateValues {
     nodeOrEdgeId: string,
     step: V2StepTemplate | V2StepTrigger,
     type: "node" | "edge"
-  ) => void;
+  ) => string | null;
   setToolBoxConfig: (config: ToolboxConfiguration) => void;
   setEditorOpen: (open: boolean) => void;
   updateSelectedNodeData: (key: string, value: any) => void;

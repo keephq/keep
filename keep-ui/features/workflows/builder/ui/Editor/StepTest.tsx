@@ -28,7 +28,7 @@ export function useTestStep() {
   return testStep;
 }
 
-const variablesRegex = /{{.*?}}/g;
+const variablesRegex = /{{[\s]*.*?[\s]*}}/g;
 
 export function TestRunStepForm({
   providerInfo,
@@ -46,14 +46,23 @@ export function TestRunStepForm({
 
   // Todo: find {{variables}} in the formData with regex, and store them in a dict [variable_name: ""]
   const variables = useMemo(() => {
-    return Object.values(methodParams)
-      .map((value) => value.toString().match(variablesRegex))
-      .filter((variable) => variable !== null)
-      .map((variable) => variable[0].replace(/{{|}}/g, ""))
-      .reduce((acc, key) => {
-        acc[key] = "";
-        return acc;
-      }, {});
+    const variables: Record<string, string> = {};
+
+    for (const value of Object.values(methodParams)) {
+      const variableMatch = JSON.stringify(value).matchAll(variablesRegex);
+      for (const match of variableMatch) {
+        if (!match) {
+          continue;
+        }
+        for (const variable of match) {
+          const variableName = variable.replace(/{{|}}/g, "").trim();
+          if (variableName) {
+            variables[variableName] = "";
+          }
+        }
+      }
+    }
+    return variables;
   }, [methodParams]);
 
   const [variablesOverride, setVariablesOverride] = useState<
@@ -64,18 +73,32 @@ export function TestRunStepForm({
     () =>
       Object.fromEntries(
         Object.entries(methodParams).map(([key, value]) => {
-          const variableMatch = value.toString().match(variablesRegex);
-          const variableName = variableMatch?.[0].replace(/{{|}}/g, "");
-          if (variableName && variablesOverride[variableName]) {
+          // Convert to string only if needed
+          const stringValue =
+            typeof value === "object" ? JSON.stringify(value) : String(value);
+          let result = stringValue;
+
+          // Find all variables in the value
+          const matches = Array.from(stringValue.matchAll(variablesRegex));
+          for (const match of matches) {
+            const variableName = match[0].replace(/{{|}}/g, "").trim();
+            if (variableName && variablesOverride[variableName]) {
+              result = result.replaceAll(
+                new RegExp(`{{\\s*${variableName}\\s*}}`, "g"),
+                variablesOverride[variableName]
+              );
+            }
+          }
+
+          // Convert back to original type if it was JSON
+          try {
             return [
               key,
-              value.replace(
-                `{{${variableName}}}`,
-                variablesOverride[variableName]
-              ),
+              typeof value === "object" ? JSON.parse(result) : result,
             ];
+          } catch {
+            return [key, result];
           }
-          return [key, value];
         })
       ),
     [methodParams, variablesOverride]
