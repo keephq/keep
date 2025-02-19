@@ -264,6 +264,7 @@ export const useWorkflowStore = create<FlowState>()(
       try {
         const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
         set({ selectedNode: newNodeId, selectedEdge: null });
+        return newNodeId ?? null;
       } catch (error) {
         if (error instanceof ZodError) {
           // TODO: extract meaningful error from ZodError
@@ -274,6 +275,7 @@ export const useWorkflowStore = create<FlowState>()(
           showErrorToast(error);
           console.error(error);
         }
+        return null;
       }
     },
     setToolBoxConfig: (config: ToolboxConfiguration) =>
