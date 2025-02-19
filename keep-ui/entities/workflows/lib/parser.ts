@@ -2,7 +2,6 @@ import {
   Definition,
   DefinitionV2,
   V2ActionStep,
-  V2Properties,
   V2Step,
   V2StepConditionAssert,
   V2StepConditionThreshold,
@@ -13,9 +12,10 @@ import { Provider } from "@/app/(keep)/providers/providers";
 import { v4 as uuidv4 } from "uuid";
 import { JSON_SCHEMA, load } from "js-yaml";
 import {
-  Action,
-  LegacyWorkflow,
-} from "@/entities/workflows/model/legacy-workflow.types";
+  YamlAction,
+  YamlStep,
+  YamlWorkflowDefinition,
+} from "@/entities/workflows/model/yaml.types";
 
 export function getActionOrStepObj(
   actionOrStep: any,
@@ -244,7 +244,7 @@ function getWithParams(s: V2ActionStep | V2StepStep): any {
 function getActionsFromCondition(
   condition: V2StepConditionThreshold | V2StepConditionAssert,
   foreach?: string
-): Action[] {
+): YamlAction[] {
   const compiledCondition = {
     name: condition.name,
     type: condition.type.replace("condition-", ""),
@@ -266,16 +266,61 @@ function getActionsFromCondition(
       name: a.name,
       provider: provider,
       condition: [compiledCondition],
-    } as unknown as Action;
+    } as unknown as YamlAction;
     if (foreach) compiledAction["foreach"] = foreach;
     return compiledAction;
   });
   return compiledActions;
 }
 
+export function getYamlStepFromStep(s: V2StepStep): YamlStep {
+  const withParams = getWithParams(s);
+  const providerType = s.type.replace("step-", "");
+  const providerName =
+    (s.properties.config as string)?.trim() || `default-${providerType}`;
+  const provider = {
+    type: s.type.replace("step-", ""),
+    config: `{{ providers.${providerName} }}`,
+    with: withParams,
+  };
+  const step: YamlStep = {
+    name: s.name,
+    provider: provider,
+  };
+  if (s.properties.vars) {
+    step.vars = s.properties.vars;
+  }
+  return step;
+}
+
+export function getYamlActionFromAction(s: V2ActionStep): YamlAction {
+  const withParams = getWithParams(s);
+  const providerType = s.type.replace("action-", "");
+  const ifParam = s.properties.if;
+  const providerName =
+    (s.properties.config as string)?.trim() || `default-${providerType}`;
+  const provider = {
+    type: s.type.replace("action-", ""),
+    config: `{{ providers.${providerName} }}`,
+    with: withParams,
+  };
+  const action: YamlAction = {
+    name: s.name,
+    provider: provider,
+  };
+  // add 'if' only if it's not empty
+  if (ifParam) {
+    action.if = ifParam as string;
+  }
+  if (s.properties.vars) {
+    action.vars = s.properties.vars;
+  }
+  return action;
+}
+
 export function getWorkflowFromDefinition(
   definition: Definition
-): LegacyWorkflow {
+): YamlWorkflowDefinition {
   const alert = definition;
   const alertId = alert.properties.id as string;
   const name = (alert.properties.name as string) ?? "";
@@ -287,52 +332,11 @@ export function getWorkflowFromDefinition(
   // Steps (move to func?)
   const steps = alert.sequence
     .filter((s): s is V2StepStep => s.type.startsWith("step-"))
-    .map((s: V2StepStep) => {
-      const withParams = getWithParams(s);
-      const providerType = s.type.replace("step-", "");
-      const providerName =
-        (s.properties.config as string)?.trim() || `default-${providerType}`;
-      const provider = {
-        type: s.type.replace("step-", ""),
-        config: `{{ providers.${providerName} }}`,
-        with: withParams,
-      };
-      const step: any = {
-        name: s.name,
-        provider: provider,
-      };
-      if (s.properties.vars) {
-        step.vars = s.properties.vars;
-      }
-      return step;
-    });
+    .map((s: V2StepStep) => getYamlStepFromStep(s));
   // Actions
   let actions = alert.sequence
     .filter((s): s is V2ActionStep => s.type.startsWith("action-"))
-    .map((s: V2ActionStep) => {
-      const withParams = getWithParams(s);
-      const providerType = s.type.replace("action-", "");
-      const ifParam = s.properties.if;
-      const providerName =
-        (s.properties.config as string)?.trim() || `default-${providerType}`;
-      const provider: any = {
-        type: s.type.replace("action-", ""),
-        config: `{{ providers.${providerName} }}`,
-        with: withParams,
-      };
-      const action: any = {
-        name: s.name,
-        provider: provider,
-      };
-      // add 'if' only if it's not empty
-      if (ifParam) {
-        action.if = ifParam as string;
-      }
-      if (s.properties.vars) {
-        action.vars = s.properties.vars;
-      }
-      return action;
-    });
+    .map((s: V2ActionStep) => getYamlActionFromAction(s));
   // Actions > Foreach
   alert.sequence
     .filter((step): step is V2StepForeach => step.type === "foreach")
@@ -342,12 +346,15 @@ export function getWorkflowFromDefinition(
       const condition = forEach?.sequence?.find((c) =>
         c.type.startsWith("condition-")
       ) as unknown as V2StepConditionAssert | V2StepConditionThreshold;
-      let foreachActions = [] as Action[];
+      let foreachActions = [] as YamlAction[];
       if (condition) {
         foreachActions = getActionsFromCondition(condition, forEachValue);
       } else {
-        const forEachSequence = forEach?.sequence || ([] as V2Step[]);
-        const stepOrAction = forEachSequence[0] || ({} as V2Step[]);
+        const forEachSequence = forEach?.sequence || [];
+        const stepOrAction = forEachSequence[0];
+        if (!stepOrAction) {
+          return;
+        }
         const withParams = getWithParams(stepOrAction);
         const providerType = stepOrAction.type
           .replace("action-", "")
@@ -426,7 +433,7 @@ export function getWorkflowFromDefinition(
     consts: consts,
     steps: steps,
     actions: actions,
-  } as LegacyWorkflow;
+  };
 }
 
 export function wrapDefinitionV2({
