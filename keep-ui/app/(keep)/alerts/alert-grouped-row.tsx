@@ -37,10 +37,6 @@ export const GroupedRow = ({
       ? row.getValue(groupingColumnId)
       : "Unknown Group";
 
-    const groupColumnIndex = row
-      .getVisibleCells()
-      .findIndex((cell) => cell.column.id === groupingColumnId);
-
     return (
       <>
         {/* Group Header Row */}
@@ -140,7 +136,7 @@ export const GroupedRow = ({
               className,
               rowBgColor,
               "group-hover:bg-orange-100",
-              isLastViewed && "bg-gray-50"
+              isLastViewed && "bg-orange-50"
             )}
             style={style}
           >
