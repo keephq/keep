@@ -15,8 +15,8 @@ from keep.providers.base.base_provider import BaseProvider
 class S3ProviderAuthConfig:
     access_key: str = dataclasses.field(
         metadata={
-            "required": True,
-            "description": "S3 Access Token",
+            "required": False,
+            "description": "S3 Access Token (Leave empty if using IAM role at EC2)",
             "sensitive": True,
         },
         default=None,
@@ -24,8 +24,8 @@ class S3ProviderAuthConfig:
 
     secret_access_key: str = dataclasses.field(
         metadata={
-            "required": True,
-            "description": "S3 Secret Access Token",
+            "required": False,
+            "description": "S3 Secret Access Token (Leave empty if using IAM role at EC2)",
             "sensitive": True,
         },
         default=None,
@@ -40,9 +40,7 @@ class S3Provider(BaseProvider):
         pass
 
     def validate_config(self):
-        self.authentication_config = S3ProviderAuthConfig(
-            **self.config.authentication
-        )
+        self.authentication_config = S3ProviderAuthConfig(**self.config.authentication)
         if (
             self.authentication_config.access_key is None
             or self.authentication_config.secret_access_key is None
@@ -87,7 +85,7 @@ class S3Provider(BaseProvider):
             if any(key.endswith(ext) for ext in valid_extensions):
                 try:
                     response = s3_client.get_object(Bucket=bucket, Key=key)
-                    files.append(response.get("Body").read().decode('utf-8'))
+                    files.append(response.get("Body").read().decode("utf-8"))
                     print(files)
                 except Exception as e:
                     self.logger.exception(

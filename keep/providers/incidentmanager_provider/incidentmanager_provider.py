@@ -21,12 +21,16 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 @pydantic.dataclasses.dataclass
 class IncidentmanagerProviderAuthConfig:
     access_key: str = dataclasses.field(
-        metadata={"required": True, "description": "AWS access key", "sensitive": True}
+        metadata={
+            "required": False,
+            "description": "AWS access key (Leave empty if using IAM role at EC2)",
+            "sensitive": True,
+        }
     )
     access_key_secret: str = dataclasses.field(
         metadata={
-            "required": True,
-            "description": "AWS access key secret",
+            "required": False,
+            "description": "AWS access key secret (Leave empty if using IAM role at EC2)",
             "sensitive": True,
         }
     )

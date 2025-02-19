@@ -27,15 +27,15 @@ class AmazonsqsProviderAuthConfig:
 
     access_key_id: str = dataclasses.field(
         metadata={
-            "required": True,
-            "description": "Access Key Id",
+            "required": False,
+            "description": "Access Key Id (Leave empty if using IAM role at EC2)",
             "hint": "Access Key ID",
         },
     )
     secret_access_key: str = dataclasses.field(
         metadata={
-            "required": True,
-            "description": "Secret access key",
+            "required": False,
+            "description": "Secret access key (Leave empty if using IAM role at EC2)",
             "hint": "Secret access key",
             "sensitive": True,
         },
