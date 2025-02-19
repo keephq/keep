@@ -3592,7 +3592,6 @@ def update_incident_from_dto_by_id(
                     if value is not None:
                         setattr(incident, key, value)
 
-        # Force update same_incident_in_the_past_id
         if "same_incident_in_the_past_id" in updated_data:
             incident.same_incident_in_the_past_id = updated_data["same_incident_in_the_past_id"]
 
