@@ -573,7 +573,7 @@ export function BuilderChatSafe({
   }
 
   return (
-    <CopilotKit showDevConsole={true} runtimeUrl="/api/copilotkit">
+    <CopilotKit runtimeUrl="/api/copilotkit">
       <BuilderChat definition={definition} {...props} />
     </CopilotKit>
   );
