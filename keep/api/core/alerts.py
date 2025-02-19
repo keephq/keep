@@ -100,6 +100,13 @@ static_facets = [
         is_static=True,
         type=FacetType.str,
     ),
+    FacetDto(
+        id="77b8a6d4-3b8d-4b6a-9f8e-2c8e4b8f8e4c",
+        property_path="dismissed",
+        name="Dismissed",
+        is_static=True,
+        type=FacetType.str,
+    ),
 ]
 static_facets_dict = {facet.id: facet for facet in static_facets}
 

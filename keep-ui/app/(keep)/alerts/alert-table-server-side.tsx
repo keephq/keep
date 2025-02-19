@@ -402,7 +402,7 @@ export function AlertTableServerSide({
           <UserStatefulAvatar email={facetOption.display_name} size="xs" />
         ),
         renderOptionLabel: (facetOption) => {
-          if (!facetOption.display_name) {
+          if (facetOption.display_name === "null") {
             return "Not assigned";
           }
           return <AssigneeLabel email={facetOption.display_name} />;
@@ -410,11 +410,15 @@ export function AlertTableServerSide({
       },
       ["Dismissed"]: {
         renderOptionLabel: (facetOption) =>
-          facetOption.display_name === "true" ? "Dismissed" : "Not dismissed",
+          facetOption.display_name.toLocaleLowerCase() === "true"
+            ? "Dismissed"
+            : "Not dismissed",
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={
-              facetOption.display_name === "true" ? BellSlashIcon : BellIcon
+              facetOption.display_name.toLocaleLowerCase() === "true"
+                ? BellSlashIcon
+                : BellIcon
             }
             size="sm"
             className="text-gray-600 !p-0"
