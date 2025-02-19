@@ -162,7 +162,7 @@ function WorkflowNode({ id, data }: FlowNode) {
                 <DynamicImageProviderIcon
                   src={IconUrlProvider(data) || "/keep.png"}
                   alt={data?.type}
-                  className="object-cover w-8 h-8 rounded-full bg-gray-100"
+                  className="object-cover w-8 h-8"
                   width={32}
                   height={32}
                 />

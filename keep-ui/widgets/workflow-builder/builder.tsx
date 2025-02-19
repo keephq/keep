@@ -232,18 +232,25 @@ function Builder({
   };
 
   return (
-    <ResizableColumns
-      key={leftColumnMode}
-      initialLeftWidth={leftColumnMode !== null ? 33 : 0}
-    >
+    <ResizableColumns initialLeftWidth={leftColumnMode !== null ? 33 : 0}>
       <>
-        {leftColumnMode === "yaml" && <YamlEditor />}
-        {leftColumnMode === "chat" && (
+        <div
+          className={clsx(
+            leftColumnMode === "yaml" ? "visible h-full" : "hidden"
+          )}
+        >
+          <YamlEditor />
+        </div>
+        <div
+          className={clsx(
+            leftColumnMode === "chat" ? "visible h-full" : "hidden"
+          )}
+        >
           <BuilderChatSafe
             definition={definition}
             installedProviders={installedProviders ?? []}
           />
-        )}
+        </div>
       </>
       <>
         <div className="relative h-full">

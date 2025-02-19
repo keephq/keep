@@ -41,6 +41,18 @@ interface BuilderChatProps {
   installedProviders: Provider[];
 }
 
+function getWorkflowSummaryForCopilot(nodes: FlowNode[], edges: Edge[]) {
+  return {
+    nodes: nodes.map((n) => ({
+      id: n.id,
+      nextStepId: n.nextStepId,
+      prevStepId: n.prevStepId,
+      ...n.data,
+    })),
+    edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
+  };
+}
+
 export function BuilderChat({
   definition,
   installedProviders,
@@ -73,39 +85,17 @@ export function BuilderChat({
     return result;
   }, [toolboxConfiguration]);
 
+  const workflowSummary = useMemo(() => {
+    return getWorkflowSummaryForCopilot(nodes, edges);
+  }, [nodes, edges]);
+
   // TODO: reduce the size of the nodes object, e.g. only id and data, or something like this
   useCopilotReadable(
     {
-      description: "Current nodes representing the workflow",
-      value: nodes,
-      convert: (description, nodes: FlowNode[]) => {
-        return JSON.stringify(
-          nodes.map((n) => ({
-            id: n.id,
-            componentType: n.data.componentType,
-            name: n.data.name,
-          })),
-          null,
-          2
-        );
-      },
+      description: "Current workflow",
+      value: workflowSummary,
     },
-    [nodes]
-  );
-
-  useCopilotReadable(
-    {
-      description: "Current edges representing the workflow",
-      value: edges,
-      convert: (description, edges: Edge[]) => {
-        return JSON.stringify(
-          edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
-          null,
-          2
-        );
-      },
-    },
-    [edges]
+    [workflowSummary]
   );
 
   useCopilotReadable(

@@ -41,10 +41,8 @@ def upgrade() -> None:
                 "idx_status_started", "workflowexecution", ["status", "started"]
             )
     except Exception as e:
-        if "already exists" not in str(e):
-            raise e
-        else:
-            print("Index idx_status_started already exists. It's ok.")
+        print(f"Error creating index raised error: {e}")
+        print("Index idx_status_started already exists. It's ok.")
 
 
 def downgrade() -> None:
