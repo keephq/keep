@@ -789,6 +789,14 @@ def change_incident_status(
                     authenticated_entity=authenticated_entity,
                 )
         incident.end_time = end_time
+        add_audit(
+            tenant_id,
+            str(incident_id),
+            authenticated_entity.email,
+            ActionType.INCIDENT_STATUS_CHANGE.value,
+            f"Incident status changed from {incident.status} to {change.status} by {authenticated_entity.email}",
+        )
+        incident.assignee = authenticated_entity.email
         incident.status = change.status
 
     new_incident_dto = IncidentDto.from_db_incident(incident)
