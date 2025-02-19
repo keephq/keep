@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from arq import ArqRedis
@@ -763,10 +763,10 @@ def change_incident_status(
         },
     )
 
-    with_alerts = (
-        change.status == IncidentStatus.RESOLVED
-        or change.status == IncidentStatus.ACKNOWLEDGED
-    )
+    with_alerts = change.status in [
+        IncidentStatus.RESOLVED,
+        IncidentStatus.ACKNOWLEDGED,
+    ]
     incident = get_incident_by_id(tenant_id, incident_id, with_alerts=with_alerts)
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
@@ -774,7 +774,9 @@ def change_incident_status(
     # We need to do something only if status really changed
     if not change.status == incident.status:
         end_time = (
-            datetime.utcnow() if change.status == IncidentStatus.RESOLVED else None
+            datetime.now(tz=timezone.utc)
+            if change.status == IncidentStatus.RESOLVED
+            else None
         )
         change_incident_status_by_id(tenant_id, incident_id, change.status, end_time)
         if change.status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:

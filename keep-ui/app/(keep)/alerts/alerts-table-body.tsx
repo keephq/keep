@@ -1,4 +1,4 @@
-import { TableBody, TableRow, TableCell } from "@tremor/react";
+import { TableBody, TableRow, TableCell, Icon } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -6,8 +6,14 @@ import { Table } from "@tanstack/react-table";
 import React, { useState } from "react";
 import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
-import { MagnifyingGlassIcon, FunnelIcon } from "@heroicons/react/24/outline";
+import {
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  EyeIcon,
+} from "@heroicons/react/24/outline";
 import { GroupedRow } from "./alert-grouped-row";
+import { format } from "date-fns";
+import { ViewedAlert } from "./alert-table";
 
 interface Props {
   table: Table<AlertDto>;
@@ -18,6 +24,8 @@ interface Props {
   theme: { [key: string]: string };
   onRowClick: (alert: AlertDto) => void;
   presetName: string;
+  viewedAlerts: ViewedAlert[];
+  lastViewedAlert: string | null;
 }
 
 export function AlertsTableBody({
@@ -29,6 +37,8 @@ export function AlertsTableBody({
   presetName,
   showFilterEmptyState,
   showSearchEmptyState,
+  viewedAlerts,
+  lastViewedAlert,
 }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -148,6 +158,8 @@ export function AlertsTableBody({
           table={table}
           theme={theme}
           onRowClick={handleRowClick}
+          viewedAlerts={viewedAlerts}
+          lastViewedAlert={lastViewedAlert}
         />
       ))}
     </TableBody>
