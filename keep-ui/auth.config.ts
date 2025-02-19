@@ -177,7 +177,7 @@ const baseProviderConfigs = {
 };
 
 export const config = {
-  debug: process.env.NODE_ENV === "development",
+  debug: true,
   trustHost: true,
   providers:
     baseProviderConfigs[authType as keyof typeof baseProviderConfigs] ||
