@@ -144,6 +144,11 @@ def get_facet_options(
                 grouped_by_id_dict[facet_data.facet_id].append(facet_data)
 
             for facet in facets:
+                property_mapping = properties_metadata.get_property_metadata(
+                    facet.property_path
+                )
+                result_dict.setdefault(facet.id, [])
+
                 if facet.id in grouped_by_id_dict:
                     result_dict[facet.id] = [
                         FacetOptionDto(
@@ -155,9 +160,39 @@ def get_facet_options(
                             facet.id
                         ]
                     ]
-                    continue
 
-                result_dict[facet.id] = []
+                if property_mapping.enum_values:
+                    if facet.id in result_dict:
+                        values_with_zero_matches = [
+                            enum_value
+                            for enum_value in property_mapping.enum_values
+                            if enum_value
+                            not in [
+                                facet_option.value
+                                for facet_option in result_dict[facet.id]
+                            ]
+                        ]
+                    else:
+                        result_dict.setdefault(facet.id, [])
+                        values_with_zero_matches = property_mapping.enum_values
+
+                    for enum_value in values_with_zero_matches:
+                        result_dict[facet.id].append(
+                            FacetOptionDto(
+                                display_name=enum_value,
+                                value=enum_value,
+                                matches_count=0,
+                            )
+                        )
+                    result_dict[facet.id] = sorted(
+                        result_dict[facet.id],
+                        key=lambda facet_option: (
+                            property_mapping.enum_values.index(facet_option.value)
+                            if facet_option.value in property_mapping.enum_values
+                            else -100  # put unknown values at the end
+                        ),
+                        reverse=True,
+                    )
 
     for invalid_facet in invalid_facets:
         result_dict[invalid_facet.id] = []
