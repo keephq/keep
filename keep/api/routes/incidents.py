@@ -793,7 +793,7 @@ def change_incident_status(
             tenant_id,
             str(incident_id),
             authenticated_entity.email,
-            ActionType.INCIDENT_STATUS_CHANGE.value,
+            ActionType.INCIDENT_STATUS_CHANGE,
             f"Incident status changed from {incident.status} to {change.status} by {authenticated_entity.email}",
         )
         incident.assignee = authenticated_entity.email
