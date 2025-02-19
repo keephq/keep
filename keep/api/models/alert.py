@@ -340,8 +340,8 @@ class AlertDto(BaseModel):
         # if dismissed, change status to SUPPRESSED
         # note this is happen AFTER validate_dismissed which already consider
         #   dismissed + dismissUntil
-        if values.get("dismissed"):
-            values["status"] = AlertStatus.SUPPRESSED
+        # if values.get("dismissed"):
+        #     values["status"] = AlertStatus.SUPPRESSED
         return values
 
     class Config:

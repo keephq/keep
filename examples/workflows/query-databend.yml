@@ -1,0 +1,18 @@
+workflow:
+  id: d4d5221a-41b6-44c1-9c25-33d00ff6deb1
+  name: query-databend
+  description: Query rows from databend
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps:
+    - name: databend-step
+      provider:
+        type: databend
+        config: "{{ providers.databend }}"
+        with:
+          query: SELECT avg(number) FROM numbers(100000000)
+  actions: []
