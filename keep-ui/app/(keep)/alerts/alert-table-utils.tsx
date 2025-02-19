@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-table";
 import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
-import { AlertName } from "@/entities/alerts/ui";
+import { AlertName, AlertImage } from "@/entities/alerts/ui";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
@@ -26,6 +26,8 @@ import {
   UISeverity,
 } from "@/shared/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import Image from "next/image";
+import { KeepLogoError } from "@/shared/ui/KeepLogoError";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -128,6 +130,8 @@ export const useAlertTableCols = (
       cell: (context) => {
         const keys = colName.split(".");
         let alertValue: any = context.row.original;
+
+        // Traverse the object using the dot notation
         for (const key of keys) {
           if (
             alertValue &&
@@ -141,6 +145,12 @@ export const useAlertTableCols = (
           }
         }
 
+        // Special handling for imageUrl
+        if (colName === "imageUrl" && alertValue) {
+          return <AlertImage imageUrl={alertValue} />;
+        }
+
+        // Handle object values
         if (typeof alertValue === "object" && alertValue !== null) {
           return (
             <Accordion>
@@ -154,6 +164,7 @@ export const useAlertTableCols = (
           );
         }
 
+        // Handle primitive values
         if (alertValue && alertValue !== null) {
           return (
             <div className="truncate whitespace-pre-wrap line-clamp-3">

@@ -44,7 +44,7 @@ from keep.api.models.alert import (
     DeleteRequestBody,
     EnrichAlertRequestBody,
     IncidentStatus,
-    UnEnrichAlertRequestBody,
+    UnEnrichAlertRequestBody, AlertStatus,
 )
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import ActionType
@@ -721,6 +721,18 @@ def enrich_alert(
     ),
     session: Session = Depends(get_session),
 ) -> dict[str, str]:
+    if "dismissed" in enrich_data.enrichments and enrich_data.enrichments["dismissed"].lower() == "true":
+        enrich_data.enrichments["status"] = AlertStatus.SUPPRESSED.value
+
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Enriching alert",
+        extra={
+            "fingerprint": enrich_data.fingerprint,
+            "tenant_id": tenant_id,
+        }
+    )
+
     return _enrich_alert(
         enrich_data,
         authenticated_entity=authenticated_entity,

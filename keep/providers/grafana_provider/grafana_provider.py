@@ -15,7 +15,11 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
-from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider, ProviderHealthMixin
+from keep.providers.base.base_provider import (
+    BaseProvider,
+    BaseTopologyProvider,
+    ProviderHealthMixin,
+)
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.grafana_provider.grafana_alert_format_description import (
     GrafanaAlertFormatDescription,
@@ -239,6 +243,11 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
             if values:
                 extra["values"] = values
 
+            url = alert.get("generatorURL", None)
+            image_url = alert.get("imageURL", None)
+            dashboard_url = alert.get("dashboardURL", None)
+            panel_url = alert.get("panelURL", None)
+
             alert_dto = AlertDto(
                 id=alert.get("fingerprint"),
                 fingerprint=fingerprint,
@@ -252,6 +261,10 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 description=alert.get("annotations", {}).get("summary", ""),
                 source=["grafana"],
                 labels=labels,
+                url=url,
+                imageUrl=image_url,
+                dashboardUrl=dashboard_url,
+                panelUrl=panel_url,
                 **extra,  # add annotations and values
             )
             # enrich extra payload with labels
