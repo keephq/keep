@@ -154,6 +154,13 @@ const DraggableHeaderCell = ({
 
   const isRightmostColumn = () => {
     const visibleColumns = table.getVisibleLeafColumns();
+
+    // name is a special column since it has menu but can't be moved
+    if (column.id === "name") {
+      // return true so the "move right" option is disabled
+      return true;
+    }
+
     // the alertMenu is always the rightmost column
     // so we need to check the second rightmost column
     return column.id === visibleColumns[visibleColumns.length - 2].id;
@@ -161,6 +168,13 @@ const DraggableHeaderCell = ({
 
   const isLeftmostUnpinnedColumn = () => {
     const visibleColumns = table.getVisibleLeafColumns();
+
+    // name is a special column since it has menu but can't be moved
+    if (column.id === "name") {
+      // return true so the "move left" option is disabled
+      return true;
+    }
+
     const firstUnpinnedIndex = visibleColumns.findIndex(
       (col) => !col.getIsPinned()
     );
