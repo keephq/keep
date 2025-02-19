@@ -248,6 +248,13 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
             dashboard_url = alert.get("dashboardURL", None)
             panel_url = alert.get("panelURL", None)
 
+            # backward compatibility
+            description = alert.get("annotations", {}).get("summary", "")
+            if not description:
+                description = alert.get("annotations", {}).get("description")
+
+            valueString = alert.get("valueString")
+
             alert_dto = AlertDto(
                 id=alert.get("fingerprint"),
                 fingerprint=fingerprint,
@@ -258,13 +265,14 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 lastReceived=datetime.datetime.now(
                     tz=datetime.timezone.utc
                 ).isoformat(),
-                description=alert.get("annotations", {}).get("summary", ""),
+                description=description,
                 source=["grafana"],
                 labels=labels,
                 url=url,
                 imageUrl=image_url,
                 dashboardUrl=dashboard_url,
                 panelUrl=panel_url,
+                valueString=valueString,
                 **extra,  # add annotations and values
             )
             # enrich extra payload with labels
