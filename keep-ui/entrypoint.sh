@@ -33,4 +33,5 @@ if [ "${AUTH_TYPE}" = "azuread" ] || [ "${AUTH_TYPE}" = "AZUREAD" ]; then
     fi
 fi
 
+exit
 exec node server.js
