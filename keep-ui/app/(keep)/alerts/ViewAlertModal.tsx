@@ -41,10 +41,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     }
   };
 
-  const handleEditorDidMount = (
-    editor: any,
-    monacoInstance: Monaco
-  ) => {
+  const handleEditorDidMount = (editor: any, monacoInstance: Monaco) => {
     editorRef.current = editor;
 
     // Add click handler

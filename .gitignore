@@ -219,3 +219,4 @@ tests/provision/*
 grafana/*
 !grafana/provisioning/
 !grafana/dashboards/
+keep/providers/grafana_provider/grafana/png/*

@@ -20,6 +20,7 @@ export interface Preset {
   alerts_count: number;
   created_by?: string;
   tags: Tag[];
+  group_column?: string;
 }
 
 type TagPayload = {
