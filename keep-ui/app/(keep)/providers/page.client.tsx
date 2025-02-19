@@ -113,7 +113,6 @@ export default function ProvidersPage({
     providers,
     installedProviders,
     linkedProviders,
-    setInstalledProviders,
     isLocalhost,
     mutate,
   } = useFetchProviders();

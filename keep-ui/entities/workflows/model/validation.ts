@@ -2,6 +2,8 @@ import { Definition, V2Step } from "./types";
 
 export type ValidationResult = [string, string];
 
+export const PROVIDERS_WITH_NO_CONFIG = ["console", "bash"];
+
 export function validateGlobalPure(definition: Definition): ValidationResult[] {
   const errors: ValidationResult[] = [];
   const workflowName = definition?.properties?.name;
@@ -45,7 +47,7 @@ export function validateGlobalPure(definition: Definition): ValidationResult[] {
     definition.properties["alert"] &&
     alertSources.length == 0
   ) {
-    errors.push(["alert", "Workflow alert trigger cannot be empty."]);
+    errors.push(["alert", "Alert trigger should have at least one filter."]);
   }
 
   const incidentActions = Object.values(
@@ -61,18 +63,21 @@ export function validateGlobalPure(definition: Definition): ValidationResult[] {
 
   const anyStepOrAction = definition?.sequence?.length > 0;
   if (!anyStepOrAction) {
-    errors.push(["trigger_end", "At least 1 step/action is required."]);
+    errors.push(["trigger_end", "At least one step or action is required."]);
   }
-  const anyActionsInMainSequence = (
-    definition.sequence[0] as V2Step
-  )?.sequence?.some((step) => step?.type?.includes("action-"));
+  const firstStep = definition?.sequence?.[0];
+  const firstStepSequence =
+    firstStep?.componentType === "container" ? firstStep.sequence : [];
+  const anyActionsInMainSequence = firstStepSequence?.some((step) =>
+    step?.type?.includes("action-")
+  );
   if (anyActionsInMainSequence) {
     // This checks to see if there's any steps after the first action
-    const actionIndex = (
-      definition?.sequence?.[0] as V2Step
-    )?.sequence?.findIndex((step) => step.type.includes("action-"));
+    const actionIndex = firstStepSequence?.findIndex((step) =>
+      step.type.includes("action-")
+    );
     if (actionIndex && definition?.sequence) {
-      const sequence = definition?.sequence?.[0]?.sequence || [];
+      const sequence = firstStepSequence;
       for (let i = actionIndex + 1; i < sequence.length; i++) {
         if (sequence[i]?.type?.includes("step-")) {
           errors.push([
@@ -91,10 +96,13 @@ export function validateStepPure(step: V2Step): string | null {
     if (!step.name) {
       return "Step/action name cannot be empty.";
     }
-    const branches = (step?.branches || {
-      true: [],
-      false: [],
-    }) as V2Step["branches"];
+    const branches =
+      step?.componentType === "switch"
+        ? step.branches
+        : {
+            true: [],
+            false: [],
+          };
     const onlyActions = branches?.true?.every((step: V2Step) =>
       step.type.includes("action-")
     );
@@ -114,8 +122,9 @@ export function validateStepPure(step: V2Step): string | null {
     if (!step?.name) {
       return "Step name cannot be empty.";
     }
+    const providerType = step?.type.split("-")[1];
     const providerConfig = (step?.properties.config as string)?.trim();
-    if (!providerConfig) {
+    if (!providerConfig && !PROVIDERS_WITH_NO_CONFIG.includes(providerType)) {
       return "No provider selected";
     }
     if (
