@@ -6,12 +6,15 @@ import { Table } from "@tanstack/react-table";
 import React, { useState } from "react";
 import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
+import { MagnifyingGlassIcon, FunnelIcon } from "@heroicons/react/24/outline";
 import { GroupedRow } from "./alert-grouped-row";
 
 interface Props {
   table: Table<AlertDto>;
   showSkeleton: boolean;
   showEmptyState: boolean;
+  showFilterEmptyState?: boolean;
+  showSearchEmptyState?: boolean;
   theme: { [key: string]: string };
   onRowClick: (alert: AlertDto) => void;
   presetName: string;
@@ -24,33 +27,77 @@ export function AlertsTableBody({
   theme,
   onRowClick,
   presetName,
+  showFilterEmptyState,
+  showSearchEmptyState,
 }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
 
   const handleModalClose = () => setModalOpen(false);
   const handleModalOpen = () => setModalOpen(true);
 
-  if (showEmptyState) {
-    return (
-      <>
-        <div className="flex items-center h-full w-full absolute -mt-20">
-          <div className="flex flex-col justify-center items-center w-full p-4">
-            <EmptyStateCard
-              title="No alerts to display"
-              description="It is because you have not connected any data source yet or there are no alerts matching the filter."
-              buttonText="Add Alert"
-              onClick={handleModalOpen}
-            />
+  if (!showSkeleton) {
+    if (
+      table.getPageCount() === 0 &&
+      !showFilterEmptyState &&
+      !showSearchEmptyState
+    ) {
+      return (
+        <>
+          <div className="flex items-center h-full w-full absolute -mt-20">
+            <div className="flex flex-col justify-center items-center w-full p-4">
+              <EmptyStateCard
+                title="No alerts to display"
+                description="It is because you have not connected any data source yet or there are no alerts matching the filter."
+                buttonText="Add Alert"
+                onClick={handleModalOpen}
+              />
+            </div>
           </div>
-        </div>
-        {modalOpen && (
-          <PushAlertToServerModal
-            handleClose={handleModalClose}
-            presetName={presetName}
-          />
-        )}
-      </>
-    );
+          {modalOpen && (
+            <PushAlertToServerModal
+              handleClose={handleModalClose}
+              presetName={presetName}
+            />
+          )}
+        </>
+      );
+    }
+
+    if (showFilterEmptyState) {
+      return (
+        <>
+          <div className="flex items-center h-full w-full absolute -mt-20">
+            <div className="flex flex-col justify-center items-center w-full p-4">
+              <EmptyStateCard
+                title="No alerts to display matching your filter"
+                buttonText="Clear filter"
+                renderIcon={() => (
+                  <FunnelIcon className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
+                )}
+                onClick={() => console.log("")}
+              />
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    if (showSearchEmptyState) {
+      return (
+        <>
+          <div className="flex items-center h-full w-full absolute -mt-20">
+            <div className="flex flex-col justify-center items-center w-full p-4">
+              <EmptyStateCard
+                title="No alerts to display matching your CEL query"
+                renderIcon={() => (
+                  <MagnifyingGlassIcon className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
+                )}
+              />
+            </div>
+          </div>
+        </>
+      );
+    }
   }
 
   const handleRowClick = (e: React.MouseEvent, alert: AlertDto) => {
