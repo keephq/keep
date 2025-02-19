@@ -55,7 +55,6 @@ alert_field_configurations = [
             for severity in sorted(
                 [severity for _, severity in enumerate(AlertSeverity)],
                 key=lambda s: s.order,
-                reverse=True,
             )
         ],
     ),

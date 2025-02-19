@@ -346,14 +346,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
               facetState={getFacetState(facet.id)}
               facetKey={facet.id}
               facetConfig={facetsConfigIdBased[facet.id]}
-              renderOptionLabel={(optionDisplayName) =>
-                renderFacetOptionLabel &&
-                renderFacetOptionLabel(facet.name, optionDisplayName)
-              }
-              renderIcon={(optionDisplayName) =>
-                renderFacetOptionIcon &&
-                renderFacetOptionIcon(facet.name, optionDisplayName)
-              }
               onLoadOptions={() =>
                 onLoadFacetOptions && onLoadFacetOptions(facet.id)
               }
