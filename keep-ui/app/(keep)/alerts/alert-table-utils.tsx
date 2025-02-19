@@ -128,7 +128,6 @@ export const useAlertTableCols = (
       header: colName,
       minSize: 100,
       cell: (context) => {
-        const [imageError, setImageError] = useState(false);
         const keys = colName.split(".");
         let alertValue: any = context.row.original;
 
