@@ -64,30 +64,50 @@ class CheckmkProvider(BaseProvider):
 
     @staticmethod
     def convert_to_utc_isoformat(long_date_time: str, default: str) -> str:
+        # Early return if long_date_time is None
         if long_date_time is None:
+            logger.warning("Received None as long_date_time, returning default value")
             return default
 
-        # Handle timezone offset with space (e.g., '+07 00' -> '+0700')
-        if " " in long_date_time[-6:]:  # Check last 6 chars for space in offset
-            parts = long_date_time.split()
-            if len(parts) == 7:  # Standard format with split timezone
-                offset = parts[-3] + parts[-2]  # Combine timezone parts
-                long_date_time = " ".join(parts[:-3] + [offset] + parts[-1:])
+        logger.info(f"Converting {long_date_time} to UTC ISO format")
+        formats = [
+            "%a %b %d %H:%M:%S %Z %Y",  # For timezone names (e.g., CEST, UTC)
+            "%a %b %d %H:%M:%S %z %Y",  # For timezone offsets (e.g., +0700, -0500)
+            "%a %b %d %H:%M:%S %z%z %Y",  # For space-separated offsets (e.g., +07 00)
+        ]
 
-        try:
-            # Try parsing with timezone
-            local_dt = datetime.strptime(long_date_time, "%a %b %d %H:%M:%S %z %Y")
-        except ValueError:
+        for date_format in formats:
             try:
-                # Fallback: try parsing with timezone name
-                local_dt = datetime.strptime(long_date_time, "%a %b %d %H:%M:%S %Z %Y")
-                local_dt = local_dt.replace(
-                    tzinfo=timezone.utc
-                )  # Assume UTC if no offset
-            except ValueError:
-                return default
+                # Handle special case where timezone offset has a space
+                if "+" in long_date_time or "-" in long_date_time:
+                    # Remove space in timezone offset if present (e.g., '+07 00' -> '+0700')
+                    parts = long_date_time.split()
+                    if (
+                        len(parts) == 6 and len(parts[4]) == 3
+                    ):  # If offset is +07, we need +0700
+                        parts[4] = parts[4] + "00"
+                        long_date_time = " ".join(parts)
+                    if len(parts) == 7:  # If offset is split into two parts
+                        offset = parts[-3] + parts[-2]
+                        long_date_time = " ".join(parts[:-3] + [offset] + parts[-1:])
 
-        return local_dt.astimezone(timezone.utc).isoformat()
+                # Parse the datetime string
+                local_dt = datetime.strptime(long_date_time, date_format)
+
+                # Convert to UTC if it has timezone info, otherwise assume UTC
+                if local_dt.tzinfo is None:
+                    local_dt = local_dt.replace(tzinfo=timezone.utc)
+                utc_dt = local_dt.astimezone(timezone.utc)
+
+                # Return the ISO 8601 format
+                return utc_dt.isoformat()
+
+            except ValueError:
+                continue
+
+        # If none of the formats match
+        logger.exception(f"Error converting {long_date_time} to UTC ISO format")
+        return default
 
     @staticmethod
     def _format_alert(

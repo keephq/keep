@@ -156,7 +156,9 @@ export default function IncidentAlerts({ incident }: Props) {
         minSize: 100,
         cell: (context) => (
           <div title={context.getValue()}>
-            <div className="truncate">{context.getValue()}</div>
+            <div className="truncate whitespace-pre-wrap line-clamp-3">
+              {context.getValue()}
+            </div>
           </div>
         ),
       }),
