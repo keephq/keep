@@ -217,7 +217,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     const facetState = getFacetState(facetId);
     const facetConfig = facetsConfigIdBased?.[facetId];
 
-    if (!facetConfig?.canHitEmptyState) {
+    if (!facetConfig?.canHitEmptyState && isOptionSelected(facetId, value)) {
       const facetOptionsWithMatches = facetOptions[facetId].filter(
         (facetOption) => facetOption.matches_count
       );
