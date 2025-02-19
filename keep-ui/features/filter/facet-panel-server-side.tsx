@@ -33,14 +33,6 @@ export interface FacetsPanelProps {
    **/
   uncheckedByDefaultOptionValues?: { [key: string]: string[] };
   facetsConfig?: FacetsConfig;
-  renderFacetOptionLabel?: (
-    facetName: string,
-    optionDisplayName: string
-  ) => JSX.Element | string | undefined;
-  renderFacetOptionIcon?: (
-    facetName: string,
-    optionDisplayName: string
-  ) => JSX.Element | undefined;
   /** Callback to handle the change of the CEL when options toggle */
   onCelChange?: (cel: string) => void;
 }
@@ -56,8 +48,6 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   onCelChange = undefined,
   uncheckedByDefaultOptionValues,
   facetsConfig,
-  renderFacetOptionIcon,
-  renderFacetOptionLabel,
 }) => {
   function buildFacetOptionsQuery() {
     if (!facetQueriesState) {
@@ -173,8 +163,6 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
         areFacetOptionsLoading={!isSilentLoading && isLoading}
         clearFiltersToken={clearFiltersToken}
         uncheckedByDefaultOptionValues={uncheckedByDefaultOptionValues}
-        renderFacetOptionLabel={renderFacetOptionLabel}
-        renderFacetOptionIcon={renderFacetOptionIcon}
         facetsConfig={facetsConfig}
         onCelChange={(cel: string) => {
           onCelChange && onCelChange(cel);

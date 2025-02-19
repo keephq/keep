@@ -6,12 +6,14 @@ export function EmptyStateCard({
   description,
   buttonText,
   onClick,
+  renderIcon,
   className,
 }: {
   title: string;
   description?: string;
   buttonText?: string;
   onClick?: (e: React.MouseEvent) => void;
+  renderIcon?: () => JSX.Element;
   className?: string;
 }) {
   return (
@@ -19,10 +21,13 @@ export function EmptyStateCard({
       className={`sm:mx-auto w-full max-w-5xl ${className ? className : ""}`}
     >
       <div className="text-center">
-        <CircleStackIcon
-          className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle"
-          aria-hidden={true}
-        />
+        {!renderIcon && (
+          <CircleStackIcon
+            className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle"
+            aria-hidden={true}
+          />
+        )}
+        {renderIcon && renderIcon()}
         <p className="mt-4 text-tremor-default font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
           {title}
         </p>

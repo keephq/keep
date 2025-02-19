@@ -300,92 +300,6 @@ export function AlertTableServerSide({
     setIsSidebarOpen(true);
   };
 
-  const renderFacetOptionIcon = useCallback(
-    (facetName: string, facetOptionName: string) => {
-      facetName = facetName.toLowerCase();
-
-      if (facetName === "source") {
-        if (facetOptionName === "None") {
-          return;
-        }
-
-        return (
-          <Image
-            className="inline-block"
-            alt={facetOptionName}
-            height={16}
-            width={16}
-            title={facetOptionName}
-            src={
-              facetOptionName.includes("@")
-                ? "/icons/mailgun-icon.png"
-                : `/icons/${facetOptionName}-icon.png`
-            }
-          />
-        );
-      }
-      if (facetName === "severity") {
-        return (
-          <SeverityBorderIcon
-            severity={
-              (severityMapping[Number(facetOptionName)] ||
-                facetOptionName) as UISeverity
-            }
-          />
-        );
-      }
-      if (facetName === "assignee") {
-        return <UserStatefulAvatar email={facetOptionName} size="xs" />;
-      }
-      if (facetName === "status") {
-        return (
-          <Icon
-            icon={getStatusIcon(facetOptionName)}
-            size="sm"
-            color={getStatusColor(facetOptionName)}
-            className="!p-0"
-          />
-        );
-      }
-      if (facetName === "dismissed") {
-        return (
-          <Icon
-            icon={facetOptionName === "true" ? BellSlashIcon : BellIcon}
-            size="sm"
-            className="text-gray-600 !p-0"
-          />
-        );
-      }
-
-      return undefined;
-    },
-    []
-  );
-
-  const renderFacetOptionLabel = useCallback(
-    (facetName: string, facetOptionName: string) => {
-      facetName = facetName.toLowerCase();
-
-      switch (facetName) {
-        case "assignee":
-          if (!facetOptionName) {
-            return "Not assigned";
-          }
-          return <AssigneeLabel email={facetOptionName} />;
-        case "dismissed":
-          return facetOptionName === "true" ? "Dismissed" : "Not dismissed";
-        case "severity": {
-          const label =
-            severityMapping[Number(facetOptionName)] || facetOptionName;
-          return <span className="capitalize">{label}</span>;
-        }
-        default:
-          return <span className="capitalize">{facetOptionName}</span>;
-      }
-    },
-    []
-  );
-
   useEffect(() => {
     // When refresh token comes, this code allows polling for certain time and then stops.
     // Will start polling again when new refresh token comes.
@@ -434,8 +348,78 @@ export function AlertTableServerSide({
     return {
       ["Severity"]: {
         canHitEmptyState: false,
+        renderOptionLabel: (facetOption) => {
+          const label =
+            severityMapping[Number(facetOption.display_name)] ||
+            facetOption.display_name;
+          return <span className="capitalize">{label}</span>;
+        },
+        renderOptionIcon: (facetOption) => (
+          <SeverityBorderIcon
+            severity={
+              (severityMapping[Number(facetOption.display_name)] ||
+                facetOption.display_name) as UISeverity
+            }
+          />
+        ),
         sortCallback: (facetOption) =>
           reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
+      },
+      ["Status"]: {
+        renderOptionIcon: (facetOption) => (
+          <Icon
+            icon={getStatusIcon(facetOption.display_name)}
+            size="sm"
+            color={getStatusColor(facetOption.display_name)}
+            className="!p-0"
+          />
+        ),
+      },
+      ["Source"]: {
+        renderOptionIcon: (facetOption) => {
+          if (facetOption.display_name === "None") {
+            return;
+          }
+
+          return (
+            <Image
+              className="inline-block"
+              alt={facetOption.display_name}
+              height={16}
+              width={16}
+              title={facetOption.display_name}
+              src={
+                facetOption.display_name.includes("@")
+                  ? "/icons/mailgun-icon.png"
+                  : `/icons/${facetOption.display_name}-icon.png`
+              }
+            />
+          );
+        },
+      },
+      ["Assignee"]: {
+        renderOptionIcon: (facetOption) => (
+          <UserStatefulAvatar email={facetOption.display_name} size="xs" />
+        ),
+        renderOptionLabel: (facetOption) => {
+          if (!facetOption.display_name) {
+            return "Not assigned";
+          }
+          return <AssigneeLabel email={facetOption.display_name} />;
+        },
+      },
+      ["Dismissed"]: {
+        renderOptionLabel: (facetOption) =>
+          facetOption.display_name === "true" ? "Dismissed" : "Not dismissed",
+        renderOptionIcon: (facetOption) => (
+          <Icon
+            icon={
+              facetOption.display_name === "true" ? BellSlashIcon : BellIcon
+            }
+            size="sm"
+            className="text-gray-600 !p-0"
+          />
+        ),
       },
     };
   }, []);
@@ -491,8 +475,6 @@ export function AlertTableServerSide({
               initialFacetsData={{ facets: initialFacets, facetOptions: null }}
               facetsConfig={facetsConfig}
               onCelChange={setFilterCel}
-              renderFacetOptionIcon={renderFacetOptionIcon}
-              renderFacetOptionLabel={renderFacetOptionLabel}
               revalidationToken={facetsPanelRefreshToken}
             />
           </div>

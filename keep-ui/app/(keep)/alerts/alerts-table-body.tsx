@@ -8,6 +8,7 @@ import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
+import { MagnifyingGlassIcon, FunnelIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   table: Table<AlertDto>;
@@ -71,6 +72,9 @@ export function AlertsTableBody({
               <EmptyStateCard
                 title="No alerts to display matching your filter"
                 buttonText="Clear filter"
+                renderIcon={() => (
+                  <FunnelIcon className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
+                )}
                 onClick={() => console.log("")}
               />
             </div>
@@ -84,7 +88,12 @@ export function AlertsTableBody({
         <>
           <div className="flex items-center h-full w-full absolute -mt-20">
             <div className="flex flex-col justify-center items-center w-full p-4">
-              <EmptyStateCard title="No alerts to display matching your CEL query" />
+              <EmptyStateCard
+                title="No alerts to display matching your CEL query"
+                renderIcon={() => (
+                  <MagnifyingGlassIcon className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
+                )}
+              />
             </div>
           </div>
         </>

@@ -19,10 +19,6 @@ export interface FacetProps {
   facetKey: string;
   facetState: Set<string>;
   facetConfig?: FacetConfig;
-  renderOptionLabel?: (
-    optionDisplayName: string
-  ) => JSX.Element | string | undefined;
-  renderIcon?: (option_display_name: string) => JSX.Element | undefined;
   onSelectOneOption?: (value: string) => void;
   onSelectAllOptions?: () => void;
   onSelect?: (value: string) => void;
@@ -44,8 +40,6 @@ export const Facet: React.FC<FacetProps> = ({
   onSelectAllOptions: selectAllOptions,
   onLoadOptions,
   onDelete,
-  renderIcon,
-  renderOptionLabel,
   isOpenByDefault,
   facetConfig,
 }) => {
@@ -121,10 +115,16 @@ export const Facet: React.FC<FacetProps> = ({
         isSelectable={
           facetConfig?.canHitEmptyState || facetOption.matches_count > 0
         }
-        renderLabel={() =>
-          renderOptionLabel && renderOptionLabel(facetOption.display_name)
+        renderLabel={
+          facetConfig?.renderOptionLabel
+            ? () => facetConfig.renderOptionLabel!(facetOption)
+            : () => facetOption.display_name
         }
-        renderIcon={() => renderIcon && renderIcon(facetOption.display_name)}
+        renderIcon={
+          facetConfig?.renderOptionIcon
+            ? () => facetConfig.renderOptionIcon!(facetOption)
+            : undefined
+        }
         onToggleOption={() => onSelect && onSelect(facetOption.display_name)}
         onSelectOneOption={(value: string) =>
           selectOneOption && selectOneOption(value)
