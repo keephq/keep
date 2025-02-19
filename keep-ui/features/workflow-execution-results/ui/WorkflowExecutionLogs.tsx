@@ -186,15 +186,15 @@ function LogGroupAccordion({
                 {log.timestamp}: {log.message}
               </p>
               {result && (
-                <div className="bg-gray-100 rounded-md overflow-hidden text-xs my-2">
-                  <div className="text-gray-500 bg-gray-50 p-2 flex justify-between items-center">
-                    <span>output</span>
-                  </div>
+                <pre className="bg-gray-100 rounded-md text-xs my-2 overflow-hidden">
+                  <div className="text-gray-500 bg-gray-50 p-2">output</div>
                   <div
-                    className="overflow-auto"
+                    className="overflow-auto bg-[#fffffe] break-words whitespace-pre-wrap py-2 border rounded-[inherit] rounded-t-none  border-gray-200"
                     style={{
                       height: Math.min(
-                        JSON.stringify(result, null, 2).split("\n").length * 18,
+                        JSON.stringify(result, null, 2).split("\n").length *
+                          20 +
+                          16,
                         192
                       ),
                     }}
@@ -214,7 +214,7 @@ function LogGroupAccordion({
                       }}
                     />
                   </div>
-                </div>
+                </pre>
               )}
             </div>
           ))}

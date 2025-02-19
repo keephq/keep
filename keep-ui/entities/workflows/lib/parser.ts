@@ -1,8 +1,13 @@
 import {
   Definition,
   DefinitionV2,
+  V2ActionStep,
   V2Properties,
   V2Step,
+  V2StepConditionAssert,
+  V2StepConditionThreshold,
+  V2StepForeach,
+  V2StepStep,
 } from "@/entities/workflows";
 import { Provider } from "@/app/(keep)/providers/providers";
 import { v4 as uuidv4 } from "uuid";
@@ -16,7 +21,7 @@ export function getActionOrStepObj(
   actionOrStep: any,
   type: "action" | "step",
   providers?: Provider[]
-): V2Step {
+): V2StepStep | V2ActionStep {
   /**
    * Generate a step or action definition (both are kinda the same)
    */
@@ -46,7 +51,7 @@ function generateForeach(
   stepOrAction: "step" | "action",
   providers?: Provider[],
   sequence?: any
-) {
+): V2StepForeach {
   return {
     id: actionOrStep?.id || uuidv4(),
     type: "foreach",
@@ -141,7 +146,7 @@ export function parseWorkflow(
   const workflow = parsedWorkflowFile.alert
     ? parsedWorkflowFile.alert
     : parsedWorkflowFile.workflow;
-  const steps = [] as V2Step[];
+  const steps: V2Step[] = [];
   const workflowSteps =
     workflow.steps?.map((s: V2Step) => {
       s.type = "step";
@@ -215,11 +220,11 @@ export function parseWorkflow(
   );
 }
 
-function getWithParams(s: V2Step): any {
+function getWithParams(s: V2ActionStep | V2StepStep): any {
   if (!s) {
     return;
   }
-  s.properties = (s.properties || {}) as V2Properties;
+  s.properties = s.properties || {};
   const withParams =
     (s.properties.with as {
       [key: string]: string | number | boolean | object;
@@ -237,7 +242,7 @@ function getWithParams(s: V2Step): any {
 }
 
 function getActionsFromCondition(
-  condition: V2Step,
+  condition: V2StepConditionThreshold | V2StepConditionAssert,
   foreach?: string
 ): Action[] {
   const compiledCondition = {
@@ -246,7 +251,7 @@ function getActionsFromCondition(
     ...condition.properties,
   };
   const steps = condition?.branches?.true || ([] as V2Step[]);
-  const compiledActions = steps.map((a: V2Step) => {
+  const compiledActions = steps.map((a) => {
     const withParams = getWithParams(a);
     const providerType = a?.type?.replace("action-", "");
     const providerName =
@@ -256,11 +261,12 @@ function getActionsFromCondition(
       config: `{{ providers.${providerName} }}`,
       with: withParams,
     };
+    // FIX: type
     const compiledAction = {
       name: a.name,
       provider: provider,
       condition: [compiledCondition],
-    } as Action;
+    } as unknown as Action;
     if (foreach) compiledAction["foreach"] = foreach;
     return compiledAction;
   });
@@ -280,8 +286,8 @@ export function getWorkflowFromDefinition(
   const consts = (alert.properties.consts as Record<string, string>) ?? {};
   // Steps (move to func?)
   const steps = alert.sequence
-    .filter((s) => s.type.startsWith("step-"))
-    .map((s) => {
+    .filter((s): s is V2StepStep => s.type.startsWith("step-"))
+    .map((s: V2StepStep) => {
       const withParams = getWithParams(s);
       const providerType = s.type.replace("step-", "");
       const providerName =
@@ -302,8 +308,8 @@ export function getWorkflowFromDefinition(
     });
   // Actions
   let actions = alert.sequence
-    .filter((s) => s.type.startsWith("action-"))
-    .map((s) => {
+    .filter((s): s is V2ActionStep => s.type.startsWith("action-"))
+    .map((s: V2ActionStep) => {
       const withParams = getWithParams(s);
       const providerType = s.type.replace("action-", "");
       const ifParam = s.properties.if;
@@ -329,12 +335,13 @@ export function getWorkflowFromDefinition(
     });
   // Actions > Foreach
   alert.sequence
-    .filter((step) => step.type === "foreach")
-    ?.forEach((forEach) => {
+    .filter((step): step is V2StepForeach => step.type === "foreach")
+    ?.forEach((forEach: V2StepForeach) => {
       const forEachValue = forEach?.properties?.value as string;
+      // FIX: type
       const condition = forEach?.sequence?.find((c) =>
         c.type.startsWith("condition-")
-      ) as V2Step;
+      ) as unknown as V2StepConditionAssert | V2StepConditionThreshold;
       let foreachActions = [] as Action[];
       if (condition) {
         foreachActions = getActionsFromCondition(condition, forEachValue);
@@ -371,9 +378,11 @@ export function getWorkflowFromDefinition(
     });
   // Actions > Condition
   alert.sequence
-    .filter((step) => step.type.startsWith("condition-"))
+    .filter((step): step is V2StepConditionThreshold | V2StepConditionAssert =>
+      step.type.startsWith("condition-")
+    )
     ?.forEach((condition) => {
-      const conditionActions = getActionsFromCondition(condition as V2Step);
+      const conditionActions = getActionsFromCondition(condition);
       actions = [...actions, ...conditionActions];
     });
 
