@@ -186,6 +186,17 @@ export const config = {
     signIn: "/signin",
     error: "/error",
   },
+  cookies: {
+    pkceCodeVerifier: {
+      name: "authjs.pkce.code_verifier", // Removed __Secure- prefix
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false, // Set to false to make it work over HTTP
+      },
+    },
+  },
   session: {
     strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days
