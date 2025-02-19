@@ -140,18 +140,7 @@ export const GroupedRow = ({
             )}
             style={style}
           >
-            <div className="flex items-center gap-2">
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              {viewedAlert && cell.column.id === "alertMenu" && (
-                <Icon
-                  icon={EyeIcon}
-                  tooltip={`Viewed ${format(
-                    new Date(viewedAlert.viewedAt),
-                    "MMM d, yyyy HH:mm"
-                  )}`}
-                />
-              )}
-            </div>
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </TableCell>
         );
       })}
