@@ -163,14 +163,6 @@ def get_facet_options(
 
                 if property_mapping.enum_values:
                     if facet.id in result_dict:
-                        result_dict[facet.id] = sorted(
-                            result_dict[facet.id],
-                            key=lambda facet_option: (
-                                property_mapping.enum_values.index(facet_option.value)
-                                if facet_option.value in property_mapping.enum_values
-                                else -1
-                            ),
-                        )
                         values_with_zero_matches = [
                             enum_value
                             for enum_value in property_mapping.enum_values
@@ -192,6 +184,15 @@ def get_facet_options(
                                 matches_count=0,
                             )
                         )
+                    result_dict[facet.id] = sorted(
+                        result_dict[facet.id],
+                        key=lambda facet_option: (
+                            property_mapping.enum_values.index(facet_option.value)
+                            if facet_option.value in property_mapping.enum_values
+                            else -100  # put unknown values at the end
+                        ),
+                        reverse=True,
+                    )
 
     for invalid_facet in invalid_facets:
         result_dict[invalid_facet.id] = []

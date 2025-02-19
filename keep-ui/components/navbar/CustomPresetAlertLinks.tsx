@@ -44,12 +44,11 @@ export const AlertPresetLink = ({
   const isActive = decodeURIComponent(pathname?.toLowerCase() || "") === href;
   const { useLastAlerts } = useAlerts();
 
-  // const { totalCount } = useLastAlerts({
-  //   cel: preset.options.find((option) => option.label === "CEL")?.value || "",
-  //   limit: 20,
-  //   offset: 0,
-  // });
-  const totalCount = 0;
+  const { totalCount } = useLastAlerts({
+    cel: preset.options.find((option) => option.label === "CEL")?.value || "",
+    limit: 20,
+    offset: 0,
+  });
 
   const { listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({

@@ -64,7 +64,7 @@ alert_field_configurations = [
             "JSON(filter_alert_enrichment_json).*",
             "JSON(filter_alert_event_json).*",
         ],
-        enum_values=[item.value for _, item in enumerate(AlertStatus)],
+        enum_values=list(reversed([item.value for _, item in enumerate(AlertStatus)])),
     ),
     FieldMappingConfiguration(
         map_from_pattern="*",
