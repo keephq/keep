@@ -54,16 +54,17 @@ from keep.api.models.alert import (
     IncidentListFilterParamsDto,
     IncidentsClusteringSuggestion,
     IncidentSeverity,
+    IncidentSeverityChangeDto,
     IncidentSorting,
     IncidentStatus,
     IncidentStatusChangeDto,
     MergeIncidentsRequestDto,
     MergeIncidentsResponseDto,
     SplitIncidentRequestDto,
-    SplitIncidentResponseDto, IncidentSeverityChangeDto,
+    SplitIncidentResponseDto,
 )
-from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.db.alert import ActionType, AlertAudit
+from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.workflow import WorkflowExecutionDTO
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
@@ -239,10 +240,10 @@ def fetch_inicident_facet_options(
     )
 
     facet_options = get_incident_facets_data(
-            tenant_id = tenant_id,
-            allowed_incident_ids=allowed_incident_ids,
-            facet_options_query = facet_options_query
-        )
+        tenant_id=tenant_id,
+        allowed_incident_ids=allowed_incident_ids,
+        facet_options_query=facet_options_query,
+    )
 
     logger.info(
         "Fetched incident facets from DB",
@@ -283,6 +284,7 @@ def fetch_inicident_facets(
 
     return facets
 
+
 @router.get(
     "/facets/fields",
     description="Get potential fields for incident facets",
@@ -290,7 +292,7 @@ def fetch_inicident_facets(
 def fetch_alert_facet_fields(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
-    )
+    ),
 ) -> list:
     tenant_id = authenticated_entity.tenant_id
 
@@ -301,9 +303,7 @@ def fetch_alert_facet_fields(
         },
     )
 
-    fields = get_incident_potential_facet_fields(
-            tenant_id = tenant_id
-        )
+    fields = get_incident_potential_facet_fields(tenant_id=tenant_id)
 
     logger.info(
         "Fetched incident facet fields from DB",
@@ -763,7 +763,10 @@ def change_incident_status(
         },
     )
 
-    with_alerts = change.status == IncidentStatus.RESOLVED
+    with_alerts = (
+        change.status == IncidentStatus.RESOLVED
+        or change.status == IncidentStatus.ACKNOWLEDGED
+    )
     incident = get_incident_by_id(tenant_id, incident_id, with_alerts=with_alerts)
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
@@ -773,14 +776,12 @@ def change_incident_status(
         end_time = (
             datetime.utcnow() if change.status == IncidentStatus.RESOLVED else None
         )
-        change_incident_status_by_id(
-            tenant_id, incident_id, change.status, end_time
-        )
-        if change.status == IncidentStatus.RESOLVED:
+        change_incident_status_by_id(tenant_id, incident_id, change.status, end_time)
+        if change.status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:
             for alert in incident._alerts:
                 _enrich_alert(
                     EnrichAlertRequestBody(
-                        enrichments={"status": "resolved"},
+                        enrichments={"status": change.status.value},
                         fingerprint=alert.fingerprint,
                     ),
                     authenticated_entity=authenticated_entity,
@@ -816,8 +817,12 @@ def change_incident_severity(
             "severity": change.severity.value,
         },
     )
-    incident_bl = IncidentBl(tenant_id, session, pusher_client, user=authenticated_entity.email)
-    incident_dto = incident_bl.update_severity(incident_id, change.severity, change.comment)
+    incident_bl = IncidentBl(
+        tenant_id, session, pusher_client, user=authenticated_entity.email
+    )
+    incident_dto = incident_bl.update_severity(
+        incident_id, change.severity, change.comment
+    )
     return incident_dto
 
 
