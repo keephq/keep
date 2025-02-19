@@ -46,6 +46,11 @@ import { Icon } from "@tremor/react";
 import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import AlertPaginationServerSide from "./alert-pagination-server-side";
 import { FacetDto } from "@/features/filter";
+import {
+  GroupingState,
+  getGroupedRowModel,
+  getExpandedRowModel,
+} from "@tanstack/react-table";
 import { TimeFrame } from "@/components/ui/DateRangePicker";
 import { AlertsQuery } from "@/utils/hooks/useAlerts";
 import { v4 as uuidV4 } from "uuid";
@@ -109,6 +114,7 @@ export function AlertTableServerSide({
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
+  const [grouping, setGrouping] = useState<GroupingState>([]);
   const [facetsPanelRefreshToken, setFacetsPanelRefreshToken] = useState<
     string | null
   >(null);
@@ -235,8 +241,8 @@ export function AlertTableServerSide({
     useState<boolean>(false);
 
   const leftPinnedColumns = noisyAlertsEnabled
-    ? ["severity", "checkbox", "noise"]
-    : ["severity", "checkbox"];
+    ? ["severity", "checkbox", "source", "name", "noise"]
+    : ["severity", "checkbox", "source", "name"];
 
   const table = useReactTable({
     data: alerts,
@@ -250,11 +256,13 @@ export function AlertTableServerSide({
         right: ["alertMenu"],
       },
       sorting: sorting,
+      grouping: grouping,
       pagination: {
         pageIndex: paginationState.pageIndex,
         pageSize: paginationState.pageSize,
       },
     },
+    enableGrouping: true,
     manualSorting: true,
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
@@ -264,6 +272,7 @@ export function AlertTableServerSide({
     globalFilterFn: ({ original }, _id, value) => {
       return evalWithContext(original, value);
     },
+    getGroupedRowModel: getGroupedRowModel(),
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -276,6 +285,7 @@ export function AlertTableServerSide({
     manualPagination: true,
     pageCount: Math.ceil(alertsTotalCount / paginationState.pageSize),
     onPaginationChange: setPaginationState,
+    onGroupingChange: setGrouping,
   });
 
   const selectedRowIds = Object.entries(
@@ -461,6 +471,7 @@ export function AlertTableServerSide({
           <AlertPresetManager
             presetName={presetName}
             onCelChanges={setSearchCel}
+            table={table}
           />
         )}
       </div>

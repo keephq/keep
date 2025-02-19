@@ -34,6 +34,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import { useRouter } from "next/navigation";
 import { RootCauseAnalysis } from "@/components/ui/RootCauseAnalysis";
 import { IncidentChangeSeveritySelect } from "@/features/change-incident-severity";
+import remarkGfm from "remark-gfm";
 
 interface Props {
   incident: IncidentDto;
@@ -94,7 +95,11 @@ function Summary({
   };
 
   const formatedSummary = (
-    <Markdown remarkPlugins={[remarkRehype]} rehypePlugins={[rehypeRaw]} className="whitespace-pre-wrap">
+    <Markdown 
+    remarkPlugins={[remarkGfm, remarkRehype]} 
+    rehypePlugins={[rehypeRaw]}
+    className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1"
+    >
       {summary ?? generatedSummary}
     </Markdown>
   );

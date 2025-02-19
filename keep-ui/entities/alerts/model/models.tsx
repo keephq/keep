@@ -48,6 +48,7 @@ export interface AlertDto {
   description?: string;
   severity?: Severity;
   url?: string;
+  imageUrl?: string;
   pushed: boolean;
   generatorURL?: string;
   fingerprint: string;
