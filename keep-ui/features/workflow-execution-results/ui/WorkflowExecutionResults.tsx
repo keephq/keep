@@ -16,7 +16,7 @@ import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
 import { setFavicon } from "@/shared/ui/utils/favicon";
-import ResizableColumns from "@/components/ui/ResizableColumns";
+import { ResizableColumns } from "@/shared/ui";
 
 const convertWorkflowStatusToFaviconStatus = (
   status: WorkflowExecutionDetail["status"]
@@ -186,7 +186,7 @@ export function WorkflowExecutionResultsInternal({
     {
       name: "Workflow Definition",
       content: (
-        <div className="h-[calc(100vh-300px)]">
+        <div className="h-[calc(100vh-220px)]">
           <MonacoYAMLEditor
             workflowRaw={workflowRaw ?? ""}
             workflowId={workflowId}
@@ -230,43 +230,36 @@ export function WorkflowExecutionResultsInternal({
           eventType={eventType}
         />
       )}
-      <ResizableColumns
-        leftChild={
-          <div className="pr-2">
-            <Title>Workflow Logs</Title>
-            <Card className="p-0 overflow-hidden">
-              <WorkflowExecutionLogs
-                logs={logs ?? null}
-                results={results ?? null}
-                status={status ?? ""}
-                checks={checks}
-                hoveredStep={hoveredStep}
-                selectedStep={selectedStep}
-              />
-            </Card>
-          </div>
-        }
-        rightChild={
-          <div className="pl-2">
-            <Title>Workflow Metadata</Title>
-            <Card className="p-0 overflow-hidden">
-              <TabGroup>
-                <TabList className="p-2">
-                  {tabs.map((tab) => (
-                    <Tab key={tab.name}>{tab.name}</Tab>
-                  ))}
-                </TabList>
-                <TabPanels>
-                  {tabs.map((tab) => (
-                    <TabPanel key={tab.name}>{tab.content}</TabPanel>
-                  ))}
-                </TabPanels>
-              </TabGroup>
-            </Card>
-          </div>
-        }
-        initialLeftWidth={50}
-      />
+      <ResizableColumns initialLeftWidth={50}>
+        <div className="pr-2">
+          <Card className="p-0 overflow-hidden">
+            <WorkflowExecutionLogs
+              logs={logs ?? null}
+              results={results ?? null}
+              status={status ?? ""}
+              checks={checks}
+              hoveredStep={hoveredStep}
+              selectedStep={selectedStep}
+            />
+          </Card>
+        </div>
+        <div className="px-2">
+          <Card className="p-0 overflow-hidden">
+            <TabGroup>
+              <TabList className="p-2">
+                {tabs.map((tab) => (
+                  <Tab key={tab.name}>{tab.name}</Tab>
+                ))}
+              </TabList>
+              <TabPanels>
+                {tabs.map((tab) => (
+                  <TabPanel key={tab.name}>{tab.content}</TabPanel>
+                ))}
+              </TabPanels>
+            </TabGroup>
+          </Card>
+        </div>
+      </ResizableColumns>
     </div>
   );
 }

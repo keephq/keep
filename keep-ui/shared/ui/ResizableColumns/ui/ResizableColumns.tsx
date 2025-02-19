@@ -1,14 +1,19 @@
 "use client";
 
+import clsx from "clsx";
 import React, { useState, useCallback, useEffect } from "react";
 
 interface ResizableColumnsProps {
   initialLeftWidth?: number;
   children: React.ReactNode;
+  leftChildClassName?: string;
+  rightChildClassName?: string;
 }
 
 export const ResizableColumns = ({
   initialLeftWidth = 50,
+  leftChildClassName,
+  rightChildClassName,
   children,
 }: ResizableColumnsProps) => {
   if (React.Children.count(children) !== 2) {
@@ -50,20 +55,24 @@ export const ResizableColumns = ({
   }, [isDragging, stopDragging]);
 
   return (
-    <div
-      className="flex h-full w-full overflow-hidden"
-      onMouseMove={onMouseMove}
-    >
-      <div className="" style={{ width: `${leftWidth}%` }}>
+    <div className="flex h-full w-full" onMouseMove={onMouseMove}>
+      {/* p-px is used to prevent cropping card-shadow */}
+      <div
+        className={clsx("min-w-0 p-px", leftChildClassName)}
+        style={{ width: `${leftWidth}%` }}
+      >
         {leftChild}
       </div>
 
       <div
-        className="w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize transition-colors"
+        className="w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize transition-colors shrink-0"
         onMouseDown={startDragging}
       />
 
-      <div className="flex-1">{rightChild}</div>
+      {/* p-px is used to prevent cropping card-shadow */}
+      <div className={clsx("flex-1 min-w-0 p-px", rightChildClassName)}>
+        {rightChild}
+      </div>
     </div>
   );
 };
