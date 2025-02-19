@@ -188,22 +188,23 @@ export function CreateOrUpdatePresetForm({
           setIsNoisy={setIsNoisy}
         />
       </div>
-
-      <div className="space-y-2">
-        <Subtitle>Group By Column</Subtitle>
-        <Select
-          value={groupColumn}
-          onValueChange={setGroupColumn}
-          placeholder="Select a column to group by"
-        >
-          <SelectItem value="">None</SelectItem>
-          {groupableColumns.map((column) => (
-            <SelectItem key={column.id} value={column.id}>
-              {column.header}
-            </SelectItem>
-          ))}
-        </Select>
-      </div>
+      {/* Group by column TODO
+        <div className="space-y-2">
+          <Subtitle>Group By Column</Subtitle>
+          <Select
+            value={groupColumn}
+            onValueChange={setGroupColumn}
+            placeholder="Select a column to group by"
+          >
+            <SelectItem value="">None</SelectItem>
+            {groupableColumns.map((column) => (
+              <SelectItem key={column.id} value={column.id}>
+                {column.header}
+              </SelectItem>
+            ))}
+          </Select>
+        </div>
+      */}
 
       <Subtitle>Tags</Subtitle>
       <CreatableMultiSelect
