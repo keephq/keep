@@ -33,11 +33,6 @@ import AlertSidebar from "./alert-sidebar";
 import { AlertFacets } from "./alert-table-alert-facets";
 import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
 import { useConfig } from "@/utils/hooks/useConfig";
-import {
-  GroupingState,
-  getGroupedRowModel,
-  getExpandedRowModel,
-} from "@tanstack/react-table";
 
 interface PresetTab {
   name: string;
@@ -78,7 +73,6 @@ export function AlertTable({
 }: Props) {
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
-  const [grouping, setGrouping] = useState<GroupingState>([]);
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
 
   const [theme, setTheme] = useLocalStorage(
@@ -238,21 +232,17 @@ export function AlertTable({
         right: ["alertMenu"],
       },
       sorting: sorting,
-      grouping: grouping,
-      expanded: true,
     },
     onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getGroupedRowModel: getGroupedRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onGroupingChange: setGrouping,
     initialState: {
       pagination: { pageSize: 20 },
     },
     globalFilterFn: ({ original }, _id, value) => {
       return evalWithContext(original, value);
     },
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onColumnSizingChange: setColumnSizing,
     enableColumnPinning: true,
@@ -260,16 +250,6 @@ export function AlertTable({
     autoResetPageIndex: false,
     enableGlobalFilter: true,
     enableSorting: true,
-    enableGrouping: true,
-    enableExpanding: true,
-    getExpandedRowModel: getExpandedRowModel(),
-  });
-
-  console.log("Table state:", {
-    grouping: table.getState().grouping,
-    rowModel: table.getRowModel(),
-    groupedRows: table.getGroupedRowModel(),
-    data: table.options.data, // To see the raw data
   });
 
   const selectedRowIds = Object.entries(
