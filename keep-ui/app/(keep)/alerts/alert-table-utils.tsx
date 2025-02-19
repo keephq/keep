@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-table";
 import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
-import { AlertName } from "@/entities/alerts/ui";
+import { AlertName, AlertImage } from "@/entities/alerts/ui";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
@@ -181,10 +181,15 @@ export const useAlertTableCols = (
             );
           }
 
-          if (alertValue && alertValue !== null) {
+          // Special handling for imageUrl
+          if (colName === "imageUrl" && value) {
+            return <AlertImage imageUrl={value as string} />;
+          }
+
+          if (value && value !== null) {
             return (
               <div className="truncate whitespace-pre-wrap line-clamp-3">
-                {alertValue.toString()}
+                {value.toString()}
               </div>
             );
           }

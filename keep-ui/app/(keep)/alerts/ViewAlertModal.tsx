@@ -1,7 +1,5 @@
-"use client";
-
-import { AlertDto } from "@/entities/alerts/model";
-import Modal from "@/components/ui/Modal";
+import { AlertDto } from "@/entities/alerts/model"; // Adjust the import path as needed
+import Modal from "@/components/ui/Modal"; // Ensure this path matches your project structure
 import { Button, Switch, Text } from "@tremor/react";
 import { toast } from "react-toastify";
 import "./ViewAlertModal.css";
@@ -9,9 +7,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import Editor, { Monaco } from "@monaco-editor/react";
-
-// Dynamically import the Editor component with no SSR
-const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
 interface ViewAlertModalProps {
   alert: AlertDto | null | undefined;
@@ -167,6 +162,8 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
       <div className="flex justify-between items-center mb-4 min-w-full">
         <h2 className="text-lg font-semibold">Alert Details</h2>
         <div className="flex gap-x-2">
+          {" "}
+          {/* Adjust gap as needed */}
           <div className="placeholder-resizing min-w-48"></div>
           <div className="flex items-center space-x-2">
             <Switch
