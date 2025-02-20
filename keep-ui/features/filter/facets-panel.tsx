@@ -122,7 +122,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     if (facets) {
       facets.forEach((facet) => {
         const facetConfig = facetsConfig?.[facet.name];
-        const canHitEmptyState = facetConfig?.canHitEmptyState || false;
         const sortCallback =
           facetConfig?.sortCallback ||
           ((facetOption: FacetOptionDto) => facetOption.matches_count);
@@ -133,7 +132,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             <span className="capitalize">{facetOption.display_name}</span>
           ));
         result[facet.id] = {
-          canHitEmptyState,
           sortCallback,
           renderOptionIcon,
           renderOptionLabel,
