@@ -21,7 +21,7 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
     workflow?.steps?.find((step: MockStep) => step?.provider?.type);
 
   return (
-    <div className="container flex gap-2 items-center overflow-x-auto max-w-full whitespace-nowrap">
+    <div className="container flex gap-1 items-center flex-wrap">
       {workflow?.steps?.map((step: any, index: number) => {
         const provider = step?.provider;
         if (["threshold", "assert", "foreach"].includes(provider?.type)) {
@@ -30,13 +30,13 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
         return provider ? (
           <div
             key={`step-${step.id}-${index}`}
-            className="flex items-center gap-2 flex-shrink-0"
+            className="flex items-center gap-1 flex-shrink-0"
           >
             {index > 0 && <TiArrowRight size={24} className="text-gray-500" />}
             <DynamicImageProviderIcon
               src={`/icons/${provider?.type}-icon.png`}
-              width={30}
-              height={30}
+              width={24}
+              height={24}
               alt={provider?.type}
               className="flex-shrink-0"
             />
@@ -51,15 +51,15 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
         return provider ? (
           <div
             key={`action-${action.id}-${index}`}
-            className="flex items-center gap-2 flex-shrink-0"
+            className="flex items-center gap-1 flex-shrink-0"
           >
             {(index > 0 || isStepPresent) && (
               <TiArrowRight size={24} className="text-gray-500" />
             )}
             <DynamicImageProviderIcon
               src={`/icons/${provider?.type}-icon.png`}
-              width={30}
-              height={30}
+              width={24}
+              height={24}
               alt={provider?.type}
               className="flex-shrink-0"
             />

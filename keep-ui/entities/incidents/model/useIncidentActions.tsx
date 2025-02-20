@@ -4,6 +4,9 @@ import { useCallback } from "react";
 import { toast } from "react-toastify";
 import { useSWRConfig } from "swr";
 import { IncidentDto, Severity, Status } from "./models";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui";
+
 
 type UseIncidentActionsValue = {
   addIncident: (incident: IncidentCreateDto) => Promise<IncidentDto>;
@@ -223,12 +226,13 @@ export function useIncidentActions(): UseIncidentActionsValue {
 
         toast.success("Incident status changed successfully!");
         mutateIncidentsList();
+        mutateIncident(incidentId);
         return result;
       } catch (error) {
         showErrorToast(error, "Failed to change incident status");
       }
     },
-    [api, mutateIncidentsList]
+    [api, mutateIncident, mutateIncidentsList]
   );
 
   const changeSeverity = useCallback(

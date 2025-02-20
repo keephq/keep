@@ -1,0 +1,37 @@
+id: execute-workflow-example
+description: a Slack message with button that triggers a workflow - use with slack_basic.yml
+disabled: false
+triggers:
+  - type: manual
+consts: {}
+name: Trigger workflow from Slack message
+owners: []
+services: []
+steps: []
+actions:
+  - name: send-slack-alert
+    if: "not '{{ alert.slack_timestamp }}'"
+    provider:
+      config: " {{ providers.slack-prod }} "
+      type: slack
+      with:
+        blocks:
+          - text:
+              emoji: true
+              text: "{{alert.name}}"
+              type: plain_text
+            type: header
+          - elements:
+              - action_id: actionId-0
+                text:
+                  emoji: true
+                  text: "Trigger Slack Workflow"
+                  type: plain_text
+                type: button
+                # The following will trigger the workflow with the whole alert object:
+                # url: "https://api.keephq.dev/workflows/WORKFLOW_ID_TO_EXECUTE/execute?alert={{alert.id}}&api_key=YOUR_API_KEY"
+                # The following will trigger the workflow with the alert name, as an example, while any parameters can be passed:
+                url: "https://api.keephq.dev/workflows/WORKFLOW_ID_TO_EXECUTE/execute?name={{alert.name}}&api_key=YOUR_API_KEY"
+            type: actions
+        channel: C06PF9TCWUF
+        message: ""

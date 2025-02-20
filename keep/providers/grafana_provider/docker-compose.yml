@@ -8,13 +8,26 @@ services:
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./grafana/png:/var/lib/grafana/png
       - grafana-storage:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      # Add renderer configurations
+      - GF_RENDERING_SERVER_URL=http://renderer:8081/render
+      - GF_RENDERING_CALLBACK_URL=http://grafana:3000/
     depends_on:
       - prometheus
       - node-exporter-1
       - node-exporter-2
+      - renderer # Add dependency on renderer
+
+  # Add the renderer service
+  renderer:
+    image: grafana/grafana-image-renderer:latest
+    ports:
+      - "8081:8081"
+    environment:
+      - ENABLE_METRICS=true
 
   prometheus:
     image: prom/prometheus:latest

@@ -152,6 +152,7 @@ class AlertDto(BaseModel):
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
     event_id: str | None = None  # Database alert id
     url: AnyHttpUrl | None = None
+    imageUrl: AnyHttpUrl | None = None
     labels: dict | None = {}
     fingerprint: str | None = (
         None  # The fingerprint of the alert (used for alert de-duplication)
@@ -230,13 +231,33 @@ class AlertDto(BaseModel):
             except ValueError:
                 return None
 
+        def parse_unix_timestamp(timestamp_string):
+            try:
+                # Remove trailing 'Z' if present
+                timestamp_string = timestamp_string.rstrip("Z")
+                # Convert string to float
+                timestamp = float(timestamp_string)
+                # Create datetime from timestamp
+                dt = datetime.datetime.fromtimestamp(
+                    timestamp, tz=datetime.timezone.utc
+                )
+                return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            except (ValueError, TypeError):
+                return None
+
         if not last_received:
             return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         # Try to convert the date to iso format
         # see: https://github.com/keephq/keep/issues/1397
-        if convert_to_iso_format(last_received):
-            return convert_to_iso_format(last_received)
+        iso_date = convert_to_iso_format(last_received)
+        if iso_date:
+            return iso_date
+
+        # Try to parse as UNIX timestamp
+        unix_date = parse_unix_timestamp(last_received)
+        if unix_date:
+            return unix_date
 
         raise ValueError(f"Invalid date format: {last_received}")
 
@@ -319,8 +340,8 @@ class AlertDto(BaseModel):
         # if dismissed, change status to SUPPRESSED
         # note this is happen AFTER validate_dismissed which already consider
         #   dismissed + dismissUntil
-        if values.get("dismissed"):
-            values["status"] = AlertStatus.SUPPRESSED
+        # if values.get("dismissed"):
+        #     values["status"] = AlertStatus.SUPPRESSED
         return values
 
     class Config:

@@ -479,6 +479,7 @@ class ActionType(enum.Enum):
     # the alert was escalated
     WORKFLOW_ENRICH = "alert enriched by workflow"
     MAPPING_RULE_ENRICH = "alert enriched by mapping rule"
+    EXTRACTION_RULE_ENRICH = "alert enriched by extraction rule"
     # the alert was deduplicated
     DEDUPLICATED = "alert was deduplicated"
     # a ticket was created
@@ -499,3 +500,4 @@ class ActionType(enum.Enum):
     MAINTENANCE = "Alert is in maintenance window"
     INCIDENT_COMMENT = "A comment was added to the incident"
     INCIDENT_ENRICH = "Incident enriched"
+    INCIDENT_STATUS_CHANGE = "Incident status changed"

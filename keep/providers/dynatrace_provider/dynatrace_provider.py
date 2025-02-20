@@ -413,8 +413,6 @@ class DynatraceProvider(BaseProvider):
                 raise Exception(
                     f"Failed to setup Dynatrace webhook: {response.status_code} {response.text}"
                 )
-        else:
-            return True
 
     def dispose(self):
         """
