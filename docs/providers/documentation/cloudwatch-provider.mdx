@@ -84,6 +84,9 @@ Connecting CloudWatch to Keep requires:
 - **Region**: The AWS region your CloudWatch alarms and SNS topics reside in.
 - **Session Token** (optional): Necessary for temporary AWS credentials.
 - **CloudWatch SNS Topic** (optional): An ARN or name of the SNS topic for sending notifications. Optional if your alarms are already configured with an SNS topic.
+- **Profile Name** (optional): If you have multiple profiles in your credentials file, you can specify the profile name here.
+
+AWS credentials should be optional. If Keep is running on an AWS EC2 instance, the credentials of the instance role can and should be used. See more about IAM roles for EC2 [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2.html).
 
 ## Setting Up the Integration
 

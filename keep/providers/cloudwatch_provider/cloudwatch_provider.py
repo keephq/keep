@@ -24,6 +24,7 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 @pydantic.dataclasses.dataclass
 class CloudwatchProviderAuthConfig:
     access_key: str | None = dataclasses.field(
+        default=None,
         metadata={
             "required": False,
             "description": "AWS access key (Leave empty if using IAM role at EC2)",
@@ -31,6 +32,7 @@ class CloudwatchProviderAuthConfig:
         }
     )
     access_key_secret: str | None = dataclasses.field(
+        default=None,
         metadata={
             "required": False,
             "description": "AWS access key secret (Leave empty if using IAM role at EC2)",
@@ -53,6 +55,17 @@ class CloudwatchProviderAuthConfig:
             "sensitive": True,
         },
     )
+
+    profile_name: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "AWS's credentials profile name",
+            "hint": "If you have multiple profiles in your credentials file, you can specify the profile name here.",
+            "sensitive": False,
+        }
+    )
+
     cloudwatch_sns_topic: str = dataclasses.field(
         default=None,
         metadata={
@@ -378,11 +391,19 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 aws_session_token=self.authentication_config.session_token,
                 region_name=self.authentication_config.region,
             )
-        else:
+        elif self.authentication_config.access_key and self.authentication_config.access_key_secret:
+            self.logger.info("Using provided AWS credentials")
             client = boto3.client(
                 aws_client_type,
                 aws_access_key_id=self.authentication_config.access_key,
                 aws_secret_access_key=self.authentication_config.access_key_secret,
+                region_name=self.authentication_config.region,
+            )
+        else:
+            self.logger.info("Using instance role credentials")
+            session = boto3.Session(profile_name=self.authentication_config.profile_name)
+            client = session.client(
+                aws_client_type,
                 region_name=self.authentication_config.region,
             )
         return client
@@ -603,6 +624,7 @@ if __name__ == "__main__":
             "access_key": os.environ.get("AWS_ACCESS_KEY_ID"),
             "access_key_secret": os.environ.get("AWS_SECRET_ACCESS_KEY"),
             "region": os.environ.get("AWS_REGION"),
+            "profile_name": os.environ.get("AWS_PROFILE"),
         }
     )
     context_manager = ContextManager(
