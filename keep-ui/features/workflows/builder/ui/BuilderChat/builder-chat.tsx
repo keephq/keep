@@ -562,9 +562,5 @@ export function BuilderChatSafe({
     return null;
   }
 
-  return (
-    <CopilotKit runtimeUrl="/api/copilotkit">
-      <BuilderChat definition={definition} {...props} />
-    </CopilotKit>
-  );
+  return <BuilderChat definition={definition} {...props} />;
 }

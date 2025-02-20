@@ -48,11 +48,24 @@ export default function ManualRunWorkflowModal({
         }
       );
 
-      // Workflow started successfully
-      toast.success("Workflow started successfully", { position: "top-left" });
       const { workflow_execution_id } = responseData;
-      router.push(
-        `/workflows/${selectedWorkflowId}/runs/${workflow_execution_id}`
+      const executionUrl = `/workflows/${selectedWorkflowId}/runs/${workflow_execution_id}`;
+
+      toast.success(
+        <div>
+          Workflow started successfully.{" "}
+          <a
+            href={executionUrl}
+            className="text-orange-500 hover:text-orange-600 underline"
+            onClick={(e) => {
+              e.preventDefault();
+              router.push(executionUrl);
+            }}
+          >
+            View execution
+          </a>
+        </div>,
+        { position: "top-right" }
       );
     } catch (error) {
       showErrorToast(error, "Failed to start workflow");
