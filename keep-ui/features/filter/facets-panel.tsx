@@ -99,8 +99,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   areFacetOptionsLoading = false,
   clearFiltersToken,
   uncheckedByDefaultOptionValues,
-  renderFacetOptionIcon = undefined,
-  renderFacetOptionLabel,
   facetsConfig,
   onCelChange = undefined,
   onAddFacet = undefined,
@@ -215,20 +213,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   function toggleFacetOption(facetId: string, value: string) {
     setClickedFacetId(facetId);
     const facetState = getFacetState(facetId);
-    const facetConfig = facetsConfigIdBased?.[facetId];
-
-    if (!facetConfig?.canHitEmptyState && isOptionSelected(facetId, value)) {
-      const facetOptionsWithMatches = facetOptions[facetId].filter(
-        (facetOption) => facetOption.matches_count
-      );
-      if (facetState.size === facetOptionsWithMatches.length - 1) {
-        facetOptionsWithMatches.forEach((facetOption) => {
-          facetState.delete(facetOption.display_name);
-        });
-        setFacetsState({ ...facetsState, [facetId]: facetState });
-        return;
-      }
-    }
 
     if (isOptionSelected(facetId, value)) {
       facetState.add(value);
