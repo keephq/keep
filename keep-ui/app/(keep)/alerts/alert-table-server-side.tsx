@@ -551,6 +551,7 @@ export function AlertTableServerSide({
                       viewedAlerts={viewedAlerts}
                       lastViewedAlert={lastViewedAlert}
                       onRowClick={handleRowClick}
+                      onClearFiltersClick={() => setClearFiltersToken(uuidV4())}
                       presetName={presetName}
                     />
                   </Table>
