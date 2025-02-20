@@ -18,6 +18,7 @@ interface Props {
   showSearchEmptyState?: boolean;
   theme: { [key: string]: string };
   onRowClick: (alert: AlertDto) => void;
+  onClearFiltersClick?: () => void;
   presetName: string;
   viewedAlerts: ViewedAlert[];
   lastViewedAlert: string | null;
@@ -29,6 +30,7 @@ export function AlertsTableBody({
   showEmptyState,
   theme,
   onRowClick,
+  onClearFiltersClick,
   presetName,
   showFilterEmptyState,
   showSearchEmptyState,
@@ -75,11 +77,11 @@ export function AlertsTableBody({
             <div className="flex flex-col justify-center items-center w-full p-4">
               <EmptyStateCard
                 title="No alerts to display matching your filter"
-                buttonText="Clear filter"
+                buttonText="Reset filter"
                 renderIcon={() => (
                   <FunnelIcon className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
                 )}
-                onClick={() => console.log("")}
+                onClick={() => onClearFiltersClick!()}
               />
             </div>
           </div>
