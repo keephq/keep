@@ -77,7 +77,7 @@ export function AlertsTableBody({
             <div className="flex flex-col justify-center items-center w-full p-4">
               <EmptyStateCard
                 title="No alerts to display matching your filter"
-                buttonText="Clear filter"
+                buttonText="Reset filter"
                 renderIcon={() => (
                   <FunnelIcon className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
                 )}
