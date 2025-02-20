@@ -23,7 +23,11 @@ const GroupedMenu = ({
   isDraggable?: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(!!searchTerm || isDraggable);
-  const { selectedNode, selectedEdge, addNodeBetween } = useWorkflowStore();
+  const {
+    selectedNode,
+    selectedEdge,
+    addNodeBetweenSafe: addNodeBetween,
+  } = useWorkflowStore();
 
   useEffect(() => {
     setIsOpen(!!searchTerm || !isDraggable);

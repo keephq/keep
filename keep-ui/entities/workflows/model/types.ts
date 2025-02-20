@@ -170,6 +170,13 @@ export type V2StepConditionThreshold = z.infer<
   typeof V2StepConditionThresholdSchema
 >;
 
+export const V2StepConditionSchema = z.union([
+  V2StepConditionAssertSchema,
+  V2StepConditionThresholdSchema,
+]);
+
+export type V2StepCondition = z.infer<typeof V2StepConditionSchema>;
+
 export const V2StepForeachSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -347,6 +354,11 @@ export interface FlowState extends FlowStateValues {
     step: V2StepTemplate | V2StepTrigger,
     type: "node" | "edge"
   ) => string | null;
+  addNodeBetweenSafe: (
+    nodeOrEdgeId: string,
+    step: V2StepTemplate | V2StepTrigger,
+    type: "node" | "edge"
+  ) => string | null;
   setToolBoxConfig: (config: ToolboxConfiguration) => void;
   setEditorOpen: (open: boolean) => void;
   updateSelectedNodeData: (key: string, value: any) => void;
@@ -361,7 +373,7 @@ export interface FlowState extends FlowStateValues {
   setEdges: (edges: Edge[]) => void;
   getNodeById: (id: string) => FlowNode | undefined;
   getEdgeById: (id: string) => Edge | undefined;
-  deleteNodes: (ids: string | string[]) => void;
+  deleteNodes: (ids: string | string[]) => string[];
   getNextEdge: (nodeId: string) => Edge | undefined;
   reset: () => void;
   setDefinition: (def: DefinitionV2) => void;

@@ -20,7 +20,7 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
       color="rose"
     >
       {Object.entries(validationErrors).map(([id, error]) => (
-        <div key={id}>
+        <span key={id}>
           <span
             className="font-medium hover:underline cursor-pointer"
             onClick={() => {
@@ -31,7 +31,7 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
             {id}:
           </span>{" "}
           {error}
-        </div>
+        </span>
       ))}
     </Callout>
   ) : (

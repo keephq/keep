@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Provider } from "@/app/(keep)/providers/providers";
 import {
   V2Step,
@@ -7,6 +7,14 @@ import {
   V2StepStep,
   DefinitionV2,
   IncidentEventEnum,
+  V2ActionStep,
+  V2ActionSchema,
+  V2StepStepSchema,
+  V2StepConditionAssert,
+  V2StepConditionThreshold,
+  V2StepConditionAssertSchema,
+  V2StepCondition,
+  V2StepConditionSchema,
 } from "@/entities/workflows/model/types";
 import {
   CopilotChat,
@@ -25,7 +33,6 @@ import { GENERAL_INSTRUCTIONS } from "@/app/(keep)/workflows/builder/_constants"
 import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
 import { WF_DEBUG_INFO } from "../debug-settings";
 import { AddTriggerUI } from "./AddTriggerUI";
-import { AddStepUI } from "./AddStepUI";
 import { useTestStep } from "../Editor/StepTest";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { Title, Text } from "@tremor/react";
@@ -37,6 +44,8 @@ import { SuggestionResult } from "./SuggestionStatus";
 import { useSearchAlerts } from "@/utils/hooks/useSearchAlerts";
 import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
+import Skeleton from "react-loading-skeleton";
+import { AddStepUI } from "./AddStepUI";
 
 const useAlertKeys = () => {
   const defaultQuery = {
@@ -94,6 +103,31 @@ function getWorkflowSummaryForCopilot(nodes: FlowNode[], edges: Edge[]) {
     edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
   };
 }
+
+function isProtectedStep(stepId: string) {
+  return (
+    stepId === "start" ||
+    stepId === "end" ||
+    stepId === "trigger_start" ||
+    stepId === "trigger_end"
+  );
+}
+
+const AddTriggerSkeleton = () => {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="h-4 w-full">
+        <Skeleton />
+      </div>
+      <div className="h-4 w-1/2">
+        <Skeleton />
+      </div>
+      <div className="h-12 max-w-[250px] w-full rounded-md">
+        <Skeleton className="w-full h-full" />
+      </div>
+    </div>
+  );
+};
 
 export function BuilderChat({
   definition,
@@ -256,18 +290,32 @@ export function BuilderChat({
         required: true,
       },
     ],
-    handler: ({ stepId }: { stepId: string }) => {
-      if (
-        stepId === "start" ||
-        stepId === "end" ||
-        stepId === "trigger_start" ||
-        stepId === "trigger_end"
-      ) {
-        return;
+    renderAndWaitForResponse: ({ status, args, respond }) => {
+      if (status === "inProgress") {
+        return <div>Loading...</div>;
+      }
+      const stepId = args.stepId;
+      if (isProtectedStep(stepId)) {
+        respond?.(
+          "Cannot remove start, end, trigger_start or trigger_end steps"
+        );
+        return (
+          <p>Cannot remove start, end, trigger_start or trigger_end steps</p>
+        );
       }
       // TODO: nice UI for this
       if (confirm(`Are you sure you want to remove ${stepId} step?`)) {
-        deleteNodes(stepId);
+        const deletedNodeIds = deleteNodes(stepId);
+        if (deletedNodeIds.length > 0) {
+          respond?.("Step removed");
+          return <p>Step {stepId} removed</p>;
+        } else {
+          respond?.("Step removal failed");
+          return <p>Step removal failed</p>;
+        }
+      } else {
+        respond?.("User cancelled the step removal");
+        return <p>Step removal cancelled</p>;
       }
     },
   });
@@ -284,79 +332,39 @@ export function BuilderChat({
         required: true,
       },
     ],
-    handler: ({ triggerNodeId }: { triggerNodeId: string }) => {
+    renderAndWaitForResponse: ({ status, args, respond }) => {
+      if (status === "inProgress") {
+        return <div>Loading...</div>;
+      }
+      const triggerNodeId = args.triggerNodeId;
+
+      if (isProtectedStep(triggerNodeId)) {
+        respond?.(
+          "Cannot remove start, end, trigger_start or trigger_end steps"
+        );
+        return (
+          <p>Cannot remove start, end, trigger_start or trigger_end steps</p>
+        );
+      }
+
       // TODO: nice UI for this
       if (
         confirm(`Are you sure you want to remove ${triggerNodeId} trigger?`)
       ) {
-        deleteNodes(triggerNodeId);
+        const deletedNodeIds = deleteNodes(triggerNodeId);
+        if (deletedNodeIds.length > 0) {
+          respond?.("Trigger removed");
+          return <p>Trigger {triggerNodeId} removed</p>;
+        } else {
+          respond?.("Trigger removal failed");
+          return <p>Trigger removal failed</p>;
+        }
+      } else {
+        respond?.("User cancelled the trigger removal");
+        return <p>Trigger removal cancelled</p>;
       }
     },
   });
-
-  // TODO: simplify this action, e.g. params: componentType, name, properties
-  useCopilotAction(
-    {
-      name: "generateStepDefinition",
-      description: "Generate a workflow step definition",
-      parameters: [
-        {
-          name: "stepType",
-          description:
-            "The type of step to add e.g. action-slack, step-python, condition-assert, etc",
-          type: "string",
-          required: true,
-        },
-        {
-          name: "name",
-          description: "The short name of the step",
-          type: "string",
-          required: true,
-        },
-        {
-          name: "aim",
-          description:
-            "The detailed description of the step's purpose and proposed solution",
-          type: "string",
-          required: true,
-        },
-      ],
-      handler: async ({
-        stepType,
-        name,
-        aim,
-      }: {
-        stepType: string;
-        name: string;
-        aim: string;
-      }) => {
-        const step = steps?.find((step: any) => step.type === stepType);
-        if (!step) {
-          return;
-        }
-        try {
-          const stepDefinition = await generateStepDefinition({
-            name,
-            stepType,
-            stepProperties: { ...step.properties },
-            aim,
-          });
-          return {
-            ...step,
-            name: name ?? step.name,
-            properties: {
-              ...step.properties,
-              with: stepDefinition,
-            },
-          };
-        } catch (e) {
-          console.error(e);
-          return;
-        }
-      },
-    },
-    [steps]
-  );
 
   useCopilotAction({
     name: "addManualTrigger",
@@ -365,35 +373,38 @@ export function BuilderChat({
     parameters: [],
     renderAndWaitForResponse: (args) => {
       if (args.status === "inProgress") {
-        // TODO: skeleton loader
-        return <div>Loading...</div>;
+        return <AddTriggerSkeleton />;
       }
 
       if (args.status === "complete" && "result" in args) {
-        return AddTriggerUI({
-          status: "complete",
-          args: {
+        return (
+          <AddTriggerUI
+            status="complete"
+            args={{
+              triggerType: "manual",
+              triggerProperties: JSON.stringify({
+                manual: "true",
+              }),
+            }}
+            respond={undefined}
+            result={args.result as SuggestionResult}
+          />
+        );
+      }
+
+      return (
+        <AddTriggerUI
+          status="executing"
+          args={{
             triggerType: "manual",
             triggerProperties: JSON.stringify({
               manual: "true",
             }),
-          },
-          respond: undefined,
-          result: args.result as SuggestionResult,
-        });
-      }
-
-      return AddTriggerUI({
-        status: "executing",
-        args: {
-          triggerType: "manual",
-          triggerProperties: JSON.stringify({
-            manual: "true",
-          }),
-        },
-        respond: args.respond,
-        result: undefined,
-      });
+          }}
+          respond={args.respond}
+          result={undefined}
+        />
+      );
     },
   });
 
@@ -405,117 +416,52 @@ export function BuilderChat({
     return keys?.map((key) => key.split(".").pop());
   }, [keys]);
 
-  useCopilotAction(
-    {
-      name: "addAlertTrigger",
-      description:
-        "Add an alert trigger to the workflow. There could be only one alert trigger in the workflow, if you need more combine them into one alert trigger.",
-      parameters: [
-        {
-          name: "alertFilters",
-          description: `The filters of the alert trigger, this should be a JSON object, there keys are one of: ${possibleAlertProperties.join(
-            ", "
-          )}, values are strings. This cannot be empty (undefined!)`,
-          type: "string",
-          required: true,
-        },
-      ],
-      renderAndWaitForResponse: (args) => {
-        if (args.status === "inProgress") {
-          // TODO: skeleton loader
-          return <div>Loading...</div>;
-        }
-
-        const argsToPass = {
-          triggerType: "alert",
-          triggerProperties: JSON.stringify({
-            alert: JSON.parse(args.args.alertFilters),
-          }),
-        };
-
-        if (args.status === "complete" && "result" in args) {
-          return AddTriggerUI({
-            status: "complete",
-            args: argsToPass,
-            respond: undefined,
-            result: args.result as SuggestionResult,
-          });
-        }
-
-        return AddTriggerUI({
-          status: "executing",
-          args: argsToPass,
-          respond: args.respond,
-          result: undefined,
-        });
-      },
-    },
-    [possibleAlertProperties]
-  );
-
-  useCopilotAction({
-    name: "addIntervalTrigger",
-    description:
-      "Add an interval trigger to the workflow. There could be only one interval trigger in the workflow.",
-    parameters: [
-      {
-        name: "interval",
-        description: "The interval of the interval trigger in seconds",
-        type: "number",
-        required: true,
-      },
-    ],
-    renderAndWaitForResponse: (args) => {
-      if (args.status === "inProgress") {
-        // TODO: skeleton loader
-        return <div>Loading...</div>;
-      }
-
-      const argsToPass = {
-        triggerType: "interval",
-        triggerProperties: JSON.stringify({ interval: args.args.interval }),
-      };
-
-      if (args.status === "complete" && "result" in args) {
-        return AddTriggerUI({
-          status: "complete",
-          args: argsToPass,
-          respond: undefined,
-          result: args.result as SuggestionResult,
-        });
-      }
-
-      return AddTriggerUI({
-        status: "executing",
-        args: argsToPass,
-        respond: args.respond,
-        result: undefined,
-      });
-    },
+  useCopilotReadable({
+    description: "Possible alert properties",
+    value: possibleAlertProperties,
   });
 
   useCopilotAction({
-    name: "addIncidentTrigger",
+    name: "addAlertTrigger",
     description:
-      "Add an incident trigger to the workflow. There could be only one incident trigger in the workflow.",
+      "Add an alert trigger to the workflow. There could be only one alert trigger in the workflow, if you need more combine them into one alert trigger.",
     parameters: [
       {
-        name: "incidentEvents",
-        description: `The events of the incident trigger, one of: ${IncidentEventEnum.options.map((o) => `"${o}"`).join(", ")}`,
-        type: "string[]",
+        name: "alertFilters",
+        description: "The filters of the alert trigger",
+        type: "object[]",
         required: true,
+        attributes: [
+          {
+            name: "attribute",
+            description: `One of alert properties`,
+            type: "string",
+            required: true,
+          },
+          {
+            name: "value",
+            description: "The value of the alert filter",
+            type: "string",
+            required: true,
+          },
+        ],
       },
     ],
     renderAndWaitForResponse: (args) => {
       if (args.status === "inProgress") {
-        // TODO: skeleton loader
-        return <div>Loading...</div>;
+        return <AddTriggerSkeleton />;
       }
 
       const argsToPass = {
-        triggerType: "incident",
+        triggerType: "alert",
         triggerProperties: JSON.stringify({
-          incident: { events: args.args.incidentEvents },
+          alert: args.args.alertFilters.reduce(
+            (acc, filter) => {
+              acc[filter.attribute] = filter.value;
+              return acc;
+            },
+            {} as Record<string, string>
+          ),
         }),
       };
 
@@ -537,52 +483,423 @@ export function BuilderChat({
     },
   });
 
-  // TODO: split this action into: addAction, addStep, addCondition, addForeach so parameters are more accurate
-  useCopilotAction(
-    {
-      name: "addStep",
-      description:
-        "Add a step to the workflow. After adding a step ensure you have the updated workflow definition.",
-      parameters: [
-        {
-          name: "stepDefinitionJSON",
-          description:
-            "The step definition to add, use the 'generateStepDefinition' action to generate a step definition.",
-          type: "string",
-          required: true,
-        },
-        {
-          name: "addAfterNodeName",
-          description:
-            "The 'name' of the step to add the new step after, get it from the workflow definition. If workflow is empty, use 'trigger_end'.",
-          type: "string",
-          required: true,
-        },
-        {
-          name: "addAfterEdgeId",
-          description:
-            "If you want to add the step after specific edge, use the edgeId.",
-          type: "string",
-          required: false,
-        },
-        {
-          // TODO: replace with more accurate nodeOrEdgeId description
-          name: "isStart",
-          description: "Whether the step is the start of the workflow",
-          type: "boolean",
-          required: false,
-        },
-      ],
-      renderAndWaitForResponse: (args) => {
-        if (args.status === "inProgress") {
-          return <div>Loading...</div>;
-        }
-        return AddStepUI(args);
+  useCopilotAction({
+    name: "addIntervalTrigger",
+    description:
+      "Add an interval trigger to the workflow. There could be only one interval trigger in the workflow.",
+    parameters: [
+      {
+        name: "interval",
+        description: "The interval of the interval trigger in seconds",
+        type: "number",
+        required: true,
       },
-    },
-    [steps, selectedNode, selectedEdge, addNodeBetween]
-  );
+    ],
+    renderAndWaitForResponse: (args) => {
+      if (args.status === "inProgress") {
+        return <AddTriggerSkeleton />;
+      }
 
+      const argsToPass = {
+        triggerType: "interval",
+        triggerProperties: JSON.stringify({ interval: args.args.interval }),
+      };
+
+      if (args.status === "complete" && "result" in args) {
+        return (
+          <AddTriggerUI
+            status="complete"
+            args={argsToPass}
+            respond={undefined}
+            result={args.result as SuggestionResult}
+          />
+        );
+      }
+
+      return (
+        <AddTriggerUI
+          status="executing"
+          args={argsToPass}
+          respond={args.respond}
+          result={undefined}
+        />
+      );
+    },
+  });
+
+  useCopilotAction({
+    name: "addIncidentTrigger",
+    description:
+      "Add an incident trigger to the workflow. There could be only one incident trigger in the workflow.",
+    parameters: [
+      {
+        name: "incidentEvents",
+        description: `The events of the incident trigger, one of: ${IncidentEventEnum.options.map((o) => `"${o}"`).join(", ")}`,
+        type: "string[]",
+        required: true,
+      },
+    ],
+    renderAndWaitForResponse: (args) => {
+      if (args.status === "inProgress") {
+        return <AddTriggerSkeleton />;
+      }
+
+      const argsToPass = {
+        triggerType: "incident",
+        triggerProperties: JSON.stringify({
+          incident: { events: args.args.incidentEvents },
+        }),
+      };
+
+      if (args.status === "complete" && "result" in args) {
+        return (
+          <AddTriggerUI
+            status="complete"
+            args={argsToPass}
+            respond={undefined}
+            result={args.result as SuggestionResult}
+          />
+        );
+      }
+
+      return (
+        <AddTriggerUI
+          status="executing"
+          args={argsToPass}
+          respond={args.respond}
+          result={undefined}
+        />
+      );
+    },
+  });
+
+  function getActionStepFromCopilotAction(args: {
+    actionId: string;
+    actionType: string;
+    actionName: string;
+    providerName: string;
+    withActionParams: { name: string; value: string }[];
+  }) {
+    const template = steps.find(
+      (step): step is V2ActionStep =>
+        step.type === args.actionType &&
+        step.componentType === "task" &&
+        "actionParams" in step.properties
+    );
+    if (!template) {
+      return null;
+    }
+    const action: V2ActionStep = {
+      ...template,
+      id: args.actionId,
+      name: args.actionName,
+      properties: {
+        ...template.properties,
+        with: args.withActionParams.reduce(
+          (acc, param) => {
+            acc[param.name] = param.value;
+            return acc;
+          },
+          {} as Record<string, string>
+        ),
+      },
+    };
+    return V2ActionSchema.parse(action);
+  }
+
+  useCopilotAction({
+    name: "addAction",
+    description:
+      "Add an action to the workflow. Actions are sending notifications to a provider.",
+    parameters: [
+      {
+        name: "withActionParams",
+        description: "The parameters of the action to add",
+        type: "object[]",
+        required: true,
+        attributes: [
+          {
+            name: "name",
+            description: "The name of the action parameter",
+            type: "string",
+            required: true,
+          },
+          {
+            name: "value",
+            description: "The value of the action parameter",
+            type: "string",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "actionId",
+        description: "The id of the action to add",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "actionType",
+        description: "The type of the action to add",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "actionName",
+        description: "The kebab-case name of the action to add",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "providerName",
+        description: "The name of the provider to add",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "addAfterEdgeId",
+        description:
+          "The id of the edge to add the action after. If you're adding action in condition branch, make sure the edge id ends with '-true' or '-false' according to the desired branch.",
+        type: "string",
+        required: true,
+      },
+    ],
+    renderAndWaitForResponse: ({ status, args, respond, result }) => {
+      if (status === "inProgress") {
+        return <AddTriggerSkeleton />;
+      }
+      const action = getActionStepFromCopilotAction(args);
+      if (!action) {
+        respond?.({
+          status: "error",
+          error: "Action definition is invalid",
+        });
+        return <div>Action definition is invalid</div>;
+      }
+
+      return (
+        <AddStepUI
+          status={status}
+          step={action}
+          addAfterEdgeId={args.addAfterEdgeId}
+          result={result}
+          respond={respond}
+        />
+      );
+    },
+  });
+
+  function getStepStepFromCopilotAction(args: {
+    stepId: string;
+    stepType: string;
+    stepName: string;
+    providerName: string;
+    withStepParams: { name: string; value: string }[];
+  }) {
+    const template = steps.find(
+      (step): step is V2StepStep => step.type === args.stepType
+    );
+    if (!template) {
+      return null;
+    }
+
+    const step: V2StepStep = {
+      ...template,
+      id: args.stepId,
+      name: args.stepName,
+      properties: {
+        ...template.properties,
+        with: args.withStepParams.reduce(
+          (acc, param) => {
+            acc[param.name] = param.value;
+            return acc;
+          },
+          {} as Record<string, string>
+        ),
+      },
+    };
+    return V2StepStepSchema.parse(step);
+  }
+
+  useCopilotAction({
+    name: "addStep",
+    description:
+      "Add a step to the workflow. Steps are fetching data from a provider.",
+    parameters: [
+      {
+        name: "withStepParams",
+        description: "The parameters of the step to add",
+        type: "object[]",
+        required: true,
+        attributes: [
+          {
+            name: "name",
+            description: "The name of the step parameter",
+            type: "string",
+            required: true,
+          },
+          {
+            name: "value",
+            description: "The value of the step parameter",
+            type: "string",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "stepId",
+        description: "The id of the step to add",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "stepType",
+        description: "The type of the step to add, should start with 'step-'",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "stepName",
+        description: "The kebab-case name of the step to add",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "providerName",
+        description: "The name of the provider to add",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "addAfterEdgeId",
+        description: "The id of the edge to add the action after",
+        type: "string",
+        required: true,
+      },
+    ],
+    renderAndWaitForResponse: ({ status, args, respond, result }) => {
+      if (status === "inProgress") {
+        return <AddTriggerSkeleton />;
+      }
+      const step = getStepStepFromCopilotAction(args);
+      if (!step) {
+        respond?.({
+          status: "error",
+          error: "Step definition is invalid",
+        });
+        return <div>Step definition is invalid</div>;
+      }
+
+      return (
+        <AddStepUI
+          status={status}
+          step={step}
+          result={result}
+          addAfterEdgeId={args.addAfterEdgeId}
+          respond={respond}
+        />
+      );
+    },
+  });
+
+  function getConditionStepFromCopilotAction(args: {
+    conditionId: string;
+    conditionType: string;
+    conditionName: string;
+    conditionValue: string;
+    compareToValue: string;
+  }) {
+    const template = steps.find(
+      (step): step is V2StepCondition => step.type === args.conditionType
+    );
+    if (!template) {
+      throw new Error("Condition type is invalid");
+    }
+
+    const condition: V2StepCondition = {
+      ...template,
+      id: args.conditionId,
+      name: args.conditionName,
+      properties: {
+        ...template.properties,
+        value: args.conditionValue,
+        compare_to: args.compareToValue,
+      },
+    };
+    return V2StepConditionSchema.parse(condition);
+  }
+
+  useCopilotAction({
+    name: "addCondition",
+    description: "Add a condition to the workflow.",
+    parameters: [
+      {
+        name: "conditionId",
+        description: "The id of the condition to add",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "conditionType",
+        description:
+          "The type of the condition to add. One of: 'condition-assert', 'condition-threshold'",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "conditionName",
+        description: "The kebab-case name of the condition to add",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "conditionValue",
+        description: "The value of the condition to add",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "compareToValue",
+        description: "The value to compare the condition to",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "addAfterEdgeId",
+        description: "The id of the edge to add the condition after",
+        type: "string",
+        required: true,
+      },
+    ],
+    renderAndWaitForResponse: ({ status, args, respond, result }) => {
+      if (status === "inProgress") {
+        return <AddTriggerSkeleton />;
+      }
+      try {
+        const condition = getConditionStepFromCopilotAction(args);
+        if (!condition) {
+          respond?.({
+            status: "error",
+            error: "Condition definition is invalid",
+            errorDetail: "Condition type is invalid",
+          });
+          return <div>Condition definition is invalid</div>;
+        }
+        return (
+          <AddStepUI
+            status={status}
+            step={condition}
+            result={result}
+            addAfterEdgeId={args.addAfterEdgeId}
+            respond={respond}
+          />
+        );
+      } catch (e) {
+        respond?.({ status: "error", error: e });
+        return <div>Failed to add condition {e?.message}</div>;
+      }
+    },
+  });
   // const testStep = useTestStep();
 
   // TODO: add this action
