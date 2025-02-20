@@ -7,7 +7,7 @@ import { useWorkflowStore } from "@/entities/workflows";
 
 type AddStepUIPropsCommon = {
   step: V2Step;
-  addAfterEdgeId: string;
+  addBeforeNodeId: string;
 };
 
 type AddStepUIPropsComplete = AddStepUIPropsCommon & {
@@ -27,15 +27,26 @@ type AddStepUIProps = AddStepUIPropsComplete | AddStepUIPropsExecuting;
 export const AddStepUI = ({
   status,
   step,
-  addAfterEdgeId,
+  addBeforeNodeId,
   result,
   respond,
 }: AddStepUIProps) => {
-  const { addNodeBetween } = useWorkflowStore();
+  const { addNodeBetween, setSelectedNode } = useWorkflowStore();
 
   const onAdd = () => {
     try {
-      addNodeBetween(addAfterEdgeId, step, "edge");
+      // Hack to get the conditions to work. TODO: make it more straightforward
+      // FIX: it fails for ordinary steps
+      // if (addAfterEdgeId.includes("condition")) {
+      //   const edge = getEdgeById(addAfterEdgeId);
+      //   if (!edge) {
+      //     throw new Error("Edge not found");
+      //   }
+      //   const nodeId = edge!.source;
+      //   addNodeBetween(nodeId, step, "node");
+      // } else {
+      addNodeBetween(addBeforeNodeId, step, "node");
+      // }
       respond?.({
         status: "complete",
         message: "Step added",
@@ -75,7 +86,18 @@ export const AddStepUI = ({
     <div className="flex flex-col gap-2">
       <div>
         {/* TODO: add the place where the action will be added in text */}
-        <div>Do you want to add this action?</div>
+        <div>
+          Do you want to add this action before node {addBeforeNodeId} (
+          <button
+            className="text-blue-500"
+            onClick={() => {
+              setSelectedNode(addBeforeNodeId);
+            }}
+          >
+            Select node
+          </button>
+          )?
+        </div>
         <div className="my-2">
           <StepPreview step={step} />
         </div>

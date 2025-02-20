@@ -183,3 +183,28 @@ export const normalizeStepType = (type: string) => {
     ?.replace("condition-", "")
     ?.replace("trigger_", "");
 };
+
+export function edgeCanHaveAddButton(source: string, target: string) {
+  let showAddButton =
+    !source?.includes("empty") &&
+    !target?.includes("trigger_end") &&
+    source !== "start";
+
+  if (!showAddButton) {
+    showAddButton =
+      target?.includes("trigger_end") && source?.includes("trigger_start");
+  }
+  return showAddButton;
+}
+
+export function edgeCanAddTrigger(source: string, target: string) {
+  return source?.includes("trigger_start") && target?.includes("trigger_end");
+}
+
+export function edgeCanAddStep(source: string, target: string) {
+  return (
+    !source?.includes("empty") &&
+    !target?.includes("trigger_end") &&
+    source !== "start"
+  );
+}

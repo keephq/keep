@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Provider } from "@/app/(keep)/providers/providers";
 import {
   V2Step,
@@ -10,9 +10,6 @@ import {
   V2ActionStep,
   V2ActionSchema,
   V2StepStepSchema,
-  V2StepConditionAssert,
-  V2StepConditionThreshold,
-  V2StepConditionAssertSchema,
   V2StepCondition,
   V2StepConditionSchema,
 } from "@/entities/workflows/model/types";
@@ -46,6 +43,11 @@ import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
 import Skeleton from "react-loading-skeleton";
 import { AddStepUI } from "./AddStepUI";
+import {
+  edgeCanAddStep,
+  edgeCanAddTrigger,
+  edgeCanHaveAddButton,
+} from "../../lib/utils";
 
 const useAlertKeys = () => {
   const defaultQuery = {
@@ -100,7 +102,11 @@ function getWorkflowSummaryForCopilot(nodes: FlowNode[], edges: Edge[]) {
       prevStepId: n.prevStepId,
       ...n.data,
     })),
-    edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
+    edges: edges.map((e) => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+    })),
   };
 }
 
@@ -609,8 +615,7 @@ export function BuilderChat({
 
   useCopilotAction({
     name: "addAction",
-    description:
-      "Add an action to the workflow. Actions are sending notifications to a provider.",
+    description: `Add an action to the workflow. Actions are sending notifications to a provider.`,
     parameters: [
       {
         name: "withActionParams",
@@ -657,9 +662,11 @@ export function BuilderChat({
         required: true,
       },
       {
-        name: "addAfterEdgeId",
-        description:
-          "The id of the edge to add the action after. If you're adding action in condition branch, make sure the edge id ends with '-true' or '-false' according to the desired branch.",
+        name: "addBeforeNodeId",
+        description: `The id of the node to add the condition before. For workflows with no steps, should be 'end'. Cannot be a node with componentType: 'trigger'. For condition branches:
+- Must end with '__empty-true' for true branch
+- Must end with '__empty-false' for false branch
+Example: 'node_123__empty-true'`,
         type: "string",
         required: true,
       },
@@ -681,7 +688,7 @@ export function BuilderChat({
         <AddStepUI
           status={status}
           step={action}
-          addAfterEdgeId={args.addAfterEdgeId}
+          addBeforeNodeId={args.addBeforeNodeId}
           result={result}
           respond={respond}
         />
@@ -771,8 +778,11 @@ export function BuilderChat({
         required: true,
       },
       {
-        name: "addAfterEdgeId",
-        description: "The id of the edge to add the action after",
+        name: "addBeforeNodeId",
+        description: `The id of the node to add the condition before. For workflows with no steps, should be 'end'. Cannot be a node with componentType: 'trigger'. For condition branches:
+- Must end with '__empty-true' for true branch
+- Must end with '__empty-false' for false branch
+Example: 'node_123__empty-true'`,
         type: "string",
         required: true,
       },
@@ -795,7 +805,7 @@ export function BuilderChat({
           status={status}
           step={step}
           result={result}
-          addAfterEdgeId={args.addAfterEdgeId}
+          addBeforeNodeId={args.addBeforeNodeId}
           respond={respond}
         />
       );
@@ -865,8 +875,11 @@ export function BuilderChat({
         required: true,
       },
       {
-        name: "addAfterEdgeId",
-        description: "The id of the edge to add the condition after",
+        name: "addBeforeNodeId",
+        description: `The id of the node to add the condition before. For workflows with no steps, should be 'end'. Cannot be a node with componentType: 'trigger'. For condition branches:
+- Must end with '__empty-true' for true branch
+- Must end with '__empty-false' for false branch
+Example: 'node_123__empty-true'`,
         type: "string",
         required: true,
       },
@@ -890,7 +903,7 @@ export function BuilderChat({
             status={status}
             step={condition}
             result={result}
-            addAfterEdgeId={args.addAfterEdgeId}
+            addBeforeNodeId={args.addBeforeNodeId}
             respond={respond}
           />
         );

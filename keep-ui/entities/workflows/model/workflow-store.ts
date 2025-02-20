@@ -173,6 +173,7 @@ function addNodeBetween(
     nodes: newNodes,
     isLayouted: false,
     changes: get().changes + 1,
+    lastChangedAt: Date.now(),
   });
 
   switch (newNodeId) {
