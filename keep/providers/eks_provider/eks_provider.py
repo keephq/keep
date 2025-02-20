@@ -21,14 +21,18 @@ from keep.providers.models.provider_method import ProviderMethod
 class EksProviderAuthConfig:
     """EKS authentication configuration."""
 
-    access_key: str = dataclasses.field(
-        metadata={"required": True, "description": "AWS access key", "sensitive": True}
+    access_key: str | None = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "AWS access key (Leave empty if using IAM role at EC2)",
+            "sensitive": True,
+        }
     )
 
-    secret_access_key: str = dataclasses.field(
+    secret_access_key: str | None = dataclasses.field(
         metadata={
-            "required": True,
-            "description": "AWS secret access key",
+            "required": False,
+            "description": "AWS secret access key (Leave empty if using IAM role at EC2)",
             "sensitive": True,
         }
     )
