@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Table, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
-import { AlertDto } from "@/entities/alerts/model";
+import {
+  AlertDto,
+  reverseSeverityMapping,
+  Severity,
+  Status,
+} from "@/entities/alerts/model";
 import {
   getCoreRowModel,
   useReactTable,
@@ -41,14 +46,13 @@ import { Icon } from "@tremor/react";
 import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import AlertPaginationServerSide from "./alert-pagination-server-side";
 import { FacetDto } from "@/features/filter";
-import {
-  GroupingState,
-  getGroupedRowModel,
-  getExpandedRowModel,
-} from "@tanstack/react-table";
+import { GroupingState, getGroupedRowModel } from "@tanstack/react-table";
 import { TimeFrame } from "@/components/ui/DateRangePicker";
 import { AlertsQuery } from "@/utils/hooks/useAlerts";
 import { v4 as uuidV4 } from "uuid";
+import { FacetsConfig } from "@/features/filter/models";
+import { ViewedAlert } from "./alert-table";
+
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
@@ -117,6 +121,7 @@ export function AlertTableServerSide({
   const [searchCel, setSearchCel] = useState<string>("");
   const [dateRangeCel, setDateRangeCel] = useState<string>("");
   const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
+  const alertsQueryRef = useRef<AlertsQuery | null>(null);
 
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
@@ -162,6 +167,12 @@ export function AlertTableServerSide({
     pageSize: 20,
   });
 
+  const [viewedAlerts, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
+    `viewed-alerts-${presetName}`,
+    []
+  );
+  const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
+
   useEffect(() => {
     const filterArray = [];
 
@@ -178,7 +189,7 @@ export function AlertTableServerSide({
     // makes alerts to refresh when not paused and all time is selected
     if (!dateRange?.start && !dateRange?.end && !dateRange?.paused) {
       setTimeout(() => {
-        onReload && onReload(alertsQuery);
+        onReload && onReload(alertsQueryRef.current as AlertsQuery);
         setFacetsPanelRefreshToken(uuidV4());
       }, 100);
     }
@@ -203,6 +214,7 @@ export function AlertTableServerSide({
         sortDirection: sorting[0]?.desc ? "DESC" : "ASC",
       };
 
+      alertsQueryRef.current = alertsQuery;
       return alertsQuery;
     },
     [filterCel, mainCelQuery, paginationState, sorting]
@@ -213,7 +225,7 @@ export function AlertTableServerSide({
   }, [filterCel, searchCel, paginationState, sorting, onQueryChange]);
 
   useEffect(() => {
-    onReload && onReload(alertsQuery);
+    onReload && onReload(alertsQueryRef.current as AlertsQuery);
   }, [alertsQuery, onReload]);
 
   const [tabs, setTabs] = useState([
@@ -287,103 +299,36 @@ export function AlertTableServerSide({
   }, []);
 
   let showSkeleton = isAsyncLoading;
-  let showEmptyState =
-    !alertsQuery.cel && table.getPageCount() === 0 && !isAsyncLoading;
+  const isTableEmpty = table.getPageCount() === 0;
+  let showEmptyState = !alertsQuery.cel && isTableEmpty && !isAsyncLoading;
+  const showFilterEmptyState = isTableEmpty && !!filterCel;
+  const showSearchEmptyState =
+    isTableEmpty && !!searchCel && !showFilterEmptyState;
 
   const handleRowClick = (alert: AlertDto) => {
     // if presetName is alert-history, do not open sidebar
     if (presetName === "alert-history") {
       return;
     }
+
+    // Update viewed alerts
+    setViewedAlerts((prev) => {
+      const newViewedAlerts = prev.filter(
+        (a) => a.fingerprint !== alert.fingerprint
+      );
+      return [
+        ...newViewedAlerts,
+        {
+          fingerprint: alert.fingerprint,
+          viewedAt: new Date().toISOString(),
+        },
+      ];
+    });
+
+    setLastViewedAlert(alert.fingerprint);
     setSelectedAlert(alert);
     setIsSidebarOpen(true);
   };
-
-  const renderFacetOptionIcon = useCallback(
-    (facetName: string, facetOptionName: string) => {
-      facetName = facetName.toLowerCase();
-
-      if (facetName === "source") {
-        if (facetOptionName === "None") {
-          return;
-        }
-
-        return (
-          <Image
-            className="inline-block"
-            alt={facetOptionName}
-            height={16}
-            width={16}
-            title={facetOptionName}
-            src={
-              facetOptionName.includes("@")
-                ? "/icons/mailgun-icon.png"
-                : `/icons/${facetOptionName}-icon.png`
-            }
-          />
-        );
-      }
-      if (facetName === "severity") {
-        return (
-          <SeverityBorderIcon
-            severity={
-              (severityMapping[Number(facetOptionName)] ||
-                facetOptionName) as UISeverity
-            }
-          />
-        );
-      }
-      if (facetName === "assignee") {
-        return <UserStatefulAvatar email={facetOptionName} size="xs" />;
-      }
-      if (facetName === "status") {
-        return (
-          <Icon
-            icon={getStatusIcon(facetOptionName)}
-            size="sm"
-            color={getStatusColor(facetOptionName)}
-            className="!p-0"
-          />
-        );
-      }
-      if (facetName === "dismissed") {
-        return (
-          <Icon
-            icon={facetOptionName === "true" ? BellSlashIcon : BellIcon}
-            size="sm"
-            className="text-gray-600 !p-0"
-          />
-        );
-      }
-
-      return undefined;
-    },
-    []
-  );
-
-  const renderFacetOptionLabel = useCallback(
-    (facetName: string, facetOptionName: string) => {
-      facetName = facetName.toLowerCase();
-
-      switch (facetName) {
-        case "assignee":
-          if (!facetOptionName) {
-            return "Not assigned";
-          }
-          return <AssigneeLabel email={facetOptionName} />;
-        case "dismissed":
-          return facetOptionName === "true" ? "Dismissed" : "Not dismissed";
-        case "severity": {
-          const label =
-            severityMapping[Number(facetOptionName)] || facetOptionName;
-          return <span className="capitalize">{label}</span>;
-        }
-        default:
-          return <span className="capitalize">{facetOptionName}</span>;
-      }
-    },
-    []
-  );
 
   useEffect(() => {
     // When refresh token comes, this code allows polling for certain time and then stops.
@@ -428,6 +373,90 @@ export function AlertTableServerSide({
     },
     [dateRange, shouldRefreshDate, onLiveUpdateStateChange]
   );
+
+  const facetsConfig: FacetsConfig = useMemo(() => {
+    return {
+      ["Severity"]: {
+        canHitEmptyState: false,
+        renderOptionLabel: (facetOption) => {
+          const label =
+            severityMapping[Number(facetOption.display_name)] ||
+            facetOption.display_name;
+          return <span className="capitalize">{label}</span>;
+        },
+        renderOptionIcon: (facetOption) => (
+          <SeverityBorderIcon
+            severity={
+              (severityMapping[Number(facetOption.display_name)] ||
+                facetOption.display_name) as UISeverity
+            }
+          />
+        ),
+        sortCallback: (facetOption) =>
+          reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
+      },
+      ["Status"]: {
+        renderOptionIcon: (facetOption) => (
+          <Icon
+            icon={getStatusIcon(facetOption.display_name)}
+            size="sm"
+            color={getStatusColor(facetOption.display_name)}
+            className="!p-0"
+          />
+        ),
+      },
+      ["Source"]: {
+        renderOptionIcon: (facetOption) => {
+          if (facetOption.display_name === "None") {
+            return;
+          }
+
+          return (
+            <Image
+              className="inline-block"
+              alt={facetOption.display_name}
+              height={16}
+              width={16}
+              title={facetOption.display_name}
+              src={
+                facetOption.display_name.includes("@")
+                  ? "/icons/mailgun-icon.png"
+                  : `/icons/${facetOption.display_name}-icon.png`
+              }
+            />
+          );
+        },
+      },
+      ["Assignee"]: {
+        renderOptionIcon: (facetOption) => (
+          <UserStatefulAvatar email={facetOption.display_name} size="xs" />
+        ),
+        renderOptionLabel: (facetOption) => {
+          if (facetOption.display_name === "null") {
+            return "Not assigned";
+          }
+          return <AssigneeLabel email={facetOption.display_name} />;
+        },
+      },
+      ["Dismissed"]: {
+        renderOptionLabel: (facetOption) =>
+          facetOption.display_name.toLocaleLowerCase() === "true"
+            ? "Dismissed"
+            : "Not dismissed",
+        renderOptionIcon: (facetOption) => (
+          <Icon
+            icon={
+              facetOption.display_name.toLocaleLowerCase() === "true"
+                ? BellSlashIcon
+                : BellIcon
+            }
+            size="sm"
+            className="text-gray-600 !p-0"
+          />
+        ),
+      },
+    };
+  }, []);
 
   return (
     // Add h-screen to make it full height and remove the default flex-col gap
@@ -479,9 +508,8 @@ export function AlertTableServerSide({
               facetOptionsCel={mainCelQuery}
               clearFiltersToken={clearFiltersToken}
               initialFacetsData={{ facets: initialFacets, facetOptions: null }}
+              facetsConfig={facetsConfig}
               onCelChange={setFilterCel}
-              renderFacetOptionIcon={renderFacetOptionIcon}
-              renderFacetOptionLabel={renderFacetOptionLabel}
               revalidationToken={facetsPanelRefreshToken}
             />
           </div>
@@ -517,7 +545,11 @@ export function AlertTableServerSide({
                       table={table}
                       showSkeleton={showSkeleton}
                       showEmptyState={showEmptyState}
+                      showFilterEmptyState={showFilterEmptyState}
+                      showSearchEmptyState={showSearchEmptyState}
                       theme={theme}
+                      viewedAlerts={viewedAlerts}
+                      lastViewedAlert={lastViewedAlert}
                       onRowClick={handleRowClick}
                       presetName={presetName}
                     />
@@ -535,7 +567,9 @@ export function AlertTableServerSide({
           table={table}
           isRefreshing={isAsyncLoading}
           isRefreshAllowed={isRefreshAllowed}
-          onRefresh={() => onReload && onReload(alertsQuery)}
+          onRefresh={() =>
+            onReload && onReload(alertsQueryRef.current as AlertsQuery)
+          }
         />
       </div>
 

@@ -1,19 +1,15 @@
 import { useEffect, useRef, useMemo } from "react";
 import { useWorkflowStore } from "@/entities/workflows";
-import { GlobalEditorV2, StepEditorV2 } from "./editors";
+import { StepEditorV2 } from "./StepEditor";
 import { Divider } from "@tremor/react";
-import { Provider } from "@/app/(keep)/providers/providers";
 import clsx from "clsx";
 import { ChevronRightIcon, Cog8ToothIcon } from "@heroicons/react/24/outline";
-import { WorkflowToolbox } from "./WorkflowToolbox";
+import { WorkflowToolbox } from "../WorkflowToolbox";
+import { WorkflowEditorV2 } from "./WorkflowEditor";
+import { TriggerEditor } from "./TriggerEditor";
+import { WorkflowStatus } from "../workflow-status";
 
-const ReactFlowEditor = ({
-  providers,
-  installedProviders,
-}: {
-  providers: Provider[] | undefined | null;
-  installedProviders: Provider[] | undefined | null;
-}) => {
+const ReactFlowEditor = () => {
   const { selectedNode, selectedEdge, setEditorOpen, getNodeById, editorOpen } =
     useWorkflowStore();
   const stepEditorRef = useRef<HTMLDivElement>(null);
@@ -27,6 +23,11 @@ const ReactFlowEditor = ({
     if (!selectedNode && !selectedEdge) {
       return;
     }
+    // TODO: refactor to use ref callback function, e.g. ref={(el) => {
+    //   if (el) {
+    //     el.scrollIntoView({ behavior: "smooth", block: "start" });
+    //   }
+    // }}
     // Scroll the StepEditorV2 into view when the editor is opened
     const timer = setTimeout(() => {
       if (containerRef.current && stepEditorRef.current) {
@@ -55,6 +56,9 @@ const ReactFlowEditor = ({
     const { name, type, properties } = data || {};
     return { name, type, properties };
   }, [selectedNode]);
+
+  const isStepEditor =
+    !selectedNode?.includes("empty") && !isTrigger && initialFormData;
 
   return (
     <div className="transition-transform relative z-50" ref={containerRef}>
@@ -87,24 +91,20 @@ const ReactFlowEditor = ({
         )}
       </div>
       {editorOpen && (
-        <div className="relative flex-1 bg-white border-l overflow-y-auto h-full">
-          <div className="w-80 2xl:w-96">
-            <GlobalEditorV2 />
-            {!selectedNode?.includes("empty") && !isTrigger && (
-              <Divider ref={stepEditorRef} className="my-2" />
-            )}
-            {!selectedNode?.includes("empty") &&
-              !isTrigger &&
-              initialFormData && (
-                <StepEditorV2
-                  key={selectedNode}
-                  providers={providers}
-                  installedProviders={installedProviders}
-                  initialFormData={initialFormData}
-                />
-              )}
-            <WorkflowToolbox isDraggable={false} />
-          </div>
+        <div className="relative flex-1 flex flex-col bg-white border-l overflow-y-auto h-full w-80 2xl:w-96">
+          <WorkflowStatus className="m-2 shrink-0" />
+          <WorkflowEditorV2 />
+          {(isStepEditor || isTrigger) && (
+            <Divider ref={stepEditorRef} className="my-2" />
+          )}
+          {isTrigger && <TriggerEditor />}
+          {isStepEditor && (
+            <StepEditorV2
+              key={selectedNode}
+              initialFormData={initialFormData}
+            />
+          )}
+          <WorkflowToolbox isDraggable={false} />
         </div>
       )}
     </div>

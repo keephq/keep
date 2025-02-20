@@ -1,9 +1,21 @@
 import { Edge } from "@xyflow/react";
 import {
+  EmptyNode,
   FlowNode,
   NodeData,
+  TriggerEndLabelStep,
+  TriggerStartLabelStep,
+  TriggerType,
+  V2EndStep,
   V2Properties,
+  V2StartStep,
   V2Step,
+  V2StepConditionAssert,
+  V2StepConditionThreshold,
+  V2StepForeach,
+  V2StepTempNode,
+  V2StepTriggerUI,
+  V2StepUI,
 } from "@/entities/workflows/model/types";
 
 function getKeyBasedSquence(step: V2Step, id: string, type: string) {
@@ -145,7 +157,7 @@ export function reConstructWorklowToDefinition({
 }
 
 export function createSwitchNodeV2(
-  step: V2Step,
+  step: V2StepConditionThreshold | V2StepConditionAssert,
   nodeId: string,
   position: FlowNode["position"],
   nextNodeId?: string | null,
@@ -171,7 +183,7 @@ export function createSwitchNodeV2(
         id: nodeId,
         properties,
         name: name,
-      } as V2Step,
+      },
       isDraggable: false,
       prevNodeId,
       nextNodeId: customIdentifier,
@@ -189,7 +201,7 @@ export function createSwitchNodeV2(
         name: `${stepType} End`,
         componentType: `${step.type}__end`,
         properties: {},
-      } as V2Step,
+      },
       isDraggable: false,
       prevNodeId: nodeId,
       nextNodeId: nextNodeId,
@@ -200,15 +212,15 @@ export function createSwitchNodeV2(
 }
 
 export function handleSwitchNode(
-  step: V2Step,
+  step: V2StepConditionThreshold | V2StepConditionAssert,
   position: FlowNode["position"],
   nextNodeId: string,
   prevNodeId: string,
   nodeId: string,
   isNested: boolean
 ) {
-  let trueBranches = step?.branches?.true || ([] as FlowNode[]);
-  let falseBranches = step?.branches?.false || ([] as Edge[]);
+  const trueBranch = step?.branches?.true || [];
+  const falseBranch = step?.branches?.false || [];
 
   function _getEmptyNode(type: string) {
     const key = `empty_${type}`;
@@ -219,7 +231,7 @@ export function handleSwitchNode(
       name: "empty",
       properties: {},
       isNested: true,
-    } as V2Step;
+    };
   }
 
   let [switchStartNode, switchEndNode] = createSwitchNodeV2(
@@ -230,18 +242,34 @@ export function handleSwitchNode(
     prevNodeId,
     isNested
   );
-  trueBranches = [
-    { ...switchStartNode.data, type: "temp_node", componentType: "temp_node" },
-    ...trueBranches,
+  const trueBranches = [
+    {
+      ...switchStartNode.data,
+      type: "temp_node",
+      componentType: "temp_node",
+    } as V2StepTempNode,
+    ...trueBranch,
     _getEmptyNode("true"),
-    { ...switchEndNode.data, type: "temp_node", componentType: "temp_node" },
-  ] as V2Step[];
-  falseBranches = [
-    { ...switchStartNode.data, type: "temp_node", componentType: "temp_node" },
-    ...falseBranches,
+    {
+      ...switchEndNode.data,
+      type: "temp_node",
+      componentType: "temp_node",
+    } as V2StepTempNode,
+  ];
+  const falseBranches = [
+    {
+      ...switchStartNode.data,
+      type: "temp_node",
+      componentType: "temp_node",
+    } as V2StepTempNode,
+    ...falseBranch,
     _getEmptyNode("false"),
-    { ...switchEndNode.data, type: "temp_node", componentType: "temp_node" },
-  ] as V2Step[];
+    {
+      ...switchEndNode.data,
+      type: "temp_node",
+      componentType: "temp_node",
+    } as V2StepTempNode,
+  ];
 
   let truePostion = { x: position.x - 200, y: position.y - 100 };
   let falsePostion = { x: position.x + 200, y: position.y - 100 };
@@ -346,7 +374,7 @@ export function createCustomEdgeMeta(
   return edges;
 }
 export function handleDefaultNode(
-  step: V2Step,
+  step: V2StepUI,
   position: FlowNode["position"],
   nextNodeId: string,
   prevNodeId: string,
@@ -382,7 +410,7 @@ export function handleDefaultNode(
 }
 
 export function getForEachNode(
-  step: V2Step,
+  step: V2StepForeach,
   position: FlowNode["position"],
   nodeId: string,
   prevNodeId: string,
@@ -412,7 +440,7 @@ export function getForEachNode(
         label: "foreach end",
         type: `${step.type}__end`,
         name: "Foreach End",
-      } as V2Step,
+      },
       type: "custom",
       position: { x: 0, y: 0 },
       isDraggable: false,
@@ -425,7 +453,7 @@ export function getForEachNode(
 }
 
 export function handleForeachNode(
-  step: V2Step,
+  step: V2StepForeach,
   position: FlowNode["position"],
   nextNodeId: string,
   prevNodeId: string,
@@ -450,7 +478,7 @@ export function handleForeachNode(
       name: "empty",
       properties: {},
       isNested: true,
-    } as V2Step;
+    };
   }
   const sequences = [
     {
@@ -546,7 +574,16 @@ export const processStepV2 = (
 };
 
 export const processWorkflowV2 = (
-  sequence: V2Step[],
+  sequence: (
+    | V2StartStep
+    | V2EndStep
+    | TriggerStartLabelStep
+    | TriggerEndLabelStep
+    | V2StepTriggerUI
+    | V2Step
+    | V2StepTempNode
+    | EmptyNode
+  )[],
   position: FlowNode["position"],
   isFirstRender = false,
   isNested = false
@@ -576,8 +613,8 @@ export const processWorkflowV2 = (
   return { nodes: newNodes, edges: newEdges };
 };
 
-export function getTriggerStep(properties: V2Properties) {
-  const _steps = [] as V2Step[];
+export function getTriggerSteps(properties: V2Properties) {
+  const _steps: V2StepTriggerUI[] = [];
   function _triggerSteps() {
     if (!properties) {
       return _steps;
@@ -590,12 +627,12 @@ export function getTriggerStep(properties: V2Properties) {
       ) {
         _steps.push({
           id: key,
-          type: key,
+          type: key as TriggerType,
           componentType: "trigger",
           properties: properties[key],
           name: key,
           edgeTarget: "trigger_end",
-        } as V2Step);
+        });
       }
     });
     return _steps;
@@ -613,15 +650,15 @@ export function getTriggerStep(properties: V2Properties) {
       edgeTarget: triggerStartTargets,
       cantDelete: true,
       notClickable: true,
-    },
+    } as TriggerStartLabelStep,
     ...steps,
     {
       id: "trigger_end",
-      name: "Workflow steps",
+      name: "Steps",
       type: "",
       componentType: "trigger",
       cantDelete: true,
       notClickable: true,
-    },
-  ] as V2Step[];
+    } as TriggerEndLabelStep,
+  ];
 }

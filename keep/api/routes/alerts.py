@@ -41,10 +41,11 @@ from keep.api.core.elastic import ElasticClient
 from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
 from keep.api.models.alert import (
     AlertDto,
+    AlertStatus,
     DeleteRequestBody,
     EnrichAlertRequestBody,
     IncidentStatus,
-    UnEnrichAlertRequestBody, AlertStatus,
+    UnEnrichAlertRequestBody,
 )
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import ActionType
@@ -375,21 +376,24 @@ def assign_alert(
     )
 
     assignees_last_receievd = {}  # the last received(s) that are assigned to someone
+    status = "acknowledged"
     enrichment = get_enrichment(tenant_id, fingerprint)
     if enrichment:
         assignees_last_receievd = enrichment.enrichments.get("assignees", {})
-
+        status = enrichment.enrichments.get("status", "acknowledged")
     if unassign:
         assignees_last_receievd.pop(last_received, None)
     else:
         assignees_last_receievd[last_received] = user_email
 
+    enrichments = {"assignees": assignees_last_receievd, "status": status}
+
     enrichment_bl = EnrichmentsBl(tenant_id)
     enrichment_bl.enrich_entity(
         fingerprint=fingerprint,
-        enrichments={"assignees": assignees_last_receievd},
+        enrichments=enrichments,
         action_type=ActionType.ACKNOWLEDGE,
-        action_description=f"Alert assigned to {user_email}",
+        action_description=f"Alert assigned to {user_email}, status: {status}",
         action_callee=user_email,
     )
 
@@ -721,7 +725,10 @@ def enrich_alert(
     ),
     session: Session = Depends(get_session),
 ) -> dict[str, str]:
-    if "dismissed" in enrich_data.enrichments and enrich_data.enrichments["dismissed"].lower() == "true":
+    if (
+        "dismissed" in enrich_data.enrichments
+        and enrich_data.enrichments["dismissed"].lower() == "true"
+    ):
         enrich_data.enrichments["status"] = AlertStatus.SUPPRESSED.value
 
     tenant_id = authenticated_entity.tenant_id
@@ -730,7 +737,7 @@ def enrich_alert(
         extra={
             "fingerprint": enrich_data.fingerprint,
             "tenant_id": tenant_id,
-        }
+        },
     )
 
     return _enrich_alert(
