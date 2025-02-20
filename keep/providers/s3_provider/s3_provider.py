@@ -13,7 +13,7 @@ from keep.providers.base.base_provider import BaseProvider
 
 @pydantic.dataclasses.dataclass
 class S3ProviderAuthConfig:
-    access_key: str = dataclasses.field(
+    access_key: str | None = dataclasses.field(
         metadata={
             "required": False,
             "description": "S3 Access Token (Leave empty if using IAM role at EC2)",
@@ -22,7 +22,7 @@ class S3ProviderAuthConfig:
         default=None,
     )
 
-    secret_access_key: str = dataclasses.field(
+    secret_access_key: str | None = dataclasses.field(
         metadata={
             "required": False,
             "description": "S3 Secret Access Token (Leave empty if using IAM role at EC2)",
