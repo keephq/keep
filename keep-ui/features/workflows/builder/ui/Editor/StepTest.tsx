@@ -277,7 +277,6 @@ export function TestRunStepForm({
             >
               <Callout title={key} color="red">
                 {error}
-                <div className="mt-2"></div>
               </Callout>
               <WFDebugWithAIButton
                 errors={errors}

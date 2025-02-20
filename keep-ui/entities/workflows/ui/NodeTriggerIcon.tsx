@@ -13,11 +13,12 @@ export function NodeTriggerIcon({ nodeData }: { nodeData: FlowNode["data"] }) {
       return <CursorArrowRaysIcon className="size-8" />;
     case "interval":
       return <ClockIcon className="size-8" />;
-    case "alert":
+    case "alert": {
       const alertSource = nodeData.properties?.source;
       if (alertSource) {
         return (
           <DynamicImageProviderIcon
+            key={alertSource}
             providerType={alertSource}
             height="32"
             width="32"
@@ -27,6 +28,7 @@ export function NodeTriggerIcon({ nodeData }: { nodeData: FlowNode["data"] }) {
       return (
         <DynamicImageProviderIcon src="/keep.png" height="32" width="32" />
       );
+    }
     case "incident":
       return (
         <DynamicImageProviderIcon src="/keep.png" height="32" width="32" />
