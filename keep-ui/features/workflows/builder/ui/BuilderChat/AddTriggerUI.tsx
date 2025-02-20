@@ -56,7 +56,11 @@ export const AddTriggerUI = ({
   result,
 }: AddTriggerUIProps) => {
   const [isAddingTrigger, setIsAddingTrigger] = useState(false);
-  const { nodes, addNodeBetween, getNextEdge } = useWorkflowStore();
+  const {
+    nodes,
+    addNodeBetweenSafe: addNodeBetween,
+    getNextEdge,
+  } = useWorkflowStore();
   const { triggerType, triggerProperties } = args;
 
   const triggerDefinition = useMemo(() => {

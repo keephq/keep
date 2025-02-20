@@ -66,7 +66,7 @@ describe("useWorkflowStore", () => {
 
       // Add a trigger node
       act(() => {
-        result.current.addNodeBetween(
+        result.current.addNodeBetweenSafe(
           "edge-1",
           {
             id: "interval",
@@ -109,7 +109,7 @@ describe("useWorkflowStore", () => {
       // Try to add another trigger
       act(() => {
         const edges = result.current.edges;
-        result.current.addNodeBetween(
+        result.current.addNodeBetweenSafe(
           edges[1].id,
           {
             id: "interval",

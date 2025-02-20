@@ -261,6 +261,15 @@ export const useWorkflowStore = create<FlowState>()(
       step: V2StepTemplate | V2StepTrigger,
       type: "node" | "edge"
     ) => {
+      const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
+      set({ selectedNode: newNodeId, selectedEdge: null });
+      return newNodeId ?? null;
+    },
+    addNodeBetweenSafe: (
+      nodeOrEdgeId: string,
+      step: V2StepTemplate | V2StepTrigger,
+      type: "node" | "edge"
+    ) => {
       try {
         const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
         set({ selectedNode: newNodeId, selectedEdge: null });
@@ -474,12 +483,12 @@ export const useWorkflowStore = create<FlowState>()(
     deleteNodes: (ids) => {
       //for now handling only single node deletion. can later enhance to multiple deletions
       if (typeof ids !== "string") {
-        return;
+        return [];
       }
       const nodes = get().nodes;
       const nodeStartIndex = nodes.findIndex((node) => ids == node.id);
       if (nodeStartIndex === -1) {
-        return;
+        return [];
       }
       let idArray = Array.isArray(ids) ? ids : [ids];
 
@@ -561,6 +570,8 @@ export const useWorkflowStore = create<FlowState>()(
       });
       get().onLayout({ direction: "DOWN" });
       get().updateDefinition();
+
+      return [ids];
     },
     getNextEdge: (nodeId: string) => {
       const node = get().getNodeById(nodeId);

@@ -12,7 +12,6 @@ import {
   getYamlStepFromStep,
   getYamlActionFromAction,
 } from "@/entities/workflows/lib/parser";
-import { YamlStep, YamlAction } from "@/entities/workflows/model/yaml.types";
 import { Editor } from "@monaco-editor/react";
 import { stringify } from "yaml";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
@@ -26,6 +25,28 @@ function getStepIconUrl(data: V2Step | V2StepTrigger) {
   return `/icons/${normalizeStepType(type)}-icon.png`;
 }
 
+function getYamlFromStep(step: V2Step | V2StepTrigger) {
+  try {
+    if (step.componentType === "task" && step.type.startsWith("step-")) {
+      return getYamlStepFromStep(step as V2StepStep);
+    }
+    if (step.componentType === "task" && step.type.startsWith("action-")) {
+      return getYamlActionFromAction(step as V2ActionStep);
+    }
+    if (step.componentType === "trigger") {
+      return {
+        type: step.type,
+        ...step.properties,
+      };
+    }
+    // TODO: add other types
+    return null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
 export const StepPreview = ({
   step,
   className,
@@ -33,42 +54,8 @@ export const StepPreview = ({
   step: V2Step | V2StepTrigger;
   className?: string;
 }) => {
-  const type = normalizeStepType(step?.type);
-  let yamlOfStep:
-    | YamlStep
-    | YamlAction
-    | ({ type: string } & Record<string, any>)
-    | null = null;
-  if (
-    step.componentType === "task" &&
-    step.type.startsWith("step-") &&
-    "stepParams" in step.properties
-  ) {
-    try {
-      yamlOfStep = getYamlStepFromStep(step as V2StepStep);
-    } catch (error) {
-      console.error(error);
-    }
-  }
-  if (
-    step.componentType === "task" &&
-    step.type.startsWith("action-") &&
-    "actionParams" in step.properties
-  ) {
-    try {
-      yamlOfStep = getYamlActionFromAction(step as V2ActionStep);
-    } catch (error) {
-      console.error(error);
-    }
-  }
-  if (step.componentType === "trigger") {
-    yamlOfStep = {
-      type: step.type,
-      ...step.properties,
-    };
-  }
-
-  const yaml = yamlOfStep ? stringify(yamlOfStep) : null;
+  const yamlDefinition = getYamlFromStep(step);
+  const yaml = yamlDefinition ? stringify(yamlDefinition) : null;
 
   const displayName = step.name;
   const subtitle = getTriggerDescriptionFromStep(step as V2StepTrigger);
