@@ -1,0 +1,31 @@
+---
+title: 'MSSQL'
+sidebarTitle: 'MSSQL Provider'
+description: 'MSSQL provider allows you to query Microsoft SQL Server databases'
+---
+
+# **MSSQL Provider Documentation**  
+
+## **Overview**
+
+Microsoft SQL Server (**MSSQL**) is a relational database management system (**RDBMS**) developed by Microsoft. It supports structured data storage, querying, and advanced analytics. The **MSSQL provider** allows you to connect and execute queries against an MSSQL database.
+
+## **Authentication Parameters**
+
+The following authentication parameters are required to connect to an MSSQL database:
+
+- **MSSQL Host**: The MSSQL database server hostname or IP.
+- **MSSQL Username**: The MSSQL database username.
+- **MSSQL Password**: The password associated with the provided username.
+- **MSSQL Database**: The name of the database to connect to.
+- **MSSQL Driver** *(Optional)*: The ODBC driver to use for the connection (default: `"ODBC Driver 17 for SQL Server"`).
+
+## **Querying the Database**
+
+The MSSQL provider allows you to execute queries against an MSSQL database. It takes the following argument:
+
+- **`query`**: A string containing the SQL query to be executed.
+
+## **Useful Links**
+- [Microsoft SQL Server Documentation](https://learn.microsoft.com/en-us/sql/sql-server/)
+- [ODBC Driver for SQL Server](https://docs.microsoft.com/en-us/sql/connect/odbc/microsoft-odbc-driver-for-sql-server)

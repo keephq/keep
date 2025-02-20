@@ -193,6 +193,7 @@
             "providers/documentation/mock-provider",
             "providers/documentation/monday-provider",
             "providers/documentation/mongodb-provider",
+            "providers/documentation/mssql-provider.mdx",
             "providers/documentation/mysql-provider",
             "providers/documentation/netbox-provider",
             "providers/documentation/netdata-provider",

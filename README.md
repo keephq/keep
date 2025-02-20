@@ -383,6 +383,12 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/mssql-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/mssql-icon.svg" alt="MSSQL"/><br/>
+            MSSQL
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/mysql-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/mysql-icon.png" alt="MySQL"/><br/>
             MySQL
