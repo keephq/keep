@@ -40,15 +40,18 @@ import {
 } from "@/shared/ui";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import GenerateReportModal from "./generate-report-modal";
 
 function SelectedRowActions({
   selectedRowIds,
   onMergeInitiated,
   onDelete,
+  onGenerateReport,
 }: {
   selectedRowIds: string[];
   onMergeInitiated: () => void;
   onDelete: () => void;
+  onGenerateReport: () => void;
 }) {
   return (
     <div className="flex gap-2 items-center justify-end">
@@ -57,6 +60,15 @@ function SelectedRowActions({
           {selectedRowIds.length} selected
         </span>
       ) : null}
+      <Button
+        color="orange"
+        variant="primary"
+        size="md"
+        disabled={selectedRowIds.length < 2}
+        onClick={onGenerateReport}
+      >
+        Generate report
+      </Button>
       <Button
         color="orange"
         variant="primary"
@@ -102,6 +114,8 @@ export default function IncidentsTable({
     pageIndex: Math.ceil(incidents.offset / incidents.limit),
     pageSize: incidents.limit,
   });
+  const [isGenerateReportModalOpen, setIsGenerateReportModalOpen] =
+    useState(false);
   const [runWorkflowModalIncident, setRunWorkflowModalIncident] =
     useState<IncidentDto | null>();
 
@@ -337,12 +351,18 @@ export default function IncidentsTable({
     }
   }, [deleteIncident, selectedRowIds]);
 
+  const generateReport = useCallback(
+    () => setIsGenerateReportModalOpen(true),
+    [setIsGenerateReportModalOpen]
+  );
+
   return (
     <>
       <SelectedRowActions
         selectedRowIds={selectedRowIds}
         onMergeInitiated={handleMergeInitiated}
         onDelete={handleDeleteMultiple}
+        onGenerateReport={generateReport}
       />
       {incidents.items.length > 0 ? (
         <Card className="p-0 overflow-hidden">
@@ -372,6 +392,12 @@ export default function IncidentsTable({
           incidents={mergeOptions.incidents}
           handleClose={() => setMergeOptions(null)}
           onSuccess={() => table.resetRowSelection()}
+        />
+      )}
+      {isGenerateReportModalOpen && (
+        <GenerateReportModal
+          incidentIds={selectedRowIds}
+          onClose={() => setIsGenerateReportModalOpen(false)}
         />
       )}
     </>

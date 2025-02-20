@@ -20,7 +20,7 @@ from keep.api.arq_pool import get_pool
 from keep.api.bl.ai_suggestion_bl import AISuggestionBl
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.bl.incidents_bl import IncidentBl
-from keep.api.bl.incident_reports import IncidentReports
+from keep.api.bl.incident_reports import IncidentReportsBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, REDIS
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.db import (
@@ -320,7 +320,7 @@ def get_incidents_report(
     cel: str = Query(None),
 ):
     tenant_id = authenticated_entity.tenant_id
-    reports_bl = IncidentReports(tenant_id)
+    reports_bl = IncidentReportsBl(tenant_id)
 
     # get all preset ids that the user has access to
     identity_manager = IdentityManagerFactory.get_identity_manager(
