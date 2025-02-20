@@ -560,7 +560,7 @@ export function TopologyMap({
             onSelect={handleSelectFromSearch}
           />
           {/* Using z-index to overflow the manage selection component */}
-          <div className="basis-1/3 relative z-30">
+          <div className="basis-1/3 relative z-10">
             <MultiSelect
               placeholder="Show application"
               value={selectedApplicationIds}
