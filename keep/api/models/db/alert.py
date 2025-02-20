@@ -500,3 +500,4 @@ class ActionType(enum.Enum):
     MAINTENANCE = "Alert is in maintenance window"
     INCIDENT_COMMENT = "A comment was added to the incident"
     INCIDENT_ENRICH = "Incident enriched"
+    INCIDENT_STATUS_CHANGE = "Incident status changed"

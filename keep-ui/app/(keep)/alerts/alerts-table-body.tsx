@@ -8,6 +8,7 @@ import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { MagnifyingGlassIcon, FunnelIcon } from "@heroicons/react/24/outline";
 import { GroupedRow } from "./alert-grouped-row";
+import { ViewedAlert } from "./alert-table";
 
 interface Props {
   table: Table<AlertDto>;
@@ -18,6 +19,8 @@ interface Props {
   theme: { [key: string]: string };
   onRowClick: (alert: AlertDto) => void;
   presetName: string;
+  viewedAlerts: ViewedAlert[];
+  lastViewedAlert: string | null;
 }
 
 export function AlertsTableBody({
@@ -29,6 +32,8 @@ export function AlertsTableBody({
   presetName,
   showFilterEmptyState,
   showSearchEmptyState,
+  viewedAlerts,
+  lastViewedAlert,
 }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -148,6 +153,8 @@ export function AlertsTableBody({
           table={table}
           theme={theme}
           onRowClick={handleRowClick}
+          viewedAlerts={viewedAlerts}
+          lastViewedAlert={lastViewedAlert}
         />
       ))}
     </TableBody>

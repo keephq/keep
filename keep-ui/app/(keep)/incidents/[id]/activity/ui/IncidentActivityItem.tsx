@@ -2,16 +2,21 @@ import AlertSeverity from "@/app/(keep)/alerts/alert-severity";
 import { AlertDto } from "@/entities/alerts/model";
 import TimeAgo from "react-timeago";
 
+// TODO: REFACTOR THIS TO SUPPORT ANY ACTIVITY TYPE, IT'S A MESS!
+
 export function IncidentActivityItem({ activity }: { activity: any }) {
   const title =
     typeof activity.initiator === "string"
       ? activity.initiator
       : activity.initiator?.name;
   const subTitle =
-    typeof activity.initiator === "string"
+    activity.type === "comment"
       ? " Added a comment. "
-      : (activity.initiator?.status === "firing" ? " triggered" : " resolved") +
-        ". ";
+      : activity.type === "statuschange"
+      ? " Incident status changed. "
+      : activity.initiator?.status === "firing"
+      ? " triggered"
+      : " resolved" + ". ";
   return (
     <div className="relative h-full w-full flex flex-col">
       <div className="flex items-center gap-2">
