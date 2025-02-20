@@ -23,6 +23,29 @@ export const ResizableColumns = ({
   const [isDragging, setIsDragging] = useState(false);
   const [leftWidth, setLeftWidth] = useState(initialLeftWidth);
 
+  // Memoize the left child
+  const MemoizedLeftChild = React.useMemo(
+    () => (
+      <div
+        className={clsx("min-w-0 p-px", leftChildClassName)}
+        style={{ width: `${leftWidth}%` }}
+      >
+        {leftChild}
+      </div>
+    ),
+    [leftChild, leftWidth, leftChildClassName]
+  );
+
+  // Memoize the right child
+  const MemoizedRightChild = React.useMemo(
+    () => (
+      <div className={clsx("flex-1 min-w-0 p-px", rightChildClassName)}>
+        {rightChild}
+      </div>
+    ),
+    [rightChild, rightChildClassName]
+  );
+
   const startDragging = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true);
   }, []);
@@ -56,23 +79,14 @@ export const ResizableColumns = ({
 
   return (
     <div className="flex h-full w-full" onMouseMove={onMouseMove}>
-      {/* p-px is used to prevent cropping card-shadow */}
-      <div
-        className={clsx("min-w-0 p-px", leftChildClassName)}
-        style={{ width: `${leftWidth}%` }}
-      >
-        {leftChild}
-      </div>
+      {MemoizedLeftChild}
 
       <div
         className="w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize transition-colors shrink-0"
         onMouseDown={startDragging}
       />
 
-      {/* p-px is used to prevent cropping card-shadow */}
-      <div className={clsx("flex-1 min-w-0 p-px", rightChildClassName)}>
-        {rightChild}
-      </div>
+      {MemoizedRightChild}
     </div>
   );
 };

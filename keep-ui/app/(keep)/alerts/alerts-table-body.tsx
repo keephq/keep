@@ -8,6 +8,7 @@ import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { MagnifyingGlassIcon, FunnelIcon } from "@heroicons/react/24/outline";
 import { GroupedRow } from "./alert-grouped-row";
+import { ViewedAlert } from "./alert-table";
 
 interface Props {
   table: Table<AlertDto>;
@@ -17,7 +18,10 @@ interface Props {
   showSearchEmptyState?: boolean;
   theme: { [key: string]: string };
   onRowClick: (alert: AlertDto) => void;
+  onClearFiltersClick?: () => void;
   presetName: string;
+  viewedAlerts: ViewedAlert[];
+  lastViewedAlert: string | null;
 }
 
 export function AlertsTableBody({
@@ -26,9 +30,12 @@ export function AlertsTableBody({
   showEmptyState,
   theme,
   onRowClick,
+  onClearFiltersClick,
   presetName,
   showFilterEmptyState,
   showSearchEmptyState,
+  viewedAlerts,
+  lastViewedAlert,
 }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -70,11 +77,11 @@ export function AlertsTableBody({
             <div className="flex flex-col justify-center items-center w-full p-4">
               <EmptyStateCard
                 title="No alerts to display matching your filter"
-                buttonText="Clear filter"
+                buttonText="Reset filter"
                 renderIcon={() => (
                   <FunnelIcon className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
                 )}
-                onClick={() => console.log("")}
+                onClick={() => onClearFiltersClick!()}
               />
             </div>
           </div>
@@ -148,6 +155,8 @@ export function AlertsTableBody({
           table={table}
           theme={theme}
           onRowClick={handleRowClick}
+          viewedAlerts={viewedAlerts}
+          lastViewedAlert={lastViewedAlert}
         />
       ))}
     </TableBody>

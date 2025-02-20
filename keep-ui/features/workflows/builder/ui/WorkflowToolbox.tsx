@@ -13,11 +13,13 @@ const GroupedMenu = ({
   name,
   steps,
   searchTerm,
+  resetSearchTerm,
   isDraggable = true,
 }: {
   name: string;
   steps: any[];
   searchTerm: string;
+  resetSearchTerm: () => void;
   isDraggable?: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(!!searchTerm || isDraggable);
@@ -38,7 +40,10 @@ const GroupedMenu = ({
     if (!nodeOrEdgeId) {
       return;
     }
-    addNodeBetween(nodeOrEdgeId, step, type);
+    const newNodeId = addNodeBetween(nodeOrEdgeId, step, type);
+    if (newNodeId) {
+      resetSearchTerm();
+    }
   };
 
   function IconUrlProvider(data: any) {
@@ -214,6 +219,7 @@ export const WorkflowToolbox = ({ isDraggable }: { isDraggable?: boolean }) => {
                   name={group.name}
                   steps={group.steps}
                   searchTerm={searchTerm}
+                  resetSearchTerm={() => setSearchTerm("")}
                   isDraggable={isDraggable}
                 />
               ))}

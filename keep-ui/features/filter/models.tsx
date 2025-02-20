@@ -4,7 +4,6 @@ export interface FacetConfig {
     facetOption: FacetOptionDto
   ) => JSX.Element | string | undefined;
   sortCallback?: (facetOption: FacetOptionDto) => number;
-  canHitEmptyState?: boolean;
 }
 
 export interface FacetsConfig {

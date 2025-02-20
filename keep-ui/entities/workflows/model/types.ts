@@ -36,7 +36,7 @@ export const V2StepIntervalTriggerSchema = z.object({
   componentType: z.literal("trigger"),
   type: z.literal("interval"),
   properties: z.object({
-    interval: z.string(),
+    interval: z.union([z.string(), z.number()]),
   }),
 });
 
@@ -46,12 +46,7 @@ export const V2StepAlertTriggerSchema = z.object({
   componentType: z.literal("trigger"),
   type: z.literal("alert"),
   properties: z.object({
-    alert: z.union([
-      z.object({
-        source: z.string(),
-      }),
-      z.record(z.string(), z.any()),
-    ]),
+    alert: z.record(z.string(), z.string()),
   }),
 });
 
@@ -351,7 +346,7 @@ export interface FlowState extends FlowStateValues {
     nodeOrEdgeId: string,
     step: V2StepTemplate | V2StepTrigger,
     type: "node" | "edge"
-  ) => void;
+  ) => string | null;
   setToolBoxConfig: (config: ToolboxConfiguration) => void;
   setEditorOpen: (open: boolean) => void;
   updateSelectedNodeData: (key: string, value: any) => void;

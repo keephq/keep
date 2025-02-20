@@ -560,6 +560,11 @@ export function StepEditorV2({
   const { data: { providers, installed_providers: installedProviders } = {} } =
     useProviders();
 
+  const installedProvider = installedProviders?.find(
+    (p) => p.type === providerType && p.details?.name === providerConfig
+  );
+  const providerId = installedProvider?.id;
+
   const providerNameError = validateProviderConfig(
     providerType,
     providerConfig ?? "",
@@ -578,6 +583,36 @@ export function StepEditorV2({
 
   const saveButtonDisabled = !isEditorSyncedWithNodes || isSaving;
   const saveButtonText = isSaving ? "Saving..." : "Save & Continue";
+
+  const setupStatus = () => {
+    if (providerError || providerNameError) {
+      return "error";
+    }
+    return "ok";
+  };
+
+  const configureStatus = () => {
+    if (parametersError) {
+      return "error";
+    }
+    if (
+      formData.properties?.with &&
+      Object.keys(formData.properties?.with).length > 0
+    ) {
+      return "ok";
+    }
+    return "neutral";
+  };
+
+  const getStepIcon = (status: "error" | "ok" | "neutral") => {
+    if (status === "error") {
+      return <ExclamationCircleIcon className="size-4 text-red-500" />;
+    }
+    if (status === "ok") {
+      return <CheckCircleIcon className="size-4" />;
+    }
+    return null;
+  };
 
   return (
     <TabGroup
@@ -601,22 +636,12 @@ export function StepEditorV2({
       <TabList className="px-4">
         <Tab value="select">
           <div className="flex items-center gap-1">
-            Setup{" "}
-            {providerError || providerNameError ? (
-              <ExclamationCircleIcon className="size-4 text-red-500" />
-            ) : (
-              <CheckCircleIcon className="size-4" />
-            )}
+            Setup {getStepIcon(setupStatus())}
           </div>
         </Tab>
         <Tab value="configure">
           <div className="flex items-center gap-1">
-            Configure{" "}
-            {parametersError ? (
-              <ExclamationCircleIcon className="size-4 text-red-500" />
-            ) : (
-              <CheckCircleIcon className="size-4" />
-            )}
+            Configure {getStepIcon(configureStatus())}
           </div>
         </Tab>
         <Tab value="test">Test</Tab>
@@ -700,7 +725,7 @@ export function StepEditorV2({
         <TabPanel className="flex-1">
           <TestRunStepForm
             providerInfo={{
-              provider_id: providerConfig ?? "",
+              provider_id: providerId || providerConfig || "",
               provider_type: providerType ?? "",
             }}
             method={method}

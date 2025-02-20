@@ -5,6 +5,10 @@ import { Callout, Text } from "@tremor/react";
 import { useMemo, useState } from "react";
 import { EditorLayout } from "./StepEditor";
 import { Editor } from "@monaco-editor/react";
+import { SparklesIcon } from "@heroicons/react/24/outline";
+import { useCopilotChat } from "@copilotkit/react-core";
+import { Role } from "@copilotkit/runtime-client-gql";
+import { TextMessage } from "@copilotkit/runtime-client-gql";
 
 export function useTestStep() {
   const api = useApi();
@@ -28,7 +32,51 @@ export function useTestStep() {
   return testStep;
 }
 
-const variablesRegex = /{{.*?}}/g;
+const WFDebugWithAI = ({
+  errors,
+  description,
+}: {
+  errors: { [key: string]: string };
+  description: string;
+}) => {
+  const { appendMessage } = useCopilotChat();
+  return (
+    <Button
+      variant="secondary"
+      color="orange"
+      size="xs"
+      icon={SparklesIcon}
+      onClick={() => {
+        appendMessage(
+          new TextMessage({
+            content: `Help me debug this error ${description}: ${JSON.stringify(
+              errors
+            )}. If you propose a fix, make it concise and to the point.`,
+            role: Role.User,
+          })
+        );
+      }}
+    >
+      Debug with AI
+    </Button>
+  );
+};
+
+const WFDebugWithAIButton = ({
+  errors,
+  description,
+}: {
+  errors: { [key: string]: string };
+  description: string;
+}) => {
+  try {
+    return <WFDebugWithAI errors={errors} description={description} />;
+  } catch (e) {
+    return null;
+  }
+};
+
+const variablesRegex = /{{[\s]*.*?[\s]*}}/g;
 
 export function TestRunStepForm({
   providerInfo,
@@ -46,14 +94,23 @@ export function TestRunStepForm({
 
   // Todo: find {{variables}} in the formData with regex, and store them in a dict [variable_name: ""]
   const variables = useMemo(() => {
-    return Object.values(methodParams)
-      .map((value) => value.toString().match(variablesRegex))
-      .filter((variable) => variable !== null)
-      .map((variable) => variable[0].replace(/{{|}}/g, ""))
-      .reduce((acc, key) => {
-        acc[key] = "";
-        return acc;
-      }, {});
+    const variables: Record<string, string> = {};
+
+    for (const value of Object.values(methodParams)) {
+      const variableMatch = JSON.stringify(value).matchAll(variablesRegex);
+      for (const match of variableMatch) {
+        if (!match) {
+          continue;
+        }
+        for (const variable of match) {
+          const variableName = variable.replace(/{{|}}/g, "").trim();
+          if (variableName) {
+            variables[variableName] = "";
+          }
+        }
+      }
+    }
+    return variables;
   }, [methodParams]);
 
   const [variablesOverride, setVariablesOverride] = useState<
@@ -64,18 +121,32 @@ export function TestRunStepForm({
     () =>
       Object.fromEntries(
         Object.entries(methodParams).map(([key, value]) => {
-          const variableMatch = value.toString().match(variablesRegex);
-          const variableName = variableMatch?.[0].replace(/{{|}}/g, "");
-          if (variableName && variablesOverride[variableName]) {
+          // Convert to string only if needed
+          const stringValue =
+            typeof value === "object" ? JSON.stringify(value) : String(value);
+          let result = stringValue;
+
+          // Find all variables in the value
+          const matches = Array.from(stringValue.matchAll(variablesRegex));
+          for (const match of matches) {
+            const variableName = match[0].replace(/{{|}}/g, "").trim();
+            if (variableName && variablesOverride[variableName]) {
+              result = result.replaceAll(
+                new RegExp(`{{\\s*${variableName}\\s*}}`, "g"),
+                variablesOverride[variableName]
+              );
+            }
+          }
+
+          // Convert back to original type if it was JSON
+          try {
             return [
               key,
-              value.replace(
-                `{{${variableName}}}`,
-                variablesOverride[variableName]
-              ),
+              typeof value === "object" ? JSON.parse(result) : result,
             ];
+          } catch {
+            return [key, result];
           }
-          return [key, value];
         })
       ),
     [methodParams, variablesOverride]
@@ -195,18 +266,25 @@ export function TestRunStepForm({
         {errors &&
           Object.values(errors).length > 0 &&
           Object.entries(errors).map(([key, error]) => (
-            <Callout
+            <div
               key={key}
-              title={key}
-              color="red"
+              className="flex flex-col gap-2 items-end"
               ref={(el) => {
                 if (el) {
                   el.scrollIntoView({ behavior: "smooth", block: "start" });
                 }
               }}
             >
-              {error}
-            </Callout>
+              <Callout title={key} color="red">
+                {error}
+              </Callout>
+              <WFDebugWithAIButton
+                errors={errors}
+                description={`in step test run ${providerInfo.provider_type}, with parameters ${JSON.stringify(
+                  resultingParameters
+                )}`}
+              />
+            </div>
           ))}
       </EditorLayout>
       <div className="sticky flex justify-end bottom-0 px-4 py-2.5 bg-white border-t border-gray-200">

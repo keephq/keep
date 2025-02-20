@@ -24,6 +24,7 @@ import { BuilderChatSafe } from "@/features/workflows/builder/ui/BuilderChat/bui
 import clsx from "clsx";
 import { ResizableColumns } from "@/shared/ui";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { CopilotKit } from "@copilotkit/react-core";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -232,18 +233,25 @@ function Builder({
   };
 
   return (
-    <ResizableColumns
-      key={leftColumnMode}
-      initialLeftWidth={leftColumnMode !== null ? 33 : 0}
-    >
+    <ResizableColumns initialLeftWidth={leftColumnMode !== null ? 33 : 0}>
       <>
-        {leftColumnMode === "yaml" && <YamlEditor />}
-        {leftColumnMode === "chat" && (
+        <div
+          className={clsx(
+            leftColumnMode === "yaml" ? "visible h-full" : "hidden"
+          )}
+        >
+          <YamlEditor />
+        </div>
+        <div
+          className={clsx(
+            leftColumnMode === "chat" ? "visible h-full" : "hidden"
+          )}
+        >
           <BuilderChatSafe
             definition={definition}
             installedProviders={installedProviders ?? []}
           />
-        )}
+        </div>
       </>
       <>
         <div className="relative h-full">
@@ -302,4 +310,15 @@ function Builder({
   );
 }
 
-export default Builder;
+export default function BuilderWrapper(props: Props) {
+  const { data: configData } = useConfig();
+  const isAIEnabled = configData?.OPEN_AI_API_KEY_SET;
+  if (!isAIEnabled) {
+    return <Builder {...props} />;
+  }
+  return (
+    <CopilotKit runtimeUrl="/api/copilotkit">
+      <Builder {...props} />
+    </CopilotKit>
+  );
+}

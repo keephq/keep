@@ -46,15 +46,13 @@ import { Icon } from "@tremor/react";
 import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import AlertPaginationServerSide from "./alert-pagination-server-side";
 import { FacetDto } from "@/features/filter";
-import {
-  GroupingState,
-  getGroupedRowModel,
-  getExpandedRowModel,
-} from "@tanstack/react-table";
+import { GroupingState, getGroupedRowModel } from "@tanstack/react-table";
 import { TimeFrame } from "@/components/ui/DateRangePicker";
 import { AlertsQuery } from "@/utils/hooks/useAlerts";
 import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
+import { ViewedAlert } from "./alert-table";
+
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
@@ -168,6 +166,12 @@ export function AlertTableServerSide({
     pageIndex: 0,
     pageSize: 20,
   });
+
+  const [viewedAlerts, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
+    `viewed-alerts-${presetName}`,
+    []
+  );
+  const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
 
   useEffect(() => {
     const filterArray = [];
@@ -306,6 +310,22 @@ export function AlertTableServerSide({
     if (presetName === "alert-history") {
       return;
     }
+
+    // Update viewed alerts
+    setViewedAlerts((prev) => {
+      const newViewedAlerts = prev.filter(
+        (a) => a.fingerprint !== alert.fingerprint
+      );
+      return [
+        ...newViewedAlerts,
+        {
+          fingerprint: alert.fingerprint,
+          viewedAt: new Date().toISOString(),
+        },
+      ];
+    });
+
+    setLastViewedAlert(alert.fingerprint);
     setSelectedAlert(alert);
     setIsSidebarOpen(true);
   };
@@ -528,7 +548,10 @@ export function AlertTableServerSide({
                       showFilterEmptyState={showFilterEmptyState}
                       showSearchEmptyState={showSearchEmptyState}
                       theme={theme}
+                      viewedAlerts={viewedAlerts}
+                      lastViewedAlert={lastViewedAlert}
                       onRowClick={handleRowClick}
+                      onClearFiltersClick={() => setClearFiltersToken(uuidV4())}
                       presetName={presetName}
                     />
                   </Table>

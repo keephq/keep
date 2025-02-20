@@ -8,7 +8,11 @@ import { MdNotStarted } from "react-icons/md";
 import { GoSquareFill } from "react-icons/go";
 import { PiSquareLogoFill } from "react-icons/pi";
 import { toast } from "react-toastify";
-import { FlowNode } from "@/entities/workflows/model/types";
+import {
+  FlowNode,
+  V2StepStep,
+  V2StepTrigger,
+} from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import clsx from "clsx";
 import { WF_DEBUG_INFO } from "./debug-settings";
@@ -16,6 +20,8 @@ import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Tooltip } from "@/shared/ui/Tooltip";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 import { normalizeStepType, triggerTypes } from "../lib/utils";
+import { getHumanReadableInterval } from "@/entities/workflows/lib/getHumanReadableInterval";
+import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
   if (!WF_DEBUG_INFO) {
@@ -121,6 +127,11 @@ function WorkflowNode({ id, data }: FlowNode) {
     );
   }
 
+  let displayName = data?.name;
+  let subtitle = isTrigger
+    ? getTriggerDescriptionFromStep(data as V2StepTrigger)
+    : data?.type;
+
   return (
     <>
       {!specialNodeCheck && (
@@ -162,14 +173,16 @@ function WorkflowNode({ id, data }: FlowNode) {
                 <DynamicImageProviderIcon
                   src={IconUrlProvider(data) || "/keep.png"}
                   alt={data?.type}
-                  className="object-cover w-8 h-8 rounded-full bg-gray-100"
+                  className="object-cover w-8 h-8"
                   width={32}
                   height={32}
                 />
               )}
-              <div className="flex-1 flex-col gap-2 flex-wrap truncate">
-                <div className="text-lg font-bold truncate flex items-center gap-1">
-                  {data?.name}
+              <div className="flex-1 flex-col flex-wrap min-w-0">
+                <div className="text-lg font-bold flex items-center gap-1 leading-tight">
+                  <span className="truncate" title={displayName}>
+                    {displayName}
+                  </span>
                   {isError && (
                     <Tooltip
                       content={errorMessage}
@@ -179,7 +192,7 @@ function WorkflowNode({ id, data }: FlowNode) {
                     </Tooltip>
                   )}
                 </div>
-                <div className="text-gray-500 truncate">{type}</div>
+                <div className="text-gray-500 truncate">{subtitle}</div>
               </div>
               <div>
                 <NodeMenu data={data} id={id} />
