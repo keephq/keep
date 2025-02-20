@@ -3,15 +3,8 @@ from datetime import datetime
 from typing import List
 
 from arq import ArqRedis
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Depends,
-    HTTPException,
-    Query,
-    Request,
-    Response,
-)
+from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException, Query,
+                     Request, Response)
 from pusher import Pusher
 from pydantic.types import UUID
 from sqlmodel import Session
@@ -22,57 +15,42 @@ from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, REDIS
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
-from keep.api.core.db import (
-    DestinationIncidentNotFound,
-    add_audit,
-    change_incident_status_by_id,
-    confirm_predicted_incident_by_id,
-    get_future_incidents_by_incident_id,
-    get_incident_alerts_and_links_by_incident_id,
-    get_incident_by_id,
-    get_incidents_meta_for_tenant,
-    get_last_alerts,
-    get_rule,
-    get_session,
-    get_workflow_executions_for_incident_or_alert,
-    merge_incidents_to_id,
-)
+from keep.api.core.db import (DestinationIncidentNotFound, add_audit,
+                              change_incident_status_by_id,
+                              confirm_predicted_incident_by_id,
+                              get_future_incidents_by_incident_id,
+                              get_incident_alerts_and_links_by_incident_id,
+                              get_incident_by_id,
+                              get_incidents_meta_for_tenant, get_last_alerts,
+                              get_rule, get_session,
+                              get_workflow_executions_for_incident_or_alert,
+                              merge_incidents_to_id)
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
-from keep.api.core.incidents import (
-    get_incident_facets,
-    get_incident_facets_data,
-    get_incident_potential_facet_fields,
-    get_last_incidents_by_cel,
-)
-from keep.api.models.alert import (
-    AlertDto,
-    EnrichAlertRequestBody,
-    EnrichIncidentRequestBody,
-    IncidentCommit,
-    IncidentDto,
-    IncidentDtoIn,
-    IncidentListFilterParamsDto,
-    IncidentsClusteringSuggestion,
-    IncidentSeverity,
-    IncidentSorting,
-    IncidentStatus,
-    IncidentStatusChangeDto,
-    MergeIncidentsRequestDto,
-    MergeIncidentsResponseDto,
-    SplitIncidentRequestDto,
-    SplitIncidentResponseDto, IncidentSeverityChangeDto,
-)
-from keep.api.models.facet import FacetOptionsQueryDto
+from keep.api.core.incidents import (get_incident_facets,
+                                     get_incident_facets_data,
+                                     get_incident_potential_facet_fields,
+                                     get_last_incidents_by_cel)
+from keep.api.models.alert import (AlertDto, EnrichAlertRequestBody,
+                                   EnrichIncidentRequestBody, IncidentCommit,
+                                   IncidentDto, IncidentDtoIn,
+                                   IncidentListFilterParamsDto,
+                                   IncidentsClusteringSuggestion,
+                                   IncidentSeverity, IncidentSeverityChangeDto,
+                                   IncidentSorting, IncidentStatus,
+                                   IncidentStatusChangeDto,
+                                   MergeIncidentsRequestDto,
+                                   MergeIncidentsResponseDto,
+                                   SplitIncidentRequestDto,
+                                   SplitIncidentResponseDto)
 from keep.api.models.db.alert import ActionType, AlertAudit
+from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.workflow import WorkflowExecutionDTO
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import (
     AlertWithIncidentLinkMetadataPaginatedResultsDto,
-    IncidentsPaginatedResultsDto,
-    WorkflowExecutionsPaginatedResultsDto,
-)
+    IncidentsPaginatedResultsDto, WorkflowExecutionsPaginatedResultsDto)
 from keep.api.utils.pluralize import pluralize
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
@@ -434,13 +412,16 @@ def merge_incidents(
     ),
 ) -> MergeIncidentsResponseDto:
     tenant_id = authenticated_entity.tenant_id
+
+    # Validate inputs early
+    if not command.source_incident_ids:
+        raise HTTPException(status_code=400, detail="No source incidents selected for merging.")
+    if not command.destination_incident_id:
+        raise HTTPException(status_code=400, detail="Invalid destination incident ID.")
+
     logger.info(
-        "Merging incidents",
-        extra={
-            "source_incident_ids": command.source_incident_ids,
-            "destination_incident_id": command.destination_incident_id,
-            "tenant_id": tenant_id,
-        },
+        f"Merging {len(command.source_incident_ids)} incidents into {command.destination_incident_id}",
+        extra={"tenant_id": tenant_id},
     )
 
     try:
@@ -451,15 +432,17 @@ def merge_incidents(
             authenticated_entity.email,
         )
 
-        if not merged_ids:
-            message = "No incidents merged"
-        else:
-            message = f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id} successfully"
+        # If no incidents were merged or skipped, return an error
+        if not merged_ids and not skipped_ids:
+            raise HTTPException(status_code=400, detail="Merge failed: No incidents could be merged.")
 
-        if skipped_ids:
-            message += f", {pluralize(len(skipped_ids), 'incident')} were skipped"
-        if failed_ids:
-            message += f", {pluralize(len(failed_ids), 'incident')} failed to merge"
+        # Dynamically build the response message
+        message_parts = [
+            f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id}" if merged_ids else "",
+            f"{pluralize(len(skipped_ids), 'incident')} were skipped" if skipped_ids else "",
+            f"{pluralize(len(failed_ids), 'incident')} failed to merge" if failed_ids else "",
+        ]
+        message = ", ".join(filter(None, message_parts))
 
         return MergeIncidentsResponseDto(
             merged_incident_ids=merged_ids,
@@ -470,7 +453,6 @@ def merge_incidents(
         )
     except DestinationIncidentNotFound as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 
 @router.get(
     "/{incident_id}/alerts",
