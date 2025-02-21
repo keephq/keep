@@ -1,7 +1,7 @@
 import datetime
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import validators
 from fastapi import (
@@ -44,6 +44,8 @@ from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.parser.parser import Parser
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
+from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -868,3 +870,76 @@ def toggle_workflow_state(
         "status": "success",
         "is_disabled": workflow.is_disabled,
     }
+
+@router.post(
+    "/{workflow_id}/new-secret",
+    description="Write a new secret or update existing secret for a workflow",
+)
+def write_workflow_secret(
+    workflow_id: str,
+    secret_name: str,
+    secret_value: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:secrets"])
+    ),
+) -> dict:
+    """
+    Write a secret for a workflow. Creates a new secret if it doesn't exist,
+    or updates the existing secret if it does.
+    """
+    tenant_id = authenticated_entity.tenant_id
+    secret_manager = SecretManagerFactory.get_secret_manager()
+    
+    secret_key = f"{tenant_id}_{workflow_id}_{secret_name}"
+    secret_manager.write_secret(
+        secret_name=secret_key,
+        secret_value=secret_value
+    )
+    
+    return {"status": "success", "message": "Secret written successfully"}
+
+@router.get(
+    "/{workflow_id}/secrets/{secret_name}",
+    description="Read a workflow secret",
+)
+def read_workflow_secret(
+    workflow_id: str,
+    secret_name: str,
+    is_json: bool = False,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:secrets"])
+    ),
+) -> Union[Dict, str]:
+    """
+    Read a secret value for a workflow. Optionally parse as JSON if is_json is True.
+    """
+    tenant_id = authenticated_entity.tenant_id
+    secret_manager = SecretManagerFactory.get_secret_manager()
+    
+    secret_key = f"{tenant_id}_{workflow_id}_{secret_name}"
+    return secret_manager.read_secret(
+        secret_name=secret_key,
+        is_json=is_json
+    )
+
+@router.delete(
+    "/{workflow_id}/secrets/{secret_name}",
+    description="Delete a workflow secret",
+)
+def delete_workflow_secret(
+    workflow_id: str,
+    secret_name: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:secrets"])
+    ),
+) -> dict:
+    """
+    Delete a secret for a workflow.
+    """
+    tenant_id = authenticated_entity.tenant_id
+    secret_manager = SecretManagerFactory.get_secret_manager()
+    
+    secret_key = f"{tenant_id}_{workflow_id}_{secret_name}"
+    secret_manager.delete_secret(secret_key)
+    
+    return {"status": "success", "message": "Secret deleted successfully"}
