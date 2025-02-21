@@ -95,6 +95,7 @@ httptools = "^0.6.4"
 anthropic = "^0.44.0"
 google-generativeai = "^0.8.4"
 js2py = "^0.74"
+pyodbc = "^5.2.0"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
 pre-commit-hooks = "^4.4.0"

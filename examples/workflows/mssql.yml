@@ -1,0 +1,18 @@
+workflow:
+  id: mssql-workflow
+  name: query-mssql
+  description: Query rows from MSSQL
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps:
+    - name: mssql-query-step
+      provider:
+        type: mssql
+        config: "{{ providers.mssql }}"
+        with:
+          query: SELECT MAX(datetime) FROM demo_table;
+  actions: []
