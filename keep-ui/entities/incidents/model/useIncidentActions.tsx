@@ -1,9 +1,12 @@
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui";
 import { useCallback } from "react";
 import { toast } from "react-toastify";
 import { useSWRConfig } from "swr";
 import { IncidentDto, Severity, Status } from "./models";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
+
 
 type UseIncidentActionsValue = {
   addIncident: (incident: IncidentCreateDto) => Promise<IncidentDto>;
@@ -152,29 +155,40 @@ export function useIncidentActions(): UseIncidentActionsValue {
   );
 
   const mergeIncidents = useCallback(
-    async (
-      sourceIncidents: IncidentDto[],
-      destinationIncident: IncidentDto
-    ) => {
-      if (!sourceIncidents.length || !destinationIncident) {
-        showErrorToast(new Error("Please select incidents to merge."));
+    async (sourceIncidents: IncidentDto[], destinationIncident: IncidentDto) => {
+      if (!sourceIncidents.length) {
+        showErrorToast(new Error("No incidents selected for merging. Please select at least one incident to merge."));
         return;
       }
-
+      
+      if (!destinationIncident) {
+        showErrorToast(new Error("Please select a destination incident."));
+        return;
+      }
+      
       try {
         const result = await api.post("/incidents/merge", {
           source_incident_ids: sourceIncidents.map((incident) => incident.id),
           destination_incident_id: destinationIncident.id,
         });
-        toast.success("Incidents merged successfully!");
+        
+        if (result.merged_incident_ids?.length) {
+          toast.success("Incidents merged successfully!");
+        } else if (result.skipped_incident_ids?.length) {
+          showErrorToast(new Error("Some incidents were skipped and not merged."));
+        } else {
+          showErrorToast(new Error("No incidents were merged. Please check the selection and try again."));
+        }
+        
         mutateIncidentsList();
-        return result;
       } catch (error) {
         showErrorToast(error, "Failed to merge incidents");
       }
     },
     [api, mutateIncidentsList]
   );
+  
+  
 
   const deleteIncident = useCallback(
     async (incidentId: string, skipConfirmation = false) => {
