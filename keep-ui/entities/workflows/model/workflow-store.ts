@@ -105,15 +105,15 @@ function addNodeBetween(
     }
   }
 
-  if (isTriggerComponent && !edgeCanAddTrigger(edge.source, edge.target)) {
+  let { source: sourceId, target: targetId } = edge || {};
+  if (sourceId === "trigger_start") {
+    targetId = "trigger_end";
+  }
+
+  if (isTriggerComponent && !edgeCanAddTrigger(sourceId, targetId)) {
     throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add trigger`);
   }
 
-  if (!isTriggerComponent && !edgeCanAddStep(edge.source, edge.target)) {
-    throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add step`);
-  }
-
-  let { source: sourceId, target: targetId } = edge || {};
   if (!sourceId) {
     throw new KeepWorkflowStoreError(
       `Source is not defined for edge ${edge.id}`
@@ -137,11 +137,15 @@ function addNodeBetween(
     );
   }
 
+  if (!isTriggerComponent && !edgeCanAddStep(sourceId, targetId)) {
+    throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add step`);
+  }
+
   const nodes = get().nodes;
   // Return if the trigger is already in the workflow
   if (isTriggerComponent && nodes.find((node) => node && step.id === node.id)) {
     throw new KeepWorkflowStoreError(
-      `This ${step.type} trigger is already in the workflow`
+      `Trigger of type ${step.type} is already in the workflow`
     );
   }
 
@@ -153,9 +157,6 @@ function addNodeBetween(
     );
   }
 
-  if (sourceId === "trigger_start") {
-    targetId = "trigger_end";
-  }
   // for triggers, we use the id from the step, for steps we generate a new id
   const newNodeId = isTriggerComponent ? step.id : uuidv4();
   const cloneStep = JSON.parse(JSON.stringify(step));

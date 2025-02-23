@@ -466,8 +466,8 @@ describe("useWorkflowStore", () => {
             sequence: [
               {
                 id: "step1",
-                name: "Step 1",
-                type: "step",
+                name: "step1",
+                type: "step-mock",
                 componentType: "task",
                 properties: {
                   stepParams: [],
@@ -476,7 +476,7 @@ describe("useWorkflowStore", () => {
               {
                 id: "step2",
                 name: "",
-                type: "step",
+                type: "step-uninstalled",
                 componentType: "task",
                 properties: {
                   stepParams: [],
@@ -495,10 +495,17 @@ describe("useWorkflowStore", () => {
       });
 
       // Verify step validation errors are captured
+      expect(result.current.validationErrors).toHaveProperty("step1");
+      expect(result.current.validationErrors["step1"]).toBe(
+        "No parameters configured"
+      );
       expect(result.current.validationErrors).toHaveProperty("step2");
+      expect(result.current.validationErrors["step2"]).toBe(
+        "Step name cannot be empty."
+      );
     });
 
-    it("should allow deployment if only provider errors exist", () => {
+    it("should allow deployment if errors exist but are about missing providers", () => {
       const { result } = renderHook(() => useWorkflowStore());
 
       // Setup a workflow with provider-related errors
@@ -509,10 +516,13 @@ describe("useWorkflowStore", () => {
               {
                 id: "step1",
                 name: "Step 1",
-                type: "step-mock",
+                type: "step-notinstalled",
                 componentType: "task",
                 properties: {
-                  stepParams: [],
+                  stepParams: ["param1"],
+                  with: {
+                    param1: "value1",
+                  },
                 },
               },
             ],
