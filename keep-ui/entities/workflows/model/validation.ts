@@ -103,7 +103,7 @@ function validateProviderConfig(
   const providerObject = providers?.find((p) => p.type === providerType);
 
   if (!providerObject) {
-    return `Type ${providerType} of provider is not found`;
+    return `Provider type '${providerType}' is not supported`;
   }
   // If config is not empty, it means that the provider needs installation
   const doesProviderNeedInstallation =
@@ -114,16 +114,16 @@ function validateProviderConfig(
   }
 
   if (!providerConfig) {
-    return "No provider selected";
+    return `No ${providerType} provider selected`;
   }
 
   if (
     doesProviderNeedInstallation &&
     installedProviders?.find(
-      (p) => (p.type === providerType && p.details?.name) === providerConfig
+      (p) => p.type === providerType && p.details?.name === providerConfig
     ) === undefined
   ) {
-    return "This provider is not installed and you'll need to install it before executing this workflow.";
+    return `The '${providerConfig}' ${providerType} provider is not installed. Please install it before executing this workflow.`;
   }
   return null;
 }
