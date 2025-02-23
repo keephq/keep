@@ -188,6 +188,13 @@ def run_workflow(
     created_by = authenticated_entity.email
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
 
+    workflow = get_workflow(tenant_id, workflow_id)
+    if not workflow:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Workflow {workflow_id} not found",
+        )
+
     # if the workflow id is the name of the workflow (e.g. the CLI has only the name)
     if not validators.uuid(workflow_id):
         logger.info("Workflow ID is not a UUID, trying to get the ID by name")

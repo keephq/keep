@@ -1,7 +1,7 @@
-import { TableBody, TableRow, TableCell } from "@tremor/react";
+import { TableBody, TableRow, TableCell, Icon } from "@tremor/react";
 import { AlertDto, Severity } from "@/entities/alerts/model";
 import { Table, flexRender, Row } from "@tanstack/react-table";
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon, EyeIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import { useState } from "react";
 import {
@@ -9,12 +9,16 @@ import {
   UISeverity,
   getCommonPinningStylesAndClassNames,
 } from "@/shared/ui";
+import { ViewedAlert } from "./alert-table";
+import { format } from "date-fns";
 
 interface GroupedRowProps {
   row: Row<AlertDto>;
   table: Table<AlertDto>;
   theme: Record<string, string>;
   onRowClick?: (e: React.MouseEvent, alert: AlertDto) => void;
+  viewedAlerts: ViewedAlert[];
+  lastViewedAlert: string | null;
 }
 
 export const GroupedRow = ({
@@ -22,6 +26,8 @@ export const GroupedRow = ({
   table,
   theme,
   onRowClick,
+  viewedAlerts,
+  lastViewedAlert,
 }: GroupedRowProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -30,10 +36,6 @@ export const GroupedRow = ({
     const groupValue = groupingColumnId
       ? row.getValue(groupingColumnId)
       : "Unknown Group";
-
-    const groupColumnIndex = row
-      .getVisibleCells()
-      .findIndex((cell) => cell.column.id === groupingColumnId);
 
     return (
       <>
@@ -109,6 +111,10 @@ export const GroupedRow = ({
   // Regular non-grouped row
   const severity = row.original.severity || "info";
   const rowBgColor = theme[severity] || "bg-white";
+  const isLastViewed = row.original.fingerprint === lastViewedAlert;
+  const viewedAlert = viewedAlerts?.find(
+    (a) => a.fingerprint === row.original.fingerprint
+  );
   return (
     <TableRow
       id={`alert-row-${row.original.fingerprint}`}
@@ -129,11 +135,26 @@ export const GroupedRow = ({
               cell.column.columnDef.meta?.tdClassName,
               className,
               rowBgColor,
-              "group-hover:bg-orange-100"
+              "group-hover:bg-orange-100",
+              isLastViewed && "bg-orange-50"
             )}
             style={style}
           >
-            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            {viewedAlert && cell.column.id === "alertMenu" ? (
+              <div className="flex items-center gap-2">
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+
+                <Icon
+                  icon={EyeIcon}
+                  tooltip={`Viewed ${format(
+                    new Date(viewedAlert.viewedAt),
+                    "MMM d, yyyy HH:mm"
+                  )}`}
+                />
+              </div>
+            ) : (
+              flexRender(cell.column.columnDef.cell, cell.getContext())
+            )}
           </TableCell>
         );
       })}

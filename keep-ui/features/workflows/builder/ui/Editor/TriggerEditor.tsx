@@ -4,23 +4,38 @@ import { BackspaceIcon, FunnelIcon } from "@heroicons/react/24/outline";
 import { Text, Subtitle, Icon, Switch } from "@tremor/react";
 import { EditorLayout } from "./StepEditor";
 import { capitalize } from "@/utils/helpers";
+import { getHumanReadableInterval } from "@/entities/workflows/lib/getHumanReadableInterval";
+import { debounce } from "lodash";
+import { useCallback } from "react";
 
 export function TriggerEditor() {
   const {
     v2Properties: properties,
     updateV2Properties,
+    updateSelectedNodeData,
     selectedNode,
     validationErrors,
   } = useWorkflowStore();
 
+  const saveNodeDataDebounced = useCallback(
+    debounce((key: string, value: string | Record<string, any>) => {
+      updateSelectedNodeData(key, value);
+    }, 300),
+    [updateSelectedNodeData]
+  );
+
   const handleChange = (key: string, value: string | Record<string, any>) => {
     updateV2Properties({ [key]: value });
+    if (key === "interval") {
+      updateSelectedNodeData("properties", { interval: value });
+    }
   };
 
   const updateAlertFilter = (filter: string, value: string) => {
     const currentFilters = properties.alert || {};
     const updatedFilters = { ...currentFilters, [filter]: value };
     updateV2Properties({ alert: updatedFilters });
+    saveNodeDataDebounced("properties", updatedFilters);
   };
 
   const addFilter = () => {
@@ -148,7 +163,8 @@ export function TriggerEditor() {
           </>
         );
 
-      case "interval":
+      case "interval": {
+        const value = properties[selectedTriggerKey];
         return (
           <>
             <Subtitle className="mt-2.5">Interval (in seconds)</Subtitle>
@@ -157,12 +173,18 @@ export function TriggerEditor() {
               onChange={(e: any) =>
                 handleChange(selectedTriggerKey, e.target.value)
               }
-              value={properties[selectedTriggerKey] || ("" as string)}
+              value={value || ("" as string)}
               error={!!error}
               errorMessage={error}
             />
+            {value && (
+              <Text className="text-sm text-gray-500">
+                Workflow will run every {getHumanReadableInterval(value)}
+              </Text>
+            )}
           </>
         );
+      }
 
       default:
         return null;

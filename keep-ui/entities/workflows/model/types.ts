@@ -36,7 +36,7 @@ export const V2StepIntervalTriggerSchema = z.object({
   componentType: z.literal("trigger"),
   type: z.literal("interval"),
   properties: z.object({
-    interval: z.string(),
+    interval: z.union([z.string(), z.number()]),
   }),
 });
 
@@ -46,12 +46,7 @@ export const V2StepAlertTriggerSchema = z.object({
   componentType: z.literal("trigger"),
   type: z.literal("alert"),
   properties: z.object({
-    alert: z.union([
-      z.object({
-        source: z.string(),
-      }),
-      z.record(z.string(), z.any()),
-    ]),
+    alert: z.record(z.string(), z.string()),
   }),
 });
 

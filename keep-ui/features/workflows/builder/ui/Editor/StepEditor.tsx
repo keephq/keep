@@ -560,6 +560,11 @@ export function StepEditorV2({
   const { data: { providers, installed_providers: installedProviders } = {} } =
     useProviders();
 
+  const installedProvider = installedProviders?.find(
+    (p) => p.type === providerType && p.details?.name === providerConfig
+  );
+  const providerId = installedProvider?.id;
+
   const providerNameError = validateProviderConfig(
     providerType,
     providerConfig ?? "",
@@ -720,7 +725,7 @@ export function StepEditorV2({
         <TabPanel className="flex-1">
           <TestRunStepForm
             providerInfo={{
-              provider_id: providerConfig ?? "",
+              provider_id: providerId || providerConfig || "",
               provider_type: providerType ?? "",
             }}
             method={method}
