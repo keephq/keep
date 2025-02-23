@@ -49,7 +49,7 @@ incident_field_configurations = [
     FieldMappingConfiguration("alerts_count", "alerts_count"),
     FieldMappingConfiguration("merged_at", "merged_at"),
     FieldMappingConfiguration("merged_by", "merged_by"),
-    FieldMappingConfiguration("hasLinkedIncident", "incident_has_past_incident"),
+    FieldMappingConfiguration("hasLinkedIncident", "incident_has_linked_incident"),
     FieldMappingConfiguration("alert.providerType", "incident_alert_provider_type"),
     FieldMappingConfiguration(
         map_from_pattern="alert.*",
@@ -194,7 +194,7 @@ def __build_last_incidents_query(
                     True,
                 ),
                 else_=False,
-            ).label("incident_has_past_incident"),
+            ).label("incident_has_linked_incident"),
         )
         .select_from(Incident)
         .outerjoin(
@@ -226,7 +226,7 @@ def __build_last_incidents_query(
         query = query.filter(Incident.last_seen_time >= lower_timestamp)
 
     if sorting:
-        query = query.order_by(Incident.id, sorting.get_order_by(Incident))
+        query = query.order_by(sorting.get_order_by(Incident), Incident.id)
 
     if cel:
         instance = get_cel_to_sql_provider(properties_metadata)
@@ -342,7 +342,7 @@ def get_incident_facets_data(
                     True,
                 ),
                 else_=False,
-            ).label("incident_has_past_incident"),
+            ).label("incident_has_linked_incident"),
         )
         .select_from(Incident)
         .outerjoin(
