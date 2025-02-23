@@ -193,7 +193,8 @@ export const config = {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: false, // Set to false to make it work over HTTP
+        // Set to false to make it work over HTTP
+        secure: false,
       },
     },
   },

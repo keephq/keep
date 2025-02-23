@@ -14,12 +14,13 @@ services:
   tunnel:
     image: nginx:alpine
     ports:
-      - "3000:80"
+      - "3000:443" # Changed from 80 to 443
     networks:
       - internal
       - proxy-net
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./certs:/etc/nginx/certs # Add certificates
     depends_on:
       - keep-frontend
 
@@ -30,9 +31,10 @@ services:
     extends:
       file: ../docker-compose.common.yml
       service: keep-frontend-common
-    image: us-central1-docker.pkg.dev/keephq/keep/keep-ui:0.37.1-console
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-ui:0.37.4-console
     environment:
       - HOSTNAME=0.0.0.0
+      - NEXTAUTH_URL=https://localhost:3000
       - API_URL=http://keep-backend:8080
       - http_proxy=http://proxy:3128
       - https_proxy=http://proxy:3128
@@ -44,8 +46,8 @@ services:
       - AUTH_TYPE=AZUREAD
       - NODE_ENV=development
       - KEEP_AZUREAD_TENANT_ID=XXX
-      - KEEP_AZUREAD_CLIENT_ID=YYY
-      - KEEP_AZUREAD_CLIENT_SECRET=ZZZ
+      - KEEP_AZUREAD_CLIENT_ID=XXX
+      - KEEP_AZUREAD_CLIENT_SECRET=XXX
 
     # volumes:
     # - ./keep-ui:/app
