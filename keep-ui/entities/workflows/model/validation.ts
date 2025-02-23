@@ -97,8 +97,8 @@ export function validateGlobalPure(definition: Definition): ValidationResult[] {
 function validateProviderConfig(
   providerType: string | undefined,
   providerConfig: string,
-  providers: Provider[] | null | undefined,
-  installedProviders: Provider[] | null | undefined
+  providers: Provider[],
+  installedProviders: Provider[]
 ) {
   const providerObject = providers?.find((p) => p.type === providerType);
 
@@ -119,7 +119,7 @@ function validateProviderConfig(
 
   if (
     doesProviderNeedInstallation &&
-    installedProviders?.find(
+    installedProviders.find(
       (p) => p.type === providerType && p.details?.name === providerConfig
     ) === undefined
   ) {
@@ -135,7 +135,7 @@ export function validateStepPure(
 ): string | null {
   if (step.componentType === "switch") {
     if (!step.name) {
-      return "Step/action name cannot be empty.";
+      return "Condition name cannot be empty.";
     }
     const branches = step.branches || {
       true: [],
