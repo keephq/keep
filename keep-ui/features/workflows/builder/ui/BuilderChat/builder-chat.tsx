@@ -6,6 +6,7 @@ import {
   ToolboxConfiguration,
   V2StepStep,
   DefinitionV2,
+  IncidentEventEnum,
 } from "@/entities/workflows/model/types";
 import {
   CopilotChat,
@@ -14,7 +15,6 @@ import {
 } from "@copilotkit/react-ui";
 import { useWorkflowStore } from "@/entities/workflows";
 import {
-  CopilotKit,
   useCopilotAction,
   useCopilotChat,
   useCopilotReadable,
@@ -26,8 +26,6 @@ import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
 import { WF_DEBUG_INFO } from "../debug-settings";
 import { AddTriggerUI } from "./AddTriggerUI";
 import { AddStepUI } from "./AddStepUI";
-import "@copilotkit/react-ui/styles.css";
-import "./chat.css";
 import { useTestStep } from "../Editor/StepTest";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { Title, Text } from "@tremor/react";
@@ -35,6 +33,50 @@ import { SparklesIcon } from "@heroicons/react/24/outline";
 import BuilderChatPlaceholder from "./ai-workflow-placeholder.png";
 import Image from "next/image";
 import { Edge } from "@xyflow/react";
+import { SuggestionResult } from "./SuggestionStatus";
+import { useSearchAlerts } from "@/utils/hooks/useSearchAlerts";
+import "@copilotkit/react-ui/styles.css";
+import "./chat.css";
+
+const useAlertKeys = () => {
+  const defaultQuery = {
+    combinator: "or",
+    rules: [
+      {
+        combinator: "and",
+        rules: [{ field: "source", operator: "=", value: "" }],
+      },
+      {
+        combinator: "and",
+        rules: [{ field: "source", operator: "=", value: "" }],
+      },
+    ],
+  };
+  const { data: alertsFound = [], isLoading } = useSearchAlerts({
+    query: defaultQuery,
+    timeframe: 3600 * 24,
+  });
+
+  const keys = useMemo(() => {
+    const getNestedKeys = (obj: any, prefix = ""): string[] => {
+      return Object.entries(obj).reduce<string[]>((acc, [key, value]) => {
+        const newKey = prefix ? `${prefix}.${key}` : key;
+        if (value && typeof value === "object" && !Array.isArray(value)) {
+          return [...acc, ...getNestedKeys(value, newKey)];
+        }
+        return [...acc, newKey];
+      }, []);
+    };
+    return [
+      ...alertsFound.reduce<Set<string>>((acc, alert) => {
+        const alertKeys = getNestedKeys(alert);
+        return new Set([...acc, ...alertKeys]);
+      }, new Set<string>()),
+    ];
+  }, [alertsFound]);
+
+  return { keys, isLoading };
+};
 
 interface BuilderChatProps {
   definition: DefinitionV2;
@@ -89,13 +131,25 @@ export function BuilderChat({
     return getWorkflowSummaryForCopilot(nodes, edges);
   }, [nodes, edges]);
 
-  // TODO: reduce the size of the nodes object, e.g. only id and data, or something like this
   useCopilotReadable(
     {
       description: "Current workflow",
       value: workflowSummary,
     },
     [workflowSummary]
+  );
+
+  useCopilotReadable(
+    {
+      description: "Installed providers",
+      value: installedProviders,
+      convert: (description, installedProviders: Provider[]) => {
+        return installedProviders
+          .map((p) => `${p.type}, id: ${p.id}`)
+          .join(", ");
+      },
+    },
+    [installedProviders]
   );
 
   useCopilotReadable(
@@ -203,6 +257,14 @@ export function BuilderChat({
       },
     ],
     handler: ({ stepId }: { stepId: string }) => {
+      if (
+        stepId === "start" ||
+        stepId === "end" ||
+        stepId === "trigger_start" ||
+        stepId === "trigger_end"
+      ) {
+        return;
+      }
       // TODO: nice UI for this
       if (confirm(`Are you sure you want to remove ${stepId} step?`)) {
         deleteNodes(stepId);
@@ -296,35 +358,186 @@ export function BuilderChat({
     [steps]
   );
 
+  useCopilotAction({
+    name: "addManualTrigger",
+    description:
+      "Add a manual trigger to the workflow. There could be only one manual trigger in the workflow.",
+    parameters: [],
+    renderAndWaitForResponse: (args) => {
+      if (args.status === "inProgress") {
+        // TODO: skeleton loader
+        return <div>Loading...</div>;
+      }
+
+      if (args.status === "complete" && "result" in args) {
+        return AddTriggerUI({
+          status: "complete",
+          args: {
+            triggerType: "manual",
+            triggerProperties: JSON.stringify({
+              manual: "true",
+            }),
+          },
+          respond: undefined,
+          result: args.result as SuggestionResult,
+        });
+      }
+
+      return AddTriggerUI({
+        status: "executing",
+        args: {
+          triggerType: "manual",
+          triggerProperties: JSON.stringify({
+            manual: "true",
+          }),
+        },
+        respond: args.respond,
+        result: undefined,
+      });
+    },
+  });
+
+  const { keys } = useAlertKeys();
+  const possibleAlertProperties = useMemo(() => {
+    if (!keys || keys.length === 0) {
+      return ["source", "severity", "status", "message", "timestamp"];
+    }
+    return keys?.map((key) => key.split(".").pop());
+  }, [keys]);
+
   useCopilotAction(
     {
-      name: "addTrigger",
-      description: "Add a trigger to the workflow",
+      name: "addAlertTrigger",
+      description:
+        "Add an alert trigger to the workflow. There could be only one alert trigger in the workflow, if you need more combine them into one alert trigger.",
       parameters: [
         {
-          name: "triggerType",
-          description:
-            "The type of trigger to generate. One of: manual, alert, incident, or interval.",
-          type: "string",
-          required: true,
-        },
-        {
-          name: "triggerProperties",
-          description: "The properties of the trigger",
+          name: "alertFilters",
+          description: `The filters of the alert trigger, this should be a JSON object, there keys are one of: ${possibleAlertProperties.join(
+            ", "
+          )}, values are strings. This cannot be empty (undefined!)`,
           type: "string",
           required: true,
         },
       ],
       renderAndWaitForResponse: (args) => {
         if (args.status === "inProgress") {
+          // TODO: skeleton loader
           return <div>Loading...</div>;
         }
-        return AddTriggerUI(args);
+
+        const argsToPass = {
+          triggerType: "alert",
+          triggerProperties: JSON.stringify({
+            alert: JSON.parse(args.args.alertFilters),
+          }),
+        };
+
+        if (args.status === "complete" && "result" in args) {
+          return AddTriggerUI({
+            status: "complete",
+            args: argsToPass,
+            respond: undefined,
+            result: args.result as SuggestionResult,
+          });
+        }
+
+        return AddTriggerUI({
+          status: "executing",
+          args: argsToPass,
+          respond: args.respond,
+          result: undefined,
+        });
       },
     },
-    [steps]
+    [possibleAlertProperties]
   );
 
+  useCopilotAction({
+    name: "addIntervalTrigger",
+    description:
+      "Add an interval trigger to the workflow. There could be only one interval trigger in the workflow.",
+    parameters: [
+      {
+        name: "interval",
+        description: "The interval of the interval trigger in seconds",
+        type: "number",
+        required: true,
+      },
+    ],
+    renderAndWaitForResponse: (args) => {
+      if (args.status === "inProgress") {
+        // TODO: skeleton loader
+        return <div>Loading...</div>;
+      }
+
+      const argsToPass = {
+        triggerType: "interval",
+        triggerProperties: JSON.stringify({ interval: args.args.interval }),
+      };
+
+      if (args.status === "complete" && "result" in args) {
+        return AddTriggerUI({
+          status: "complete",
+          args: argsToPass,
+          respond: undefined,
+          result: args.result as SuggestionResult,
+        });
+      }
+
+      return AddTriggerUI({
+        status: "executing",
+        args: argsToPass,
+        respond: args.respond,
+        result: undefined,
+      });
+    },
+  });
+
+  useCopilotAction({
+    name: "addIncidentTrigger",
+    description:
+      "Add an incident trigger to the workflow. There could be only one incident trigger in the workflow.",
+    parameters: [
+      {
+        name: "incidentEvents",
+        description: `The events of the incident trigger, one of: ${IncidentEventEnum.options.map((o) => `"${o}"`).join(", ")}`,
+        type: "string[]",
+        required: true,
+      },
+    ],
+    renderAndWaitForResponse: (args) => {
+      if (args.status === "inProgress") {
+        // TODO: skeleton loader
+        return <div>Loading...</div>;
+      }
+
+      const argsToPass = {
+        triggerType: "incident",
+        triggerProperties: JSON.stringify({
+          incident: { events: args.args.incidentEvents },
+        }),
+      };
+
+      if (args.status === "complete" && "result" in args) {
+        return AddTriggerUI({
+          status: "complete",
+          args: argsToPass,
+          respond: undefined,
+          result: args.result as SuggestionResult,
+        });
+      }
+
+      return AddTriggerUI({
+        status: "executing",
+        args: argsToPass,
+        respond: args.respond,
+        result: undefined,
+      });
+    },
+  });
+
+  // TODO: split this action into: addAction, addStep, addCondition, addForeach so parameters are more accurate
   useCopilotAction(
     {
       name: "addStep",
@@ -370,7 +583,7 @@ export function BuilderChat({
     [steps, selectedNode, selectedEdge, addNodeBetween]
   );
 
-  const testStep = useTestStep();
+  // const testStep = useTestStep();
 
   // TODO: add this action
   // useCopilotAction({
