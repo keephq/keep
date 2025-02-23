@@ -413,7 +413,7 @@ def merge_incidents(
 ) -> MergeIncidentsResponseDto:
     tenant_id = authenticated_entity.tenant_id
 
-    # Validate inputs early
+    # Validate input
     if not command.source_incident_ids:
         raise HTTPException(status_code=400, detail="No source incidents selected for merging.")
     if not command.destination_incident_id:
@@ -432,24 +432,25 @@ def merge_incidents(
             authenticated_entity.email,
         )
 
-        # If no incidents were merged or skipped, return an error
+        # Ensure the merge was at least partially successful
         if not merged_ids and not skipped_ids:
             raise HTTPException(status_code=400, detail="Merge failed: No incidents could be merged.")
 
-        # Dynamically build the response message
-        message_parts = [
-            f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id}" if merged_ids else "",
-            f"{pluralize(len(skipped_ids), 'incident')} were skipped" if skipped_ids else "",
-            f"{pluralize(len(failed_ids), 'incident')} failed to merge" if failed_ids else "",
-        ]
-        message = ", ".join(filter(None, message_parts))
+        # Construct response message
+        message_parts = []
+        if merged_ids:
+            message_parts.append(f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id}")
+        if skipped_ids:
+            message_parts.append(f"{pluralize(len(skipped_ids), 'incident')} were skipped")
+        if failed_ids:
+            message_parts.append(f"{pluralize(len(failed_ids), 'incident')} failed to merge")
 
         return MergeIncidentsResponseDto(
             merged_incident_ids=merged_ids,
             skipped_incident_ids=skipped_ids,
             failed_incident_ids=failed_ids,
             destination_incident_id=command.destination_incident_id,
-            message=message,
+            message=", ".join(message_parts),
         )
     except DestinationIncidentNotFound as e:
         raise HTTPException(status_code=400, detail=str(e))

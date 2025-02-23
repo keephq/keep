@@ -154,21 +154,31 @@ export function useIncidentActions(): UseIncidentActionsValue {
   const mergeIncidents = useCallback(
     async (sourceIncidents: IncidentDto[], destinationIncident: IncidentDto) => {
       if (!sourceIncidents.length) {
-        showErrorToast(new Error("No incidents selected for merging. Please select at least one incident to merge."));
+        showErrorToast(new Error("No incidents selected for merging. Please select at least one incident."));
         return;
       }
-      
+  
       if (!destinationIncident) {
         showErrorToast(new Error("Please select a destination incident."));
         return;
       }
-      
+  
+      // Check if any source incident is empty (has no alerts)
+      const emptySourceIncidents = sourceIncidents.filter(incident => incident.alert_count === 0);
+  
+      if (emptySourceIncidents.length) {
+        const confirmMerge = window.confirm(
+          `You are merging ${emptySourceIncidents.length} incident(s) with no alerts. Do you want to continue?`
+        );
+        if (!confirmMerge) return;
+      }
+  
       try {
         const result = await api.post("/incidents/merge", {
-          source_incident_ids: sourceIncidents.map((incident) => incident.id),
+          source_incident_ids: sourceIncidents.map(incident => incident.id),
           destination_incident_id: destinationIncident.id,
         });
-        
+  
         if (result.merged_incident_ids?.length) {
           toast.success("Incidents merged successfully!");
         } else if (result.skipped_incident_ids?.length) {
@@ -176,7 +186,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
         } else {
           showErrorToast(new Error("No incidents were merged. Please check the selection and try again."));
         }
-        
+  
         mutateIncidentsList();
       } catch (error) {
         showErrorToast(error, "Failed to merge incidents");
@@ -184,6 +194,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
     },
     [api, mutateIncidentsList]
   );
+  
   
   
 
