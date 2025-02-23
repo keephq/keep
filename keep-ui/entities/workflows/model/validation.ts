@@ -100,9 +100,6 @@ function validateProviderConfig(
   providers: Provider[] | null | undefined,
   installedProviders: Provider[] | null | undefined
 ) {
-  if (!providerConfig) {
-    return "No provider selected";
-  }
   const providerObject = providers?.find((p) => p.type === providerType);
 
   if (!providerObject) {
@@ -112,8 +109,15 @@ function validateProviderConfig(
   const doesProviderNeedInstallation =
     checkProviderNeedsInstallation(providerObject);
 
+  if (!doesProviderNeedInstallation) {
+    return null;
+  }
+
+  if (!providerConfig) {
+    return "No provider selected";
+  }
+
   if (
-    providerConfig &&
     doesProviderNeedInstallation &&
     installedProviders?.find(
       (p) => (p.type === providerType && p.details?.name) === providerConfig
