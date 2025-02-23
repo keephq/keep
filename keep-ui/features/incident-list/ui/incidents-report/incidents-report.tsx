@@ -1,8 +1,79 @@
+import { useMemo } from "react";
 import { IncidentData } from "./models";
+import { DonutChart } from "@tremor/react";
 
 interface IncidentsReportProps {
   incidentsReportData: IncidentData;
 }
+
+interface PieChartProps {
+  data: { name: string; value: number }[];
+  formatCount?: (value: number) => string;
+}
+
+export const PieChart: React.FC<PieChartProps> = ({
+  data,
+  formatCount: counterFormatter,
+}) => {
+  const sortedByValue = useMemo(() => {
+    return [...data].sort((a, b) => b.value - a.value);
+  }, [data]);
+
+  const colors = useMemo(
+    () => ["red", "blue", "green", "orange", "yellow", "purple"],
+    []
+  ); // Tremor color names
+
+  // Tremor color name to HEX mapping (based on Tailwind)
+  const tremorColorMap = useMemo(
+    () => ({
+      blue: "bg-blue-700",
+      red: "bg-red-500",
+      green: "bg-green-500",
+      orange: "bg-orange-500",
+      yellow: "bg-yellow-500",
+      purple: "bg-purple-500",
+      teal: "bg-teal-500",
+      cyan: "bg-cyan-500",
+      rose: "bg-rose-500",
+      lime: "bg-lime-500",
+    }),
+    []
+  );
+
+  function getCategoryColor(index: number): string {
+    const categoryColor = colors[index];
+    return tremorColorMap[categoryColor as keyof typeof tremorColorMap];
+  }
+
+  return (
+    <div className="flex items-center gap-10">
+      <DonutChart
+        className="w-48 h-48"
+        data={sortedByValue}
+        colors={colors}
+        variant="pie"
+        onValueChange={(v) => console.log(v)}
+      />
+      <div className="flex-col">
+        {sortedByValue.map((chartValue, index) => (
+          <div key={chartValue.name} className="flex gap-2">
+            <div
+              className={`min-w-5 h-3 mt-2 ${getCategoryColor(index)}`}
+            ></div>
+            <div>
+              <span className="font-bold">{chartValue.name}</span> -{" "}
+              {counterFormatter && (
+                <span>{counterFormatter(chartValue.value)}</span>
+              )}
+              {!counterFormatter && <span>{chartValue.value}</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   incidentsReportData,
@@ -47,6 +118,10 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
     return result.join(" ");
   }
 
+  function formatIncidentsCount(count: number): string {
+    return count > 1 ? `${count} incidents` : `${count} incident`;
+  }
+
   function renderTimeMetric(
     metricName: string,
     metricValueInSeconds: number | undefined
@@ -64,18 +139,16 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   function renderMainReasons(): JSX.Element {
     return (
       <div className="text-lg">
-        <p className="font-bold">Most of the incidents reasons:</p>
-        <ul className="ml-7 list-decimal">
-          {Object.entries(incidentsReportData?.most_incident_reasons || {}).map(
-            ([reason, incidentIds]) => (
-              <li key={reason}>
-                <span className="font-bold">{reason}</span>
-                <span>&nbsp;-&nbsp;</span>
-                <span>{incidentIds.length}times</span>
-              </li>
-            )
-          )}
-        </ul>
+        <p className="font-bold mb-2">Most of the incidents reasons:</p>
+        <PieChart
+          formatCount={formatIncidentsCount}
+          data={Object.entries(
+            incidentsReportData?.most_incident_reasons || {}
+          ).map(([reason, incidentIds]) => ({
+            name: reason,
+            value: incidentIds.length,
+          }))}
+        />
       </div>
     );
   }
@@ -83,20 +156,16 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   function renderRecurringIncidents(): JSX.Element {
     return (
       <div className="text-lg">
-        <p className="font-bold">Recurring incidents:</p>
-        <ul className="ml-7 list-decimal text-lg">
-          {(incidentsReportData?.recurring_incidents || []).map(
-            (recurringIncident) => (
-              <li key={recurringIncident.incident_id}>
-                <span className="font-bold">
-                  {recurringIncident.incident_name}
-                </span>
-                <span>&nbsp;-&nbsp;</span>
-                <span>{recurringIncident.occurrence_count}times</span>
-              </li>
-            )
+        <p className="font-bold mb-2">Recurring incidents:</p>
+        <PieChart
+          formatCount={formatIncidentsCount}
+          data={incidentsReportData?.recurring_incidents.map(
+            (recurringIncident) => ({
+              name: recurringIncident.incident_name as string,
+              value: recurringIncident.occurrence_count as number,
+            })
           )}
-        </ul>
+        />
       </div>
     );
   }
@@ -128,7 +197,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   }
 
   return (
-    <div className="flex flex-col gap-4 mt-4">
+    <div className="flex flex-col gap-4 mt-4 px-6">
       {renderTimeMetrics()}
       {incidentsReportData?.most_incident_reasons && renderMainReasons()}
       {incidentsReportData?.recurring_incidents && renderRecurringIncidents()}

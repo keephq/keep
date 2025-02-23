@@ -36,11 +36,16 @@ export const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
       isOpen={true}
       onClose={onClose}
     >
-      <div>
+      <div className="w-full h-full">
         {isLoading && <KeepLoader />}
         {!isLoading && (
-          <div className="flex flex-col">
-            <div className="flex justify-end">
+          <div className="flex flex-col w-full h-full">
+            <div className="flex-1 overflow-auto">
+              <div ref={contentRef}>
+                <IncidentsReport incidentsReportData={data as IncidentData} />
+              </div>
+            </div>
+            <div className="flex justify-end p-6 border-teal-100 border-t">
               <Button
                 color="orange"
                 variant="primary"
@@ -49,9 +54,6 @@ export const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
               >
                 Print
               </Button>
-            </div>
-            <div ref={contentRef}>
-              <IncidentsReport incidentsReportData={data as IncidentData} />
             </div>
           </div>
         )}
