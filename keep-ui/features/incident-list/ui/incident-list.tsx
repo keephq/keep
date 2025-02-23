@@ -190,6 +190,18 @@ export function IncidentList({
           />
         ),
       },
+      ["Has past incident"]: {
+        sortCallback: (facetOption) =>
+          facetOption.display_name == "1" ||
+          facetOption.display_name.toLocaleLowerCase() == "true"
+            ? 1
+            : 0,
+        renderOptionLabel: (facetOption) =>
+          facetOption.display_name == "1" ||
+          facetOption.display_name.toLocaleLowerCase() == "true"
+            ? "Yes"
+            : "No",
+      },
     };
   }, []);
 
