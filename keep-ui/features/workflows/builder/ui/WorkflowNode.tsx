@@ -20,7 +20,6 @@ import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Tooltip } from "@/shared/ui/Tooltip";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 import { normalizeStepType, triggerTypes } from "../lib/utils";
-import { getHumanReadableInterval } from "@/entities/workflows/lib/getHumanReadableInterval";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
@@ -57,7 +56,6 @@ function WorkflowNode({ id, data }: FlowNode) {
   const {
     selectedNode,
     setSelectedNode,
-    setEditorOpen,
     isEditorSyncedWithNodes: synced,
     validationErrors,
   } = useWorkflowStore();
@@ -84,7 +82,6 @@ function WorkflowNode({ id, data }: FlowNode) {
     if (specialNodeCheck || id?.includes("end")) {
       return;
     }
-    setEditorOpen(true);
     setSelectedNode(id);
   }
 
@@ -219,7 +216,6 @@ function WorkflowNode({ id, data }: FlowNode) {
               return;
             }
             if (specialNodeCheck || id?.includes("end")) {
-              setEditorOpen(true);
               return;
             }
             setSelectedNode(id);

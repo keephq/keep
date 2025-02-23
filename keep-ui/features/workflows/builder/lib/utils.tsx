@@ -101,8 +101,7 @@ export const conditionAssertTemplate: Omit<V2StepConditionAssert, "id"> = {
   componentType: "switch",
   name: "Assert",
   properties: {
-    value: "",
-    compare_to: "",
+    assert: "",
   },
   branches: {
     true: [],

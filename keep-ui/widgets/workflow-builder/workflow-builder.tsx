@@ -132,8 +132,14 @@ export function WorkflowBuilder({
           });
         }
       } catch (error) {
-        if (error instanceof YAMLException) {
-          showErrorToast(error, "Invalid YAML: " + error.message);
+        // Check if error is from js-yaml by checking its name property
+        if (
+          error &&
+          typeof error === "object" &&
+          "name" in error &&
+          error.name === "YAMLException"
+        ) {
+          showErrorToast(error, "Invalid YAML: " + (error as Error).message);
         } else {
           showErrorToast(error, "Failed to load workflow");
         }

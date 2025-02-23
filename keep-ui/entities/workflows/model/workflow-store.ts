@@ -18,8 +18,8 @@ import {
   V2Step,
   StoreSet,
   StoreGet,
-  FlowStateValues,
-  FlowState,
+  WorkflowStateValues,
+  WorkflowState,
   FlowNode,
   Definition,
   V2StepTemplateSchema,
@@ -29,6 +29,7 @@ import {
   V2StepTemplate,
   V2StepTriggerSchema,
   ProvidersConfiguration,
+  WorkflowProperties,
 } from "@/entities/workflows";
 import { validateStepPure, validateGlobalPure } from "./validation";
 import { getLayoutedWorkflowElements } from "../lib/getLayoutedWorkflowElements";
@@ -39,6 +40,7 @@ import { fromError } from "zod-validation-error";
 import {
   edgeCanAddStep,
   edgeCanAddTrigger,
+  edgeCanHaveAddButton,
   getToolboxConfiguration,
 } from "@/features/workflows/builder/lib/utils";
 import { Provider } from "@/shared/api/providers";
@@ -251,7 +253,7 @@ function addNodeBetween(
 // - core worfklow state (definition, nodes, edges, selectedNode, etc)
 // - editor state (editorOpen, stepEditorOpenForNode)
 // - builder state (toolbox, selectedEdge, selectedNode, isLayouted, etc)
-const defaultState: FlowStateValues = {
+const defaultState: WorkflowStateValues = {
   workflowId: null,
   nodes: [],
   edges: [],
@@ -277,7 +279,7 @@ const defaultState: FlowStateValues = {
   validationErrors: {},
 };
 
-export const useWorkflowStore = create<FlowState>()(
+export const useWorkflowStore = create<WorkflowState>()(
   devtools((set, get) => ({
     ...defaultState,
     setDefinition: (def) => set({ definition: def }),
@@ -290,7 +292,17 @@ export const useWorkflowStore = create<FlowState>()(
     setCanDeploy: (deploy) => set({ canDeploy: deploy }),
     setEditorSynced: (sync) => set({ isEditorSyncedWithNodes: sync }),
     setLastDeployedAt: (deployedAt) => set({ lastDeployedAt: deployedAt }),
-    setSelectedEdge: (id) => set({ selectedEdge: id, selectedNode: null }),
+    setSelectedEdge: (id) => {
+      const edge = get().edges.find((edge) => edge.id === id);
+      if (!edge) {
+        return;
+      }
+      set({
+        selectedEdge: id,
+        selectedNode: null,
+        editorOpen: edgeCanHaveAddButton(edge?.source, edge?.target),
+      });
+    },
     setIsLayouted: (isLayouted) => set({ isLayouted }),
     getEdgeById: (id) => get().edges.find((edge) => edge.id === id),
     addNodeBetween: (
@@ -364,7 +376,10 @@ export const useWorkflowStore = create<FlowState>()(
       // Use validators to check if the workflow is valid
       let isValid = true;
       const validationErrors: Record<string, string> = {};
-      const definition: Definition = { sequence, properties: newProperties };
+      const definition: Definition = {
+        sequence,
+        properties: newProperties as WorkflowProperties,
+      };
 
       const result = validateGlobalPure(definition);
       if (result) {
@@ -394,6 +409,19 @@ export const useWorkflowStore = create<FlowState>()(
             }
           });
         }
+        if (step.componentType === "container") {
+          step.sequence.forEach((s) => {
+            const error = validateStepPure(
+              s,
+              get().providers ?? [],
+              get().installedProviders ?? []
+            );
+            if (error) {
+              validationErrors[s.name || s.id] = error;
+              isValid = false;
+            }
+          });
+        }
         if (error) {
           validationErrors[step.name || step.id] = error;
           isValid = false;
@@ -408,8 +436,7 @@ export const useWorkflowStore = create<FlowState>()(
 
       set({
         definition: wrapDefinitionV2({
-          sequence,
-          properties: newProperties,
+          ...definition,
           isValid,
         }),
         validationErrors,
@@ -430,6 +457,8 @@ export const useWorkflowStore = create<FlowState>()(
       set({
         selectedNode: id || null,
         selectedEdge: null,
+        // open editor if we select a node
+        editorOpen: !!id,
       });
     },
     onNodesChange: (changes) =>

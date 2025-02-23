@@ -127,7 +127,13 @@ describe("useWorkflowStore", () => {
           value: {
             sequence: [],
             properties: {
+              id: "test",
+              disabled: false,
+              name: "test",
+              description: "test",
               interval: "5m",
+              isLocked: false,
+              consts: {},
             },
           },
           isValid: true,
@@ -135,7 +141,13 @@ describe("useWorkflowStore", () => {
         result.current.initializeWorkflow(null, mockProvidersConfiguration);
       });
 
-      expect(result.current.nodes).toHaveLength(5);
+      expect(result.current.nodes.map((node) => node.id)).toEqual([
+        "start",
+        "trigger_start",
+        "interval",
+        "trigger_end",
+        "end",
+      ]);
 
       // Try to add another trigger
       act(() => {
@@ -217,7 +229,13 @@ describe("useWorkflowStore", () => {
           value: {
             sequence: [],
             properties: {
+              id: "test",
+              disabled: false,
+              name: "test",
+              description: "test",
               interval: "5m",
+              isLocked: false,
+              consts: {},
             },
           },
           isValid: true,
@@ -417,9 +435,13 @@ describe("useWorkflowStore", () => {
               },
             ],
             properties: {
+              id: "test",
+              disabled: false,
               name: "test",
               description: "test",
-              manual: true,
+              manual: "true",
+              isLocked: false,
+              consts: {},
             },
           },
           isValid: true,
@@ -440,6 +462,7 @@ describe("useWorkflowStore", () => {
         result.current.setDefinition({
           value: {
             sequence: [],
+            // @ts-ignore
             properties: {},
           },
           isValid: false,
@@ -484,9 +507,13 @@ describe("useWorkflowStore", () => {
               },
             ],
             properties: {
+              id: "test",
+              disabled: false,
               name: "test",
               description: "test",
-              manual: true,
+              manual: "true",
+              isLocked: false,
+              consts: {},
             },
           },
           isValid: false,
@@ -527,9 +554,13 @@ describe("useWorkflowStore", () => {
               },
             ],
             properties: {
+              id: "test",
+              disabled: false,
               name: "test",
               description: "test",
-              manual: true,
+              manual: "true",
+              isLocked: false,
+              consts: {},
             },
           },
           isValid: false,

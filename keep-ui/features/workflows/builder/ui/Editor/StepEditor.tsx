@@ -25,7 +25,14 @@ import {
 } from "@heroicons/react/20/solid";
 import React, { useCallback, useState } from "react";
 import { useWorkflowStore } from "@/entities/workflows";
-import { V2Properties } from "@/entities/workflows/model/types";
+import {
+  V2ActionStep,
+  V2Properties,
+  V2StepConditionAssert,
+  V2StepConditionThreshold,
+  V2StepForeach,
+  V2StepStep,
+} from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
 import debounce from "lodash.debounce";
 import { TestRunStepForm } from "./StepTest";
@@ -394,9 +401,12 @@ function KeepStepEditor({
 function KeepThresholdConditionEditor({
   properties,
   updateProperty,
-}: KeepEditorProps) {
-  const currentValueValue = (properties.value as string) ?? "";
-  const currentCompareToValue = (properties.compare_to as string) ?? "";
+}: {
+  properties: V2StepConditionThreshold["properties"];
+  updateProperty: (key: string, value: any) => void;
+}) {
+  const currentValueValue = properties.value ?? "";
+  const currentCompareToValue = properties.compare_to ?? "";
   return (
     <>
       <Text>Value</Text>
@@ -420,8 +430,11 @@ function KeepThresholdConditionEditor({
 function KeepAssertConditionEditor({
   properties,
   updateProperty,
-}: KeepEditorProps) {
-  const currentAssertValue = (properties.assert as string) ?? "";
+}: {
+  properties: V2StepConditionAssert["properties"];
+  updateProperty: (key: string, value: any) => void;
+}) {
+  const currentAssertValue = properties.assert ?? "";
   return (
     <>
       <Text>Assert</Text>
@@ -435,8 +448,14 @@ function KeepAssertConditionEditor({
   );
 }
 
-function KeepForeachEditor({ properties, updateProperty }: KeepEditorProps) {
-  const currentValueValue = (properties.value as string) ?? "";
+function KeepForeachEditor({
+  properties,
+  updateProperty,
+}: {
+  properties: V2StepForeach["properties"];
+  updateProperty: (key: string, value: any) => void;
+}) {
+  const currentValueValue = properties.value ?? "";
 
   return (
     <>
@@ -451,20 +470,103 @@ function KeepForeachEditor({ properties, updateProperty }: KeepEditorProps) {
   );
 }
 
+type ActionOrStepProperties =
+  | V2StepStep["properties"]
+  | V2ActionStep["properties"];
+
+type FormDataType =
+  | {
+      type: "condition-threshold";
+      name?: string;
+      properties: V2StepConditionThreshold["properties"];
+    }
+  | {
+      type: "condition-assert";
+      name?: string;
+      properties: V2StepConditionAssert["properties"];
+    }
+  | {
+      type: "foreach";
+      name?: string;
+      properties: V2StepForeach["properties"];
+    };
+
 export function StepEditorV2({
   initialFormData,
 }: {
-  initialFormData: {
-    name?: string;
-    properties?: V2Properties;
-    type?: string;
-  };
+  initialFormData: FormDataType;
 }) {
-  const [formData, setFormData] = useState<{
-    name?: string;
-    properties?: V2Properties;
-    type?: string;
-  }>(initialFormData);
+  if (
+    initialFormData.type === "condition-threshold" ||
+    initialFormData.type === "condition-assert" ||
+    initialFormData.type === "foreach"
+  ) {
+    return <ConditionsAndMiscEditor initialFormData={initialFormData} />;
+  }
+  return <ActionOrStepEditor initialFormData={initialFormData} />;
+}
+
+function ConditionsAndMiscEditor({
+  initialFormData,
+}: {
+  initialFormData: FormDataType;
+}) {
+  const [formData, setFormData] = useState<FormDataType>(initialFormData);
+  const { updateSelectedNodeData, setEditorSynced } = useWorkflowStore();
+  const saveFormDataToStoreDebounced = useCallback(
+    debounce((formData: any) => {
+      updateSelectedNodeData("name", formData.name);
+      updateSelectedNodeData("properties", formData.properties);
+    }, 300),
+    [updateSelectedNodeData]
+  );
+  const handlePropertyChange = (key: string, value: any) => {
+    const updatedFormData = {
+      ...formData,
+      properties: {
+        ...formData.properties,
+        [key]: value,
+      },
+    };
+    setFormData(updatedFormData as FormDataType);
+    setEditorSynced(false);
+    saveFormDataToStoreDebounced(updatedFormData);
+  };
+  return (
+    <EditorLayout className="flex-1">
+      {formData.type === "condition-threshold" ? (
+        <KeepThresholdConditionEditor
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
+        />
+      ) : formData.type === "foreach" ? (
+        <KeepForeachEditor
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
+        />
+      ) : formData.type === "condition-assert" ? (
+        <KeepAssertConditionEditor
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
+        />
+      ) : null}
+    </EditorLayout>
+  );
+}
+
+type ActionOrStepFormDataType = {
+  type: string;
+  name?: string;
+  properties: ActionOrStepProperties;
+};
+
+function ActionOrStepEditor({
+  initialFormData,
+}: {
+  initialFormData: ActionOrStepFormDataType;
+}) {
+  const [formData, setFormData] =
+    useState<ActionOrStepFormDataType>(initialFormData);
   const {
     updateSelectedNodeData,
     setEditorSynced,
@@ -494,7 +596,10 @@ export function StepEditorV2({
   const handlePropertyChange = (key: string, value: any) => {
     const updatedFormData = {
       ...formData,
-      properties: { ...formData.properties, [key]: value },
+      properties: {
+        ...formData.properties,
+        [key]: value,
+      } as ActionOrStepProperties,
     };
     setFormData(updatedFormData);
     setEditorSynced(false);
@@ -652,21 +757,6 @@ export function StepEditorV2({
                   updateProperty={handlePropertyChange}
                   providerType={providerType}
                   type={formData.type}
-                />
-              ) : formData.type === "condition-threshold" ? (
-                <KeepThresholdConditionEditor
-                  properties={formData.properties!}
-                  updateProperty={handlePropertyChange}
-                />
-              ) : formData.type?.includes("foreach") ? (
-                <KeepForeachEditor
-                  properties={formData.properties!}
-                  updateProperty={handlePropertyChange}
-                />
-              ) : formData.type === "condition-assert" ? (
-                <KeepAssertConditionEditor
-                  properties={formData.properties!}
-                  updateProperty={handlePropertyChange}
                 />
               ) : null}
             </EditorLayout>
