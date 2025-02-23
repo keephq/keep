@@ -1,1 +1,1 @@
-export const WF_DEBUG_INFO = true;
+export const WF_DEBUG_INFO = false;
