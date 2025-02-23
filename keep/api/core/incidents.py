@@ -119,32 +119,43 @@ def __build_base_incident_query(tenant_id: str):
     """
     incidents_alerts_cte = (
         select(
-            LastAlertToIncident.incident_id.label("incident_id"),
+            Incident.id.label("incident_id"),
             AlertEnrichment.enrichments.label("alert_enrichments"),
             Alert.event.label("alert_event"),
-            Alert.provider_type.label("incident_alert_provider_type")
+            Alert.provider_type.label("incident_alert_provider_type"),
+            case(
+                (
+                    Incident.same_incident_in_the_past_id.isnot(None),
+                    True,
+                ),
+                else_=False,
+            ).label("incident_has_linked_incident"),
         )
-        .select_from(LastAlertToIncident)
-        .join(
+        .select_from(Incident)
+        .outerjoin(
+            LastAlertToIncident,
+            and_(
+                LastAlertToIncident.incident_id == Incident.id,
+                LastAlertToIncident.tenant_id == tenant_id,
+            ),
+        )
+        .outerjoin(
             LastAlert,
             and_(
                 LastAlert.tenant_id == tenant_id,
-                LastAlert.fingerprint == LastAlertToIncident.fingerprint
-            )
+                LastAlert.fingerprint == LastAlertToIncident.fingerprint,
+            ),
         )
-        .join(
+        .outerjoin(
             Alert,
-            and_(
-                LastAlert.alert_id == Alert.id,
-                LastAlert.tenant_id == tenant_id
-            )
+            and_(LastAlert.alert_id == Alert.id, LastAlert.tenant_id == tenant_id),
         )
         .outerjoin(
             AlertEnrichment,
             and_(
                 AlertEnrichment.alert_fingerprint == Alert.fingerprint,
-                AlertEnrichment.tenant_id == tenant_id
-            )
+                AlertEnrichment.tenant_id == tenant_id,
+            ),
         )
     )
 
@@ -188,18 +199,9 @@ def __build_last_incidents_query(
     base_query_cte = (
         select(
             Incident,
-            case(
-                (
-                    Incident.same_incident_in_the_past_id.isnot(None),
-                    True,
-                ),
-                else_=False,
-            ).label("incident_has_linked_incident"),
         )
-        .select_from(Incident)
-        .outerjoin(
-            incidents_alers_cte, Incident.id == incidents_alers_cte.c.incident_id
-        )
+        .select_from(incidents_alers_cte)
+        .join(Incident, Incident.id == incidents_alers_cte.c.incident_id)
         .filter(Incident.tenant_id == tenant_id)
     )
     query = base_query_cte.filter(Incident.is_confirmed == is_confirmed)
@@ -233,7 +235,10 @@ def __build_last_incidents_query(
         sql_filter = instance.convert_to_sql_str(cel)
         query = query.filter(text(sql_filter))
 
-    query = query.distinct(Incident.id)
+    distinct_sorting_key = (
+        sorting.value[1:] if sorting.value.startswith("-") else sorting.value
+    )
+    query = query.distinct(text(distinct_sorting_key), Incident.id)
 
     # Order by start_time in descending order and limit the results
     query = query.limit(limit).offset(offset)
@@ -335,14 +340,8 @@ def get_incident_facets_data(
             incidents_alerts_cte.c.alert_enrichments,
             incidents_alerts_cte.c.alert_event,
             incidents_alerts_cte.c.incident_alert_provider_type,
+            incidents_alerts_cte.c.incident_has_linked_incident,
             Incident.id.label("entity_id"),
-            case(
-                (
-                    Incident.same_incident_in_the_past_id.isnot(None),
-                    True,
-                ),
-                else_=False,
-            ).label("incident_has_linked_incident"),
         )
         .select_from(Incident)
         .outerjoin(
