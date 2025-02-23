@@ -49,7 +49,7 @@ incident_field_configurations = [
     FieldMappingConfiguration("alerts_count", "alerts_count"),
     FieldMappingConfiguration("merged_at", "merged_at"),
     FieldMappingConfiguration("merged_by", "merged_by"),
-    FieldMappingConfiguration("hasPastIncident", "incident_has_past_incident"),
+    FieldMappingConfiguration("hasLinkedIncident", "incident_has_past_incident"),
     FieldMappingConfiguration("alert.providerType", "incident_alert_provider_type"),
     FieldMappingConfiguration(
         map_from_pattern="alert.*",
@@ -97,8 +97,8 @@ static_facets = [
     ),
     FacetDto(
         id="5e247d67-ad9a-4f32-b8d1-8bdf4191d93f",
-        property_path="hasPastIncident",
-        name="Has past incident",
+        property_path="hasLinkedIncident",
+        name="Linked incident",
         is_static=True,
         type=FacetType.str,
     ),
