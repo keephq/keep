@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, case, func, select
 from sqlmodel import Session, col, text
 
 from keep.api.core.alerts import get_alert_potential_facet_fields
@@ -49,6 +49,7 @@ incident_field_configurations = [
     FieldMappingConfiguration("alerts_count", "alerts_count"),
     FieldMappingConfiguration("merged_at", "merged_at"),
     FieldMappingConfiguration("merged_by", "merged_by"),
+    FieldMappingConfiguration("hasPastIncident", "incident_has_past_incident"),
     FieldMappingConfiguration("alert.providerType", "incident_alert_provider_type"),
     FieldMappingConfiguration(
         map_from_pattern="alert.*",
@@ -64,36 +65,43 @@ static_facets = [
         property_path="status",
         name="Status",
         is_static=True,
-        type=FacetType.str
+        type=FacetType.str,
     ),
     FacetDto(
         id="2e7b1d6e-2c2b-4f8e-9f8e-2c2b4f8e9f8e",
         property_path="severity",
         name="Severity",
         is_static=True,
-        type=FacetType.str
+        type=FacetType.str,
     ),
     FacetDto(
         id="3e7b1d6e-3c2b-4f8e-9f8e-3c2b4f8e9f8e",
         property_path="assignee",
         name="Assignee",
         is_static=True,
-        type=FacetType.str
+        type=FacetType.str,
     ),
     FacetDto(
         id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
         property_path="alert.provider_type",
         name="Source",
         is_static=True,
-        type=FacetType.str
+        type=FacetType.str,
     ),
     FacetDto(
         id="4e7b1d6e-4c2b-4f8e-9f8e-4c2b4f8e9f8e",
         property_path="alert.service",
         name="Service",
         is_static=True,
-        type=FacetType.str
-    )
+        type=FacetType.str,
+    ),
+    FacetDto(
+        id="5e247d67-ad9a-4f32-b8d1-8bdf4191d93f",
+        property_path="hasPastIncident",
+        name="Incident in the past",
+        is_static=True,
+        type=FacetType.str,
+    ),
 ]
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
@@ -178,13 +186,22 @@ def __build_last_incidents_query(
     """
     incidents_alers_cte = __build_base_incident_query(tenant_id).cte("incidents_alers_cte")
     base_query_cte = (
-            select(
-                Incident
-            )
-            .select_from(Incident)
-            .outerjoin(incidents_alers_cte, Incident.id == incidents_alers_cte.c.incident_id)
-            .filter(Incident.tenant_id == tenant_id)
+        select(
+            Incident,
+            case(
+                (
+                    Incident.same_incident_in_the_past_id.isnot(None),
+                    True,
+                ),
+                else_=False,
+            ).label("incident_has_past_incident"),
         )
+        .select_from(Incident)
+        .outerjoin(
+            incidents_alers_cte, Incident.id == incidents_alers_cte.c.incident_id
+        )
+        .filter(Incident.tenant_id == tenant_id)
+    )
     query = base_query_cte.filter(Incident.is_confirmed == is_confirmed)
 
     if allowed_incident_ids:
@@ -220,7 +237,6 @@ def __build_last_incidents_query(
 
     # Order by start_time in descending order and limit the results
     query = query.limit(limit).offset(offset)
-
     return query
 
 
@@ -320,6 +336,13 @@ def get_incident_facets_data(
             incidents_alerts_cte.c.alert_event,
             incidents_alerts_cte.c.incident_alert_provider_type,
             Incident.id.label("entity_id"),
+            case(
+                (
+                    Incident.same_incident_in_the_past_id.isnot(None),
+                    True,
+                ),
+                else_=False,
+            ).label("incident_has_past_incident"),
         )
         .select_from(Incident)
         .outerjoin(
