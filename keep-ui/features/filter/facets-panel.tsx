@@ -112,10 +112,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   const [celState, setCelState] = useState("");
   const [facetOptionQueries, setFacetOptionQueries] =
     useState<FacetOptionsQueries | null>(null);
-  const facetsByNameMap = useMemo(
-    () => new Map<string, FacetDto>(facets.map((facet) => [facet.name, facet])),
-    [facets]
-  );
+
   const facetsConfigIdBased = useMemo(() => {
     const result: FacetsConfig = {};
 
