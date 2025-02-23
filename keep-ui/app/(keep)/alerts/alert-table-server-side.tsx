@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Table, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
-import { AlertDto } from "@/entities/alerts/model";
+import {
+  AlertDto,
+  reverseSeverityMapping,
+  Severity,
+  Status,
+} from "@/entities/alerts/model";
 import {
   getCoreRowModel,
   useReactTable,
@@ -15,7 +20,6 @@ import {
   getSortedRowModel,
   PaginationState,
 } from "@tanstack/react-table";
-import AlertPagination from "./alert-pagination";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import {
@@ -27,12 +31,10 @@ import {
 import AlertActions from "./alert-actions";
 import { AlertPresetManager } from "./alert-preset-manager";
 import { evalWithContext } from "./alerts-rules-builder";
-import { TitleAndFilters, DateRange } from "./TitleAndFilters";
+import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "@/entities/alerts/model";
 import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
-import { AlertFacets } from "./alert-table-alert-facets";
-import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import Image from "next/image";
@@ -44,20 +46,17 @@ import { Icon } from "@tremor/react";
 import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import AlertPaginationServerSide from "./alert-pagination-server-side";
 import { FacetDto } from "@/features/filter";
+import { GroupingState, getGroupedRowModel } from "@tanstack/react-table";
+import { TimeFrame } from "@/components/ui/DateRangePicker";
+import { AlertsQuery } from "@/utils/hooks/useAlerts";
+import { v4 as uuidV4 } from "uuid";
+import { FacetsConfig } from "@/features/filter/models";
+import { ViewedAlert } from "./alert-table";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
 };
-
-export interface AlertsQuery {
-  cel: string;
-  pageIndex: number;
-  offset: number;
-  limit: number;
-  sortBy: string;
-  sortDirection: "ASC" | "DESC";
-}
 
 interface PresetTab {
   name: string;
@@ -82,8 +81,10 @@ interface Props {
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
   setChangeStatusAlert?: (alert: AlertDto) => void;
-  onQueryChange?: (query: AlertsQuery) => void;
-  onRefresh?: () => void;
+  onReload?: (query: AlertsQuery) => void;
+  onPoll?: () => void;
+  onQueryChange?: () => void;
+  onLiveUpdateStateChange?: (isLiveUpdateEnabled: boolean) => void;
 }
 
 export function AlertTableServerSide({
@@ -103,15 +104,24 @@ export function AlertTableServerSide({
   setRunWorkflowModalAlert,
   setDismissModalAlert,
   setChangeStatusAlert,
+  onReload,
+  onPoll,
   onQueryChange,
-  onRefresh,
+  onLiveUpdateStateChange,
 }: Props) {
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
+  const [grouping, setGrouping] = useState<GroupingState>([]);
+  const [facetsPanelRefreshToken, setFacetsPanelRefreshToken] = useState<
+    string | null
+  >(null);
+  const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
   const [filterCel, setFilterCel] = useState<string>("");
   const [searchCel, setSearchCel] = useState<string>("");
-  const [dateRange, setDateRange] = useState<DateRange | null>(null);
+  const [dateRangeCel, setDateRangeCel] = useState<string>("");
+  const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
+  const alertsQueryRef = useRef<AlertsQuery | null>(null);
 
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
@@ -157,21 +167,38 @@ export function AlertTableServerSide({
     pageSize: 20,
   });
 
-  const mainCelQuery = useMemo(() => {
+  const [viewedAlerts, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
+    `viewed-alerts-${presetName}`,
+    []
+  );
+  const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
+
+  useEffect(() => {
     const filterArray = [];
 
     if (dateRange?.start) {
       filterArray.push(`lastReceived >= '${dateRange.start.toISOString()}'`);
     }
 
-    if (dateRange?.end) {
+    if (dateRange?.paused && dateRange?.end) {
       filterArray.push(`lastReceived <= '${dateRange.end.toISOString()}'`);
     }
 
-    filterArray.push(searchCel);
+    setDateRangeCel(filterArray.filter(Boolean).join(" && "));
 
+    // makes alerts to refresh when not paused and all time is selected
+    if (!dateRange?.start && !dateRange?.end && !dateRange?.paused) {
+      setTimeout(() => {
+        onReload && onReload(alertsQueryRef.current as AlertsQuery);
+        setFacetsPanelRefreshToken(uuidV4());
+      }, 100);
+    }
+  }, [dateRange]);
+
+  const mainCelQuery = useMemo(() => {
+    const filterArray = [dateRangeCel, searchCel];
     return filterArray.filter(Boolean).join(" && ");
-  }, [searchCel, dateRange]);
+  }, [searchCel, dateRangeCel]);
 
   const alertsQuery = useMemo(
     function whenQueryChange() {
@@ -181,22 +208,25 @@ export function AlertTableServerSide({
       const offset = limit * paginationState.pageIndex;
       const alertsQuery: AlertsQuery = {
         cel: resultCel,
-        pageIndex: paginationState.pageIndex,
         offset,
         limit,
         sortBy: sorting[0]?.id,
         sortDirection: sorting[0]?.desc ? "DESC" : "ASC",
       };
 
+      alertsQueryRef.current = alertsQuery;
       return alertsQuery;
     },
     [filterCel, mainCelQuery, paginationState, sorting]
   );
 
-  useEffect(
-    () => onQueryChange && onQueryChange(alertsQuery),
-    [alertsQuery, onQueryChange]
-  );
+  useEffect(() => {
+    onQueryChange && onQueryChange();
+  }, [filterCel, searchCel, paginationState, sorting, onQueryChange]);
+
+  useEffect(() => {
+    onReload && onReload(alertsQueryRef.current as AlertsQuery);
+  }, [alertsQuery, onReload]);
 
   const [tabs, setTabs] = useState([
     { name: "All", filter: (alert: AlertDto) => true },
@@ -215,8 +245,8 @@ export function AlertTableServerSide({
     useState<boolean>(false);
 
   const leftPinnedColumns = noisyAlertsEnabled
-    ? ["severity", "checkbox", "noise"]
-    : ["severity", "checkbox"];
+    ? ["severity", "checkbox", "source", "name", "noise"]
+    : ["severity", "checkbox", "source", "name"];
 
   const table = useReactTable({
     data: alerts,
@@ -230,11 +260,13 @@ export function AlertTableServerSide({
         right: ["alertMenu"],
       },
       sorting: sorting,
+      grouping: grouping,
       pagination: {
         pageIndex: paginationState.pageIndex,
         pageSize: paginationState.pageSize,
       },
     },
+    enableGrouping: true,
     manualSorting: true,
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
@@ -244,6 +276,7 @@ export function AlertTableServerSide({
     globalFilterFn: ({ original }, _id, value) => {
       return evalWithContext(original, value);
     },
+    getGroupedRowModel: getGroupedRowModel(),
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -256,6 +289,7 @@ export function AlertTableServerSide({
     manualPagination: true,
     pageCount: Math.ceil(alertsTotalCount / paginationState.pageSize),
     onPaginationChange: setPaginationState,
+    onGroupingChange: setGrouping,
   });
 
   const selectedRowIds = Object.entries(
@@ -265,103 +299,164 @@ export function AlertTableServerSide({
   }, []);
 
   let showSkeleton = isAsyncLoading;
-  let showEmptyState =
-    !alertsQuery.cel && table.getPageCount() === 0 && !isAsyncLoading;
+  const isTableEmpty = table.getPageCount() === 0;
+  let showEmptyState = !alertsQuery.cel && isTableEmpty && !isAsyncLoading;
+  const showFilterEmptyState = isTableEmpty && !!filterCel;
+  const showSearchEmptyState =
+    isTableEmpty && !!searchCel && !showFilterEmptyState;
 
   const handleRowClick = (alert: AlertDto) => {
     // if presetName is alert-history, do not open sidebar
     if (presetName === "alert-history") {
       return;
     }
+
+    // Update viewed alerts
+    setViewedAlerts((prev) => {
+      const newViewedAlerts = prev.filter(
+        (a) => a.fingerprint !== alert.fingerprint
+      );
+      return [
+        ...newViewedAlerts,
+        {
+          fingerprint: alert.fingerprint,
+          viewedAt: new Date().toISOString(),
+        },
+      ];
+    });
+
+    setLastViewedAlert(alert.fingerprint);
     setSelectedAlert(alert);
     setIsSidebarOpen(true);
   };
 
-  const renderFacetOptionIcon = useCallback(
-    (facetName: string, facetOptionName: string) => {
-      facetName = facetName.toLowerCase();
+  useEffect(() => {
+    // When refresh token comes, this code allows polling for certain time and then stops.
+    // Will start polling again when new refresh token comes.
+    // Why? Because events are throttled on BE side but we want to refresh the data frequently
+    // when keep gets ingested with data, and it requires control when to refresh from the UI side.
+    if (refreshToken) {
+      setShouldRefreshDate(true);
+      const timeout = setTimeout(() => {
+        setShouldRefreshDate(false);
+      }, 15000);
+      return () => clearTimeout(timeout);
+    }
+  }, [refreshToken]);
 
-      if (facetName === "source") {
-        if (facetOptionName === "None") {
-          return;
-        }
-
-        return (
-          <Image
-            className="inline-block"
-            alt={facetOptionName}
-            height={16}
-            width={16}
-            title={facetOptionName}
-            src={
-              facetOptionName.includes("@")
-                ? "/icons/mailgun-icon.png"
-                : `/icons/${facetOptionName}-icon.png`
-            }
-          />
-        );
+  const timeframeChanged = useCallback(
+    (timeframe: TimeFrame | null) => {
+      if (!timeframe) {
+        setDateRange(null);
+        return;
       }
-      if (facetName === "severity") {
-        return (
+
+      if (timeframe?.paused != dateRange?.paused) {
+        onLiveUpdateStateChange && onLiveUpdateStateChange(!timeframe.paused);
+      }
+
+      const currentDiff =
+        (dateRange?.end?.getTime() || 0) - (dateRange?.start?.getTime() || 0);
+      const newDiff =
+        (timeframe?.end?.getTime() || 0) - (timeframe?.start?.getTime() || 0);
+
+      if (!timeframe?.paused && currentDiff === newDiff) {
+        if (shouldRefreshDate) {
+          onPoll && onPoll();
+          setDateRange(timeframe);
+        }
+        return;
+      }
+
+      onQueryChange && onQueryChange();
+      setDateRange(timeframe);
+    },
+    [dateRange, shouldRefreshDate, onLiveUpdateStateChange]
+  );
+
+  const facetsConfig: FacetsConfig = useMemo(() => {
+    return {
+      ["Severity"]: {
+        canHitEmptyState: false,
+        renderOptionLabel: (facetOption) => {
+          const label =
+            severityMapping[Number(facetOption.display_name)] ||
+            facetOption.display_name;
+          return <span className="capitalize">{label}</span>;
+        },
+        renderOptionIcon: (facetOption) => (
           <SeverityBorderIcon
             severity={
-              (severityMapping[Number(facetOptionName)] ||
-                facetOptionName) as UISeverity
+              (severityMapping[Number(facetOption.display_name)] ||
+                facetOption.display_name) as UISeverity
             }
           />
-        );
-      }
-      if (facetName === "assignee") {
-        return <UserStatefulAvatar email={facetOptionName} size="xs" />;
-      }
-      if (facetName === "status") {
-        return (
+        ),
+        sortCallback: (facetOption) =>
+          reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
+      },
+      ["Status"]: {
+        renderOptionIcon: (facetOption) => (
           <Icon
-            icon={getStatusIcon(facetOptionName)}
+            icon={getStatusIcon(facetOption.display_name)}
             size="sm"
-            color={getStatusColor(facetOptionName)}
+            color={getStatusColor(facetOption.display_name)}
             className="!p-0"
           />
-        );
-      }
-      if (facetName === "dismissed") {
-        return (
+        ),
+      },
+      ["Source"]: {
+        renderOptionIcon: (facetOption) => {
+          if (facetOption.display_name === "None") {
+            return;
+          }
+
+          return (
+            <Image
+              className="inline-block"
+              alt={facetOption.display_name}
+              height={16}
+              width={16}
+              title={facetOption.display_name}
+              src={
+                facetOption.display_name.includes("@")
+                  ? "/icons/mailgun-icon.png"
+                  : `/icons/${facetOption.display_name}-icon.png`
+              }
+            />
+          );
+        },
+      },
+      ["Assignee"]: {
+        renderOptionIcon: (facetOption) => (
+          <UserStatefulAvatar email={facetOption.display_name} size="xs" />
+        ),
+        renderOptionLabel: (facetOption) => {
+          if (facetOption.display_name === "null") {
+            return "Not assigned";
+          }
+          return <AssigneeLabel email={facetOption.display_name} />;
+        },
+      },
+      ["Dismissed"]: {
+        renderOptionLabel: (facetOption) =>
+          facetOption.display_name.toLocaleLowerCase() === "true"
+            ? "Dismissed"
+            : "Not dismissed",
+        renderOptionIcon: (facetOption) => (
           <Icon
-            icon={facetOptionName === "true" ? BellSlashIcon : BellIcon}
+            icon={
+              facetOption.display_name.toLocaleLowerCase() === "true"
+                ? BellSlashIcon
+                : BellIcon
+            }
             size="sm"
             className="text-gray-600 !p-0"
           />
-        );
-      }
-
-      return undefined;
-    },
-    []
-  );
-
-  const renderFacetOptionLabel = useCallback(
-    (facetName: string, facetOptionName: string) => {
-      facetName = facetName.toLowerCase();
-
-      switch (facetName) {
-        case "assignee":
-          if (!facetOptionName) {
-            return "Not assigned";
-          }
-          return <AssigneeLabel email={facetOptionName} />;
-        case "dismissed":
-          return facetOptionName === "true" ? "Dismissed" : "Not dismissed";
-        case "severity": {
-          const label =
-            severityMapping[Number(facetOptionName)] || facetOptionName;
-          return <span className="capitalize">{label}</span>;
-        }
-        default:
-          return <span className="capitalize">{facetOptionName}</span>;
-      }
-    },
-    []
-  );
+        ),
+      },
+    };
+  }, []);
 
   return (
     // Add h-screen to make it full height and remove the default flex-col gap
@@ -371,9 +466,11 @@ export function AlertTableServerSide({
         <TitleAndFilters
           table={table}
           alerts={alerts}
+          timeframeRefreshInterval={2000}
+          liveUpdateOptionEnabled={true}
           presetName={presetName}
           onThemeChange={handleThemeChange}
-          onDateRangeChange={setDateRange}
+          onTimeframeChange={timeframeChanged}
         />
       </div>
 
@@ -393,7 +490,8 @@ export function AlertTableServerSide({
         ) : (
           <AlertPresetManager
             presetName={presetName}
-            onCelChanges={(searchCel) => setSearchCel(searchCel)}
+            onCelChanges={setSearchCel}
+            table={table}
           />
         )}
       </div>
@@ -410,10 +508,9 @@ export function AlertTableServerSide({
               facetOptionsCel={mainCelQuery}
               clearFiltersToken={clearFiltersToken}
               initialFacetsData={{ facets: initialFacets, facetOptions: null }}
-              onCelChange={(cel) => setFilterCel(cel)}
-              renderFacetOptionIcon={renderFacetOptionIcon}
-              renderFacetOptionLabel={renderFacetOptionLabel}
-              revalidationToken={refreshToken}
+              facetsConfig={facetsConfig}
+              onCelChange={setFilterCel}
+              revalidationToken={facetsPanelRefreshToken}
             />
           </div>
 
@@ -448,8 +545,13 @@ export function AlertTableServerSide({
                       table={table}
                       showSkeleton={showSkeleton}
                       showEmptyState={showEmptyState}
+                      showFilterEmptyState={showFilterEmptyState}
+                      showSearchEmptyState={showSearchEmptyState}
                       theme={theme}
+                      viewedAlerts={viewedAlerts}
+                      lastViewedAlert={lastViewedAlert}
                       onRowClick={handleRowClick}
+                      onClearFiltersClick={() => setClearFiltersToken(uuidV4())}
                       presetName={presetName}
                     />
                   </Table>
@@ -466,7 +568,9 @@ export function AlertTableServerSide({
           table={table}
           isRefreshing={isAsyncLoading}
           isRefreshAllowed={isRefreshAllowed}
-          onRefresh={() => onRefresh && onRefresh()}
+          onRefresh={() =>
+            onReload && onReload(alertsQueryRef.current as AlertsQuery)
+          }
         />
       </div>
 

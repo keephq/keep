@@ -218,19 +218,25 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/grafana_loki-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/grafana_loki-icon.png" alt="Grafana Loki"/><br/>
+            Grafana Loki
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/graylog-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/graylog-icon.png" alt="Graylog"/><br/>
             Graylog
         </a>
     </td>
+  </tr>
+  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/kibana-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/kibana-icon.png" alt="Kibana"/><br/>
             Kibana
         </a>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/netbox-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/netbox-icon.png" alt="NetBox"/><br/>
@@ -261,14 +267,14 @@
             Pingdom
         </a>
     </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/prometheus-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/prometheus-icon.png" alt="Prometheus"/><br/>
             Prometheus
         </a>
     </td>
-</tr>
-<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/rollbar-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/rollbar-icon.png" alt="Rollbar"/><br/>
@@ -299,14 +305,14 @@
           Site24x7
         </a>
   </td>
+</tr>
+<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/splunk-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/splunk-icon.png" alt="Splunk"/><br/>
           Splunk
         </a>
   </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/statuscake-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/statuscake-icon.png" alt="StatusCake"/><br/>
@@ -337,6 +343,8 @@
           Wazuh
         </a>
   </td>
+<tr>
+</tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/zabbix-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/zabbix-icon.png" alt="Zabbix"/><br/>
@@ -363,6 +371,12 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/databend-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/databend-icon.png" alt="Databend"/><br/>
+            Databend
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/mongodb-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/mongodb-icon.png" alt="MongoDB"/><br/>
             MongoDB
@@ -380,6 +394,8 @@
             PostgreSQL
         </a>
     </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/snowflake-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/snowflake-icon.png" alt="Snowflake"/><br/>
@@ -465,6 +481,12 @@
       <a href="https://docs.keephq.dev/providers/documentation/teams-provider" target="_blank">
           <img width="40" src="keep-ui/public/icons/teams-icon.png" alt="Teams"/><br/>
           Teams
+      </a>
+  </td>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/zoom-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/zoom-icon.png" alt="Teams"/><br/>
+          Zoom
       </a>
   </td>
 </tr>

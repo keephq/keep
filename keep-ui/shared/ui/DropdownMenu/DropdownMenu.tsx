@@ -51,12 +51,13 @@ interface MenuProps {
   label: string;
   nested?: boolean;
   children?: React.ReactNode;
+  iconClassName?: string;
 }
 
 const MenuComponent = React.forwardRef<
   HTMLButtonElement,
   MenuProps & React.HTMLProps<HTMLButtonElement>
->(({ icon, children, label, ...props }, forwardedRef) => {
+>(({ icon, children, label, iconClassName, ...props }, forwardedRef) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [hasFocusInside, setHasFocusInside] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
@@ -159,7 +160,9 @@ const MenuComponent = React.forwardRef<
         data-focus-inside={hasFocusInside ? "" : undefined}
         className={clsx(
           isNested ? "DropdownMenuItem" : "DropdownMenuButton",
-          props.className
+          "group",
+          props.className,
+          iconClassName || "text-gray-500" // Default to gray if no custom class provided
         )}
         {...getReferenceProps(
           parent.getItemProps({
@@ -172,7 +175,14 @@ const MenuComponent = React.forwardRef<
           })
         )}
       >
-        {Icon && <Icon className="w-4 h-4" />}
+        {Icon && (
+          <Icon
+            className={clsx(
+              "w-4 h-4",
+              iconClassName || "text-gray-500" // Default to gray if no custom class provided
+            )}
+          />
+        )}
         {label}
         {isNested && (
           <span aria-hidden style={{ marginLeft: 10, fontSize: 10 }}>

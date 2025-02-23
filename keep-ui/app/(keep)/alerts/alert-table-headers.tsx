@@ -1,5 +1,3 @@
-// culled from https://github.com/cpvalente/ontime/blob/master/apps/client/src/features/cuesheet/cuesheet-table-elements/CuesheetHeader.tsx
-
 import { CSSProperties, ReactNode, RefObject } from "react";
 import {
   closestCenter,
@@ -19,6 +17,7 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   ColumnDef,
   ColumnOrderState,
+  VisibilityState,
   flexRender,
   Header,
   Table,
@@ -28,11 +27,25 @@ import { AlertDto } from "@/entities/alerts/model";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { getColumnsIds } from "./alert-table-utils";
 import { FaArrowUp, FaArrowDown, FaArrowRight } from "react-icons/fa";
+import {
+  ChevronDownIcon,
+  ArrowsUpDownIcon,
+  XMarkIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+} from "@heroicons/react/24/outline";
+import { BsSortAlphaDown } from "react-icons/bs";
+import { BsSortAlphaDownAlt } from "react-icons/bs";
+
 import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
+import { DropdownMenu } from "@/shared/ui";
+import { DEFAULT_COLS_VISIBILITY } from "./alert-table-utils";
 
 interface DraggableHeaderCellProps {
   header: Header<AlertDto, unknown>;
+  table: Table<AlertDto>;
+  presetName: string;
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
@@ -40,11 +53,23 @@ interface DraggableHeaderCellProps {
 
 const DraggableHeaderCell = ({
   header,
+  table,
+  presetName,
   children,
   className,
   style,
 }: DraggableHeaderCellProps) => {
   const { column, getResizeHandler } = header;
+  const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
+    `column-order-${presetName}`,
+    getColumnsIds(table.getAllLeafColumns().map((col) => col.columnDef))
+  );
+
+  const [columnVisibility, setColumnVisibility] =
+    useLocalStorage<VisibilityState>(
+      `column-visibility-${presetName}`,
+      DEFAULT_COLS_VISIBILITY
+    );
 
   const {
     attributes,
@@ -58,13 +83,32 @@ const DraggableHeaderCell = ({
     disabled: column.getIsPinned() !== false,
   });
 
+  const moveColumn = (direction: "left" | "right") => {
+    const currentIndex = columnOrder.indexOf(column.id);
+    if (direction === "left" && currentIndex > 0) {
+      const newOrder = [...columnOrder];
+      [newOrder[currentIndex], newOrder[currentIndex - 1]] = [
+        newOrder[currentIndex - 1],
+        newOrder[currentIndex],
+      ];
+      setColumnOrder(newOrder);
+    } else if (direction === "right" && currentIndex < columnOrder.length - 1) {
+      const newOrder = [...columnOrder];
+      [newOrder[currentIndex], newOrder[currentIndex + 1]] = [
+        newOrder[currentIndex + 1],
+        newOrder[currentIndex],
+      ];
+      setColumnOrder(newOrder);
+    }
+  };
+
   const dragStyle: CSSProperties = {
     width:
       column.id === "checkbox"
         ? "32px !important"
         : column.id === "source"
-          ? "40px !important"
-          : column.getSize(),
+        ? "40px !important"
+        : column.getSize(),
     opacity: isDragging ? 0.5 : 1,
     transform: CSS.Translate.toString(transform),
     transition,
@@ -72,16 +116,78 @@ const DraggableHeaderCell = ({
       column.getIsPinned() !== false
         ? "default"
         : isDragging
-          ? "grabbing"
-          : "grab",
+        ? "grabbing"
+        : "grab",
+  };
+
+  // Hide menu for checkbox, source, severity and alertMenu columns
+  const shouldShowMenu =
+    column.id !== "checkbox" &&
+    column.id !== "source" &&
+    column.id !== "severity" &&
+    column.id !== "alertMenu";
+
+  const handleColumnVisibilityChange = (
+    columnId: string,
+    isVisible: boolean
+  ) => {
+    const newVisibility = {
+      ...columnVisibility,
+      [columnId]: isVisible,
+    };
+    setColumnVisibility(newVisibility);
+    // Update the table's state as well
+    table.setColumnVisibility(newVisibility);
+  };
+
+  const getGroupedColumnName = () => {
+    const grouping = table.getState().grouping;
+    if (grouping.length > 0) {
+      // Find the column that's currently grouped
+      const groupedColumn = table
+        .getAllColumns()
+        .find((col) => col.id === grouping[0]);
+      return groupedColumn?.columnDef?.header?.toString() || grouping[0];
+    }
+    return null;
+  };
+
+  const isRightmostColumn = () => {
+    const visibleColumns = table.getVisibleLeafColumns();
+
+    // name is a special column since it has menu but can't be moved
+    if (column.id === "name") {
+      // return true so the "move right" option is disabled
+      return true;
+    }
+
+    // the alertMenu is always the rightmost column
+    // so we need to check the second rightmost column
+    return column.id === visibleColumns[visibleColumns.length - 2].id;
+  };
+
+  const isLeftmostUnpinnedColumn = () => {
+    const visibleColumns = table.getVisibleLeafColumns();
+
+    // name is a special column since it has menu but can't be moved
+    if (column.id === "name") {
+      // return true so the "move left" option is disabled
+      return true;
+    }
+
+    const firstUnpinnedIndex = visibleColumns.findIndex(
+      (col) => !col.getIsPinned()
+    );
+    return column.id === visibleColumns[firstUnpinnedIndex]?.id;
   };
 
   return (
     <TableHeaderCell
       className={clsx(
-        "relative",
+        "relative group",
         column.columnDef.meta?.thClassName,
-        column.getIsPinned() === false && "hover:bg-slate-100",
+        (column.getIsPinned() === false || column.id == "name") &&
+          "hover:bg-orange-200",
         className
       )}
       style={{ ...dragStyle, ...style }}
@@ -89,44 +195,130 @@ const DraggableHeaderCell = ({
     >
       <div
         className={`flex items-center ${
-          column.id === "checkbox" ? "justify-center" : ""
+          column.id === "checkbox" ? "justify-center" : "justify-between"
         }`}
-        {...listeners}
       >
-        {/* Flex container */}
-        {children} {/* Column name or text */}
-        {column.getCanSort() && ( // Sorting icon to the left
-          <>
-            {/* Custom styled vertical line separator */}
-            <div className="w-px h-5 mx-2 bg-gray-400"></div>
-            <span
-              className="cursor-pointer" // Ensures clickability of the icon
-              onClick={(event) => {
-                console.log("clicked for sorting");
-                event.stopPropagation();
-                const toggleSorting = header.column.getToggleSortingHandler();
-                if (toggleSorting) toggleSorting(event);
-              }}
-              title={
-                column.getNextSortingOrder() === "asc"
-                  ? "Sort ascending"
-                  : column.getNextSortingOrder() === "desc"
+        <div className="flex items-center" {...listeners} {...attributes}>
+          {children}
+
+          {column.getCanSort() && (
+            <>
+              <div className="w-px h-5 mx-2 bg-gray-400"></div>
+              <span
+                className="cursor-pointer"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  const toggleSorting = column.getToggleSortingHandler();
+                  if (toggleSorting) toggleSorting(event);
+                }}
+                title={
+                  column.getNextSortingOrder() === "asc"
+                    ? "Sort ascending"
+                    : column.getNextSortingOrder() === "desc"
                     ? "Sort descending"
                     : "Clear sort"
-              }
-            >
-              {/* Icon logic */}
-              {column.getIsSorted() ? (
-                column.getIsSorted() === "asc" ? (
-                  <FaArrowDown />
+                }
+              >
+                {column.getIsSorted() ? (
+                  column.getIsSorted() === "asc" ? (
+                    <FaArrowDown />
+                  ) : (
+                    <FaArrowUp />
+                  )
                 ) : (
-                  <FaArrowUp />
-                )
-              ) : (
-                <FaArrowRight />
-              )}
-            </span>
-          </>
+                  <FaArrowRight />
+                )}
+              </span>
+            </>
+          )}
+        </div>
+
+        {shouldShowMenu && (
+          <DropdownMenu.Menu
+            icon={ChevronDownIcon}
+            label=""
+            className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            iconClassName="group-hover:text-orange-500 transition-colors"
+          >
+            {column.getCanSort() && (
+              <>
+                <DropdownMenu.Item
+                  icon={BsSortAlphaDown}
+                  label="Sort ascending"
+                  onClick={() => column.toggleSorting(false)}
+                />
+                <DropdownMenu.Item
+                  icon={BsSortAlphaDownAlt}
+                  label="Sort descending"
+                  onClick={() => column.toggleSorting(true)}
+                />
+                {column.getCanGroup() !== false && (
+                  <DropdownMenu.Item
+                    icon={ArrowsUpDownIcon}
+                    label={column.getIsGrouped() ? "Ungroup" : "Group by"}
+                    disabled={
+                      !column.getIsGrouped() &&
+                      table.getState().grouping.length > 0
+                    }
+                    title={
+                      !column.getIsGrouped() &&
+                      table.getState().grouping.length > 0
+                        ? `Only one column can be grouped by at any single time. You should ungroup "${getGroupedColumnName()}"`
+                        : undefined
+                    }
+                    onClick={() => {
+                      console.log("Can group:", column.getCanGroup());
+                      console.log("Is grouped:", column.getIsGrouped());
+                      console.log(
+                        "Current grouping state:",
+                        table.getState().grouping
+                      );
+                      console.log("Column ID:", column.id);
+                      column.toggleGrouping();
+                      console.log(
+                        "New grouping state:",
+                        table.getState().grouping
+                      );
+                    }}
+                  />
+                )}
+              </>
+            )}
+            {column.getCanPin() && (
+              <>
+                <DropdownMenu.Item
+                  icon={ArrowLeftIcon}
+                  label="Move column left"
+                  onClick={() => moveColumn("left")}
+                  disabled={isLeftmostUnpinnedColumn()}
+                  title={
+                    isLeftmostUnpinnedColumn()
+                      ? "This is the leftmost unpinned column"
+                      : undefined
+                  }
+                />
+                <DropdownMenu.Item
+                  icon={ArrowRightIcon}
+                  label="Move column right"
+                  onClick={() => moveColumn("right")}
+                  disabled={isRightmostColumn()}
+                  title={
+                    isRightmostColumn()
+                      ? "This is the rightmost column"
+                      : undefined
+                  }
+                />
+              </>
+            )}
+            <DropdownMenu.Item
+              icon={XMarkIcon}
+              label="Remove column"
+              onClick={() =>
+                handleColumnVisibilityChange(header.column.id, false)
+              }
+              variant="destructive"
+            />
+          </DropdownMenu.Menu>
         )}
       </div>
 
@@ -145,6 +337,7 @@ const DraggableHeaderCell = ({
     </TableHeaderCell>
   );
 };
+
 interface Props {
   columns: ColumnDef<AlertDto>[];
   table: Table<AlertDto>;
@@ -166,8 +359,8 @@ export default function AlertsTableHeaders({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        delay: 250, // Adjust delay to prevent drag on quick clicks
-        tolerance: 5, // Adjust tolerance based on needs
+        delay: 250,
+        tolerance: 5,
       },
     }),
     useSensor(TouchSensor, {
@@ -211,7 +404,6 @@ export default function AlertsTableHeaders({
         >
           <TableRow key={headerGroup.id}>
             <SortableContext
-              key={headerGroup.id}
               items={headerGroup.headers}
               strategy={horizontalListSortingStrategy}
             >
@@ -226,6 +418,8 @@ export default function AlertsTableHeaders({
                   <DraggableHeaderCell
                     key={header.column.columnDef.id}
                     header={header}
+                    table={table}
+                    presetName={presetName}
                     className={className}
                     style={style}
                   >

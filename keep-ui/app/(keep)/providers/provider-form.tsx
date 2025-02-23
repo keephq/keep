@@ -37,6 +37,7 @@ import {
   ArrowTopRightOnSquareIcon,
   GlobeAltIcon,
   DocumentTextIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
 import ProviderFormScopes from "./provider-form-scopes";
@@ -45,7 +46,6 @@ import cookieCutter from "@boiseitguru/cookie-cutter";
 import { useSearchParams } from "next/navigation";
 import "./provider-form.css";
 import { toast } from "react-toastify";
-import { useProviders } from "@/utils/hooks/useProviders";
 import { getZodSchema } from "./form-validation";
 import TimeAgo from "react-timeago";
 import { useApi } from "@/shared/lib/hooks/useApi";
@@ -574,24 +574,31 @@ const ProviderForm = ({
                     tooltip={`Whether to install Keep as a webhook integration in ${provider.type}. This allows Keep to asynchronously receive alerts from ${provider.type}. Please note that this will install a new integration in ${provider.type} and slightly modify your monitors/notification policy to include Keep.`}
                   />
                 </label>
-                <input
-                  type="checkbox"
-                  id="pulling_enabled"
-                  name="pulling_enabled"
-                  className="mr-2.5"
-                  onChange={handlePullingEnabledChange}
-                  checked={Boolean(formValues["pulling_enabled"])}
-                />
-                <label htmlFor="pulling_enabled" className="flex items-center">
-                  <Text className="capitalize">Pulling Enabled</Text>
-                  <Icon
-                    icon={QuestionMarkCircleIcon}
-                    variant="simple"
-                    color="gray"
-                    size="sm"
-                    tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
-                  />
-                </label>
+                {provider.pulling_available && (
+                  <>
+                    <input
+                      type="checkbox"
+                      id="pulling_enabled"
+                      name="pulling_enabled"
+                      className="mr-2.5"
+                      onChange={handlePullingEnabledChange}
+                      checked={Boolean(formValues["pulling_enabled"])}
+                    />
+                    <label
+                      htmlFor="pulling_enabled"
+                      className="flex items-center"
+                    >
+                      <Text className="capitalize">Pulling Enabled</Text>
+                      <Icon
+                        icon={QuestionMarkCircleIcon}
+                        variant="simple"
+                        color="gray"
+                        size="sm"
+                        tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
+                      />
+                    </label>
+                  </>
+                )}
               </div>
               {isLocalhost && (
                 <span className="text-sm">
@@ -617,6 +624,38 @@ const ProviderForm = ({
                   </Callout>
                 </span>
               )}
+            </div>
+          )}
+
+        {!isHealthCheck &&
+          !provider.can_setup_webhook &&
+          !installedProvidersMode &&
+          provider.pulling_available && (
+            <div
+              className={`${
+                isLocalhost ? "bg-gray-100 p-2 rounded-tremor-default" : ""
+              }`}
+            >
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="pulling_enabled"
+                  name="pulling_enabled"
+                  className="mr-2.5"
+                  onChange={handlePullingEnabledChange}
+                  checked={Boolean(formValues["pulling_enabled"])}
+                />
+                <label htmlFor="pulling_enabled" className="flex items-center">
+                  <Text className="capitalize">Pulling Enabled</Text>
+                  <Icon
+                    icon={QuestionMarkCircleIcon}
+                    variant="simple"
+                    color="gray"
+                    size="sm"
+                    tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
+                  />
+                </label>
+              </div>
             </div>
           )}
       </div>
@@ -674,28 +713,41 @@ const ProviderForm = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-grow overflow-auto p-5">
-        <div className="flex flex-row">
-          <Title>Connect to {provider.display_name}</Title>
-          {provider.provisioned && (
-            <Badge color="orange" className="ml-2">
-              Provisioned
-            </Badge>
-          )}
-          <Link
-            href={`${
-              config?.KEEP_DOCS_URL || "http://docs.keephq.dev"
-            }/providers/documentation/${provider.type}-provider`}
-            target="_blank"
+      <div className="flex-grow p-5">
+        <div className="flex flex-row w-full">
+          <div className="flex-grow flex gap-1">
+            <Title>Connect to {provider.display_name}</Title>
+            {provider.provisioned && (
+              <Badge color="orange" className="ml-2">
+                Provisioned
+              </Badge>
+            )}
+            <Link
+              href={`${
+                config?.KEEP_DOCS_URL || "http://docs.keephq.dev"
+              }/providers/documentation/${provider.type}-provider`}
+              target="_blank"
+            >
+              <Icon
+                icon={DocumentTextIcon}
+                variant="simple"
+                color="gray"
+                size="sm"
+                tooltip={`${provider.type} provider documentation`}
+              />
+            </Link>
+          </div>
+          <Button
+            variant="light"
+            color="gray"
+            className="aspect-square p-1 hover:bg-gray-100 hover:dark:bg-gray-400/10 rounded"
+            onClick={(e) => {
+              e.preventDefault();
+              closeModal();
+            }}
           >
-            <Icon
-              icon={DocumentTextIcon}
-              variant="simple"
-              color="gray"
-              size="sm"
-              tooltip={`${provider.type} provider documentation`}
-            />
-          </Link>
+            <XMarkIcon className="size-6" aria-hidden="true" />
+          </Button>
         </div>
 
         {installedProvidersMode && provider.id && (
@@ -802,7 +854,7 @@ const ProviderForm = ({
         )}
       </div>
 
-      <div className="flex justify-end p-5 border-t">
+      <div className="flex justify-end p-5 border-t sticky bottom-0 bg-white">
         <Button
           variant="secondary"
           color="orange"

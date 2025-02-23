@@ -1,3 +1,15 @@
+export interface FacetConfig {
+  renderOptionIcon?: (facetOption: FacetOptionDto) => JSX.Element | undefined;
+  renderOptionLabel?: (
+    facetOption: FacetOptionDto
+  ) => JSX.Element | string | undefined;
+  sortCallback?: (facetOption: FacetOptionDto) => number;
+}
+
+export interface FacetsConfig {
+  [facetName: string]: FacetConfig;
+}
+
 export interface FacetOptionDto {
   display_name: string;
   value: any;

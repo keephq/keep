@@ -1,6 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -23,9 +23,13 @@ import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import { useUser } from "@/entities/users/model/useUser";
-import { severityMapping } from "@/entities/alerts/model";
+import {
+  reverseSeverityMapping,
+  severityMapping,
+} from "@/entities/alerts/model";
 import { IncidentsNotFoundPlaceholder } from "./incidents-not-found";
 import { v4 as uuidV4 } from "uuid";
+import { FacetsConfig } from "@/features/filter/models";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -62,6 +66,7 @@ export function IncidentList({
     error: incidentsError,
   } = useIncidents(
     true,
+    null,
     incidentsPagination.limit,
     incidentsPagination.offset,
     incidentsSorting[0],
@@ -74,7 +79,7 @@ export function IncidentList({
   );
 
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
-    useIncidents(false);
+    useIncidents(false, true);
   const { incidentChangeToken } = usePollIncidents(mutateIncidents);
 
   const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
@@ -108,91 +113,97 @@ export function IncidentList({
     setIsFormOpen(false);
   };
 
-  const renderFacetOptionIcon = useCallback(
-    (facetName: string, facetOptionName: string) => {
-      facetName = facetName.toLowerCase();
-
-      if (facetName === "source") {
-        if (facetOptionName === "None") {
-          return;
-        }
-
-        return (
-          <Image
-            className="inline-block"
-            alt={facetOptionName}
-            height={16}
-            width={16}
-            title={facetOptionName}
-            src={
-              facetOptionName.includes("@")
-                ? "/icons/mailgun-icon.png"
-                : `/icons/${facetOptionName}-icon.png`
-            }
-          />
-        );
-      }
-      if (facetName === "severity") {
-        return (
+  const facetsConfig: FacetsConfig = useMemo(() => {
+    return {
+      ["Severity"]: {
+        canHitEmptyState: false,
+        renderOptionLabel: (facetOption) => {
+          const label =
+            severityMapping[Number(facetOption.display_name)] ||
+            facetOption.display_name;
+          return <span className="capitalize">{label}</span>;
+        },
+        renderOptionIcon: (facetOption) => (
           <SeverityBorderIcon
             severity={
-              (severityMapping[Number(facetOptionName)] ||
-                facetOptionName) as UISeverity
+              (severityMapping[Number(facetOption.display_name)] ||
+                facetOption.display_name) as UISeverity
             }
           />
-        );
-      }
-      if (facetName === "assignee") {
-        return <UserStatefulAvatar email={facetOptionName} size="xs" />;
-      }
-      if (facetName === "status") {
-        return (
+        ),
+        sortCallback: (facetOption) =>
+          reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
+      },
+      ["Status"]: {
+        renderOptionIcon: (facetOption) => (
           <Icon
-            icon={getStatusIcon(facetOptionName)}
+            icon={getStatusIcon(facetOption.display_name)}
             size="sm"
-            color={getStatusColor(facetOptionName)}
+            color={getStatusColor(facetOption.display_name)}
             className="!p-0"
           />
-        );
-      }
-      if (facetName === "dismissed") {
-        return (
+        ),
+      },
+      ["Source"]: {
+        renderOptionIcon: (facetOption) => {
+          if (facetOption.display_name === "None") {
+            return;
+          }
+
+          return (
+            <Image
+              className="inline-block"
+              alt={facetOption.display_name}
+              height={16}
+              width={16}
+              title={facetOption.display_name}
+              src={
+                facetOption.display_name.includes("@")
+                  ? "/icons/mailgun-icon.png"
+                  : `/icons/${facetOption.display_name}-icon.png`
+              }
+            />
+          );
+        },
+      },
+      ["Assignee"]: {
+        renderOptionIcon: (facetOption) => (
+          <UserStatefulAvatar email={facetOption.display_name} size="xs" />
+        ),
+        renderOptionLabel: (facetOption) => {
+          if (!facetOption.display_name) {
+            return "Not assigned";
+          }
+          return <AssigneeLabel email={facetOption.display_name} />;
+        },
+      },
+      ["Dismissed"]: {
+        renderOptionLabel: (facetOption) =>
+          facetOption.display_name === "true" ? "Dismissed" : "Not dismissed",
+        renderOptionIcon: (facetOption) => (
           <Icon
-            icon={facetOptionName === "true" ? BellSlashIcon : BellIcon}
+            icon={
+              facetOption.display_name === "true" ? BellSlashIcon : BellIcon
+            }
             size="sm"
             className="text-gray-600 !p-0"
           />
-        );
-      }
-
-      return undefined;
-    },
-    []
-  );
-
-  const renderFacetOptionLabel = useCallback(
-    (facetName: string, facetOptionName: string) => {
-      facetName = facetName.toLowerCase();
-
-      switch (facetName) {
-        case "assignee":
-          if (!facetOptionName) {
-            return "Not assigned";
-          }
-          return <AssigneeLabel email={facetOptionName} />;
-        case "dismissed":
-          return facetOptionName === "true" ? "Dismissed" : "Not dismissed";
-        case "severity": {
-          const label =
-            severityMapping[Number(facetOptionName)] || facetOptionName;
-          return <span className="capitalize">{label}</span>;
-        }
-        default:
-          return <span className="capitalize">{facetOptionName}</span>;
-      }
-    },
-    []
-  );
+        ),
+      },
+      ["Has past incident"]: {
+        sortCallback: (facetOption) =>
+          facetOption.display_name == "1" ||
+          facetOption.display_name.toLocaleLowerCase() == "true"
+            ? 1
+            : 0,
+        renderOptionLabel: (facetOption) =>
+          facetOption.display_name == "1" ||
+          facetOption.display_name.toLocaleLowerCase() == "true"
+            ? "Yes"
+            : "No",
+      },
+    };
+  }, []);
 
   function renderIncidents() {
     if (incidents && incidents.items.length > 0) {
@@ -275,6 +286,7 @@ export function IncidentList({
                 <FacetsPanelServerSide
                   className="mt-14"
                   entityName={"incidents"}
+                  facetsConfig={facetsConfig}
                   usePropertyPathsSuggestions={true}
                   clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}
@@ -282,8 +294,6 @@ export function IncidentList({
                     uncheckedFacetOptionsByDefault
                   }
                   onCelChange={(cel) => setFilterCel(cel)}
-                  renderFacetOptionIcon={renderFacetOptionIcon}
-                  renderFacetOptionLabel={renderFacetOptionLabel}
                   revalidationToken={filterRevalidationToken}
                 />
                 <div className="flex flex-col gap-5 flex-1 min-w-0">

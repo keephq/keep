@@ -7,7 +7,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import Editor, { Monaco } from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
 
 interface ViewAlertModalProps {
   alert: AlertDto | null | undefined;
@@ -23,7 +22,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
   const isOpen = !!alert;
   const [showHighlightedOnly, setShowHighlightedOnly] = useState(false);
   const api = useApi();
-  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const editorRef = useRef(null);
   const decorationsRef = useRef<string[]>([]);
 
   const unEnrichAlert = async (key: string) => {
@@ -42,14 +41,11 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     }
   };
 
-  const handleEditorDidMount = (
-    editor: monaco.editor.IStandaloneCodeEditor,
-    monacoInstance: Monaco
-  ) => {
+  const handleEditorDidMount = (editor: any, monacoInstance: Monaco) => {
     editorRef.current = editor;
 
     // Add click handler
-    editor.onMouseDown((e) => {
+    editor.onMouseDown((e: any) => {
       if (!alert?.enriched_fields) return;
 
       const position = e.target.position;
@@ -94,13 +90,13 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     }
   }, [showHighlightedOnly]);
 
-  const updateDecorations = (editor: monaco.editor.IStandaloneCodeEditor) => {
+  const updateDecorations = (editor: any) => {
     if (!alert?.enriched_fields || !editor) return;
 
     const model = editor.getModel();
     if (!model) return;
 
-    const decorations: monaco.editor.IModelDeltaDecoration[] = [];
+    const decorations: any[] = [];
 
     // For each enriched field, find its position and create a decoration
     alert.enriched_fields.forEach((field) => {
@@ -113,14 +109,13 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
         true
       );
 
-      matches.forEach((match) => {
+      matches.forEach((match: any) => {
         decorations.push({
           range: match.range,
           options: {
             inlineClassName: "enriched-field",
             hoverMessage: { value: "Click to un-enrich" },
-            stickiness:
-              monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+            stickiness: 1,
           },
         });
       });
@@ -132,7 +127,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     );
   };
 
-  const editorOptions: monaco.editor.IStandaloneEditorConstructionOptions = {
+  const editorOptions: any = {
     readOnly: true,
     minimap: { enabled: false },
     lineNumbers: "on",

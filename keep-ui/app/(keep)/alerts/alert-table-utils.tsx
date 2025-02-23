@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-table";
 import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
-import { AlertName } from "@/entities/alerts/ui";
+import { AlertName, AlertImage } from "@/entities/alerts/ui";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
@@ -121,46 +121,83 @@ export const useAlertTableCols = (
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
-    columnHelper.display({
-      id: colName,
-      header: colName,
-      minSize: 100,
-      cell: (context) => {
+    columnHelper.accessor(
+      (row) => {
+        // Extract value using the dot notation path
         const keys = colName.split(".");
-        let alertValue: any = context.row.original;
+        let value: any = row;
         for (const key of keys) {
-          if (
-            alertValue &&
-            typeof alertValue === "object" &&
-            key in alertValue
-          ) {
-            alertValue = alertValue[key as keyof typeof alertValue];
+          if (value && typeof value === "object" && key in value) {
+            value = value[key as keyof typeof value];
           } else {
-            alertValue = undefined;
+            value = undefined;
             break;
           }
         }
-
-        if (typeof alertValue === "object" && alertValue !== null) {
-          return (
-            <Accordion>
-              <AccordionHeader>Value</AccordionHeader>
-              <AccordionBody>
-                <pre className="overflow-scroll max-w-lg">
-                  {JSON.stringify(alertValue, null, 2)}
-                </pre>
-              </AccordionBody>
-            </Accordion>
-          );
-        }
-
-        if (alertValue && alertValue !== null) {
-          return <div className="truncate">{alertValue.toString()}</div>;
-        }
-
-        return "";
+        return value;
       },
-    })
+      {
+        id: colName,
+        header: colName,
+        minSize: 100,
+        enableGrouping: true,
+        getGroupingValue: (row) => {
+          const keys = colName.split(".");
+          let value: any = row;
+          for (const key of keys) {
+            if (value && typeof value === "object" && key in value) {
+              value = value[key as keyof typeof value];
+            } else {
+              value = undefined;
+              break;
+            }
+          }
+
+          if (typeof value === "object" && value !== null) {
+            return "object"; // Group all objects together
+          }
+          return value;
+        },
+        aggregatedCell: ({ getValue }) => {
+          const value = getValue();
+          if (typeof value === "object" && value !== null) {
+            return "Multiple Objects";
+          }
+          return `${String(value ?? "N/A")}`;
+        },
+        cell: (context) => {
+          const value = context.getValue();
+
+          if (typeof value === "object" && value !== null) {
+            return (
+              <Accordion>
+                <AccordionHeader>Value</AccordionHeader>
+                <AccordionBody>
+                  <pre className="overflow-scroll max-w-lg">
+                    {JSON.stringify(value, null, 2)}
+                  </pre>
+                </AccordionBody>
+              </Accordion>
+            );
+          }
+
+          // Special handling for imageUrl
+          if (colName === "imageUrl" && value) {
+            return <AlertImage imageUrl={value as string} />;
+          }
+
+          if (value) {
+            return (
+              <div className="truncate whitespace-pre-wrap line-clamp-3">
+                {value.toString()}
+              </div>
+            );
+          }
+
+          return "";
+        },
+      }
+    )
   ) as ColumnDef<AlertDto>[];
 
   return [
@@ -256,6 +293,8 @@ export const useAlertTableCols = (
       minSize: 40,
       maxSize: 40,
       enableSorting: false,
+      enableGrouping: true,
+      getGroupingValue: (row) => row.source,
       enableResizing: false,
       cell: (context) => (
         <div className="flex items-center justify-center">
@@ -284,9 +323,14 @@ export const useAlertTableCols = (
       },
     }),
     // Name column butted up against source
-    columnHelper.display({
+    columnHelper.accessor("name", {
       id: "name",
       header: "Name",
+      enableGrouping: true,
+      getGroupingValue: (row) => {
+        console.log("Grouping value for row:", row.name);
+        return row.name;
+      },
       cell: (context) => (
         <div>
           <AlertName
@@ -304,18 +348,23 @@ export const useAlertTableCols = (
     columnHelper.accessor("description", {
       id: "description",
       header: "Description",
+      enableGrouping: true,
       minSize: 100,
       cell: (context) => (
         <div title={context.getValue()}>
-          <div className="truncate">{context.getValue()}</div>
+          <div className="truncate line-clamp-3 whitespace-pre-wrap">
+            {context.getValue()}
+          </div>
         </div>
       ),
     }),
     columnHelper.accessor("status", {
       id: "status",
       header: "Status",
-      maxSize: 100,
-      size: 100,
+      enableGrouping: true,
+      getGroupingValue: (row) => row.status,
+      maxSize: 150,
+      size: 150,
       cell: (context) => (
         <span className="flex items-center gap-1 capitalize">
           <Icon
@@ -348,6 +397,8 @@ export const useAlertTableCols = (
     columnHelper.accessor("assignee", {
       id: "assignee",
       header: "Assignee",
+      enableGrouping: true,
+      getGroupingValue: (row) => row.assignee,
       minSize: 100,
       cell: (context) => <AlertAssignee assignee={context.getValue()} />,
     }),

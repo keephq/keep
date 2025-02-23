@@ -602,6 +602,7 @@ def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
                     "service": "test-service",
                     "environment": "unknown",
                     "display_name": "Test Service",
+                    "is_manual": False,
                 },
                 action_callee="system",
                 action_type=ActionType.MAPPING_RULE_ENRICH,

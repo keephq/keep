@@ -5,17 +5,10 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { useWorkflowStore } from "@/entities/workflows";
 
 // Mock the hooks and components
-jest.mock("../ReactFlowEditor", () => ({
+jest.mock("../Editor/ReactFlowEditor", () => ({
   __esModule: true,
   default: () => <div data-testid="flow-editor">Flow Editor</div>,
 }));
-
-// Mock minimal props
-const mockProps = {
-  workflowId: null,
-  providers: [],
-  installedProviders: [],
-};
 
 describe("ReactFlowBuilder", () => {
   beforeAll(() => {
@@ -42,7 +35,7 @@ describe("ReactFlowBuilder", () => {
 
     const { getByTestId } = render(
       <ReactFlowProvider>
-        <ReactFlowBuilder {...mockProps} />
+        <ReactFlowBuilder />
       </ReactFlowProvider>
     );
 

@@ -27,7 +27,7 @@ from keep.providers.base.provider_exceptions import (
     GetAlertException,
     ProviderMethodException,
 )
-from keep.providers.providers_factory import ProvidersFactory
+from keep.providers.providers_factory import ProviderConfigurationException, ProvidersFactory
 from keep.providers.providers_service import ProvidersService
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -589,6 +589,14 @@ async def install_provider_oauth2(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+def _get_default_provider_config(provider_info: dict) -> tuple[str, str, dict]:
+    provider_id = provider_info.pop("provider_id")
+    provider_type = provider_info.pop("provider_type", None) or provider_id
+    provider_config = {
+        "authentication": provider_info,
+    }
+    return provider_id, provider_type, provider_config
+
 @router.post(
     "/{provider_id}/invoke/{method}",
     description="Invoke provider special method",
@@ -597,7 +605,7 @@ async def install_provider_oauth2(
 def invoke_provider_method(
     provider_id: str,
     method: str,
-    method_params: dict,
+    body: dict = Body(...),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:providers"])
     ),
@@ -607,42 +615,66 @@ def invoke_provider_method(
     logger.info(
         "Invoking provider method", extra={"provider_id": provider_id, "method": method}
     )
-    provider = session.exec(
-        select(Provider).where(
-            (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
-        )
-    ).one()
-
-    if not provider:
-        raise HTTPException(404, detail="Provider not found")
-
+    from sqlalchemy.exc import NoResultFound
+    provider = None
+    
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    provider_config = secret_manager.read_secret(
-        provider.configuration_key, is_json=True
-    )
-    provider_instance = ProvidersFactory.get_provider(
-        context_manager, provider_id, provider.type, provider_config
-    )
-
-    func: Callable = getattr(provider_instance, method, None)
-    if not func:
-        raise HTTPException(400, detail="Method not found")
+    provider_info = body.pop("providerInfo")
+    method_params = body
 
     try:
-        response = func(**method_params)
-    except ProviderMethodException as e:
-        logger.exception(
-            "Failed to invoke method",
-            extra={"provider_id": provider_id, "method": method},
+        provider = session.exec(
+            select(Provider).where(
+                (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
+            )
+        ).one()
+        provider_id = provider.id
+        provider_type = provider.type
+        provider_config = secret_manager.read_secret(
+            provider.configuration_key, is_json=True
         )
-        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except NoResultFound as e:
+        if not provider_id.startswith("default-"):
+            raise HTTPException(404, detail="Provider not found") from e
+        else:
+            provider_id, provider_type, provider_config = _get_default_provider_config(provider_info)
 
-    logger.info(
-        "Successfully invoked provider method",
-        extra={"provider_id": provider_id, "method": method},
-    )
-    return response
+    try:
+        provider_instance = ProvidersFactory.get_provider(
+            context_manager, provider_id, provider_type, provider_config
+        )
+
+        func: Callable | None = getattr(provider_instance, method, None)
+        if not func:
+            raise HTTPException(400, detail="Method not found")
+
+        try:
+            response = func(**method_params)
+        except ProviderMethodException as e:
+            logger.exception(
+                "Failed to invoke method",
+                extra={"provider_id": provider_id, "provider_type": provider_type, "method": method},
+            )
+            raise HTTPException(status_code=e.status_code, detail=e.message)
+
+        logger.info(
+            "Successfully invoked provider method",
+            extra={"provider_id": provider_id, "provider_type": provider_type, "method": method},
+        )
+        return response
+    except ProviderConfigurationException as e:
+        logger.exception(
+            "Failed to initialize provider",
+            extra={"provider_id": provider_id, "provider_type": provider_type},
+        )
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except (ValueError, TypeError) as e:
+        logger.exception("Invalid request", extra={"provider_id": provider_id, "provider_type": provider_type})
+        raise HTTPException(status_code=400, detail=f"Invalid request: {str(e)}") from e
+    except Exception as e:
+        logger.exception("Unexpected error while invoking provider method", extra={"provider_id": provider_id, "provider_type": provider_type})
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 # Webhook related endpoints

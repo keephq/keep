@@ -14,6 +14,14 @@ export type AuditEvent = {
   fingerprint: string;
 };
 
+export interface AlertsQuery {
+  cel?: string;
+  offset?: number;
+  limit?: number;
+  sortBy?: string;
+  sortDirection?: "ASC" | "DESC";
+}
+
 export const useAlerts = () => {
   const api = useApi();
   const revalidateMultiple = useRevalidateMultiple();
@@ -118,31 +126,27 @@ export const useAlerts = () => {
   };
 
   const useLastAlerts = (
-    cel: string | undefined,
-    limit: number | undefined,
-    offset: number | undefined,
-    sortBy?: string | undefined,
-    sortDirection?: "ASC" | "DESC" | undefined,
+    query: AlertsQuery | undefined,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     const filtersParams = new URLSearchParams();
 
-    if (offset !== undefined) {
-      filtersParams.set("offset", String(offset));
+    if (query?.offset !== undefined) {
+      filtersParams.set("offset", String(query.offset));
     }
 
-    if (limit !== undefined) {
-      filtersParams.set("limit", String(limit));
+    if (query?.limit !== undefined) {
+      filtersParams.set("limit", String(query.limit));
     }
 
-    if (cel) {
-      filtersParams.set("cel", cel);
+    if (query?.cel) {
+      filtersParams.set("cel", query.cel);
     }
 
-    if (sortBy) {
-      filtersParams.set("sort_by", sortBy);
+    if (query?.sortBy) {
+      filtersParams.set("sort_by", query.sortBy);
 
-      switch (sortDirection) {
+      switch (query?.sortDirection) {
         case "DESC":
           filtersParams.set("sort_dir", "desc");
           break;
@@ -158,8 +162,8 @@ export const useAlerts = () => {
     }
 
     const swrValue = useSWR<any>(
-      () => (api.isReady() && cel !== undefined ? requestUrl : null),
-      (url) => api.get(url),
+      () => (api.isReady() && query ? requestUrl : null),
+      () => api.get(requestUrl),
       options
     );
 

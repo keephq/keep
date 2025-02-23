@@ -9,9 +9,13 @@ import {
 } from "../../../utils/hooks/useIncidents";
 import Loading from "@/app/(keep)/loading";
 import { AlertDto } from "@/entities/alerts/model";
-import { getIncidentName } from "@/entities/incidents/lib/utils";
+import {
+  getIncidentName,
+  getIncidentNameWithCreationTime,
+} from "@/entities/incidents/lib/utils";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { Select, showErrorToast } from "@/shared/ui";
+import { IncidentDto, Status } from "@/entities/incidents/model";
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;
@@ -28,7 +32,7 @@ const AlertAssociateIncidentModal = ({
 }: AlertAssociateIncidentModalProps) => {
   const [createIncident, setCreateIncident] = useState(false);
 
-  const { data: incidents, isLoading, mutate } = useIncidents(true, 100);
+  const { data: incidents, isLoading, mutate } = useIncidents(true, null, 100);
   usePollIncidents(mutate);
 
   const [selectedIncident, setSelectedIncident] = useState<
@@ -76,6 +80,13 @@ const AlertAssociateIncidentModal = ({
     },
     [associateAlertsHandler, handleClose, hideCreateIncidentForm]
   );
+
+  const filterIncidents = (incident: IncidentDto) => {
+    return (
+      incident.status === Status.Firing ||
+      incident.status === Status.Acknowledged
+    );
+  };
 
   // reset modal state after closing
   useEffect(() => {
@@ -127,9 +138,9 @@ const AlertAssociateIncidentModal = ({
           onChange={(selectedOption) =>
             setSelectedIncident(selectedOption?.value)
           }
-          options={incidents.items?.map((incident) => ({
+          options={incidents.items?.filter(filterIncidents).map((incident) => ({
             value: incident.id,
-            label: getIncidentName(incident),
+            label: getIncidentNameWithCreationTime(incident),
           }))}
         />
         <Divider />

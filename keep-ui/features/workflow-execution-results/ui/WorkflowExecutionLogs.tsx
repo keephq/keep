@@ -20,6 +20,7 @@ import formatDistance from "date-fns/formatDistance";
 import { differenceInSeconds } from "date-fns";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import Editor from "@monaco-editor/react";
 
 function getStepIcon(status: string) {
   switch (status) {
@@ -185,10 +186,33 @@ function LogGroupAccordion({
                 {log.timestamp}: {log.message}
               </p>
               {result && (
-                <pre className="bg-gray-100 rounded-md overflow-hidden text-xs my-2">
-                  <div className="text-gray-500 bg-gray-50 p-2">result</div>
-                  <div className="overflow-auto max-h-48 break-words whitespace-pre-wrap p-2">
-                    {JSON.stringify(result, null, 2)}
+                <pre className="bg-gray-100 rounded-md text-xs my-2 overflow-hidden">
+                  <div className="text-gray-500 bg-gray-50 p-2">output</div>
+                  <div
+                    className="overflow-auto bg-[#fffffe] break-words whitespace-pre-wrap py-2 border rounded-[inherit] rounded-t-none  border-gray-200"
+                    style={{
+                      height: Math.min(
+                        JSON.stringify(result, null, 2).split("\n").length *
+                          20 +
+                          16,
+                        192
+                      ),
+                    }}
+                  >
+                    <Editor
+                      value={JSON.stringify(result, null, 2)}
+                      language="json"
+                      theme="vs-light"
+                      options={{
+                        readOnly: true,
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        fontSize: 12,
+                        lineNumbers: "off",
+                        folding: true,
+                        wordWrap: "on",
+                      }}
+                    />
                   </div>
                 </pre>
               )}
