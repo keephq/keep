@@ -106,7 +106,7 @@ function validateProviderConfig(
   const providerObject = providers?.find((p) => p.type === providerType);
 
   if (!providerObject) {
-    return "This type of provider is not found";
+    return `Type ${providerType} of provider is not found`;
   }
   // If config is not empty, it means that the provider needs installation
   const doesProviderNeedInstallation =

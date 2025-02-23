@@ -16,14 +16,14 @@ const Builder = dynamic(
 
 interface Props {
   fileContents: string | null;
-  workflow?: string;
+  workflowRaw?: string;
   workflowId?: string;
   standalone?: boolean;
 }
 
-export function BuilderCard({
+export function WorkflowBuilderCard({
   fileContents,
-  workflow,
+  workflowRaw,
   workflowId,
   standalone = false,
 }: Props) {
@@ -62,7 +62,7 @@ export function BuilderCard({
     );
   }
 
-  if (fileContents == "" && !workflow) {
+  if (fileContents == "" && !workflowRaw) {
     return (
       <Card className={cardClassName}>
         <EmptyBuilderState />
@@ -79,7 +79,7 @@ export function BuilderCard({
           providers={providers}
           installedProviders={installedProviders}
           loadedAlertFile={fileContents}
-          workflow={workflow}
+          workflowRaw={workflowRaw}
           workflowId={workflowId}
         />
       </Card>

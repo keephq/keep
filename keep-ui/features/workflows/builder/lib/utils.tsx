@@ -71,7 +71,7 @@ export const getTriggerTemplate = (triggerType: string) => {
 
 export const triggerTypes = ["manual", "alert", "incident", "interval"];
 
-const foreachTemplate: Omit<V2StepForeach, "id"> = {
+export const foreachTemplate: Omit<V2StepForeach, "id"> = {
   type: "foreach",
   componentType: "container",
   name: "Foreach",
@@ -81,21 +81,22 @@ const foreachTemplate: Omit<V2StepForeach, "id"> = {
   sequence: [],
 };
 
-const conditionThresholdTemplate: Omit<V2StepConditionThreshold, "id"> = {
-  type: "condition-threshold",
-  componentType: "switch",
-  name: "Threshold",
-  properties: {
-    value: "",
-    compare_to: "",
-  },
-  branches: {
-    true: [],
-    false: [],
-  },
-};
+export const conditionThresholdTemplate: Omit<V2StepConditionThreshold, "id"> =
+  {
+    type: "condition-threshold",
+    componentType: "switch",
+    name: "Threshold",
+    properties: {
+      value: "",
+      compare_to: "",
+    },
+    branches: {
+      true: [],
+      false: [],
+    },
+  };
 
-const conditionAssertTemplate: Omit<V2StepConditionAssert, "id"> = {
+export const conditionAssertTemplate: Omit<V2StepConditionAssert, "id"> = {
   type: "condition-assert",
   componentType: "switch",
   name: "Assert",

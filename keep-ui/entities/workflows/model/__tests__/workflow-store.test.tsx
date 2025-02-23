@@ -6,7 +6,7 @@ import {
 } from "@/entities/workflows";
 import { v4 as uuidv4 } from "uuid";
 import { Connection } from "@xyflow/react";
-import { getToolboxConfiguration } from "@/features/workflows/builder/lib/utils";
+import { Provider } from "@/app/(keep)/providers/providers";
 
 // Mock uuid to return predictable values
 jest.mock("uuid", () => ({
@@ -21,7 +21,38 @@ jest.mock("../../../../shared/ui/utils/showErrorToast", () => ({
   showErrorToast: () => showErrorToastMock(),
 }));
 
-const mockToolboxConfiguration = getToolboxConfiguration([]);
+const mockProvider: Provider = {
+  id: "mock-provider",
+  type: "mock",
+  config: {},
+  installed: true,
+  linked: true,
+  last_alert_received: "",
+  details: {
+    authentication: {},
+  },
+  display_name: "Mock Provider",
+  can_query: true,
+  can_notify: true,
+  validatedScopes: {},
+  tags: [],
+  pulling_available: true,
+  pulling_enabled: true,
+  health: true,
+  categories: [],
+  coming_soon: false,
+};
+
+const notInstalledProvider: Provider = {
+  ...mockProvider,
+  type: "notinstalled",
+  installed: false,
+};
+
+const mockProvidersConfiguration = {
+  providers: [mockProvider, notInstalledProvider],
+  installedProviders: [mockProvider],
+};
 
 describe("useWorkflowStore", () => {
   beforeEach(() => {
@@ -101,7 +132,7 @@ describe("useWorkflowStore", () => {
           },
           isValid: true,
         });
-        result.current.initializeWorkflow(null, mockToolboxConfiguration);
+        result.current.initializeWorkflow(null, mockProvidersConfiguration);
       });
 
       expect(result.current.nodes).toHaveLength(5);
@@ -191,7 +222,7 @@ describe("useWorkflowStore", () => {
           },
           isValid: true,
         });
-        result.current.initializeWorkflow(null, mockToolboxConfiguration);
+        result.current.initializeWorkflow(null, mockProvidersConfiguration);
       });
 
       // Delete interval trigger
@@ -374,7 +405,7 @@ describe("useWorkflowStore", () => {
               {
                 id: "step1",
                 name: "Step 1",
-                type: "step",
+                type: "step-mock",
                 componentType: "task",
                 properties: {
                   stepParams: ["param1"],
@@ -393,7 +424,7 @@ describe("useWorkflowStore", () => {
           },
           isValid: true,
         });
-        result.current.initializeWorkflow(null, mockToolboxConfiguration);
+        result.current.initializeWorkflow(null, mockProvidersConfiguration);
       });
 
       // Verify no validation errors and canDeploy is true
@@ -413,7 +444,7 @@ describe("useWorkflowStore", () => {
           },
           isValid: false,
         });
-        result.current.initializeWorkflow(null, mockToolboxConfiguration);
+        result.current.initializeWorkflow(null, mockProvidersConfiguration);
       });
 
       // Verify validation errors are captured
@@ -460,7 +491,7 @@ describe("useWorkflowStore", () => {
           },
           isValid: false,
         });
-        result.current.initializeWorkflow(null, mockToolboxConfiguration);
+        result.current.initializeWorkflow(null, mockProvidersConfiguration);
       });
 
       // Verify step validation errors are captured
@@ -478,7 +509,7 @@ describe("useWorkflowStore", () => {
               {
                 id: "step1",
                 name: "Step 1",
-                type: "step",
+                type: "step-mock",
                 componentType: "task",
                 properties: {
                   stepParams: [],
@@ -493,7 +524,7 @@ describe("useWorkflowStore", () => {
           },
           isValid: false,
         });
-        result.current.initializeWorkflow(null, mockToolboxConfiguration);
+        result.current.initializeWorkflow(null, mockProvidersConfiguration);
       });
 
       // Verify canDeploy is true despite provider errors

@@ -26,7 +26,7 @@ import { WorkflowBuilderChatSafe } from "@/features/workflows/ai-assistant";
 interface Props {
   loadedAlertFile: string | null;
   providers: Provider[];
-  workflow?: string;
+  workflowRaw?: string;
   workflowId?: string;
   installedProviders?: Provider[] | undefined | null;
 }
@@ -34,7 +34,7 @@ interface Props {
 export function WorkflowBuilder({
   loadedAlertFile,
   providers,
-  workflow,
+  workflowRaw,
   workflowId,
   installedProviders,
 }: Props) {
@@ -79,10 +79,10 @@ export function WorkflowBuilder({
     function updateDefinitionFromInput() {
       setIsLoading(true);
       try {
-        if (workflow) {
+        if (workflowRaw) {
           setDefinition(
             wrapDefinitionV2({
-              ...parseWorkflow(workflow, providers),
+              ...parseWorkflow(workflowRaw, providers),
               isValid: true,
             })
           );
@@ -140,7 +140,7 @@ export function WorkflowBuilder({
       }
       setIsLoading(false);
     },
-    [loadedAlertFile, workflow, searchParams, providers]
+    [loadedAlertFile, workflowRaw, searchParams, providers]
   );
 
   const workflowYaml = useMemo(() => {

@@ -52,6 +52,10 @@ export const GENERAL_INSTRUCTIONS = `
   `
   }
 
+  If alert trigger is used, {{alert.<property>}} can be used to access the properties of the alert.
+  If incident trigger is used, {{incident.<property>}} can be used to access the properties of the incident.
+
+
   There are 5 types of steps:
   - step: fetch data from a provider
   - action: send data to a provider
@@ -128,61 +132,96 @@ export const GENERAL_INSTRUCTIONS = `
       "type": "foreach-type",
       "properties": {
         "value": "value",
-        "with": {
-          "query-param1": "value1",
-          "query-param2": "value2"
-        }
       },
+      "sequence": [StepJSON[]]
     }
   `}
 
-  To access the results of a previous steps, use the following syntax: {{ steps.step-id.results }}
 
-    Example of a workflow definition with two steps: [
-    {
-      "label": "get-user-data",
-      "id": "467cd570-a083-4247-b716-27de7d8df6e5",
-      "name": "get-user-data",
-      "componentType": "task",
-      "type": "step-mysql",
-      "properties": {
-        "config": " mysql-prod ",
-        "with": {
-          "query": "SELECT email FROM users WHERE id = 1",
-          "single_row": true
+  To access the results of a previous steps, use the following syntax: {{ steps.<step-id>.results }}
+
+  Example of a workflow definition with an alert trigger: ${`
+    [
+      {
+        type: "alert",
+        componentType: "trigger",
+        name: "Alert",
+        id: "alert",
+        "properties": {
+          "source": "sentry",
+          "severity": "critical",
+          "service": "r\"(payments|ftp)\""
         },
-        "stepParams": [
-          "query",
-          "as_dict",
-          "single_row",
-          "kwargs"
-        ],
-        "actionParams": null
-      }
-    },
-    {
-      "label": "send-notification",
-      "id": "e87d8b71-00b4-4392-96dd-bc982e1ce524",
-      "name": "send-notification",
-      "componentType": "task",
-      "type": "action-slack",
-      "properties": {
-        "config": " slack-demo ",
-        "with": {
-          "message": "User email: {{ steps.get-user-data.results.email }}"
+      },
+      {
+        "id": "42997fbf-1266-4195-8f90-ccd20d034c9e",
+        "name": "send-slack-message-team-payments",
+        "componentType": "task",
+        "type": "action-slack",
+        "properties": {
+          "with": {
+            "message": "\"A new alert from Sentry: Alert: {{ alert.name }} - {{ alert.description }}\n{{ alert}}\"\n"
+          },
+          "stepParams": null,
+          "actionParams": [
+            "message",
+            "blocks",
+            "channel",
+            "slack_timestamp",
+            "thread_timestamp",
+            "attachments",
+            "username",
+            "notification_type",
+            "kwargs"
+          ],
+          "if": "'{{ alert.service }}' == 'payments'"
         },
-        "stepParams": null,
-        "actionParams": [
-          "message",
-          "blocks",
-          "channel",
-          "slack_timestamp",
-          "thread_timestamp",
-          "attachments",
-          "username",
-          "kwargs"
-        ]
+      },
+      {
+        "id": "5d3383d9-862c-4863-8d72-65e07631f911",
+        "name": "create-jira-ticket-oncall-board",
+        "componentType": "task",
+        "type": "action-jira",
+        "properties": {
+          "with": {
+            "board_name": "Oncall Board",
+            "custom_fields": {
+              "customfield_10201": "Critical"
+            },
+            "description": "\"This ticket was created by Keep.\nPlease check the alert details below:\n{code:json} {{ alert }} {code}\"\n",
+            "enrich_alert": [
+              {
+                "key": "ticket_type",
+                "value": "jira"
+              },
+              {
+                "key": "ticket_id",
+                "value": "results.issue.key"
+              },
+              {
+                "key": "ticket_url",
+                "value": "results.ticket_url"
+              }
+            ],
+            "issuetype": "Task",
+            "summary": "{{ alert.name }} - {{ alert.description }} (created by Keep)"
+          },
+          "stepParams": ["ticket_id", "board_id", "kwargs"],
+          "actionParams": [
+            "summary",
+            "description",
+            "issue_type",
+            "project_key",
+            "board_name",
+            "issue_id",
+            "labels",
+            "components",
+            "custom_fields",
+            "kwargs"
+          ],
+          "if": "'{{ alert.service }}' == 'ftp' and not '{{ alert.ticket_id }}'"
+        },
       }
-    }
-  ]
+    ]
+  `}
 `;

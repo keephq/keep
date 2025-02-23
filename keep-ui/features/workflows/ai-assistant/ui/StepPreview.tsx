@@ -7,6 +7,8 @@ import { Editor } from "@monaco-editor/react";
 import { stringify } from "yaml";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
 import { getYamlFromStep } from "../lib/utils";
+import { WF_DEBUG_INFO } from "../../builder/ui/debug-settings";
+import { JsonCard } from "@/shared/ui";
 
 function getStepIconUrl(data: V2Step | V2StepTrigger) {
   const { type } = data || {};
@@ -32,6 +34,7 @@ export const StepPreview = ({
 
   return (
     <div className="flex flex-col gap-2">
+      {WF_DEBUG_INFO && <JsonCard title="step" json={step} />}
       <div
         className={clsx(
           "max-w-[250px] flex shadow-md bg-white border-2 border-stone-400 px-4 py-2 flex-1 flex-row items-center justify-between gap-2 flex-wrap text-sm",

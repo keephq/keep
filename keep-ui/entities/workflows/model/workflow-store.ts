@@ -42,10 +42,11 @@ import {
   getToolboxConfiguration,
 } from "@/features/workflows/builder/lib/utils";
 import { Provider } from "@/app/(keep)/providers/providers";
-class WorkflowBuilderError extends Error {
+
+class KeepWorkflowStoreError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "WorkflowBuilderError";
+    this.name = "KeepWorkflowStoreError";
   }
 }
 const PROTECTED_NODE_IDS = ["start", "end", "trigger_start", "trigger_end"];
@@ -58,7 +59,7 @@ const PROTECTED_NODE_IDS = ["start", "end", "trigger_start", "trigger_end"];
  * @param set - The set function
  * @param get - The get function
  * @returns The id of the new node
- * @throws WorkflowBuilderError if the node or edge or step is not defined
+ * @throws KeepWorkflowStoreError if the node or edge or step is not defined
  * @throws ZodError if the step is not valid
  */
 function addNodeBetween(
@@ -68,8 +69,12 @@ function addNodeBetween(
   set: StoreSet,
   get: StoreGet
 ) {
-  if (!nodeOrEdgeId || !rawStep) {
-    throw new WorkflowBuilderError("Node or edge or step is not defined");
+  if (!rawStep) {
+    throw new KeepWorkflowStoreError("Step is not defined");
+  }
+
+  if (!nodeOrEdgeId) {
+    throw new KeepWorkflowStoreError("Node or edge id is not defined");
   }
 
   const isTriggerComponent = rawStep.componentType === "trigger";
@@ -84,56 +89,68 @@ function addNodeBetween(
   let edge = {} as Edge;
   if (type === "node") {
     edge = get().edges.find((edge) => edge.target === nodeOrEdgeId) as Edge;
+    if (!edge) {
+      throw new KeepWorkflowStoreError(
+        `Edge with target ${nodeOrEdgeId} not found`
+      );
+    }
   }
 
   if (type === "edge") {
     edge = get().edges.find((edge) => edge.id === nodeOrEdgeId) as Edge;
-  }
-
-  if (!edge) {
-    throw new WorkflowBuilderError("Edge not found");
+    if (!edge) {
+      throw new KeepWorkflowStoreError(
+        `Edge with id ${nodeOrEdgeId} not found`
+      );
+    }
   }
 
   if (isTriggerComponent && !edgeCanAddTrigger(edge.source, edge.target)) {
-    throw new WorkflowBuilderError("This edge cannot add trigger");
+    throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add trigger`);
   }
 
   if (!isTriggerComponent && !edgeCanAddStep(edge.source, edge.target)) {
-    throw new WorkflowBuilderError("This edge cannot add step");
+    throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add step`);
   }
 
   let { source: sourceId, target: targetId } = edge || {};
   if (!sourceId) {
-    throw new WorkflowBuilderError("Source is not defined");
+    throw new KeepWorkflowStoreError(
+      `Source is not defined for edge ${edge.id}`
+    );
   }
   if (!targetId) {
-    throw new WorkflowBuilderError("Target is not defined");
+    throw new KeepWorkflowStoreError(
+      `Target is not defined for edge ${edge.id}`
+    );
   }
 
   if (sourceId !== "trigger_start" && isTriggerComponent) {
-    throw new WorkflowBuilderError(
-      "Trigger is only allowed at the start of the workflow"
+    throw new KeepWorkflowStoreError(
+      `Trigger is only allowed at the start of the workflow. Attempted to add trigger at edge ${edge.id}`
     );
   }
 
   if (sourceId == "trigger_start" && !isTriggerComponent) {
-    throw new WorkflowBuilderError(
-      "Only trigger can be added at the start of the workflow"
+    throw new KeepWorkflowStoreError(
+      `Only trigger can be added at the start of the workflow. Attempted to add step at edge ${edge.id}`
     );
   }
 
   const nodes = get().nodes;
   // Return if the trigger is already in the workflow
   if (isTriggerComponent && nodes.find((node) => node && step.id === node.id)) {
-    throw new WorkflowBuilderError(
-      "This type of trigger is already in the workflow"
+    throw new KeepWorkflowStoreError(
+      `This ${step.type} trigger is already in the workflow`
     );
   }
 
   let targetIndex = nodes.findIndex((node) => node.id === targetId);
   const sourceIndex = nodes.findIndex((node) => node.id === sourceId);
   if (targetIndex == -1) {
-    throw new WorkflowBuilderError("Target node not found");
+    throw new KeepWorkflowStoreError(
+      `Target node with id ${targetId} not found`
+    );
   }
 
   if (sourceId === "trigger_start") {
@@ -280,11 +297,6 @@ export const useWorkflowStore = create<FlowState>()(
       step: V2StepTemplate | V2StepTrigger,
       type: "node" | "edge"
     ) => {
-      console.log("addNodeBetween", {
-        nodeOrEdgeId,
-        step,
-        type,
-      });
       const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
       set({ selectedNode: newNodeId, selectedEdge: null });
       return newNodeId ?? null;
@@ -294,11 +306,6 @@ export const useWorkflowStore = create<FlowState>()(
       step: V2StepTemplate | V2StepTrigger,
       type: "node" | "edge"
     ) => {
-      console.log("addNodeBetweenSafe", {
-        nodeOrEdgeId,
-        step,
-        type,
-      });
       try {
         const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
         set({ selectedNode: newNodeId, selectedEdge: null });
@@ -533,7 +540,7 @@ export const useWorkflowStore = create<FlowState>()(
         return [];
       }
       if (PROTECTED_NODE_IDS.includes(ids)) {
-        throw new WorkflowBuilderError("Cannot delete protected node");
+        throw new KeepWorkflowStoreError("Cannot delete protected node");
       }
       const nodes = get().nodes;
       const nodeStartIndex = nodes.findIndex((node) => ids == node.id);
@@ -626,12 +633,12 @@ export const useWorkflowStore = create<FlowState>()(
     getNextEdge: (nodeId: string) => {
       const node = get().getNodeById(nodeId);
       if (!node) {
-        throw new WorkflowBuilderError("Node not found");
+        throw new KeepWorkflowStoreError("Node not found");
       }
       // TODO: handle multiple edges
       const edges = get().edges.filter((e) => e.source === nodeId);
       if (!edges.length) {
-        throw new WorkflowBuilderError("Edge not found");
+        throw new KeepWorkflowStoreError("Edge not found");
       }
       if (node.data.componentType === "switch") {
         // If the node is a switch, return the second edge, because "true" is the second edge

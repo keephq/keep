@@ -152,6 +152,7 @@ function KeepSetupProviderEditor({
   const isGeneralError = providerError?.includes("No provider selected");
   const inputError =
     providerError && !isGeneralError ? providerError : undefined;
+  const isSelectError = !!inputError && selectValue !== "enter-manually";
 
   const handleSelectChange = (value: string) => {
     setSelectValue(value);
@@ -206,7 +207,7 @@ function KeepSetupProviderEditor({
         value={selectValue}
         icon={getSelectIcon}
         onValueChange={handleSelectChange}
-        error={!!inputError}
+        error={isSelectError}
         errorMessage={inputError}
       >
         {installedProviderByType?.map((provider) => {
@@ -484,7 +485,6 @@ export function StepEditorV2({
   const providerType = formData?.type?.split("-")[1];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("handleInputChange", e.target.name, e.target.value);
     const updatedFormData = { ...formData, [e.target.name]: e.target.value };
     setFormData(updatedFormData);
     setEditorSynced(false);

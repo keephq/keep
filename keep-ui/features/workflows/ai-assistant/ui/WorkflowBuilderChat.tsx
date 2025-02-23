@@ -31,11 +31,14 @@ import { AddTriggerUI } from "./AddTriggerUI";
 import { SuggestionResult } from "./SuggestionStatus";
 import { AddStepUI } from "./AddStepUI";
 import { useAvailableAlertFields } from "@/entities/alerts/model";
+import {
+  getErrorMessage,
+  getWorkflowSummaryForCopilot,
+} from "@/features/workflows/ai-assistant/lib/utils";
+import { AddTriggerOrStepSkeleton } from "@/features/workflows/ai-assistant/ui/AddTriggerOrStepSkeleton";
+import { foreachTemplate } from "../../builder/lib/utils";
 import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
-import { getWorkflowSummaryForCopilot } from "@/features/workflows/ai-assistant/lib/utils";
-import { AddTriggerOrStepSkeleton } from "@/features/workflows/ai-assistant/ui/AddTriggerOrStepSkeleton";
-
 export interface WorkflowBuilderChatProps {
   definition: DefinitionV2;
   installedProviders: Provider[];
@@ -220,8 +223,7 @@ export function WorkflowBuilderChat({
         } catch (e) {
           respond?.({
             status: "error",
-            error: e,
-            message: "Step removal failed",
+            message: getErrorMessage(e, "Step removal failed"),
           });
           return <p>Step removal failed</p>;
         }
@@ -266,8 +268,7 @@ export function WorkflowBuilderChat({
         } catch (e) {
           respond?.({
             status: "error",
-            error: e,
-            message: "Trigger removal failed",
+            message: getErrorMessage(e, "Trigger removal failed"),
           });
           return <p>Trigger removal failed</p>;
         }
@@ -584,7 +585,6 @@ Example: 'node_123__empty_true'`,
         return <AddTriggerOrStepSkeleton />;
       }
       const action = getActionStepFromCopilotAction(args);
-      console.log("action", action);
       if (!action) {
         respond?.({
           status: "error",
@@ -593,12 +593,24 @@ Example: 'node_123__empty_true'`,
         return <div>Action definition is invalid</div>;
       }
 
+      if (status === "complete") {
+        return (
+          <AddStepUI
+            status={status}
+            step={action}
+            addBeforeNodeId={args.addBeforeNodeId}
+            result={result}
+            respond={undefined}
+          />
+        );
+      }
+
       return (
         <AddStepUI
           status={status}
           step={action}
           addBeforeNodeId={args.addBeforeNodeId}
-          result={result}
+          result={undefined}
           respond={respond}
         />
       );
@@ -709,11 +721,23 @@ Example: 'node_123__empty_true'`,
         return <div>Step definition is invalid</div>;
       }
 
+      if (status === "complete") {
+        return (
+          <AddStepUI
+            status={status}
+            step={step}
+            addBeforeNodeId={args.addBeforeNodeId}
+            result={result}
+            respond={undefined}
+          />
+        );
+      }
+
       return (
         <AddStepUI
           status={status}
           step={step}
-          result={result}
+          result={undefined}
           addBeforeNodeId={args.addBeforeNodeId}
           respond={respond}
         />
@@ -802,26 +826,109 @@ Example: 'node_123__empty_true'`,
         if (!condition) {
           respond?.({
             status: "error",
-            error: "Condition definition is invalid",
-            errorDetail: "Condition type is invalid",
+            message: "Condition definition is invalid",
           });
           return <div>Condition definition is invalid</div>;
+        }
+        if (status === "complete") {
+          return (
+            <AddStepUI
+              status={status}
+              step={condition}
+              result={result}
+              addBeforeNodeId={args.addBeforeNodeId}
+              respond={respond}
+            />
+          );
         }
         return (
           <AddStepUI
             status={status}
             step={condition}
-            result={result}
+            result={undefined}
             addBeforeNodeId={args.addBeforeNodeId}
             respond={respond}
           />
         );
-      } catch (e) {
-        respond?.({ status: "error", error: e });
+      } catch (e: any) {
+        respond?.({ status: "error", message: getErrorMessage(e) });
         return <div>Failed to add condition {e?.message}</div>;
       }
     },
   });
+
+  function getForeachStepFromCopilotAction(args: {
+    foreachName: string;
+    value: string;
+    addBeforeNodeId: string;
+  }) {
+    return {
+      ...foreachTemplate,
+      name: args.foreachName,
+      id: `foreach_${args.foreachName}`,
+      properties: {
+        ...foreachTemplate.properties,
+        value: args.value,
+      },
+    };
+  }
+
+  useCopilotAction({
+    name: "addForeach",
+    description: "Add a foreach loop to the workflow.",
+    parameters: [
+      {
+        name: "foreachName",
+        description: "The kebab-case name of the foreach to add",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "value",
+        description:
+          "The value to iterate over. Could refer to results from previous steps: '{{ steps.<stepId>.results }}'.",
+        type: "string",
+        required: true,
+      },
+      {
+        name: "addBeforeNodeId",
+        description: `The id of the node to add the foreach before. For workflows with no steps, should be 'end'. Cannot be a node with componentType: 'trigger'. If adding to a condition branch, search for node id:
+- Must end with '__empty_true' for true branch
+- Must end with '__empty_false' for false branch
+Example: 'node_123__empty_true'`,
+        type: "string",
+        required: true,
+      },
+    ],
+    renderAndWaitForResponse: ({ status, args, respond, result }) => {
+      if (status === "inProgress") {
+        return <AddTriggerOrStepSkeleton />;
+      }
+      const foreach = getForeachStepFromCopilotAction(args);
+
+      if (status === "complete") {
+        return (
+          <AddStepUI
+            status={status}
+            step={foreach}
+            addBeforeNodeId={args.addBeforeNodeId}
+            result={result}
+            respond={undefined}
+          />
+        );
+      }
+      return (
+        <AddStepUI
+          status={status}
+          step={foreach}
+          addBeforeNodeId={args.addBeforeNodeId}
+          result={undefined}
+          respond={respond}
+        />
+      );
+    },
+  });
+
   // const testStep = useTestStep();
 
   // TODO: add this action

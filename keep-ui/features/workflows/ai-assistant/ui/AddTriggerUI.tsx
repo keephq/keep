@@ -7,7 +7,7 @@ import { DebugArgs } from "./debug-args";
 import { DebugJSON } from "@/shared/ui";
 import { StepPreview } from "./StepPreview";
 import { SuggestionResult, SuggestionStatus } from "./SuggestionStatus";
-
+import { getErrorMessage } from "../lib/utils";
 /**
  * Get the definition of a trigger
  * @param triggerType - The type of trigger
@@ -72,8 +72,7 @@ export const AddTriggerUI = ({
     } catch (e) {
       respond?.({
         status: "error",
-        error: e,
-        message: "Error getting trigger definition",
+        message: getErrorMessage(e, "Failed to get trigger definition"),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,8 +82,7 @@ export const AddTriggerUI = ({
     if (!triggerDefinition) {
       respond?.({
         status: "error",
-        error: new Error("trigger definition not found"),
-        message: "trigger definition not found",
+        message: "Trigger definition not found",
       });
       return;
     }
@@ -97,8 +95,7 @@ export const AddTriggerUI = ({
       if (!nextEdge) {
         respond?.({
           status: "error",
-          error: new Error("Can't find the edge to add the trigger after"),
-          message: "Trigger not added due to error",
+          message: "Can't find the edge to add the trigger after",
         });
         return;
       }
@@ -111,16 +108,13 @@ export const AddTriggerUI = ({
       } catch (e) {
         respond?.({
           status: "error",
-          error: e,
-          message: "Error adding trigger",
+          message: getErrorMessage(e),
         });
       }
     } catch (e) {
-      console.error(e);
       respond?.({
         status: "error",
-        error: e,
-        message: "Error adding trigger",
+        message: getErrorMessage(e),
       });
     }
     setIsAddingTrigger(false);
@@ -144,7 +138,6 @@ export const AddTriggerUI = ({
   if (!triggerType || !triggerProperties) {
     respond?.({
       status: "error",
-      error: new Error("Trigger type or properties not provided"),
       message: "Trigger type or properties not provided",
     });
     return <>Trigger type or properties not provided</>;
@@ -152,7 +145,6 @@ export const AddTriggerUI = ({
   if (!triggerDefinition) {
     respond?.({
       status: "error",
-      error: new Error("Trigger definition not found"),
       message: "Trigger definition not found",
     });
     return <>Trigger definition not found</>;

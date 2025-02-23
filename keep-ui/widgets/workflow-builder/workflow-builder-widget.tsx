@@ -8,7 +8,7 @@ import {
   PlayIcon,
   PlusIcon,
 } from "@heroicons/react/20/solid";
-import { BuilderCard } from "./workflow-builder-card";
+import { WorkflowBuilderCard } from "./workflow-builder-card";
 import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 import { useWorkflowStore } from "@/entities/workflows";
@@ -17,16 +17,19 @@ import { WorkflowMetadataModal } from "@/features/workflows/edit-metadata";
 import { WorkflowTestRunModal } from "@/features/workflows/test-run";
 import { WorkflowEnabledSwitch } from "@/features/workflows/enable-disable";
 import { WorkflowSyncStatus } from "@/app/(keep)/workflows/[workflow_id]/workflow-sync-status";
+import clsx from "clsx";
 
-export function WorkflowBuilderWidget({
-  workflowRaw: workflow,
-  workflowId,
-  standalone = false,
-}: {
+export interface WorkflowBuilderWidgetProps {
   workflowRaw?: string;
   workflowId?: string;
   standalone?: boolean;
-}) {
+}
+
+export function WorkflowBuilderWidget({
+  workflowRaw,
+  workflowId,
+  standalone,
+}: WorkflowBuilderWidgetProps) {
   const [fileContents, setFileContents] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,13 +105,13 @@ export function WorkflowBuilderWidget({
       <main className="mx-auto max-w-full flex flex-col h-full">
         <div className="flex items-baseline justify-between p-2">
           <div className="flex items-center gap-2">
-            <Title className="mx-2">
+            <Title className={clsx(workflowId ? "mx-2" : "mx-0")}>
               {workflowId ? "Edit" : "New"} Workflow
             </Title>
             <WorkflowSyncStatus />
           </div>
           <div className="flex gap-2">
-            {!workflow && (
+            {!workflowRaw && (
               <>
                 <Button
                   color="orange"
@@ -142,7 +145,7 @@ export function WorkflowBuilderWidget({
               </>
             )}
             {isInitialized && <WorkflowEnabledSwitch />}
-            {workflow && (
+            {workflowRaw && (
               <Button
                 color="orange"
                 size="md"
@@ -178,9 +181,9 @@ export function WorkflowBuilderWidget({
             </Button>
           </div>
         </div>
-        <BuilderCard
+        <WorkflowBuilderCard
           fileContents={fileContents}
-          workflow={workflow}
+          workflowRaw={workflowRaw}
           workflowId={workflowId}
           standalone={standalone}
         />

@@ -4,6 +4,7 @@ import { SuggestionResult, SuggestionStatus } from "./SuggestionStatus";
 import clsx from "clsx";
 import { V2Step } from "@/entities/workflows/model/types";
 import { useWorkflowStore } from "@/entities/workflows";
+import { getErrorMessage } from "../lib/utils";
 
 type AddStepUIPropsCommon = {
   step: V2Step;
@@ -40,6 +41,21 @@ export const AddStepUI = ({
     }
   };
 
+  const nodeLink = (nodeId: string) => {
+    if (nodeId === "start" || nodeId === "end") {
+      return `"${nodeId}"`;
+    }
+    return (
+      <a
+        href={`#${nodeId}`}
+        className="text-orange-500 hover:underline"
+        onClick={selectNode}
+      >
+        "{nodeId}"
+      </a>
+    );
+  };
+
   const onAdd = () => {
     try {
       addNodeBetween(addBeforeNodeId, step, "node");
@@ -48,18 +64,16 @@ export const AddStepUI = ({
         message: "Step added",
       });
     } catch (e) {
-      console.error("Step not added", e);
       respond?.({
         status: "error",
-        error: e,
-        message: "Step not added",
+        message: getErrorMessage(e),
       });
     }
   };
 
   const onCancel = () => {
     respond?.({
-      status: "complete",
+      status: "declined",
       message: "User cancelled adding step",
     });
   };
@@ -68,11 +82,8 @@ export const AddStepUI = ({
     return (
       <div className="flex flex-col gap-1 my-2">
         <div>
-          Do you want to add this action before node {addBeforeNodeId} (
-          <button className="text-blue-500" onClick={selectNode}>
-            Select node
-          </button>
-          )?
+          Do you want to add this action before node {nodeLink(addBeforeNodeId)}
+          ?
         </div>
         <StepPreview
           step={step}
@@ -91,11 +102,8 @@ export const AddStepUI = ({
       <div>
         {/* TODO: add the place where the action will be added in text */}
         <div>
-          Do you want to add this action before node {addBeforeNodeId} (
-          <button className="text-blue-500" onClick={selectNode}>
-            Select node
-          </button>
-          )?
+          Do you want to add this action before node {nodeLink(addBeforeNodeId)}
+          ?
         </div>
         <div className="my-2">
           <StepPreview step={step} />

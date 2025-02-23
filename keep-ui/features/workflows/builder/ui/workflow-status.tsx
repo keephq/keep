@@ -37,6 +37,7 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
   const {
     validationErrors,
     canDeploy,
+    nodes,
     edges,
     setSelectedNode,
     setSelectedEdge,
@@ -57,7 +58,9 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
         setSelectedEdge(addTriggerEdge.id);
       }
     } else {
-      const node = getNodeById(id);
+      const node = nodes.find(
+        (node) => node.id === id || node.data.name === id
+      );
       if (node) {
         setSelectedNode(node.id);
       }

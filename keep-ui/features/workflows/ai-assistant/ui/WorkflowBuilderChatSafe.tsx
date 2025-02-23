@@ -9,7 +9,6 @@ import {
   WorkflowBuilderChat,
   WorkflowBuilderChatProps,
 } from "@/features/workflows/ai-assistant/ui/WorkflowBuilderChat";
-import { CopilotKit } from "@copilotkit/react-core";
 
 type WorkflowBuilderChatSafeProps = Omit<
   WorkflowBuilderChatProps,
@@ -58,9 +57,5 @@ export function WorkflowBuilderChatSafe({
     return null;
   }
 
-  return (
-    <CopilotKit runtimeUrl="/api/copilotkit">
-      <WorkflowBuilderChat definition={definition} {...props} />
-    </CopilotKit>
-  );
+  return <WorkflowBuilderChat definition={definition} {...props} />;
 }

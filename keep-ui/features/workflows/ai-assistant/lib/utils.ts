@@ -48,3 +48,10 @@ export function getWorkflowSummaryForCopilot(nodes: FlowNode[], edges: Edge[]) {
     })),
   };
 }
+
+export function getErrorMessage(e: unknown, defaultMessage?: string) {
+  if (e instanceof Error) {
+    return e.message;
+  }
+  return defaultMessage ?? "Unknown error";
+}
