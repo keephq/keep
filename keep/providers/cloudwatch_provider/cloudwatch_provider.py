@@ -23,25 +23,27 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 @pydantic.dataclasses.dataclass
 class CloudwatchProviderAuthConfig:
-    access_key: str | None = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "AWS access key (Leave empty if using IAM role at EC2)",
-            "sensitive": True,
-        }
-    )
-    access_key_secret: str | None = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "AWS access key secret (Leave empty if using IAM role at EC2)",
-            "sensitive": True,
-        }
-    )
     region: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "AWS region",
             "senstive": False,
+        },
+    )
+    access_key: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "AWS access key (Leave empty if using IAM role at EC2)",
+            "sensitive": True,
+        },
+    )
+    access_key_secret: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "AWS access key secret (Leave empty if using IAM role at EC2)",
+            "sensitive": True,
         },
     )
     session_token: str = dataclasses.field(
