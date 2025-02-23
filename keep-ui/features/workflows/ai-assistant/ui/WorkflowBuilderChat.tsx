@@ -1,17 +1,16 @@
 import { useMemo, useState } from "react";
 import { Provider } from "@/app/(keep)/providers/providers";
 import {
-  V2Step,
-  FlowNode,
-  ToolboxConfiguration,
-  V2StepStep,
   DefinitionV2,
   IncidentEventEnum,
-  V2ActionStep,
+  ToolboxConfiguration,
   V2ActionSchema,
-  V2StepStepSchema,
+  V2ActionStep,
+  V2Step,
   V2StepCondition,
   V2StepConditionSchema,
+  V2StepStep,
+  V2StepStepSchema,
 } from "@/entities/workflows/model/types";
 import {
   CopilotChat,
@@ -24,75 +23,28 @@ import {
   useCopilotChat,
   useCopilotReadable,
 } from "@copilotkit/react-core";
-import { Button, Link } from "@/components/ui";
-import { GENERAL_INSTRUCTIONS } from "@/app/(keep)/workflows/builder/_constants";
+import { Button } from "@/components/ui";
+import { GENERAL_INSTRUCTIONS } from "@/features/workflows/ai-assistant/lib/constants";
 import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
-import { WF_DEBUG_INFO } from "../debug-settings";
+import { WF_DEBUG_INFO } from "../../builder/ui/debug-settings";
 import { AddTriggerUI } from "./AddTriggerUI";
-import { useTestStep } from "../Editor/StepTest";
-import { useConfig } from "@/utils/hooks/useConfig";
-import { Title, Text } from "@tremor/react";
-import { SparklesIcon } from "@heroicons/react/24/outline";
-import BuilderChatPlaceholder from "./ai-workflow-placeholder.png";
-import Image from "next/image";
-import { Edge } from "@xyflow/react";
 import { SuggestionResult } from "./SuggestionStatus";
-import Skeleton from "react-loading-skeleton";
 import { AddStepUI } from "./AddStepUI";
 import { useAvailableAlertFields } from "@/entities/alerts/model";
 import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
+import { getWorkflowSummaryForCopilot } from "@/features/workflows/ai-assistant/lib/utils";
+import { AddTriggerOrStepSkeleton } from "@/features/workflows/ai-assistant/ui/AddTriggerOrStepSkeleton";
 
-interface BuilderChatProps {
+export interface WorkflowBuilderChatProps {
   definition: DefinitionV2;
   installedProviders: Provider[];
 }
 
-function getWorkflowSummaryForCopilot(nodes: FlowNode[], edges: Edge[]) {
-  return {
-    nodes: nodes.map((n) => ({
-      id: n.id,
-      nextStepId: n.nextStepId,
-      prevStepId: n.prevStepId,
-      ...n.data,
-    })),
-    edges: edges.map((e) => ({
-      id: e.id,
-      source: e.source,
-      target: e.target,
-    })),
-  };
-}
-
-function isProtectedStep(stepId: string) {
-  return (
-    stepId === "start" ||
-    stepId === "end" ||
-    stepId === "trigger_start" ||
-    stepId === "trigger_end"
-  );
-}
-
-const AddTriggerSkeleton = () => {
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="h-4 w-full">
-        <Skeleton />
-      </div>
-      <div className="h-4 w-1/2">
-        <Skeleton />
-      </div>
-      <div className="h-12 max-w-[250px] w-full rounded-md">
-        <Skeleton className="w-full h-full" />
-      </div>
-    </div>
-  );
-};
-
-export function BuilderChat({
+export function WorkflowBuilderChat({
   definition,
   installedProviders,
-}: BuilderChatProps) {
+}: WorkflowBuilderChatProps) {
   const {
     nodes,
     edges,
@@ -254,22 +206,23 @@ export function BuilderChat({
         return <div>Loading...</div>;
       }
       const stepId = args.stepId;
-      if (isProtectedStep(stepId)) {
-        respond?.(
-          "Cannot remove start, end, trigger_start or trigger_end steps"
-        );
-        return (
-          <p>Cannot remove start, end, trigger_start or trigger_end steps</p>
-        );
-      }
       // TODO: nice UI for this
       if (confirm(`Are you sure you want to remove ${stepId} step?`)) {
-        const deletedNodeIds = deleteNodes(stepId);
-        if (deletedNodeIds.length > 0) {
-          respond?.("Step removed");
-          return <p>Step {stepId} removed</p>;
-        } else {
-          respond?.("Step removal failed");
+        try {
+          const deletedNodeIds = deleteNodes(stepId);
+          if (deletedNodeIds.length > 0) {
+            respond?.("Step removed");
+            return <p>Step {stepId} removed</p>;
+          } else {
+            respond?.("Step removal failed");
+            return <p>Step removal failed</p>;
+          }
+        } catch (e) {
+          respond?.({
+            status: "error",
+            error: e,
+            message: "Step removal failed",
+          });
           return <p>Step removal failed</p>;
         }
       } else {
@@ -297,25 +250,25 @@ export function BuilderChat({
       }
       const triggerNodeId = args.triggerNodeId;
 
-      if (isProtectedStep(triggerNodeId)) {
-        respond?.(
-          "Cannot remove start, end, trigger_start or trigger_end steps"
-        );
-        return (
-          <p>Cannot remove start, end, trigger_start or trigger_end steps</p>
-        );
-      }
-
       // TODO: nice UI for this
       if (
         confirm(`Are you sure you want to remove ${triggerNodeId} trigger?`)
       ) {
-        const deletedNodeIds = deleteNodes(triggerNodeId);
-        if (deletedNodeIds.length > 0) {
-          respond?.("Trigger removed");
-          return <p>Trigger {triggerNodeId} removed</p>;
-        } else {
-          respond?.("Trigger removal failed");
+        try {
+          const deletedNodeIds = deleteNodes(triggerNodeId);
+          if (deletedNodeIds.length > 0) {
+            respond?.("Trigger removed");
+            return <p>Trigger {triggerNodeId} removed</p>;
+          } else {
+            respond?.("Trigger removal failed");
+            return <p>Trigger removal failed</p>;
+          }
+        } catch (e) {
+          respond?.({
+            status: "error",
+            error: e,
+            message: "Trigger removal failed",
+          });
           return <p>Trigger removal failed</p>;
         }
       } else {
@@ -332,7 +285,7 @@ export function BuilderChat({
     parameters: [],
     renderAndWaitForResponse: (args) => {
       if (args.status === "inProgress") {
-        return <AddTriggerSkeleton />;
+        return <AddTriggerOrStepSkeleton />;
       }
 
       if (args.status === "complete" && "result" in args) {
@@ -408,7 +361,7 @@ export function BuilderChat({
     ],
     renderAndWaitForResponse: (args) => {
       if (args.status === "inProgress") {
-        return <AddTriggerSkeleton />;
+        return <AddTriggerOrStepSkeleton />;
       }
 
       const argsToPass = {
@@ -457,7 +410,7 @@ export function BuilderChat({
     ],
     renderAndWaitForResponse: (args) => {
       if (args.status === "inProgress") {
-        return <AddTriggerSkeleton />;
+        return <AddTriggerOrStepSkeleton />;
       }
 
       const argsToPass = {
@@ -501,7 +454,7 @@ export function BuilderChat({
     ],
     renderAndWaitForResponse: (args) => {
       if (args.status === "inProgress") {
-        return <AddTriggerSkeleton />;
+        return <AddTriggerOrStepSkeleton />;
       }
 
       const argsToPass = {
@@ -628,7 +581,7 @@ Example: 'node_123__empty_true'`,
     ],
     renderAndWaitForResponse: ({ status, args, respond, result }) => {
       if (status === "inProgress") {
-        return <AddTriggerSkeleton />;
+        return <AddTriggerOrStepSkeleton />;
       }
       const action = getActionStepFromCopilotAction(args);
       console.log("action", action);
@@ -745,7 +698,7 @@ Example: 'node_123__empty_true'`,
     ],
     renderAndWaitForResponse: ({ status, args, respond, result }) => {
       if (status === "inProgress") {
-        return <AddTriggerSkeleton />;
+        return <AddTriggerOrStepSkeleton />;
       }
       const step = getStepStepFromCopilotAction(args);
       if (!step) {
@@ -842,7 +795,7 @@ Example: 'node_123__empty_true'`,
     ],
     renderAndWaitForResponse: ({ status, args, respond, result }) => {
       if (status === "inProgress") {
-        return <AddTriggerSkeleton />;
+        return <AddTriggerOrStepSkeleton />;
       }
       try {
         const condition = getConditionStepFromCopilotAction(args);
@@ -986,51 +939,4 @@ Example: 'node_123__empty_true'`,
       />
     </div>
   );
-}
-
-type BuilderChatSafeProps = Omit<BuilderChatProps, "definition"> & {
-  definition: DefinitionV2 | null;
-};
-
-export function BuilderChatSafe({
-  definition,
-  ...props
-}: BuilderChatSafeProps) {
-  const { data: config } = useConfig();
-
-  // If AI is not enabled, return null to collapse the chat section
-  if (!config?.OPEN_AI_API_KEY_SET) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full relative">
-        <Image
-          src={BuilderChatPlaceholder}
-          alt="Workflow AI Assistant"
-          width={400}
-          height={895}
-          className="w-full h-full object-cover object-top max-w-[500px] mx-auto absolute inset-0"
-        />
-        <div className="w-full h-full absolute inset-0 bg-white/80" />
-        <div className="flex flex-col items-center justify-center h-full z-10">
-          <div className="flex flex-col items-center justify-center bg-[radial-gradient(circle,white_50%,transparent)] p-8 rounded-lg aspect-square">
-            <SparklesIcon className="size-10 text-orange-500" />
-            <Title>AI is disabled</Title>
-            <Text>Contact us to enable AI for you.</Text>
-            <Link
-              href="https://slack.keephq.dev/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Contact us
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (definition == null) {
-    return null;
-  }
-
-  return <BuilderChat definition={definition} {...props} />;
 }

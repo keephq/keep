@@ -48,6 +48,7 @@ class WorkflowBuilderError extends Error {
     this.name = "WorkflowBuilderError";
   }
 }
+const PROTECTED_NODE_IDS = ["start", "end", "trigger_start", "trigger_end"];
 
 /**
  * Add a node between two edges
@@ -530,6 +531,9 @@ export const useWorkflowStore = create<FlowState>()(
       //for now handling only single node deletion. can later enhance to multiple deletions
       if (typeof ids !== "string") {
         return [];
+      }
+      if (PROTECTED_NODE_IDS.includes(ids)) {
+        throw new WorkflowBuilderError("Cannot delete protected node");
       }
       const nodes = get().nodes;
       const nodeStartIndex = nodes.findIndex((node) => ids == node.id);

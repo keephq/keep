@@ -7,9 +7,12 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { KeepLoader } from "@/shared/ui";
 import clsx from "clsx";
 
-const Builder = dynamic(() => import("./builder"), {
-  ssr: false, // Prevents server-side rendering
-});
+const Builder = dynamic(
+  () => import("./workflow-builder").then((mod) => mod.WorkflowBuilder),
+  {
+    ssr: false, // Prevents server-side rendering
+  }
+);
 
 interface Props {
   fileContents: string | null;

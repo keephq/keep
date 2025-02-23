@@ -8,7 +8,7 @@ import {
   PlayIcon,
   PlusIcon,
 } from "@heroicons/react/20/solid";
-import { BuilderCard } from "./builder-card";
+import { BuilderCard } from "./workflow-builder-card";
 import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 import { useWorkflowStore } from "@/entities/workflows";

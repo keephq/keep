@@ -19,11 +19,9 @@ import {
   wrapDefinitionV2,
 } from "@/entities/workflows/lib/parser";
 import { CodeBracketIcon, SparklesIcon } from "@heroicons/react/24/outline";
-import { BuilderChatSafe } from "@/features/workflows/builder/ui/BuilderChat/builder-chat";
 import clsx from "clsx";
 import { ResizableColumns } from "@/shared/ui";
-import { useConfig } from "@/utils/hooks/useConfig";
-import { CopilotKit } from "@copilotkit/react-core";
+import { WorkflowBuilderChatSafe } from "@/features/workflows/ai-assistant";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -33,7 +31,7 @@ interface Props {
   installedProviders?: Provider[] | undefined | null;
 }
 
-function Builder({
+export function WorkflowBuilder({
   loadedAlertFile,
   providers,
   workflow,
@@ -60,11 +58,8 @@ function Builder({
   } = useWorkflowStore();
   const router = useRouter();
 
-  const { data: configData } = useConfig();
-  const isAIEnabled = configData?.OPEN_AI_API_KEY_SET;
-
   const [leftColumnMode, setLeftColumnMode] = useState<"yaml" | "chat" | null>(
-    isAIEnabled ? "chat" : "yaml"
+    "chat"
   );
 
   const searchParams = useSearchParams();
@@ -262,7 +257,7 @@ function Builder({
             leftColumnMode === "chat" ? "visible h-full" : "hidden"
           )}
         >
-          <BuilderChatSafe
+          <WorkflowBuilderChatSafe
             definition={definition}
             installedProviders={installedProviders ?? []}
           />
@@ -322,18 +317,5 @@ function Builder({
         </div>
       </>
     </ResizableColumns>
-  );
-}
-
-export default function BuilderWrapper(props: Props) {
-  const { data: configData } = useConfig();
-  const isAIEnabled = configData?.OPEN_AI_API_KEY_SET;
-  if (!isAIEnabled) {
-    return <Builder {...props} />;
-  }
-  return (
-    <CopilotKit runtimeUrl="/api/copilotkit">
-      <Builder {...props} />
-    </CopilotKit>
   );
 }

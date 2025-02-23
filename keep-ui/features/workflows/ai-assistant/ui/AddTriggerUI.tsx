@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useWorkflowStore, V2StepTriggerSchema } from "@/entities/workflows";
-import { WF_DEBUG_INFO } from "../debug-settings";
+import { WF_DEBUG_INFO } from "../../builder/ui/debug-settings";
 import { Button } from "@/components/ui";
 import { getTriggerTemplate } from "@/features/workflows/builder/lib/utils";
 import { DebugArgs } from "./debug-args";

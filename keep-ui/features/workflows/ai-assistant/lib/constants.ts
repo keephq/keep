@@ -1,6 +1,3 @@
-export const ADD_TRIGGER_AFTER_EDGE_ID = "etrigger_start-trigger_end";
-export const ADD_STEPS_AFTER_EDGE_ID = "etrigger_end-end";
-
 export const GENERAL_INSTRUCTIONS = `
   You are an workflow builder assistant for Keep Platform. You are responsible for helping the user to build a workflow.
   You are given a workflow definition, and you are responsible for helping the user add, remove, or modify steps in the workflow.

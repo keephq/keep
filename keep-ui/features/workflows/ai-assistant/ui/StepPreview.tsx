@@ -1,20 +1,12 @@
-import {
-  V2ActionStep,
-  V2Step,
-  V2StepStep,
-  V2StepTrigger,
-} from "@/entities/workflows";
+import { V2Step, V2StepTrigger } from "@/entities/workflows";
 import clsx from "clsx";
 import Image from "next/image";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
-import { normalizeStepType } from "../../lib/utils";
-import {
-  getYamlStepFromStep,
-  getYamlActionFromAction,
-} from "@/entities/workflows/lib/parser";
+import { normalizeStepType } from "../../builder/lib/utils";
 import { Editor } from "@monaco-editor/react";
 import { stringify } from "yaml";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
+import { getYamlFromStep } from "../lib/utils";
 
 function getStepIconUrl(data: V2Step | V2StepTrigger) {
   const { type } = data || {};
@@ -23,28 +15,6 @@ function getStepIconUrl(data: V2Step | V2StepTrigger) {
   if (type === "incident" || type === "workflow" || type === "trigger" || !type)
     return "/keep.png";
   return `/icons/${normalizeStepType(type)}-icon.png`;
-}
-
-function getYamlFromStep(step: V2Step | V2StepTrigger) {
-  try {
-    if (step.componentType === "task" && step.type.startsWith("step-")) {
-      return getYamlStepFromStep(step as V2StepStep);
-    }
-    if (step.componentType === "task" && step.type.startsWith("action-")) {
-      return getYamlActionFromAction(step as V2ActionStep);
-    }
-    if (step.componentType === "trigger") {
-      return {
-        type: step.type,
-        ...step.properties,
-      };
-    }
-    // TODO: add other types
-    return null;
-  } catch (error) {
-    console.error(error);
-    return null;
-  }
 }
 
 export const StepPreview = ({
