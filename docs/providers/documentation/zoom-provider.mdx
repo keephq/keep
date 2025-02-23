@@ -1,0 +1,113 @@
+---
+title: "Zoom"
+sidebarTitle: "Zoom Provider"
+description: "Zoom provider allows you to create meetings with Zoom."
+---
+
+<Tip>
+For this integration, you'll need to create a Zoom Application - for more details read https://developers.zoom.us/docs/internal-apps
+</Tip>
+
+<Tip>
+The `record_meeting` parameter won't work with Zoom's basic plan. With basic plan, you'll be able to connect to the meeting and enable the "recording" manually.
+</Tip>
+
+## Inputs
+
+- `topic`: str: The title or subject of the Zoom meeting.
+- `start_time`(Optional): datetime : When the meeting should start. If None, creates an instant meeting.
+- `duration`(Optional): int = 60: Length of the meeting in minutes.
+- `timezone`(Optional): str = "UTC": The timezone for the meeting time (e.g., "America/New_York", "UTC").
+- `record_meeting(Optional)`: bool = False: Whether to automatically record the meeting when it starts.
+- `host_email`(Optional): str = None: Email address of the meeting host. If None, uses the authenticated user.
+
+## Authentication Parameters
+
+- `account_id`: str: The Zoom Account ID from your Server-to-Server OAuth app. Required for authentication.
+- `client_id`: str: The OAuth Client ID from your Server-to-Server OAuth app. Required for obtaining access tokens.
+- `client_secret`: str: The OAuth Client Secret from your Server-to-Server OAuth app. Required for obtaining access tokens.
+
+
+## Connecting with the Provider
+
+### Create an Application
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/zoom1.png" />
+</Frame>
+
+
+Keep the credentials:
+
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/zoom2.png" />
+</Frame>
+
+### Grant Scopes
+
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/zoom3.png" />
+</Frame>
+
+### Activate the app
+
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/zoom4.png" />
+</Frame>
+
+### (Optional) Make sure cloud recording is set on your account
+
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/zoom5.png" />
+</Frame>
+
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/zoom6.png" />
+</Frame>
+
+
+## Workflow Example - sending zoom meeting in a slack message
+
+```bash
+
+workflow:
+  id: zoom-example
+  description: zoom-example
+  triggers:
+    - type: manual
+  actions:
+    - name: create-zoom-meeting
+      provider:
+        type: zoom
+        config: "{{ providers.zoom }}"
+        with:
+          topic: "War room - {{ alert.name }}"
+          record_meeting: true
+    - name: send-slack-alert
+      provider:
+        config: "{{ providers.slack }}"
+        type: slack
+        with:
+          blocks:
+            - text:
+                emoji: true
+                text: "{{alert.name}}"
+                type: plain_text
+              type: header
+            - elements:
+                - action_id: actionId-0
+                  text:
+                    emoji: true
+                    text: "Join Warroom [Zoom]"
+                    type: plain_text
+                  type: button
+                  url: "{{ steps.create-zoom-meeting.results.join_url }}"
+              type: actions
+          message: ""
+
+```
