@@ -6,6 +6,7 @@ import { useReactToPrint } from "react-to-print";
 import { useReportData } from "./use-report-data";
 import { IncidentData } from "./models";
 import { IncidentsReport } from "./incidents-report";
+import { PrinterIcon } from "@heroicons/react/24/outline";
 
 interface GenerateReportModalProps {
   incidentIds: string[];
@@ -50,6 +51,7 @@ export const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
                 color="orange"
                 variant="primary"
                 size="md"
+                icon={PrinterIcon}
                 onClick={handlePrint}
               >
                 Print
