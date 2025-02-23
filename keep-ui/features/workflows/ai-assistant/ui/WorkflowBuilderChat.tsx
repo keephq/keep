@@ -792,16 +792,31 @@ Example: 'node_123__empty_true'`,
       throw new Error("Condition type is invalid");
     }
 
-    const condition: V2StepCondition = {
-      ...template,
-      id: args.conditionId,
-      name: args.conditionName,
-      properties: {
-        ...template.properties,
-        value: args.conditionValue,
-        compare_to: args.compareToValue,
-      },
-    };
+    let condition: V2StepCondition | null = null;
+
+    if (template.type === "condition-assert") {
+      condition = {
+        ...template,
+        id: args.conditionId,
+        name: args.conditionName,
+        properties: {
+          ...template.properties,
+          assert: `${args.conditionValue} == ${args.compareToValue}`,
+        },
+      };
+    } else if (template.type === "condition-threshold") {
+      condition = {
+        ...template,
+        id: args.conditionId,
+        name: args.conditionName,
+        properties: {
+          ...template.properties,
+          value: args.conditionValue,
+          compare_to: args.compareToValue,
+        },
+      };
+    }
+
     return V2StepConditionSchema.parse(condition);
   }
 

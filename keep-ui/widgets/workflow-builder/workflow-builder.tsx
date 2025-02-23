@@ -8,7 +8,6 @@ import ReactFlowBuilder from "@/features/workflows/builder/ui/ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useWorkflowStore } from "@/entities/workflows";
 import { showErrorToast, KeepLoader } from "@/shared/ui";
-import { YAMLException } from "js-yaml";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import Skeleton from "react-loading-skeleton";
