@@ -148,7 +148,7 @@ export const AddStepUI = ({
 
   if (status === "complete") {
     return (
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 my-2">
         {WF_DEBUG_INFO && (
           <DebugArgs args={{ isStart, addAfterNodeIdOrName }} nodes={nodes} />
         )}
@@ -180,7 +180,9 @@ export const AddStepUI = ({
             />
           )}
         </div>
-        <StepPreview step={step} />
+        <div className="my-2">
+          <StepPreview step={step} />
+        </div>
       </div>
       <div className="flex gap-2">
         <Button

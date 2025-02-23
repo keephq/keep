@@ -355,7 +355,11 @@ export const useWorkflowStore = create<FlowState>()(
     },
     updateV2Properties: (properties) => {
       const updatedProperties = { ...get().v2Properties, ...properties };
-      set({ v2Properties: updatedProperties, changes: get().changes + 1 });
+      set({
+        v2Properties: updatedProperties,
+        changes: get().changes + 1,
+        lastChangedAt: Date.now(),
+      });
       get().updateDefinition();
     },
     setSelectedNode: (id) => {

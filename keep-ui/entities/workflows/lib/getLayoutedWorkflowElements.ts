@@ -37,10 +37,6 @@ export const getLayoutedWorkflowElements = (
     let width = 280;
     let height = 80;
 
-    if (triggerTypes.includes(type)) {
-      width = 200;
-    }
-
     // We want to remove start, but for now just hide it
     if (node.id === "start") {
       width = 0;

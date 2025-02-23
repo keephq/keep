@@ -59,8 +59,6 @@ export const AddTriggerUI = ({
   const { nodes, addNodeBetween, getNextEdge } = useWorkflowStore();
   const { triggerType, triggerProperties } = args;
 
-  console.log("AddTriggerUI", { status, args, respond, result });
-
   const triggerDefinition = useMemo(() => {
     if (!triggerType || !triggerProperties) {
       throw new Error("Trigger type or properties not provided");
@@ -87,7 +85,6 @@ export const AddTriggerUI = ({
       return;
     }
     if (isAddingTrigger) {
-      console.log("isAddingTrigger", isAddingTrigger);
       return;
     }
     setIsAddingTrigger(true);
@@ -158,7 +155,7 @@ export const AddTriggerUI = ({
   }
   if (status === "complete") {
     return (
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 my-2">
         {WF_DEBUG_INFO && (
           <DebugArgs args={{ args, result, status }} nodes={nodes} />
         )}
@@ -179,7 +176,7 @@ export const AddTriggerUI = ({
         <DebugJSON name="triggerDefinition" json={triggerDefinition} />
       )}
       <p>Do you want to add this trigger to the workflow?</p>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 my-2">
         <StepPreview step={triggerDefinition} />
         <div className="flex gap-2">
           <Button
