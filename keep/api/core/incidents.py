@@ -98,7 +98,7 @@ static_facets = [
     FacetDto(
         id="5e247d67-ad9a-4f32-b8d1-8bdf4191d93f",
         property_path="hasPastIncident",
-        name="Incident in the past",
+        name="Has past incident",
         is_static=True,
         type=FacetType.str,
     ),

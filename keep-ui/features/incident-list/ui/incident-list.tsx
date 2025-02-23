@@ -190,7 +190,7 @@ export function IncidentList({
           />
         ),
       },
-      ["Incident in the past"]: {
+      ["Has past incident"]: {
         sortCallback: (facetOption) =>
           facetOption.display_name == "1" ||
           facetOption.display_name.toLocaleLowerCase() == "true"
@@ -199,8 +199,8 @@ export function IncidentList({
         renderOptionLabel: (facetOption) =>
           facetOption.display_name == "1" ||
           facetOption.display_name.toLocaleLowerCase() == "true"
-            ? "Exists"
-            : "Doesn't exist",
+            ? "Yes"
+            : "No",
       },
     };
   }, []);
