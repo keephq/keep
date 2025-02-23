@@ -26,23 +26,33 @@ export const useAvailableAlertFields = ({
     timeframe,
   });
 
-  const fields = useMemo(() => {
-    const getNestedKeys = (obj: any, prefix = ""): string[] => {
-      return Object.entries(obj).reduce<string[]>((acc, [key, value]) => {
-        const newKey = prefix ? `${prefix}.${key}` : key;
-        if (value && typeof value === "object" && !Array.isArray(value)) {
-          return [...acc, ...getNestedKeys(value, newKey)];
-        }
-        return [...acc, newKey];
-      }, []);
-    };
-    return [
-      ...alertsFound.reduce<Set<string>>((acc, alert) => {
-        const alertKeys = getNestedKeys(alert);
-        return new Set([...acc, ...alertKeys]);
-      }, new Set<string>()),
-    ];
-  }, [alertsFound]);
+interface AlertType {
+  [key: string]: unknown;
+}
+
+const MAX_DEPTH = 10;
+
+const fields = useMemo(() => {
+  const getNestedKeys = (obj: AlertType, prefix = "", depth = 0): string[] => {
+    if (depth > MAX_DEPTH) return [];
+    return Object.entries(obj).reduce<string[]>((acc, [key, value]) => {
+      const newKey = prefix ? `${prefix}.${key}` : key;
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        const nestedKeys = getNestedKeys(value as AlertType, newKey, depth + 1);
+        acc.push(...nestedKeys);
+        return acc;
+      }
+      acc.push(newKey);
+      return acc;
+    }, []);
+  };
+  const uniqueFields = new Set<string>();
+  alertsFound.forEach((alert: AlertType) => {
+    const alertKeys = getNestedKeys(alert);
+    alertKeys.forEach(key => uniqueFields.add(key));
+  });
+  return Array.from(uniqueFields);
+}, [alertsFound]);
 
   return { fields, isLoading };
 };
