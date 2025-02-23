@@ -51,6 +51,7 @@ export const V2StepAlertTriggerSchema = z.object({
 });
 
 export const IncidentEventEnum = z.enum(["created", "updated", "deleted"]);
+export type IncidentEvent = z.infer<typeof IncidentEventEnum>;
 
 export const V2StepIncidentTriggerSchema = z.object({
   id: z.string(),

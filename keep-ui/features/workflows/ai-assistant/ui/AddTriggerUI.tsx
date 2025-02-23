@@ -1,57 +1,34 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
-import { useWorkflowStore, V2StepTriggerSchema } from "@/entities/workflows";
+import { useState, useCallback, useEffect } from "react";
+import { useWorkflowStore } from "@/entities/workflows";
 import { WF_DEBUG_INFO } from "../../builder/ui/debug-settings";
 import { Button } from "@/components/ui";
-import { getTriggerTemplate } from "@/features/workflows/builder/lib/utils";
-import { DebugArgs } from "./debug-args";
-import { DebugJSON } from "@/shared/ui";
+import { JsonCard } from "@/shared/ui";
 import { StepPreview } from "./StepPreview";
 import { SuggestionResult, SuggestionStatus } from "./SuggestionStatus";
 import { getErrorMessage } from "../lib/utils";
-/**
- * Get the definition of a trigger
- * @param triggerType - The type of trigger
- * @param triggerProperties - The properties of the trigger
- * @returns The definition of the trigger
- * @throws ZodError if the trigger type is not supported or triggerProperties are invalid
- */
-function getTriggerDefinition(triggerType: string, triggerProperties: string) {
-  const triggerTemplate = getTriggerTemplate(triggerType);
+import { V2StepTrigger } from "@/entities/workflows/model/types";
 
-  // TODO: validate triggerProperties here or in addNodeBetween??
-  const triggerDefinition = {
-    ...triggerTemplate,
-    properties: {
-      ...triggerTemplate.properties,
-      ...JSON.parse(triggerProperties),
-    },
-  };
-  return V2StepTriggerSchema.parse(triggerDefinition);
-}
+type AddTriggerUIPropsCommon = {
+  trigger: V2StepTrigger;
+};
 
-type AddTriggerUIProps =
-  | {
-      status: "complete";
-      args: {
-        triggerType?: string;
-        triggerProperties?: string;
-      };
-      respond: undefined;
-      result: SuggestionResult;
-    }
-  | {
-      status: "executing";
-      args: {
-        triggerType?: string;
-        triggerProperties?: string;
-      };
-      respond: ((response: SuggestionResult) => void) | undefined;
-      result: undefined;
-    };
+type AddTriggerUIPropsComplete = AddTriggerUIPropsCommon & {
+  status: "complete";
+  result: SuggestionResult;
+  respond: undefined;
+};
+
+type AddTriggerUIPropsExecuting = AddTriggerUIPropsCommon & {
+  status: "executing";
+  result: undefined;
+  respond: ((response: SuggestionResult) => void) | undefined;
+};
+
+type AddTriggerUIProps = AddTriggerUIPropsComplete | AddTriggerUIPropsExecuting;
 
 export const AddTriggerUI = ({
   status,
-  args,
+  trigger,
   respond,
   result,
 }: AddTriggerUIProps) => {
@@ -61,31 +38,8 @@ export const AddTriggerUI = ({
     addNodeBetweenSafe: addNodeBetween,
     getNextEdge,
   } = useWorkflowStore();
-  const { triggerType, triggerProperties } = args;
-
-  const triggerDefinition = useMemo(() => {
-    if (!triggerType || !triggerProperties) {
-      throw new Error("Trigger type or properties not provided");
-    }
-    try {
-      return getTriggerDefinition(triggerType, triggerProperties);
-    } catch (e) {
-      respond?.({
-        status: "error",
-        message: getErrorMessage(e, "Failed to get trigger definition"),
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [triggerType, triggerProperties]);
 
   const handleAddTrigger = useCallback(() => {
-    if (!triggerDefinition) {
-      respond?.({
-        status: "error",
-        message: "Trigger definition not found",
-      });
-      return;
-    }
     if (isAddingTrigger) {
       return;
     }
@@ -100,7 +54,7 @@ export const AddTriggerUI = ({
         return;
       }
       try {
-        addNodeBetween(nextEdge.id, triggerDefinition, "edge");
+        addNodeBetween(nextEdge.id, trigger, "edge");
         respond?.({
           status: "complete",
           message: "Trigger added",
@@ -118,14 +72,11 @@ export const AddTriggerUI = ({
       });
     }
     setIsAddingTrigger(false);
-  }, [triggerDefinition, respond]);
+  }, [trigger, respond]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-        if (!triggerDefinition) {
-          return;
-        }
         handleAddTrigger();
       }
     };
@@ -133,47 +84,24 @@ export const AddTriggerUI = ({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [args, respond]);
+  }, [respond]);
 
-  if (!triggerType || !triggerProperties) {
-    respond?.({
-      status: "error",
-      message: "Trigger type or properties not provided",
-    });
-    return <>Trigger type or properties not provided</>;
-  }
-  if (!triggerDefinition) {
-    respond?.({
-      status: "error",
-      message: "Trigger definition not found",
-    });
-    return <>Trigger definition not found</>;
-  }
   if (status === "complete") {
     return (
       <div className="flex flex-col gap-1 my-2">
-        {WF_DEBUG_INFO && (
-          <DebugArgs args={{ args, result, status }} nodes={nodes} />
-        )}
-        {WF_DEBUG_INFO && (
-          <DebugJSON name="triggerDefinition" json={triggerDefinition} />
-        )}
-        <StepPreview step={triggerDefinition} />
+        {WF_DEBUG_INFO && <JsonCard title="trigger" json={trigger} />}
+        <p>Do you want to add this trigger to the workflow?</p>
+        <StepPreview step={trigger} />
         <SuggestionStatus status={result?.status} message={result?.message} />
       </div>
     );
   }
   return (
     <div>
-      {WF_DEBUG_INFO && (
-        <DebugArgs args={{ args, result, status }} nodes={nodes} />
-      )}
-      {WF_DEBUG_INFO && (
-        <DebugJSON name="triggerDefinition" json={triggerDefinition} />
-      )}
+      {WF_DEBUG_INFO && <JsonCard title="trigger" json={trigger} />}
       <p>Do you want to add this trigger to the workflow?</p>
       <div className="flex flex-col gap-2 my-2">
-        <StepPreview step={triggerDefinition} />
+        <StepPreview step={trigger} />
         <div className="flex gap-2">
           <Button
             variant="primary"

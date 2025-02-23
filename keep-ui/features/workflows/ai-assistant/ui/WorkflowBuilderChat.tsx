@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Provider } from "@/app/(keep)/providers/providers";
 import {
   DefinitionV2,
+  IncidentEvent,
   IncidentEventEnum,
   ToolboxConfiguration,
   V2ActionSchema,
@@ -11,6 +12,8 @@ import {
   V2StepConditionSchema,
   V2StepStep,
   V2StepStepSchema,
+  V2StepTrigger,
+  V2StepTriggerSchema,
 } from "@/entities/workflows/model/types";
 import {
   CopilotChat,
@@ -36,7 +39,7 @@ import {
   getWorkflowSummaryForCopilot,
 } from "@/features/workflows/ai-assistant/lib/utils";
 import { AddTriggerOrStepSkeleton } from "@/features/workflows/ai-assistant/ui/AddTriggerOrStepSkeleton";
-import { foreachTemplate } from "../../builder/lib/utils";
+import { foreachTemplate, getTriggerTemplate } from "../../builder/lib/utils";
 import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
 export interface WorkflowBuilderChatProps {
@@ -279,6 +282,29 @@ export function WorkflowBuilderChat({
     },
   });
 
+  /**
+   * Get the definition of a trigger
+   * @param triggerType - The type of trigger
+   * @param triggerProperties - The properties of the trigger
+   * @returns The definition of the trigger
+   * @throws ZodError if the trigger type is not supported or triggerProperties are invalid
+   */
+  function getTriggerDefinitionFromCopilotAction(
+    triggerType: string,
+    triggerProperties: V2StepTrigger["properties"]
+  ) {
+    const triggerTemplate = getTriggerTemplate(triggerType);
+
+    const triggerDefinition = {
+      ...triggerTemplate,
+      properties: {
+        ...triggerTemplate.properties,
+        ...triggerProperties,
+      },
+    };
+    return V2StepTriggerSchema.parse(triggerDefinition);
+  }
+
   useCopilotAction({
     name: "addManualTrigger",
     description:
@@ -289,16 +315,15 @@ export function WorkflowBuilderChat({
         return <AddTriggerOrStepSkeleton />;
       }
 
+      const trigger = getTriggerDefinitionFromCopilotAction("manual", {
+        manual: "true",
+      });
+
       if (args.status === "complete" && "result" in args) {
         return (
           <AddTriggerUI
             status="complete"
-            args={{
-              triggerType: "manual",
-              triggerProperties: JSON.stringify({
-                manual: "true",
-              }),
-            }}
+            trigger={trigger}
             respond={undefined}
             result={args.result as SuggestionResult}
           />
@@ -308,12 +333,7 @@ export function WorkflowBuilderChat({
       return (
         <AddTriggerUI
           status="executing"
-          args={{
-            triggerType: "manual",
-            triggerProperties: JSON.stringify({
-              manual: "true",
-            }),
-          }}
+          trigger={trigger}
           respond={args.respond}
           result={undefined}
         />
@@ -365,35 +385,40 @@ export function WorkflowBuilderChat({
         return <AddTriggerOrStepSkeleton />;
       }
 
-      const argsToPass = {
-        triggerType: "alert",
-        triggerProperties: JSON.stringify({
-          alert: args.args.alertFilters.reduce(
-            (acc, filter) => {
-              acc[filter.attribute] = filter.value;
-              return acc;
-            },
-            {} as Record<string, string>
-          ),
-        }),
+      const properties = {
+        alert: args.args.alertFilters.reduce(
+          (acc, filter) => {
+            acc[filter.attribute] = filter.value;
+            return acc;
+          },
+          {} as Record<string, string>
+        ),
       };
 
+      const trigger = getTriggerDefinitionFromCopilotAction(
+        "alert",
+        properties
+      );
+
       if (args.status === "complete" && "result" in args) {
-        return AddTriggerUI({
-          status: "complete",
-          args: argsToPass,
-          respond: undefined,
-          result: args.result as SuggestionResult,
-        });
+        return (
+          <AddTriggerUI
+            status="complete"
+            trigger={trigger}
+            respond={undefined}
+            result={args.result as SuggestionResult}
+          />
+        );
       }
 
-      // TODO: if the trigger is already in the workflow, ask to replace it
-      return AddTriggerUI({
-        status: "executing",
-        args: argsToPass,
-        respond: args.respond,
-        result: undefined,
-      });
+      return (
+        <AddTriggerUI
+          status="executing"
+          trigger={trigger}
+          respond={args.respond}
+          result={undefined}
+        />
+      );
     },
   });
 
@@ -414,16 +439,20 @@ export function WorkflowBuilderChat({
         return <AddTriggerOrStepSkeleton />;
       }
 
-      const argsToPass = {
-        triggerType: "interval",
-        triggerProperties: JSON.stringify({ interval: args.args.interval }),
+      const properties = {
+        interval: args.args.interval,
       };
+
+      const trigger = getTriggerDefinitionFromCopilotAction(
+        "interval",
+        properties
+      );
 
       if (args.status === "complete" && "result" in args) {
         return (
           <AddTriggerUI
             status="complete"
-            args={argsToPass}
+            trigger={trigger}
             respond={undefined}
             result={args.result as SuggestionResult}
           />
@@ -433,7 +462,7 @@ export function WorkflowBuilderChat({
       return (
         <AddTriggerUI
           status="executing"
-          args={argsToPass}
+          trigger={trigger}
           respond={args.respond}
           result={undefined}
         />
@@ -458,18 +487,22 @@ export function WorkflowBuilderChat({
         return <AddTriggerOrStepSkeleton />;
       }
 
-      const argsToPass = {
-        triggerType: "incident",
-        triggerProperties: JSON.stringify({
-          incident: { events: args.args.incidentEvents },
-        }),
+      const properties = {
+        incident: {
+          events: args.args.incidentEvents as IncidentEvent[],
+        },
       };
+
+      const trigger = getTriggerDefinitionFromCopilotAction(
+        "incident",
+        properties
+      );
 
       if (args.status === "complete" && "result" in args) {
         return (
           <AddTriggerUI
             status="complete"
-            args={argsToPass}
+            trigger={trigger}
             respond={undefined}
             result={args.result as SuggestionResult}
           />
@@ -479,7 +512,7 @@ export function WorkflowBuilderChat({
       return (
         <AddTriggerUI
           status="executing"
-          args={argsToPass}
+          trigger={trigger}
           respond={args.respond}
           result={undefined}
         />
