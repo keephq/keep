@@ -242,7 +242,8 @@
             "providers/documentation/webhook-provider",
             "providers/documentation/websocket-provider",
             "providers/documentation/zabbix-provider",
-            "providers/documentation/zenduty-provider"
+            "providers/documentation/zenduty-provider",
+            "providers/documentation/zoom-provider"
           ]
         }
       ]
