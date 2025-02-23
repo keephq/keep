@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@tremor/react";
 import { Provider } from "@/app/(keep)/providers/providers";
-import { getToolboxConfiguration } from "@/features/workflows/builder/lib/utils";
 import { stringify } from "yaml";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
@@ -56,6 +55,8 @@ function Builder({
     reset,
     canDeploy,
     initializeWorkflow,
+    setProviders,
+    setInstalledProviders,
   } = useWorkflowStore();
   const router = useRouter();
 
@@ -68,9 +69,14 @@ function Builder({
 
   const searchParams = useSearchParams();
 
-  const toolboxConfiguration = useMemo(
-    () => getToolboxConfiguration(providers ?? []),
-    [providers]
+  useEffect(
+    function syncProviders() {
+      setProviders(providers);
+      setInstalledProviders(installedProviders ?? []);
+    },
+    // setProviders and setInstalledProviders shouldn't change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [providers, installedProviders]
   );
 
   // TODO: move to workflow initialization
@@ -85,7 +91,10 @@ function Builder({
               isValid: true,
             })
           );
-          initializeWorkflow(workflowId ?? null, toolboxConfiguration);
+          initializeWorkflow(workflowId ?? null, {
+            providers,
+            installedProviders: installedProviders ?? [],
+          });
         } else if (loadedAlertFile == null) {
           const alertUuid = uuidv4();
           const alertName = searchParams?.get("alertName");
@@ -110,7 +119,10 @@ function Builder({
               isValid: true,
             })
           );
-          initializeWorkflow(workflowId ?? null, toolboxConfiguration);
+          initializeWorkflow(workflowId ?? null, {
+            providers,
+            installedProviders: installedProviders ?? [],
+          });
         } else {
           const parsedDefinition = parseWorkflow(loadedAlertFile!, providers);
           setDefinition(
@@ -119,7 +131,10 @@ function Builder({
               isValid: true,
             })
           );
-          initializeWorkflow(workflowId ?? null, toolboxConfiguration);
+          initializeWorkflow(workflowId ?? null, {
+            providers,
+            installedProviders: installedProviders ?? [],
+          });
         }
       } catch (error) {
         if (error instanceof YAMLException) {

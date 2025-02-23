@@ -178,7 +178,10 @@ export function TestRunStepForm({
     handleTestStep();
   }
 
-  const isDisabled = Object.values(methodParams).every((value) => !value);
+  const isDisabled =
+    !providerInfo.provider_id ||
+    !providerInfo.provider_type ||
+    Object.values(methodParams).every((value) => !value);
 
   return (
     <form className="h-full flex flex-col" onSubmit={handleRun}>

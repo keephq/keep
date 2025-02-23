@@ -29,7 +29,7 @@ import { V2Properties } from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
 import debounce from "lodash.debounce";
 import { TestRunStepForm } from "./StepTest";
-import { PROVIDERS_WITH_NO_CONFIG } from "@/entities/workflows/model/validation";
+import { checkProviderNeedsInstallation } from "@/entities/workflows/model/validation";
 import { EditorField } from "@/features/workflows/builder/ui/Editor/EditorField";
 import { useProviders } from "@/utils/hooks/useProviders";
 import ProviderForm from "@/app/(keep)/providers/provider-form";
@@ -56,47 +56,6 @@ export interface KeepEditorProps {
   providerType?: string;
   type?: string;
   isV2?: boolean;
-}
-
-function getProviderConfig(
-  providerType: string | undefined,
-  properties: V2Properties
-) {
-  const providerConfig = (properties.config as string)?.trim();
-  if (PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")) {
-    return "default-" + providerType;
-  }
-  if (!providerConfig) {
-    return null;
-  }
-  return providerConfig;
-}
-
-function validateProviderConfig(
-  providerType: string | undefined,
-  providerConfig: string,
-  providers: Provider[] | null | undefined,
-  installedProviders: Provider[] | null | undefined
-) {
-  if (PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")) {
-    return "";
-  }
-  const isThisProviderNeedsInstallation =
-    providers?.some(
-      (p) =>
-        p.type === providerType && p.config && Object.keys(p.config).length > 0
-    ) ?? false;
-
-  if (
-    providerConfig &&
-    isThisProviderNeedsInstallation &&
-    installedProviders?.find(
-      (p) => (p.type === providerType && p.details?.name) === providerConfig
-    ) === undefined
-  ) {
-    return "This provider is not installed and you'll need to install it before executing this workflow.";
-  }
-  return "";
 }
 
 function InstallProviderButton({ providerType }: { providerType: string }) {
@@ -163,21 +122,24 @@ function KeepSetupProviderEditor({
   updateProperty,
   providerType,
   providerError,
-  providerNameError,
 }: KeepEditorProps & {
   providerError?: string | null;
   providerNameError?: string | null;
 }) {
   const { data: { providers, installed_providers: installedProviders } = {} } =
     useProviders();
+  const providerObject =
+    providers?.find((p) => p.type === providerType) ?? null;
 
   const installedProviderByType = installedProviders?.filter(
     (p) => p.type === providerType
   );
-  const providerConfig = getProviderConfig(providerType, properties);
-
-  const providerObject =
-    providers?.find((p) => p.type === providerType) ?? null;
+  const doesProviderNeedInstallation = providerObject
+    ? checkProviderNeedsInstallation(providerObject)
+    : false;
+  const providerConfig = !doesProviderNeedInstallation
+    ? "default-" + providerType
+    : (properties.config ?? "")?.trim();
 
   const isCustomConfig =
     installedProviderByType?.find((p) => p.details?.name === providerConfig) ===
@@ -186,6 +148,10 @@ function KeepSetupProviderEditor({
   const [selectValue, setSelectValue] = useState(
     isCustomConfig ? "enter-manually" : (providerConfig ?? "")
   );
+
+  const isGeneralError = providerError?.includes("No provider selected");
+  const inputError =
+    providerError && !isGeneralError ? providerError : undefined;
 
   const handleSelectChange = (value: string) => {
     setSelectValue(value);
@@ -215,12 +181,12 @@ function KeepSetupProviderEditor({
     );
   };
 
-  if (PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")) {
+  if (!doesProviderNeedInstallation) {
     return (
       <section>
         <Callout color="teal" title="You're all set">
           <span className="capitalize">{providerType}</span> provider does not
-          require configuration
+          require installation
         </Callout>
       </section>
     );
@@ -230,7 +196,9 @@ function KeepSetupProviderEditor({
     <section>
       <div className="mb-2">
         <Text className="font-bold">Select provider</Text>
-        {providerError && <Text className="text-red-500">{providerError}</Text>}
+        {isGeneralError && (
+          <Text className="text-red-500">{providerError}</Text>
+        )}
       </div>
       <Select
         className="mb-1.5"
@@ -238,6 +206,8 @@ function KeepSetupProviderEditor({
         value={selectValue}
         icon={getSelectIcon}
         onValueChange={handleSelectChange}
+        error={!!inputError}
+        errorMessage={inputError}
       >
         {installedProviderByType?.map((provider) => {
           const providerName = provider.details?.name ?? provider.id;
@@ -283,9 +253,9 @@ function KeepSetupProviderEditor({
             onChange={(e: any) => updateProperty("config", e.target.value)}
             className="mb-2.5"
             value={providerConfig || ""}
-            error={!!providerNameError}
-            errorMessage={providerNameError ?? undefined}
-            disabled={PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")}
+            error={!!inputError}
+            errorMessage={inputError}
+            disabled={!doesProviderNeedInstallation}
           />
         </>
       )}
@@ -550,30 +520,26 @@ export function StepEditorV2({
     providerError = error;
   }
 
-  const method = formData.type?.includes("step-") ? "_query" : "_notify";
-  const methodParams = formData.properties?.with ?? {};
-  const providerConfig = getProviderConfig(
-    providerType,
-    formData.properties ?? {}
+  const { data: { installed_providers: installedProviders } = {} } =
+    useProviders();
+
+  const providerObject = installedProviders?.find(
+    (p) => p.type === providerType
   );
 
-  const { data: { providers, installed_providers: installedProviders } = {} } =
-    useProviders();
+  const method = formData.type?.includes("step-") ? "_query" : "_notify";
+  const methodParams = formData.properties?.with ?? {};
+  const providerConfig =
+    providerObject && !checkProviderNeedsInstallation(providerObject)
+      ? "default-" + providerType
+      : (formData.properties?.config ?? "")?.trim();
 
   const installedProvider = installedProviders?.find(
     (p) => p.type === providerType && p.details?.name === providerConfig
   );
   const providerId = installedProvider?.id;
 
-  const providerNameError = validateProviderConfig(
-    providerType,
-    providerConfig ?? "",
-    providers,
-    installedProviders
-  );
-
-  const defaultTabIndex =
-    providerError || providerNameError ? 0 : parametersError ? 1 : 1;
+  const defaultTabIndex = providerError ? 0 : parametersError ? 1 : 1;
 
   const [tabIndex, setTabIndex] = useState(defaultTabIndex);
 
@@ -585,7 +551,7 @@ export function StepEditorV2({
   const saveButtonText = isSaving ? "Saving..." : "Save & Continue";
 
   const setupStatus = () => {
-    if (providerError || providerNameError) {
+    if (providerError) {
       return "error";
     }
     return "ok";
@@ -654,7 +620,6 @@ export function StepEditorV2({
                 <KeepSetupProviderEditor
                   providerType={providerType}
                   providerError={providerError}
-                  providerNameError={providerNameError}
                   properties={formData.properties}
                   updateProperty={handlePropertyChange}
                 />

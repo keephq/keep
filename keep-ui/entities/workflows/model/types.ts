@@ -1,7 +1,7 @@
 import { Edge, Node } from "@xyflow/react";
 import { Workflow } from "@/shared/api/workflows";
 import { z } from "zod";
-
+import { Provider } from "@/app/(keep)/providers/providers";
 export type WorkflowMetadata = Pick<Workflow, "name" | "description">;
 
 export type V2Properties = Record<string, any>;
@@ -90,13 +90,11 @@ export const V2ActionSchema = z.object({
         z.union([z.string(), z.number(), z.boolean(), z.object({})])
       )
       .superRefine((withObj, ctx) => {
-        console.log(withObj, ctx);
+        // console.log(withObj, { "ctx.path": ctx.path });
         // const actionParams = ctx.path[0].properties.actionParams;
         // const withKeys = Object.keys(withObj);
-
         // // Check if all keys in 'with' are present in actionParams
         // const validKeys = withKeys.every((key) => actionParams.includes(key));
-
         // if (!validKeys) {
         //   ctx.addIssue({
         //     code: z.ZodIssueCode.custom,
@@ -311,6 +309,24 @@ export type StoreSet = (
     | ((state: FlowState) => FlowState | Partial<FlowState>)
 ) => void;
 
+export type ToolboxConfiguration = {
+  groups: (
+    | {
+        name: "Triggers";
+        steps: V2StepTrigger[];
+      }
+    | {
+        name: string;
+        steps: Omit<V2Step, "id">[];
+      }
+  )[];
+};
+
+export type ProvidersConfiguration = {
+  providers: Provider[];
+  installedProviders: Provider[];
+};
+
 export interface FlowStateValues {
   workflowId: string | null;
   definition: DefinitionV2 | null;
@@ -320,6 +336,8 @@ export interface FlowStateValues {
   selectedEdge: string | null;
   v2Properties: Record<string, any>;
   toolboxConfiguration: ToolboxConfiguration | null;
+  providers: Provider[] | null;
+  installedProviders: Provider[] | null;
   isLayouted: boolean;
   isInitialized: boolean;
 
@@ -359,16 +377,14 @@ export interface FlowState extends FlowStateValues {
     step: V2StepTemplate | V2StepTrigger,
     type: "node" | "edge"
   ) => string | null;
-  setToolBoxConfig: (config: ToolboxConfiguration) => void;
+  setProviders: (providers: Provider[]) => void;
+  setInstalledProviders: (providers: Provider[]) => void;
   setEditorOpen: (open: boolean) => void;
   updateSelectedNodeData: (key: string, value: any) => void;
   updateV2Properties: (properties: Record<string, any>) => void;
   setSelectedNode: (id: string | null) => void;
   onNodesChange: (changes: any) => void;
   onEdgesChange: (changes: any) => void;
-  onConnect: (connection: any) => void;
-  onDragOver: (event: React.DragEvent) => void;
-  onDrop: (event: DragEvent, screenToFlowPosition: any) => void;
   setNodes: (nodes: FlowNode[]) => void;
   setEdges: (edges: Edge[]) => void;
   getNodeById: (id: string) => FlowNode | undefined;
@@ -386,19 +402,11 @@ export interface FlowState extends FlowStateValues {
   }) => void;
   initializeWorkflow: (
     workflowId: string | null,
-    toolboxConfiguration: ToolboxConfiguration
+    { providers, installedProviders }: ProvidersConfiguration
   ) => void;
   updateDefinition: () => void;
+  // Deprecated
+  onConnect: (connection: any) => void;
+  onDragOver: (event: React.DragEvent) => void;
+  onDrop: (event: DragEvent, screenToFlowPosition: any) => void;
 }
-export type ToolboxConfiguration = {
-  groups: (
-    | {
-        name: "Triggers";
-        steps: V2StepTrigger[];
-      }
-    | {
-        name: string;
-        steps: Omit<V2Step, "id">[];
-      }
-  )[];
-};

@@ -31,27 +31,24 @@ export const AddStepUI = ({
   result,
   respond,
 }: AddStepUIProps) => {
-  const { addNodeBetween, setSelectedNode } = useWorkflowStore();
+  const { addNodeBetween, setSelectedNode, getNodeById } = useWorkflowStore();
+
+  const selectNode = () => {
+    const node = getNodeById(addBeforeNodeId);
+    if (node) {
+      setSelectedNode(node.id);
+    }
+  };
 
   const onAdd = () => {
     try {
-      // Hack to get the conditions to work. TODO: make it more straightforward
-      // FIX: it fails for ordinary steps
-      // if (addAfterEdgeId.includes("condition")) {
-      //   const edge = getEdgeById(addAfterEdgeId);
-      //   if (!edge) {
-      //     throw new Error("Edge not found");
-      //   }
-      //   const nodeId = edge!.source;
-      //   addNodeBetween(nodeId, step, "node");
-      // } else {
       addNodeBetween(addBeforeNodeId, step, "node");
-      // }
       respond?.({
         status: "complete",
         message: "Step added",
       });
     } catch (e) {
+      console.error("Step not added", e);
       respond?.({
         status: "error",
         error: e,
@@ -70,6 +67,13 @@ export const AddStepUI = ({
   if (status === "complete") {
     return (
       <div className="flex flex-col gap-1 my-2">
+        <div>
+          Do you want to add this action before node {addBeforeNodeId} (
+          <button className="text-blue-500" onClick={selectNode}>
+            Select node
+          </button>
+          )?
+        </div>
         <StepPreview
           step={step}
           className={clsx(
@@ -88,12 +92,7 @@ export const AddStepUI = ({
         {/* TODO: add the place where the action will be added in text */}
         <div>
           Do you want to add this action before node {addBeforeNodeId} (
-          <button
-            className="text-blue-500"
-            onClick={() => {
-              setSelectedNode(addBeforeNodeId);
-            }}
-          >
+          <button className="text-blue-500" onClick={selectNode}>
             Select node
           </button>
           )?

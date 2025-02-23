@@ -25,7 +25,6 @@ import {
   useCopilotReadable,
 } from "@copilotkit/react-core";
 import { Button, Link } from "@/components/ui";
-import { generateStepDefinition } from "@/app/(keep)/workflows/builder/_actions/getStepJson";
 import { GENERAL_INSTRUCTIONS } from "@/app/(keep)/workflows/builder/_constants";
 import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
 import { WF_DEBUG_INFO } from "../debug-settings";
@@ -38,56 +37,11 @@ import BuilderChatPlaceholder from "./ai-workflow-placeholder.png";
 import Image from "next/image";
 import { Edge } from "@xyflow/react";
 import { SuggestionResult } from "./SuggestionStatus";
-import { useSearchAlerts } from "@/utils/hooks/useSearchAlerts";
-import "@copilotkit/react-ui/styles.css";
-import "./chat.css";
 import Skeleton from "react-loading-skeleton";
 import { AddStepUI } from "./AddStepUI";
-import {
-  edgeCanAddStep,
-  edgeCanAddTrigger,
-  edgeCanHaveAddButton,
-} from "../../lib/utils";
-
-const useAlertKeys = () => {
-  const defaultQuery = {
-    combinator: "or",
-    rules: [
-      {
-        combinator: "and",
-        rules: [{ field: "source", operator: "=", value: "" }],
-      },
-      {
-        combinator: "and",
-        rules: [{ field: "source", operator: "=", value: "" }],
-      },
-    ],
-  };
-  const { data: alertsFound = [], isLoading } = useSearchAlerts({
-    query: defaultQuery,
-    timeframe: 3600 * 24,
-  });
-
-  const keys = useMemo(() => {
-    const getNestedKeys = (obj: any, prefix = ""): string[] => {
-      return Object.entries(obj).reduce<string[]>((acc, [key, value]) => {
-        const newKey = prefix ? `${prefix}.${key}` : key;
-        if (value && typeof value === "object" && !Array.isArray(value)) {
-          return [...acc, ...getNestedKeys(value, newKey)];
-        }
-        return [...acc, newKey];
-      }, []);
-    };
-    return [
-      ...alertsFound.reduce<Set<string>>((acc, alert) => {
-        const alertKeys = getNestedKeys(alert);
-        return new Set([...acc, ...alertKeys]);
-      }, new Set<string>()),
-    ];
-  }, [alertsFound]);
-
-  return { keys, isLoading };
-};
+import { useAvailableAlertFields } from "@/entities/alerts/model";
+import "@copilotkit/react-ui/styles.css";
+import "./chat.css";
 
 interface BuilderChatProps {
   definition: DefinitionV2;
@@ -143,7 +97,6 @@ export function BuilderChat({
     nodes,
     edges,
     toolboxConfiguration,
-    addNodeBetween,
     selectedEdge,
     selectedNode,
     deleteNodes,
@@ -414,13 +367,13 @@ export function BuilderChat({
     },
   });
 
-  const { keys } = useAlertKeys();
+  const { fields } = useAvailableAlertFields();
   const possibleAlertProperties = useMemo(() => {
-    if (!keys || keys.length === 0) {
+    if (!fields || fields.length === 0) {
       return ["source", "severity", "status", "message", "timestamp"];
     }
-    return keys?.map((key) => key.split(".").pop());
-  }, [keys]);
+    return fields?.map((field) => field.split(".").pop());
+  }, [fields]);
 
   useCopilotReadable({
     description: "Possible alert properties",
@@ -480,6 +433,7 @@ export function BuilderChat({
         });
       }
 
+      // TODO: if the trigger is already in the workflow, ask to replace it
       return AddTriggerUI({
         status: "executing",
         args: argsToPass,
@@ -615,7 +569,8 @@ export function BuilderChat({
 
   useCopilotAction({
     name: "addAction",
-    description: `Add an action to the workflow. Actions are sending notifications to a provider.`,
+    description:
+      "Add an action to the workflow. Actions are sending notifications to a provider.",
     parameters: [
       {
         name: "withActionParams",
@@ -663,10 +618,10 @@ export function BuilderChat({
       },
       {
         name: "addBeforeNodeId",
-        description: `The id of the node to add the condition before. For workflows with no steps, should be 'end'. Cannot be a node with componentType: 'trigger'. For condition branches:
-- Must end with '__empty-true' for true branch
-- Must end with '__empty-false' for false branch
-Example: 'node_123__empty-true'`,
+        description: `The id of the node to add the action before. For workflows with no steps, should be 'end'. Cannot be a node with componentType: 'trigger'. If adding to a condition branch, search for node id:
+- Must end with '__empty_true' for true branch
+- Must end with '__empty_false' for false branch
+Example: 'node_123__empty_true'`,
         type: "string",
         required: true,
       },
@@ -676,6 +631,7 @@ Example: 'node_123__empty-true'`,
         return <AddTriggerSkeleton />;
       }
       const action = getActionStepFromCopilotAction(args);
+      console.log("action", action);
       if (!action) {
         respond?.({
           status: "error",
@@ -779,10 +735,10 @@ Example: 'node_123__empty-true'`,
       },
       {
         name: "addBeforeNodeId",
-        description: `The id of the node to add the condition before. For workflows with no steps, should be 'end'. Cannot be a node with componentType: 'trigger'. For condition branches:
-- Must end with '__empty-true' for true branch
-- Must end with '__empty-false' for false branch
-Example: 'node_123__empty-true'`,
+        description: `The id of the node to add the step before. For workflows with no steps, should be 'end'. Cannot be a node with componentType: 'trigger'. If adding to a condition branch, search for node id:
+- Must end with '__empty_true' for true branch
+- Must end with '__empty_false' for false branch
+Example: 'node_123__empty_true'`,
         type: "string",
         required: true,
       },
@@ -876,10 +832,10 @@ Example: 'node_123__empty-true'`,
       },
       {
         name: "addBeforeNodeId",
-        description: `The id of the node to add the condition before. For workflows with no steps, should be 'end'. Cannot be a node with componentType: 'trigger'. For condition branches:
-- Must end with '__empty-true' for true branch
-- Must end with '__empty-false' for false branch
-Example: 'node_123__empty-true'`,
+        description: `The id of the node to add the condition before. For workflows with no steps, should be 'end'. Cannot be a node with componentType: 'trigger'. If adding to a condition branch, search for node id:
+- Must end with '__empty_true' for true branch
+- Must end with '__empty_false' for false branch
+Example: 'node_123__empty_true'`,
         type: "string",
         required: true,
       },
@@ -975,13 +931,10 @@ Example: 'node_123__empty-true'`,
   // });
 
   const [debugInfoVisible, setDebugInfoVisible] = useState(false);
-  const chatInstructions = useMemo(() => {
-    return (
-      GENERAL_INSTRUCTIONS +
-      `Here is the list of providers that are installed: ${installedProviders.map((p) => `type: ${p.type}, id: ${p.id}`).join(", ")}. If you you need to use a provider that is not installed, add step, but mention to user that you need to add the provider first.` +
-      "Then asked to create a complete workflow, you break down the workflow into steps, outline the steps, show them to user, and then iterate over the steps one by one, generate step definition, show it to user to decide if they want to add them to the workflow."
-    );
-  }, [installedProviders]);
+  const chatInstructions =
+    GENERAL_INSTRUCTIONS +
+    `If you you need to use a provider that is not installed, add step, but mention to user that you need to add the provider first.
+      Then asked to create a complete workflow, you break down the workflow into steps, outline the steps, show them to user, and then iterate over the steps one by one, generate step definition, show it to user to decide if they want to add them to the workflow.`;
 
   return (
     <div
@@ -999,43 +952,17 @@ Example: 'node_123__empty-true'`,
           <div className="flex">
             <Button
               variant="secondary"
-              size="sm"
+              size="xs"
               onClick={() => setMessages([])}
             >
               Reset
             </Button>
             <Button
               variant="secondary"
-              size="sm"
+              size="xs"
               onClick={() => setDebugInfoVisible(!debugInfoVisible)}
             >
-              {debugInfoVisible ? "Hide" : "Show debug info"}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={async () => {
-                try {
-                  const step = steps.find(
-                    (step) => step.type === "step-python"
-                  ) as V2StepStep;
-                  if (!step) {
-                    return;
-                  }
-                  // Generate a step definition of a python step that returns a list of 5 random cheer-up messages as a JSON object, allowed keys are: ${step.properties.stepParams?.join(", ") ?? "none"}
-                  const definition = await generateStepDefinition({
-                    name: "python-step",
-                    stepType: step.type,
-                    stepProperties: { ...step.properties },
-                    aim: "This step should return random of five cheer-up messages (generate a list of 5 messages and hardcode them)",
-                  });
-                  console.log("!!!response", definition);
-                } catch (e) {
-                  console.error(e);
-                }
-              }}
-            >
-              Generate Example Definition
+              {debugInfoVisible ? "Hide definition" : "Show definition"}
             </Button>
           </div>
           {debugInfoVisible && (

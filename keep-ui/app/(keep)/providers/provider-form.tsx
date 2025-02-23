@@ -451,8 +451,6 @@ const ProviderForm = ({
     ?.filter((scope) => scope.mandatory_for_webhook)
     .every((scope) => providerValidatedScopes[scope.name] === true);
 
-  const [activeTab, setActiveTab] = useState(0);
-
   const renderFormContent = () => (
     <>
       <div className="form-group">
