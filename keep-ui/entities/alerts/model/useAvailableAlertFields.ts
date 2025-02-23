@@ -1,7 +1,9 @@
 import { useSearchAlerts } from "@/utils/hooks/useSearchAlerts";
 import { useMemo } from "react";
+import { AlertDto } from ".";
 
 const DAY = 3600 * 24;
+const MAX_DEPTH = 10;
 
 export const useAvailableAlertFields = ({
   timeframe = DAY,
@@ -26,33 +28,31 @@ export const useAvailableAlertFields = ({
     timeframe,
   });
 
-interface AlertType {
-  [key: string]: unknown;
-}
-
-const MAX_DEPTH = 10;
-
-const fields = useMemo(() => {
-  const getNestedKeys = (obj: AlertType, prefix = "", depth = 0): string[] => {
-    if (depth > MAX_DEPTH) return [];
-    return Object.entries(obj).reduce<string[]>((acc, [key, value]) => {
-      const newKey = prefix ? `${prefix}.${key}` : key;
-      if (value && typeof value === "object" && !Array.isArray(value)) {
-        const nestedKeys = getNestedKeys(value as AlertType, newKey, depth + 1);
-        acc.push(...nestedKeys);
+  const fields = useMemo(() => {
+    const getNestedKeys = (obj: AlertDto, prefix = "", depth = 0): string[] => {
+      if (depth > MAX_DEPTH) return [];
+      return Object.entries(obj).reduce<string[]>((acc, [key, value]) => {
+        const newKey = prefix ? `${prefix}.${key}` : key;
+        if (value && typeof value === "object" && !Array.isArray(value)) {
+          const nestedKeys = getNestedKeys(
+            value as AlertDto,
+            newKey,
+            depth + 1
+          );
+          acc.push(...nestedKeys);
+          return acc;
+        }
+        acc.push(newKey);
         return acc;
-      }
-      acc.push(newKey);
-      return acc;
-    }, []);
-  };
-  const uniqueFields = new Set<string>();
-  alertsFound.forEach((alert: AlertType) => {
-    const alertKeys = getNestedKeys(alert);
-    alertKeys.forEach(key => uniqueFields.add(key));
-  });
-  return Array.from(uniqueFields);
-}, [alertsFound]);
+      }, []);
+    };
+    const uniqueFields = new Set<string>();
+    alertsFound.forEach((alert: AlertDto) => {
+      const alertKeys = getNestedKeys(alert);
+      alertKeys.forEach((key) => uniqueFields.add(key));
+    });
+    return Array.from(uniqueFields);
+  }, [alertsFound]);
 
   return { fields, isLoading };
 };
