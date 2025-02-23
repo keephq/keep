@@ -5,7 +5,7 @@ import {
   ProviderFormData,
   ProviderFormValue,
   ProviderInputErrors,
-} from "./providers";
+} from "@/shared/api/providers";
 import Image from "next/image";
 import {
   Title,

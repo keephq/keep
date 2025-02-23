@@ -6,7 +6,7 @@ import {
 } from "@/entities/workflows";
 import { v4 as uuidv4 } from "uuid";
 import { Connection } from "@xyflow/react";
-import { Provider } from "@/app/(keep)/providers/providers";
+import { Provider } from "@/shared/api/providers";
 
 // Mock uuid to return predictable values
 jest.mock("uuid", () => ({

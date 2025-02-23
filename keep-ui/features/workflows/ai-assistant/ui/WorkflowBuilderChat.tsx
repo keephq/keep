@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Provider } from "@/app/(keep)/providers/providers";
+import { Provider } from "@/shared/api/providers";
 import {
   DefinitionV2,
   IncidentEvent,

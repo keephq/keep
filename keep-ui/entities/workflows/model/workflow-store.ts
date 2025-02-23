@@ -41,7 +41,7 @@ import {
   edgeCanAddTrigger,
   getToolboxConfiguration,
 } from "@/features/workflows/builder/lib/utils";
-import { Provider } from "@/app/(keep)/providers/providers";
+import { Provider } from "@/shared/api/providers";
 
 class KeepWorkflowStoreError extends Error {
   constructor(message: string) {

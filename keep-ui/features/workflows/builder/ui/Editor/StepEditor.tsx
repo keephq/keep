@@ -13,7 +13,7 @@ import {
   Text,
 } from "@tremor/react";
 import { KeyIcon } from "@heroicons/react/20/solid";
-import { Provider } from "@/app/(keep)/providers/providers";
+import { Provider } from "@/shared/api/providers";
 import {
   BackspaceIcon,
   PencilIcon,

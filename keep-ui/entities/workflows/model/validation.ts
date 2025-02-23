@@ -1,4 +1,4 @@
-import { Provider } from "@/app/(keep)/providers/providers";
+import { Provider } from "@/shared/api/providers";
 import { Definition, V2Step } from "./types";
 
 export type ValidationResult = [string, string];

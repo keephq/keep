@@ -1,6 +1,6 @@
 import { Icon } from "@tremor/react";
 import ProviderForm from "../../providers/provider-form";
-import { Provider as FullProvider } from "@/app/(keep)/providers/providers";
+import { Provider as FullProvider } from "@/shared/api/providers";
 import { useState } from "react";
 import { Workflow, Provider } from "@/shared/api/workflows";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";

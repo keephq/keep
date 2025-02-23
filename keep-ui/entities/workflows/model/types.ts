@@ -1,7 +1,7 @@
 import { Edge, Node } from "@xyflow/react";
 import { Workflow } from "@/shared/api/workflows";
 import { z } from "zod";
-import { Provider } from "@/app/(keep)/providers/providers";
+import { Provider } from "@/shared/api/providers";
 export type WorkflowMetadata = Pick<Workflow, "name" | "description">;
 
 export type V2Properties = Record<string, any>;

@@ -1,5 +1,5 @@
 "use client";
-import { defaultProvider, Provider } from "./providers";
+import { defaultProvider, Provider } from "@/shared/api/providers";
 import ProvidersTiles from "./providers-tiles";
 import React, { useState, useEffect } from "react";
 import Loading from "@/app/(keep)/loading";
