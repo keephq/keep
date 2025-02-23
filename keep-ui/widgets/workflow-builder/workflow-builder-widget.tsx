@@ -20,8 +20,8 @@ import { WorkflowSyncStatus } from "@/app/(keep)/workflows/[workflow_id]/workflo
 import clsx from "clsx";
 
 export interface WorkflowBuilderWidgetProps {
-  workflowRaw?: string;
-  workflowId?: string;
+  workflowRaw: string | undefined;
+  workflowId: string | undefined;
   standalone?: boolean;
 }
 

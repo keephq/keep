@@ -33,11 +33,7 @@ export const AddTriggerUI = ({
   result,
 }: AddTriggerUIProps) => {
   const [isAddingTrigger, setIsAddingTrigger] = useState(false);
-  const {
-    nodes,
-    addNodeBetweenSafe: addNodeBetween,
-    getNextEdge,
-  } = useWorkflowStore();
+  const { addNodeBetween, getNextEdge } = useWorkflowStore();
 
   const handleAddTrigger = useCallback(() => {
     if (isAddingTrigger) {

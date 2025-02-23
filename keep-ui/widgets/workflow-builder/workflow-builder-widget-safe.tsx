@@ -11,7 +11,7 @@ export function WorkflowBuilderWidgetSafe(props: WorkflowBuilderWidgetProps) {
   const { data: config } = useConfig();
 
   if (!config?.OPEN_AI_API_KEY_SET) {
-    return <WorkflowBuilderWidget />;
+    return <WorkflowBuilderWidget {...props} />;
   }
 
   return (
