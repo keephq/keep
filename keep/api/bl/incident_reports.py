@@ -118,6 +118,42 @@ incidents_json_hardcoded = """
             "rule_is_deleted": null
         },
         {
+            "user_generated_name": null,
+            "assignee": null,
+            "user_summary": "The 'Processing Problems' incident has been resolved. The root cause was identified as a deadlock error (Deadlock found when trying to get lock; try restarting transaction) occurring during an event processing task in the Cloud Run 'keep-api' service within the 'keephq-sandbox' project, deployed in 'us-central1'.",
+            "same_incident_in_the_past_id": null,
+            "id": "47692666-9b9f-44ea-9b55-86a35801002a",
+            "start_time": "2025-01-27T13:49:20",
+            "last_seen_time": "2025-01-27T13:49:20",
+            "end_time": "2025-01-28T08:49:28",
+            "creation_time": "2025-01-27T13:49:20",
+            "alerts_count": 1,
+            "alert_sources": [
+                "gcpmonitoring"
+            ],
+            "severity": "critical",
+            "status": "resolved",
+            "services": [
+                "null"
+            ],
+            "is_predicted": false,
+            "is_confirmed": true,
+            "generated_summary": "Incident 'Processing Problems' was resolved. The root cause was a deadlock error ('Deadlock found when trying to get lock; try restarting transaction') during an event processing task in the Cloud Run 'keep-api' service in the 'keephq-sandbox' project, located in 'us-central1'. Correction actions are being tracked on GitHub (issue #3159).",
+            "ai_generated_name": null,
+            "rule_fingerprint": "none",
+            "fingerprint": null,
+            "merged_into_incident_id": null,
+            "merged_by": null,
+            "merged_at": null,
+            "enrichments": {},
+            "incident_type": "rule",
+            "incident_application": "None",
+            "resolve_on": "all_resolved",
+            "rule_id": null,
+            "rule_name": null,
+            "rule_is_deleted": null
+        },
+        {
             "user_generated_name": "auth/users 500",
             "assignee": "matvey+keep@keephq.dev",
             "user_summary": "",
@@ -1338,7 +1374,7 @@ class Incident(BaseModel):
 
 
 class ReoccuringIncident(Incident):
-    occurence_count: Optional[int] = None
+    occurrence_count: Optional[int] = None
 
 
 class IncidentReport(BaseModel):
@@ -1349,7 +1385,7 @@ class IncidentReport(BaseModel):
     mean_time_to_detect_seconds: Optional[int] = None
     mean_time_to_resolve_seconds: Optional[int] = None
     most_incident_reasons: Optional[dict[str, list[str]]] = None
-    reoccuring_incidents: Optional[list[ReoccuringIncident]] = None
+    recurring_incidents: Optional[list[ReoccuringIncident]] = None
 
     # time_based_metrics: Optional[TimeBasedMetrics] = None
 
@@ -1400,13 +1436,13 @@ Generate an incident report based on the provided incidents dataset and response
 7. **Most Frequent Incident Reasons**
    - Identify the most common root causes by analyzing `name` and `description`.
    - Group similar reasons to avoid duplicates.
-   - Output `most_frequent_reasons` as a dictionary with reasons as keys and list of incident ids as values.
+   - Output `most_frequent_reasons` as a dictionary with reason as key and list of incident ids as values whose reason it is.
 
 8. **Reoccuring incidents**
-   - Put result into reoccuring_incidents property
+   - Put result into recurring_incidents property
    - Rely on the same_incident_in_the_past_id field to identify reoccuring incidents.
    - same_incident_in_the_past_id is the id of the previous incident that is the same as the current one.
-   - Output `reoccuring_incidents` as a list with incident id, name and occurence count.
+   - Output `recurring_incidents` as a list with incident id, name and occurence count.
    - Include only incidents occurring more than one time.
 """
 
@@ -1452,24 +1488,29 @@ class IncidentReportsBl:
             for incident in incidents
             if incident.status == IncidentStatus.RESOLVED
         ]
-        report.mean_time_to_detect_seconds = self.__calculate_mttd(resolved_incidents)
+        report.mean_time_to_detect_seconds = self.__calculate_mttd(incidents)
         report.mean_time_to_resolve_seconds = self.__calculate_mttr(resolved_incidents)
         report.incident_durations = self.__calculate_durations(resolved_incidents)
-        report.reoccuring_incidents = self.__calculate_reoccuring_incidents(
+        report.recurring_incidents = self.__calculate_recurring_incidents(
             incidents_dict
         )
 
         return report
 
-    def __calculate_mttd(self, resolved_incidents: list[IncidentDto]) -> int:
+    def __calculate_mttd(self, incidents: list[IncidentDto]) -> int:
         duration_sum = 0
+        incidents_count = 0
 
-        for incident in resolved_incidents:
+        for incident in incidents:
+            if not incident.start_time:
+                continue
+
             duration_sum += (
                 incident.creation_time - incident.start_time
             ).total_seconds()
+            incidents_count += 1
 
-        return math.ceil(duration_sum / len(resolved_incidents))
+        return math.ceil(duration_sum / incidents_count)
 
     def __calculate_mttr(self, resolved_incidents: list[IncidentDto]) -> int:
         duration_sum = 0
@@ -1511,10 +1552,10 @@ class IncidentReportsBl:
             longest_duration_incident_id=str(longest_duration_incident_id),
         )
 
-    def __calculate_reoccuring_incidents(
+    def __calculate_recurring_incidents(
         self, incidents_dict: dict[UUID, IncidentDto]
     ) -> list[ReoccuringIncident]:
-        reoccuring_incidents: dict[str, set[str]] = {}
+        recurring_incidents: dict[str, set[str]] = {}
         for incident in incidents_dict.values():
             current_incident_in_the_past_id = incident.same_incident_in_the_past_id
             path = list([incident.id])
@@ -1532,13 +1573,13 @@ class IncidentReportsBl:
                 )
 
                 if not same_incident_in_the_past_id:
-                    root_incident_id = path.pop()
+                    root_incident_id = path[-1]
 
-                    if root_incident_id not in reoccuring_incidents:
-                        reoccuring_incidents[root_incident_id] = set()
+                    if root_incident_id not in recurring_incidents:
+                        recurring_incidents[root_incident_id] = set()
 
                     for incident_id in path:
-                        reoccuring_incidents[root_incident_id].add(incident_id)
+                        recurring_incidents[root_incident_id].add(incident_id)
                     break
 
                 current_incident_in_the_past_id = (
@@ -1550,9 +1591,9 @@ class IncidentReportsBl:
                 incident_name=incidents_dict[root_incident_id].user_generated_name
                 or incidents_dict[root_incident_id].ai_generated_name,
                 incident_id=str(root_incident_id),
-                occurence_count=len(reoccuring_incidents),
+                occurrence_count=len(recurring_incidents),
             )
-            for root_incident_id, reoccuring_incidents in reoccuring_incidents.items()
+            for root_incident_id, recurring_incidents in recurring_incidents.items()
         ]
 
     def __get_incidents(

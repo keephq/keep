@@ -40,7 +40,7 @@ import {
 } from "@/shared/ui";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
-import GenerateReportModal from "./generate-report-modal";
+import { GenerateReportModal } from "./incidents-report";
 
 function SelectedRowActions({
   selectedRowIds,
