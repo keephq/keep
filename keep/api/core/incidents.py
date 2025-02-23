@@ -235,7 +235,10 @@ def __build_last_incidents_query(
         sql_filter = instance.convert_to_sql_str(cel)
         query = query.filter(text(sql_filter))
 
-    query = query.distinct(Incident.id)
+    distinct_sorting_key = (
+        sorting.value[1:] if sorting.value.startswith("-") else sorting.value
+    )
+    query = query.distinct(text(distinct_sorting_key), Incident.id)
 
     # Order by start_time in descending order and limit the results
     query = query.limit(limit).offset(offset)
