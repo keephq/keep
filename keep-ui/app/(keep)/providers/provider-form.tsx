@@ -5,7 +5,7 @@ import {
   ProviderFormData,
   ProviderFormValue,
   ProviderInputErrors,
-} from "./providers";
+} from "@/shared/api/providers";
 import Image from "next/image";
 import {
   Title,
@@ -450,8 +450,6 @@ const ProviderForm = ({
   const installOrUpdateWebhookEnabled = provider.scopes
     ?.filter((scope) => scope.mandatory_for_webhook)
     .every((scope) => providerValidatedScopes[scope.name] === true);
-
-  const [activeTab, setActiveTab] = useState(0);
 
   const renderFormContent = () => (
     <>

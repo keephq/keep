@@ -1,5 +1,5 @@
 import { SWRConfiguration } from "swr";
-import { ProvidersResponse } from "@/app/(keep)/providers/providers";
+import { ProvidersResponse } from "@/shared/api/providers";
 import useSWRImmutable from "swr/immutable";
 import { useApi } from "@/shared/lib/hooks/useApi";
 

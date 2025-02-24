@@ -27,7 +27,14 @@ describe("ReactFlowBuilder", () => {
       result.current.setDefinition({
         value: {
           sequence: [],
-          properties: {},
+          properties: {
+            id: "test-workflow",
+            name: "Test Workflow",
+            description: "Test Description",
+            consts: {},
+            isLocked: false,
+            disabled: false,
+          },
         },
         isValid: true,
       });

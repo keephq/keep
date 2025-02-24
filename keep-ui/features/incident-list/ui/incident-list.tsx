@@ -190,7 +190,7 @@ export function IncidentList({
           />
         ),
       },
-      ["Has past incident"]: {
+      ["Linked incident"]: {
         sortCallback: (facetOption) =>
           facetOption.display_name == "1" ||
           facetOption.display_name.toLocaleLowerCase() == "true"

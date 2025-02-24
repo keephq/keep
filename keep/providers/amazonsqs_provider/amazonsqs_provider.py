@@ -25,21 +25,6 @@ class AmazonsqsProviderAuthConfig:
     AmazonSQS authentication configuration.
     """
 
-    access_key_id: str | None = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "Access Key Id (Leave empty if using IAM role at EC2)",
-            "hint": "Access Key ID",
-        },
-    )
-    secret_access_key: str | None = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "Secret access key (Leave empty if using IAM role at EC2)",
-            "hint": "Secret access key",
-            # "sensitive": True,
-        },
-    )
     region_name: str = dataclasses.field(
         metadata={
             "required": True,
@@ -53,6 +38,23 @@ class AmazonsqsProviderAuthConfig:
             "required": True,
             "description": "SQS Queue URL",
             "hint": "Example: https://sqs.ap-south-1.amazonaws.com/614100018813/Q2",
+        },
+    )
+    access_key_id: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "Access Key Id (Leave empty if using IAM role at EC2)",
+            "hint": "Access Key ID",
+        },
+    )
+    secret_access_key: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "Secret access key (Leave empty if using IAM role at EC2)",
+            "hint": "Secret access key",
+            # "sensitive": True,
         },
     )
 

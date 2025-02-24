@@ -1,8 +1,11 @@
+import { Provider } from "@/shared/api/providers";
 import { Definition, V2Step } from "./types";
 
 export type ValidationResult = [string, string];
 
-export const PROVIDERS_WITH_NO_CONFIG = ["console", "bash"];
+export const checkProviderNeedsInstallation = (providerObject: Provider) => {
+  return providerObject.config && Object.keys(providerObject.config).length > 0;
+};
 
 export function validateGlobalPure(definition: Definition): ValidationResult[] {
   const errors: ValidationResult[] = [];
@@ -91,41 +94,79 @@ export function validateGlobalPure(definition: Definition): ValidationResult[] {
   return errors;
 }
 
-export function validateStepPure(step: V2Step): string | null {
-  if (step.type.includes("condition-")) {
+function validateProviderConfig(
+  providerType: string | undefined,
+  providerConfig: string,
+  providers: Provider[],
+  installedProviders: Provider[]
+) {
+  const providerObject = providers?.find((p) => p.type === providerType);
+
+  if (!providerObject) {
+    return `Provider type '${providerType}' is not supported`;
+  }
+  // If config is not empty, it means that the provider needs installation
+  const doesProviderNeedInstallation =
+    checkProviderNeedsInstallation(providerObject);
+
+  if (!doesProviderNeedInstallation) {
+    return null;
+  }
+
+  if (!providerConfig) {
+    return `No ${providerType} provider selected`;
+  }
+
+  if (
+    doesProviderNeedInstallation &&
+    installedProviders.find(
+      (p) => p.type === providerType && p.details?.name === providerConfig
+    ) === undefined
+  ) {
+    return `The '${providerConfig}' ${providerType} provider is not installed. Please install it before executing this workflow.`;
+  }
+  return null;
+}
+
+export function validateStepPure(
+  step: V2Step,
+  providers: Provider[],
+  installedProviders: Provider[]
+): string | null {
+  if (step.componentType === "switch") {
     if (!step.name) {
-      return "Step/action name cannot be empty.";
+      return "Condition name cannot be empty.";
     }
-    const branches =
-      step?.componentType === "switch"
-        ? step.branches
-        : {
-            true: [],
-            false: [],
-          };
-    const onlyActions = branches?.true?.every((step: V2Step) =>
+    const branches = step.branches || {
+      true: [],
+      false: [],
+    };
+    const conditionHasActions = branches.true.length > 0;
+    if (!conditionHasActions) {
+      return "Conditions true branch must contain at least one action.";
+    }
+    const onlyActions = branches.true.every((step: V2Step) =>
       step.type.includes("action-")
     );
     if (!onlyActions) {
       return "Conditions can only contain actions.";
     }
-    const conditionHasActions = branches?.true
-      ? branches?.true.length > 0
-      : false;
-    if (!conditionHasActions) {
-      return "Conditions must contain at least one action.";
-    }
-    const valid = conditionHasActions && onlyActions;
-    return valid ? null : "Conditions must contain at least one action.";
+    return null;
   }
-  if (step?.componentType === "task") {
-    if (!step?.name) {
+  if (step.componentType === "task") {
+    if (!step.name) {
       return "Step name cannot be empty.";
     }
-    const providerType = step?.type.split("-")[1];
-    const providerConfig = (step?.properties.config as string)?.trim();
-    if (!providerConfig && !PROVIDERS_WITH_NO_CONFIG.includes(providerType)) {
-      return "No provider selected";
+    const providerType = step.type.split("-")[1];
+    const providerConfig = (step.properties.config || "").trim();
+    const providerError = validateProviderConfig(
+      providerType,
+      providerConfig,
+      providers,
+      installedProviders
+    );
+    if (providerError) {
+      return providerError;
     }
     if (
       !Object.values(step?.properties?.with || {}).some(

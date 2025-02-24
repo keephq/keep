@@ -40,6 +40,7 @@ export default function PageWithId({
         {workflowPreviewData && workflowPreviewData.name === key && (
           <WorkflowBuilderWidget
             workflowRaw={workflowPreviewData.workflow_raw || ""}
+            workflowId={undefined}
             standalone={true}
           />
         )}

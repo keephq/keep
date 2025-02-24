@@ -51,6 +51,7 @@ type UseIncidentActionsValue = {
   ) => Promise<void>;
   mutateIncidentsList: () => void;
   mutateIncident: (incidentId: string) => void;
+  assignIncident: (incidentId: string) => Promise<void>;
 };
 
 type IncidentCreateDto = {
@@ -82,6 +83,16 @@ export function useIncidentActions(): UseIncidentActionsValue {
           typeof key === "string" && key.startsWith(`/incidents/${incidentId}`)
       ),
     [mutate]
+  );
+
+  const assignIncident = useCallback(
+    async (incidentId: string) => {
+      const result = await api.post(`/incidents/${incidentId}/assign`);
+      mutateIncidentsList();
+      mutateIncident(incidentId);
+      return result;
+    },
+    [api, mutateIncident, mutateIncidentsList]
   );
 
   const invokeProviderMethod = useCallback(
@@ -340,5 +351,6 @@ export function useIncidentActions(): UseIncidentActionsValue {
     splitIncidentAlerts,
     invokeProviderMethod,
     enrichIncident,
+    assignIncident,
   };
 }
