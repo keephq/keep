@@ -350,7 +350,7 @@ class WorkflowStore:
                 logger.info("Workflow provisioned successfully")
             except Exception as e:
                 logger.error(
-                    f"Error provisioning workflow from env var",
+                    "Error provisioning workflow from env var",
                     extra={"exception": e},
                 )
 
