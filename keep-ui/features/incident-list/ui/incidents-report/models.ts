@@ -12,15 +12,11 @@ export interface IncidentDurations {
   longest_duration_incident_id: string;
 }
 
-
-
-// Base Incident model
 export interface Incident {
   incident_name?: string;
   incident_id?: string;
 }
 
-// Reoccurring Incident extends Incident
 export interface ReoccurringIncident extends Incident {
   occurrence_count?: number;
 }
