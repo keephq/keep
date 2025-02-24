@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@tremor/react";
-import { Provider } from "@/app/(keep)/providers/providers";
-import { getToolboxConfiguration } from "@/features/workflows/builder/lib/utils";
+import { Provider } from "@/shared/api/providers";
 import { stringify } from "yaml";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
@@ -9,7 +8,6 @@ import ReactFlowBuilder from "@/features/workflows/builder/ui/ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useWorkflowStore } from "@/entities/workflows";
 import { showErrorToast, KeepLoader } from "@/shared/ui";
-import { YAMLException } from "js-yaml";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import Skeleton from "react-loading-skeleton";
@@ -20,24 +18,22 @@ import {
   wrapDefinitionV2,
 } from "@/entities/workflows/lib/parser";
 import { CodeBracketIcon, SparklesIcon } from "@heroicons/react/24/outline";
-import { BuilderChatSafe } from "@/features/workflows/builder/ui/BuilderChat/builder-chat";
 import clsx from "clsx";
 import { ResizableColumns } from "@/shared/ui";
-import { useConfig } from "@/utils/hooks/useConfig";
-import { CopilotKit } from "@copilotkit/react-core";
+import { WorkflowBuilderChatSafe } from "@/features/workflows/ai-assistant";
 
 interface Props {
   loadedAlertFile: string | null;
   providers: Provider[];
-  workflow?: string;
+  workflowRaw?: string;
   workflowId?: string;
   installedProviders?: Provider[] | undefined | null;
 }
 
-function Builder({
+export function WorkflowBuilder({
   loadedAlertFile,
   providers,
-  workflow,
+  workflowRaw,
   workflowId,
   installedProviders,
 }: Props) {
@@ -56,21 +52,25 @@ function Builder({
     reset,
     canDeploy,
     initializeWorkflow,
+    setProviders,
+    setInstalledProviders,
   } = useWorkflowStore();
   const router = useRouter();
 
-  const { data: configData } = useConfig();
-  const isAIEnabled = configData?.OPEN_AI_API_KEY_SET;
-
   const [leftColumnMode, setLeftColumnMode] = useState<"yaml" | "chat" | null>(
-    isAIEnabled ? "chat" : "yaml"
+    "chat"
   );
 
   const searchParams = useSearchParams();
 
-  const toolboxConfiguration = useMemo(
-    () => getToolboxConfiguration(providers ?? []),
-    [providers]
+  useEffect(
+    function syncProviders() {
+      setProviders(providers);
+      setInstalledProviders(installedProviders ?? []);
+    },
+    // setProviders and setInstalledProviders shouldn't change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [providers, installedProviders]
   );
 
   // TODO: move to workflow initialization
@@ -78,14 +78,17 @@ function Builder({
     function updateDefinitionFromInput() {
       setIsLoading(true);
       try {
-        if (workflow) {
+        if (workflowRaw) {
           setDefinition(
             wrapDefinitionV2({
-              ...parseWorkflow(workflow, providers),
+              ...parseWorkflow(workflowRaw, providers),
               isValid: true,
             })
           );
-          initializeWorkflow(workflowId ?? null, toolboxConfiguration);
+          initializeWorkflow(workflowId ?? null, {
+            providers,
+            installedProviders: installedProviders ?? [],
+          });
         } else if (loadedAlertFile == null) {
           const alertUuid = uuidv4();
           const alertName = searchParams?.get("alertName");
@@ -110,7 +113,10 @@ function Builder({
               isValid: true,
             })
           );
-          initializeWorkflow(workflowId ?? null, toolboxConfiguration);
+          initializeWorkflow(workflowId ?? null, {
+            providers,
+            installedProviders: installedProviders ?? [],
+          });
         } else {
           const parsedDefinition = parseWorkflow(loadedAlertFile!, providers);
           setDefinition(
@@ -119,18 +125,27 @@ function Builder({
               isValid: true,
             })
           );
-          initializeWorkflow(workflowId ?? null, toolboxConfiguration);
+          initializeWorkflow(workflowId ?? null, {
+            providers,
+            installedProviders: installedProviders ?? [],
+          });
         }
       } catch (error) {
-        if (error instanceof YAMLException) {
-          showErrorToast(error, "Invalid YAML: " + error.message);
+        // Check if error is from js-yaml by checking its name property
+        if (
+          error &&
+          typeof error === "object" &&
+          "name" in error &&
+          error.name === "YAMLException"
+        ) {
+          showErrorToast(error, "Invalid YAML: " + (error as Error).message);
         } else {
           showErrorToast(error, "Failed to load workflow");
         }
       }
       setIsLoading(false);
     },
-    [loadedAlertFile, workflow, searchParams, providers]
+    [loadedAlertFile, workflowRaw, searchParams, providers]
   );
 
   const workflowYaml = useMemo(() => {
@@ -247,7 +262,7 @@ function Builder({
             leftColumnMode === "chat" ? "visible h-full" : "hidden"
           )}
         >
-          <BuilderChatSafe
+          <WorkflowBuilderChatSafe
             definition={definition}
             installedProviders={installedProviders ?? []}
           />
@@ -307,18 +322,5 @@ function Builder({
         </div>
       </>
     </ResizableColumns>
-  );
-}
-
-export default function BuilderWrapper(props: Props) {
-  const { data: configData } = useConfig();
-  const isAIEnabled = configData?.OPEN_AI_API_KEY_SET;
-  if (!isAIEnabled) {
-    return <Builder {...props} />;
-  }
-  return (
-    <CopilotKit runtimeUrl="/api/copilotkit">
-      <Builder {...props} />
-    </CopilotKit>
   );
 }

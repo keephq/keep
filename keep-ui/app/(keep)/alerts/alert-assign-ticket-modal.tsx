@@ -3,7 +3,7 @@ import Select, { components } from "react-select";
 import { Button, TextInput, Text, Icon } from "@tremor/react";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
-import { Providers } from "../providers/providers";
+import { Providers } from "@/shared/api/providers";
 import { AlertDto } from "@/entities/alerts/model";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
