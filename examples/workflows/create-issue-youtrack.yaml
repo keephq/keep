@@ -1,0 +1,19 @@
+workflow:
+  id: create-issue-youtrack
+  name: Create issue in YouTrack
+  description: You can create a new issue in YouTrack
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: youtrack-action
+      provider:
+        type: youtrack
+        config: "{{ providers.YouTrack }}"
+        with:
+          description: Users face random logout issues when logged in through Google OAuth
+          summary: Login fails with session error
