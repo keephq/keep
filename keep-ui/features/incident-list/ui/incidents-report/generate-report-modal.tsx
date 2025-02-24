@@ -24,11 +24,12 @@ export const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
   }, [data]);
 
   const contentRef = useRef<HTMLDivElement>(null);
-  const reactToPrintFn = useReactToPrint({ contentRef });
+  const reactToPrintFn = useReactToPrint({
+    contentRef,
+    documentTitle: "Incidents Report",
+  });
 
-  const handlePrint = useCallback(() => {
-    reactToPrintFn();
-  }, [reactToPrintFn]);
+  const handlePrint = useCallback(() => reactToPrintFn(), [reactToPrintFn]);
 
   return (
     <Modal

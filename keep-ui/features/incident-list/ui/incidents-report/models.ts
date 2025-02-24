@@ -12,10 +12,7 @@ export interface IncidentDurations {
   longest_duration_incident_id: string;
 }
 
-export interface SeverityMetrics {
-  critical: string;
-  high: string;
-}
+
 
 // Base Incident model
 export interface Incident {
@@ -28,15 +25,16 @@ export interface ReoccurringIncident extends Incident {
   occurrence_count?: number;
 }
 
+export interface SeverityMetrics {
+  [key: string]: Incident[];
+}
+
 export interface IncidentData {
-  incident_metrics: IncidentMetrics;
-  top_services_affected: string[];
-  common_incident_names: string[];
+  services_affected_metrics: { [key: string]: number };
   severity_metrics: SeverityMetrics;
   incident_durations: IncidentDurations;
   mean_time_to_detect_seconds: number;
   mean_time_to_resolve_seconds: number;
-  most_occuring_incidents: string[];
   most_incident_reasons: Record<string, string[]>;
   recurring_incidents: ReoccurringIncident[];
 }

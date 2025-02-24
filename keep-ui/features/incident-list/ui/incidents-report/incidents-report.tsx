@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { IncidentData } from "./models";
 import { DonutChart } from "@tremor/react";
+import { IncidentSeverityMetric } from "./incident-severity-metric";
 
 interface IncidentsReportProps {
   incidentsReportData: IncidentData;
@@ -20,7 +21,18 @@ export const PieChart: React.FC<PieChartProps> = ({
   }, [data]);
 
   const colors = useMemo(
-    () => ["red", "blue", "green", "orange", "yellow", "purple"],
+    () => [
+      "red",
+      "blue",
+      "green",
+      "orange",
+      "yellow",
+      "purple",
+      "teal",
+      "cyan",
+      "rose",
+      "lime",
+    ],
     []
   ); // Tremor color names
 
@@ -121,7 +133,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
     metricValueInSeconds: number | undefined
   ): JSX.Element {
     return (
-      <p className="font-medium text-lg">
+      <p className="incidents-time-metric font-medium text-lg">
         <strong>{metricName}:&nbsp;</strong>
         <span>
           {metricValueInSeconds && convertSeconds(metricValueInSeconds)}
@@ -132,7 +144,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
 
   function renderMainReasons(): JSX.Element {
     return (
-      <div className="text-lg">
+      <div className="break-inside-avoid incidents-main-reasons text-lg">
         <p className="font-bold mb-2">Most of the incidents reasons:</p>
         <PieChart
           formatCount={formatIncidentsCount}
@@ -147,9 +159,26 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
     );
   }
 
+  function renderAffectedServices(): JSX.Element {
+    return (
+      <div className="break-inside-avoid text-lg">
+        <p className="font-bold mb-2">Affected services:</p>
+        <PieChart
+          formatCount={formatIncidentsCount}
+          data={Object.entries(
+            incidentsReportData?.services_affected_metrics || {}
+          ).map(([reason, count]) => ({
+            name: reason,
+            value: count,
+          }))}
+        />
+      </div>
+    );
+  }
+
   function renderRecurringIncidents(): JSX.Element {
     return (
-      <div className="text-lg">
+      <div className="text-lg break-inside-avoid">
         <p className="font-bold mb-2">Recurring incidents:</p>
         <PieChart
           formatCount={formatIncidentsCount}
@@ -166,7 +195,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
 
   function renderTimeMetrics(): JSX.Element {
     return (
-      <div>
+      <div className="break-inside-avoid">
         <p className="font-bold text-lg">Incident Metrics:</p>
         <div className="pl-4">
           {renderTimeMetric(
@@ -193,6 +222,13 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   return (
     <div className="flex flex-col gap-4 mt-4 px-6">
       {renderTimeMetrics()}
+      {incidentsReportData.severity_metrics && (
+        <IncidentSeverityMetric
+          severityMetrics={incidentsReportData.severity_metrics}
+        />
+      )}
+      {incidentsReportData?.services_affected_metrics &&
+        renderAffectedServices()}
       {incidentsReportData?.most_incident_reasons && renderMainReasons()}
       {incidentsReportData?.recurring_incidents && renderRecurringIncidents()}
     </div>

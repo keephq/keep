@@ -1368,41 +1368,23 @@ class IncidentDurations(BaseModel):
     longest_duration_incident_id: Optional[str] = None
 
 
-class Incident(BaseModel):
+class IncidentReportDto(BaseModel):
     incident_name: Optional[str] = None
     incident_id: Optional[str] = None
 
 
-class ReoccuringIncident(Incident):
+class ReoccuringIncidentReportDto(IncidentReportDto):
     occurrence_count: Optional[int] = None
 
 
 class IncidentReport(BaseModel):
-    incident_metrics: Optional[IncidentMetrics] = None
-    top_services_affected: Optional[list[str]] = None
-    severity_metrics: Optional[dict[str, str]] = None
+    services_affected_metrics: Optional[dict[str, int]] = None
+    severity_metrics: Optional[dict[str, list[IncidentReportDto]]] = None
     incident_durations: Optional[IncidentDurations] = None
     mean_time_to_detect_seconds: Optional[int] = None
     mean_time_to_resolve_seconds: Optional[int] = None
     most_incident_reasons: Optional[dict[str, list[str]]] = None
-    recurring_incidents: Optional[list[ReoccuringIncident]] = None
-
-    # time_based_metrics: Optional[TimeBasedMetrics] = None
-
-
-# system_prompt = """
-#     Generate me a report for provided incidents and response schema.
-
-#     - Calculate Mean Time to Detect (mean_time_to_detect field) based on start_time and creation_time.
-#     - Calculate Mean Time to Resolve (mean_time_to_resolve).
-#     - Calculate severity metrics based on severity field. It should be dictionary with severity as key and count as value.
-#     - Calculate incidents duration, such as:
-#         - Shortest duration incident (shortest_duration_ms, shortest_duration_incident_id).
-#         - Longest duration incident (longest_duration_ms, longest_duration_incident_id).
-#     - Calculate top services affected (top_services_affected).
-#     - Calculate the most occuring incidents and distict them by meaning based on name and summary. If incident name means the same, do not include it.
-#     - Calculate the most incident reasons based on name and description.
-# """
+    recurring_incidents: Optional[list[ReoccuringIncidentReportDto]] = None
 
 system_prompt = """
 Generate an incident report based on the provided incidents dataset and response schema. Ensure all calculated metrics follow the specified format for consistency.
@@ -1416,9 +1398,7 @@ Generate an incident report based on the provided incidents dataset and response
    - Skip mean_time_to_resolve_seconds
 
 3. **Severity Metrics**
-   - Create a dictionary `severity_metrics` where:
-     - Keys represent unique severity levels.
-     - Values represent the count of incidents with that severity.
+   - Skip severity_metrics
 
 4. **Incident Duration Metrics**
    - Skip incident_durations
@@ -1428,22 +1408,10 @@ Generate an incident report based on the provided incidents dataset and response
    - Do not inculde "null" values
    - Output as a dictionary with service names as keys and the number of incidents as values.
 
-6. **Most Frequent Incidents (Grouped by Meaning)**
-   - Group incidents by their `name` and `summary`.
-   - If multiple incidents have different names but the same meaning, only include one.
-   - Output `most_frequent_incidents` as a list of distinct incident names with their occurrence count.
-
-7. **Most Frequent Incident Reasons**
+6. **Most Frequent Incident Reasons**
    - Identify the most common root causes by analyzing `name` and `description`.
    - Group similar reasons to avoid duplicates.
    - Output `most_frequent_reasons` as a dictionary with reason as key and list of incident ids as values whose reason it is.
-
-8. **Reoccuring incidents**
-   - Put result into recurring_incidents property
-   - Rely on the same_incident_in_the_past_id field to identify reoccuring incidents.
-   - same_incident_in_the_past_id is the id of the previous incident that is the same as the current one.
-   - Output `recurring_incidents` as a list with incident id, name and occurence count.
-   - Include only incidents occurring more than one time.
 """
 
 
@@ -1474,8 +1442,6 @@ class IncidentReportsBl:
                     "schema": IncidentReport.schema(),
                 },
             },
-            # tools=tools,
-            # tool_choice="auto",
             seed=1239,
             temperature=0.2,
         )
@@ -1494,8 +1460,43 @@ class IncidentReportsBl:
         report.recurring_incidents = self.__calculate_recurring_incidents(
             incidents_dict
         )
+        report.severity_metrics = self.__calculate_severity_metrics(incidents)
+        report.services_affected_metrics = self.__calculate_top_services_affected(
+            incidents
+        )
 
         return report
+
+    def __calculate_top_services_affected(
+        self, incidents: list[IncidentDto]
+    ) -> dict[str, int]:
+        top_services_affected = {}
+        for incident in incidents:
+            for service in incident.services:
+                if service == "null":
+                    continue
+                if service not in top_services_affected:
+                    top_services_affected[service] = 0
+                top_services_affected[service] += 1
+
+        return top_services_affected
+
+    def __calculate_severity_metrics(
+        self, incidents: list[IncidentDto]
+    ) -> dict[str, list[IncidentReportDto]]:
+        severity_metrics = {}
+        for incident in incidents:
+            if incident.severity not in severity_metrics:
+                severity_metrics[incident.severity] = []
+            severity_metrics[incident.severity].append(
+                IncidentReportDto(
+                    incident_name=incident.user_generated_name
+                    or incident.ai_generated_name,
+                    incident_id=str(incident.id),
+                )
+            )
+
+        return severity_metrics
 
     def __calculate_mttd(self, incidents: list[IncidentDto]) -> int:
         duration_sum = 0
@@ -1554,7 +1555,7 @@ class IncidentReportsBl:
 
     def __calculate_recurring_incidents(
         self, incidents_dict: dict[UUID, IncidentDto]
-    ) -> list[ReoccuringIncident]:
+    ) -> list[ReoccuringIncidentReportDto]:
         recurring_incidents: dict[str, set[str]] = {}
         for incident in incidents_dict.values():
             current_incident_in_the_past_id = incident.same_incident_in_the_past_id
@@ -1587,7 +1588,7 @@ class IncidentReportsBl:
                 )
 
         return [
-            ReoccuringIncident(
+            ReoccuringIncidentReportDto(
                 incident_name=incidents_dict[root_incident_id].user_generated_name
                 or incidents_dict[root_incident_id].ai_generated_name,
                 incident_id=str(root_incident_id),
