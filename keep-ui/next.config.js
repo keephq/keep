@@ -10,6 +10,7 @@ const nextConfig = {
     // Only apply proxy configuration for Node.js server runtime
     if (isServer) {
       console.log(` 🔐 AUTH_TYPE=${process.env.AUTH_TYPE}`);
+      console.log(` 🔐 AUTH_DEBUG=${process.env.AUTH_DEBUG}`);
     }
     if (isServer && nextRuntime === "nodejs") {
       // Add environment variables for proxy at build time
