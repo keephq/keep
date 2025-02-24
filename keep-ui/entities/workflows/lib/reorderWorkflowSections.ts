@@ -8,7 +8,13 @@ export function loadWorkflowIntoOrderedYaml(yamlString: string) {
   const workflow = load(content) as any;
   const workflowData = workflow.workflow;
 
-  const metadataFields = ["id", "name", "description", "disabled", "debug"];
+  const metadataFieldsOrder = [
+    "id",
+    "name",
+    "description",
+    "disabled",
+    "debug",
+  ];
   const sectionOrder = [
     "triggers",
     "consts",
@@ -17,12 +23,14 @@ export function loadWorkflowIntoOrderedYaml(yamlString: string) {
     "steps",
     "actions",
   ];
+  const stepFieldsOrder = ["name", "foreach", "if", "provider", "with"];
+  const providerFieldsOrder = ["config", "type", "with"];
 
   const orderedWorkflow: any = {
     workflow: {},
   };
 
-  metadataFields.forEach((field) => {
+  metadataFieldsOrder.forEach((field) => {
     if (workflowData[field] !== undefined) {
       orderedWorkflow.workflow[field] = workflowData[field];
     }
@@ -30,8 +38,40 @@ export function loadWorkflowIntoOrderedYaml(yamlString: string) {
 
   sectionOrder.forEach((section) => {
     if (workflowData[section] !== undefined) {
-      orderedWorkflow.workflow[section] = workflowData[section];
-      // TODO: order provider keys: config, type, with
+      if (section === "steps" || section === "actions") {
+        orderedWorkflow.workflow[section] = workflowData[section].map(
+          (item: any) => {
+            const orderedItem: any = {};
+
+            stepFieldsOrder.forEach((field) => {
+              if (item[field] !== undefined) {
+                if (field === "provider") {
+                  const orderedProvider: any = {};
+                  providerFieldsOrder.forEach((providerField) => {
+                    if (item.provider[providerField] !== undefined) {
+                      orderedProvider[providerField] =
+                        item.provider[providerField];
+                    }
+                  });
+                  orderedItem.provider = orderedProvider;
+                } else {
+                  orderedItem[field] = item[field];
+                }
+              }
+            });
+
+            Object.keys(item).forEach((field) => {
+              if (!stepFieldsOrder.includes(field)) {
+                orderedItem[field] = item[field];
+              }
+            });
+
+            return orderedItem;
+          }
+        );
+      } else {
+        orderedWorkflow.workflow[section] = workflowData[section];
+      }
     }
   });
 

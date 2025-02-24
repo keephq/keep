@@ -7,7 +7,7 @@ import {
 import { dump } from "js-yaml";
 import { loadWorkflowIntoOrderedYaml } from "../../lib/reorderWorkflowSections";
 
-const exampleYaml = `
+const gcpMonitoringExampleYaml = `
 workflow:
   id: enrich-gcp-alert
   name: 5a76aa52-4e0f-43c3-85ff-5603229c5d7e
@@ -52,7 +52,67 @@ workflow:
           message: "{{steps.openai-step.results}}"
 `;
 
+const clickhouseExampleYaml = `
+workflow:
+  id: query-clickhouse
+  name: Query Clickhouse and send an alert if there is an error
+  description: Query Clickhouse and send an alert if there is an error
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps:
+    - name: clickhouse-step
+      provider:
+        config: "{{ providers.clickhouse }}"
+        type: clickhouse
+        with:
+          query: "SELECT * FROM logs_table ORDER BY timestamp DESC LIMIT 1;"
+          single_row: "True"
+
+  actions:
+    - name: ntfy-action
+      if: "'{{ steps.clickhouse-step.results.level }}' == 'ERROR'"
+      provider:
+        config: "{{ providers.ntfy }}"
+        type: ntfy
+        with:
+          message: "Error in clickhouse logs_table: {{ steps.clickhouse-step.results.level }}"
+          topic: clickhouse
+
+    - name: slack-action
+      if: "'{{ steps.clickhouse-step.results.level }}' == 'ERROR'"
+      provider:
+        config: "{{ providers.slack }}"
+        type: slack
+        with:
+          message: "Error in clickhouse logs_table: {{ steps.clickhouse-step.results.level }}"
+`;
+
 const providers: Provider[] = [
+  {
+    id: "clickhouse",
+    type: "clickhouse",
+    config: {},
+    installed: true,
+    linked: true,
+    last_alert_received: "",
+    details: {
+      authentication: {},
+    },
+    display_name: "Clickhouse",
+    can_query: true,
+    can_notify: true,
+    validatedScopes: {},
+    tags: [],
+    pulling_available: true,
+    pulling_enabled: true,
+    categories: [],
+    coming_soon: false,
+    health: true,
+  },
   {
     id: "gcp",
     type: "gcpmonitoring",
@@ -117,11 +177,14 @@ const providers: Provider[] = [
     health: true,
   },
 ];
-const expectedWorkflow = loadWorkflowYAML(exampleYaml);
+const expectedWorkflow = loadWorkflowYAML(clickhouseExampleYaml);
 
 describe("YAML Parser", () => {
   it("should parse workflow into a definition and serialize it back to YAML Definition", () => {
-    const parsedWorkflowDefinition = parseWorkflow(exampleYaml, providers);
+    const parsedWorkflowDefinition = parseWorkflow(
+      clickhouseExampleYaml,
+      providers
+    );
     const yamlDefinitionWorkflow = {
       workflow: getWorkflowFromDefinition(parsedWorkflowDefinition),
     };
@@ -129,7 +192,10 @@ describe("YAML Parser", () => {
   });
 
   it("should parse yaml string and serialize it back to yaml string", () => {
-    const parsedWorkflowDefinition = parseWorkflow(exampleYaml, providers);
+    const parsedWorkflowDefinition = parseWorkflow(
+      clickhouseExampleYaml,
+      providers
+    );
     const orderedWorkflow = {
       workflow: getWorkflowFromDefinition(parsedWorkflowDefinition),
     };
@@ -141,6 +207,6 @@ describe("YAML Parser", () => {
       quotingType: '"',
     });
     const reorderedWorkflow = loadWorkflowIntoOrderedYaml(serializedWorkflow);
-    expect(reorderedWorkflow).toEqual(exampleYaml);
+    expect(reorderedWorkflow).toEqual(clickhouseExampleYaml);
   });
 });
