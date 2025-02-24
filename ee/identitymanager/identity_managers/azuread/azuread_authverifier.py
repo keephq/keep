@@ -293,9 +293,10 @@ class AzureadAuthVerifier(AuthVerifierBase):
 
         except HTTPException:
             # Re-raise known HTTP errors
+            self.logger.exception("Token validation failed (HTTPException)")
             raise
-        except Exception as e:
-            logger.error(f"Token validation failed: {str(e)}")
+        except Exception:
+            self.logger.exception("Token validation failed")
             raise HTTPException(status_code=401, detail="Invalid token")
 
         except HTTPException:
