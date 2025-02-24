@@ -125,14 +125,16 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
             "Mean Time To Resolve (MTTR)",
             incidentsReportData?.mean_time_to_resolve_seconds
           )}
-          {renderTimeMetric(
-            "Shortest Incident Duration",
-            incidentsReportData?.incident_durations?.shortest_duration_seconds
-          )}
-          {renderTimeMetric(
-            "Longest Incident Duration",
-            incidentsReportData?.incident_durations?.longest_duration_seconds
-          )}
+          {incidentsReportData?.incident_durations &&
+            renderTimeMetric(
+              "Shortest Incident Duration",
+              incidentsReportData?.incident_durations?.shortest_duration_seconds
+            )}
+          {incidentsReportData?.incident_durations &&
+            renderTimeMetric(
+              "Longest Incident Duration",
+              incidentsReportData?.incident_durations?.longest_duration_seconds
+            )}
         </div>
       </div>
     );

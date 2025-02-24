@@ -9,15 +9,15 @@ import { IncidentsReport } from "./incidents-report";
 import { PrinterIcon } from "@heroicons/react/24/outline";
 
 interface GenerateReportModalProps {
-  incidentIds: string[];
+  filterCel: string;
   onClose: () => void;
 }
 
 export const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
-  incidentIds,
+  filterCel,
   onClose,
 }) => {
-  const { data, isLoading } = useReportData(incidentIds);
+  const { data, isLoading } = useReportData(filterCel);
 
   useEffect(() => {
     console.log("Ihor", data);

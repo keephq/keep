@@ -2,11 +2,13 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import useSWR from "swr";
 import { IncidentData } from "./models";
 
-export const useReportData = (incidentIds: string[]) => {
+export const useReportData = (filterCel: string) => {
   const api = useApi();
-  const ids_query = incidentIds.map((id) => `'${id}'`).join(",");
-  const cel_query = `id in [${ids_query}]`;
-  const requestUrl = `/incidents/report?cel=${cel_query}`;
+  let requestUrl = `/incidents/report`;
+
+  if (filterCel) {
+    requestUrl += `?cel=${filterCel}`;
+  }
 
   const swrValue = useSWR<IncidentData>(
     () => (api.isReady() ? requestUrl : null),
