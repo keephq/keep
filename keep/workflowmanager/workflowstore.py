@@ -347,7 +347,7 @@ class WorkflowStore:
                     provisioned_file=None,
                 )
                 provisioned_workflows.append(workflow_yaml)
-                logger.info(f"Workflow provisioned successfully")
+                logger.info("Workflow provisioned successfully")
             except Exception as e:
                 logger.error(
                     f"Error provisioning workflow from env var",
