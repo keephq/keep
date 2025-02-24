@@ -1,23 +1,19 @@
 import NextAuth from "next-auth";
 import { customFetch } from "next-auth";
-import { config, authType } from "@/auth.config";
+import { config, authType, proxyUrl } from "@/auth.config";
 import { ProxyAgent, fetch as undici } from "undici";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { AuthType } from "@/utils/authenticationType";
 
-const proxyUrl =
-  process.env.HTTP_PROXY ||
-  process.env.HTTPS_PROXY ||
-  process.env.http_proxy ||
-  process.env.https_proxy;
-
 function proxyFetch(
   ...args: Parameters<typeof fetch>
 ): ReturnType<typeof fetch> {
+  const isDebug = config.debug;
   console.log(
     "Proxy called for URL:",
     args[0] instanceof Request ? args[0].url : args[0]
   );
+
   const dispatcher = new ProxyAgent(proxyUrl!);
 
   if (args[0] instanceof Request) {
@@ -29,11 +25,53 @@ function proxyFetch(
       headers: request.headers as HeadersInit,
       body: request.body,
       dispatcher,
+    }).then(async (response) => {
+      if (isDebug) {
+        // Clone the response to log it without consuming the body
+        const clonedResponse = response.clone();
+
+        console.log("Proxy response status:", clonedResponse.status);
+        console.log(
+          "Proxy response headers:",
+          Object.fromEntries(clonedResponse.headers)
+        );
+
+        // Log response body only in debug mode
+        try {
+          const body = await clonedResponse.text();
+          console.log("Proxy response body:", body);
+        } catch (err) {
+          console.error("Error reading response body:", err);
+        }
+      }
+      return response;
     });
   }
 
   // @ts-expect-error `undici` has a `duplex` option
-  return undici(args[0], { ...(args[1] || {}), dispatcher });
+  return undici(args[0], { ...(args[1] || {}), dispatcher }).then(
+    async (response) => {
+      if (isDebug) {
+        // Clone the response to log it without consuming the body
+        const clonedResponse = response.clone();
+
+        console.log("Proxy response status:", clonedResponse.status);
+        console.log(
+          "Proxy response headers:",
+          Object.fromEntries(clonedResponse.headers)
+        );
+
+        // Log response body only in debug mode
+        try {
+          const body = await clonedResponse.text();
+          console.log("Proxy response body:", body);
+        } catch (err) {
+          console.error("Error reading response body:", err);
+        }
+      }
+      return response;
+    }
+  );
 }
 
 // Modify the config if using Azure AD with proxy

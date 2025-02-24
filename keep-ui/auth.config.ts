@@ -32,6 +32,12 @@ export const authType =
     ? AuthType.NOAUTH
     : (authTypeEnv as AuthType);
 
+export const proxyUrl =
+  process.env.HTTP_PROXY ||
+  process.env.HTTPS_PROXY ||
+  process.env.http_proxy ||
+  process.env.https_proxy;
+
 async function refreshAccessToken(token: any) {
   const issuerUrl = process.env.KEYCLOAK_ISSUER;
   const refreshTokenUrl = `${issuerUrl}/protocol/openid-connect/token`;
@@ -176,8 +182,14 @@ const baseProviderConfigs = {
   ],
 };
 
+let isDebug =
+  process.env.AUTH_DEBUG == "true" || process.env.NODE_ENV === "development";
+if (isDebug) {
+  console.log("Auth deubg mode enabled");
+}
+
 export const config = {
-  debug: process.env.NODE_ENV === "development",
+  debug: isDebug,
   trustHost: true,
   providers:
     baseProviderConfigs[authType as keyof typeof baseProviderConfigs] ||
@@ -279,3 +291,23 @@ export const config = {
     },
   },
 } satisfies NextAuthConfig;
+
+if (isDebug && authType === AuthType.AZUREAD && proxyUrl) {
+  // add cookies override for AzureAD
+  (config as any).cookies = {
+    pkceCodeVerifier: {
+      name: "authjs.pkce.code_verifier",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false,
+      },
+    },
+  };
+}
+
+// if debug is enabled, log the config
+if (isDebug) {
+  console.log("Auth config:", config);
+}
