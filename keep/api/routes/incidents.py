@@ -42,7 +42,6 @@ from keep.api.core.incidents import (
     get_incident_facets,
     get_incident_facets_data,
     get_incident_potential_facet_fields,
-    get_last_incidents_by_cel,
 )
 from keep.api.models.alert import (
     AlertDto,
