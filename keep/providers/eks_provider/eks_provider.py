@@ -21,22 +21,6 @@ from keep.providers.models.provider_method import ProviderMethod
 class EksProviderAuthConfig:
     """EKS authentication configuration."""
 
-    access_key: str | None = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "AWS access key (Leave empty if using IAM role at EC2)",
-            "sensitive": True,
-        }
-    )
-
-    secret_access_key: str | None = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "AWS secret access key (Leave empty if using IAM role at EC2)",
-            "sensitive": True,
-        }
-    )
-
     region: str = dataclasses.field(
         metadata={
             "required": True,
@@ -52,6 +36,24 @@ class EksProviderAuthConfig:
             "description": "Name of the EKS cluster",
             "sensitive": False,
         }
+    )
+
+    access_key: str = dataclasses.field(
+        default=True,
+        metadata={
+            "required": False,
+            "description": "AWS access key (Leave empty if using IAM role at EC2)",
+            "sensitive": True,
+        },
+    )
+
+    secret_access_key: str = dataclasses.field(
+        default=True,
+        metadata={
+            "required": False,
+            "description": "AWS secret access key (Leave empty if using IAM role at EC2)",
+            "sensitive": True,
+        },
     )
 
 

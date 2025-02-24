@@ -6,7 +6,7 @@ import {
   Text,
   Title,
 } from "@tremor/react";
-import { Provider, TProviderLabels } from "./providers";
+import { Provider, TProviderLabels } from "@/shared/api/providers";
 import {
   BellAlertIcon,
   ChatBubbleBottomCenterIcon,
@@ -27,6 +27,7 @@ interface Props {
   onClick: () => void;
 }
 
+// TODO: move to a separate file
 const WebhookIcon = (props: any) => (
   <svg
     width="256px"

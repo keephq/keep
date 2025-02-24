@@ -11,7 +11,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import { IoNotificationsOffOutline } from "react-icons/io5";
-import { ProviderMethod } from "@/app/(keep)/providers/providers";
+import { ProviderMethod } from "@/shared/api/providers";
 import { AlertDto } from "@/entities/alerts/model";
 import { useProviders } from "utils/hooks/useProviders";
 import { useAlerts } from "utils/hooks/useAlerts";

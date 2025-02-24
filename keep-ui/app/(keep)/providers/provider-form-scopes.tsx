@@ -12,7 +12,7 @@ import {
   Icon,
   Button,
 } from "@tremor/react";
-import { Provider } from "./providers";
+import { Provider } from "@/shared/api/providers";
 import {
   ArrowPathIcon,
   QuestionMarkCircleIcon,
