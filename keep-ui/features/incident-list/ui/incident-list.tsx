@@ -347,7 +347,7 @@ export function IncidentList({
                   className="mt-14"
                   entityName={"incidents"}
                   facetsConfig={facetsConfig}
-                  facetOptionsCel={mainCelQuery}
+                  facetOptionsCel={dateRangeCel}
                   usePropertyPathsSuggestions={true}
                   clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}
