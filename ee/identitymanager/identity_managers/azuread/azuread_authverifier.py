@@ -157,6 +157,7 @@ class AzureadAuthVerifier(AuthVerifierBase):
         self, token: str = Depends(oauth2_scheme)
     ) -> AuthenticatedEntity:
         """Verify the Azure AD JWT token and extract claims"""
+
         try:
             # First decode without verification to get the key id (kid)
             unverified_headers = jwt.get_unverified_header(token)
@@ -170,15 +171,17 @@ class AzureadAuthVerifier(AuthVerifierBase):
             if not signing_key:
                 raise HTTPException(status_code=401, detail="Invalid token signing key")
 
-            # Verify and decode the token
+            # For v2.0 tokens, 'appid' doesn't exist — 'azp' is used instead.
+            # Remove "appid" from the 'require' list so v2 tokens won't fail.
             options = {
                 "verify_signature": True,
-                "verify_aud": False,  # We'll validate manually
+                "verify_aud": False,  # We'll validate manually below
                 "verify_iat": True,
                 "verify_exp": True,
                 "verify_nbf": True,
                 "verify_iss": True,
-                "require": ["exp", "iat", "nbf", "iss", "sub", "appid"],
+                # "require" the standard claims but NOT "appid"
+                "require": ["exp", "iat", "nbf", "iss", "sub"],
             }
 
             try:
@@ -190,13 +193,25 @@ class AzureadAuthVerifier(AuthVerifierBase):
                     options=options,
                 )
 
-                # Validate the appid claim instead of audience
-                if payload.get("appid") != self.client_id:
+                # In v1.0 tokens, client_id => 'appid'
+                # In v2.0 tokens, client_id => 'azp'
+                # We consider either one valid, so long as it matches self.client_id
+                client_id_in_token = payload.get("appid") or payload.get("azp")
+
+                if not client_id_in_token:
                     raise HTTPException(
-                        status_code=401, detail="Invalid token application ID"
+                        status_code=401, detail="No client ID (appid/azp) in token"
                     )
-                # validate aud
-                if payload.get("aud") != f"api://{self.client_id}":
+
+                if client_id_in_token != self.client_id:
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Invalid token application ID (appid/azp)",
+                    )
+
+                # Validate the audience
+                expected_aud = f"api://{self.client_id}"
+                if payload.get("aud") != expected_aud:
                     raise HTTPException(
                         status_code=401, detail="Invalid token audience"
                     )
@@ -236,10 +251,10 @@ class AzureadAuthVerifier(AuthVerifierBase):
             if not role_name:
                 raise HTTPException(
                     status_code=403,
-                    detail="You are using Azure AD but the user is not a member of any authorized groups. You need to be a member of an authorized group to access Keep.",
+                    detail="User not a member of any authorized groups for Keep",
                 )
 
-            # Validate role has required scopes
+            # Validate role scopes
             role = get_role_by_role_name(role_name)
             if not role.has_scopes(self.scopes):
                 raise HTTPException(
@@ -247,7 +262,7 @@ class AzureadAuthVerifier(AuthVerifierBase):
                     detail=f"Role {role_name} does not have required permissions",
                 )
 
-            # Auto-provision so we can list users
+            # Auto-provisioning logic
             hashed_token = hashlib.sha256(token.encode()).hexdigest()
             if hashed_token not in self.saw_tokens and not user_exists(
                 tenant_id, email
@@ -258,9 +273,16 @@ class AzureadAuthVerifier(AuthVerifierBase):
 
             if hashed_token not in self.saw_tokens:
                 update_user_last_sign_in(tenant_id, email)
-            # Add token to seen tokens
             self.saw_tokens.add(hashed_token)
+
             return AuthenticatedEntity(tenant_id, email, None, role_name)
+
+        except HTTPException:
+            # Re-raise known HTTP errors
+            raise
+        except Exception as e:
+            logger.error(f"Token validation failed: {str(e)}")
+            raise HTTPException(status_code=401, detail="Invalid token")
 
         except HTTPException:
             raise
