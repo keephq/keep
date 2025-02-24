@@ -122,6 +122,7 @@ class YoutrackProvider(BaseProvider):
         }
     
     def _notify(self, summary="", description=""):
+        self.logger.info("Creating issue in Youtrack")
         return self._create_issue(summary=summary, description=description)
     
 if __name__ == "__main__":
