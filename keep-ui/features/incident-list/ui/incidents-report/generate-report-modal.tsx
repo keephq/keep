@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useRef } from "react";
 import { Button } from "@/components/ui";
 import Modal from "@/components/ui/Modal";
 import { KeepLoader } from "@/shared/ui";
@@ -18,10 +18,6 @@ export const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
   onClose,
 }) => {
   const { data, isLoading } = useReportData(filterCel);
-
-  useEffect(() => {
-    console.log("Ihor", data);
-  }, [data]);
 
   const contentRef = useRef<HTMLDivElement>(null);
   const reactToPrintFn = useReactToPrint({

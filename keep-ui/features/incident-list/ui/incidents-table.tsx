@@ -56,7 +56,7 @@ function SelectedRowActions({
   onGenerateReport: () => void;
 }) {
   return (
-    <div className="flex justify-between">
+    <div className="w-full flex justify-between">
       <div>
         <Button
           color="orange"
@@ -69,7 +69,7 @@ function SelectedRowActions({
         </Button>
       </div>
 
-      <div className="flex gap-2 items-center justify-end">
+      <div className="flex gap-2 items-center">
         {selectedRowIds.length ? (
           <span className="accent-dark-tremor-content text-sm px-2">
             {selectedRowIds.length} selected
