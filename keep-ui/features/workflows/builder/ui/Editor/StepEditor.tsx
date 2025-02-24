@@ -13,7 +13,7 @@ import {
   Text,
 } from "@tremor/react";
 import { KeyIcon } from "@heroicons/react/20/solid";
-import { Provider } from "@/app/(keep)/providers/providers";
+import { Provider } from "@/shared/api/providers";
 import {
   BackspaceIcon,
   PencilIcon,
@@ -23,13 +23,22 @@ import {
   ExclamationCircleIcon,
   CheckCircleIcon,
 } from "@heroicons/react/20/solid";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useWorkflowStore } from "@/entities/workflows";
-import { V2Properties } from "@/entities/workflows/model/types";
+import {
+  NodeDataStepSchema,
+  V2ActionStep,
+  V2Properties,
+  V2StepConditionAssert,
+  V2StepConditionThreshold,
+  V2StepForeach,
+  V2StepSchema,
+  V2StepStep,
+} from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
 import debounce from "lodash.debounce";
 import { TestRunStepForm } from "./StepTest";
-import { PROVIDERS_WITH_NO_CONFIG } from "@/entities/workflows/model/validation";
+import { checkProviderNeedsInstallation } from "@/entities/workflows/model/validation";
 import { EditorField } from "@/features/workflows/builder/ui/Editor/EditorField";
 import { useProviders } from "@/utils/hooks/useProviders";
 import ProviderForm from "@/app/(keep)/providers/provider-form";
@@ -56,47 +65,6 @@ export interface KeepEditorProps {
   providerType?: string;
   type?: string;
   isV2?: boolean;
-}
-
-function getProviderConfig(
-  providerType: string | undefined,
-  properties: V2Properties
-) {
-  const providerConfig = (properties.config as string)?.trim();
-  if (PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")) {
-    return "default-" + providerType;
-  }
-  if (!providerConfig) {
-    return null;
-  }
-  return providerConfig;
-}
-
-function validateProviderConfig(
-  providerType: string | undefined,
-  providerConfig: string,
-  providers: Provider[] | null | undefined,
-  installedProviders: Provider[] | null | undefined
-) {
-  if (PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")) {
-    return "";
-  }
-  const isThisProviderNeedsInstallation =
-    providers?.some(
-      (p) =>
-        p.type === providerType && p.config && Object.keys(p.config).length > 0
-    ) ?? false;
-
-  if (
-    providerConfig &&
-    isThisProviderNeedsInstallation &&
-    installedProviders?.find(
-      (p) => (p.type === providerType && p.details?.name) === providerConfig
-    ) === undefined
-  ) {
-    return "This provider is not installed and you'll need to install it before executing this workflow.";
-  }
-  return "";
 }
 
 function InstallProviderButton({ providerType }: { providerType: string }) {
@@ -163,21 +131,24 @@ function KeepSetupProviderEditor({
   updateProperty,
   providerType,
   providerError,
-  providerNameError,
 }: KeepEditorProps & {
   providerError?: string | null;
   providerNameError?: string | null;
 }) {
   const { data: { providers, installed_providers: installedProviders } = {} } =
     useProviders();
+  const providerObject =
+    providers?.find((p) => p.type === providerType) ?? null;
 
   const installedProviderByType = installedProviders?.filter(
     (p) => p.type === providerType
   );
-  const providerConfig = getProviderConfig(providerType, properties);
-
-  const providerObject =
-    providers?.find((p) => p.type === providerType) ?? null;
+  const doesProviderNeedInstallation = providerObject
+    ? checkProviderNeedsInstallation(providerObject)
+    : false;
+  const providerConfig = !doesProviderNeedInstallation
+    ? "default-" + providerType
+    : (properties.config ?? "")?.trim();
 
   const isCustomConfig =
     installedProviderByType?.find((p) => p.details?.name === providerConfig) ===
@@ -186,6 +157,11 @@ function KeepSetupProviderEditor({
   const [selectValue, setSelectValue] = useState(
     isCustomConfig ? "enter-manually" : (providerConfig ?? "")
   );
+
+  const isGeneralError = providerError?.includes("No provider selected");
+  const inputError =
+    providerError && !isGeneralError ? providerError : undefined;
+  const isSelectError = !!inputError && selectValue !== "enter-manually";
 
   const handleSelectChange = (value: string) => {
     setSelectValue(value);
@@ -215,12 +191,12 @@ function KeepSetupProviderEditor({
     );
   };
 
-  if (PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")) {
+  if (!doesProviderNeedInstallation) {
     return (
       <section>
         <Callout color="teal" title="You're all set">
           <span className="capitalize">{providerType}</span> provider does not
-          require configuration
+          require installation
         </Callout>
       </section>
     );
@@ -230,7 +206,9 @@ function KeepSetupProviderEditor({
     <section>
       <div className="mb-2">
         <Text className="font-bold">Select provider</Text>
-        {providerError && <Text className="text-red-500">{providerError}</Text>}
+        {isGeneralError && (
+          <Text className="text-red-500">{providerError}</Text>
+        )}
       </div>
       <Select
         className="mb-1.5"
@@ -238,6 +216,8 @@ function KeepSetupProviderEditor({
         value={selectValue}
         icon={getSelectIcon}
         onValueChange={handleSelectChange}
+        error={isSelectError}
+        errorMessage={inputError}
       >
         {installedProviderByType?.map((provider) => {
           const providerName = provider.details?.name ?? provider.id;
@@ -283,9 +263,9 @@ function KeepSetupProviderEditor({
             onChange={(e: any) => updateProperty("config", e.target.value)}
             className="mb-2.5"
             value={providerConfig || ""}
-            error={!!providerNameError}
-            errorMessage={providerNameError ?? undefined}
-            disabled={PROVIDERS_WITH_NO_CONFIG.includes(providerType ?? "")}
+            error={!!inputError}
+            errorMessage={inputError}
+            disabled={!doesProviderNeedInstallation}
           />
         </>
       )}
@@ -423,9 +403,12 @@ function KeepStepEditor({
 function KeepThresholdConditionEditor({
   properties,
   updateProperty,
-}: KeepEditorProps) {
-  const currentValueValue = (properties.value as string) ?? "";
-  const currentCompareToValue = (properties.compare_to as string) ?? "";
+}: {
+  properties: V2StepConditionThreshold["properties"];
+  updateProperty: (key: string, value: any) => void;
+}) {
+  const currentValueValue = properties.value ?? "";
+  const currentCompareToValue = properties.compare_to ?? "";
   return (
     <>
       <Text>Value</Text>
@@ -449,8 +432,11 @@ function KeepThresholdConditionEditor({
 function KeepAssertConditionEditor({
   properties,
   updateProperty,
-}: KeepEditorProps) {
-  const currentAssertValue = (properties.assert as string) ?? "";
+}: {
+  properties: V2StepConditionAssert["properties"];
+  updateProperty: (key: string, value: any) => void;
+}) {
+  const currentAssertValue = properties.assert ?? "";
   return (
     <>
       <Text>Assert</Text>
@@ -464,8 +450,14 @@ function KeepAssertConditionEditor({
   );
 }
 
-function KeepForeachEditor({ properties, updateProperty }: KeepEditorProps) {
-  const currentValueValue = (properties.value as string) ?? "";
+function KeepForeachEditor({
+  properties,
+  updateProperty,
+}: {
+  properties: V2StepForeach["properties"];
+  updateProperty: (key: string, value: any) => void;
+}) {
+  const currentValueValue = properties.value ?? "";
 
   return (
     <>
@@ -480,20 +472,170 @@ function KeepForeachEditor({ properties, updateProperty }: KeepEditorProps) {
   );
 }
 
-export function StepEditorV2({
+type ActionOrStepProperties =
+  | V2StepStep["properties"]
+  | V2ActionStep["properties"];
+
+export function StepEditorV2() {
+  const { selectedNode, getNodeById } = useWorkflowStore();
+  const nodeData = useMemo(() => {
+    if (!selectedNode) {
+      return null;
+    }
+    const node = getNodeById(selectedNode);
+    if (
+      !node ||
+      node.data.componentType === "condition-assert__end" ||
+      node.data.componentType === "condition-threshold__end"
+    ) {
+      return null;
+    }
+
+    const parsedNode = NodeDataStepSchema.parse(node.data);
+    return {
+      type: parsedNode.type,
+      componentType: parsedNode.componentType,
+      name: parsedNode.name,
+      properties: parsedNode.properties,
+    };
+  }, [selectedNode]);
+
+  if (!nodeData) {
+    // If the node is not a step, action, condition or foreach, don't render anything
+    return null;
+  }
+
+  if (
+    nodeData.componentType === "switch" &&
+    nodeData.type === "condition-threshold"
+  ) {
+    return (
+      <ConditionsAndMiscEditor
+        initialFormData={{
+          type: "condition-threshold",
+          name: nodeData.name,
+          properties:
+            nodeData.properties as V2StepConditionThreshold["properties"],
+        }}
+      />
+    );
+  }
+
+  if (
+    nodeData.componentType === "switch" &&
+    nodeData.type === "condition-assert"
+  ) {
+    return (
+      <ConditionsAndMiscEditor
+        initialFormData={{
+          type: "condition-assert",
+          name: nodeData.name,
+          properties:
+            nodeData.properties as V2StepConditionAssert["properties"],
+        }}
+      />
+    );
+  }
+  if (nodeData.componentType === "container") {
+    return (
+      <ConditionsAndMiscEditor
+        initialFormData={{
+          type: nodeData.type as "foreach",
+          name: nodeData.name,
+          properties: nodeData.properties as V2StepForeach["properties"],
+        }}
+      />
+    );
+  }
+  return (
+    <ActionOrStepEditor
+      initialFormData={{
+        type: nodeData.type,
+        name: nodeData.name,
+        properties: nodeData.properties as ActionOrStepProperties,
+      }}
+    />
+  );
+}
+
+type ConditionsAndMiscFormDataType =
+  | {
+      type: "condition-threshold";
+      name: string;
+      properties: V2StepConditionThreshold["properties"];
+    }
+  | {
+      type: "condition-assert";
+      name: string;
+      properties: V2StepConditionAssert["properties"];
+    }
+  | {
+      type: "foreach";
+      name: string;
+      properties: V2StepForeach["properties"];
+    };
+
+function ConditionsAndMiscEditor({
   initialFormData,
 }: {
-  initialFormData: {
-    name?: string;
-    properties?: V2Properties;
-    type?: string;
-  };
+  initialFormData: ConditionsAndMiscFormDataType;
 }) {
-  const [formData, setFormData] = useState<{
-    name?: string;
-    properties?: V2Properties;
-    type?: string;
-  }>(initialFormData);
+  const [formData, setFormData] = useState(initialFormData);
+  const { updateSelectedNodeData, setEditorSynced } = useWorkflowStore();
+  const saveFormDataToStoreDebounced = useCallback(
+    debounce((formData: any) => {
+      updateSelectedNodeData("name", formData.name);
+      updateSelectedNodeData("properties", formData.properties);
+    }, 300),
+    [updateSelectedNodeData]
+  );
+  const handlePropertyChange = (key: string, value: any) => {
+    const updatedFormData = {
+      ...formData,
+      properties: {
+        ...formData.properties,
+        [key]: value,
+      },
+    };
+    setFormData(updatedFormData as ConditionsAndMiscFormDataType);
+    setEditorSynced(false);
+    saveFormDataToStoreDebounced(updatedFormData);
+  };
+  return (
+    <EditorLayout className="flex-1">
+      {formData.type === "condition-threshold" ? (
+        <KeepThresholdConditionEditor
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
+        />
+      ) : formData.type === "foreach" ? (
+        <KeepForeachEditor
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
+        />
+      ) : formData.type === "condition-assert" ? (
+        <KeepAssertConditionEditor
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
+        />
+      ) : null}
+    </EditorLayout>
+  );
+}
+
+type ActionOrStepFormDataType = {
+  type: string;
+  name?: string;
+  properties: ActionOrStepProperties;
+};
+
+function ActionOrStepEditor({
+  initialFormData,
+}: {
+  initialFormData: ActionOrStepFormDataType;
+}) {
+  const [formData, setFormData] =
+    useState<ActionOrStepFormDataType>(initialFormData);
   const {
     updateSelectedNodeData,
     setEditorSynced,
@@ -514,7 +656,6 @@ export function StepEditorV2({
   const providerType = formData?.type?.split("-")[1];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("handleInputChange", e.target.name, e.target.value);
     const updatedFormData = { ...formData, [e.target.name]: e.target.value };
     setFormData(updatedFormData);
     setEditorSynced(false);
@@ -524,7 +665,10 @@ export function StepEditorV2({
   const handlePropertyChange = (key: string, value: any) => {
     const updatedFormData = {
       ...formData,
-      properties: { ...formData.properties, [key]: value },
+      properties: {
+        ...formData.properties,
+        [key]: value,
+      } as ActionOrStepProperties,
     };
     setFormData(updatedFormData);
     setEditorSynced(false);
@@ -550,30 +694,26 @@ export function StepEditorV2({
     providerError = error;
   }
 
-  const method = formData.type?.includes("step-") ? "_query" : "_notify";
-  const methodParams = formData.properties?.with ?? {};
-  const providerConfig = getProviderConfig(
-    providerType,
-    formData.properties ?? {}
+  const { data: { installed_providers: installedProviders } = {} } =
+    useProviders();
+
+  const providerObject = installedProviders?.find(
+    (p) => p.type === providerType
   );
 
-  const { data: { providers, installed_providers: installedProviders } = {} } =
-    useProviders();
+  const method = formData.type?.includes("step-") ? "_query" : "_notify";
+  const methodParams = formData.properties?.with ?? {};
+  const providerConfig =
+    providerObject && !checkProviderNeedsInstallation(providerObject)
+      ? "default-" + providerType
+      : (formData.properties?.config ?? "")?.trim();
 
   const installedProvider = installedProviders?.find(
     (p) => p.type === providerType && p.details?.name === providerConfig
   );
   const providerId = installedProvider?.id;
 
-  const providerNameError = validateProviderConfig(
-    providerType,
-    providerConfig ?? "",
-    providers,
-    installedProviders
-  );
-
-  const defaultTabIndex =
-    providerError || providerNameError ? 0 : parametersError ? 1 : 1;
+  const defaultTabIndex = providerError ? 0 : parametersError ? 1 : 1;
 
   const [tabIndex, setTabIndex] = useState(defaultTabIndex);
 
@@ -585,7 +725,7 @@ export function StepEditorV2({
   const saveButtonText = isSaving ? "Saving..." : "Save & Continue";
 
   const setupStatus = () => {
-    if (providerError || providerNameError) {
+    if (providerError) {
       return "error";
     }
     return "ok";
@@ -654,7 +794,6 @@ export function StepEditorV2({
                 <KeepSetupProviderEditor
                   providerType={providerType}
                   providerError={providerError}
-                  providerNameError={providerNameError}
                   properties={formData.properties}
                   updateProperty={handlePropertyChange}
                 />
@@ -687,21 +826,6 @@ export function StepEditorV2({
                   updateProperty={handlePropertyChange}
                   providerType={providerType}
                   type={formData.type}
-                />
-              ) : formData.type === "condition-threshold" ? (
-                <KeepThresholdConditionEditor
-                  properties={formData.properties!}
-                  updateProperty={handlePropertyChange}
-                />
-              ) : formData.type?.includes("foreach") ? (
-                <KeepForeachEditor
-                  properties={formData.properties!}
-                  updateProperty={handlePropertyChange}
-                />
-              ) : formData.type === "condition-assert" ? (
-                <KeepAssertConditionEditor
-                  properties={formData.properties!}
-                  updateProperty={handlePropertyChange}
                 />
               ) : null}
             </EditorLayout>

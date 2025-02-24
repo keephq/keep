@@ -7,6 +7,7 @@ import "@xyflow/react/dist/style.css";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import { WF_DEBUG_INFO } from "./debug-settings";
+import { edgeCanHaveAddButton } from "../lib/utils";
 
 export function DebugEdgeInfo({
   id,
@@ -28,11 +29,15 @@ export function DebugEdgeInfo({
       className={`absolute bg-black text-green-500 font-mono text-[10px] px-1 py-1`}
       style={{
         transform: `translate(0, -50%) translate(${labelX + 30}px, ${labelY}px)`,
-        pointerEvents: "none",
         opacity: isLayouted ? 1 : 0,
+        pointerEvents: "all",
       }}
     >
       {id}
+      <details>
+        <summary>data=</summary>
+        <pre>{JSON.stringify({ source, target }, null, 2)}</pre>
+      </details>
     </div>
   );
 }
@@ -68,15 +73,7 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
 
   let dynamicLabel = label;
   const isLayouted = !!data?.isLayouted;
-  let showAddButton =
-    !source?.includes("empty") &&
-    !target?.includes("trigger_end") &&
-    source !== "start";
-
-  if (!showAddButton) {
-    showAddButton =
-      target?.includes("trigger_end") && source?.includes("trigger_start");
-  }
+  let showAddButton = edgeCanHaveAddButton(source, target);
 
   const color =
     dynamicLabel === "True"

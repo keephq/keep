@@ -25,7 +25,6 @@ from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.db import (
     DestinationIncidentNotFound,
     add_audit,
-    change_incident_status_by_id,
     confirm_predicted_incident_by_id,
     get_future_incidents_by_incident_id,
     get_incident_alerts_and_links_by_incident_id,
@@ -365,6 +364,23 @@ def update_incident(
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     incident_bl = IncidentBl(tenant_id, session=session, pusher_client=pusher_client)
+
+    current_incident = get_incident_by_id(tenant_id, incident_id)
+    if not current_incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    if (
+        updated_incident_dto.assignee
+        and current_incident.assignee != updated_incident_dto.assignee
+    ):
+        add_audit(
+            tenant_id,
+            str(incident_id),
+            authenticated_entity.email,
+            ActionType.INCIDENT_ASSIGN,
+            f"Incident assigned to {updated_incident_dto.assignee}",
+        )
+
     new_incident_dto = incident_bl.update_incident(
         incident_id, updated_incident_dto, generated_by_ai
     )
@@ -742,6 +758,35 @@ async def receive_event(
     return Response(status_code=202)
 
 
+@router.post("/{incident_id}/assign", description="Assign incident to user")
+def assign_incident(
+    incident_id: UUID,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    session: Session = Depends(get_session),
+):
+    logger.info(
+        "Assigning incident to user",
+        extra={"incident_id": incident_id, "assignee": authenticated_entity.email},
+    )
+    incident = get_incident_by_id(
+        authenticated_entity.tenant_id, incident_id, session=session
+    )
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    incident.assignee = authenticated_entity.email
+    add_audit(
+        authenticated_entity.tenant_id,
+        str(incident_id),
+        authenticated_entity.email,
+        ActionType.INCIDENT_ASSIGN,
+        f"Incident self-assigned to {authenticated_entity.email}",
+    )
+    session.commit()
+    return Response(status_code=202)
+
+
 @router.post(
     "/{incident_id}/status",
     description="Change incident status",
@@ -753,6 +798,7 @@ def change_incident_status(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
+    session: Session = Depends(get_session),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -767,18 +813,15 @@ def change_incident_status(
         IncidentStatus.RESOLVED,
         IncidentStatus.ACKNOWLEDGED,
     ]
-    incident = get_incident_by_id(tenant_id, incident_id, with_alerts=with_alerts)
+    incident = get_incident_by_id(
+        tenant_id, incident_id, with_alerts=with_alerts, session=session
+    )
+
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
     # We need to do something only if status really changed
-    if not change.status == incident.status:
-        end_time = (
-            datetime.now(tz=timezone.utc)
-            if change.status == IncidentStatus.RESOLVED
-            else None
-        )
-        change_incident_status_by_id(tenant_id, incident_id, change.status, end_time)
+    if change.status != incident.status:
         if change.status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:
             for alert in incident._alerts:
                 _enrich_alert(
@@ -788,16 +831,30 @@ def change_incident_status(
                     ),
                     authenticated_entity=authenticated_entity,
                 )
-        incident.end_time = end_time
-        incident.assignee = authenticated_entity.email
-        incident.status = change.status
+
+        if change.status == IncidentStatus.RESOLVED:
+            end_time = datetime.now(tz=timezone.utc)
+            incident.end_time = end_time
+
+        if incident.assignee != authenticated_entity.email:
+            incident.assignee = authenticated_entity.email
+            add_audit(
+                tenant_id,
+                str(incident_id),
+                authenticated_entity.email,
+                ActionType.INCIDENT_ASSIGN,
+                f"Incident self-assigned to {authenticated_entity.email}",
+            )
+
         add_audit(
             tenant_id,
             str(incident_id),
             authenticated_entity.email,
             ActionType.INCIDENT_STATUS_CHANGE,
-            f"Incident status changed from {incident.status} to {change.status} by {authenticated_entity.email}",
+            f"Incident status changed from {incident.status} to {change.status.value}",
         )
+        incident.status = change.status.value
+        session.commit()
 
     new_incident_dto = IncidentDto.from_db_incident(incident)
 

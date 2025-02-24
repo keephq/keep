@@ -501,3 +501,4 @@ class ActionType(enum.Enum):
     INCIDENT_COMMENT = "A comment was added to the incident"
     INCIDENT_ENRICH = "Incident enriched"
     INCIDENT_STATUS_CHANGE = "Incident status changed"
+    INCIDENT_ASSIGN = "Incident assigned"

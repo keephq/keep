@@ -1,5 +1,9 @@
 import { useEffect, useRef, useMemo } from "react";
-import { useWorkflowStore } from "@/entities/workflows";
+import {
+  useWorkflowStore,
+  V2ActionOrStep,
+  V2StepSchema,
+} from "@/entities/workflows";
 import { StepEditorV2 } from "./StepEditor";
 import { Divider } from "@tremor/react";
 import clsx from "clsx";
@@ -8,57 +12,47 @@ import { WorkflowToolbox } from "../WorkflowToolbox";
 import { WorkflowEditorV2 } from "./WorkflowEditor";
 import { TriggerEditor } from "./TriggerEditor";
 import { WorkflowStatus } from "../workflow-status";
+import { triggerTypes } from "../../lib/utils";
 
 const ReactFlowEditor = () => {
   const { selectedNode, selectedEdge, setEditorOpen, getNodeById, editorOpen } =
     useWorkflowStore();
-  const stepEditorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isTrigger = ["interval", "manual", "alert", "incident"].includes(
-    selectedNode || ""
+  const dividerRef = useRef<HTMLDivElement>(null);
+
+  const isTrigger = triggerTypes.includes(selectedNode || "");
+  const isStepEditor = !selectedNode?.includes("empty") && !isTrigger;
+
+  useEffect(
+    function scrollRelevantEditorIntoView() {
+      if (!selectedNode && !selectedEdge) {
+        return;
+      }
+      // Scroll the view to the divider into view when the editor is opened, so the relevant editor is visible
+      const timer = setTimeout(() => {
+        if (!containerRef.current || !dividerRef.current) {
+          return;
+        }
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const dividerRect = dividerRef.current.getBoundingClientRect();
+        // Check if the divider is already at the top of the container
+        const isAtTop = dividerRect.top <= containerRect.top;
+
+        if (isAtTop) {
+          return;
+        }
+        // Scroll the divider into view
+        dividerRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+      return () => clearTimeout(timer); // Cleanup the timer on unmount
+    },
+    [selectedNode, selectedEdge]
   );
 
-  useEffect(() => {
-    setEditorOpen(true);
-    if (!selectedNode && !selectedEdge) {
-      return;
-    }
-    // TODO: refactor to use ref callback function, e.g. ref={(el) => {
-    //   if (el) {
-    //     el.scrollIntoView({ behavior: "smooth", block: "start" });
-    //   }
-    // }}
-    // Scroll the StepEditorV2 into view when the editor is opened
-    const timer = setTimeout(() => {
-      if (containerRef.current && stepEditorRef.current) {
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const stepEditorRect = stepEditorRef.current.getBoundingClientRect();
-        // Check if StepEditorV2 is already at the top of the container
-        const isAtTop = stepEditorRect.top <= containerRect.top;
-
-        if (!isAtTop) {
-          // Scroll the StepEditorV2 into view
-          stepEditorRef.current.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        }
-      }
-    }, 100);
-    return () => clearTimeout(timer); // Cleanup the timer on unmount
-  }, [selectedNode, selectedEdge]);
-
-  const initialFormData = useMemo(() => {
-    if (!selectedNode) {
-      return null;
-    }
-    const { data } = getNodeById(selectedNode) || {};
-    const { name, type, properties } = data || {};
-    return { name, type, properties };
-  }, [selectedNode]);
-
-  const isStepEditor =
-    !selectedNode?.includes("empty") && !isTrigger && initialFormData;
+  const showDivider = Boolean(selectedNode || selectedEdge);
 
   return (
     <div className="transition-transform relative z-50" ref={containerRef}>
@@ -94,16 +88,9 @@ const ReactFlowEditor = () => {
         <div className="relative flex-1 flex flex-col bg-white border-l overflow-y-auto h-full w-80 2xl:w-96">
           <WorkflowStatus className="m-2 shrink-0" />
           <WorkflowEditorV2 />
-          {(isStepEditor || isTrigger) && (
-            <Divider ref={stepEditorRef} className="my-2" />
-          )}
+          {showDivider && <Divider ref={dividerRef} className="my-2" />}
           {isTrigger && <TriggerEditor />}
-          {isStepEditor && (
-            <StepEditorV2
-              key={selectedNode}
-              initialFormData={initialFormData}
-            />
-          )}
+          {isStepEditor && <StepEditorV2 key={selectedNode} />}
           <WorkflowToolbox isDraggable={false} />
         </div>
       )}

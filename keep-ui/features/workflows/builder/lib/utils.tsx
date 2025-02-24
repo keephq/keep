@@ -1,4 +1,4 @@
-import { Provider } from "@/app/(keep)/providers/providers";
+import { Provider } from "@/shared/api/providers";
 import {
   ToolboxConfiguration,
   V2StepConditionThreshold,
@@ -71,7 +71,7 @@ export const getTriggerTemplate = (triggerType: string) => {
 
 export const triggerTypes = ["manual", "alert", "incident", "interval"];
 
-const foreachTemplate: Omit<V2StepForeach, "id"> = {
+export const foreachTemplate: Omit<V2StepForeach, "id"> = {
   type: "foreach",
   componentType: "container",
   name: "Foreach",
@@ -81,27 +81,27 @@ const foreachTemplate: Omit<V2StepForeach, "id"> = {
   sequence: [],
 };
 
-const conditionThresholdTemplate: Omit<V2StepConditionThreshold, "id"> = {
-  type: "condition-threshold",
-  componentType: "switch",
-  name: "Threshold",
-  properties: {
-    value: "",
-    compare_to: "",
-  },
-  branches: {
-    true: [],
-    false: [],
-  },
-};
+export const conditionThresholdTemplate: Omit<V2StepConditionThreshold, "id"> =
+  {
+    type: "condition-threshold",
+    componentType: "switch",
+    name: "Threshold",
+    properties: {
+      value: "",
+      compare_to: "",
+    },
+    branches: {
+      true: [],
+      false: [],
+    },
+  };
 
-const conditionAssertTemplate: Omit<V2StepConditionAssert, "id"> = {
+export const conditionAssertTemplate: Omit<V2StepConditionAssert, "id"> = {
   type: "condition-assert",
   componentType: "switch",
   name: "Assert",
   properties: {
-    value: "",
-    compare_to: "",
+    assert: "",
   },
   branches: {
     true: [],
@@ -183,3 +183,36 @@ export const normalizeStepType = (type: string) => {
     ?.replace("condition-", "")
     ?.replace("trigger_", "");
 };
+
+export function edgeCanHaveAddButton(source: string, target: string) {
+  let showAddButton =
+    !source?.includes("empty") &&
+    !target?.includes("trigger_end") &&
+    source !== "start";
+
+  if (!showAddButton) {
+    showAddButton =
+      target?.includes("trigger_end") && source?.includes("trigger_start");
+  }
+  return showAddButton;
+}
+
+export function canAddTriggerBeforeEdge(source: string, target: string) {
+  return source?.includes("trigger_start") && target?.includes("trigger_end");
+}
+
+export function canAddStepBeforeEdge(source: string, target: string) {
+  return (
+    !source?.includes("empty") &&
+    !target?.includes("trigger_end") &&
+    source !== "start"
+  );
+}
+
+export function canAddConditionBeforeEdge(source: string, target: string) {
+  return !target?.endsWith("empty_true") && !target?.endsWith("empty_false");
+}
+
+export function canAddForeachBeforeEdge(source: string, target: string) {
+  return !target?.endsWith("foreach");
+}

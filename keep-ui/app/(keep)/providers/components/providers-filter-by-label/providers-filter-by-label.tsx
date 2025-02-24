@@ -2,7 +2,7 @@ import type { FC } from "react";
 import { MultiSelect, MultiSelectItem } from "@tremor/react";
 import { TagIcon } from "@heroicons/react/20/solid";
 import { useFilterContext, PROVIDER_LABELS } from "../../filter-context";
-import type { TProviderLabels } from "../../providers";
+import type { TProviderLabels } from "@/shared/api/providers";
 
 export const ProvidersFilterByLabel: FC = (props) => {
   const { setProvidersSelectedTags, providersSelectedTags } =

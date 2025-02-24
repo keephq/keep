@@ -8,11 +8,7 @@ import { MdNotStarted } from "react-icons/md";
 import { GoSquareFill } from "react-icons/go";
 import { PiSquareLogoFill } from "react-icons/pi";
 import { toast } from "react-toastify";
-import {
-  FlowNode,
-  V2StepStep,
-  V2StepTrigger,
-} from "@/entities/workflows/model/types";
+import { FlowNode } from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import clsx from "clsx";
 import { WF_DEBUG_INFO } from "./debug-settings";
@@ -20,7 +16,6 @@ import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Tooltip } from "@/shared/ui/Tooltip";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 import { normalizeStepType, triggerTypes } from "../lib/utils";
-import { getHumanReadableInterval } from "@/entities/workflows/lib/getHumanReadableInterval";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
@@ -57,7 +52,6 @@ function WorkflowNode({ id, data }: FlowNode) {
   const {
     selectedNode,
     setSelectedNode,
-    setEditorOpen,
     isEditorSyncedWithNodes: synced,
     validationErrors,
   } = useWorkflowStore();
@@ -68,7 +62,8 @@ function WorkflowNode({ id, data }: FlowNode) {
   const errorMessage =
     validationErrors?.[data?.name] || validationErrors?.[data?.id];
   const isError = !!errorMessage;
-  const isTrigger = triggerTypes.includes(type);
+  const isTrigger =
+    data?.componentType === "trigger" && triggerTypes.includes(type);
 
   function handleNodeClick(e: React.MouseEvent<HTMLDivElement>) {
     e.stopPropagation();
@@ -84,7 +79,6 @@ function WorkflowNode({ id, data }: FlowNode) {
     if (specialNodeCheck || id?.includes("end")) {
       return;
     }
-    setEditorOpen(true);
     setSelectedNode(id);
   }
 
@@ -128,9 +122,7 @@ function WorkflowNode({ id, data }: FlowNode) {
   }
 
   let displayName = data?.name;
-  let subtitle = isTrigger
-    ? getTriggerDescriptionFromStep(data as V2StepTrigger)
-    : data?.type;
+  let subtitle = isTrigger ? getTriggerDescriptionFromStep(data) : data?.type;
 
   return (
     <>
@@ -166,7 +158,11 @@ function WorkflowNode({ id, data }: FlowNode) {
             <div className="container px-4 py-2 flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
               {data.componentType === "trigger" ? (
                 <NodeTriggerIcon
-                  key={data?.properties?.source}
+                  key={
+                    data?.type === "alert"
+                      ? data?.properties?.alert?.source
+                      : data?.id
+                  }
                   nodeData={data}
                 />
               ) : (
@@ -219,7 +215,6 @@ function WorkflowNode({ id, data }: FlowNode) {
               return;
             }
             if (specialNodeCheck || id?.includes("end")) {
-              setEditorOpen(true);
               return;
             }
             setSelectedNode(id);

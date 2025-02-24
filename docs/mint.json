@@ -241,6 +241,7 @@
             "providers/documentation/wazuh-provider",
             "providers/documentation/webhook-provider",
             "providers/documentation/websocket-provider",
+            "providers/documentation/youtrack-provider",
             "providers/documentation/zabbix-provider",
             "providers/documentation/zenduty-provider",
             "providers/documentation/zoom-provider"

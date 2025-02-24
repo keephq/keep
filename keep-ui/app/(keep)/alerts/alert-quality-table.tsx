@@ -10,7 +10,7 @@ import React, {
 import { GenericTable } from "@/components/table/GenericTable";
 import { useAlertQualityMetrics } from "utils/hooks/useAlertQuality";
 import { useProviders } from "utils/hooks/useProviders";
-import { Provider, ProvidersResponse } from "@/app/(keep)/providers/providers";
+import { Provider, ProvidersResponse } from "@/shared/api/providers";
 import { TabGroup, TabList, Tab, Callout } from "@tremor/react";
 import { GenericFilters } from "@/components/filters/GenericFilters";
 import { useSearchParams } from "next/navigation";

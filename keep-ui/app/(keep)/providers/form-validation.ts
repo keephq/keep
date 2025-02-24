@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Provider } from "./providers";
+import { Provider } from "@/shared/api/providers";
 
 type URLOptions = {
   protocols: string[];

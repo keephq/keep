@@ -30,6 +30,11 @@ import {
 import { IncidentsNotFoundPlaceholder } from "./incidents-not-found";
 import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
+import EnhancedDateRangePicker, {
+  TimeFrame,
+} from "@/components/ui/DateRangePicker";
+import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
+import { AlertsQuery } from "@/utils/hooks/useAlerts";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -58,6 +63,12 @@ export function IncidentList({
   ]);
 
   const [filterCel, setFilterCel] = useState<string>("");
+  const [dateRangeCel, setDateRangeCel] = useState<string>("");
+
+  const mainCelQuery = useMemo(() => {
+    const filterArray = [dateRangeCel, filterCel];
+    return filterArray.filter(Boolean).join(" && ");
+  }, [filterCel, dateRangeCel]);
 
   const {
     data: incidents,
@@ -70,7 +81,7 @@ export function IncidentList({
     incidentsPagination.limit,
     incidentsPagination.offset,
     incidentsSorting[0],
-    filterCel,
+    mainCelQuery,
     {
       revalidateOnFocus: false,
       revalidateOnMount: !initialData,
@@ -97,6 +108,26 @@ export function IncidentList({
   useEffect(() => {
     setFilterRevalidationToken(incidentChangeToken);
   }, [incidentChangeToken]);
+
+  const [dateRange, setDateRange] = useState<TimeFrame>({
+    start: null,
+    end: null,
+    paused: true,
+  });
+
+  useEffect(() => {
+    const filterArray: string[] = [];
+
+    if (dateRange?.start) {
+      filterArray.push(`creation_time >= '${dateRange.start.toISOString()}'`);
+    }
+
+    if (dateRange?.paused && dateRange?.end) {
+      filterArray.push(`creation_time <= '${dateRange.end.toISOString()}'`);
+    }
+
+    setDateRangeCel(filterArray.filter(Boolean).join(" && "));
+  }, [dateRange]);
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
@@ -190,7 +221,7 @@ export function IncidentList({
           />
         ),
       },
-      ["Has past incident"]: {
+      ["Linked incident"]: {
         sortCallback: (facetOption) =>
           facetOption.display_name == "1" ||
           facetOption.display_name.toLocaleLowerCase() == "true"
@@ -205,6 +236,19 @@ export function IncidentList({
     };
   }, []);
 
+  const handleClearFilters = () => {
+    setDateRange({
+      start: null,
+      end: null,
+      paused: true,
+    });
+    setIncidentsPagination({
+      limit: 20,
+      offset: 0,
+    });
+    setClearFiltersToken(uuidV4());
+  };
+
   function renderIncidents() {
     if (incidents && incidents.items.length > 0) {
       return (
@@ -218,12 +262,10 @@ export function IncidentList({
       );
     }
 
-    if (filterCel && incidents?.items.length === 0) {
+    if (mainCelQuery && incidents?.items.length === 0) {
       return (
         <Card className="flex-grow ">
-          <IncidentsNotFoundPlaceholder
-            onClearFilters={() => setClearFiltersToken(uuidV4())}
-          />
+          <IncidentsNotFoundPlaceholder onClearFilters={handleClearFilters} />
         </Card>
       );
     }
@@ -238,6 +280,24 @@ export function IncidentList({
 
   const uncheckedFacetOptionsByDefault: Record<string, string[]> = {
     Status: ["resolved", "deleted"],
+  };
+
+  const renderDateTimePicker = () => {
+    return (
+      <div className="flex justify-end">
+        <EnhancedDateRangePicker
+          timeFrame={dateRange}
+          setTimeFrame={(timeFrame) => setDateRange(timeFrame)}
+          timeframeRefreshInterval={2000}
+          hasPlay={false}
+          pausedByDefault={true}
+          hasRewind={false}
+          hasForward={false}
+          hasZoomOut={false}
+          enableYearNavigation
+        />
+      </div>
+    );
   };
 
   return (
@@ -287,6 +347,7 @@ export function IncidentList({
                   className="mt-14"
                   entityName={"incidents"}
                   facetsConfig={facetsConfig}
+                  facetOptionsCel={dateRangeCel}
                   usePropertyPathsSuggestions={true}
                   clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}
@@ -297,6 +358,7 @@ export function IncidentList({
                   revalidationToken={filterRevalidationToken}
                 />
                 <div className="flex flex-col gap-5 flex-1 min-w-0">
+                  {renderDateTimePicker()}
                   {renderIncidents()}
                 </div>
               </div>
