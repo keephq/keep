@@ -24,12 +24,16 @@ Choosing the right provisioning strategy depends on your specific use case, depl
 
 Provisioning in Keep is controlled through environment variables and configuration files. The main environment variables for provisioning are:
 
-| Provisioning Type      | Environment Variable           | Purpose                                                                                                                                                                     |
-| ---------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Provider**           | `KEEP_PROVIDERS`               | JSON string containing provider configurations with deduplication rules                                                                                                     |
-| **Workflow**           | `KEEP_WORKFLOW`                | One workflow to provision right from the env variable. Use `cat workflow_file.yaml | awk '{printf "%s\\n", $0}' | tr -d '\n'; echo` to get the workflow in 1-string format. |
-| **Workflows**          | `KEEP_WORKFLOWS_DIRECTORY`     | Directory path containing workflow configuration files                                                                                                                      |
-| **Dashboard**          | `KEEP_DASHBOARDS`              | JSON string containing dashboard configurations                                                                                                                             |
+| Provisioning Type      | Environment Variable           | Purpose                                                                   |
+| ---------------------- | ------------------------------ | ------------------------------------------------------------------------- |
+| **Provider**           | `KEEP_PROVIDERS`               | JSON string containing provider configurations with deduplication rules   |
+| **Workflow**           | `KEEP_WORKFLOW`                | One workflow to provision right from the env variable.                    |
+| **Workflows**          | `KEEP_WORKFLOWS_DIRECTORY`     | Directory path containing workflow configuration files                    |
+| **Dashboard**          | `KEEP_DASHBOARDS`              | JSON string containing dashboard configurations                           |
 
+Hint: use the script to get 1-liner from the workflow file for KEEP_WORKFLOW:
+```
+Use `cat workflow_file.yaml | awk '{printf "%s\\n", $0}' | tr -d '\n'; echo` to get the workflow in 1-string format.
+```
 
 For more details on each provisioning strategy, including setup instructions and implications, refer to the respective sections.
