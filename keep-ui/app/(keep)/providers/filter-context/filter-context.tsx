@@ -2,7 +2,10 @@ import { createContext, useState, FC, PropsWithChildren } from "react";
 import { IFilterContext } from "./types";
 import { useSearchParams } from "next/navigation";
 import { PROVIDER_LABELS_KEYS } from "./constants";
-import type { TProviderCategory, TProviderLabels } from "../providers";
+import type {
+  TProviderCategory,
+  TProviderLabels,
+} from "@/shared/api/providers";
 
 export const FilterContext = createContext<IFilterContext | null>(null);
 

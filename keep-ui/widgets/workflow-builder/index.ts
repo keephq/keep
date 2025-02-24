@@ -1,1 +1,1 @@
-export { WorkflowBuilderWidget } from "./workflow-builder-widget";
+export { WorkflowBuilderWidgetSafe as WorkflowBuilderWidget } from "./workflow-builder-widget-safe";

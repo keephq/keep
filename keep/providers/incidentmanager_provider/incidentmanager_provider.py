@@ -20,20 +20,6 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 @pydantic.dataclasses.dataclass
 class IncidentmanagerProviderAuthConfig:
-    access_key: str | None = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "AWS access key (Leave empty if using IAM role at EC2)",
-            "sensitive": True,
-        }
-    )
-    access_key_secret: str | None = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "AWS access key secret (Leave empty if using IAM role at EC2)",
-            "sensitive": True,
-        }
-    )
     region: str = dataclasses.field(
         metadata={
             "required": True,
@@ -50,7 +36,6 @@ class IncidentmanagerProviderAuthConfig:
             "sensitive": False,
         },
     )
-
     sns_topic_arn: str = dataclasses.field(
         default=None,
         metadata={
@@ -58,6 +43,22 @@ class IncidentmanagerProviderAuthConfig:
             "description": "AWS SNS Topic arn you want to be used/using in response plan",
             "hint": "Default sns topic to use when creating incidents, if not provided, we won't be able to register web hook for the incidents",
             "sensitive": False,
+        },
+    )
+    access_key: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "AWS access key (Leave empty if using IAM role at EC2)",
+            "sensitive": True,
+        },
+    )
+    access_key_secret: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "AWS access key secret (Leave empty if using IAM role at EC2)",
+            "sensitive": True,
         },
     )
 

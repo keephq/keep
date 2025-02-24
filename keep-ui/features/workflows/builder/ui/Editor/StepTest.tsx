@@ -121,7 +121,7 @@ export function TestRunStepForm({
     () =>
       Object.fromEntries(
         Object.entries(methodParams).map(([key, value]) => {
-          // Convert to string only if needed
+          // FIX: Convert to string only if needed
           const stringValue =
             typeof value === "object" ? JSON.stringify(value) : String(value);
           let result = stringValue;
@@ -142,7 +142,11 @@ export function TestRunStepForm({
           try {
             return [
               key,
-              typeof value === "object" ? JSON.parse(result) : result,
+              typeof value === "object"
+                ? JSON.parse(result)
+                : typeof value === "number"
+                  ? Number(result)
+                  : result,
             ];
           } catch {
             return [key, result];
@@ -178,7 +182,10 @@ export function TestRunStepForm({
     handleTestStep();
   }
 
-  const isDisabled = Object.values(methodParams).every((value) => !value);
+  const isDisabled =
+    !providerInfo.provider_id ||
+    !providerInfo.provider_type ||
+    Object.values(methodParams).every((value) => !value);
 
   return (
     <form className="h-full flex flex-col" onSubmit={handleRun}>

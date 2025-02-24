@@ -7,6 +7,7 @@ import {
   SortingState,
   getSortedRowModel,
   ColumnDef,
+  Table,
 } from "@tanstack/react-table";
 import type {
   IncidentDto,
@@ -41,6 +42,7 @@ import {
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { GenerateReportModal } from "./incidents-report";
+import { DocumentChartBarIcon } from "@heroicons/react/24/outline";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -54,39 +56,44 @@ function SelectedRowActions({
   onGenerateReport: () => void;
 }) {
   return (
-    <div className="flex gap-2 items-center justify-end">
-      {selectedRowIds.length ? (
-        <span className="accent-dark-tremor-content text-sm px-2">
-          {selectedRowIds.length} selected
-        </span>
-      ) : null}
-      <Button
-        color="orange"
-        variant="primary"
-        size="md"
-        disabled={selectedRowIds.length < 2}
-        onClick={onGenerateReport}
-      >
-        Generate report
-      </Button>
-      <Button
-        color="orange"
-        variant="primary"
-        size="md"
-        disabled={selectedRowIds.length < 2}
-        onClick={onMergeInitiated}
-      >
-        Merge
-      </Button>
-      <Button
-        color="red"
-        variant="primary"
-        size="md"
-        disabled={!selectedRowIds.length}
-        onClick={onDelete}
-      >
-        Delete
-      </Button>
+    <div className="flex justify-between">
+      <div>
+        <Button
+          color="orange"
+          variant="primary"
+          icon={DocumentChartBarIcon}
+          size="md"
+          onClick={onGenerateReport}
+        >
+          Generate report
+        </Button>
+      </div>
+
+      <div className="flex gap-2 items-center justify-end">
+        {selectedRowIds.length ? (
+          <span className="accent-dark-tremor-content text-sm px-2">
+            {selectedRowIds.length} selected
+          </span>
+        ) : null}
+        <Button
+          color="orange"
+          variant="primary"
+          size="md"
+          disabled={selectedRowIds.length < 2}
+          onClick={onMergeInitiated}
+        >
+          Merge
+        </Button>
+        <Button
+          color="red"
+          variant="primary"
+          size="md"
+          disabled={!selectedRowIds.length}
+          onClick={onDelete}
+        >
+          Delete
+        </Button>
+      </div>
     </div>
   );
 }
@@ -94,6 +101,7 @@ function SelectedRowActions({
 const columnHelper = createColumnHelper<IncidentDto>();
 
 interface Props {
+  filterCel: string;
   incidents: PaginatedIncidentsDto;
   sorting: SortingState;
   setSorting: Dispatch<SetStateAction<any>>;
@@ -103,6 +111,7 @@ interface Props {
 
 export default function IncidentsTable({
   incidents: incidents,
+  filterCel,
   setPagination,
   sorting,
   setSorting,
@@ -281,7 +290,7 @@ export default function IncidentsTable({
     }),
   ] as ColumnDef<IncidentDto>[];
 
-  const table = useReactTable({
+  const table: Table<IncidentDto> = useReactTable({
     columns,
     data: incidents.items,
     state: {
@@ -396,7 +405,7 @@ export default function IncidentsTable({
       )}
       {isGenerateReportModalOpen && (
         <GenerateReportModal
-          incidentIds={selectedRowIds}
+          filterCel={filterCel}
           onClose={() => setIsGenerateReportModalOpen(false)}
         />
       )}

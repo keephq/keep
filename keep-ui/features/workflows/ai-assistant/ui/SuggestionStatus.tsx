@@ -1,14 +1,13 @@
-import { CheckCircleIcon } from "@heroicons/react/20/solid";
 import {
-  ExclamationCircleIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
   NoSymbolIcon,
-} from "@heroicons/react/24/outline";
+} from "@heroicons/react/20/solid";
 
 export type SuggestionStatus = "complete" | "error" | "declined";
 export type SuggestionResult = {
   status: SuggestionStatus;
   message: string;
-  error?: unknown;
 };
 
 export const SuggestionStatus = ({
@@ -29,7 +28,7 @@ export const SuggestionStatus = ({
   if (status === "error") {
     return (
       <p className="text-sm text-gray-500 flex items-center gap-1">
-        <ExclamationCircleIcon className="w-4 h-4" />
+        <ExclamationTriangleIcon className="w-4 h-4" />
         {message}
       </p>
     );
