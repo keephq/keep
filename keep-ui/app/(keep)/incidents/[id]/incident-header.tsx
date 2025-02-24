@@ -63,7 +63,7 @@ export function IncidentHeader({
   return (
     <CopilotKit runtimeUrl="/api/copilotkit">
       <header className="flex flex-col mb-1">
-        <div className="flex flex-row justify-between items-end">
+        <div className="flex flex-row justify-between items-end mb-2.5">
           <div>
             <Subtitle className="text-sm">
               <Link href="/incidents">All Incidents</Link>{" "}
@@ -80,12 +80,12 @@ export function IncidentHeader({
           </div>
 
           {incident.is_confirmed && (
-            <div>
+            <div className="flex">
               <Button
                 color="orange"
                 size="xs"
                 variant="secondary"
-                className="mr-2"
+                className="!px-1 !py-0.5 mr-2"
                 icon={MdPlayArrow}
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();
@@ -99,6 +99,7 @@ export function IncidentHeader({
                 color="orange"
                 size="xs"
                 variant="secondary"
+                className="!px-1 !py-0.5"
                 icon={MdModeEdit}
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();

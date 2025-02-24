@@ -95,10 +95,10 @@ function Summary({
   };
 
   const formatedSummary = (
-    <Markdown 
-    remarkPlugins={[remarkGfm, remarkRehype]} 
-    rehypePlugins={[rehypeRaw]}
-    className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1"
+    <Markdown
+      remarkPlugins={[remarkGfm, remarkRehype]}
+      rehypePlugins={[rehypeRaw]}
+      className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1"
     >
       {summary ?? generatedSummary}
     </Markdown>
@@ -190,6 +190,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
   const notNullServices = incident.services.filter(
     (service) => service !== "null"
   );
+  const { assignIncident } = useIncidentActions();
   const {
     data: alerts,
     isLoading: _alertsLoading,
@@ -260,7 +261,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
           <div className="flex flex-col gap-2">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <FieldHeader>Involved services</FieldHeader>
+                <FieldHeader>Services</FieldHeader>
                 {notNullServices.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {notNullServices.map((service) => (
@@ -281,7 +282,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
               </div>
 
               <div>
-                <FieldHeader>Affected environments</FieldHeader>
+                <FieldHeader>Environments</FieldHeader>
                 {environments.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {environments.map((env) => (
@@ -370,11 +371,20 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
               </div>
               <div>
                 <FieldHeader>Assignee</FieldHeader>
-                {incident.assignee ? (
-                  <p>{incident.assignee}</p>
-                ) : (
-                  <p>No assignee yet</p>
-                )}
+                <div className="flex gap-1">
+                  {incident.assignee ? (
+                    <p>{incident.assignee}</p>
+                  ) : (
+                    <p>No assignee yet</p>
+                  )}
+                  <div>
+                    {" ("}
+                    <span className="text-sm text-gray-500 cursor-pointer hover:text-orange-500 underline">
+                      Assign to me
+                    </span>
+                    {")"}
+                  </div>
+                </div>
               </div>
               {incident.rule_fingerprint !== "none" &&
                 !!incident.rule_fingerprint && (
