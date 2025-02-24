@@ -62,6 +62,7 @@ function SelectedRowActions({
           color="orange"
           variant="primary"
           icon={DocumentChartBarIcon}
+          tooltip="Generate report for currently visible incidents"
           size="md"
           onClick={onGenerateReport}
         >
