@@ -79,41 +79,35 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   incidentsReportData,
 }) => {
   function convertSeconds(secondsValue: number): string {
-    const minutes = Math.floor(secondsValue / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    const weeks = Math.floor(days / 7);
-    const months = Math.floor(weeks / 4);
-
     const result = [];
 
-    if (months > 0) {
-      result.push(`${months} months`);
-    }
+    const secondsInMinute = 60;
+    const secondsInHour = 60 * secondsInMinute;
+    const secondsInDay = 24 * secondsInHour;
+    const secondsInWeek = 7 * secondsInDay;
+    const secondsInMonth = 30 * secondsInDay; // Approximation
 
-    if (weeks > 0) {
-      result.push(`${weeks} weeks`);
-    }
+    const months = Math.floor(secondsValue / secondsInMonth);
+    secondsValue %= secondsInMonth;
 
-    if (days > 0) {
-      const daysStr = days == 1 ? "day" : "days";
-      result.push(`${days} ${daysStr}`);
-    }
+    const weeks = Math.floor(secondsValue / secondsInWeek);
+    secondsValue %= secondsInWeek;
 
-    if (hours > 0) {
-      const hoursStr = hours == 1 ? "hour" : "hours";
-      result.push(`${hours} ${hoursStr}`);
-    }
+    const days = Math.floor(secondsValue / secondsInDay);
+    secondsValue %= secondsInDay;
 
-    if (minutes % 60 > 0) {
-      const minutesStr = minutes % 60 == 1 ? "minute" : "minutes";
-      result.push(`${minutes % 60} ${minutesStr}`);
-    }
+    const hours = Math.floor(secondsValue / secondsInHour);
+    secondsValue %= secondsInHour;
 
-    if (secondsValue % 60 > 0) {
-      const secondsStr = secondsValue % 60 == 1 ? "second" : "seconds";
-      result.push(`${secondsValue % 60} ${secondsStr}`);
-    }
+    const minutes = Math.floor(secondsValue / secondsInMinute);
+    const seconds = secondsValue % secondsInMinute;
+
+    if (months > 0) result.push(`${months} month${months > 1 ? "s" : ""}`);
+    if (weeks > 0) result.push(`${weeks} week${weeks > 1 ? "s" : ""}`);
+    if (days > 0) result.push(`${days} day${days > 1 ? "s" : ""}`);
+    if (hours > 0) result.push(`${hours} hour${hours > 1 ? "s" : ""}`);
+    if (minutes > 0) result.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
+    if (seconds > 0) result.push(`${seconds} second${seconds > 1 ? "s" : ""}`);
 
     return result.join(" ");
   }
