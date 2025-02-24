@@ -148,7 +148,6 @@ class AzureadAuthVerifier(AuthVerifierBase):
                 "Missing KEEP_AZUREAD_TENANT_ID or KEEP_AZUREAD_CLIENT_ID environment variable"
             )
 
-        self.issuer = f"https://sts.windows.net/{self.tenant_id}/"
         self.group_mapper = AzureADGroupMapper()
         # Keep track of hashed tokens so we won't update the user on the same token
         self.saw_tokens = set()
@@ -179,23 +178,33 @@ class AzureadAuthVerifier(AuthVerifierBase):
                 "verify_iat": True,
                 "verify_exp": True,
                 "verify_nbf": True,
-                "verify_iss": True,
+                # we will validate manually since we need to support both
+                # v1 (sts.windows.net) and v2 (https://login.microsoftonline.com)
+                "verify_iss": False,
                 # "require" the standard claims but NOT "appid"
                 "require": ["exp", "iat", "nbf", "iss", "sub"],
             }
 
             try:
+
                 payload = jwt.decode(
                     token,
                     key=signing_key,
                     algorithms=["RS256"],
-                    issuer=self.issuer,
                     options=options,
                 )
 
-                # In v1.0 tokens, client_id => 'appid'
-                # In v2.0 tokens, client_id => 'azp'
-                # We consider either one valid, so long as it matches self.client_id
+                # ---- MANUAL ISSUER CHECK ----
+                # Allowed issuers for v1 vs. v2 in the same tenant:
+                allowed_issuers = [
+                    f"https://sts.windows.net/{self.tenant_id}/",  # v1 tokens
+                    f"https://login.microsoftonline.com/{self.tenant_id}/v2.0",  # v2 tokens
+                ]
+                issuer_in_token = payload.get("iss")
+                if issuer_in_token not in allowed_issuers:
+                    raise HTTPException(status_code=401, detail="Invalid token issuer")
+
+                # Check client ID: v1 -> 'appid', v2 -> 'azp'
                 client_id_in_token = payload.get("appid") or payload.get("azp")
 
                 if not client_id_in_token:
