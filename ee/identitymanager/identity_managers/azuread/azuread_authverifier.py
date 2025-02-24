@@ -181,7 +181,7 @@ class AzureadAuthVerifier(AuthVerifierBase):
                 # we will validate manually since we need to support both
                 # v1 (sts.windows.net) and v2 (https://login.microsoftonline.com)
                 "verify_iss": False,
-                # "require" the standard claims but NOT "appid"
+                # "require" the standard claims but NOT "appid" (search for 'azp' in this code to see the comment)
                 "require": ["exp", "iat", "nbf", "iss", "sub"],
             }
 
@@ -219,8 +219,19 @@ class AzureadAuthVerifier(AuthVerifierBase):
                     )
 
                 # Validate the audience
-                expected_aud = f"api://{self.client_id}"
-                if payload.get("aud") != expected_aud:
+                allowed_aud = [
+                    f"api://{self.client_id}",  # v1 tokens
+                    f"{self.client_id}",  # v2 tokens
+                ]
+                if payload.get("aud") not in allowed_aud:
+                    self.logger.error(
+                        f"Invalid token audience: {payload.get('aud')}",
+                        extra={
+                            "tenant_id": self.tenant_id,
+                            "audience": payload.get("aud"),
+                            "allowed_aud": allowed_aud,
+                        },
+                    )
                     raise HTTPException(
                         status_code=401, detail="Invalid token audience"
                     )
