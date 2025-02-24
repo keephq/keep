@@ -1,21 +1,14 @@
-import {
-  V2ActionStep,
-  V2Step,
-  V2StepStep,
-  V2StepTrigger,
-} from "@/entities/workflows";
+import { V2Step, V2StepTrigger } from "@/entities/workflows";
 import clsx from "clsx";
 import Image from "next/image";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
-import { normalizeStepType } from "../../lib/utils";
-import {
-  getYamlStepFromStep,
-  getYamlActionFromAction,
-} from "@/entities/workflows/lib/parser";
-import { YamlStep, YamlAction } from "@/entities/workflows/model/yaml.types";
+import { normalizeStepType } from "../../builder/lib/utils";
 import { Editor } from "@monaco-editor/react";
 import { stringify } from "yaml";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
+import { getYamlFromStep } from "../lib/utils";
+import { WF_DEBUG_INFO } from "../../builder/ui/debug-settings";
+import { JsonCard } from "@/shared/ui";
 
 function getStepIconUrl(data: V2Step | V2StepTrigger) {
   const { type } = data || {};
@@ -33,48 +26,15 @@ export const StepPreview = ({
   step: V2Step | V2StepTrigger;
   className?: string;
 }) => {
-  const type = normalizeStepType(step?.type);
-  let yamlOfStep:
-    | YamlStep
-    | YamlAction
-    | ({ type: string } & Record<string, any>)
-    | null = null;
-  if (
-    step.componentType === "task" &&
-    step.type.startsWith("step-") &&
-    "stepParams" in step.properties
-  ) {
-    try {
-      yamlOfStep = getYamlStepFromStep(step as V2StepStep);
-    } catch (error) {
-      console.error(error);
-    }
-  }
-  if (
-    step.componentType === "task" &&
-    step.type.startsWith("action-") &&
-    "actionParams" in step.properties
-  ) {
-    try {
-      yamlOfStep = getYamlActionFromAction(step as V2ActionStep);
-    } catch (error) {
-      console.error(error);
-    }
-  }
-  if (step.componentType === "trigger") {
-    yamlOfStep = {
-      type: step.type,
-      ...step.properties,
-    };
-  }
-
-  const yaml = yamlOfStep ? stringify(yamlOfStep) : null;
+  const yamlDefinition = getYamlFromStep(step);
+  const yaml = yamlDefinition ? stringify(yamlDefinition) : null;
 
   const displayName = step.name;
   const subtitle = getTriggerDescriptionFromStep(step as V2StepTrigger);
 
   return (
     <div className="flex flex-col gap-2">
+      {WF_DEBUG_INFO && <JsonCard title="step" json={step} />}
       <div
         className={clsx(
           "max-w-[250px] flex shadow-md bg-white border-2 border-stone-400 px-4 py-2 flex-1 flex-row items-center justify-between gap-2 flex-wrap text-sm",

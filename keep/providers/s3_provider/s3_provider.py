@@ -13,22 +13,22 @@ from keep.providers.base.base_provider import BaseProvider
 
 @pydantic.dataclasses.dataclass
 class S3ProviderAuthConfig:
-    access_key: str | None = dataclasses.field(
+    access_key: str = dataclasses.field(
+        default=None,
         metadata={
             "required": False,
             "description": "S3 Access Token (Leave empty if using IAM role at EC2)",
             "sensitive": True,
         },
-        default=None,
     )
 
-    secret_access_key: str | None = dataclasses.field(
+    secret_access_key: str = dataclasses.field(
+        default=None,
         metadata={
             "required": False,
             "description": "S3 Secret Access Token (Leave empty if using IAM role at EC2)",
             "sensitive": True,
         },
-        default=None,
     )
 
 
@@ -41,16 +41,7 @@ class S3Provider(BaseProvider):
 
     def validate_config(self):
         self.authentication_config = S3ProviderAuthConfig(**self.config.authentication)
-        if (
-            self.authentication_config.access_key is None
-            or self.authentication_config.secret_access_key is None
-        ):
-            raise ProviderException("Access key and secret access key are required")
-        boto3.client(
-            "s3",
-            aws_access_key_id=self.authentication_config.access_key,
-            aws_secret_access_key=self.authentication_config.secret_access_key,
-        )
+
         # List all S3 buckets to validate the credentials
         s3_client = boto3.client(
             "s3",

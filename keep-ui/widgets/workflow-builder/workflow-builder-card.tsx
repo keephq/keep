@@ -7,20 +7,23 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { KeepLoader } from "@/shared/ui";
 import clsx from "clsx";
 
-const Builder = dynamic(() => import("./builder"), {
-  ssr: false, // Prevents server-side rendering
-});
+const Builder = dynamic(
+  () => import("./workflow-builder").then((mod) => mod.WorkflowBuilder),
+  {
+    ssr: false, // Prevents server-side rendering
+  }
+);
 
 interface Props {
   fileContents: string | null;
-  workflow?: string;
+  workflowRaw?: string;
   workflowId?: string;
   standalone?: boolean;
 }
 
-export function BuilderCard({
+export function WorkflowBuilderCard({
   fileContents,
-  workflow,
+  workflowRaw,
   workflowId,
   standalone = false,
 }: Props) {
@@ -59,7 +62,7 @@ export function BuilderCard({
     );
   }
 
-  if (fileContents == "" && !workflow) {
+  if (fileContents == "" && !workflowRaw) {
     return (
       <Card className={cardClassName}>
         <EmptyBuilderState />
@@ -76,7 +79,7 @@ export function BuilderCard({
           providers={providers}
           installedProviders={installedProviders}
           loadedAlertFile={fileContents}
-          workflow={workflow}
+          workflowRaw={workflowRaw}
           workflowId={workflowId}
         />
       </Card>

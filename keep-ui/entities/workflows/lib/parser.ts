@@ -8,7 +8,7 @@ import {
   V2StepForeach,
   V2StepStep,
 } from "@/entities/workflows";
-import { Provider } from "@/app/(keep)/providers/providers";
+import { Provider } from "@/shared/api/providers";
 import { v4 as uuidv4 } from "uuid";
 import { JSON_SCHEMA, load } from "js-yaml";
 import {

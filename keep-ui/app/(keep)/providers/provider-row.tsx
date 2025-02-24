@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { TableRow, TableCell } from "@tremor/react";
 import Image from "next/image";
 import "./provider-row.css";
-import { Provider } from "./providers";
+import { Provider } from "@/shared/api/providers";
 
 const ProviderRow = ({ provider }: { provider: Provider }) => {
   return (
