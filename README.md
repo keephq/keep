@@ -647,6 +647,12 @@
           Trello
       </a>
   </td>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/youtrack-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/youtrack-icon.png" alt="YouTrack"/><br/>
+          YouTrack
+      </a>
+  </td>
 </tr>
 </table>
 
