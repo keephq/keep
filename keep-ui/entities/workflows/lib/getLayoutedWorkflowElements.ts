@@ -2,7 +2,6 @@ import { FlowNode } from "../model/types";
 import { Edge } from "@xyflow/react";
 import dagre, { graphlib } from "@dagrejs/dagre";
 import { Position } from "@xyflow/react";
-import { triggerTypes } from "@/features/workflows/builder/lib/utils";
 
 export const getLayoutedWorkflowElements = (
   nodes: FlowNode[],

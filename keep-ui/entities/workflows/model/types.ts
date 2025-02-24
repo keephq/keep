@@ -64,6 +64,20 @@ export const V2StepTriggerSchema = z.union([
 export type V2StepTrigger = z.infer<typeof V2StepTriggerSchema>;
 export type TriggerType = V2StepTrigger["type"];
 
+const EnrichAlertSchema = z.array(
+  z.object({
+    key: z.string(),
+    value: z.string(),
+  })
+);
+
+const EnrichIncidentSchema = z.array(
+  z.object({
+    key: z.string(),
+    value: z.string(),
+  })
+);
+
 export const V2ActionSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -75,24 +89,11 @@ export const V2ActionSchema = z.object({
     if: z.string().optional(),
     vars: z.record(z.string(), z.string()).optional(),
     with: z
-      .record(
-        z.string(),
-        z.union([z.string(), z.number(), z.boolean(), z.object({})])
-      )
-      .superRefine((withObj, ctx) => {
-        // console.log(withObj, { "ctx.path": ctx.path });
-        // const actionParams = ctx.path[0].properties.actionParams;
-        // const withKeys = Object.keys(withObj);
-        // // Check if all keys in 'with' are present in actionParams
-        // const validKeys = withKeys.every((key) => actionParams.includes(key));
-        // if (!validKeys) {
-        //   ctx.addIssue({
-        //     code: z.ZodIssueCode.custom,
-        //     message: "All keys in 'with' must be listed in actionParams",
-        //     path: ["with"],
-        //   });
-        // }
+      .object({
+        enrich_alert: EnrichAlertSchema.optional(),
+        enrich_incident: EnrichIncidentSchema.optional(),
       })
+      .catchall(z.union([z.string(), z.number(), z.boolean(), z.object({})]))
       .optional(),
   }),
 });
@@ -110,10 +111,11 @@ export const V2StepStepSchema = z.object({
     vars: z.record(z.string(), z.string()).optional(),
     if: z.string().optional(),
     with: z
-      .record(
-        z.string(),
-        z.union([z.string(), z.number(), z.boolean(), z.object({})])
-      )
+      .object({
+        enrich_alert: EnrichAlertSchema.optional(),
+        enrich_incident: EnrichIncidentSchema.optional(),
+      })
+      .catchall(z.union([z.string(), z.number(), z.boolean(), z.object({})]))
       .optional(),
   }),
 });
@@ -121,6 +123,8 @@ export const V2StepStepSchema = z.object({
 export type V2StepStep = z.infer<typeof V2StepStepSchema>;
 
 export const V2ActionOrStepSchema = z.union([V2ActionSchema, V2StepStepSchema]);
+
+export type V2ActionOrStep = z.infer<typeof V2ActionOrStepSchema>;
 
 export const V2StepConditionAssertSchema = z.object({
   id: z.string(),
@@ -172,7 +176,8 @@ export const V2StepForeachSchema = z.object({
   properties: z.object({
     value: z.string(),
   }),
-  sequence: z.array(V2ActionOrStepSchema),
+  // TODO: make a generic sequence type
+  sequence: z.array(z.union([V2ActionOrStepSchema, V2StepConditionSchema])),
 });
 
 export type V2StepForeach = z.infer<typeof V2StepForeachSchema>;
@@ -194,6 +199,14 @@ export const V2StepTemplateSchema = z.union([
 ]);
 
 export type V2StepTemplate = z.infer<typeof V2StepTemplateSchema>;
+
+export const NodeDataStepSchema = z.union([
+  V2ActionSchema.partial({ id: true }),
+  V2StepStepSchema.partial({ id: true }),
+  V2StepConditionAssertSchema.partial({ id: true, branches: true }),
+  V2StepConditionThresholdSchema.partial({ id: true, branches: true }),
+  V2StepForeachSchema.partial({ id: true, sequence: true }),
+]);
 
 export type V2StartStep = {
   id: "start";
@@ -264,25 +277,6 @@ export type DefinitionV2 = {
   isValid: boolean;
 };
 
-// export type V2Step = {
-//   id: string;
-//   name?: string;
-//   componentType: string;
-//   type: string;
-//   properties: V2StepProperties;
-//   branches?: {
-//     true: V2Step[];
-//     false: V2Step[];
-//   };
-//   sequence?: V2Step[];
-//   edgeNotNeeded?: boolean;
-//   edgeLabel?: string;
-//   edgeColor?: string;
-//   edgeSource?: string;
-//   edgeTarget?: string;
-//   notClickable?: boolean;
-// };
-
 export type V2StepTempNode = V2Step & {
   type: "temp_node";
   componentType: "temp_node";
@@ -294,6 +288,7 @@ type UIProps = {
   edgeColor?: string;
   edgeSource?: string;
   edgeTarget?: string | string[];
+  notClickable?: boolean;
 };
 
 export type V2StepUI = V2Step & UIProps;
@@ -309,7 +304,33 @@ export type EmptyNode = {
   isNested?: boolean;
 };
 
-export type NodeData = Node["data"] & Record<string, any>;
+type ConditionAssertEndNodeData = {
+  id: string;
+  type: "condition-assert__end";
+  componentType: "condition-assert__end";
+  properties: Record<string, never>;
+  name: string;
+};
+
+type ConditionThresholdEndNodeData = {
+  id: string;
+  type: "condition-threshold__end";
+  componentType: "condition-threshold__end";
+  properties: Record<string, never>;
+  name: string;
+};
+
+// export type NodeData = Node["data"] & Record<string, any>;
+export type NodeData = (
+  | V2Step
+  | V2StepTrigger
+  | ConditionAssertEndNodeData
+  | ConditionThresholdEndNodeData
+) & {
+  label?: string;
+  islayouted?: boolean;
+};
+
 export type NodeStepMeta = { id: string; label?: string };
 export type FlowNode = Node & {
   prevStepId?: string | string[];
@@ -393,12 +414,12 @@ export interface WorkflowState extends WorkflowStateValues {
   setIsLayouted: (isLayouted: boolean) => void;
   addNodeBetween: (
     nodeOrEdgeId: string,
-    step: V2StepTemplate | V2StepTrigger,
+    step: V2StepTrigger | Omit<V2Step, "id">,
     type: "node" | "edge"
   ) => string | null;
   addNodeBetweenSafe: (
     nodeOrEdgeId: string,
-    step: V2StepTemplate | V2StepTrigger,
+    step: V2StepTrigger | Omit<V2Step, "id">,
     type: "node" | "edge"
   ) => string | null;
   setProviders: (providers: Provider[]) => void;

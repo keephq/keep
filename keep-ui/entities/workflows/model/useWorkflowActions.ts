@@ -5,7 +5,7 @@ import { showErrorToast } from "@/shared/ui";
 import { Definition } from "@/entities/workflows/model/types";
 import { stringify } from "yaml";
 import { useCallback } from "react";
-import { getWorkflowFromDefinition } from "@/entities/workflows/lib/parser";
+import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
 
 type UseWorkflowActionsReturn = {
   createWorkflow: (
@@ -34,7 +34,7 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
   const createWorkflow = useCallback(
     async (definition: Definition) => {
       try {
-        const workflow = getWorkflowFromDefinition(definition);
+        const workflow = getYamlWorkflowDefinition(definition);
         const body = stringify(workflow);
         const response = await api.request<CreateOrUpdateWorkflowResponse>(
           "/workflows/json",
@@ -64,7 +64,7 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
         const body = stringify(
           "workflow" in definition
             ? definition
-            : getWorkflowFromDefinition(definition as Definition)
+            : getYamlWorkflowDefinition(definition as Definition)
         );
         const response = await api.request<CreateOrUpdateWorkflowResponse>(
           `/workflows/${workflowId}`,

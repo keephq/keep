@@ -1,5 +1,9 @@
 import { useEffect, useRef, useMemo } from "react";
-import { useWorkflowStore } from "@/entities/workflows";
+import {
+  useWorkflowStore,
+  V2ActionOrStep,
+  V2StepSchema,
+} from "@/entities/workflows";
 import { StepEditorV2 } from "./StepEditor";
 import { Divider } from "@tremor/react";
 import clsx from "clsx";
@@ -48,15 +52,6 @@ const ReactFlowEditor = () => {
     [selectedNode, selectedEdge]
   );
 
-  const initialFormData = useMemo(() => {
-    if (!selectedNode) {
-      return null;
-    }
-    const { data } = getNodeById(selectedNode) || {};
-    const { name, type, properties } = data || {};
-    return { name, type, properties };
-  }, [selectedNode]);
-
   const showDivider = Boolean(selectedNode || selectedEdge);
 
   return (
@@ -95,12 +90,7 @@ const ReactFlowEditor = () => {
           <WorkflowEditorV2 />
           {showDivider && <Divider ref={dividerRef} className="my-2" />}
           {isTrigger && <TriggerEditor />}
-          {isStepEditor && initialFormData && (
-            <StepEditorV2
-              key={selectedNode}
-              initialFormData={initialFormData}
-            />
-          )}
+          {isStepEditor && <StepEditorV2 key={selectedNode} />}
           <WorkflowToolbox isDraggable={false} />
         </div>
       )}
