@@ -299,12 +299,6 @@ class AzureadAuthVerifier(AuthVerifierBase):
             self.logger.exception("Token validation failed")
             raise HTTPException(status_code=401, detail="Invalid token")
 
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Token validation failed: {str(e)}")
-            raise HTTPException(status_code=401, detail="Invalid token")
-
     def _authorize(self, authenticated_entity: AuthenticatedEntity) -> None:
         """
         Authorize the authenticated entity against required scopes
