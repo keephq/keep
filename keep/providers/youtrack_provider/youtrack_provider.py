@@ -83,7 +83,7 @@ class YoutrackProvider(BaseProvider):
             response = requests.get(url, headers=headers)
             response.raise_for_status()
         except Exception as e:
-            self.logger.error(f"Error getting issues from Youtrack: {e}")
+            self.logger.exception("Failed to validate scopes")
             return {"create_issue": str(e)}
         return {"create_issue": True}
     
@@ -104,8 +104,8 @@ class YoutrackProvider(BaseProvider):
             response.raise_for_status()
             self.logger.info("Successfully created issue in Youtrack", extra={"response": response.json()})
         except Exception as e:
-            self.logger.error(f"Error creating issue in Youtrack: {e}")
-            return str(e)
+            self.logger.exception("Error creating issue in Youtrack")
+            raise Exception(f"Error creating issue in Youtrack: {e}")
         return response.json()
 
     def _get_url(self, endpoint: str):
