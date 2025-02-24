@@ -1,14 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { Button } from "@/components/ui";
-import Modal from "@/components/ui/Modal";
-import { KeepLoader } from "@/shared/ui";
-import { useReactToPrint } from "react-to-print";
-import { useReportData } from "./use-report-data";
-import { IncidentData } from "./models";
-import { IncidentsReport } from "./incidents-report";
-import { PrinterIcon } from "@heroicons/react/24/outline";
+import React, { useMemo } from "react";
 import { SeverityMetrics } from "./models";
 import { DonutChart } from "@tremor/react";
+import {
+  getSeverityBgClassName,
+  UISeverity,
+} from "@/shared/ui/utils/severity-utils";
 
 interface IncidentSeverityMetricProps {
   severityMetrics: SeverityMetrics;
@@ -24,32 +20,24 @@ export const IncidentSeverityMetric: React.FC<IncidentSeverityMetricProps> = ({
       .sort((a, b) => b.value - a.value);
   }, [severityMetric]);
 
-  const colors = useMemo(
-    () => ["red", "blue", "green", "orange", "yellow", "purple"],
-    []
-  ); // Tremor color names
-
-  // Tremor color name to HEX mapping (based on Tailwind)
-  const tremorColorMap = useMemo(
-    () => ({
-      blue: "bg-blue-700",
-      red: "bg-red-500",
-      green: "bg-green-500",
-      orange: "bg-orange-500",
-      yellow: "bg-yellow-500",
-      purple: "bg-purple-500",
-      teal: "bg-teal-500",
-      cyan: "bg-cyan-500",
-      rose: "bg-rose-500",
-      lime: "bg-lime-500",
-    }),
+  const severityBgColorDictionary = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.values(UISeverity).map((severity) => [
+          severity,
+          getSeverityBgClassName(severity),
+        ])
+      ),
     []
   );
 
-  function getCategoryColor(index: number): string {
-    const categoryColor = colors[index];
-    return tremorColorMap[categoryColor as keyof typeof tremorColorMap];
-  }
+  const severityColorsSorted = useMemo(
+    () =>
+      sortedByValue.map((chartValue) =>
+        getSeverityBgClassName(chartValue.name as UISeverity).replace("bg-", "")
+      ),
+    [sortedByValue]
+  );
 
   function formatIncidentsCount(count: number): string {
     return count > 1 ? `${count} incidents` : `${count} incident`;
@@ -62,7 +50,7 @@ export const IncidentSeverityMetric: React.FC<IncidentSeverityMetricProps> = ({
         <DonutChart
           className="w-48 h-48"
           data={sortedByValue}
-          colors={colors}
+          colors={severityColorsSorted}
           variant="pie"
           onValueChange={(v) => console.log(v)}
         />
@@ -70,7 +58,7 @@ export const IncidentSeverityMetric: React.FC<IncidentSeverityMetricProps> = ({
           {sortedByValue.map((chartValue, index) => (
             <div key={chartValue.name} className="flex gap-2">
               <div
-                className={`min-w-5 h-3 mt-2 ${getCategoryColor(index)}`}
+                className={`min-w-5 h-3 mt-2 ${severityBgColorDictionary[chartValue.name]}`}
               ></div>
               <div>
                 <span className="font-bold">{chartValue.name}</span> -{" "}

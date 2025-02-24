@@ -1,91 +1,10 @@
-import { useMemo } from "react";
 import { IncidentData } from "./models";
-import { DonutChart } from "@tremor/react";
 import { IncidentSeverityMetric } from "./incident-severity-metric";
+import { PieChart } from "./pie-chart";
 
 interface IncidentsReportProps {
   incidentsReportData: IncidentData;
 }
-
-interface PieChartProps {
-  data: { name: string; value: number }[];
-  formatCount?: (value: number) => string;
-}
-
-export const PieChart: React.FC<PieChartProps> = ({
-  data,
-  formatCount: counterFormatter,
-}) => {
-  const sortedByValue = useMemo(() => {
-    return [...data].sort((a, b) => b.value - a.value);
-  }, [data]);
-
-  const colors = useMemo(
-    () => [
-      "red",
-      "blue",
-      "green",
-      "orange",
-      "yellow",
-      "purple",
-      "teal",
-      "cyan",
-      "rose",
-      "lime",
-    ],
-    []
-  ); // Tremor color names
-
-  // Tremor color name to HEX mapping (based on Tailwind)
-  const tremorColorMap = useMemo(
-    () => ({
-      blue: "bg-blue-700",
-      red: "bg-red-500",
-      green: "bg-green-500",
-      orange: "bg-orange-500",
-      yellow: "bg-yellow-500",
-      purple: "bg-purple-500",
-      teal: "bg-teal-500",
-      cyan: "bg-cyan-500",
-      rose: "bg-rose-500",
-      lime: "bg-lime-500",
-    }),
-    []
-  );
-
-  function getCategoryColor(index: number): string {
-    const categoryColor = colors[index];
-    return tremorColorMap[categoryColor as keyof typeof tremorColorMap];
-  }
-
-  return (
-    <div className="flex items-center gap-10">
-      <DonutChart
-        className="w-48 h-48"
-        data={sortedByValue}
-        colors={colors}
-        variant="pie"
-        onValueChange={(v) => console.log(v)}
-      />
-      <div className="flex-col">
-        {sortedByValue.map((chartValue, index) => (
-          <div key={chartValue.name} className="flex gap-2">
-            <div
-              className={`min-w-5 h-3 mt-2 ${getCategoryColor(index)}`}
-            ></div>
-            <div>
-              <span className="font-bold">{chartValue.name}</span> -{" "}
-              {counterFormatter && (
-                <span>{counterFormatter(chartValue.value)}</span>
-              )}
-              {!counterFormatter && <span>{chartValue.value}</span>}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   incidentsReportData,
@@ -222,7 +141,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   return (
     <div className="flex flex-col gap-4 mt-4 px-6">
       {renderTimeMetrics()}
-      {incidentsReportData.severity_metrics && (
+      {incidentsReportData?.severity_metrics && (
         <IncidentSeverityMetric
           severityMetrics={incidentsReportData.severity_metrics}
         />
