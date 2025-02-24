@@ -13,14 +13,14 @@ export function useSecrets(workflowId: string) {
 
   const addOrUpdateSecret = async (name: string, value: string) => {
     try {
-      await api.post(`/workflows/${workflowId}/new-secret`, {
-        secret_name: name,
-        secret_value: value,
-      });
-
+      const resp = await api.post(
+        `/workflows/${workflowId}/secrets?secret_name=${name}&secret_value=${value}`
+      );
+      console.log("resp",resp);
       setSecrets((prev) => [...prev.filter((s) => s.name !== name), { name, value }]);
       setError("");
     } catch (err) {
+      console.log("err",err);
       setError(err instanceof Error ? err.message : "Failed to write secret");
     }
   };

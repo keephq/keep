@@ -45,6 +45,7 @@ from keep.parser.parser import Parser
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
+from keep.contextmanager.contextmanager import ContextManager
 
 
 router = APIRouter()
@@ -879,7 +880,7 @@ def toggle_workflow_state(
     }
 
 @router.post(
-    "/{workflow_id}/new-secret",
+    "/{workflow_id}/secrets",
     description="Write a new secret or update existing secret for a workflow",
 )
 def write_workflow_secret(
@@ -895,7 +896,8 @@ def write_workflow_secret(
     or updates the existing secret if it does.
     """
     tenant_id = authenticated_entity.tenant_id
-    secret_manager = SecretManagerFactory.get_secret_manager()
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     
     secret_key = f"{tenant_id}_{workflow_id}_{secret_name}"
     secret_manager.write_secret(
@@ -921,7 +923,8 @@ def read_workflow_secret(
     Read a secret value for a workflow. Optionally parse as JSON if is_json is True.
     """
     tenant_id = authenticated_entity.tenant_id
-    secret_manager = SecretManagerFactory.get_secret_manager()
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     
     secret_key = f"{tenant_id}_{workflow_id}_{secret_name}"
     return secret_manager.read_secret(
@@ -944,7 +947,8 @@ def delete_workflow_secret(
     Delete a secret for a workflow.
     """
     tenant_id = authenticated_entity.tenant_id
-    secret_manager = SecretManagerFactory.get_secret_manager()
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     
     secret_key = f"{tenant_id}_{workflow_id}_{secret_name}"
     secret_manager.delete_secret(secret_key)
