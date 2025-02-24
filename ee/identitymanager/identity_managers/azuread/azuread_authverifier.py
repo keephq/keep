@@ -249,6 +249,13 @@ class AzureadAuthVerifier(AuthVerifierBase):
             # Map groups to role
             role_name = self.group_mapper.get_role_from_groups(groups)
             if not role_name:
+                self.logger.warning(
+                    f"User {email} is not a member of any authorized groups for Keep",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "groups": groups,
+                    },
+                )
                 raise HTTPException(
                     status_code=403,
                     detail="User not a member of any authorized groups for Keep",
@@ -257,6 +264,13 @@ class AzureadAuthVerifier(AuthVerifierBase):
             # Validate role scopes
             role = get_role_by_role_name(role_name)
             if not role.has_scopes(self.scopes):
+                self.logger.warning(
+                    f"Role {role_name} does not have required permissions",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "role": role_name,
+                    },
+                )
                 raise HTTPException(
                     status_code=403,
                     detail=f"Role {role_name} does not have required permissions",
