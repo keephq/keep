@@ -9,6 +9,7 @@ import {
 } from "@heroicons/react/20/solid";
 import { getStepStatus } from "../lib/logs-utils";
 import { LogEntry } from "@/shared/api/workflow-executions";
+import { loadWorkflowIntoOrderedYaml } from "@/entities/workflows/lib/reorderWorkflowSections";
 
 interface Props {
   workflowRaw: string;
@@ -29,51 +30,8 @@ export function WorkflowDefinitionYAML({
   selectedStep,
   setSelectedStep,
 }: Props) {
-  const reorderWorkflowSections = (yamlString: string) => {
-    const content = yamlString.startsWith('"')
-      ? JSON.parse(yamlString)
-      : yamlString;
-
-    const workflow = load(content) as any;
-    const workflowData = workflow.workflow;
-
-    const metadataFields = ["id", "name", "description", "disabled", "debug"];
-    const sectionOrder = [
-      "triggers",
-      "consts",
-      "owners",
-      "services",
-      "steps",
-      "actions",
-    ];
-
-    const orderedWorkflow: any = {
-      workflow: {},
-    };
-
-    metadataFields.forEach((field) => {
-      if (workflowData[field] !== undefined) {
-        orderedWorkflow.workflow[field] = workflowData[field];
-      }
-    });
-
-    sectionOrder.forEach((section) => {
-      if (workflowData[section] !== undefined) {
-        orderedWorkflow.workflow[section] = workflowData[section];
-      }
-    });
-
-    return dump(orderedWorkflow, {
-      indent: 2,
-      lineWidth: -1,
-      noRefs: true,
-      sortKeys: false,
-      quotingType: '"',
-    });
-  };
-
   const reorderedWorkflowSections = useMemo(() => {
-    return reorderWorkflowSections(workflowRaw);
+    return loadWorkflowIntoOrderedYaml(workflowRaw);
   }, [workflowRaw]);
 
   const getStatus = useCallback(
