@@ -364,6 +364,23 @@ def update_incident(
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     incident_bl = IncidentBl(tenant_id, session=session, pusher_client=pusher_client)
+
+    current_incident = get_incident_by_id(tenant_id, incident_id)
+    if not current_incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    if (
+        updated_incident_dto.assignee
+        and current_incident.assignee != updated_incident_dto.assignee
+    ):
+        add_audit(
+            tenant_id,
+            str(incident_id),
+            authenticated_entity.email,
+            ActionType.INCIDENT_ASSIGN,
+            f"Incident assigned to {updated_incident_dto.assignee}",
+        )
+
     new_incident_dto = incident_bl.update_incident(
         incident_id, updated_incident_dto, generated_by_ai
     )
@@ -759,6 +776,13 @@ def assign_incident(
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
     incident.assignee = authenticated_entity.email
+    add_audit(
+        authenticated_entity.tenant_id,
+        str(incident_id),
+        authenticated_entity.email,
+        ActionType.INCIDENT_ASSIGN,
+        f"Incident self-assigned to {authenticated_entity.email}",
+    )
     session.commit()
     return Response(status_code=202)
 
@@ -812,15 +836,24 @@ def change_incident_status(
             end_time = datetime.now(tz=timezone.utc)
             incident.end_time = end_time
 
-        incident.assignee = authenticated_entity.email
-        incident.status = change.status.value
+        if incident.assignee != authenticated_entity.email:
+            incident.assignee = authenticated_entity.email
+            add_audit(
+                tenant_id,
+                str(incident_id),
+                authenticated_entity.email,
+                ActionType.INCIDENT_ASSIGN,
+                f"Incident self-assigned to {authenticated_entity.email}",
+            )
+
         add_audit(
             tenant_id,
             str(incident_id),
             authenticated_entity.email,
             ActionType.INCIDENT_STATUS_CHANGE,
-            f"Incident status changed from {incident.status} to {change.status.value} by {authenticated_entity.email}",
+            f"Incident status changed from {incident.status} to {change.status.value}",
         )
+        incident.status = change.status.value
         session.commit()
 
     new_incident_dto = IncidentDto.from_db_incident(incident)
