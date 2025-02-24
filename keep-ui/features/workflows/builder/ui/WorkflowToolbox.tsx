@@ -1,13 +1,31 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Disclosure } from "@headlessui/react";
-import { Subtitle, Title } from "@tremor/react";
+import { Subtitle } from "@tremor/react";
 import { IoChevronUp } from "react-icons/io5";
 import { useWorkflowStore } from "@/entities/workflows";
 import clsx from "clsx";
-import { V2Step } from "@/entities/workflows/model/types";
+import { V2Step, V2StepTrigger } from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 import { triggerTypes } from "../lib/utils";
+
+type GroupedMenuBaseProps = {
+  searchTerm: string;
+  resetSearchTerm: () => void;
+  isDraggable?: boolean;
+};
+
+type GroupedMenuProps = GroupedMenuBaseProps &
+  (
+    | {
+        name: "Triggers";
+        steps: V2StepTrigger[];
+      }
+    | {
+        name: string;
+        steps: Omit<V2Step, "id">[];
+      }
+  );
 
 const GroupedMenu = ({
   name,
@@ -15,25 +33,18 @@ const GroupedMenu = ({
   searchTerm,
   resetSearchTerm,
   isDraggable = true,
-}: {
-  name: string;
-  steps: any[];
-  searchTerm: string;
-  resetSearchTerm: () => void;
-  isDraggable?: boolean;
-}) => {
+}: GroupedMenuProps) => {
   const [isOpen, setIsOpen] = useState(!!searchTerm || isDraggable);
-  const {
-    selectedNode,
-    selectedEdge,
-    addNodeBetweenSafe: addNodeBetween,
-  } = useWorkflowStore();
+  const { selectedNode, selectedEdge, addNodeBetweenSafe } = useWorkflowStore();
 
   useEffect(() => {
     setIsOpen(!!searchTerm || !isDraggable);
   }, [searchTerm, isDraggable]);
 
-  const handleAddNode = (e: React.MouseEvent<HTMLLIElement>, step: V2Step) => {
+  const handleAddNode = (
+    e: React.MouseEvent<HTMLLIElement>,
+    step: V2StepTrigger | Omit<V2Step, "id">
+  ) => {
     e.stopPropagation();
     e.preventDefault();
     if (isDraggable) {
@@ -44,7 +55,7 @@ const GroupedMenu = ({
     if (!nodeOrEdgeId) {
       return;
     }
-    const newNodeId = addNodeBetween(nodeOrEdgeId, step, type);
+    const newNodeId = addNodeBetweenSafe(nodeOrEdgeId, step, type);
     if (newNodeId) {
       resetSearchTerm();
     }
@@ -96,7 +107,7 @@ const GroupedMenu = ({
                 className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4"
               >
                 {steps.length > 0 &&
-                  steps.map((step: any) => (
+                  steps.map((step) => (
                     <li
                       key={step.type}
                       className={clsx(
@@ -140,7 +151,17 @@ export const WorkflowToolbox = ({ isDraggable }: { isDraggable?: boolean }) => {
   const { toolboxConfiguration, selectedNode, selectedEdge, nodes } =
     useWorkflowStore();
 
-  const showTriggers = selectedEdge?.startsWith("etrigger_start");
+  const showOnlyTriggers = selectedEdge?.startsWith("etrigger_start");
+  // User cannot add conditions inside a condition
+  const showConditions =
+    !selectedEdge?.endsWith("empty_true") &&
+    !selectedEdge?.endsWith("empty_false") &&
+    !selectedNode?.endsWith("empty_true") &&
+    !selectedNode?.endsWith("empty_false");
+  // User cannot add foreach inside a foreach
+  const showForeach =
+    !selectedEdge?.endsWith("foreach") &&
+    !selectedNode?.endsWith("empty_foreach");
 
   useEffect(() => {
     const isOpen =
@@ -150,11 +171,11 @@ export const WorkflowToolbox = ({ isDraggable }: { isDraggable?: boolean }) => {
   }, [selectedNode, selectedEdge, isDraggable]);
 
   const triggerNodeMap = nodes
-    .filter((node: any) =>
+    .filter((node) =>
       ["interval", "manual", "alert", "incident"].includes(node?.id)
     )
     .reduce(
-      (obj: any, node: any) => {
+      (obj: any, node) => {
         obj[node.id] = true;
         return obj;
       },
@@ -167,23 +188,31 @@ export const WorkflowToolbox = ({ isDraggable }: { isDraggable?: boolean }) => {
     }
     return (
       toolboxConfiguration.groups
-        .filter((group: any) =>
-          showTriggers ? group?.name === "Triggers" : group?.name !== "Triggers"
-        )
-        .map((group: any) => ({
+        .filter((group) => {
+          if (showOnlyTriggers) {
+            return group?.name === "Triggers";
+          }
+          if (!showConditions) {
+            return group?.name !== "Conditions" && group?.name !== "Triggers";
+          }
+          if (!showForeach) {
+            return group?.name !== "Misc" && group?.name !== "Triggers";
+          }
+          return group?.name !== "Triggers";
+        })
+        .map((group) => ({
           ...group,
           steps: group?.steps?.filter(
-            (step: any) =>
+            (step) =>
               step?.name?.toLowerCase().includes(searchTerm?.toLowerCase()) &&
-              !triggerNodeMap[step?.id]
+              (!("id" in step) || !triggerNodeMap[step?.id])
           ),
         })) || []
     );
-  }, [toolboxConfiguration, showTriggers, searchTerm, triggerNodeMap]);
+  }, [toolboxConfiguration, showOnlyTriggers, searchTerm, triggerNodeMap]);
 
   const checkForSearchResults =
-    searchTerm &&
-    !!filteredGroups?.find((group: any) => group?.steps?.length > 0);
+    searchTerm && !!filteredGroups?.find((group) => group?.steps?.length > 0);
 
   if (!open) {
     return null;
@@ -200,7 +229,7 @@ export const WorkflowToolbox = ({ isDraggable }: { isDraggable?: boolean }) => {
         {/* Sticky header */}
         <div className="sticky top-0 left-0 z-10 bg-white">
           <Subtitle className="font-medium p-2">
-            Add {showTriggers ? "trigger" : "step"}
+            Add {showOnlyTriggers ? "trigger" : "step"}
           </Subtitle>
           <div className="flex items-center justify-between p-2 pt-0 bg-white">
             <TextInput
@@ -217,11 +246,12 @@ export const WorkflowToolbox = ({ isDraggable }: { isDraggable?: boolean }) => {
         {(isVisible || checkForSearchResults) && (
           <div className="flex-1 overflow-y-auto pt-2 space-y-4 overflow-hidden">
             {filteredGroups.length > 0 &&
-              filteredGroups.map((group: Record<string, any>) => (
+              filteredGroups.map((group) => (
                 <GroupedMenu
                   key={group.name}
                   name={group.name}
-                  steps={group.steps}
+                  // TODO: fix type
+                  steps={group.steps as any}
                   searchTerm={searchTerm}
                   resetSearchTerm={() => setSearchTerm("")}
                   isDraggable={isDraggable}
