@@ -351,6 +351,7 @@ def get_incident_facets_data(
                 Incident.tenant_id == tenant_id,
             ),
         )
+        .filter(Incident.tenant_id == tenant_id)
     )
 
     if allowed_incident_ids:
