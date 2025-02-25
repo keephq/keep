@@ -226,7 +226,7 @@ export default function WorkflowsPage() {
                   entityName={"workflows"}
                   // facetsConfig={facetsConfig}
                   // facetOptionsCel={dateRangeCel}
-                  // usePropertyPathsSuggestions={true}
+                  usePropertyPathsSuggestions={true}
                   // clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}
                   // uncheckedByDefaultOptionValues={uncheckedFacetOptionsByDefault}

@@ -28,7 +28,11 @@ from keep.api.core.db import (
     get_workflow_by_name,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
-from keep.api.core.workflows import get_workflow_facets, get_workflow_facets_data
+from keep.api.core.workflows import (
+    get_workflow_facets,
+    get_workflow_facets_data,
+    get_workflow_potential_facet_fields,
+)
 from keep.api.models.alert import AlertDto, IncidentDto
 from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.workflow import (
@@ -117,33 +121,34 @@ def fetch_facets(
     return facets
 
 
-# @router.get(
-#     "/facets/fields",
-#     description="Get potential fields for alert facets",
-# )
-# def fetch_alert_facet_fields(
-#     authenticated_entity: AuthenticatedEntity = Depends(
-#     IdentityManagerFactory.get_auth_verifier(["read:workflows"])
-# ),
-# ) -> list:
-#     tenant_id = authenticated_entity.tenant_id
+@router.get(
+    "/facets/fields",
+    description="Get potential fields for alert facets",
+)
+def fetch_facet_fields(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
 
-#     logger.info(
-#         "Fetching alert facet fields from DB",
-#         extra={
-#             "tenant_id": tenant_id,
-#         },
-#     )
+    logger.info(
+        "Fetching workflow facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
 
-#     fields = get_alert_potential_facet_fields(tenant_id=tenant_id)
+    fields = get_workflow_potential_facet_fields(tenant_id=tenant_id)
 
-#     logger.info(
-#         "Fetched alert facet fields from DB",
-#         extra={
-#             "tenant_id": tenant_id,
-#         },
-#     )
-#     return fields
+    logger.info(
+        "Fetched workflow facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    return fields
+
 
 # Redesign the workflow Card
 #   The workflow card needs execution records (currently limited to 15) for the graph. To achieve this, the following changes

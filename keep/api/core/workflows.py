@@ -32,13 +32,23 @@ workflow_field_configurations = [
     FieldMappingConfiguration("started", "filter_started"),
     FieldMappingConfiguration("status", "filter_status"),
     FieldMappingConfiguration("executionTime", "filter_execution_time"),
+    FieldMappingConfiguration("isDisabled", "filter_workflow_is_disabled"),
+    FieldMappingConfiguration("lastUpdated", "filter_workflow_last_updated"),
+    FieldMappingConfiguration("creationTime", "filter_workflow_creation_time"),
+    FieldMappingConfiguration("createdBy", "filter_workflow_created_by"),
+    FieldMappingConfiguration("updatedBy", "filter_workflow_updated_by"),
 ]
 alias_column_mapping = {
     "filter_workflow_name": "workflow.name",
     "filter_workflow_description": "workflow.description",
+    "filter_workflow_is_disabled": "workflow.is_disabled",
+    "filter_workflow_last_updated": "workflow.last_updated",
+    "filter_workflow_creation_time": "workflow.creation_time",
+    "filter_workflow_updated_by": "workflow.updated_by",
     "filter_started": "started",
     "filter_status": "status",
     "filter_execution_time": "execution_time",
+    "filter_workflow_created_by": "workflow.created_by",
 }
 
 properties_metadata = PropertiesMetadata(workflow_field_configurations)
@@ -279,3 +289,11 @@ def get_workflow_facets_data(
         facet_options_query=facet_options_query,
         properties_metadata=properties_metadata,
     )
+
+
+def get_workflow_potential_facet_fields(tenant_id: str) -> list[str]:
+    return [
+        field_configuration.map_from_pattern
+        for field_configuration in workflow_field_configurations
+        if "*" not in field_configuration.map_from_pattern
+    ]
