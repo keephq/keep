@@ -459,7 +459,7 @@ class ProvidersFactory:
         if all_providers is None:
             all_providers = ProvidersFactory.get_all_providers()
 
-        installed_providers = get_installed_providers(tenant_id)
+        installed_providers = get_installed_providers(tenant_id, )
         providers = []
         context_manager = ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
@@ -487,7 +487,7 @@ class ProvidersFactory:
                 if include_details:
                     provider_auth.update(
                         secret_manager.read_secret(
-                            secret_name=f"{tenant_id}_{p.type}_{p.id}", is_json=True
+                            secret_name=p.configuration_key, is_json=True
                         )
                     )
                 if READ_ONLY_MODE and not override_readonly:
@@ -499,7 +499,7 @@ class ProvidersFactory:
                         }
             # Somehow the provider is installed but the secret is missing, probably bug in deletion
             # TODO: solve its root cause
-            except Exception:
+            except Exception as e:
                 logger.warning(
                     f"Could not get provider {provider_copy.id} auth config from secret manager"
                 )
