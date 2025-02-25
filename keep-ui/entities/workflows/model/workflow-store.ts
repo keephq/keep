@@ -38,8 +38,10 @@ import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 import { ZodError } from "zod";
 import { fromError } from "zod-validation-error";
 import {
-  edgeCanAddStep,
-  edgeCanAddTrigger,
+  canAddConditionBeforeEdge,
+  canAddForeachBeforeEdge,
+  canAddStepBeforeEdge,
+  canAddTriggerBeforeEdge,
   edgeCanHaveAddButton,
   getToolboxConfiguration,
 } from "@/features/workflows/builder/lib/utils";
@@ -66,7 +68,7 @@ const PROTECTED_NODE_IDS = ["start", "end", "trigger_start", "trigger_end"];
  */
 function addNodeBetween(
   nodeOrEdgeId: string,
-  rawStep: V2StepTemplate | V2StepTrigger,
+  rawStep: V2StepTemplate | V2StepTrigger | Omit<V2Step, "id">,
   type: "node" | "edge",
   set: StoreSet,
   get: StoreGet
@@ -112,10 +114,6 @@ function addNodeBetween(
     targetId = "trigger_end";
   }
 
-  if (isTriggerComponent && !edgeCanAddTrigger(sourceId, targetId)) {
-    throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add trigger`);
-  }
-
   if (!sourceId) {
     throw new KeepWorkflowStoreError(
       `Source is not defined for edge ${edge.id}`
@@ -125,6 +123,25 @@ function addNodeBetween(
     throw new KeepWorkflowStoreError(
       `Target is not defined for edge ${edge.id}`
     );
+  }
+
+  if (isTriggerComponent && !canAddTriggerBeforeEdge(sourceId, targetId)) {
+    throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add trigger`);
+  }
+
+  if (
+    step.componentType === "switch" &&
+    !canAddConditionBeforeEdge(sourceId, targetId)
+  ) {
+    throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add condition`);
+  }
+
+  if (
+    step.componentType === "container" &&
+    step.type === "foreach" &&
+    !canAddForeachBeforeEdge(sourceId, targetId)
+  ) {
+    throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add foreach`);
   }
 
   if (sourceId !== "trigger_start" && isTriggerComponent) {
@@ -139,7 +156,7 @@ function addNodeBetween(
     );
   }
 
-  if (!isTriggerComponent && !edgeCanAddStep(sourceId, targetId)) {
+  if (!isTriggerComponent && !canAddStepBeforeEdge(sourceId, targetId)) {
     throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add step`);
   }
 
@@ -307,7 +324,7 @@ export const useWorkflowStore = create<WorkflowState>()(
     getEdgeById: (id) => get().edges.find((edge) => edge.id === id),
     addNodeBetween: (
       nodeOrEdgeId: string,
-      step: V2StepTemplate | V2StepTrigger,
+      step: V2StepTrigger | Omit<V2Step, "id">,
       type: "node" | "edge"
     ) => {
       const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
@@ -316,7 +333,7 @@ export const useWorkflowStore = create<WorkflowState>()(
     },
     addNodeBetweenSafe: (
       nodeOrEdgeId: string,
-      step: V2StepTemplate | V2StepTrigger,
+      step: V2StepTrigger | Omit<V2Step, "id">,
       type: "node" | "edge"
     ) => {
       try {
@@ -486,7 +503,10 @@ export const useWorkflowStore = create<WorkflowState>()(
             get().edges.filter((edge) => edge.source === source).length < 2
           );
         }
-        if (sourceType === "foreach" || sourceNode?.data?.type === "foreach") {
+        if (
+          sourceType === "container" &&
+          sourceNode?.data?.type === "foreach"
+        ) {
           return true;
         }
         return (

@@ -35,7 +35,7 @@ export function TriggerEditor() {
     const currentFilters = properties.alert || {};
     const updatedFilters = { ...currentFilters, [filter]: value };
     updateV2Properties({ alert: updatedFilters });
-    saveNodeDataDebounced("properties", updatedFilters);
+    saveNodeDataDebounced("properties", { alert: updatedFilters });
   };
 
   const addFilter = () => {

@@ -36,10 +36,10 @@ export function getYamlFromStep(step: V2Step | V2StepTrigger) {
 export function getWorkflowSummaryForCopilot(nodes: FlowNode[], edges: Edge[]) {
   return {
     nodes: nodes.map((n) => ({
-      id: n.id,
+      ...n.data,
+      id: n.id || n.data.id,
       nextStepId: n.nextStepId,
       prevStepId: n.prevStepId,
-      ...n.data,
     })),
     edges: edges.map((e) => ({
       id: e.id,
