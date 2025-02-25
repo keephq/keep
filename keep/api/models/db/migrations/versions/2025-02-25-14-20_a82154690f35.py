@@ -28,11 +28,11 @@ def upgrade() -> None:
     prepare_data()
 
     with op.batch_alter_table("topologyapplication", schema=None) as batch_op:
-        batch_op.alter_column("description", existing_type=sa.VARCHAR(), nullable=False)
-        batch_op.alter_column("repository", existing_type=sa.VARCHAR(), nullable=False)
+        batch_op.alter_column("description", existing_type=sa.VARCHAR(255), nullable=False)
+        batch_op.alter_column("repository", existing_type=sa.VARCHAR(255), nullable=False)
 
 
 def downgrade() -> None:
     with op.batch_alter_table("topologyapplication", schema=None) as batch_op:
-        batch_op.alter_column("repository", existing_type=sa.VARCHAR(), nullable=True)
-        batch_op.alter_column("description", existing_type=sa.VARCHAR(), nullable=True)
+        batch_op.alter_column("repository", existing_type=sa.VARCHAR(255), nullable=True)
+        batch_op.alter_column("description", existing_type=sa.VARCHAR(255), nullable=True)
