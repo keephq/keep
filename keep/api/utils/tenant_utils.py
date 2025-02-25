@@ -173,6 +173,7 @@ def get_api_keys(
             select(TenantApiKey)
             .where(TenantApiKey.tenant_id == tenant_id)
             .where(TenantApiKey.created_by == email)
+            .where(TenantApiKey.is_system == False)
             .where(TenantApiKey.is_deleted != True)
         )
 
@@ -180,6 +181,7 @@ def get_api_keys(
         statement = (
             select(TenantApiKey)
             .where(TenantApiKey.tenant_id == tenant_id)
+            .where(TenantApiKey.is_system == False)
             .where(TenantApiKey.is_deleted != True)
         )
 

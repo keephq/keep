@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { Provider } from "./providers";
+import { Provider } from "@/shared/api/providers";
 import { Subtitle, Title, Text, Icon } from "@tremor/react";
 import { CopyBlock, a11yLight, railscast } from "react-code-blocks";
 import Image from "next/image";

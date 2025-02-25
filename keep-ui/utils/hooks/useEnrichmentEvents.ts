@@ -10,6 +10,7 @@ interface UseEnrichmentEventsOptions {
   ruleId: string;
   limit?: number;
   offset?: number;
+  type?: "mapping" | "extraction";
   options?: SWRConfiguration;
 }
 
@@ -18,13 +19,14 @@ export function useEnrichmentEvents({
   limit = 20,
   offset = 0,
   options = { revalidateOnFocus: false },
+  type = "mapping",
 }: UseEnrichmentEventsOptions) {
   const api = useApi();
 
   const { data, error, isLoading, mutate } =
     useSWR<PaginatedMappingExecutionDto>(
       api.isReady()
-        ? `/mapping/${ruleId}/executions?limit=${limit}&offset=${offset}`
+        ? `/${type}/${ruleId}/executions?limit=${limit}&offset=${offset}`
         : null,
       (url) => api.get(url),
       options
@@ -43,17 +45,19 @@ interface UseEnrichmentEventOptions {
   ruleId: string;
   executionId: string;
   options?: SWRConfiguration;
+  type?: "mapping" | "extraction";
 }
 
 export function useEnrichmentEvent({
   ruleId,
   executionId,
   options = { revalidateOnFocus: false },
+  type = "mapping",
 }: UseEnrichmentEventOptions) {
   const api = useApi();
 
   const { data, error, isLoading, mutate } = useSWR<EnrichmentEventWithLogs>(
-    api.isReady() ? `/mapping/${ruleId}/executions/${executionId}` : null,
+    api.isReady() ? `/${type}/${ruleId}/executions/${executionId}` : null,
     (url) => api.get(url),
     options
   );

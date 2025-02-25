@@ -3,7 +3,9 @@ import { Title } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
 import ColumnSelection from "./ColumnSelection";
 import { ThemeSelection } from "./ThemeSelection";
-import EnhancedDateRangePicker from "@/components/ui/DateRangePicker";
+import EnhancedDateRangePicker, {
+  TimeFrame,
+} from "@/components/ui/DateRangePicker";
 import { useEffect, useState } from "react";
 
 type Theme = {
@@ -14,20 +16,19 @@ type TableHeaderProps = {
   presetName: string;
   alerts: AlertDto[];
   table: Table<AlertDto>;
+  liveUpdateOptionEnabled?: boolean;
+  timeframeRefreshInterval?: number;
   onThemeChange: (newTheme: Theme) => void;
-  onDateRangeChange?: (newDateRange: DateRange | null) => void;
+  onTimeframeChange?: (timeFrame: TimeFrame | null) => void;
 };
-
-export interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
 
 export const TitleAndFilters = ({
   presetName,
   table,
+  liveUpdateOptionEnabled = false,
+  timeframeRefreshInterval = 1000,
   onThemeChange,
-  onDateRangeChange,
+  onTimeframeChange,
 }: TableHeaderProps) => {
   const [timeFrame, setTimeFrame] = useState<{
     start: Date | null;
@@ -42,18 +43,10 @@ export const TitleAndFilters = ({
   });
 
   useEffect(() => {
-    if (onDateRangeChange) {
-      if (timeFrame.start && timeFrame.end) {
-        onDateRangeChange({
-          start: timeFrame.start,
-          end: timeFrame.end,
-        });
-        return;
-      }
-
-      onDateRangeChange(null);
+    if (onTimeframeChange) {
+      onTimeframeChange(timeFrame);
     }
-  }, [timeFrame]);
+  }, [timeFrame, onTimeframeChange]);
 
   const handleTimeFrameChange = (newTimeFrame: {
     start: Date | null;
@@ -70,7 +63,7 @@ export const TitleAndFilters = ({
 
     // We don't need to manipulate table in case onDateRange is provided.
     // Most likely the code below must be removed in the future.
-    if (onDateRangeChange) {
+    if (onTimeframeChange) {
       return;
     }
 
@@ -120,7 +113,9 @@ export const TitleAndFilters = ({
         <EnhancedDateRangePicker
           timeFrame={timeFrame}
           setTimeFrame={handleTimeFrameChange}
-          hasPlay={false}
+          timeframeRefreshInterval={timeframeRefreshInterval}
+          hasPlay={liveUpdateOptionEnabled}
+          pausedByDefault={liveUpdateOptionEnabled}
           hasRewind={false}
           hasForward={false}
           hasZoomOut={false}

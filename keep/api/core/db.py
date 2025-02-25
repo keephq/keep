@@ -214,6 +214,16 @@ def get_mapping_rule_by_id(
         return session.exec(query).first()
 
 
+def get_extraction_rule_by_id(
+    tenant_id: str, rule_id: str, session: Optional[Session] = None
+) -> ExtractionRule | None:
+    with existed_or_new_session(session) as session:
+        query = select(ExtractionRule).where(
+            ExtractionRule.tenant_id == tenant_id, ExtractionRule.id == rule_id
+        )
+        return session.exec(query).first()
+
+
 def get_last_completed_execution(
     session: Session, workflow_id: str
 ) -> WorkflowExecution:
@@ -1849,7 +1859,10 @@ def get_incident_for_grouping_rule(
 
         # if the last alert in the incident is older than the timeframe, create a new incident
         is_incident_expired = False
-        if incident and incident.status in [IncidentStatus.RESOLVED.value, IncidentStatus.DELETED.value]:
+        if incident and incident.status in [
+            IncidentStatus.RESOLVED.value,
+            IncidentStatus.DELETED.value,
+        ]:
             is_incident_expired = True
         elif incident and incident.alerts_count > 0:
             enrich_incidents_with_alerts(tenant_id, [incident], session)
@@ -3579,6 +3592,9 @@ def update_incident_from_dto_by_id(
                     if value is not None:
                         setattr(incident, key, value)
 
+        if "same_incident_in_the_past_id" in updated_data:
+            incident.same_incident_in_the_past_id = updated_data["same_incident_in_the_past_id"]
+
         if generated_by_ai:
             incident.generated_summary = updated_incident_dto.user_summary
         else:
@@ -4576,9 +4592,8 @@ def change_incident_status_by_id(
                 end_time=end_time,
             )
         )
-        updated = session.execute(stmt)
+        session.exec(stmt)
         session.commit()
-        return updated.rowcount > 0
 
 
 def get_workflow_executions_for_incident_or_alert(

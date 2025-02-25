@@ -1,0 +1,22 @@
+.copilotKitInput {
+  @apply sticky bottom-2 bg-white !important;
+  @apply flex items-center outline-none rounded-tremor-default px-3 py-2 mx-2 text-tremor-default focus:ring-2 transition duration-100 border shadow-tremor-input focus:border-tremor-brand-subtle focus:ring-tremor-brand-muted dark:shadow-dark-tremor-input focus:dark:border-dark-tremor-brand-subtle focus:dark:ring-dark-tremor-brand-muted bg-tremor-background dark:bg-dark-tremor-background hover:bg-tremor-background-muted dark:hover:bg-dark-tremor-background-muted text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis border-tremor-border dark:border-dark-tremor-border placeholder:text-tremor-content dark:placeholder:text-dark-tremor-content !important;
+}
+
+.copilotKitInput:hover textarea {
+  @apply bg-tremor-background-muted dark:bg-dark-tremor-background-muted transition duration-100 !important;
+}
+
+.copilotKitInput textarea {
+  height: unset !important;
+  max-height: unset !important;
+  min-height: 100px;
+}
+
+.copilotKitMessages {
+  @apply px-4 !important;
+}
+
+.copilotKitMessages .suggestion {
+  @apply bg-white text-black scale-100 border-tremor-border border-2 hover:border-tremor-brand hover:text-tremor-brand hover:bg-tremor-brand-muted dark:border-dark-tremor-brand dark:hover:bg-dark-tremor-brand-muted transition !important;
+}

@@ -1,6 +1,6 @@
 import logging
-from datetime import datetime
-from typing import List
+from datetime import datetime, timezone
+from typing import List, Optional
 
 from arq import ArqRedis
 from fastapi import (
@@ -25,7 +25,6 @@ from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.db import (
     DestinationIncidentNotFound,
     add_audit,
-    change_incident_status_by_id,
     confirm_predicted_incident_by_id,
     get_future_incidents_by_incident_id,
     get_incident_alerts_and_links_by_incident_id,
@@ -54,16 +53,17 @@ from keep.api.models.alert import (
     IncidentListFilterParamsDto,
     IncidentsClusteringSuggestion,
     IncidentSeverity,
+    IncidentSeverityChangeDto,
     IncidentSorting,
     IncidentStatus,
     IncidentStatusChangeDto,
     MergeIncidentsRequestDto,
     MergeIncidentsResponseDto,
     SplitIncidentRequestDto,
-    SplitIncidentResponseDto, IncidentSeverityChangeDto,
+    SplitIncidentResponseDto,
 )
-from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.db.alert import ActionType, AlertAudit
+from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.workflow import WorkflowExecutionDTO
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
@@ -123,6 +123,7 @@ def get_incidents_meta(
 )
 def get_all_incidents(
     confirmed: bool = True,
+    predicted: Optional[bool] = None,
     limit: int = 25,
     offset: int = 0,
     sorting: IncidentSorting = IncidentSorting.creation_time,
@@ -175,6 +176,7 @@ def get_all_incidents(
         incidents, total_count = get_last_incidents_by_cel(
             tenant_id=tenant_id,
             is_confirmed=confirmed,
+            is_predicted=predicted,
             limit=limit,
             offset=offset,
             sorting=sorting,
@@ -237,10 +239,10 @@ def fetch_inicident_facet_options(
     )
 
     facet_options = get_incident_facets_data(
-            tenant_id = tenant_id,
-            allowed_incident_ids=allowed_incident_ids,
-            facet_options_query = facet_options_query
-        )
+        tenant_id=tenant_id,
+        allowed_incident_ids=allowed_incident_ids,
+        facet_options_query=facet_options_query,
+    )
 
     logger.info(
         "Fetched incident facets from DB",
@@ -281,6 +283,7 @@ def fetch_inicident_facets(
 
     return facets
 
+
 @router.get(
     "/facets/fields",
     description="Get potential fields for incident facets",
@@ -288,7 +291,7 @@ def fetch_inicident_facets(
 def fetch_alert_facet_fields(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
-    )
+    ),
 ) -> list:
     tenant_id = authenticated_entity.tenant_id
 
@@ -299,9 +302,7 @@ def fetch_alert_facet_fields(
         },
     )
 
-    fields = get_incident_potential_facet_fields(
-            tenant_id = tenant_id
-        )
+    fields = get_incident_potential_facet_fields(tenant_id=tenant_id)
 
     logger.info(
         "Fetched incident facet fields from DB",
@@ -363,6 +364,23 @@ def update_incident(
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     incident_bl = IncidentBl(tenant_id, session=session, pusher_client=pusher_client)
+
+    current_incident = get_incident_by_id(tenant_id, incident_id)
+    if not current_incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    if (
+        updated_incident_dto.assignee
+        and current_incident.assignee != updated_incident_dto.assignee
+    ):
+        add_audit(
+            tenant_id,
+            str(incident_id),
+            authenticated_entity.email,
+            ActionType.INCIDENT_ASSIGN,
+            f"Incident assigned to {updated_incident_dto.assignee}",
+        )
+
     new_incident_dto = incident_bl.update_incident(
         incident_id, updated_incident_dto, generated_by_ai
     )
@@ -740,6 +758,35 @@ async def receive_event(
     return Response(status_code=202)
 
 
+@router.post("/{incident_id}/assign", description="Assign incident to user")
+def assign_incident(
+    incident_id: UUID,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    session: Session = Depends(get_session),
+):
+    logger.info(
+        "Assigning incident to user",
+        extra={"incident_id": incident_id, "assignee": authenticated_entity.email},
+    )
+    incident = get_incident_by_id(
+        authenticated_entity.tenant_id, incident_id, session=session
+    )
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    incident.assignee = authenticated_entity.email
+    add_audit(
+        authenticated_entity.tenant_id,
+        str(incident_id),
+        authenticated_entity.email,
+        ActionType.INCIDENT_ASSIGN,
+        f"Incident self-assigned to {authenticated_entity.email}",
+    )
+    session.commit()
+    return Response(status_code=202)
+
+
 @router.post(
     "/{incident_id}/status",
     description="Change incident status",
@@ -751,6 +798,7 @@ def change_incident_status(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
+    session: Session = Depends(get_session),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -761,36 +809,52 @@ def change_incident_status(
         },
     )
 
-    with_alerts = change.status == IncidentStatus.RESOLVED
-    incident = get_incident_by_id(tenant_id, incident_id, with_alerts=with_alerts)
+    with_alerts = change.status in [
+        IncidentStatus.RESOLVED,
+        IncidentStatus.ACKNOWLEDGED,
+    ]
+    incident = get_incident_by_id(
+        tenant_id, incident_id, with_alerts=with_alerts, session=session
+    )
+
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
     # We need to do something only if status really changed
-    if not change.status == incident.status:
-        end_time = (
-            datetime.utcnow() if change.status == IncidentStatus.RESOLVED else None
-        )
-        result = change_incident_status_by_id(
-            tenant_id, incident_id, change.status, end_time
-        )
-        if not result:
-            raise HTTPException(
-                status_code=500, detail="Error changing incident status"
-            )
-        # TODO: same this change to audit table with the comment
-
-        if change.status == IncidentStatus.RESOLVED:
+    if change.status != incident.status:
+        if change.status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:
             for alert in incident._alerts:
                 _enrich_alert(
                     EnrichAlertRequestBody(
-                        enrichments={"status": "resolved"},
+                        enrichments={"status": change.status.value},
                         fingerprint=alert.fingerprint,
                     ),
                     authenticated_entity=authenticated_entity,
                 )
-        incident.end_time = end_time
-        incident.status = change.status
+
+        if change.status == IncidentStatus.RESOLVED:
+            end_time = datetime.now(tz=timezone.utc)
+            incident.end_time = end_time
+
+        if incident.assignee != authenticated_entity.email:
+            incident.assignee = authenticated_entity.email
+            add_audit(
+                tenant_id,
+                str(incident_id),
+                authenticated_entity.email,
+                ActionType.INCIDENT_ASSIGN,
+                f"Incident self-assigned to {authenticated_entity.email}",
+            )
+
+        add_audit(
+            tenant_id,
+            str(incident_id),
+            authenticated_entity.email,
+            ActionType.INCIDENT_STATUS_CHANGE,
+            f"Incident status changed from {incident.status} to {change.status.value}",
+        )
+        incident.status = change.status.value
+        session.commit()
 
     new_incident_dto = IncidentDto.from_db_incident(incident)
 
@@ -820,8 +884,12 @@ def change_incident_severity(
             "severity": change.severity.value,
         },
     )
-    incident_bl = IncidentBl(tenant_id, session, pusher_client, user=authenticated_entity.email)
-    incident_dto = incident_bl.update_severity(incident_id, change.severity, change.comment)
+    incident_bl = IncidentBl(
+        tenant_id, session, pusher_client, user=authenticated_entity.email
+    )
+    incident_dto = incident_bl.update_severity(
+        incident_id, change.severity, change.comment
+    )
     return incident_dto
 
 

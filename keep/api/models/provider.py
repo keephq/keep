@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from keep.providers.models.provider_config import ProviderScope
 from keep.providers.models.provider_method import ProviderMethodDTO
@@ -15,7 +15,7 @@ class Provider(BaseModel):
     id: str | None = None
     display_name: str
     type: str
-    config: dict[str, dict] = {}
+    config: dict[str, dict] = Field(default_factory=dict)
     details: dict[str, dict] | None = None
     can_notify: bool
     # TODO: consider making it strongly typed for UI validations
@@ -34,11 +34,12 @@ class Provider(BaseModel):
     webhook_required: bool = False
     provider_description: str | None = None
     oauth2_url: str | None = None
-    scopes: list[ProviderScope] = []
-    validatedScopes: dict[str, bool | str] | None = {}
-    methods: list[ProviderMethodDTO] = []
+    scopes: list[ProviderScope] = Field(default_factory=list)
+    validatedScopes: dict[str, bool | str] | None = Field(default_factory=dict)
+    methods: list[ProviderMethodDTO] = Field(default_factory=list)
     installed_by: str | None = None
     installation_time: datetime | None = None
+    pulling_available: bool = False
     pulling_enabled: bool = True
     last_pull_time: datetime | None = None
     docs: str | None = None
@@ -46,8 +47,8 @@ class Provider(BaseModel):
         Literal[
             "alert", "ticketing", "messaging", "data", "queue", "topology", "incident"
         ]
-    ] = []
-    categories: list[str] = ["Others"]
+    ] = Field(default_factory=list)
+    categories: list[str] = Field(default_factory=lambda: ["Others"])
     coming_soon: bool = False
     alertsDistribution: dict[str, int] | None = None
     alertExample: dict | None = None

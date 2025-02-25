@@ -17,6 +17,7 @@ from keep.api.core.db import engine
 
 # This import is required to create the tables
 from keep.api.core.facets import get_facet_options, get_facets
+from keep.api.models.alert import AlertSeverity, AlertStatus
 from keep.api.models.db.alert import (
     Alert,
     AlertEnrichment,
@@ -49,7 +50,21 @@ alert_field_configurations = [
             "JSON(filter_alert_enrichment_json).*",
             "JSON(filter_alert_event_json).*",
         ],
-        enum_values=["low", "info", "warning", "high", "critical"],
+        enum_values=[
+            severity.value
+            for severity in sorted(
+                [severity for _, severity in enumerate(AlertSeverity)],
+                key=lambda s: s.order,
+            )
+        ],
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="status",
+        map_to=[
+            "JSON(filter_alert_enrichment_json).*",
+            "JSON(filter_alert_event_json).*",
+        ],
+        enum_values=list(reversed([item.value for _, item in enumerate(AlertStatus)])),
     ),
     FieldMappingConfiguration(
         map_from_pattern="*",
@@ -97,6 +112,13 @@ static_facets = [
         id="6afa12d7-21df-4694-8566-fd56d5ee2266",
         property_path="incident.name",
         name="Incident",
+        is_static=True,
+        type=FacetType.str,
+    ),
+    FacetDto(
+        id="77b8a6d4-3b8d-4b6a-9f8e-2c8e4b8f8e4c",
+        property_path="dismissed",
+        name="Dismissed",
         is_static=True,
         type=FacetType.str,
     ),

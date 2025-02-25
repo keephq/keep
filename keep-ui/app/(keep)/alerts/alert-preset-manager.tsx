@@ -57,6 +57,7 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
         isPrivate: selectedPreset.is_private,
         isNoisy: selectedPreset.is_noisy,
         tags: selectedPreset.tags,
+        groupColumn: selectedPreset.group_column,
       }
     : {
         CEL: presetCEL,
@@ -64,7 +65,21 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
         isPrivate: undefined,
         isNoisy: undefined,
         tags: undefined,
+        groupColumn: undefined,
       };
+
+  // for future use
+  const getGroupableColumns = () => {
+    if (!table) return [];
+
+    return table
+      .getAllColumns()
+      .filter((column) => column.getCanGroup())
+      .map((column) => ({
+        id: column.id,
+        header: column.columnDef.header?.toString() || column.id,
+      }));
+  };
 
   return (
     <>
@@ -88,6 +103,10 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
             key={idToUpdate}
             presetId={idToUpdate}
             presetData={presetData}
+            // in the future, we might want to allow grouping by any column
+            // for now, let's use group only if the user chose a group by column
+            //groupableColumns={getGroupableColumns()}
+            groupableColumns={[]}
             onCreateOrUpdate={onCreateOrUpdatePreset}
             onCancel={handleModalClose}
           />

@@ -10,6 +10,7 @@ from threading import Lock
 
 from sqlalchemy.exc import IntegrityError
 
+from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.core.db import create_workflow_execution
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
@@ -423,12 +424,24 @@ class WorkflowScheduler:
                     "tenant_id": workflow_execution.tenant_id,
                 },
             )
+            timeout_message = "Workflow execution timed out. "
+
+            if RUNNING_IN_CLOUD_RUN:
+                timeout_message += (
+                    "Please contact Keep support for help with this issue."
+                )
+            else:
+                timeout_message += (
+                    "Most probably it's caused by worker restart or crash "
+                    "during long workflow execution. Check backend logs."
+                )
+
             self._finish_workflow_execution(
                 tenant_id=workflow_execution.tenant_id,
                 workflow_id=workflow_execution.workflow_id,
                 workflow_execution_id=workflow_execution.id,
                 status=WorkflowStatus.ERROR,
-                error="Workflow execution timed out, may happen because of the worker restart. Please check backend logs.",
+                error=timeout_message,
             )
 
     def _handle_event_workflows(self):
@@ -665,8 +678,11 @@ class WorkflowScheduler:
         )
 
     def _start(self):
+        RUN_TIMEOUT_CHECKS_EVERY = 100
         self.logger.info("Starting workflows scheduler")
+        runs = 0
         while not self._stop:
+            runs += 1
             # get all workflows that should run now
             self.logger.debug(
                 "Starting workflow scheduler iteration",
@@ -675,7 +691,8 @@ class WorkflowScheduler:
             try:
                 self._handle_interval_workflows()
                 self._handle_event_workflows()
-                self._timeout_workflows()
+                if runs % RUN_TIMEOUT_CHECKS_EVERY == 0:
+                    self._timeout_workflows()
             except Exception:
                 # This is the "mainloop" of the scheduler, we don't want to crash it
                 # But any exception here should be investigated

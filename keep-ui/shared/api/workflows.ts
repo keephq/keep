@@ -16,11 +16,30 @@ export type Filter = {
   value: string;
 };
 
-export type Trigger = {
-  type: string;
-  filters?: Filter[];
-  value?: string;
+type IncidentFilter = {
+  type: "incident";
+  events: string[];
 };
+
+type AlertFilter = {
+  type: "alert";
+  filters: Filter[];
+};
+
+type IntervalFilter = {
+  type: "interval";
+  value: string;
+};
+
+type ManualFilter = {
+  type: "manual";
+};
+
+export type Trigger =
+  | IncidentFilter
+  | AlertFilter
+  | IntervalFilter
+  | ManualFilter;
 
 export type LastWorkflowExecution = {
   execution_time: number;

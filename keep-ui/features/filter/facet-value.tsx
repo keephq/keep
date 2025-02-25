@@ -7,6 +7,7 @@ export interface FacetValueProps {
   count: number;
   isExclusivelySelected: boolean;
   isSelected: boolean;
+  isSelectable: boolean;
   showIcon: boolean;
   renderLabel?: () => JSX.Element | string | undefined;
   renderIcon?: () => JSX.Element | undefined;
@@ -19,6 +20,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
   label,
   count,
   isSelected,
+  isSelectable,
   isExclusivelySelected,
   showIcon = false,
   onSelectOneOption,
@@ -44,14 +46,14 @@ export const FacetValue: React.FC<FacetValueProps> = ({
 
   return (
     <div
-      className={`flex items-center px-2 py-1 h-7 hover:bg-gray-100 rounded-sm cursor-pointer group ${!count ? "opacity-50 pointer-events-none" : ""}`}
+      className={`flex items-center px-2 py-1 h-7 hover:bg-gray-100 rounded-sm cursor-pointer group ${isSelectable ? "" : "opacity-50 pointer-events-none"}`}
       onClick={handleCheckboxClick}
       data-testid="facet-value"
     >
       <div className="flex items-center min-w-[24px]">
         <input
           type="checkbox"
-          checked={isSelected && count > 0}
+          checked={isSelected && isSelectable}
           onClick={handleCheckboxClick}
           onChange={() => {}}
           style={{ accentColor: "#eb6221" }}
@@ -82,9 +84,11 @@ export const FacetValue: React.FC<FacetValueProps> = ({
           {isExclusivelySelected ? "All" : "Only"}
         </button>
         {
-          <Text className="text-xs text-gray-500 group-hover:hidden">
-            <ShortNumber value={count}></ShortNumber>
-          </Text>
+          <span data-testid="facet-value-count">
+            <Text className="text-xs text-gray-500 group-hover:hidden">
+              <ShortNumber value={count}></ShortNumber>
+            </Text>
+          </span>
         }
       </div>
     </div>

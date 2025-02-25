@@ -371,6 +371,12 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/databend-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/databend-icon.png" alt="Databend"/><br/>
+            Databend
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/mongodb-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/mongodb-icon.png" alt="MongoDB"/><br/>
             MongoDB
@@ -388,6 +394,8 @@
             PostgreSQL
         </a>
     </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/snowflake-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/snowflake-icon.png" alt="Snowflake"/><br/>
@@ -473,6 +481,12 @@
       <a href="https://docs.keephq.dev/providers/documentation/teams-provider" target="_blank">
           <img width="40" src="keep-ui/public/icons/teams-icon.png" alt="Teams"/><br/>
           Teams
+      </a>
+  </td>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/zoom-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/zoom-icon.png" alt="Teams"/><br/>
+          Zoom
       </a>
   </td>
 </tr>
@@ -631,6 +645,12 @@
       <a href="https://docs.keephq.dev/providers/documentation/trello-provider" target="_blank">
           <img width="40" src="keep-ui/public/icons/trello-icon.png" alt="Trello"/><br/>
           Trello
+      </a>
+  </td>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/youtrack-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/youtrack-icon.png" alt="YouTrack"/><br/>
+          YouTrack
       </a>
   </td>
 </tr>

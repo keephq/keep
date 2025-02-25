@@ -39,6 +39,12 @@ interface PresetTab {
   filter: string;
   id?: string;
 }
+
+export interface ViewedAlert {
+  fingerprint: string;
+  viewedAt: string;
+}
+
 interface Props {
   alerts: AlertDto[];
   columns: ColumnDef<AlertDto>[];
@@ -102,6 +108,12 @@ export function AlertTable({
     `dynamicFacets-${presetName}`,
     []
   );
+
+  const [viewedAlerts, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
+    `viewed-alerts-${presetName}`,
+    []
+  );
+  const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
 
   const handleFacetDelete = (facetKey: string) => {
     setDynamicFacets((prevFacets) =>
@@ -268,8 +280,29 @@ export function AlertTable({
     if (presetName === "alert-history") {
       return;
     }
+
+    // Update viewed alerts
+    setViewedAlerts((prev) => {
+      const newViewedAlerts = prev.filter(
+        (a) => a.fingerprint !== alert.fingerprint
+      );
+      return [
+        ...newViewedAlerts,
+        {
+          fingerprint: alert.fingerprint,
+          viewedAt: new Date().toISOString(),
+        },
+      ];
+    });
+
+    setLastViewedAlert(alert.fingerprint);
     setSelectedAlert(alert);
     setIsSidebarOpen(true);
+  };
+
+  // Reset last viewed alert when sidebar closes
+  const handleSidebarClose = () => {
+    setIsSidebarOpen(false);
   };
 
   return (
@@ -355,6 +388,8 @@ export function AlertTable({
                       theme={theme}
                       onRowClick={handleRowClick}
                       presetName={presetName}
+                      viewedAlerts={viewedAlerts}
+                      lastViewedAlert={lastViewedAlert}
                     />
                   </Table>
                 </div>
@@ -375,7 +410,7 @@ export function AlertTable({
 
       <AlertSidebar
         isOpen={isSidebarOpen}
-        toggle={() => setIsSidebarOpen(false)}
+        toggle={handleSidebarClose}
         alert={selectedAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
         setDismissModalAlert={setDismissModalAlert}

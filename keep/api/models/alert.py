@@ -152,6 +152,7 @@ class AlertDto(BaseModel):
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
     event_id: str | None = None  # Database alert id
     url: AnyHttpUrl | None = None
+    imageUrl: AnyHttpUrl | None = None
     labels: dict | None = {}
     fingerprint: str | None = (
         None  # The fingerprint of the alert (used for alert de-duplication)
@@ -224,10 +225,7 @@ class AlertDto(BaseModel):
     def validate_last_received(cls, last_received):
         def convert_to_iso_format(date_string):
             try:
-                # Normalize the string to uppercase for T and Z
-                if isinstance(date_string, str):
-                    date_string = date_string.replace("t", "T").replace("z", "Z")
-                dt = datetime.datetime.fromisoformat(date_string.rstrip("Z"))
+                dt = datetime.datetime.fromisoformat(date_string)
                 dt_utc = dt.astimezone(pytz.UTC)
                 return dt_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
             except ValueError:
@@ -342,8 +340,8 @@ class AlertDto(BaseModel):
         # if dismissed, change status to SUPPRESSED
         # note this is happen AFTER validate_dismissed which already consider
         #   dismissed + dismissUntil
-        if values.get("dismissed"):
-            values["status"] = AlertStatus.SUPPRESSED
+        # if values.get("dismissed"):
+        #     values["status"] = AlertStatus.SUPPRESSED
         return values
 
     class Config:

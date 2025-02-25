@@ -148,7 +148,6 @@ class AzureadAuthVerifier(AuthVerifierBase):
                 "Missing KEEP_AZUREAD_TENANT_ID or KEEP_AZUREAD_CLIENT_ID environment variable"
             )
 
-        self.issuer = f"https://sts.windows.net/{self.tenant_id}/"
         self.group_mapper = AzureADGroupMapper()
         # Keep track of hashed tokens so we won't update the user on the same token
         self.saw_tokens = set()
@@ -157,6 +156,7 @@ class AzureadAuthVerifier(AuthVerifierBase):
         self, token: str = Depends(oauth2_scheme)
     ) -> AuthenticatedEntity:
         """Verify the Azure AD JWT token and extract claims"""
+
         try:
             # First decode without verification to get the key id (kid)
             unverified_headers = jwt.get_unverified_header(token)
@@ -170,33 +170,68 @@ class AzureadAuthVerifier(AuthVerifierBase):
             if not signing_key:
                 raise HTTPException(status_code=401, detail="Invalid token signing key")
 
-            # Verify and decode the token
+            # For v2.0 tokens, 'appid' doesn't exist — 'azp' is used instead.
+            # Remove "appid" from the 'require' list so v2 tokens won't fail.
             options = {
                 "verify_signature": True,
-                "verify_aud": False,  # We'll validate manually
+                "verify_aud": False,  # We'll validate manually below
                 "verify_iat": True,
                 "verify_exp": True,
                 "verify_nbf": True,
-                "verify_iss": True,
-                "require": ["exp", "iat", "nbf", "iss", "sub", "appid"],
+                # we will validate manually since we need to support both
+                # v1 (sts.windows.net) and v2 (https://login.microsoftonline.com)
+                "verify_iss": False,
+                # "require" the standard claims but NOT "appid" (search for 'azp' in this code to see the comment)
+                "require": ["exp", "iat", "nbf", "iss", "sub"],
             }
 
             try:
+
                 payload = jwt.decode(
                     token,
                     key=signing_key,
                     algorithms=["RS256"],
-                    issuer=self.issuer,
                     options=options,
                 )
 
-                # Validate the appid claim instead of audience
-                if payload.get("appid") != self.client_id:
+                # ---- MANUAL ISSUER CHECK ----
+                # Allowed issuers for v1 vs. v2 in the same tenant:
+                allowed_issuers = [
+                    f"https://sts.windows.net/{self.tenant_id}/",  # v1 tokens
+                    f"https://login.microsoftonline.com/{self.tenant_id}/v2.0",  # v2 tokens
+                ]
+                issuer_in_token = payload.get("iss")
+                if issuer_in_token not in allowed_issuers:
+                    raise HTTPException(status_code=401, detail="Invalid token issuer")
+
+                # Check client ID: v1 -> 'appid', v2 -> 'azp'
+                client_id_in_token = payload.get("appid") or payload.get("azp")
+
+                if not client_id_in_token:
                     raise HTTPException(
-                        status_code=401, detail="Invalid token application ID"
+                        status_code=401, detail="No client ID (appid/azp) in token"
                     )
-                # validate aud
-                if payload.get("aud") != f"api://{self.client_id}":
+
+                if client_id_in_token != self.client_id:
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Invalid token application ID (appid/azp)",
+                    )
+
+                # Validate the audience
+                allowed_aud = [
+                    f"api://{self.client_id}",  # v1 tokens
+                    f"{self.client_id}",  # v2 tokens
+                ]
+                if payload.get("aud") not in allowed_aud:
+                    self.logger.error(
+                        f"Invalid token audience: {payload.get('aud')}",
+                        extra={
+                            "tenant_id": self.tenant_id,
+                            "audience": payload.get("aud"),
+                            "allowed_aud": allowed_aud,
+                        },
+                    )
                     raise HTTPException(
                         status_code=401, detail="Invalid token audience"
                     )
@@ -234,20 +269,34 @@ class AzureadAuthVerifier(AuthVerifierBase):
             # Map groups to role
             role_name = self.group_mapper.get_role_from_groups(groups)
             if not role_name:
+                self.logger.warning(
+                    f"User {email} is not a member of any authorized groups for Keep",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "groups": groups,
+                    },
+                )
                 raise HTTPException(
                     status_code=403,
-                    detail="You are using Azure AD but the user is not a member of any authorized groups. You need to be a member of an authorized group to access Keep.",
+                    detail="User not a member of any authorized groups for Keep",
                 )
 
-            # Validate role has required scopes
+            # Validate role scopes
             role = get_role_by_role_name(role_name)
             if not role.has_scopes(self.scopes):
+                self.logger.warning(
+                    f"Role {role_name} does not have required permissions",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "role": role_name,
+                    },
+                )
                 raise HTTPException(
                     status_code=403,
                     detail=f"Role {role_name} does not have required permissions",
                 )
 
-            # Auto-provision so we can list users
+            # Auto-provisioning logic
             hashed_token = hashlib.sha256(token.encode()).hexdigest()
             if hashed_token not in self.saw_tokens and not user_exists(
                 tenant_id, email
@@ -258,14 +307,16 @@ class AzureadAuthVerifier(AuthVerifierBase):
 
             if hashed_token not in self.saw_tokens:
                 update_user_last_sign_in(tenant_id, email)
-            # Add token to seen tokens
             self.saw_tokens.add(hashed_token)
+
             return AuthenticatedEntity(tenant_id, email, None, role_name)
 
         except HTTPException:
+            # Re-raise known HTTP errors
+            self.logger.exception("Token validation failed (HTTPException)")
             raise
-        except Exception as e:
-            logger.error(f"Token validation failed: {str(e)}")
+        except Exception:
+            self.logger.exception("Token validation failed")
             raise HTTPException(status_code=401, detail="Invalid token")
 
     def _authorize(self, authenticated_entity: AuthenticatedEntity) -> None:

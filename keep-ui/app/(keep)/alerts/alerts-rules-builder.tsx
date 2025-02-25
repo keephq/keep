@@ -425,6 +425,8 @@ export const AlertsRulesBuilder = ({
     }
   }, [selectedPreset, searchParams]);
 
+  // FIX: this is not working as expected on cold load, e.g. ?cel=id=="123"
+  // the filter is not applied until the user hits enter
   useEffect(() => {
     // This effect waits for celRules to update and applies the filter only on the initial render
     if (isFirstRender.current && celRules.length > 0) {

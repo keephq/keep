@@ -1,6 +1,11 @@
+import { Provider } from "@/shared/api/providers";
 import { Definition, V2Step } from "./types";
 
 export type ValidationResult = [string, string];
+
+export const checkProviderNeedsInstallation = (providerObject: Provider) => {
+  return providerObject.config && Object.keys(providerObject.config).length > 0;
+};
 
 export function validateGlobalPure(definition: Definition): ValidationResult[] {
   const errors: ValidationResult[] = [];
@@ -45,7 +50,7 @@ export function validateGlobalPure(definition: Definition): ValidationResult[] {
     definition.properties["alert"] &&
     alertSources.length == 0
   ) {
-    errors.push(["alert", "Workflow alert trigger cannot be empty."]);
+    errors.push(["alert", "Alert trigger should have at least one filter."]);
   }
 
   const incidentActions = Object.values(
@@ -61,18 +66,21 @@ export function validateGlobalPure(definition: Definition): ValidationResult[] {
 
   const anyStepOrAction = definition?.sequence?.length > 0;
   if (!anyStepOrAction) {
-    errors.push(["trigger_end", "At least 1 step/action is required."]);
+    errors.push(["trigger_end", "At least one step or action is required."]);
   }
-  const anyActionsInMainSequence = (
-    definition.sequence[0] as V2Step
-  )?.sequence?.some((step) => step?.type?.includes("action-"));
+  const firstStep = definition?.sequence?.[0];
+  const firstStepSequence =
+    firstStep?.componentType === "container" ? firstStep.sequence : [];
+  const anyActionsInMainSequence = firstStepSequence?.some((step) =>
+    step?.type?.includes("action-")
+  );
   if (anyActionsInMainSequence) {
     // This checks to see if there's any steps after the first action
-    const actionIndex = (
-      definition?.sequence?.[0] as V2Step
-    )?.sequence?.findIndex((step) => step.type.includes("action-"));
+    const actionIndex = firstStepSequence?.findIndex((step) =>
+      step.type.includes("action-")
+    );
     if (actionIndex && definition?.sequence) {
-      const sequence = definition?.sequence?.[0]?.sequence || [];
+      const sequence = firstStepSequence;
       for (let i = actionIndex + 1; i < sequence.length; i++) {
         if (sequence[i]?.type?.includes("step-")) {
           errors.push([
@@ -86,37 +94,79 @@ export function validateGlobalPure(definition: Definition): ValidationResult[] {
   return errors;
 }
 
-export function validateStepPure(step: V2Step): string | null {
-  if (step.type.includes("condition-")) {
+function validateProviderConfig(
+  providerType: string | undefined,
+  providerConfig: string,
+  providers: Provider[],
+  installedProviders: Provider[]
+) {
+  const providerObject = providers?.find((p) => p.type === providerType);
+
+  if (!providerObject) {
+    return `Provider type '${providerType}' is not supported`;
+  }
+  // If config is not empty, it means that the provider needs installation
+  const doesProviderNeedInstallation =
+    checkProviderNeedsInstallation(providerObject);
+
+  if (!doesProviderNeedInstallation) {
+    return null;
+  }
+
+  if (!providerConfig) {
+    return `No ${providerType} provider selected`;
+  }
+
+  if (
+    doesProviderNeedInstallation &&
+    installedProviders.find(
+      (p) => p.type === providerType && p.details?.name === providerConfig
+    ) === undefined
+  ) {
+    return `The '${providerConfig}' ${providerType} provider is not installed. Please install it before executing this workflow.`;
+  }
+  return null;
+}
+
+export function validateStepPure(
+  step: V2Step,
+  providers: Provider[],
+  installedProviders: Provider[]
+): string | null {
+  if (step.componentType === "switch") {
     if (!step.name) {
-      return "Step/action name cannot be empty.";
+      return "Condition name cannot be empty.";
     }
-    const branches = (step?.branches || {
+    const branches = step.branches || {
       true: [],
       false: [],
-    }) as V2Step["branches"];
-    const onlyActions = branches?.true?.every((step: V2Step) =>
+    };
+    const conditionHasActions = branches.true.length > 0;
+    if (!conditionHasActions) {
+      return "Conditions true branch must contain at least one action.";
+    }
+    const onlyActions = branches.true.every((step: V2Step) =>
       step.type.includes("action-")
     );
     if (!onlyActions) {
       return "Conditions can only contain actions.";
     }
-    const conditionHasActions = branches?.true
-      ? branches?.true.length > 0
-      : false;
-    if (!conditionHasActions) {
-      return "Conditions must contain at least one action.";
-    }
-    const valid = conditionHasActions && onlyActions;
-    return valid ? null : "Conditions must contain at least one action.";
+    return null;
   }
-  if (step?.componentType === "task") {
-    if (!step?.name) {
+  if (step.componentType === "task") {
+    if (!step.name) {
       return "Step name cannot be empty.";
     }
-    const providerConfig = (step?.properties.config as string)?.trim();
-    if (!providerConfig) {
-      return "No provider selected";
+    const providerType = step.type.split("-")[1];
+    const providerConfig = (step.properties.config || "").trim();
+    const providerError = validateProviderConfig(
+      providerType,
+      providerConfig,
+      providers,
+      installedProviders
+    );
+    if (providerError) {
+      return providerError;
     }
     if (
       !Object.values(step?.properties?.with || {}).some(

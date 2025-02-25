@@ -4,7 +4,7 @@ import {
   Provider,
   ProviderMethod,
   ProviderMethodParam,
-} from "@/app/(keep)/providers/providers";
+} from "@/shared/api/providers";
 import { toast } from "react-toastify";
 import Loading from "@/app/(keep)/loading";
 import {

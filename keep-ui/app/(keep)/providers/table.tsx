@@ -1,7 +1,7 @@
 import React from "react";
 import { Table } from "@tremor/react";
 import ProviderRow from "./provider-row";
-import { Providers } from "./providers";
+import { Providers } from "@/shared/api/providers";
 
 export default function ProvidersTable({
   providers,

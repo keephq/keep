@@ -1,0 +1,34 @@
+workflow:
+  id: zoom-example
+  description: zoom-example
+  triggers:
+    - type: manual
+  actions:
+    - name: create-zoom-meeting
+      provider:
+        type: zoom
+        config: "{{ providers.zoom }}"
+        with:
+          topic: "War room - {{ alert.name }}"
+          record_meeting: true
+    - name: send-slack-alert
+      provider:
+        config: "{{ providers.slack }}"
+        type: slack
+        with:
+          blocks:
+            - text:
+                emoji: true
+                text: "{{alert.name}}"
+                type: plain_text
+              type: header
+            - elements:
+                - action_id: actionId-0
+                  text:
+                    emoji: true
+                    text: "Join Warroom [Zoom]"
+                    type: plain_text
+                  type: button
+                  url: "{{ steps.create-zoom-meeting.results.join_url }}"
+              type: actions
+          message: ""

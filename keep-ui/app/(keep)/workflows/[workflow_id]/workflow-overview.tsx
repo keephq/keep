@@ -1,16 +1,17 @@
 import { useWorkflowExecutionsV2 } from "@/utils/hooks/useWorkflowExecutions";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Callout, Title, Card } from "@tremor/react";
-import { load, JSON_SCHEMA } from "js-yaml";
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import { WorkflowSteps } from "../mockworkflows";
 import { Workflow } from "@/shared/api/workflows";
 import WorkflowGraph from "../workflow-graph";
 import { TableFilters } from "./table-filters";
 import { ExecutionTable } from "./workflow-execution-table";
 import { WorkflowOverviewSkeleton } from "./workflow-overview-skeleton";
-
+import { WorkflowProviders } from "./workflow-providers";
+import { WorkflowSteps } from "../mockworkflows";
+import { JSON_SCHEMA } from "js-yaml";
+import { load } from "js-yaml";
 interface Pagination {
   limit: number;
   offset: number;
@@ -18,15 +19,17 @@ interface Pagination {
 
 export function StatsCard({ children }: { children: any }) {
   return (
-    <Card className="flex flex-col p-4 min-w-1/5 gap-2 justify-between">
+    <Card className="flex flex-col p-4 min-w-1/6 gap-2 justify-between">
       {children}
     </Card>
   );
 }
 
 export default function WorkflowOverview({
+  workflow: _workflow,
   workflow_id,
 }: {
+  workflow: Workflow | null;
   workflow_id: string;
 }) {
   const [executionPagination, setExecutionPagination] = useState<Pagination>({
@@ -75,12 +78,16 @@ export default function WorkflowOverview({
     }
   };
 
-  const workflow = { last_executions: data?.items } as Partial<Workflow>;
+  const workflow = {
+    last_executions: data?.items,
+  } as Pick<Workflow, "last_executions">;
 
   return (
     <div className="flex flex-col gap-4">
       {/* TODO: Add a working time filter */}
-      {(!data || isLoading || isValidating) && <WorkflowOverviewSkeleton />}
+      {(!data || isLoading || isValidating || !workflow) && (
+        <WorkflowOverviewSkeleton />
+      )}
       {data?.items && (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -123,7 +130,7 @@ export default function WorkflowOverview({
               </div>
             </StatsCard>
             <StatsCard>
-              <Title>Involved Services</Title>
+              <Title>Steps</Title>
               <WorkflowSteps workflow={parsedWorkflowFile} />
             </StatsCard>
           </div>
@@ -136,6 +143,10 @@ export default function WorkflowOverview({
               showAll={true}
               size="sm"
             />
+          </Card>
+          <Card>
+            <Title>Providers</Title>
+            {_workflow && <WorkflowProviders workflow={_workflow} />}
           </Card>
           <h1 className="text-xl font-bold mt-4">Execution History</h1>
           <TableFilters workflowId={data.workflow.id} />

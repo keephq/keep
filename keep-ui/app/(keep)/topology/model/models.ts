@@ -1,14 +1,16 @@
 import { InterfaceToType } from "@/utils/type-utils";
 import type { Node } from "@xyflow/react";
+import { KeyedMutator } from "swr";
 
 export interface TopologyServiceDependency {
+  id: string;
   serviceId: string;
   serviceName: string;
   protocol?: string;
 }
 
 export interface TopologyService {
-  id: number;
+  id: string;
   source_provider_id?: string;
   repository?: string;
   tags?: string[];
@@ -27,16 +29,21 @@ export interface TopologyService {
   // Added on client to optimize rendering
   applications: TopologyApplicationMinimal[];
   incidents?: number;
+  is_manual: boolean;
+}
+
+export interface TopologyServiceWithMutator extends TopologyService {
+  topologyMutator: KeyedMutator<TopologyService[]>;
 }
 
 // We need to convert interface to type because only types are allowed in @xyflow/react
 // https://github.com/xyflow/web/issues/486
-export type ServiceNodeType = Node<InterfaceToType<TopologyService>, string>;
+export type ServiceNodeType = Node<InterfaceToType<TopologyServiceWithMutator>, string>;
 
 export type TopologyNode = ServiceNodeType | Node;
 
 export type TopologyServiceMinimal = {
-  id: number;
+  id: string;
   service: string;
   name: string;
 };

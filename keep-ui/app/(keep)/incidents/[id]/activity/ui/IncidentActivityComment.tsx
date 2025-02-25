@@ -19,7 +19,7 @@ export function IncidentActivityComment({
 
   const onSubmit = useCallback(async () => {
     try {
-      const response = await api.post(`/incidents/${incident.id}/comment`, {
+      await api.post(`/incidents/${incident.id}/comment`, {
         status: incident.status,
         comment,
       });

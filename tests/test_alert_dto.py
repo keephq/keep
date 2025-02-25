@@ -127,7 +127,6 @@ def test_alert_dto_additional_formats():
         ("2024-01-01T00:00:00.000Z", "Year Start"),  # Year start
         # Special cases
         ("2024-02-15 12:34:56.789Z", "Space Separator"),  # Space instead of T
-        ("2024-02-15t12:34:56.789z", "Lowercase"),  # Lowercase t and z
         ("2024-02-15T12:34:56.789", "No Z"),  # Missing Z
     ]
 

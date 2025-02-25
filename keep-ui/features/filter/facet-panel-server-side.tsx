@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FacetOptionsQueries, FacetOptionsQuery } from "./models";
+import { FacetOptionsQueries, FacetOptionsQuery, FacetsConfig } from "./models";
 import { useFacetActions, useFacetOptions, useFacets } from "./hooks";
 import { InitialFacetsData } from "./api";
 import { FacetsPanel } from "./facets-panel";
@@ -32,14 +32,7 @@ export interface FacetsPanelProps {
    * Key is the facet name, value is the list of option values to uncheck.
    **/
   uncheckedByDefaultOptionValues?: { [key: string]: string[] };
-  renderFacetOptionLabel?: (
-    facetName: string,
-    optionDisplayName: string
-  ) => JSX.Element | string | undefined;
-  renderFacetOptionIcon?: (
-    facetName: string,
-    optionDisplayName: string
-  ) => JSX.Element | undefined;
+  facetsConfig?: FacetsConfig;
   /** Callback to handle the change of the CEL when options toggle */
   onCelChange?: (cel: string) => void;
 }
@@ -54,8 +47,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   clearFiltersToken,
   onCelChange = undefined,
   uncheckedByDefaultOptionValues,
-  renderFacetOptionIcon,
-  renderFacetOptionLabel,
+  facetsConfig,
 }) => {
   function buildFacetOptionsQuery() {
     if (!facetQueriesState) {
@@ -88,6 +80,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   const facetActions = useFacetActions(entityName, initialFacetsData);
   const [facetQueriesState, setFacetQueriesState] =
     useState<FacetOptionsQueries | null>(null);
+  const [isSilentLoading, setIsSilentLoading] = useState<boolean>(false);
 
   const { data: facetsData } = useFacets(entityName, {
     revalidateOnFocus: false,
@@ -149,6 +142,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   useEffect(
     function watchRevalidationToken() {
       if (revalidationToken) {
+        setIsSilentLoading(true);
         mutateFacetOptions();
       }
     },
@@ -157,6 +151,8 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     [revalidationToken]
   );
 
+  useEffect(() => setIsSilentLoading(false), [facetQueriesState]);
+
   return (
     <>
       <FacetsPanel
@@ -164,11 +160,10 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
         className={className || ""}
         facets={facetsData as any}
         facetOptions={facetOptions as any}
-        areFacetOptionsLoading={isLoading}
+        areFacetOptionsLoading={!isSilentLoading && isLoading}
         clearFiltersToken={clearFiltersToken}
         uncheckedByDefaultOptionValues={uncheckedByDefaultOptionValues}
-        renderFacetOptionLabel={renderFacetOptionLabel}
-        renderFacetOptionIcon={renderFacetOptionIcon}
+        facetsConfig={facetsConfig}
         onCelChange={(cel: string) => {
           onCelChange && onCelChange(cel);
         }}

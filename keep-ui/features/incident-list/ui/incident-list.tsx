@@ -1,6 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -23,9 +23,18 @@ import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import { useUser } from "@/entities/users/model/useUser";
-import { severityMapping } from "@/entities/alerts/model";
+import {
+  reverseSeverityMapping,
+  severityMapping,
+} from "@/entities/alerts/model";
 import { IncidentsNotFoundPlaceholder } from "./incidents-not-found";
 import { v4 as uuidV4 } from "uuid";
+import { FacetsConfig } from "@/features/filter/models";
+import EnhancedDateRangePicker, {
+  TimeFrame,
+} from "@/components/ui/DateRangePicker";
+import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
+import { AlertsQuery } from "@/utils/hooks/useAlerts";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -54,6 +63,18 @@ export function IncidentList({
   ]);
 
   const [filterCel, setFilterCel] = useState<string>("");
+  const [dateRangeCel, setDateRangeCel] = useState<string>("");
+
+  const [dateRange, setDateRange] = useState<TimeFrame>({
+    start: null,
+    end: null,
+    paused: false,
+  });
+
+  const mainCelQuery = useMemo(() => {
+    const filterArray = [dateRangeCel, filterCel];
+    return filterArray.filter(Boolean).join(" && ");
+  }, [filterCel, dateRangeCel]);
 
   const {
     data: incidents,
@@ -62,10 +83,11 @@ export function IncidentList({
     error: incidentsError,
   } = useIncidents(
     true,
+    null,
     incidentsPagination.limit,
     incidentsPagination.offset,
     incidentsSorting[0],
-    filterCel,
+    mainCelQuery,
     {
       revalidateOnFocus: false,
       revalidateOnMount: !initialData,
@@ -74,8 +96,8 @@ export function IncidentList({
   );
 
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
-    useIncidents(false);
-  const { incidentChangeToken } = usePollIncidents(mutateIncidents);
+    useIncidents(false, true);
+  const { incidentChangeToken } = usePollIncidents(mutateIncidents, dateRange.paused);
 
   const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
     null
@@ -93,6 +115,20 @@ export function IncidentList({
     setFilterRevalidationToken(incidentChangeToken);
   }, [incidentChangeToken]);
 
+  useEffect(() => {
+    const filterArray: string[] = [];
+
+    if (dateRange?.start) {
+      filterArray.push(`creation_time >= '${dateRange.start.toISOString()}'`);
+    }
+
+    if (dateRange?.paused && dateRange?.end) {
+      filterArray.push(`creation_time <= '${dateRange.end.toISOString()}'`);
+    }
+
+    setDateRangeCel(filterArray.filter(Boolean).join(" && "));
+  }, [dateRange]);
+
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setIncidentToEdit(null);
@@ -108,91 +144,110 @@ export function IncidentList({
     setIsFormOpen(false);
   };
 
-  const renderFacetOptionIcon = useCallback(
-    (facetName: string, facetOptionName: string) => {
-      facetName = facetName.toLowerCase();
-
-      if (facetName === "source") {
-        if (facetOptionName === "None") {
-          return;
-        }
-
-        return (
-          <Image
-            className="inline-block"
-            alt={facetOptionName}
-            height={16}
-            width={16}
-            title={facetOptionName}
-            src={
-              facetOptionName.includes("@")
-                ? "/icons/mailgun-icon.png"
-                : `/icons/${facetOptionName}-icon.png`
-            }
-          />
-        );
-      }
-      if (facetName === "severity") {
-        return (
+  const facetsConfig: FacetsConfig = useMemo(() => {
+    return {
+      ["Severity"]: {
+        canHitEmptyState: false,
+        renderOptionLabel: (facetOption) => {
+          const label =
+            severityMapping[Number(facetOption.display_name)] ||
+            facetOption.display_name;
+          return <span className="capitalize">{label}</span>;
+        },
+        renderOptionIcon: (facetOption) => (
           <SeverityBorderIcon
             severity={
-              (severityMapping[Number(facetOptionName)] ||
-                facetOptionName) as UISeverity
+              (severityMapping[Number(facetOption.display_name)] ||
+                facetOption.display_name) as UISeverity
             }
           />
-        );
-      }
-      if (facetName === "assignee") {
-        return <UserStatefulAvatar email={facetOptionName} size="xs" />;
-      }
-      if (facetName === "status") {
-        return (
+        ),
+        sortCallback: (facetOption) =>
+          reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
+      },
+      ["Status"]: {
+        renderOptionIcon: (facetOption) => (
           <Icon
-            icon={getStatusIcon(facetOptionName)}
+            icon={getStatusIcon(facetOption.display_name)}
             size="sm"
-            color={getStatusColor(facetOptionName)}
+            color={getStatusColor(facetOption.display_name)}
             className="!p-0"
           />
-        );
-      }
-      if (facetName === "dismissed") {
-        return (
+        ),
+      },
+      ["Source"]: {
+        renderOptionIcon: (facetOption) => {
+          if (facetOption.display_name === "None") {
+            return;
+          }
+
+          return (
+            <Image
+              className="inline-block"
+              alt={facetOption.display_name}
+              height={16}
+              width={16}
+              title={facetOption.display_name}
+              src={
+                facetOption.display_name.includes("@")
+                  ? "/icons/mailgun-icon.png"
+                  : `/icons/${facetOption.display_name}-icon.png`
+              }
+            />
+          );
+        },
+      },
+      ["Assignee"]: {
+        renderOptionIcon: (facetOption) => (
+          <UserStatefulAvatar email={facetOption.display_name} size="xs" />
+        ),
+        renderOptionLabel: (facetOption) => {
+          if (!facetOption.display_name) {
+            return "Not assigned";
+          }
+          return <AssigneeLabel email={facetOption.display_name} />;
+        },
+      },
+      ["Dismissed"]: {
+        renderOptionLabel: (facetOption) =>
+          facetOption.display_name === "true" ? "Dismissed" : "Not dismissed",
+        renderOptionIcon: (facetOption) => (
           <Icon
-            icon={facetOptionName === "true" ? BellSlashIcon : BellIcon}
+            icon={
+              facetOption.display_name === "true" ? BellSlashIcon : BellIcon
+            }
             size="sm"
             className="text-gray-600 !p-0"
           />
-        );
-      }
+        ),
+      },
+      ["Linked incident"]: {
+        sortCallback: (facetOption) =>
+          facetOption.display_name == "1" ||
+          facetOption.display_name.toLocaleLowerCase() == "true"
+            ? 1
+            : 0,
+        renderOptionLabel: (facetOption) =>
+          facetOption.display_name == "1" ||
+          facetOption.display_name.toLocaleLowerCase() == "true"
+            ? "Yes"
+            : "No",
+      },
+    };
+  }, []);
 
-      return undefined;
-    },
-    []
-  );
-
-  const renderFacetOptionLabel = useCallback(
-    (facetName: string, facetOptionName: string) => {
-      facetName = facetName.toLowerCase();
-
-      switch (facetName) {
-        case "assignee":
-          if (!facetOptionName) {
-            return "Not assigned";
-          }
-          return <AssigneeLabel email={facetOptionName} />;
-        case "dismissed":
-          return facetOptionName === "true" ? "Dismissed" : "Not dismissed";
-        case "severity": {
-          const label =
-            severityMapping[Number(facetOptionName)] || facetOptionName;
-          return <span className="capitalize">{label}</span>;
-        }
-        default:
-          return <span className="capitalize">{facetOptionName}</span>;
-      }
-    },
-    []
-  );
+  const handleClearFilters = () => {
+    setDateRange({
+      start: null,
+      end: null,
+      paused: false,
+    });
+    setIncidentsPagination({
+      limit: 20,
+      offset: 0,
+    });
+    setClearFiltersToken(uuidV4());
+  };
 
   function renderIncidents() {
     if (incidents && incidents.items.length > 0) {
@@ -207,12 +262,10 @@ export function IncidentList({
       );
     }
 
-    if (filterCel && incidents?.items.length === 0) {
+    if (mainCelQuery && incidents?.items.length === 0) {
       return (
         <Card className="flex-grow ">
-          <IncidentsNotFoundPlaceholder
-            onClearFilters={() => setClearFiltersToken(uuidV4())}
-          />
+          <IncidentsNotFoundPlaceholder onClearFilters={handleClearFilters} />
         </Card>
       );
     }
@@ -227,6 +280,24 @@ export function IncidentList({
 
   const uncheckedFacetOptionsByDefault: Record<string, string[]> = {
     Status: ["resolved", "deleted"],
+  };
+
+  const renderDateTimePicker = () => {
+    return (
+      <div className="flex justify-end">
+        <EnhancedDateRangePicker
+          timeFrame={dateRange}
+          setTimeFrame={(timeFrame) => setDateRange(timeFrame)}
+          timeframeRefreshInterval={20000}
+          hasPlay={true}
+          pausedByDefault={false}
+          hasRewind={false}
+          hasForward={false}
+          hasZoomOut={false}
+          enableYearNavigation
+        />
+      </div>
+    );
   };
 
   return (
@@ -275,6 +346,8 @@ export function IncidentList({
                 <FacetsPanelServerSide
                   className="mt-14"
                   entityName={"incidents"}
+                  facetsConfig={facetsConfig}
+                  facetOptionsCel={dateRangeCel}
                   usePropertyPathsSuggestions={true}
                   clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}
@@ -282,11 +355,10 @@ export function IncidentList({
                     uncheckedFacetOptionsByDefault
                   }
                   onCelChange={(cel) => setFilterCel(cel)}
-                  renderFacetOptionIcon={renderFacetOptionIcon}
-                  renderFacetOptionLabel={renderFacetOptionLabel}
                   revalidationToken={filterRevalidationToken}
                 />
                 <div className="flex flex-col gap-5 flex-1 min-w-0">
+                  {renderDateTimePicker()}
                   {renderIncidents()}
                 </div>
               </div>

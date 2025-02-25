@@ -1,6 +1,6 @@
 "use client";
 import { Title } from "@tremor/react";
-import { Providers, Provider } from "./providers";
+import { Providers, Provider } from "@/shared/api/providers";
 import { useEffect, useState } from "react";
 // TODO: replace with custom component, package is not updated for last 4 years
 import SlidingPanel from "react-sliding-side-panel";

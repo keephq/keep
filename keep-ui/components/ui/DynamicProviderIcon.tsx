@@ -6,18 +6,21 @@ import Image from "next/image";
 /*
 If the icon is not found, it renders a default unknown icon.
 */
+
+const fallbackIcon = "/icons/unknown-icon.png";
 export const DynamicImageProviderIcon = (props: any) => {
-  const { src, ...rest } = props;
-  const [imgSrc, setImgSrc] = useState(
-    src || `/icons/${props.providerType}-icon.png`
+  const { src, providerType, ...rest } = props;
+  const [imageSrc, setImageSrc] = useState(
+    src || `/icons/${providerType}-icon.png`
   );
 
   return (
     <Image
       {...rest}
-      src={imgSrc}
-      onError={() => {
-        setImgSrc("/icons/unknown-icon.png");
+      alt={providerType || "unknown provider icon"}
+      src={imageSrc}
+      onError={(e) => {
+        setImageSrc(fallbackIcon);
       }}
     />
   );

@@ -1,4 +1,4 @@
-import { TProviderCategory } from "@/app/(keep)/providers/providers";
+import { TProviderCategory } from "@/shared/api/providers";
 import { Badge } from "@tremor/react";
 import { useFilterContext } from "../../filter-context";
 

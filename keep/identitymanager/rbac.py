@@ -62,6 +62,11 @@ class Webhook(Role):
     DESCRIPTION = "write alerts using API keys"
 
 
+class WorkflowRunner(Role):
+    SCOPES = ["write:workflows"]
+    DESCRIPTION = "Run workflows using API keys"
+
+
 def get_role_by_role_name(role_name: str) -> list[str]:
     if role_name == "admin":
         return Admin
@@ -69,6 +74,8 @@ def get_role_by_role_name(role_name: str) -> list[str]:
         return Noc
     elif role_name == "webhook":
         return Webhook
+    elif role_name == "workflowrunner":
+        return WorkflowRunner
     else:
         raise HTTPException(
             status_code=403,

@@ -23,7 +23,7 @@ import {
 import { KeyedMutator } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
-import { Providers } from "@/app/(keep)/providers/providers";
+import { Providers } from "@/shared/api/providers";
 import SidePanel from "@/components/SidePanel";
 import { useConfig } from "@/utils/hooks/useConfig";
 

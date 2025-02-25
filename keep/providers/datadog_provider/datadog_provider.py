@@ -7,13 +7,14 @@ import datetime
 import json
 import logging
 import os
+import re
 import time
 from collections import defaultdict
-from typing import Literal
+from dataclasses import asdict
+from typing import List, Literal, Optional
 
 import pydantic
 import requests
-
 from datadog_api_client import ApiClient, Configuration
 from datadog_api_client.api_client import Endpoint
 from datadog_api_client.exceptions import (
@@ -33,6 +34,7 @@ from datadog_api_client.v1.model.monitor_type import MonitorType
 from datadog_api_client.v2.api.incidents_api import IncidentsApi
 from datadog_api_client.v2.api.service_definition_api import ServiceDefinitionApi
 from datadog_api_client.v2.api.users_api import UsersApi, UsersResponse
+from pydantic import Field
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.topology import TopologyServiceInDto
@@ -48,6 +50,74 @@ from keep.providers.providers_factory import ProvidersFactory
 from keep.validation.fields import HttpsUrl
 
 logger = logging.getLogger(__name__)
+
+
+@pydantic.dataclasses.dataclass
+class DatadogAlertDetails:
+    metric_graph_url: Optional[str] = Field(default=None)
+    metric_query: Optional[str] = Field(default=None)
+    trigger_time: Optional[str] = Field(default=None)
+    monitor_status_url: Optional[str] = Field(default=None)
+    edit_monitor_url: Optional[str] = Field(default=None)
+    related_logs_url: Optional[str] = Field(default=None)
+    alert_message: Optional[str] = Field(default=None)
+    mentioned_users: List[str] = Field(default_factory=list)
+
+
+# Best effort to extract relevant details from the Datadog alert webhook payload body
+def extract_alert_details(body: str) -> DatadogAlertDetails:
+    """
+    Extracts relevant details from a Datadog alert webhook payload body.
+
+    Args:
+        body: The message body from the Datadog webhook payload
+
+    Returns:
+        DatadogAlertDetails object containing extracted information
+    """
+    if not body:
+        return DatadogAlertDetails()
+
+    # Remove the %%% markers if present
+    body = body.strip("%%%\n")
+
+    details = DatadogAlertDetails()
+    details.mentioned_users = []
+
+    # Extract metric graph URL
+    metric_graph_match = re.search(r"\[!\[Metric Graph\]\((.*?)\)\]", body)
+    if metric_graph_match:
+        details.metric_graph_url = metric_graph_match.group(1)
+
+    # Extract trigger time
+    trigger_time_match = re.search(r"The monitor was last triggered at (.*?)\.", body)
+    if trigger_time_match:
+        details.trigger_time = trigger_time_match.group(1)
+
+    # Extract URLs from the footer
+    monitor_status_match = re.search(r"\[Monitor Status\]\((.*?)\)", body)
+    if monitor_status_match:
+        details.monitor_status_url = monitor_status_match.group(1)
+
+    edit_monitor_match = re.search(r"\[Edit Monitor\]\((.*?)\)", body)
+    if edit_monitor_match:
+        details.edit_monitor_url = edit_monitor_match.group(1)
+
+    related_logs_match = re.search(r"\[Related Logs\]\((.*?)\)", body)
+    if related_logs_match:
+        details.related_logs_url = related_logs_match.group(1)
+
+    # Extract mentioned users (starting with @)
+    details.mentioned_users = re.findall(r"@([^\s]+)", body)
+
+    # Extract the main alert message (first line of the message)
+    lines = body.split("\n")
+    for line in lines:
+        if line and not line.startswith("%%%") and not line.startswith("@"):
+            details.alert_message = line.strip()
+            break
+
+    return details
 
 
 @pydantic.dataclasses.dataclass
@@ -1092,6 +1162,19 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
         description = event.get("message") or event.get("body")
         alert_query = event.get("alert_query")
 
+        # try to get more information from the monitor
+        try:
+            extra_details = extract_alert_details(event.get("body"))
+            extra_details = asdict(extra_details)
+            extra_details["imageUrl"] = extra_details.get("metric_graph_url")
+        except Exception:
+            logger.exception(
+                "Failed to extract alert details", extra={"alert": event.get("body")}
+            )
+            extra_details = {
+                "imageUrl": None,
+            }
+
         alert = AlertDto(
             id=event.get("id"),
             name=title,
@@ -1107,6 +1190,8 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
             tags=tags,
             monitor_id=event.get("monitor_id"),
             alert_query=alert_query,
+            imageUrl=extra_details.get("imageUrl"),
+            extra_details=extra_details,
         )
         alert.fingerprint = DatadogProvider.get_alert_fingerprint(
             alert, DatadogProvider.FINGERPRINT_FIELDS

@@ -1,5 +1,9 @@
 import { IncidentDto } from "@/entities/incidents/model";
-import {ExclamationCircleIcon, ExclamationTriangleIcon, InformationCircleIcon} from "@heroicons/react/20/solid";
+import {
+  ExclamationCircleIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+} from "@heroicons/react/20/solid";
 
 export function getIncidentName(incident: IncidentDto) {
   return (
@@ -7,8 +11,13 @@ export function getIncidentName(incident: IncidentDto) {
   );
 }
 
+export function getIncidentNameWithCreationTime(incident: IncidentDto) {
+  return `${incident.user_generated_name || incident.ai_generated_name || incident.id} (${incident.creation_time})`;
+}
 
-export function getIncidentSeverityIconAndColor(severity: IncidentDto["severity"]) {
+export function getIncidentSeverityIconAndColor(
+  severity: IncidentDto["severity"]
+) {
   let icon: any;
   let color: any;
 
@@ -38,5 +47,5 @@ export function getIncidentSeverityIconAndColor(severity: IncidentDto["severity"
       color = "blue";
       break;
   }
-  return {icon, color}
+  return { icon, color };
 }

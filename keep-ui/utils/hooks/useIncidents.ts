@@ -26,6 +26,7 @@ export interface Filters {
 
 export const useIncidents = (
   confirmed: boolean = true,
+  predicted: boolean | null = null,
   limit: number = 25,
   offset: number = 0,
   sorting: { id: string; desc: boolean } = { id: "creation_time", desc: false },
@@ -39,6 +40,9 @@ export const useIncidents = (
   const filtersParams = new URLSearchParams();
 
   filtersParams.set("confirmed", confirmed.toString());
+  if (predicted !== undefined && predicted !== null) {
+    filtersParams.set("predicted", predicted.toString());
+  }
 
   if (limit !== undefined) {
     filtersParams.set("limit", limit.toString());
@@ -174,7 +178,7 @@ export const usePollIncidentAlerts = (incidentId: string) => {
   }, [bind, unbind, handleIncoming]);
 };
 
-export const usePollIncidents = (mutateIncidents: any) => {
+export const usePollIncidents = (mutateIncidents: any, paused: boolean = false) => {
   const { bind, unbind } = useWebsocket();
   const [incidentChangeToken, setIncidentChangeToken] = useState<string | null>(null);
   const handleIncoming = useCallback(
@@ -186,11 +190,15 @@ export const usePollIncidents = (mutateIncidents: any) => {
   );
 
   useEffect(() => {
+    if (paused) {
+      return;
+    }
+
     bind("incident-change", handleIncoming);
     return () => {
       unbind("incident-change", handleIncoming);
     };
-  }, [bind, unbind, handleIncoming]);
+  }, [bind, unbind, handleIncoming, paused]);
 
   return {
     incidentChangeToken

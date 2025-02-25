@@ -6,7 +6,7 @@ import {
   ProviderFormKVData,
   ProviderFormValue,
   ProviderInputErrors,
-} from "./providers";
+} from "@/shared/api/providers";
 import {
   Title,
   Text,

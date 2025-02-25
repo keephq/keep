@@ -59,9 +59,7 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
 }) => {
   return (
     <div className="h-full p-4 bg-gray-100 border-l">
-      <h2 className="font-semibold mb-2">
-        {alert.name} ({alert.fingerprint})
-      </h2>
+      <h2 className="font-semibold mb-2">{alert.name}</h2>
       <p className="mb-2 text-md">{alert.description}</p>
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <p className="text-gray-400">Date:</p>

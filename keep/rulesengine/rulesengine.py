@@ -117,11 +117,9 @@ class RulesEngine:
                         f"Rule {rule.name} on event {event.id} is relevant"
                     )
 
-                    send_created_event = False
-
                     rule_fingerprint = self._calc_rule_fingerprint(event, rule)
 
-                    incident = self._get_or_create_incident(
+                    incident, send_created_event = self._get_or_create_incident(
                         rule=rule,
                         rule_fingerprint=rule_fingerprint,
                         session=session,
@@ -159,7 +157,7 @@ class RulesEngine:
                             send_created_event = incident.is_confirmed
 
                         incident = self._resolve_incident_if_require(
-                            rule, incident, session
+                            incident, session
                         )
                         session.add(incident)
                         session.commit()
@@ -218,7 +216,8 @@ class RulesEngine:
             rule_fingerprint,
             session,
             event
-    ) -> Optional[Incident]:
+    ) -> (Optional[Incident], bool):
+
         existed_incident, expired = get_incident_for_grouping_rule(
             self.tenant_id,
             rule,
@@ -227,7 +226,7 @@ class RulesEngine:
         )
         # if not incident name template, return the incident
         if existed_incident and not expired and not rule.incident_name_template:
-            return existed_incident
+            return existed_incident, False
         # if incident name template, merge
         elif existed_incident and not expired:
             incident_name = copy.copy(rule.incident_name_template)
@@ -271,7 +270,7 @@ class RulesEngine:
                     "new_incident_name": existed_incident.user_generated_name,
                 },
             )
-            return existed_incident
+            return existed_incident, False
 
         # else, this is the first time
         # Starting new incident ONLY if alert is firing
@@ -300,8 +299,8 @@ class RulesEngine:
                 incident_name=incident_name,
                 past_incident=existed_incident,
             )
-            return incident
-        return None
+            return incident, True
+        return None, False
 
     def _process_event_for_history_based_rule(
         self, incident: Incident, rule: Rule, session: Session
@@ -340,24 +339,24 @@ class RulesEngine:
 
     @staticmethod
     def _resolve_incident_if_require(
-        rule: Rule, incident: Incident, session: Session
+        incident: Incident, session: Session
     ) -> Incident:
 
         should_resolve = False
 
-        if rule.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
+        if incident.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
             incident=incident, session=session
         ):
             should_resolve = True
 
         elif (
-            rule.resolve_on == ResolveOn.FIRST.value
+            incident.resolve_on == ResolveOn.FIRST.value
             and is_first_incident_alert_resolved(incident, session=session)
         ):
             should_resolve = True
 
         elif (
-            rule.resolve_on == ResolveOn.LAST.value
+            incident.resolve_on == ResolveOn.LAST.value
             and is_last_incident_alert_resolved(incident, session=session)
         ):
             should_resolve = True

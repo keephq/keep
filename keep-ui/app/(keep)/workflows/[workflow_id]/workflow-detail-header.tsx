@@ -58,7 +58,10 @@ export default function WorkflowDetailHeader({
     <div>
       <div className="flex justify-between items-end text-sm gap-2">
         <div>
-          <h1 className="text-2xl line-clamp-2 font-bold" data-testid="wf-name">
+          <h1
+            className="text-2xl line-clamp-2 font-bold flex items-baseline gap-2"
+            data-testid="wf-name"
+          >
             {workflow.name}
           </h1>
           {workflow.description && (
@@ -67,21 +70,25 @@ export default function WorkflowDetailHeader({
             </Text>
           )}
         </div>
-        {!!workflow && (
-          <Button
-            color="orange"
-            disabled={isRunning || isRunButtonDisabled}
-            className="p-2 px-4"
-            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.stopPropagation();
-              e.preventDefault();
-              handleRunClick?.();
-            }}
-            tooltip={message}
-          >
-            {isRunning ? "Running..." : "Run now"}
-          </Button>
-        )}
+
+        <div className="flex gap-2">
+          {!!workflow && (
+            <Button
+              size="xs"
+              color="orange"
+              disabled={isRunning || isRunButtonDisabled}
+              className="p-2 px-4"
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleRunClick?.();
+              }}
+              tooltip={message}
+            >
+              {isRunning ? "Running..." : "Run now"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {!!workflow && !!getTriggerModalProps && (

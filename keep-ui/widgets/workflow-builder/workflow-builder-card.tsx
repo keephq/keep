@@ -1,46 +1,37 @@
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { Card, Callout } from "@tremor/react";
 import dynamic from "next/dynamic";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense } from "react";
 import { EmptyBuilderState } from "./empty-builder-state";
-import { Provider } from "@/app/(keep)/providers/providers";
 import { useProviders } from "@/utils/hooks/useProviders";
-import { useWorkflowStore } from "@/entities/workflows";
 import { KeepLoader } from "@/shared/ui";
 import clsx from "clsx";
 
-const Builder = dynamic(() => import("./builder"), {
-  ssr: false, // Prevents server-side rendering
-});
+const Builder = dynamic(
+  () => import("./workflow-builder").then((mod) => mod.WorkflowBuilder),
+  {
+    ssr: false, // Prevents server-side rendering
+  }
+);
 
 interface Props {
   fileContents: string | null;
-  workflow?: string;
+  workflowRaw?: string;
   workflowId?: string;
   standalone?: boolean;
 }
 
-export function BuilderCard({
+export function WorkflowBuilderCard({
   fileContents,
-  workflow,
+  workflowRaw,
   workflowId,
   standalone = false,
 }: Props) {
-  const [providers, setProviders] = useState<Provider[] | null>(null);
-  const [installedProviders, setInstalledProviders] = useState<
-    Provider[] | null
-  >(null);
-  const { setButtonsEnabled } = useWorkflowStore();
-
-  const { data, error, isLoading } = useProviders();
-
-  useEffect(() => {
-    if (data && !providers && !installedProviders) {
-      setProviders(data.providers);
-      setInstalledProviders(data.installed_providers);
-      setButtonsEnabled(true);
-    }
-  }, [data, providers, installedProviders, setButtonsEnabled]);
+  const {
+    data: { providers, installed_providers: installedProviders } = {},
+    error,
+    isLoading,
+  } = useProviders();
 
   const cardClassName = clsx(
     "mt-2 p-0 overflow-hidden",
@@ -71,7 +62,7 @@ export function BuilderCard({
     );
   }
 
-  if (fileContents == "" && !workflow) {
+  if (fileContents == "" && !workflowRaw) {
     return (
       <Card className={cardClassName}>
         <EmptyBuilderState />
@@ -88,7 +79,7 @@ export function BuilderCard({
           providers={providers}
           installedProviders={installedProviders}
           loadedAlertFile={fileContents}
-          workflow={workflow}
+          workflowRaw={workflowRaw}
           workflowId={workflowId}
         />
       </Card>

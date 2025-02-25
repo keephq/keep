@@ -6,7 +6,7 @@ import {
   useCopilotReadable,
 } from "@copilotkit/react-core";
 import { CopilotTask } from "@copilotkit/react-core";
-import { Subtitle, TextInput } from "@tremor/react";
+import { Subtitle, TextInput, Select, SelectItem } from "@tremor/react";
 import { useCallback, useState } from "react";
 import { PresetControls } from "./preset-controls";
 import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
@@ -30,7 +30,9 @@ type CreateOrUpdatePresetFormProps = {
     isPrivate: boolean | undefined;
     isNoisy: boolean | undefined;
     tags: TagOption[] | undefined;
+    groupColumn: string | undefined;
   };
+  groupableColumns: { id: string; header: string }[];
   onCreateOrUpdate?: (preset: Preset) => void;
   onCancel?: () => void;
 };
@@ -38,12 +40,14 @@ type CreateOrUpdatePresetFormProps = {
 export function CreateOrUpdatePresetForm({
   presetId,
   presetData,
+  groupableColumns,
   onCreateOrUpdate,
   onCancel,
 }: CreateOrUpdatePresetFormProps) {
   const [presetName, setPresetName] = useState(presetData.name ?? "");
   const [isPrivate, setIsPrivate] = useState(presetData.isPrivate ?? false);
   const [isNoisy, setIsNoisy] = useState(presetData.isNoisy ?? false);
+  const [groupColumn, setGroupColumn] = useState(presetData.groupColumn ?? "");
 
   const [generatingName, setGeneratingName] = useState(false);
   const [selectedTags, setSelectedTags] = useState<TagOption[]>(
@@ -184,6 +188,24 @@ export function CreateOrUpdatePresetForm({
           setIsNoisy={setIsNoisy}
         />
       </div>
+      {/* Group by column TODO
+        <div className="space-y-2">
+          <Subtitle>Group By Column</Subtitle>
+          <Select
+            value={groupColumn}
+            onValueChange={setGroupColumn}
+            placeholder="Select a column to group by"
+          >
+            <SelectItem value="">None</SelectItem>
+            {groupableColumns.map((column) => (
+              <SelectItem key={column.id} value={column.id}>
+                {column.header}
+              </SelectItem>
+            ))}
+          </Select>
+        </div>
+      */}
+
       <Subtitle>Tags</Subtitle>
       <CreatableMultiSelect
         value={selectedTags.map((tag) => ({

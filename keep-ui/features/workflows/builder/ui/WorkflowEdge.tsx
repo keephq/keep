@@ -6,14 +6,49 @@ import { Button } from "@tremor/react";
 import "@xyflow/react/dist/style.css";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
+import { WF_DEBUG_INFO } from "./debug-settings";
+import { edgeCanHaveAddButton } from "../lib/utils";
 
-interface WorkflowEdgeProps extends EdgeProps {
+export function DebugEdgeInfo({
+  id,
+  source,
+  labelX,
+  labelY,
+  target,
+  isLayouted,
+}: Pick<WorkflowEdgeProps, "id" | "source" | "target"> & {
+  labelX: number;
+  labelY: number;
+  isLayouted: boolean;
+}) {
+  if (!WF_DEBUG_INFO) {
+    return null;
+  }
+  return (
+    <div
+      className={`absolute bg-black text-green-500 font-mono text-[10px] px-1 py-1`}
+      style={{
+        transform: `translate(0, -50%) translate(${labelX + 30}px, ${labelY}px)`,
+        opacity: isLayouted ? 1 : 0,
+        pointerEvents: "all",
+      }}
+    >
+      {id}
+      <details>
+        <summary>data=</summary>
+        <pre>{JSON.stringify({ source, target }, null, 2)}</pre>
+      </details>
+    </div>
+  );
+}
+
+export interface WorkflowEdgeProps extends EdgeProps {
   label?: string;
   type?: string;
   data?: any;
 }
 
-const CustomEdge: React.FC<WorkflowEdgeProps> = ({
+export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
   id,
   sourceX,
   sourceY,
@@ -38,15 +73,7 @@ const CustomEdge: React.FC<WorkflowEdgeProps> = ({
 
   let dynamicLabel = label;
   const isLayouted = !!data?.isLayouted;
-  let showAddButton =
-    !source?.includes("empty") &&
-    !target?.includes("trigger_end") &&
-    source !== "start";
-
-  if (!showAddButton) {
-    showAddButton =
-      target?.includes("trigger_end") && source?.includes("trigger_start");
-  }
+  let showAddButton = edgeCanHaveAddButton(source, target);
 
   const color =
     dynamicLabel === "True"
@@ -89,11 +116,19 @@ const CustomEdge: React.FC<WorkflowEdgeProps> = ({
         path={edgePath}
         className="stroke-gray-700 stroke-2"
         style={{
-          markerEnd: `url(#arrow-${id})`,
+          markerEnd: target !== "end" ? `url(#arrow-${id})` : undefined,
           opacity: isLayouted ? 1 : 0,
         }} // Add arrowhead
       />
       <EdgeLabelRenderer>
+        <DebugEdgeInfo
+          id={id}
+          source={source}
+          target={target}
+          labelX={labelX}
+          labelY={labelY}
+          isLayouted={isLayouted}
+        />
         {!!dynamicLabel && (
           <div
             className={`absolute ${color} text-white rounded px-3 py-1 border border-gray-700`}
@@ -117,7 +152,7 @@ const CustomEdge: React.FC<WorkflowEdgeProps> = ({
               opacity: isLayouted ? 1 : 0,
             }}
             className={`p-0 m-0 bg-transparent text-transparent border-none`}
-            // tooltip="Add node"
+            tooltip={source === "trigger_start" ? "Add trigger" : "Add step"}
             onClick={(e) => {
               setSelectedEdge(id);
             }}
@@ -141,5 +176,3 @@ const CustomEdge: React.FC<WorkflowEdgeProps> = ({
     </>
   );
 };
-
-export default CustomEdge;

@@ -50,6 +50,7 @@ const CreateIncidentWithAIModal = ({
   const router = useRouter();
   const { mutate: mutateIncidents } = useIncidents(
     true,
+    null,
     20,
     0,
     { id: "creation_time", desc: true },

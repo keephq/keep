@@ -18,9 +18,11 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { DynamicImageProviderIcon } from "@/components/ui";
 
+// TODO: REFACTOR THIS TO SUPPORT ANY ACTIVITY TYPE, IT'S A MESS!
+
 interface IncidentActivity {
   id: string;
-  type: "comment" | "alert" | "newcomment";
+  type: "comment" | "alert" | "newcomment" | "statuschange" | "assign";
   text?: string;
   timestamp: string;
   initiator?: string | AlertDto;
@@ -84,7 +86,6 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
     _auditEventsLoading || (!auditEvents && !auditEventsError);
   const incidentEventsLoading =
     _incidentEventsLoading || (!incidentEvents && !incidentEventsError);
-  const usersLoading = _usersLoading || (!users && !usersError);
 
   const auditActivities = useMemo(() => {
     if (!auditEvents.length && !incidentEvents.length) {
@@ -101,17 +102,28 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
           const _type =
             auditEvent.action === "A comment was added to the incident" // @tb: I wish this was INCIDENT_COMMENT and not the text..
               ? "comment"
+              : auditEvent.action === "Incident status changed"
+              ? "statuschange"
+              : auditEvent.action === "Incident assigned"
+              ? "assign"
               : "alert";
           return {
             id: auditEvent.id,
             type: _type,
             initiator:
-              _type === "comment"
+              _type === "comment" ||
+              _type === "statuschange" ||
+              _type === "assign"
                 ? auditEvent.user_id
                 : alerts?.items.find(
                     (a) => a.fingerprint === auditEvent.fingerprint
                   ),
-            text: _type === "comment" ? auditEvent.description : "",
+            text:
+              _type === "comment" ||
+              _type === "statuschange" ||
+              _type === "assign"
+                ? auditEvent.description
+                : "",
             timestamp: auditEvent.timestamp,
           } as IncidentActivity;
         }) || []
@@ -141,7 +153,7 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
         />
       );
     } else {
-      const source = (activity.initiator as AlertDto)?.source?.[0];
+      const source = (activity.initiator as AlertDto)?.source?.[0] || "keep";
       const imagePath = `/icons/${source}-icon.png`;
       return (
         <DynamicImageProviderIcon

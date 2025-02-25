@@ -14,10 +14,11 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from opentelemetry import trace
 from sqlmodel import Session
 
+from keep.api.core.config import config
 from keep.api.core.db import (
     get_alert_by_event_id,
     get_installed_providers,
@@ -47,6 +48,8 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 router = APIRouter()
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
+
+PLATFORM_URL = config("KEEP_PLATFORM_URL", default="https://platform.keephq.dev")
 
 
 # Redesign the workflow Card
@@ -183,6 +186,13 @@ def run_workflow(
     created_by = authenticated_entity.email
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
 
+    workflow = get_workflow(tenant_id, workflow_id)
+    if not workflow:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Workflow {workflow_id} not found",
+        )
+
     # if the workflow id is the name of the workflow (e.g. the CLI has only the name)
     if not validators.uuid(workflow_id):
         logger.info("Workflow ID is not a UUID, trying to get the ID by name")
@@ -271,7 +281,27 @@ def run_workflow_with_query_params(
     ),
 ):
     params = dict(request.query_params)
-    return run_workflow(workflow_id, None, None, params, authenticated_entity)
+
+    alert_id = params.get("alert", params.get("alert_id"))
+    if params.get("alert", params.get("alert_id")):
+        response = run_workflow(
+            workflow_id,
+            "alert",
+            alert_id,
+            params,
+            authenticated_entity,
+        )
+    else:
+        response = run_workflow(workflow_id, None, None, params, authenticated_entity)
+    if response.get("status") == "success":
+        workflow_execution_id = response.get("workflow_execution_id")
+        return RedirectResponse(
+            url=f"{PLATFORM_URL}/workflows/{workflow_id}/runs/{workflow_execution_id}"
+        )
+    else:
+        return RedirectResponse(
+            url=f"{PLATFORM_URL}/workflows/{workflow_id}?error=failed_to_run_workflow"
+        )
 
 
 @router.post(

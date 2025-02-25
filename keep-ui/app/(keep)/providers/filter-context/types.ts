@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction } from "react";
-import { TProviderCategory, TProviderLabels } from "../providers";
+import { TProviderCategory, TProviderLabels } from "@/shared/api/providers";
 
 export interface IFilterContext {
   providersSearchString: string;

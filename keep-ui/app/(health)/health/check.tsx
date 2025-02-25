@@ -2,7 +2,7 @@
 
 import ProvidersTiles from "@/app/(keep)/providers/providers-tiles";
 import React, { useEffect, useState } from "react";
-import { defaultProvider, Provider } from "@/app/(keep)/providers/providers";
+import { defaultProvider, Provider } from "@/shared/api/providers";
 import { useProvidersWithHealthCheck } from "@/utils/hooks/useProviders";
 import Loading from "@/app/(keep)/loading";
 import HealthPageBanner from "@/components/banners/health-page-banner";
@@ -43,7 +43,7 @@ const useFetchProviders = () => {
   };
 };
 
-export default function ProviderHealthPage () {
+export default function ProviderHealthPage() {
   const { providers, isLocalhost, mutate } = useFetchProviders();
 
   if (!providers || providers.length <= 0) {
