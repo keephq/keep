@@ -19,8 +19,8 @@ from keep.api.core.db import (
     get_workflow,
     get_workflow_execution,
     get_workflows_with_last_execution,
-    get_workflows_with_last_executions_v2,
 )
+from keep.api.core.workflows import get_workflows_with_last_executions_v2
 from keep.api.models.db.workflow import Workflow as WorkflowModel
 from keep.api.models.workflow import ProviderDTO
 from keep.functions import cyaml
@@ -145,11 +145,26 @@ class WorkflowStore:
         return workflows
 
     def get_all_workflows_with_last_execution(
-        self, tenant_id: str, is_v2: bool = False
+        self,
+        tenant_id: str,
+        cel: str,
+        limit: int,
+        offset: int,
+        sort_by: str,
+        sort_dir: str,
+        is_v2: bool = False,
     ) -> list[dict]:
         # list all tenant's workflows
         if is_v2:
-            workflows = get_workflows_with_last_executions_v2(tenant_id, 15)
+            workflows = get_workflows_with_last_executions_v2(
+                tenant_id=tenant_id,
+                cel=cel,
+                limit=limit,
+                offset=offset,
+                sort_by=sort_by,
+                sort_dir=sort_dir,
+                fetch_last_executions=15,
+            )
         else:
             workflows = get_workflows_with_last_execution(tenant_id)
 

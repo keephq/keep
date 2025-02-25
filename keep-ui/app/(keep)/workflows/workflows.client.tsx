@@ -19,6 +19,9 @@ import { KeepApiError } from "@/shared/api";
 import { showErrorToast, Input, ErrorComponent } from "@/shared/ui";
 import { Textarea } from "@/components/ui";
 import { useWorkflowsV2 } from "utils/hooks/useWorkflowsV2";
+import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
+import { useFacets } from "@/features/filter";
+import { InitialFacetsData } from "@/features/filter/api";
 
 const EXAMPLE_WORKFLOW_DEFINITIONS = {
   slack: `
@@ -67,6 +70,10 @@ export default function WorkflowsPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [workflowDefinition, setWorkflowDefinition] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const foo = useFacets("incidents");
+  const initialFacetsData: InitialFacetsData = {
+    facets: foo.data as any,
+  };
 
   // Only fetch data when the user is authenticated
   /**
@@ -174,7 +181,7 @@ export default function WorkflowsPage() {
           <div className="flex justify-between items-center">
             <div>
               <Title className="text-2xl line-clamp-2 font-bold">
-                Workflows
+                My Workflows
               </Title>
               <Subtitle>
                 Automate your alert management with workflows.
@@ -207,15 +214,31 @@ export default function WorkflowsPage() {
           {workflows.length === 0 ? (
             <WorkflowsEmptyState isNewUI={true} />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
-              {workflows.map((workflow) => (
-                <WorkflowTile key={workflow.id} workflow={workflow} />
-              ))}
+            <div className="flex gap-4">
+              {foo.data && (
+                <FacetsPanelServerSide
+                  entityName={"incidents"}
+                  // facetsConfig={facetsConfig}
+                  // facetOptionsCel={dateRangeCel}
+                  // usePropertyPathsSuggestions={true}
+                  // clearFiltersToken={clearFiltersToken}
+                  initialFacetsData={initialFacetsData}
+                  // uncheckedByDefaultOptionValues={uncheckedFacetOptionsByDefault}
+                  // onCelChange={(cel) => setFilterCel(cel)}
+                  // revalidationToken={filterRevalidationToken}
+                />
+              )}
+
+              <div className="self-start grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
+                {workflows.map((workflow) => (
+                  <WorkflowTile key={workflow.id} workflow={workflow} />
+                ))}
+              </div>
             </div>
           )}
-        </div>
-        <div className="flex flex-col gap-4">
-          <WorkflowTemplates />
+          <div className="flex flex-col gap-4">
+            <WorkflowTemplates />
+          </div>
         </div>
       </main>
       <Modal

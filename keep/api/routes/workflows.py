@@ -71,6 +71,11 @@ def get_workflows(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
     is_v2: Optional[bool] = Query(False, alias="is_v2", type=bool),
+    cel=Query(None),
+    limit: int = Query(1000),
+    offset: int = Query(0),
+    sort_by=Query(None),
+    sort_dir=Query(None),
 ) -> list[WorkflowDTO] | list[dict]:
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
@@ -88,7 +93,13 @@ def get_workflows(
             ] = installed_provider
     # get all workflows
     workflows = workflowstore.get_all_workflows_with_last_execution(
-        tenant_id=tenant_id, is_v2=is_v2
+        tenant_id=tenant_id,
+        cel=cel,
+        limit=limit,
+        offset=offset,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        is_v2=is_v2,
     )
 
     # Group last workflow executions by workflow
