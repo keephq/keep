@@ -161,6 +161,10 @@ def get_facet_options(
                         ]
                     ]
 
+                if property_mapping is None:
+                    result_dict[facet.id] = []
+                    continue
+
                 if property_mapping.enum_values:
                     if facet.id in result_dict:
                         values_with_zero_matches = [
