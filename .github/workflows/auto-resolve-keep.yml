@@ -44,7 +44,7 @@ jobs:
 
       - name: Auto resolve Keep incident
         if: |
-          (github.event_name == 'pull_request' && github.event.pull_request.merged == true && steps.set_ids.outputs.final_incident_id != '') ||
+          (github.event_name == 'push' && steps.set_ids.outputs.final_incident_id != '') ||
           (github.event_name == 'workflow_dispatch' && inputs.incident_id != '')
         uses: fjogeleit/http-request-action@v1
         with:
@@ -55,22 +55,22 @@ jobs:
 
       - name: Auto enrich Keep incident
         if: |
-          (github.event_name == 'pull_request' && github.event.pull_request.merged == true && steps.set_ids.outputs.final_incident_id != '') ||
+          (github.event_name == 'push' && steps.set_ids.outputs.final_incident_id != '') ||
           (github.event_name == 'workflow_dispatch' && inputs.incident_id != '')
         uses: fjogeleit/http-request-action@v1
         with:
           url: "https://api.keephq.dev/incidents/${{ steps.set_ids.outputs.final_incident_id }}/enrich"
           method: "POST"
           customHeaders: '{"X-API-KEY": "${{ secrets.KEEP_API_KEY }}", "Content-Type": "application/json"}'
-          data: '{"enrichments":{"incident_title":"${{ github.event.pull_request.title || ''Manual resolution'' }}","incident_url":"${{ github.event.pull_request.html_url || format(''{0}/{1}/actions/runs/{2}'', github.server_url, github.repository, github.run_id) }}", "incident_id": "${{ github.run_id }}", "incident_provider": "github"}}'
+          data: '{"enrichments":{"incident_title":"${{ github.event.head_commit.message || ''Manual resolution'' }}","incident_url":"${{ github.event.head_commit.url || format(''{0}/{1}/actions/runs/{2}'', github.server_url, github.repository, github.run_id) }}", "incident_id": "${{ github.run_id }}", "incident_provider": "github"}}'
 
       - name: Auto resolve Keep alert
         if: |
-          (github.event_name == 'pull_request' && github.event.pull_request.merged == true && steps.set_ids.outputs.final_alert_fingerprint != '') ||
+          (github.event_name == 'push' && steps.set_ids.outputs.final_alert_fingerprint != '') ||
           (github.event_name == 'workflow_dispatch' && inputs.alert_fingerprint != '')
         uses: fjogeleit/http-request-action@v1
         with:
           url: "https://api.keephq.dev/alerts/enrich?dispose_on_new_alert=true"
           method: "POST"
           customHeaders: '{"Content-Type": "application/json", "X-API-KEY": "${{ secrets.KEEP_API_KEY }}"}'
-          data: '{"enrichments":{"status":"${{ inputs.status || ''resolved'' }}","dismissed":false,"dismissUntil":"","note":"${{ github.event.pull_request.title || ''Manual resolution'' }}","ticket_url":"${{ github.event.pull_request.html_url || format(''{0}/{1}/actions/runs/{2}'', github.server_url, github.repository, github.run_id) }}"},"fingerprint":"${{ steps.set_ids.outputs.final_alert_fingerprint }}"}'
+          data: '{"enrichments":{"status":"${{ inputs.status || ''resolved'' }}","dismissed":false,"dismissUntil":"","note":"${{ github.event.head_commit.message || ''Manual resolution'' }}","ticket_url":"${{ github.event.head_commit.url || format(''{0}/{1}/actions/runs/{2}'', github.server_url, github.repository, github.run_id) }}"},"fingerprint":"${{ steps.set_ids.outputs.final_alert_fingerprint }}"}'
