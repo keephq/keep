@@ -641,7 +641,7 @@ def invoke_provider_method(
 
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    provider_info = body.pop("providerInfo")
+    provider_info = body.pop("providerInfo", None)
     method_params = body
 
     try:
