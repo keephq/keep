@@ -2,6 +2,7 @@ import io
 import logging
 import os
 import random
+from typing import Tuple
 import uuid
 
 import requests
@@ -153,10 +154,10 @@ class WorkflowStore:
         sort_by: str,
         sort_dir: str,
         is_v2: bool = False,
-    ) -> list[dict]:
+    ) -> Tuple[list[dict], int]:
         # list all tenant's workflows
         if is_v2:
-            workflows = get_workflows_with_last_executions_v2(
+            return get_workflows_with_last_executions_v2(
                 tenant_id=tenant_id,
                 cel=cel,
                 limit=limit,
@@ -165,10 +166,8 @@ class WorkflowStore:
                 sort_dir=sort_dir,
                 fetch_last_executions=15,
             )
-        else:
-            workflows = get_workflows_with_last_execution(tenant_id)
-
-        return workflows
+        workflows = get_workflows_with_last_execution(tenant_id)
+        return workflows, len(workflows)
 
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
         # list all tenant's workflows yamls (Workflow.workflow_raw)

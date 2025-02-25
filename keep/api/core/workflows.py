@@ -6,8 +6,9 @@ This module contains the CRUD database functions for Keep.
 
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Tuple
 
-from sqlalchemy import and_, desc, func, literal_column, select, text
+from sqlalchemy import and_, asc, desc, func, literal_column, select, text
 from sqlmodel import Session
 
 from keep.api.core.cel_to_sql.properties_metadata import (
@@ -26,6 +27,7 @@ from keep.api.models.facet import FacetDto
 workflow_field_configurations = [
     FieldMappingConfiguration("name", "workflow.name"),
     FieldMappingConfiguration("description", "workflow.description"),
+    FieldMappingConfiguration("started", "started"),
 ]
 alias_column_mapping = {
     "filter_last_received": "alert.timestamp",
@@ -81,6 +83,7 @@ def __build_base_query(
             latest_executions_subquery.c.started,
             latest_executions_subquery.c.execution_time,
             latest_executions_subquery.c.status,
+            Workflow.id.label("entity_id"),
         )
         .outerjoin(
             latest_executions_subquery,
@@ -96,6 +99,63 @@ def __build_base_query(
     return workflows_with_last_executions_query
 
 
+def build_workflows_total_count_query(
+    tenant_id: str,
+    cel: str,
+    limit: int,
+    offset: int,
+    sort_by: str,
+    sort_dir: str,
+    fetch_last_executions: int = 15,
+):
+    base_query = __build_base_query(
+        tenant_id, cel, limit, offset, sort_by, sort_dir, fetch_last_executions
+    )
+
+    if cel:
+        cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
+        sql_filter_str = cel_to_sql_instance.convert_to_sql_str(cel)
+        base_query = base_query.filter(text(sql_filter_str))
+
+    base_query = base_query.cte("base_query")
+
+    query = (
+        select(func.count(func.distinct(base_query.c.entity_id)))
+        .select_from(base_query)
+        .distinct()
+    )
+
+    return query
+
+
+def build_workflows_query(
+    tenant_id: str,
+    cel: str,
+    limit: int,
+    offset: int,
+    sort_by: str,
+    sort_dir: str,
+    fetch_last_executions: int = 15,
+):
+    query = __build_base_query(
+        tenant_id, cel, limit, offset, sort_by, sort_dir, fetch_last_executions
+    )
+
+    if sort_dir == "asc":
+        query = query.order_by(asc(literal_column(sort_by)))
+    else:
+        query = query.order_by(desc(literal_column(sort_by)))
+
+    query = query.limit(limit).offset(offset).distinct()
+
+    if cel:
+        cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
+        sql_filter_str = cel_to_sql_instance.convert_to_sql_str(cel)
+        query = query.filter(text(sql_filter_str))
+
+    return query
+
+
 def get_workflows_with_last_executions_v2(
     tenant_id: str,
     cel: str,
@@ -104,24 +164,35 @@ def get_workflows_with_last_executions_v2(
     sort_by: str,
     sort_dir: str,
     fetch_last_executions: int = 15,
-) -> list[dict]:
-    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-
+) -> Tuple[list[dict], int]:
+    sort_by = sort_by if sort_by else "started"
     # List first 1000 worflows and thier last executions in the last 7 days which are active)
     with Session(engine) as session:
-        base_query = (
-            __build_base_query(
-                tenant_id, cel, limit, offset, sort_by, sort_dir, fetch_last_executions
-            )
-            .order_by(Workflow.id, desc(literal_column("started")))
-            .distinct()
-            .limit(15000)
+        total_count_query = build_workflows_total_count_query(
+            tenant_id=tenant_id,
+            cel=cel,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            fetch_last_executions=fetch_last_executions,
         )
 
-        if cel:
-            sql_filter_str = cel_to_sql_instance.convert_to_sql_str(cel)
-            base_query = base_query.filter(text(sql_filter_str))
+        count = session.exec(total_count_query).one()[0]
 
-        result = session.execute(base_query).all()
+        workflows_query = build_workflows_query(
+            tenant_id=tenant_id,
+            cel=cel,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            fetch_last_executions=fetch_last_executions,
+        )
 
-    return result
+        query_result = session.execute(workflows_query).all()
+        result = []
+        for workflow, started, execution_time, status, _ in query_result:
+            result.append(tuple([workflow, started, execution_time, status]))
+
+    return result, count

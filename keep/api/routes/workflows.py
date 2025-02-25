@@ -76,7 +76,7 @@ def get_workflows(
     offset: int = Query(0),
     sort_by=Query(None),
     sort_dir=Query(None),
-) -> list[WorkflowDTO] | list[dict]:
+) -> dict:
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
     workflows_dto = []
@@ -92,7 +92,7 @@ def get_workflows(
                 installed_provider.name
             ] = installed_provider
     # get all workflows
-    workflows = workflowstore.get_all_workflows_with_last_execution(
+    workflows, count = workflowstore.get_all_workflows_with_last_execution(
         tenant_id=tenant_id,
         cel=cel,
         limit=limit,
@@ -161,7 +161,12 @@ def get_workflows(
             logger.error(f"Error creating workflow DTO: {e}")
             continue
         workflows_dto.append(workflow_dto)
-    return workflows_dto
+    return {
+        "count": count,
+        "results": workflows_dto,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @router.get(

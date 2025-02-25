@@ -7,7 +7,7 @@ const WORKFLOWS_KEY = "/workflows?is_v2=true";
 export function useWorkflowsV2() {
   const api = useApi();
 
-  const { data, error, isLoading } = useSWR<Workflow[]>(
+  const { data, error, isLoading } = useSWR<any>(
     api.isReady() ? WORKFLOWS_KEY : null,
     (url: string) => api.get(url)
   );
@@ -17,7 +17,7 @@ export function useWorkflowsV2() {
   };
 
   return {
-    workflows: data,
+    workflows: data?.results as Workflow[],
     isLoading,
     error,
     mutateWorkflows,
