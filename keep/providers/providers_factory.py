@@ -360,7 +360,9 @@ class ProvidersFactory:
                 )
                 can_fetch_topology = issubclass(provider_class, BaseTopologyProvider)
                 can_fetch_incidents = issubclass(provider_class, BaseIncidentProvider)
-                pulling_available = can_fetch_alerts or can_fetch_topology or can_fetch_incidents
+                pulling_available = (
+                    can_fetch_alerts or can_fetch_topology or can_fetch_incidents
+                )
 
                 provider_tags = set(provider_class.PROVIDER_TAGS)
                 if can_fetch_topology:
@@ -459,7 +461,9 @@ class ProvidersFactory:
         if all_providers is None:
             all_providers = ProvidersFactory.get_all_providers()
 
-        installed_providers = get_installed_providers(tenant_id, )
+        installed_providers = get_installed_providers(
+            tenant_id,
+        )
         providers = []
         context_manager = ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
@@ -501,7 +505,7 @@ class ProvidersFactory:
             # TODO: solve its root cause
             except Exception as e:
                 logger.warning(
-                    f"Could not get provider {provider_copy.id} auth config from secret manager"
+                    f"Could not get provider {provider_copy.id} auth config from secret manager: {e}"
                 )
                 continue
             provider_copy.details = provider_auth
