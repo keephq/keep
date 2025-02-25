@@ -5,7 +5,7 @@ title: "Service Topology"
 The Service Topology feature in Keep provides a visual representation of your service dependencies, allowing you to quickly understand the relationships between various components in your system. By mapping services and their interactions, you can gain insights into how issues in one service may impact others, enabling faster root-cause analysis and more effective incident resolution.
 
 <Frame width="100" height="200">
-  <img height="10" src="/images/servicetopology.png" />
+  <img height="10" src="/images/topology/servicetopology.png" />
 </Frame>
 
 ## Key Concepts
@@ -85,3 +85,186 @@ Service topology integrates seamlessly with Keep’s incident management feature
 - View the affected nodes and their dependencies directly on the topology graph.
 - Analyze how alerts related to the incident are propagating through the system.
 - Use this information to guide remediation efforts.
+
+
+### Manually adding Topology
+
+This features allows you to create and manipulate your services and the dependencies between them.
+
+- Click on `+ Add Node` to add a new service to your map.
+<Frame width="100" height="200">
+  <img height="10" src="/images/topology/topology_add_node.png" />
+</Frame>
+
+- Field `Service` and `Display Name` are mandatory fields and rest of the fields are optional. (Note: `Tags` accepts CSV)
+- Click `Save`, this adds a new service to your map.
+<Frame width="100" height="200">
+  <img height="10" src="/images/topology/topology_sidebar_add.png" />
+</Frame>
+
+- You can add multiple such services and add connections/dependencies between them.
+- You can select on or more manually created services (holding Ctrl select multiple services), and delete them all at once using the `Delete Services` option.
+<Frame width="100" height="200">
+  <img height="10" src="/images/topology/topology_delete_services.png" />
+</Frame>
+
+- You can click any service and use `Update Service` button to update a service.
+<Frame width="100" height="200">
+  <img height="10" src="/images/topology/topology_update_service.png" />
+</Frame>
+
+- To add a dependency drag from any service's right handle (source) to another service's left handle (target).
+<Frame width="100" height="200">
+  <img height="10" src="/images/topology/topology_add_connection.png" />
+</Frame>
+
+- You can remove a dependency by dragging away a dependency from it's target handle and leave it.
+<Frame width="100" height="200">
+  <img height="10" src="/images/topology/topology_delete_dependency.png" />
+</Frame>
+
+- To add a protocol to your dependency: click the dependency > Click `Edit Dependency` > Fill in the protocol in the popup > Click `OK`.
+<Frame width="100" height="200">
+  <img height="10" src="/images/topology/topology_edit_dependency.png" />
+</Frame>
+<Frame width="100" height="200">
+  <img height="10" src="/images/topology/topology_add_protocol.png" />
+</Frame>
+<Frame width="100" height="200">
+  <img height="10" src="/images/topology/topology_protocol_added.png" />
+</Frame>
+
+<Note>
+- You can only manipulate the services that are created manually.
+- Creating or updating a dependency is only possible between two manually created services.
+</Note>
+
+
+### Importing and Exporting topology
+
+You can Import/Export topology data: services + applications + dependencies to/from keep using this feature.
+
+- Click the menu item to get the Import/Export option.
+<Frame width="100" height="200">
+  <img height="10" src="/images/topology/topology_import_export.png" />
+</Frame>
+
+- Data is Imported and Exported in YAML Format.
+- Below is a sample YAML:
+```yaml
+applications:
+- description: 'A sample application for monitoring and management'
+  id: 398e7b9a-bc0f-487a-b6d7-049a16e500e4
+  name: monitoring-app
+  repository: 'https://github.com/sample-org/monitoring-app'
+  services:
+  - 556041
+  - 556061
+dependencies:
+- depends_on_service_id: 556051
+  id: 6219
+  protocol: HTTP
+  service_id: 556041
+- depends_on_service_id: 556081
+  id: 6220
+  protocol: HTTPS
+  service_id: 556051
+- depends_on_service_id: 556041
+  id: 6221
+  protocol: GRPC
+  service_id: 556061
+- depends_on_service_id: 556071
+  id: 6222
+  protocol: TCP
+  service_id: 556061
+- depends_on_service_id: 556051
+  id: 6223
+  protocol: UDP
+  service_id: 556071
+services:
+- id: 556041
+  display_name: Auth Service
+  service: PAH3VXB
+  category: Backend
+  description: 'Handles user authentication and session management'
+  email: 'auth-team@example.com'
+  environment: production
+  ip_address: '192.168.1.10'
+  is_manual: false
+  mac_address: '00:1A:2B:3C:4D:5E'
+  manufacturer: 'Dell'
+  namespace: 'auth'
+  repository: 'https://github.com/sample-org/auth-service'
+  slack: '#auth-alerts'
+  source_provider_id: ebe062c4814f483cb2c5d556fbb9395c
+  tags: ['authentication', 'security']
+  team: 'Auth Team'
+- id: 556051
+  display_name: Log Aggregator
+  service: PFRKUOO
+  category: Monitoring
+  description: 'Main service responsible for collecting and aggregating logs'
+  email: 'logs-team@example.com'
+  environment: staging
+  ip_address: '192.168.1.11'
+  is_manual: false
+  mac_address: '00:1A:2B:3C:4D:5F'
+  manufacturer: 'HP'
+  namespace: 'logs'
+  repository: 'https://github.com/sample-org/log-aggregator'
+  slack: '#logs-alerts'
+  source_provider_id: ebe062c4814f483cb2c5d556fbb9395c
+  tags: ['monitoring', 'logging']
+  team: 'Logs Team'
+- id: 556061
+  display_name: Core API
+  service: PWKXGRK
+  category: API
+  description: 'Main business logic service for processing user data'
+  email: 'backend-team@example.com'
+  environment: production
+  ip_address: '192.168.1.12'
+  is_manual: false
+  mac_address: '00:1A:2B:3C:4D:60'
+  manufacturer: 'Cisco'
+  namespace: 'api'
+  repository: 'https://github.com/sample-org/core-api'
+  slack: '#backend-alerts'
+  source_provider_id: ebe062c4814f483cb2c5d556fbb9395c
+  tags: ['api', 'backend']
+  team: 'Backend Team'
+- id: 556071
+  display_name: Database Service
+  service: PFEIHAU
+  category: Storage
+  description: 'Handles database operations and caching'
+  email: 'db-team@example.com'
+  environment: production
+  ip_address: '192.168.1.13'
+  is_manual: false
+  mac_address: '00:1A:2B:3C:4D:61'
+  manufacturer: 'IBM'
+  namespace: 'db'
+  repository: 'https://github.com/sample-org/database-service'
+  slack: '#db-alerts'
+  source_provider_id: ebe062c4814f483cb2c5d556fbb9395c
+  tags: ['database', 'storage']
+  team: 'Database Team'
+- id: 556081
+  display_name: Service Mesh
+  service: PC8HHE7
+  category: Infrastructure
+  description: 'Handles networking and service discovery'
+  email: 'infra-team@example.com'
+  environment: production
+  ip_address: '192.168.1.14'
+  is_manual: false
+  mac_address: '00:1A:2B:3C:4D:62'
+  manufacturer: 'Juniper'
+  namespace: 'mesh'
+  repository: 'https://github.com/sample-org/service-mesh'
+  slack: '#infra-alerts'
+  source_provider_id: ebe062c4814f483cb2c5d556fbb9395c
+  tags: ['networking', 'mesh']
+  team: 'Infra Team'
+```
