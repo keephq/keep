@@ -16,8 +16,8 @@ class TopologyApplication(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id")))
     name: str
-    description: Optional[str] = None
-    repository: Optional[str] = None
+    description: str = Field(default_factory=str)
+    repository: str = Field(default_factory=str)
     services: List["TopologyService"] = Relationship(
         back_populates="applications", link_model=TopologyServiceApplication
     )
@@ -159,8 +159,8 @@ class TopologyServiceDtoIn(BaseModel, extra="ignore"):
 class TopologyApplicationDtoIn(BaseModel, extra="ignore"):
     id: Optional[UUID] = None
     name: str
-    description: Optional[str] = None
-    repository: Optional[str] = None
+    description: str = ""
+    repository: str = ""
     services: List[TopologyServiceDtoIn] = []
 
 
