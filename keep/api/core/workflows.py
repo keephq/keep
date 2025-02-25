@@ -34,7 +34,7 @@ workflow_field_configurations = [
     FieldMappingConfiguration("executionTime", "filter_execution_time"),
     FieldMappingConfiguration("isDisabled", "filter_workflow_is_disabled"),
     FieldMappingConfiguration("lastUpdated", "filter_workflow_last_updated"),
-    FieldMappingConfiguration("creationTime", "filter_workflow_creation_time"),
+    FieldMappingConfiguration("createdAt", "filter_workflow_creation_time"),
     FieldMappingConfiguration("createdBy", "filter_workflow_created_by"),
     FieldMappingConfiguration("updatedBy", "filter_workflow_updated_by"),
 ]
@@ -135,8 +135,6 @@ def build_workflows_total_count_query(
 
     query = query.distinct()
 
-    strq = str(query.compile(compile_kwargs={"literal_binds": True}))
-
     return query
 
 
@@ -149,9 +147,11 @@ def build_workflows_query(
     sort_dir: str,
     fetch_last_executions: int = 15,
 ):
+    limit = limit if limit is not None else 20
+    offset = offset is not None if offset else 0
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
 
-    base_query = __build_base_query(tenant_id).cte("base_query")
+    base_query = __build_base_query(tenant_id, fetch_last_executions).cte("base_query")
 
     if not sort_by:
         sort_by = "started"
@@ -178,7 +178,7 @@ def build_workflows_query(
             literal_column("filter_status").label("status"),
         )
         .select_from(base_query)
-        .join(
+        .outerjoin(
             Workflow,
             and_(
                 Workflow.id == base_query.c.entity_id, Workflow.tenant_id == tenant_id
@@ -198,6 +198,8 @@ def build_workflows_query(
     else:
         query = query.order_by(asc(text(order_by_field)), Workflow.id)
 
+    query = query.limit(limit).offset(offset)
+
     query = query.distinct(text(order_by_field), Workflow.id)
 
     if cel:
@@ -216,7 +218,6 @@ def get_workflows_with_last_executions_v2(
     sort_dir: str,
     fetch_last_executions: int = 15,
 ) -> Tuple[list[dict], int]:
-    # List first 1000 worflows and thier last executions in the last 7 days which are active)
     with Session(engine) as session:
         total_count_query = build_workflows_total_count_query(
             tenant_id=tenant_id,
@@ -225,6 +226,9 @@ def get_workflows_with_last_executions_v2(
         )
 
         count = session.exec(total_count_query).one()[0]
+
+        if count == 0:
+            return [], count
 
         workflows_query = build_workflows_query(
             tenant_id=tenant_id,

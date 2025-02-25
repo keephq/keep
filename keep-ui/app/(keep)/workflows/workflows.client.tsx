@@ -20,7 +20,7 @@ import { showErrorToast, Input, ErrorComponent } from "@/shared/ui";
 import { Textarea } from "@/components/ui";
 import { useWorkflowsV2 } from "utils/hooks/useWorkflowsV2";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
-import { useFacets } from "@/features/filter";
+import { SearchInput } from "@/features/filter";
 import { InitialFacetsData } from "@/features/filter/api";
 
 const EXAMPLE_WORKFLOW_DEFINITIONS = {
@@ -64,22 +64,27 @@ const EXAMPLE_WORKFLOW_DEFINITIONS = {
 
 type ExampleWorkflowKey = keyof typeof EXAMPLE_WORKFLOW_DEFINITIONS;
 
-export default function WorkflowsPage() {
+export default function WorkflowsPage({
+  initialFacetsData,
+}: {
+  initialFacetsData?: InitialFacetsData;
+}) {
   const api = useApi();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [workflowDefinition, setWorkflowDefinition] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { data: workflowFacets } = useFacets("workflows");
-  const initialFacetsData = useMemo(() => {
-    if (!workflowFacets) {
-      return null;
-    }
+  const [filterCel, setFilterCel] = useState<string | null>(null);
+  const [searchedValue, setSearchedValue] = useState<string | null>(null);
 
-    return {
-      facets: workflowFacets as any,
-    } as InitialFacetsData;
-  }, [workflowFacets]);
+  const searchCel = useMemo(() => {
+    return `name.contains("${searchedValue}") || description.contains("${searchedValue}")`;
+  }, [searchedValue]);
+
+  const queryCel = useMemo(() => {
+    const celList = [searchCel, filterCel].filter((cel) => cel);
+    return celList.join(" && ");
+  }, [searchCel, filterCel]);
 
   // Only fetch data when the user is authenticated
   /**
@@ -94,13 +99,28 @@ export default function WorkflowsPage() {
           -> last_executions: Used for the workflow execution graph.
           ->last_execution_started: Used for showing the start time of execution in real-time.
   **/
-  const { workflows, error, isLoading } = useWorkflowsV2();
+  const {
+    workflows: filteredWorkflows,
+    error,
+    isLoading: isFilteredWorkflowsLoading,
+  } = useWorkflowsV2({
+    cel: queryCel ?? "",
+    limit: 100,
+    offset: 0,
+    sortBy: "createdAt",
+    sortDir: "desc",
+  });
+
+  const { totalCount: allWorkflowsCount, isLoading: isAllWorkflowsLoading } =
+    useWorkflowsV2({
+      limit: 0,
+    });
 
   if (error) {
     return <ErrorComponent error={error} reset={() => {}} />;
   }
 
-  if (isLoading || !workflows) {
+  if (isAllWorkflowsLoading) {
     return <KeepLoader />;
   }
 
@@ -184,7 +204,7 @@ export default function WorkflowsPage() {
     <>
       <main className="pt-4 flex flex-col gap-8">
         <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-end">
             <div>
               <Title className="text-2xl line-clamp-2 font-bold">
                 My Workflows
@@ -193,6 +213,11 @@ export default function WorkflowsPage() {
                 Automate your alert management with workflows.
               </Subtitle>
             </div>
+            <SearchInput
+              className="flex-1 mx-4"
+              placeholder="Search workflows"
+              onValueChange={setSearchedValue}
+            />
             <div>
               <Button
                 className="mr-2.5"
@@ -217,26 +242,24 @@ export default function WorkflowsPage() {
               </Button>
             </div>
           </div>
-          {workflows.length === 0 ? (
+          {allWorkflowsCount === 0 ? (
             <WorkflowsEmptyState isNewUI={true} />
           ) : (
             <div className="flex gap-4">
-              {initialFacetsData && (
-                <FacetsPanelServerSide
-                  entityName={"workflows"}
-                  // facetsConfig={facetsConfig}
-                  // facetOptionsCel={dateRangeCel}
-                  usePropertyPathsSuggestions={true}
-                  // clearFiltersToken={clearFiltersToken}
-                  initialFacetsData={initialFacetsData}
-                  // uncheckedByDefaultOptionValues={uncheckedFacetOptionsByDefault}
-                  // onCelChange={(cel) => setFilterCel(cel)}
-                  // revalidationToken={filterRevalidationToken}
-                />
-              )}
+              <FacetsPanelServerSide
+                entityName={"workflows"}
+                // facetsConfig={facetsConfig}
+                facetOptionsCel={searchCel}
+                usePropertyPathsSuggestions={true}
+                // clearFiltersToken={clearFiltersToken}
+                initialFacetsData={initialFacetsData}
+                // uncheckedByDefaultOptionValues={uncheckedFacetOptionsByDefault}
+                onCelChange={(cel) => setFilterCel(cel)}
+                // revalidationToken={filterRevalidationToken}
+              />
 
               <div className="self-start grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
-                {workflows.map((workflow) => (
+                {filteredWorkflows?.map((workflow) => (
                   <WorkflowTile key={workflow.id} workflow={workflow} />
                 ))}
               </div>
