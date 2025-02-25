@@ -13,7 +13,7 @@ import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import Skeleton from "react-loading-skeleton";
 import {
   generateWorkflow,
-  getWorkflowFromDefinition,
+  getYamlWorkflowDefinition,
   parseWorkflow,
   wrapDefinitionV2,
 } from "@/entities/workflows/lib/parser";
@@ -97,19 +97,19 @@ export function WorkflowBuilder({
           if (alertName && alertSource) {
             triggers = { alert: { source: alertSource, name: alertName } };
           }
-          // Set empty definition to initialize the store
+          const definition = generateWorkflow(
+            alertUuid,
+            "",
+            "",
+            false,
+            {},
+            [],
+            [],
+            triggers
+          );
           setDefinition(
             wrapDefinitionV2({
-              ...generateWorkflow(
-                alertUuid,
-                "",
-                "",
-                false,
-                {},
-                [],
-                [],
-                triggers
-              ),
+              ...definition,
               isValid: true,
             })
           );
@@ -152,7 +152,7 @@ export function WorkflowBuilder({
     if (!definition?.value) {
       return null;
     }
-    return stringify({ workflow: getWorkflowFromDefinition(definition.value) });
+    return stringify({ workflow: getYamlWorkflowDefinition(definition.value) });
   }, [definition?.value]);
 
   // TODO: move to workflow initialization or somewhere upper

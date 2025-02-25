@@ -22,7 +22,7 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 
 interface IncidentActivity {
   id: string;
-  type: "comment" | "alert" | "newcomment" | "statuschange";
+  type: "comment" | "alert" | "newcomment" | "statuschange" | "assign";
   text?: string;
   timestamp: string;
   initiator?: string | AlertDto;
@@ -104,18 +104,24 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
               ? "comment"
               : auditEvent.action === "Incident status changed"
               ? "statuschange"
+              : auditEvent.action === "Incident assigned"
+              ? "assign"
               : "alert";
           return {
             id: auditEvent.id,
             type: _type,
             initiator:
-              _type === "comment"
+              _type === "comment" ||
+              _type === "statuschange" ||
+              _type === "assign"
                 ? auditEvent.user_id
                 : alerts?.items.find(
                     (a) => a.fingerprint === auditEvent.fingerprint
                   ),
             text:
-              _type === "comment" || _type === "statuschange"
+              _type === "comment" ||
+              _type === "statuschange" ||
+              _type === "assign"
                 ? auditEvent.description
                 : "",
             timestamp: auditEvent.timestamp,

@@ -18,10 +18,6 @@ import {
   V2StepUI,
 } from "@/entities/workflows/model/types";
 
-function getKeyBasedSquence(step: V2Step, id: string, type: string) {
-  return `${step.type}__${id}__empty_${type}`;
-}
-
 export function reConstructWorklowToDefinition({
   nodes,
   edges,
@@ -57,7 +53,12 @@ export function reConstructWorklowToDefinition({
 
       if (["condition-threshold", "condition-assert"].includes(nodeType)) {
         tempSequence.push(nodeData);
-        i = processCondition(i + 1, endIdx, nodeData, currentNode.id);
+        i = processCondition(
+          i + 1,
+          endIdx,
+          nodeData as V2StepConditionThreshold | V2StepConditionAssert,
+          currentNode.id
+        );
         continue;
       }
 
@@ -75,7 +76,9 @@ export function reConstructWorklowToDefinition({
   function processCondition(
     startIdx: number,
     endIdx: number,
-    conditionNode: FlowNode["data"],
+    conditionNode: FlowNode["data"] & {
+      branches: { true: V2Step[]; false: V2Step[] };
+    },
     nodeId: string
   ) {
     conditionNode.branches = {
@@ -87,7 +90,7 @@ export function reConstructWorklowToDefinition({
     const falseBranchEmptyId = `${conditionNode?.type}__${nodeId}__empty_false`;
     let trueCaseAdded = false;
     let falseCaseAdded = false;
-    let tempSequence = [];
+    let tempSequence: V2Step[] = [];
     let i = startIdx;
     for (; i < endIdx; i++) {
       const currentNode = originalNodes[i];
@@ -111,8 +114,13 @@ export function reConstructWorklowToDefinition({
       }
 
       if (["condition-threshold", "condition-assert"].includes(nodeType)) {
-        tempSequence.push(nodeData);
-        i = processCondition(i + 1, endIdx, nodeData, currentNode.id);
+        tempSequence.push(nodeData as V2Step);
+        i = processCondition(
+          i + 1,
+          endIdx,
+          nodeData as V2StepConditionThreshold | V2StepConditionAssert,
+          currentNode.id
+        );
         continue;
       }
 
@@ -121,7 +129,7 @@ export function reConstructWorklowToDefinition({
         i = processForeach(i + 1, endIdx, nodeData, currentNode.id);
         continue;
       }
-      tempSequence.push(nodeData);
+      tempSequence.push(nodeData as V2Step);
     }
     return endIdx;
   }
@@ -134,7 +142,12 @@ export function reConstructWorklowToDefinition({
       const nodeType = nodeData?.type;
       if (["condition-threshold", "condition-assert"].includes(nodeType)) {
         workflowSequence.push(nodeData);
-        i = processCondition(i + 1, endIdx, nodeData, currentNode.id);
+        i = processCondition(
+          i + 1,
+          endIdx,
+          nodeData as V2StepConditionThreshold | V2StepConditionAssert,
+          currentNode.id
+        );
         continue;
       }
       if (nodeType === "foreach") {
@@ -183,7 +196,8 @@ export function createSwitchNodeV2(
         id: nodeId,
         properties,
         name: name,
-      },
+        // FIX: type assertion
+      } as NodeData,
       isDraggable: false,
       prevNodeId,
       nextNodeId: customIdentifier,
@@ -201,7 +215,8 @@ export function createSwitchNodeV2(
         name: `${stepType} End`,
         componentType: `${step.type}__end`,
         properties: {},
-      },
+        // FIX: type assertion
+      } as NodeData,
       isDraggable: false,
       prevNodeId: nodeId,
       nextNodeId: nextNodeId,

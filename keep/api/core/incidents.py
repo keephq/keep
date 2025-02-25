@@ -83,7 +83,7 @@ static_facets = [
     ),
     FacetDto(
         id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
-        property_path="alert.provider_type",
+        property_path="alert.providerType",
         name="Source",
         is_static=True,
         type=FacetType.str,
@@ -344,8 +344,12 @@ def get_incident_facets_data(
             Incident.id.label("entity_id"),
         )
         .select_from(Incident)
-        .outerjoin(
-            incidents_alerts_cte, Incident.id == incidents_alerts_cte.c.incident_id
+        .join(
+            incidents_alerts_cte,
+            and_(
+                Incident.id == incidents_alerts_cte.c.incident_id,
+                Incident.tenant_id == tenant_id,
+            ),
         )
         .filter(Incident.tenant_id == tenant_id)
     )

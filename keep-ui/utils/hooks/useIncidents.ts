@@ -178,7 +178,7 @@ export const usePollIncidentAlerts = (incidentId: string) => {
   }, [bind, unbind, handleIncoming]);
 };
 
-export const usePollIncidents = (mutateIncidents: any) => {
+export const usePollIncidents = (mutateIncidents: any, paused: boolean = false) => {
   const { bind, unbind } = useWebsocket();
   const [incidentChangeToken, setIncidentChangeToken] = useState<string | null>(null);
   const handleIncoming = useCallback(
@@ -190,11 +190,15 @@ export const usePollIncidents = (mutateIncidents: any) => {
   );
 
   useEffect(() => {
+    if (paused) {
+      return;
+    }
+
     bind("incident-change", handleIncoming);
     return () => {
       unbind("incident-change", handleIncoming);
     };
-  }, [bind, unbind, handleIncoming]);
+  }, [bind, unbind, handleIncoming, paused]);
 
   return {
     incidentChangeToken

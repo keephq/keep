@@ -379,7 +379,18 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                   )}
                   <div>
                     {" ("}
-                    <span className="text-sm text-gray-500 cursor-pointer hover:text-orange-500 underline">
+                    <span
+                      className="text-sm text-gray-500 cursor-pointer hover:text-orange-500 underline"
+                      onClick={() => {
+                        if (
+                          confirm(
+                            "Are you sure you want to assign this incident to yourself?"
+                          )
+                        ) {
+                          assignIncident(incident.id);
+                        }
+                      }}
+                    >
                       Assign to me
                     </span>
                     {")"}

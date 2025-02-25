@@ -23,14 +23,16 @@ import {
   ExclamationCircleIcon,
   CheckCircleIcon,
 } from "@heroicons/react/20/solid";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useWorkflowStore } from "@/entities/workflows";
 import {
+  NodeDataStepSchema,
   V2ActionStep,
   V2Properties,
   V2StepConditionAssert,
   V2StepConditionThreshold,
   V2StepForeach,
+  V2StepSchema,
   V2StepStep,
 } from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
@@ -474,44 +476,111 @@ type ActionOrStepProperties =
   | V2StepStep["properties"]
   | V2ActionStep["properties"];
 
-type FormDataType =
+export function StepEditorV2() {
+  const { selectedNode, getNodeById } = useWorkflowStore();
+  const nodeData = useMemo(() => {
+    if (!selectedNode) {
+      return null;
+    }
+    const node = getNodeById(selectedNode);
+    if (
+      !node ||
+      node.data.componentType === "condition-assert__end" ||
+      node.data.componentType === "condition-threshold__end"
+    ) {
+      return null;
+    }
+
+    const parsedNode = NodeDataStepSchema.parse(node.data);
+    return {
+      type: parsedNode.type,
+      componentType: parsedNode.componentType,
+      name: parsedNode.name,
+      properties: parsedNode.properties,
+    };
+  }, [selectedNode]);
+
+  if (!nodeData) {
+    // If the node is not a step, action, condition or foreach, don't render anything
+    return null;
+  }
+
+  if (
+    nodeData.componentType === "switch" &&
+    nodeData.type === "condition-threshold"
+  ) {
+    return (
+      <ConditionsAndMiscEditor
+        initialFormData={{
+          type: "condition-threshold",
+          name: nodeData.name,
+          properties:
+            nodeData.properties as V2StepConditionThreshold["properties"],
+        }}
+      />
+    );
+  }
+
+  if (
+    nodeData.componentType === "switch" &&
+    nodeData.type === "condition-assert"
+  ) {
+    return (
+      <ConditionsAndMiscEditor
+        initialFormData={{
+          type: "condition-assert",
+          name: nodeData.name,
+          properties:
+            nodeData.properties as V2StepConditionAssert["properties"],
+        }}
+      />
+    );
+  }
+  if (nodeData.componentType === "container") {
+    return (
+      <ConditionsAndMiscEditor
+        initialFormData={{
+          type: nodeData.type as "foreach",
+          name: nodeData.name,
+          properties: nodeData.properties as V2StepForeach["properties"],
+        }}
+      />
+    );
+  }
+  return (
+    <ActionOrStepEditor
+      initialFormData={{
+        type: nodeData.type,
+        name: nodeData.name,
+        properties: nodeData.properties as ActionOrStepProperties,
+      }}
+    />
+  );
+}
+
+type ConditionsAndMiscFormDataType =
   | {
       type: "condition-threshold";
-      name?: string;
+      name: string;
       properties: V2StepConditionThreshold["properties"];
     }
   | {
       type: "condition-assert";
-      name?: string;
+      name: string;
       properties: V2StepConditionAssert["properties"];
     }
   | {
       type: "foreach";
-      name?: string;
+      name: string;
       properties: V2StepForeach["properties"];
     };
-
-export function StepEditorV2({
-  initialFormData,
-}: {
-  initialFormData: FormDataType;
-}) {
-  if (
-    initialFormData.type === "condition-threshold" ||
-    initialFormData.type === "condition-assert" ||
-    initialFormData.type === "foreach"
-  ) {
-    return <ConditionsAndMiscEditor initialFormData={initialFormData} />;
-  }
-  return <ActionOrStepEditor initialFormData={initialFormData} />;
-}
 
 function ConditionsAndMiscEditor({
   initialFormData,
 }: {
-  initialFormData: FormDataType;
+  initialFormData: ConditionsAndMiscFormDataType;
 }) {
-  const [formData, setFormData] = useState<FormDataType>(initialFormData);
+  const [formData, setFormData] = useState(initialFormData);
   const { updateSelectedNodeData, setEditorSynced } = useWorkflowStore();
   const saveFormDataToStoreDebounced = useCallback(
     debounce((formData: any) => {
@@ -528,7 +597,7 @@ function ConditionsAndMiscEditor({
         [key]: value,
       },
     };
-    setFormData(updatedFormData as FormDataType);
+    setFormData(updatedFormData as ConditionsAndMiscFormDataType);
     setEditorSynced(false);
     saveFormDataToStoreDebounced(updatedFormData);
   };

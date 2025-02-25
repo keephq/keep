@@ -10,7 +10,7 @@ import { useState } from "react";
 import { KeepApiError } from "@/shared/api/KeepApiError";
 import { BuilderWorkflowTestRunModalContent } from "./builder-workflow-testrun-modal-content";
 import Modal from "@/components/ui/Modal";
-import { getWorkflowFromDefinition } from "@/entities/workflows/lib/parser";
+import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
 import { stringify } from "yaml";
 import { v4 as uuidv4 } from "uuid";
 
@@ -49,7 +49,7 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
     const requestId = uuidv4();
     currentRequestId.current = requestId;
     setTestRunModalOpen(true);
-    const workflow = getWorkflowFromDefinition(definition.value);
+    const workflow = getYamlWorkflowDefinition(definition.value);
     // NOTE: prevent the workflow from being disabled, so test run doesn't fail
     workflow.disabled = false;
     const body = stringify(workflow);

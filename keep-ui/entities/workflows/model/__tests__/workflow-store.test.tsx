@@ -262,7 +262,7 @@ describe("useWorkflowStore", () => {
         result.current.setNodes([
           {
             id: "switch1",
-            data: { componentType: "switch", type: "switch" },
+            data: { componentType: "switch", type: "condition-threshold" },
             position: { x: 0, y: 0 },
             isNested: false,
           } as FlowNode,
@@ -367,7 +367,11 @@ describe("useWorkflowStore", () => {
         result.current.setNodes([
           {
             id: "node1",
-            data: { type: "step", config: "old-config" },
+            data: {
+              type: "step",
+              componentType: "task",
+              properties: { config: "old-config" },
+            },
             position: { x: 0, y: 0 },
             isNested: false,
           } as FlowNode,
@@ -393,7 +397,13 @@ describe("useWorkflowStore", () => {
         result.current.setNodes([
           {
             id: "node1",
-            data: { type: "step", removable: "value" },
+            data: {
+              type: "step",
+              componentType: "task",
+              properties: {
+                config: "old-config",
+              },
+            },
             position: { x: 0, y: 0 },
             isNested: false,
           } as FlowNode,
@@ -403,11 +413,11 @@ describe("useWorkflowStore", () => {
 
       // Update node data with null
       act(() => {
-        result.current.updateSelectedNodeData("removable", null);
+        result.current.updateSelectedNodeData("config", null);
       });
 
       // Verify property was removed
-      expect(result.current.nodes[0].data).not.toHaveProperty("removable");
+      expect(result.current.nodes[0].data).not.toHaveProperty("config");
     });
   });
 
