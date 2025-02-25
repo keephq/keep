@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Extract Keep ID from PR description
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'push'
         id: extract_id
         run: |
           PR_DESC="${{ github.event.pull_request.body }}"
