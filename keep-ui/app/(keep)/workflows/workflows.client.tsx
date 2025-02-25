@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Subtitle } from "@tremor/react";
 import {
   ArrowUpOnSquareStackIcon,
@@ -70,10 +70,16 @@ export default function WorkflowsPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [workflowDefinition, setWorkflowDefinition] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const foo = useFacets("incidents");
-  const initialFacetsData: InitialFacetsData = {
-    facets: foo.data as any,
-  };
+  const { data: workflowFacets } = useFacets("workflows");
+  const initialFacetsData = useMemo(() => {
+    if (!workflowFacets) {
+      return null;
+    }
+
+    return {
+      facets: workflowFacets as any,
+    } as InitialFacetsData;
+  }, [workflowFacets]);
 
   // Only fetch data when the user is authenticated
   /**
@@ -215,9 +221,9 @@ export default function WorkflowsPage() {
             <WorkflowsEmptyState isNewUI={true} />
           ) : (
             <div className="flex gap-4">
-              {foo.data && (
+              {initialFacetsData && (
                 <FacetsPanelServerSide
-                  entityName={"incidents"}
+                  entityName={"workflows"}
                   // facetsConfig={facetsConfig}
                   // facetOptionsCel={dateRangeCel}
                   // usePropertyPathsSuggestions={true}

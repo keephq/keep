@@ -28,7 +28,9 @@ from keep.api.core.db import (
     get_workflow_by_name,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
+from keep.api.core.workflows import get_workflow_facets, get_workflow_facets_data
 from keep.api.models.alert import AlertDto, IncidentDto
+from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.workflow import (
     WorkflowCreateOrUpdateDTO,
     WorkflowDTO,
@@ -51,6 +53,97 @@ tracer = trace.get_tracer(__name__)
 
 PLATFORM_URL = config("KEEP_PLATFORM_URL", default="https://platform.keephq.dev")
 
+
+@router.post(
+    "/facets/options",
+    description="Query alert facet options. Accepts dictionary where key is facet id and value is cel to query facet",
+)
+def fetch_facet_options(
+    facet_options_query: FacetOptionsQueryDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching workflow facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    facet_options = get_workflow_facets_data(
+        tenant_id=tenant_id, facet_options_query=facet_options_query
+    )
+
+    logger.info(
+        "Fetched workflow facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facet_options
+
+
+@router.get(
+    "/facets",
+    description="Get workflow facets",
+)
+def fetch_facets(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching workflow facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    facets = get_workflow_facets(tenant_id=tenant_id)
+
+    logger.info(
+        "Fetched workflow facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facets
+
+
+# @router.get(
+#     "/facets/fields",
+#     description="Get potential fields for alert facets",
+# )
+# def fetch_alert_facet_fields(
+#     authenticated_entity: AuthenticatedEntity = Depends(
+#     IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+# ),
+# ) -> list:
+#     tenant_id = authenticated_entity.tenant_id
+
+#     logger.info(
+#         "Fetching alert facet fields from DB",
+#         extra={
+#             "tenant_id": tenant_id,
+#         },
+#     )
+
+#     fields = get_alert_potential_facet_fields(tenant_id=tenant_id)
+
+#     logger.info(
+#         "Fetched alert facet fields from DB",
+#         extra={
+#             "tenant_id": tenant_id,
+#         },
+#     )
+#     return fields
 
 # Redesign the workflow Card
 #   The workflow card needs execution records (currently limited to 15) for the graph. To achieve this, the following changes
