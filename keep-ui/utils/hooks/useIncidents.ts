@@ -190,7 +190,6 @@ export const usePollIncidents = (mutateIncidents: any, paused: boolean = false) 
   );
 
   useEffect(() => {
-    console.log("usePollIncidents", "Paused: ", paused);
     if (paused) {
       return;
     }
