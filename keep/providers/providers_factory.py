@@ -461,9 +461,7 @@ class ProvidersFactory:
         if all_providers is None:
             all_providers = ProvidersFactory.get_all_providers()
 
-        installed_providers = get_installed_providers(
-            tenant_id,
-        )
+        installed_providers = get_installed_providers(tenant_id)
         providers = []
         context_manager = ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
