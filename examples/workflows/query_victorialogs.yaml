@@ -1,0 +1,19 @@
+workflow:
+  id: fc4167b8-f6ee-4ae2-ab4a-f16f3e92a660
+  name: Query VictoriaLogs
+  description: This is a sample workflow to query VictoriaLogs
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps:
+    - name: victorialogs-step
+      provider:
+        config: "{{ providers.logs }}"
+        type: victorialogs
+        with:
+          query: "* | stats by (level) count(*)"
+          queryType: stats_query_range
+  actions: []
