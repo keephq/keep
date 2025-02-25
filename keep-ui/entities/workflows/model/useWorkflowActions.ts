@@ -9,11 +9,11 @@ import { getWorkflowFromDefinition } from "@/entities/workflows/lib/parser";
 
 type UseWorkflowActionsReturn = {
   createWorkflow: (
-    definition: Definition
+    definition: Definition | string
   ) => Promise<CreateOrUpdateWorkflowResponse | null>;
   updateWorkflow: (
     workflowId: string,
-    definition: Definition | Record<string, unknown>
+    definition: Definition | Record<string, unknown> | string
   ) => Promise<CreateOrUpdateWorkflowResponse | null>;
   deleteWorkflow: (workflowId: string) => void;
 };
@@ -32,10 +32,16 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
   }, [revalidateMultiple]);
 
   const createWorkflow = useCallback(
-    async (definition: Definition) => {
+    async (definition: Definition | string) => {
       try {
-        const workflow = getWorkflowFromDefinition(definition);
-        const body = stringify(workflow);
+        const body =
+          typeof definition === "string"
+            ? definition
+            : stringify(
+                "workflow" in definition
+                  ? definition
+                  : getWorkflowFromDefinition(definition as Definition)
+              );
         const response = await api.request<CreateOrUpdateWorkflowResponse>(
           "/workflows/json",
           {
@@ -58,14 +64,20 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
   const updateWorkflow = useCallback(
     async (
       workflowId: string,
-      definition: Definition | Record<string, unknown>
+      definition: Definition | Record<string, unknown> | string
     ) => {
       try {
-        const body = stringify(
-          "workflow" in definition
+        console.log("typeof definition", typeof definition);
+        console.log("definition", JSON.stringify(definition));
+        const body =
+          typeof definition === "string"
             ? definition
-            : getWorkflowFromDefinition(definition as Definition)
-        );
+            : stringify(
+                "workflow" in definition
+                  ? definition
+                  : getWorkflowFromDefinition(definition as Definition)
+              );
+        console.log("body", JSON.stringify(body));
         const response = await api.request<CreateOrUpdateWorkflowResponse>(
           `/workflows/${workflowId}`,
           {

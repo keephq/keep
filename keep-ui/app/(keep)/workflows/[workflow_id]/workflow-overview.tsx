@@ -10,8 +10,7 @@ import { ExecutionTable } from "./workflow-execution-table";
 import { WorkflowOverviewSkeleton } from "./workflow-overview-skeleton";
 import { WorkflowProviders } from "./workflow-providers";
 import { WorkflowSteps } from "../mockworkflows";
-import { JSON_SCHEMA } from "js-yaml";
-import { load } from "js-yaml";
+import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/reorderWorkflowSections";
 interface Pagination {
   limit: number;
   offset: number;
@@ -64,9 +63,9 @@ export default function WorkflowOverview({
     );
   }
 
-  const parsedWorkflowFile = load(data?.workflow?.workflow_raw ?? "", {
-    schema: JSON_SCHEMA,
-  }) as any;
+  const parsedWorkflowFile = parseWorkflowYamlStringToJSON(
+    data?.workflow?.workflow_raw ?? ""
+  );
 
   const formatNumber = (num: number) => {
     if (num >= 1_000_000) {

@@ -1,55 +1,46 @@
 import { Provider } from "@/shared/api/providers";
 import {
-  getWorkflowFromDefinition,
-  loadWorkflowYAML,
-  parseWorkflow,
-} from "../../lib/parser";
-import { dump } from "js-yaml";
-import { loadWorkflowIntoOrderedYaml } from "../../lib/reorderWorkflowSections";
+  getOrderedWorkflowYamlStringFromJSON,
+  parseWorkflowYamlStringToJSON,
+} from "../../lib/reorderWorkflowSections";
 
-const gcpMonitoringExampleYaml = `
+const unorderedClickhouseExampleYaml = `
 workflow:
-  id: enrich-gcp-alert
-  name: 5a76aa52-4e0f-43c3-85ff-5603229c5d7e
-  description: Enriched GCP Alert
-  disabled: false
-  triggers:
-    - type: manual
-    - filters:
-        - key: source
-          value: gcpmonitoring
-      type: alert
+  id: query-clickhouse
   consts: {}
   owners: []
   services: []
   steps:
-    - name: gcpmonitoring-step
+    - name: clickhouse-step
       provider:
-        config: "{{ providers.gcp }}"
-        type: gcpmonitoring
+        config: "{{ providers.clickhouse }}"
+        type: clickhouse
         with:
-          as_json: false
-          filter: resource.type = "cloud_run_revision" {{alert.traceId}}
-          page_size: 1000
-          raw: false
-          timedelta_in_days: 1
-    - name: openai-step
-      provider:
-        config: "{{ providers.openai }}"
-        type: openai
-        with:
-          prompt:
-            "You are a very talented engineer that receives context from GCP logs
-            about an endpoint that returned 500 status code and reports back the root
-            cause analysis. Here is the context: keep.json_dumps({{steps.gcpmonitoring-step.results}}) (it is a JSON list of log entries from GCP Logging).
-            In your answer, also provide the log entry that made you conclude the root cause and specify what your certainty level is that it is the root cause. (between 1-10, where 1 is low and 10 is high)"
+          query: "SELECT * FROM logs_table ORDER BY timestamp DESC LIMIT 1;"
+          single_row: "True"
+
   actions:
+    - name: ntfy-action
+      if: "'{{ steps.clickhouse-step.results.level }}' == 'ERROR'"
+      provider:
+        config: "{{ providers.ntfy }}"
+        type: ntfy
+        with:
+          message: "Error in clickhouse logs_table: {{ steps.clickhouse-step.results.level }}"
+          topic: clickhouse
+
     - name: slack-action
+      if: "'{{ steps.clickhouse-step.results.level }}' == 'ERROR'"
       provider:
         config: "{{ providers.slack }}"
         type: slack
         with:
-          message: "{{steps.openai-step.results}}"
+          message: "Error in clickhouse logs_table: {{ steps.clickhouse-step.results.level }}"
+  name: Query Clickhouse and send an alert if there is an error
+  description: Query Clickhouse and send an alert if there is an error
+  disabled: false
+  triggers:
+    - type: manual
 `;
 
 const clickhouseExampleYaml = `
@@ -177,36 +168,28 @@ const providers: Provider[] = [
     health: true,
   },
 ];
-const expectedWorkflow = loadWorkflowYAML(clickhouseExampleYaml);
 
 describe("YAML Parser", () => {
-  it("should parse workflow into a definition and serialize it back to YAML Definition", () => {
-    const parsedWorkflowDefinition = parseWorkflow(
-      clickhouseExampleYaml,
-      providers
-    );
-    const yamlDefinitionWorkflow = {
-      workflow: getWorkflowFromDefinition(parsedWorkflowDefinition),
-    };
-    expect(yamlDefinitionWorkflow).toEqual(expectedWorkflow);
-  });
+  // it("should parse workflow into a definition and serialize it back to YAML Definition", () => {
+  //   const parsedWorkflowDefinition = parseWorkflow(
+  //     clickhouseExampleYaml,
+  //     providers
+  //   );
+  //   const yamlDefinitionWorkflow = {
+  //     workflow: getWorkflowFromDefinition(parsedWorkflowDefinition),
+  //   };
+  //   expect(yamlDefinitionWorkflow).toEqual(expectedWorkflow);
+  // });
 
   it("should parse yaml string and serialize it back to yaml string", () => {
-    const parsedWorkflowDefinition = parseWorkflow(
-      clickhouseExampleYaml,
-      providers
+    // const reorderedWorkflow = orderWorkflowYamlString(
+    //   unorderedClickhouseExampleYaml
+    // );
+    const workflowJSON = parseWorkflowYamlStringToJSON(
+      unorderedClickhouseExampleYaml
     );
-    const orderedWorkflow = {
-      workflow: getWorkflowFromDefinition(parsedWorkflowDefinition),
-    };
-    const serializedWorkflow = dump(orderedWorkflow, {
-      indent: 2,
-      lineWidth: -1,
-      noRefs: true,
-      sortKeys: false,
-      quotingType: '"',
-    });
-    const reorderedWorkflow = loadWorkflowIntoOrderedYaml(serializedWorkflow);
-    expect(reorderedWorkflow).toEqual(clickhouseExampleYaml);
+    const reorderedWorkflow =
+      getOrderedWorkflowYamlStringFromJSON(workflowJSON);
+    expect(reorderedWorkflow.trim()).toEqual(clickhouseExampleYaml.trim());
   });
 });

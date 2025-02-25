@@ -10,12 +10,12 @@ import {
 } from "@/entities/workflows";
 import { Provider } from "@/shared/api/providers";
 import { v4 as uuidv4 } from "uuid";
-import { JSON_SCHEMA, load } from "js-yaml";
 import {
   YamlAction,
   YamlStep,
   YamlWorkflowDefinition,
 } from "@/entities/workflows/model/yaml.types";
+import { parseWorkflowYamlStringToJSON } from "./reorderWorkflowSections";
 
 export function getActionOrStepObj(
   actionOrStep: any,
@@ -126,12 +126,6 @@ export function generateWorkflow(
   };
 }
 
-export function loadWorkflowYAML(workflowString: string): Definition {
-  return load(workflowString, {
-    schema: JSON_SCHEMA,
-  }) as any;
-}
-
 export function parseWorkflow(
   workflowString: string,
   providers: Provider[]
@@ -139,9 +133,7 @@ export function parseWorkflow(
   /**
    * Parse the alert file and generate the definition
    */
-  const parsedWorkflowFile = load(workflowString, {
-    schema: JSON_SCHEMA,
-  }) as any;
+  const parsedWorkflowFile = parseWorkflowYamlStringToJSON(workflowString);
   // This is to support both old and new structure of workflow
   const workflow = parsedWorkflowFile.alert
     ? parsedWorkflowFile.alert

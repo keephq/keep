@@ -1,13 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { type editor } from "monaco-editor";
-import { load, dump } from "js-yaml";
 import { Download, Copy, Check, Save } from "lucide-react";
 import { Button } from "@tremor/react";
 import { LogEntry } from "@/shared/api/workflow-executions";
 import { getStepStatus } from "@/shared/lib/logs-utils";
-import yaml from "js-yaml";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
+import {
+  getOrderedWorkflowYamlString,
+  parseWorkflowYamlStringToJSON,
+} from "@/entities/workflows/lib/reorderWorkflowSections";
 import "./MonacoYAMLEditor.css";
 
 interface Props {
@@ -83,76 +85,6 @@ const MonacoYAMLEditor = ({
     },
     [executionLogs, executionStatus]
   );
-
-  const reorderWorkflowSections = (yamlString: string) => {
-    const content = yamlString.startsWith('"')
-      ? JSON.parse(yamlString)
-      : yamlString;
-    const workflow = load(content) as any;
-    const workflowData = workflow.workflow;
-
-    const metadataFields = ["id", "name", "description", "disabled", "debug"];
-    const sectionOrder = [
-      "triggers",
-      "consts",
-      "owners",
-      "services",
-      "steps",
-      "actions",
-    ];
-    const stepActionOrder = ["name", "if", "provider"]; // Order for properties within steps/actions
-
-    const orderedWorkflow: any = {
-      workflow: {},
-    };
-
-    // Handle metadata fields first
-    metadataFields.forEach((field) => {
-      if (workflowData[field] !== undefined) {
-        orderedWorkflow.workflow[field] = workflowData[field];
-      }
-    });
-
-    // Handle sections
-    sectionOrder.forEach((section) => {
-      if (workflowData[section] !== undefined) {
-        if (section === "steps" || section === "actions") {
-          // Reorder properties within each step/action while maintaining array order
-          const orderedItems = workflowData[section].map((item: any) => {
-            const orderedItem: any = {};
-
-            // Add properties in the specified order
-            stepActionOrder.forEach((prop) => {
-              if (item[prop] !== undefined) {
-                orderedItem[prop] = item[prop];
-              }
-            });
-
-            // Add any remaining properties that weren't in the order list
-            Object.keys(item).forEach((prop) => {
-              if (!stepActionOrder.includes(prop)) {
-                orderedItem[prop] = item[prop];
-              }
-            });
-
-            return orderedItem;
-          });
-
-          orderedWorkflow.workflow[section] = orderedItems;
-        } else {
-          orderedWorkflow.workflow[section] = workflowData[section];
-        }
-      }
-    });
-
-    return dump(orderedWorkflow, {
-      indent: 2,
-      lineWidth: -1,
-      noRefs: true,
-      sortKeys: false,
-      quotingType: '"',
-    });
-  };
 
   const handleEditorDidMount = (
     editor: editor.IStandaloneCodeEditor,
@@ -432,7 +364,7 @@ const MonacoYAMLEditor = ({
   };
 
   useEffect(() => {
-    setOriginalContent(reorderWorkflowSections(workflowRaw));
+    setOriginalContent(getOrderedWorkflowYamlString(workflowRaw));
   }, [workflowRaw]);
 
   const handleSaveWorkflow = async () => {
@@ -445,12 +377,10 @@ const MonacoYAMLEditor = ({
     }
 
     const content = editorRef.current.getValue();
+    console.log("content", JSON.stringify(content));
     try {
-      const parsedYaml = yaml.load(content) as {
-        workflow: Record<string, unknown>;
-      };
-      // update workflow
-      await updateWorkflow(workflowId, parsedYaml);
+      // const json = parseWorkflowYamlStringToJSON(content);
+      await updateWorkflow(workflowId, content);
 
       setOriginalContent(content);
       setHasChanges(false);
@@ -547,7 +477,7 @@ const MonacoYAMLEditor = ({
         <Editor
           height="100%"
           defaultLanguage="yaml"
-          defaultValue={reorderWorkflowSections(workflowRaw)}
+          defaultValue={getOrderedWorkflowYamlString(workflowRaw)}
           onMount={handleEditorDidMount}
           options={editorOptions}
         />
