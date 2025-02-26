@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import json
 from typing import Any, Dict, List, Optional, Union
 
 import validators
@@ -883,38 +884,49 @@ def toggle_workflow_state(
     "/{workflow_id}/secrets",
     description="Write a new secret or update existing secret for a workflow",
 )
+
 def write_workflow_secret(
     workflow_id: str,
-    secret_name: str,
-    secret_value: str,
+    secret_data: Dict[str, str],
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:secrets"])
     ),
 ) -> dict:
     """
-    Write a secret for a workflow. Creates a new secret if it doesn't exist,
-    or updates the existing secret if it does.
+    Write or update multiple secrets for a workflow in a single entry.
+    If a secret already exists, it updates only the changed keys.
     """
     tenant_id = authenticated_entity.tenant_id
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    
-    secret_key = f"{tenant_id}_{workflow_id}_{secret_name}"
+
+    secret_key = f"{tenant_id}_{workflow_id}_secrets"
+
+    try:
+        existing_secrets = secret_manager.read_secret(secret_key, is_json=True)
+        if not isinstance(existing_secrets, dict):
+            existing_secrets = {}
+    except Exception:
+        existing_secrets = {}
+
+    existing_secrets.update(secret_data)
+
+    # Write back the updated secret object
     secret_manager.write_secret(
         secret_name=secret_key,
-        secret_value=secret_value
+        secret_value=json.dumps(existing_secrets),
     )
-    
-    return {"status": "success", "message": "Secret written successfully"}
+
+    return {"status": "success", "message": "Secrets updated successfully"}
+
 
 @router.get(
-    "/{workflow_id}/secrets/{secret_name}",
+    "/{workflow_id}/secrets",
     description="Read a workflow secret",
 )
 def read_workflow_secret(
     workflow_id: str,
-    secret_name: str,
-    is_json: bool = False,
+    is_json: bool = True,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:secrets"])
     ),
@@ -926,7 +938,7 @@ def read_workflow_secret(
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     
-    secret_key = f"{tenant_id}_{workflow_id}_{secret_name}"
+    secret_key = f"{tenant_id}_{workflow_id}_secrets"
     return secret_manager.read_secret(
         secret_name=secret_key,
         is_json=is_json
@@ -934,7 +946,7 @@ def read_workflow_secret(
 
 @router.delete(
     "/{workflow_id}/secrets/{secret_name}",
-    description="Delete a workflow secret",
+    description="Delete a specific secret key for a workflow",
 )
 def delete_workflow_secret(
     workflow_id: str,
@@ -944,13 +956,25 @@ def delete_workflow_secret(
     ),
 ) -> dict:
     """
-    Delete a secret for a workflow.
+    Delete a specific secret key inside the workflow's secrets entry.
+    If the key exists, it is removed, but other secrets remain.
     """
     tenant_id = authenticated_entity.tenant_id
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    
-    secret_key = f"{tenant_id}_{workflow_id}_{secret_name}"
-    secret_manager.delete_secret(secret_key)
-    
-    return {"status": "success", "message": "Secret deleted successfully"}
+
+    secret_key = f"{tenant_id}_{workflow_id}_secrets"
+
+    try:
+        secrets = secret_manager.read_secret(secret_key, is_json=True)
+        if secret_name in secrets:
+            del secrets[secret_name]  # Remove only the specific key
+            secret_manager.write_secret(
+                secret_name=secret_key,
+                secret_value=json.dumps(secrets),
+            )
+            return {"status": "success", "message": f"Secret '{secret_name}' deleted successfully"}
+        else:
+            return {"status": "error", "message": f"Secret '{secret_name}' not found"}
+    except Exception:
+        return {"status": "error", "message": "Failed to delete secret"}

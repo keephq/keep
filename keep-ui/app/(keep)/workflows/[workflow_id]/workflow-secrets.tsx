@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Card } from "@tremor/react";
-import { PlusIcon, TrashIcon, EyeIcon, EyeOffIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { EyeOff, Eye } from 'lucide-react';
 import { GenericTable } from "@/components/table/GenericTable";
 import { DisplayColumnDef } from "@tanstack/react-table";
-import { useSecrets } from "@/utils/hooks/useWorkFlowSecrets"; 
+import { useSecrets } from "@/utils/hooks/useWorkFlowSecrets";
 
 interface Secret {
   name: string;
@@ -11,29 +12,32 @@ interface Secret {
 }
 
 const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
-  const { secrets, error, addOrUpdateSecret, readSecret, deleteSecret } = useSecrets(workflowId);
+  const { secrets, error, addOrUpdateSecret, deleteSecret } = useSecrets(workflowId);
   const [newSecret, setNewSecret] = useState({ name: "", value: "" });
   const [showValues, setShowValues] = useState<Record<string, boolean>>({});
+  const [secretsArray, setSecretsArray] = useState<Secret[]>([]);
+
+  useEffect(() => {
+    setSecretsArray(Object.entries(secrets).map(([name, value]) => ({ name, value })));
+  }, [secrets]);
 
   const handleAddSecret = async () => {
     if (!newSecret.name || !newSecret.value) return;
     await addOrUpdateSecret(newSecret.name, newSecret.value);
-    setNewSecret({ name: "", value: "" }); 
+    setNewSecret({ name: "", value: "" });
   };
 
   const handleDeleteSecret = async (secretName: string) => {
+    const confirmed = window.confirm(`Are you sure you want to delete the secret "${secretName}"?`);
+    if (!confirmed) return;
     await deleteSecret(secretName);
   };
 
-  const toggleShowValue = async (secretName: string) => {
-    if (!showValues[secretName]) {
-      const secretValue = await readSecret(secretName);
-      if (secretValue) {
-        setShowValues((prev) => ({ ...prev, [secretName]: true }));
-      }
-    } else {
-      setShowValues((prev) => ({ ...prev, [secretName]: false }));
-    }
+  const toggleShowValue = (secretName: string) => {
+    setShowValues((prev) => ({
+      ...prev,
+      [secretName]: !prev[secretName],
+    }));
   };
 
   const columns: DisplayColumnDef<Secret>[] = [
@@ -50,6 +54,12 @@ const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           {showValues[row.original.name] ? row.original.value : "••••••••"}
+          <button
+            onClick={() => toggleShowValue(row.original.name)}
+            className="p-1 hover:bg-gray-100 rounded"
+          >
+            {showValues[row.original.name] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
         </div>
       ),
     },
@@ -58,12 +68,6 @@ const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex gap-2">
-          <button
-            onClick={() => toggleShowValue(row.original.name)}
-            className="p-1 hover:bg-gray-100 rounded"
-          >
-            {showValues[row.original.name] ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
-          </button>
           <button
             onClick={() => handleDeleteSecret(row.original.name)}
             className="p-1 hover:bg-gray-100 rounded"
@@ -106,12 +110,14 @@ const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
       </div>
 
       <GenericTable
-        data={secrets}
+        data={secretsArray}
         columns={columns}
-        rowCount={secrets.length}
+        rowCount={secretsArray.length}
         offset={0}
         limit={10}
-        onPaginationChange={() => {}}
+        onPaginationChange={(newOffset, newLimit) => {
+          console.log("Pagination changed:", newOffset, newLimit);
+        }}
         dataFetchedAtOneGO={true}
       />
     </Card>

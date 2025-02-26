@@ -1,54 +1,54 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 
-interface Secret {
-  name: string;
-  value: string;
+interface Secrets {
+  [key: string]: string; // Store secrets as key-value pairs inside an object
 }
 
 export function useSecrets(workflowId: string) {
   const api = useApi();
-  const [secrets, setSecrets] = useState<Secret[]>([]);
+  const [secrets, setSecrets] = useState<Secrets>({});
   const [error, setError] = useState<string>("");
 
-  const addOrUpdateSecret = async (name: string, value: string) => {
+  // Fetch secrets on mount
+  useEffect(() => {
+    fetchSecrets();
+  }, [workflowId]);
+
+  const fetchSecrets = async () => {
     try {
-      const resp = await api.post(
-        `/workflows/${workflowId}/secrets?secret_name=${name}&secret_value=${value}`
-      );
-      console.log("resp",resp);
-      setSecrets((prev) => [...prev.filter((s) => s.name !== name), { name, value }]);
-      setError("");
+      const resp = await api.get(`/workflows/${workflowId}/secrets`, {
+        params: { is_json: true },
+      });
+      setSecrets(resp || {});
     } catch (err) {
-      console.log("err",err);
-      setError(err instanceof Error ? err.message : "Failed to write secret");
+      setError(err instanceof Error ? err.message : "Failed to fetch secrets");
     }
   };
 
-  const readSecret = async (name: string, isJson = false) => {
+  const addOrUpdateSecret = async (name: string, value: string) => {
     try {
-      const secretValue = await api.get(`/workflows/${workflowId}/secrets/${name}`, {
-        params: { is_json: isJson },
+      const updatedSecrets = { ...secrets, [name]: value };
+      await api.post(`/workflows/${workflowId}/secrets`, {
+        [name]: value,
       });
-
-      setSecrets((prev) => [...prev.filter((s) => s.name !== name), { name, value: secretValue }]);
-
-      return secretValue;
+      setSecrets(updatedSecrets);
+      setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to read secret");
-      return null;
+      setError(err instanceof Error ? err.message : "Failed to write secret");
     }
   };
 
   const deleteSecret = async (name: string) => {
     try {
       await api.delete(`/workflows/${workflowId}/secrets/${name}`);
-
-      setSecrets((prev) => prev.filter((s) => s.name !== name));
+      const updatedSecrets = { ...secrets };
+      delete updatedSecrets[name];
+      setSecrets(updatedSecrets);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete secret");
     }
   };
 
-  return { secrets, error, addOrUpdateSecret, readSecret, deleteSecret };
+  return { secrets, error, addOrUpdateSecret, deleteSecret };
 }
