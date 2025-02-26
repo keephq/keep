@@ -14,10 +14,14 @@ import { showErrorToast } from "@/shared/ui";
 interface AlertNoteModalProps {
   handleClose: () => void;
   alert: AlertDto | null;
-  readOnly: boolean;
+  readOnly?: boolean;
 }
 
-const AlertNoteModal = ({ handleClose, alert, readOnly = false }: AlertNoteModalProps) => {
+const AlertNoteModal = ({
+  handleClose,
+  alert,
+  readOnly = false,
+}: AlertNoteModalProps) => {
   const api = useApi();
   const [noteContent, setNoteContent] = useState<string>("");
 
@@ -65,7 +69,10 @@ const AlertNoteModal = ({ handleClose, alert, readOnly = false }: AlertNoteModal
         },
         fingerprint: alert.fingerprint,
       };
-      const response = await api.post(`/alerts/enrich?dispose_on_new_alert=true`, requestData);
+      const response = await api.post(
+        `/alerts/enrich?dispose_on_new_alert=true`,
+        requestData
+      );
 
       handleNoteClose();
     } catch (error) {
@@ -89,18 +96,20 @@ const AlertNoteModal = ({ handleClose, alert, readOnly = false }: AlertNoteModal
         onChange={(value: string) => setNoteContent(value)}
         theme="snow" // Use the Snow theme
         placeholder="Add your note here..."
-        modules={readOnly ? {toolbar: []} : modules}
+        modules={readOnly ? { toolbar: [] } : modules}
         readOnly={readOnly}
         formats={formats} // Add formats
       />
       <div className="mt-4 flex justify-end">
-        {!readOnly && <Button // Use Tremor button for Save
-          onClick={saveNote}
-          color="orange"
-          className="mr-2"
-        >
-          Save
-        </Button>}
+        {!readOnly && (
+          <Button // Use Tremor button for Save
+            onClick={saveNote}
+            color="orange"
+            className="mr-2"
+          >
+            Save
+          </Button>
+        )}
         <Button // Use Tremor button for Cancel
           onClick={handleNoteClose}
           variant="secondary"

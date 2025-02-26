@@ -1,4 +1,4 @@
-import {Fragment, useState} from "react";
+import { Fragment, useState } from "react";
 import { AlertDto, AlertKnownKeys } from "@/entities/alerts/model";
 import { AlertTable } from "./alert-table";
 import { useAlertTableCols } from "./alert-table-utils";
