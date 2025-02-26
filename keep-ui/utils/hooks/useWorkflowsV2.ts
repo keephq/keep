@@ -1,37 +1,43 @@
 import useSWR, { mutate } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { Workflow } from "@/shared/api/workflows";
+import { useEffect } from "react";
 
-export function useWorkflowsV2(params: {
+export interface WorkflowsQuery {
   cel?: string;
   limit?: number;
   offset?: number;
   sortBy?: string;
   sortDir?: "asc" | "desc";
-}) {
+}
+
+export function useWorkflowsV2(
+  workflowsQuery: WorkflowsQuery | null,
+  foo?: boolean
+) {
   const api = useApi();
   const urlSearchParams = new URLSearchParams();
 
   urlSearchParams.append("is_v2", "true");
 
-  if (params.cel) {
-    urlSearchParams.append("cel", params.cel);
+  if (workflowsQuery?.cel) {
+    urlSearchParams.append("cel", workflowsQuery.cel);
   }
 
-  if (params.limit) {
-    urlSearchParams.append("limit", params.limit.toString());
+  if (workflowsQuery?.limit !== undefined) {
+    urlSearchParams.append("limit", workflowsQuery.limit.toString());
   }
 
-  if (params.offset) {
-    urlSearchParams.append("offset", params.offset.toString());
+  if (workflowsQuery?.offset !== undefined) {
+    urlSearchParams.append("offset", workflowsQuery.offset.toString());
   }
 
-  if (params.sortBy) {
-    urlSearchParams.append("sort_by", params.sortBy);
+  if (workflowsQuery?.sortBy) {
+    urlSearchParams.append("sort_by", workflowsQuery.sortBy);
   }
 
-  if (params.sortDir) {
-    urlSearchParams.append("sort_dir", params.sortDir);
+  if (workflowsQuery?.sortDir) {
+    urlSearchParams.append("sort_dir", workflowsQuery.sortDir);
   }
 
   let requestUrl = "/workflows";
@@ -40,8 +46,18 @@ export function useWorkflowsV2(params: {
     requestUrl += `?${urlSearchParams.toString()}`;
   }
 
+  useEffect(() => {
+    if (foo) {
+      return;
+    }
+    console.log({
+      text: "Ihor",
+      workflowsQuery,
+    });
+  }, [workflowsQuery, foo]);
+
   const { data, error, isLoading } = useSWR<any>(
-    api.isReady() ? requestUrl : null,
+    api.isReady() && workflowsQuery ? requestUrl : null,
     (url: string) => api.get(url)
   );
 

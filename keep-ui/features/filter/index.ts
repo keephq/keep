@@ -1,4 +1,5 @@
 export { FacetsPanel, type FacetsPanelProps } from "./facets-panel";
+export { Pagination } from "./pagination";
 export {
   useFacetActions,
   useFacets,

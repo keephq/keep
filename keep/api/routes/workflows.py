@@ -50,6 +50,7 @@ from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.parser.parser import Parser
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
+import time
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -175,6 +176,8 @@ def get_workflows(
     sort_by=Query(None),
     sort_dir=Query(None),
 ) -> dict:
+    time.sleep(5)  # Delay response by 5 seconds
+
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
     workflows_dto = []
