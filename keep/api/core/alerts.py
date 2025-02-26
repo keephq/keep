@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Tuple
 
-from sqlalchemy import and_, asc, desc, func, literal_column, select, or_
+from sqlalchemy import and_, asc, desc, func, literal_column, select
 from sqlmodel import Session, text
 
 from keep.api.core.cel_to_sql.properties_metadata import (
