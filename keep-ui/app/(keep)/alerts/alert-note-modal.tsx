@@ -14,9 +14,10 @@ import { showErrorToast } from "@/shared/ui";
 interface AlertNoteModalProps {
   handleClose: () => void;
   alert: AlertDto | null;
+  readOnly: boolean;
 }
 
-const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
+const AlertNoteModal = ({ handleClose, alert, readOnly = false }: AlertNoteModalProps) => {
   const api = useApi();
   const [noteContent, setNoteContent] = useState<string>("");
 
@@ -64,7 +65,7 @@ const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
         },
         fingerprint: alert.fingerprint,
       };
-      const response = await api.post(`/alerts/enrich`, requestData);
+      const response = await api.post(`/alerts/enrich?dispose_on_new_alert=true`, requestData);
 
       handleNoteClose();
     } catch (error) {
@@ -88,23 +89,24 @@ const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
         onChange={(value: string) => setNoteContent(value)}
         theme="snow" // Use the Snow theme
         placeholder="Add your note here..."
-        modules={modules}
+        modules={readOnly ? {toolbar: []} : modules}
+        readOnly={readOnly}
         formats={formats} // Add formats
       />
       <div className="mt-4 flex justify-end">
-        <Button // Use Tremor button for Save
+        {!readOnly && <Button // Use Tremor button for Save
           onClick={saveNote}
           color="orange"
           className="mr-2"
         >
           Save
-        </Button>
+        </Button>}
         <Button // Use Tremor button for Cancel
           onClick={handleNoteClose}
           variant="secondary"
           color="orange"
         >
-          Cancel
+          {readOnly ? "Close" : "Cancel"}
         </Button>
       </div>
     </Modal>

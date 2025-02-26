@@ -150,6 +150,7 @@ interface GenerateAlertTableColsArg {
   setChangeStatusAlert?: (alert: AlertDto) => void;
   presetName: string;
   presetNoisy?: boolean;
+  noteReadOnly?: boolean;
 }
 
 export const useAlertTableCols = (
@@ -164,6 +165,7 @@ export const useAlertTableCols = (
     setChangeStatusAlert,
     presetName,
     presetNoisy = false,
+    noteReadOnly = false,
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
@@ -410,6 +412,7 @@ export const useAlertTableCols = (
             alert={context.row.original}
             setNoteModalAlert={setNoteModalAlert}
             setTicketModalAlert={setTicketModalAlert}
+            noteReadOnly={noteReadOnly}
           />
         </div>
       ),

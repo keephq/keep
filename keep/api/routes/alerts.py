@@ -7,6 +7,7 @@ import logging
 import os
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
+from copy import deepcopy
 from typing import List, Optional
 
 import celpy
@@ -26,7 +27,7 @@ from keep.api.core.alerts import (
     query_last_alerts,
 )
 from keep.api.core.config import config
-from keep.api.core.db import enrich_alerts_with_incidents
+from keep.api.core.db import enrich_alerts_with_incidents, get_last_alert_by_fingerprint
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
@@ -265,9 +266,12 @@ def get_alert_history(
         },
     )
     db_alerts = get_alerts_by_fingerprint(
-        tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint, limit=1000
+        tenant_id=authenticated_entity.tenant_id,
+        fingerprint=fingerprint,
+        limit=1000,
+        with_alert_instance_enrichment=True,
     )
-    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
+    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts, with_alert_instance_enrichment=True)
 
     logger.info(
         "Fetched alert history",
@@ -800,14 +804,31 @@ def _enrich_alert(
         else:
             action_type = ActionType.GENERIC_ENRICH
             action_description = f"Alert enriched by {authenticated_entity.email} - {enrich_data.enrichments}"
+
+        enrichments = deepcopy(enrich_data.enrichments)
         enrichement_bl.enrich_entity(
             fingerprint=enrich_data.fingerprint,
-            enrichments=enrich_data.enrichments,
+            enrichments=enrichments,
             action_type=action_type,
             action_callee=authenticated_entity.email,
             action_description=action_description,
             dispose_on_new_alert=dispose_on_new_alert,
         )
+        last_alert = get_last_alert_by_fingerprint(
+            authenticated_entity.tenant_id,
+            enrich_data.fingerprint, session=session
+        )
+        if dispose_on_new_alert:
+            # Create instance-wide enrichment for history
+            enrichement_bl.enrich_entity(
+                fingerprint=str(last_alert.alert_id),
+                enrichments=enrich_data.enrichments,
+                action_type=action_type,
+                action_callee=authenticated_entity.email,
+                action_description=action_description,
+                audit_enabled=False
+            )
+
         # get the alert with the new enrichment
         alert = get_alerts_by_fingerprint(
             authenticated_entity.tenant_id, enrich_data.fingerprint, limit=1

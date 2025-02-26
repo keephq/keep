@@ -54,6 +54,7 @@ interface Props {
   alert: AlertDto;
   setNoteModalAlert?: (alert: AlertDto) => void;
   setTicketModalAlert?: (alert: AlertDto) => void;
+  noteReadOnly?: boolean;
   className?: string;
 }
 
@@ -62,6 +63,7 @@ export function AlertName({
   setNoteModalAlert,
   setTicketModalAlert,
   className,
+  noteReadOnly = false,
 }: Props) {
   const router = useRouter();
   const { data: executions } = useWorkflowExecutions();
@@ -233,7 +235,7 @@ export function AlertName({
           )}
 
           {setNoteModalAlert && (
-            <button
+            (noteReadOnly && note || !noteReadOnly) && <button
               onClick={(e) => handleNoteClick(e)}
               className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
               title="Add/Edit Note"

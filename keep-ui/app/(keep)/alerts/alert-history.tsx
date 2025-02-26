@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import {Fragment, useState} from "react";
 import { AlertDto, AlertKnownKeys } from "@/entities/alerts/model";
 import { AlertTable } from "./alert-table";
 import { useAlertTableCols } from "./alert-table-utils";
@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toDateObjectWithFallback } from "utils/helpers";
 import Image from "next/image";
 import Modal from "@/components/ui/Modal";
+import AlertNoteModal from "@/app/(keep)/alerts/alert-note-modal";
 
 interface AlertHistoryPanelProps {
   alertsHistoryWithDate: (Omit<AlertDto, "lastReceived"> & {
@@ -22,6 +23,7 @@ const AlertHistoryPanel = ({
   presetName,
 }: AlertHistoryPanelProps) => {
   const router = useRouter();
+  const [noteModalAlert, setNoteModalAlert] = useState<AlertDto | null>(null);
 
   const additionalColsToGenerate = [
     ...new Set(
@@ -46,6 +48,8 @@ const AlertHistoryPanel = ({
 
   const alertTableColumns = useAlertTableCols({
     additionalColsToGenerate: additionalColsToGenerate,
+    setNoteModalAlert: setNoteModalAlert,
+    noteReadOnly: true,
     presetName: alertsHistoryWithDate.at(0)?.fingerprint ?? "",
   });
 
@@ -105,6 +109,11 @@ const AlertHistoryPanel = ({
         isMenuColDisplayed={false}
         isRefreshAllowed={false}
         presetName="alert-history"
+      />
+      <AlertNoteModal
+        handleClose={() => setNoteModalAlert(null)}
+        alert={noteModalAlert ?? null}
+        readOnly={true}
       />
     </Fragment>
   );
