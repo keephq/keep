@@ -47,15 +47,18 @@ import { severityMapping } from "@/entities/alerts/model";
 import EnhancedDateRangePicker, {
   TimeFrame,
 } from "@/components/ui/DateRangePicker";
+import IncidentCatcher from "./incident-game";
 
 function SelectedRowActions({
   selectedRowIds,
   onMergeInitiated,
   onDelete,
+  onGame,
 }: {
   selectedRowIds: string[];
   onMergeInitiated: () => void;
   onDelete: () => void;
+  onGame: () => void;
 }) {
   return (
     <div className="flex gap-2 items-center justify-end">
@@ -63,6 +66,17 @@ function SelectedRowActions({
         <span className="accent-dark-tremor-content text-sm px-2">
           {selectedRowIds.length} selected
         </span>
+      ) : null}
+      {selectedRowIds.length ? (
+        <Button
+          color="stone"
+          variant="primary"
+          size="md"
+          disabled={!selectedRowIds.length}
+          onClick={onGame}
+        >
+          👾
+        </Button>
       ) : null}
       <Button
         color="orange"
@@ -104,6 +118,7 @@ export default function IncidentsTable({
   editCallback,
 }: Props) {
   const { deleteIncident } = useIncidentActions();
+  const [gameEnabled, setGameEnabled] = useState(false);
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [pagination, setTablePagination] = useState({
     pageIndex: Math.ceil(incidents.offset / incidents.limit),
@@ -314,6 +329,11 @@ export default function IncidentsTable({
   };
 
   const [mergeOptions, setMergeOptions] = useState<MergeOptions | null>(null);
+
+  const launchGame = () => {
+    setGameEnabled(true);
+  };
+
   const handleMergeInitiated = useCallback(() => {
     const selectedIncidents = selectedRowIds.map(
       (incidentId) =>
@@ -346,10 +366,19 @@ export default function IncidentsTable({
 
   return (
     <>
+      {gameEnabled && (
+        <IncidentCatcher
+          onGameClose={() => setGameEnabled(false)}
+          incidentTitles={selectedRowIds
+            .map((id) => incidents.items.find((incident) => incident.id === id))
+            .map((incident) => getIncidentName(incident!))}
+        />
+      )}
       <SelectedRowActions
         selectedRowIds={selectedRowIds}
         onMergeInitiated={handleMergeInitiated}
         onDelete={handleDeleteMultiple}
+        onGame={launchGame}
       />
       {incidents.items.length > 0 ? (
         <Card className="p-0 overflow-hidden">
