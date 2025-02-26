@@ -65,6 +65,12 @@ export function IncidentList({
   const [filterCel, setFilterCel] = useState<string>("");
   const [dateRangeCel, setDateRangeCel] = useState<string>("");
 
+  const [dateRange, setDateRange] = useState<TimeFrame>({
+    start: null,
+    end: null,
+    paused: false,
+  });
+
   const mainCelQuery = useMemo(() => {
     const filterArray = [dateRangeCel, filterCel];
     return filterArray.filter(Boolean).join(" && ");
@@ -91,7 +97,7 @@ export function IncidentList({
 
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
     useIncidents(false, true);
-  const { incidentChangeToken } = usePollIncidents(mutateIncidents);
+  const { incidentChangeToken } = usePollIncidents(mutateIncidents, dateRange.paused);
 
   const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
     null
@@ -108,12 +114,6 @@ export function IncidentList({
   useEffect(() => {
     setFilterRevalidationToken(incidentChangeToken);
   }, [incidentChangeToken]);
-
-  const [dateRange, setDateRange] = useState<TimeFrame>({
-    start: null,
-    end: null,
-    paused: true,
-  });
 
   useEffect(() => {
     const filterArray: string[] = [];
@@ -240,7 +240,7 @@ export function IncidentList({
     setDateRange({
       start: null,
       end: null,
-      paused: true,
+      paused: false,
     });
     setIncidentsPagination({
       limit: 20,
@@ -289,9 +289,9 @@ export function IncidentList({
         <EnhancedDateRangePicker
           timeFrame={dateRange}
           setTimeFrame={(timeFrame) => setDateRange(timeFrame)}
-          timeframeRefreshInterval={2000}
-          hasPlay={false}
-          pausedByDefault={true}
+          timeframeRefreshInterval={20000}
+          hasPlay={true}
+          pausedByDefault={false}
           hasRewind={false}
           hasForward={false}
           hasZoomOut={false}

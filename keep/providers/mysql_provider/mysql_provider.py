@@ -32,6 +32,9 @@ class MysqlProviderAuthConfig:
     database: str | None = dataclasses.field(
         metadata={"required": False, "description": "MySQL database name"}, default=None
     )
+    port: int | None = dataclasses.field(
+        metadata={"required": False, "description": "MySQL port"}, default=3306
+    )
 
 
 class MysqlProvider(BaseProvider):
@@ -84,6 +87,7 @@ class MysqlProvider(BaseProvider):
             password=self.authentication_config.password,
             host=self.authentication_config.host,
             database=self.authentication_config.database,
+            port=self.authentication_config.port or 3306,
         )
         return client
 
@@ -100,7 +104,7 @@ class MysqlProvider(BaseProvider):
         self.authentication_config = MysqlProviderAuthConfig(
             **self.config.authentication
         )
-        
+
     def _notify(self, **kwargs):
         """
         For MySQL there is no difference if we're querying data or we want to make an impact.

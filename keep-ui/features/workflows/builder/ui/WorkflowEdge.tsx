@@ -29,11 +29,15 @@ export function DebugEdgeInfo({
       className={`absolute bg-black text-green-500 font-mono text-[10px] px-1 py-1`}
       style={{
         transform: `translate(0, -50%) translate(${labelX + 30}px, ${labelY}px)`,
-        pointerEvents: "none",
         opacity: isLayouted ? 1 : 0,
+        pointerEvents: "all",
       }}
     >
       {id}
+      <details>
+        <summary>data=</summary>
+        <pre>{JSON.stringify({ source, target }, null, 2)}</pre>
+      </details>
     </div>
   );
 }
