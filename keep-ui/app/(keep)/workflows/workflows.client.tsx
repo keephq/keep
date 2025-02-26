@@ -87,7 +87,6 @@ export default function WorkflowsPage({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [workflowDefinition, setWorkflowDefinition] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
   const [filterCel, setFilterCel] = useState<string | null>(null);
   const [searchedValue, setSearchedValue] = useState<string | null>(null);
   const [paginationState, setPaginationState] = useState<{
@@ -146,12 +145,6 @@ export default function WorkflowsPage({
     error,
     isLoading: isFilteredWorkflowsLoading,
   } = useWorkflowsV2(workflowsQuery, true);
-
-  useEffect(() => {
-    if (!isLoaded && isFilteredWorkflowsLoading) {
-      setIsLoaded(true);
-    }
-  }, [isLoaded, isFilteredWorkflowsLoading]);
 
   const isEmptyState =
     !isFilteredWorkflowsLoading &&
@@ -297,11 +290,6 @@ export default function WorkflowsPage({
   return (
     <>
       <main className="pt-4 flex flex-col gap-8 relative">
-        {/* {!isLoaded && (
-          <div className="absolute top-0 left-0 w-full h-full  z-50">
-            <KeepLoader />
-          </div>
-        )} */}
         <div className={`flex flex-col gap-4`}>
           <div className="flex justify-between items-end">
             <div>
@@ -357,18 +345,22 @@ export default function WorkflowsPage({
                 // revalidationToken={filterRevalidationToken}
               />
 
-              <div className="flex flex-col">
-                <div className="self-start grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
-                  {isFilteredWorkflowsLoading &&
-                    new Array(paginationState?.limit)
-                      .fill(0)
-                      .map((_, index) => <WorkflowTile key={index} />)}
-                  {!isFilteredWorkflowsLoading &&
-                    filteredWorkflows?.map((workflow) => (
+              <div className="flex flex-col flex-1">
+                {isFilteredWorkflowsLoading && (
+                  <div className="flex items-center justify-center h-96 w-full">
+                    <KeepLoader includeMinHeight={false} />
+                  </div>
+                )}
+                {!isFilteredWorkflowsLoading && (
+                  <div className="self-start grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
+                    {filteredWorkflows?.map((workflow) => (
                       <WorkflowTile key={workflow.id} workflow={workflow} />
                     ))}
-                </div>
-                <div className="mt-4">
+                  </div>
+                )}
+                <div
+                  className={`mt-4 ${isFilteredWorkflowsLoading ? "invisible" : ""}`}
+                >
                   <Pagination
                     totalCount={filteredWorkflowsCount}
                     isRefreshAllowed={false}

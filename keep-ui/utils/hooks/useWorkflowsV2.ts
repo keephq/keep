@@ -1,7 +1,7 @@
 import useSWR, { mutate } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { Workflow } from "@/shared/api/workflows";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export interface WorkflowsQuery {
   cel?: string;
@@ -45,21 +45,16 @@ export function useWorkflowsV2(
   if (urlSearchParams.toString()) {
     requestUrl += `?${urlSearchParams.toString()}`;
   }
-
-  useEffect(() => {
-    if (foo) {
-      return;
-    }
-    console.log({
-      text: "Ihor",
-      workflowsQuery,
-    });
-  }, [workflowsQuery, foo]);
-
-  const { data, error, isLoading } = useSWR<any>(
+  const [isLoading, setIsLoading] = useState(true);
+  const {
+    data,
+    error,
+    isLoading: isLoadingSwr,
+  } = useSWR<any>(
     api.isReady() && workflowsQuery ? requestUrl : null,
     (url: string) => api.get(url)
   );
+  useEffect(() => setIsLoading(isLoadingSwr), [isLoadingSwr]);
 
   const mutateWorkflows = () => {
     return mutate(requestUrl);

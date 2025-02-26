@@ -176,8 +176,6 @@ def get_workflows(
     sort_by=Query(None),
     sort_dir=Query(None),
 ) -> dict:
-    time.sleep(5)  # Delay response by 5 seconds
-
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
     workflows_dto = []
