@@ -132,7 +132,9 @@ const AlertSidebar = ({
                   </p>
                   <p>
                     <FieldHeader>Description</FieldHeader>
-                    <pre className="whitespace-pre-wrap">{alert.description}</pre>
+                    <pre className="whitespace-pre-wrap">
+                      {alert.description}
+                    </pre>
                   </p>
                   <p>
                     <FieldHeader className="flex items-center gap-1">
