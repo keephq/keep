@@ -287,3 +287,103 @@ def test_delete_application(db_session, client, test_app):
     )
     assert response.status_code == 200
     assert response.json()["message"] == "Application deleted successfully"
+
+
+def test_clean_before_import(db_session):
+    # Setup: Create services, applications, and dependencies for one tenant
+    tenant_id = SINGLE_TENANT_UUID
+
+    service_1 = create_service(db_session, tenant_id, "1")
+    service_2 = create_service(db_session, tenant_id, "2")
+
+    application = TopologyApplication(
+        tenant_id=tenant_id,
+        name="Test Application",
+        services=[service_1, service_2],
+    )
+    db_session.add(application)
+    db_session.commit()
+
+    dependency = TopologyServiceDependency(
+        service_id=service_1.id,
+        depends_on_service_id=service_2.id,
+        updated_at=datetime.now(),
+    )
+    db_session.add(dependency)
+    db_session.commit()
+
+    # Assert data exists before cleaning
+    assert db_session.exec(select(TopologyService).where(TopologyService.tenant_id == tenant_id)).all()
+    assert db_session.exec(select(TopologyApplication).where(TopologyApplication.tenant_id == tenant_id)).all()
+    assert db_session.exec(select(TopologyServiceDependency)).all()
+
+    # Act: Call the clean_before_import function
+    TopologiesService.clean_before_import(tenant_id, db_session)
+
+    # Assert: Ensure all data is deleted for this tenant
+    assert not db_session.exec(select(TopologyService).where(TopologyService.tenant_id == tenant_id)).all()
+    assert not db_session.exec(select(TopologyApplication).where(TopologyApplication.tenant_id == tenant_id)).all()
+    assert not db_session.exec(select(TopologyServiceDependency)).all()
+
+
+def test_import_to_db(db_session):
+    # Setup: Define topology data to import
+    tenant_id = SINGLE_TENANT_UUID
+
+    # Do same operation twice - import and re-import
+    for i in range(2):
+        topology_data = {
+            "services": [
+                {
+                    "id": 1,
+                    "service": "test_service_1",
+                    "display_name": "Service 1",
+                    "tags": ["tag1"],
+                    "team": "team1",
+                    "email": "test1@example.com",
+                },
+                {
+                    "id": 2,
+                    "service": "test_service_2",
+                    "display_name": "Service 2",
+                    "tags": ["tag2"],
+                    "team": "team2",
+                    "email": "test2@example.com",
+                },
+            ],
+            "applications": [
+                {
+                    "name": "Test Application 1",
+                    "description": "Application 1 description",
+                    "services": [1],
+                },
+                {
+                    "name": "Test Application 2",
+                    "description": "Application 2 description",
+                    "services": [2],
+                },
+            ],
+            "dependencies": [
+                {
+                    "service_id": 1,
+                    "depends_on_service_id": 2,
+                }
+            ],
+        }
+
+        TopologiesService.import_to_db(topology_data, db_session, tenant_id)
+
+        services = db_session.exec(select(TopologyService).where(TopologyService.tenant_id == tenant_id)).all()
+        assert len(services) == 2
+        assert services[0].service == "test_service_1"
+        assert services[1].service == "test_service_2"
+
+        applications = db_session.exec(select(TopologyApplication).where(TopologyApplication.tenant_id == tenant_id)).all()
+        assert len(applications) == 2
+        assert applications[0].name == "Test Application 1"
+        assert applications[1].name == "Test Application 2"
+
+        dependencies = db_session.exec(select(TopologyServiceDependency)).all()
+        assert len(dependencies) == 1
+        assert dependencies[0].service_id == 1
+        assert dependencies[0].depends_on_service_id == 2
