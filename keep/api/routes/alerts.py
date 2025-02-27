@@ -51,6 +51,7 @@ from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import ActionType
 from keep.api.models.db.rule import ResolveOn
 from keep.api.models.facet import FacetOptionsQueryDto
+from keep.api.models.query import QueryDto
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.routes.preset import pull_data_from_providers
@@ -168,21 +169,17 @@ def fetch_alert_facet_fields(
     return fields
 
 
-@router.get(
+@router.post(
     "/query",
     description="Get last alerts occurrence",
 )
 def query_alerts(
     request: Request,
+    query: QueryDto,
     bg_tasks: BackgroundTasks,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
-    cel=Query(None),
-    limit: int = Query(1000),
-    offset: int = Query(0),
-    sort_by=Query(None),
-    sort_dir=Query(None),
 ):
     # Gathering alerts may take a while and we don't care if it will finish before we return the response.
     # In the worst case, gathered alerts will be pulled in the next request.
@@ -202,11 +199,11 @@ def query_alerts(
     )
     db_alerts, total_count = query_last_alerts(
         tenant_id=tenant_id,
-        limit=limit,
-        offset=offset,
-        cel=cel,
-        sort_by=sort_by,
-        sort_dir=sort_dir,
+        limit=query.limit,
+        offset=query.offset,
+        cel=query.cel,
+        sort_by=query.sort_by,
+        sort_dir=query.sort_dir,
     )
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
@@ -217,8 +214,8 @@ def query_alerts(
     )
 
     return {
-        "limit": limit,
-        "offset": offset,
+        "limit": query.limit,
+        "offset": query.offset,
         "count": total_count,
         "results": enriched_alerts_dto,
     }
