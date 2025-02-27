@@ -19,6 +19,7 @@ from datadog_api_client import ApiClient, Configuration
 from datadog_api_client.api_client import Endpoint
 from datadog_api_client.exceptions import (
     ApiException,
+    ApiValueError,
     ForbiddenException,
     NotFoundException,
 )
@@ -863,10 +864,26 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
                     # API failed and it means we're probably lacking some permissions
                     # perhaps we should check if status code is 403 and otherwise mark as valid?
                     self.logger.warning(
-                        f"Failed to validate scope {scope.name}",
+                        f"ApiException Failed to validate scope {scope.name}",
                         extra={"reason": e.reason, "code": e.status},
                     )
                     scopes[scope.name] = str(e.reason)
+                    continue
+                # API value error means we have the permissions
+                # but the underlying SDK fails to validate the data see
+                # https://github.com/DataDog/datadog-api-client-python/issues/2432
+                except ApiValueError:
+                    self.logger.exception(
+                        f"ApiValueError Failed to validate scope {scope.name}",
+                    )
+                    scopes[scope.name] = True
+                    continue
+                except Exception as e:
+                    self.logger.warning(
+                        f"Failed to validate scope unknown error {scope.name}",
+                        extra={"reason": str(e)},
+                    )
+                    scopes[scope.name] = str(e)
                     continue
                 scopes[scope.name] = True
         self.logger.info("Scopes validated", extra=scopes)
