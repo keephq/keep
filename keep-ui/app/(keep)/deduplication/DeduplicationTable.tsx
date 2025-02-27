@@ -157,12 +157,14 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         cell: (info) => (
           <div className="flex items-center justify-between max-w-[320px]">
             <span className="truncate lg:whitespace-normal">
-              {providers.installed_providers.find(
-                (provider) => provider.id === info.row.original.provider_id
-              )?.details.name ||
-                info.row.original.provider_id ||
-                "Keep"}{" "}
-              deduplication rule
+              {info.row.original.description ||
+                `${
+                  providers.installed_providers.find(
+                    (provider) => provider.id === info.row.original.provider_id
+                  )?.details.name ||
+                  info.row.original.provider_id ||
+                  "Keep"
+                } deduplication rule`}
             </span>
             {info.row.original.default ? (
               <Badge color="orange" size="xs" className="ml-2">
