@@ -542,25 +542,41 @@ class KeepProvider(BaseProvider):
         )
         return alerts
 
-    def _delete_workflows(self):
+    def _delete_workflows(self, except_workflow_id=None):
         self.logger.info("Deleting all workflows")
         workflow_store = WorkflowStore()
         workflows = workflow_store.get_all_workflows(self.context_manager.tenant_id)
         for workflow in workflows:
-            self.logger.info(f"Deleting workflow {workflow.id}")
-            try:
-                workflow_store.delete_workflow(
-                    self.context_manager.tenant_id, workflow.id
+            if not (except_workflow_id and workflow.id == except_workflow_id):
+                self.logger.info(f"Deleting workflow {workflow.id}")
+                try:
+                    workflow_store.delete_workflow(
+                        self.context_manager.tenant_id, workflow.id
+                    )
+                    self.logger.info(f"Deleted workflow {workflow.id}")
+                except Exception as e:
+                    self.logger.exception(
+                        f"Failed to delete workflow {workflow.id}: {e}"
+                    )
+                    raise ProviderException(
+                        f"Failed to delete workflow {workflow.id}: {e}"
+                    )
+            else:
+                self.logger.info(
+                    f"Not deleting workflow {workflow.id} as it's current workflow"
                 )
-                self.logger.info(f"Deleted workflow {workflow.id}")
-            except Exception as e:
-                self.logger.exception(f"Failed to delete workflow {workflow.id}: {e}")
-                raise ProviderException(f"Failed to delete workflow {workflow.id}: {e}")
         self.logger.info("Deleted all workflows")
 
     def _notify(self, **kwargs):
-        if "workflow_full_sync" in kwargs:
-            self._delete_workflows()
+        if "workflow_full_sync" in kwargs or "delete_all_other_workflows" in kwargs:
+            # We need DB id, not user id for the workflow, so getting it from the wf execution.
+            workflow_store = WorkflowStore()
+            workflow_execution = workflow_store.get_workflow_execution(
+                self.context_manager.tenant_id,
+                self.context_manager.workflow_execution_id,
+            )
+            workflow_db_id = workflow_execution.workflow_id
+            self._delete_workflows(except_workflow_id=workflow_db_id)
         elif "workflow_to_update_yaml" in kwargs:
             workflow_to_update_yaml = kwargs["workflow_to_update_yaml"]
             self.logger.info(
