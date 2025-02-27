@@ -31,6 +31,8 @@ RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
 COPY keep keep
 COPY ee keep/ee
 COPY examples examples
+# copy the dashboards
+COPY superset/dashboards /app/superset/dashboards
 COPY keep-ui/public/icons/unknown-icon.png unknown-icon.png
 RUN /venv/bin/pip install --use-deprecated=legacy-resolver . && \
     rm -rf /root/.cache/pip && \

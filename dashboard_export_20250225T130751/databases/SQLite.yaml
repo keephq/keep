@@ -1,5 +1,5 @@
 database_name: SQLite
-sqlalchemy_uri: sqlite:////shared-db/db2?check_same_thread=false
+sqlalchemy_uri: sqlite://///app/dbs/db2?check_same_thread=false
 cache_timeout: null
 expose_in_sqllab: true
 allow_run_async: false
