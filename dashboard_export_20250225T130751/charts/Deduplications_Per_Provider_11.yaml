@@ -1,0 +1,44 @@
+slice_name: Deduplications Per Provider
+description: null
+certified_by: null
+certification_details: null
+viz_type: gauge_chart
+params:
+  datasource: 16__table
+  viz_type: gauge_chart
+  groupby:
+    - provider_type
+  metric: count
+  adhoc_filters:
+    - clause: WHERE
+      subject: timestamp
+      operator: TEMPORAL_RANGE
+      comparator: No filter
+      expressionType: SIMPLE
+  row_limit: 10
+  sort_by_metric: true
+  start_angle: "240"
+  end_angle: "-60"
+  color_scheme: redToYellow
+  font_size: 10
+  number_format: SMART_NUMBER
+  value_formatter: "{value}"
+  show_pointer: true
+  animation: true
+  show_axis_tick: false
+  show_split_line: false
+  split_number: 8
+  show_progress: true
+  overlap: true
+  round_cap: true
+  extra_form_data: {}
+  dashboards:
+    - 2
+query_context:
+  '{"datasource":{"id":16,"type":"table"},"force":false,"queries":[{"filters":[{"col":"timestamp","op":"TEMPORAL_RANGE","val":"No
+  filter"}],"extras":{"having":"","where":""},"applied_time_extras":{},"columns":["provider_type"],"metrics":["count"],"orderby":[["count",false]],"annotation_layers":[],"row_limit":10,"series_limit":0,"order_desc":true,"url_params":{},"custom_params":{},"custom_form_data":{}}],"form_data":{"datasource":"16__table","viz_type":"gauge_chart","groupby":["provider_type"],"metric":"count","adhoc_filters":[{"clause":"WHERE","subject":"timestamp","operator":"TEMPORAL_RANGE","comparator":"No
+  filter","expressionType":"SIMPLE"}],"row_limit":10,"sort_by_metric":true,"start_angle":"240","end_angle":"-60","color_scheme":"redToYellow","font_size":10,"number_format":"SMART_NUMBER","value_formatter":"{value}","show_pointer":true,"animation":true,"show_axis_tick":false,"show_split_line":false,"split_number":8,"show_progress":true,"overlap":true,"round_cap":true,"extra_form_data":{},"dashboards":[2],"force":false,"result_format":"json","result_type":"full"},"result_format":"json","result_type":"full"}'
+cache_timeout: null
+uuid: ce74f3eb-b164-4ae3-91bf-9375efbf8491
+version: 1.0.0
+dataset_uuid: dd83289d-7aac-4b13-90fb-debc23edf7a4

@@ -1,0 +1,44 @@
+slice_name: Enrichments
+description: null
+certified_by: null
+certification_details: null
+viz_type: gauge_chart
+params:
+  datasource: 12__table
+  viz_type: gauge_chart
+  groupby:
+    - c
+  metric:
+    expressionType: SQL
+    sqlExpression: sum(c)
+    column: null
+    aggregate: null
+    datasourceWarning: false
+    hasCustomLabel: false
+    label: sum(c)
+    optionName: metric_4pwzlfgewn8_zy6ugd03rfg
+  adhoc_filters: []
+  row_limit: 1000
+  min_val: 0
+  max_val: 100
+  start_angle: 225
+  end_angle: -45
+  color_scheme: redToYellow
+  font_size: 15
+  number_format: SMART_NUMBER
+  value_formatter: Enrichments
+  show_pointer: true
+  animation: true
+  show_axis_tick: true
+  show_split_line: false
+  split_number: 10
+  show_progress: true
+  overlap: true
+  extra_form_data: {}
+  dashboards:
+    - 2
+query_context: '{"datasource":{"id":12,"type":"table"},"force":false,"queries":[{"filters":[],"extras":{"having":"","where":""},"applied_time_extras":{},"columns":["c"],"metrics":[{"expressionType":"SQL","sqlExpression":"sum(c)","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"sum(c)","optionName":"metric_4pwzlfgewn8_zy6ugd03rfg"}],"annotation_layers":[],"row_limit":1000,"series_limit":0,"order_desc":true,"url_params":{},"custom_params":{},"custom_form_data":{}}],"form_data":{"datasource":"12__table","viz_type":"gauge_chart","groupby":["c"],"metric":{"expressionType":"SQL","sqlExpression":"sum(c)","column":null,"aggregate":null,"datasourceWarning":false,"hasCustomLabel":false,"label":"sum(c)","optionName":"metric_4pwzlfgewn8_zy6ugd03rfg"},"adhoc_filters":[],"row_limit":1000,"min_val":0,"max_val":100,"start_angle":225,"end_angle":-45,"color_scheme":"redToYellow","font_size":15,"number_format":"SMART_NUMBER","value_formatter":"Enrichments","show_pointer":true,"animation":true,"show_axis_tick":true,"show_split_line":false,"split_number":10,"show_progress":true,"overlap":true,"extra_form_data":{},"dashboards":[2],"force":false,"result_format":"json","result_type":"full"},"result_format":"json","result_type":"full"}'
+cache_timeout: null
+uuid: efab8529-cef4-4796-b18f-40bc1571a196
+version: 1.0.0
+dataset_uuid: 0b20113e-3303-4be1-819b-b40d992e1596
