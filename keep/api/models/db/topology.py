@@ -11,6 +11,13 @@ class TopologyServiceApplication(SQLModel, table=True):
     service_id: int = Field(foreign_key="topologyservice.id", primary_key=True)
     application_id: UUID = Field(foreign_key="topologyapplication.id", primary_key=True)
 
+    service: "TopologyService" = Relationship(
+        sa_relationship_kwargs={"primaryjoin": "TopologyService.id == TopologyServiceApplication.service_id"},
+    )
+    application: "TopologyApplication" = Relationship(
+        sa_relationship_kwargs={"primaryjoin": "TopologyApplication.id == TopologyServiceApplication.application_id"},
+    )
+
 
 class TopologyApplication(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)

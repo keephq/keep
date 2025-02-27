@@ -186,7 +186,7 @@ export function TopologyMap({
     {
       label: "Import",
       icon: ArrowUpTrayIcon,
-      onClick: () => document.getElementById("fileInput")?.click(),
+      onClick: () => window.confirm("Current topology will be completely replaced. Do you want to continue?")? document.getElementById("fileInput")?.click() : null,
     },
     {
       label: "Export",

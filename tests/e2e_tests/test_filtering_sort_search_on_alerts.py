@@ -18,25 +18,24 @@ KEEP_API_URL = "http://localhost:8080"
 def query_allerts(cell_query: str = None, limit: int = None, offset: int = None):
     url = f"{KEEP_API_URL}/alerts/query"
 
-    query_params = {}
+    query = {}
 
     if cell_query:
-        query_params["cel"] = cell_query
+        query["cel"] = cell_query
 
     if limit is not None:
-        query_params["limit"] = limit
+        query["limit"] = limit
 
     if offset is not None:
-        query_params["offset"] = offset
+        query["offset"] = offset
 
-    if query_params:
-        url += "?" + "&".join([f"{k}={v}" for k, v in query_params.items()])
     result: dict = None
 
     for _ in range(5):
         try:
-            response = requests.get(
+            response = requests.post(
                 url,
+                json=query,
                 headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
                 timeout=5,
             )
