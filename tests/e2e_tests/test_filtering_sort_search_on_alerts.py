@@ -35,7 +35,7 @@ def query_allerts(cell_query: str = None, limit: int = None, offset: int = None)
         try:
             response = requests.post(
                 url,
-                data=query,
+                json=query,
                 headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
                 timeout=5,
             )
