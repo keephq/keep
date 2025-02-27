@@ -108,7 +108,11 @@ class RulesEngine:
                         continue
                 except Exception:
                     self.logger.exception(
-                        f"Failed to evaluate rule {rule.name} on event {event.id}"
+                        f"Failed to evaluate rule {rule.name} on event {event.id}",
+                        extra={
+                            "rule": rule.dict(),
+                            "event": event.dict(),
+                        },
                     )
                     continue
 
@@ -156,9 +160,7 @@ class RulesEngine:
 
                             send_created_event = incident.is_confirmed
 
-                        incident = self._resolve_incident_if_require(
-                            incident, session
-                        )
+                        incident = self._resolve_incident_if_require(incident, session)
                         session.add(incident)
                         session.commit()
 
@@ -211,11 +213,7 @@ class RulesEngine:
         return re.findall(regex, incident_name_template)
 
     def _get_or_create_incident(
-            self,
-            rule: Rule,
-            rule_fingerprint,
-            session,
-            event
+        self, rule: Rule, rule_fingerprint, session, event
     ) -> (Optional[Incident], bool):
 
         existed_incident, expired = get_incident_for_grouping_rule(
@@ -338,9 +336,7 @@ class RulesEngine:
         return incident
 
     @staticmethod
-    def _resolve_incident_if_require(
-        incident: Incident, session: Session
-    ) -> Incident:
+    def _resolve_incident_if_require(incident: Incident, session: Session) -> Incident:
 
         should_resolve = False
 
