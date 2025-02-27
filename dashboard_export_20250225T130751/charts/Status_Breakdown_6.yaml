@@ -1,0 +1,75 @@
+slice_name: Status Breakdown
+description: null
+certified_by: null
+certification_details: null
+viz_type: mixed_timeseries
+params:
+  datasource: 9__table
+  viz_type: mixed_timeseries
+  slice_id: 6
+  x_axis: minute
+  metrics:
+    - aggregate: null
+      column: null
+      datasourceWarning: false
+      expressionType: SQL
+      hasCustomLabel: false
+      label: sum(event_count)
+      optionName: metric_61japs3l8fp_qne2g9nfta
+      sqlExpression: sum(event_count)
+  groupby:
+    - status
+  adhoc_filters: []
+  order_desc: true
+  row_limit: 1000
+  truncate_metric: true
+  metrics_b:
+    - aggregate: null
+      column: null
+      datasourceWarning: false
+      expressionType: SQL
+      hasCustomLabel: false
+      label: sum(event_count)
+      optionName: metric_jwdlgb2oqnb_wj25cm0ymw
+      sqlExpression: sum(event_count)
+  groupby_b:
+    - status
+  adhoc_filters_b: []
+  order_desc_b: true
+  row_limit_b: 10000
+  truncate_metric_b: false
+  annotation_layers: []
+  x_axis_title_margin: 15
+  y_axis_title_margin: 15
+  y_axis_title_position: Left
+  color_scheme: redToYellow
+  seriesType: bar
+  opacity: 0.2
+  markerSize: 6
+  seriesTypeB: line
+  opacityB: 0.2
+  markerSizeB: 6
+  show_legend: true
+  legendType: scroll
+  legendOrientation: bottom
+  legendMargin: 10
+  x_axis_time_format: smart_date
+  rich_tooltip: true
+  tooltipTimeFormat: smart_date
+  truncateXAxis: true
+  y_axis_bounds:
+    - null
+    - null
+  y_axis_format: SMART_NUMBER
+  y_axis_bounds_secondary:
+    - null
+    - null
+  y_axis_format_secondary: SMART_NUMBER
+  extra_form_data: {}
+  dashboards:
+    - 2
+query_context: '{"datasource":{"id":9,"type":"table"},"force":false,"queries":[{"filters":[],"extras":{"having":"","where":""},"applied_time_extras":{},"columns":[{"columnType":"BASE_AXIS","sqlExpression":"minute","label":"minute","expressionType":"SQL"},"status"],"metrics":[{"aggregate":null,"column":null,"datasourceWarning":false,"expressionType":"SQL","hasCustomLabel":false,"label":"sum(event_count)","optionName":"metric_61japs3l8fp_qne2g9nfta","sqlExpression":"sum(event_count)"}],"annotation_layers":[],"row_limit":1000,"series_columns":["status"],"series_limit":0,"url_params":{},"custom_params":{},"custom_form_data":{},"time_offsets":[],"post_processing":[{"operation":"pivot","options":{"index":["minute"],"columns":["status"],"aggregates":{"sum(event_count)":{"operator":"mean"}},"drop_missing_columns":true}},{"operation":"rename","options":{"columns":{"sum(event_count)":null},"level":0,"inplace":true}},{"operation":"flatten"}],"orderby":[[{"aggregate":null,"column":null,"datasourceWarning":false,"expressionType":"SQL","hasCustomLabel":false,"label":"sum(event_count)","optionName":"metric_61japs3l8fp_qne2g9nfta","sqlExpression":"sum(event_count)"},false]]},{"filters":[],"extras":{"having":"","where":""},"applied_time_extras":{},"columns":[{"columnType":"BASE_AXIS","sqlExpression":"minute","label":"minute","expressionType":"SQL"},"status"],"metrics":[{"aggregate":null,"column":null,"datasourceWarning":false,"expressionType":"SQL","hasCustomLabel":false,"label":"sum(event_count)","optionName":"metric_jwdlgb2oqnb_wj25cm0ymw","sqlExpression":"sum(event_count)"}],"annotation_layers":[],"row_limit":10000,"series_columns":["status"],"series_limit":0,"url_params":{},"custom_params":{},"custom_form_data":{},"time_offsets":[],"post_processing":[{"operation":"pivot","options":{"index":["minute"],"columns":["status"],"aggregates":{"sum(event_count)":{"operator":"mean"}},"drop_missing_columns":true}},{"operation":"flatten"}],"orderby":[[{"aggregate":null,"column":null,"datasourceWarning":false,"expressionType":"SQL","hasCustomLabel":false,"label":"sum(event_count)","optionName":"metric_jwdlgb2oqnb_wj25cm0ymw","sqlExpression":"sum(event_count)"},false]]}],"form_data":{"datasource":"9__table","viz_type":"mixed_timeseries","slice_id":6,"x_axis":"minute","metrics":[{"aggregate":null,"column":null,"datasourceWarning":false,"expressionType":"SQL","hasCustomLabel":false,"label":"sum(event_count)","optionName":"metric_61japs3l8fp_qne2g9nfta","sqlExpression":"sum(event_count)"}],"groupby":["status"],"adhoc_filters":[],"order_desc":true,"row_limit":1000,"truncate_metric":true,"annotation_layers":[],"x_axis_title_margin":15,"y_axis_title_margin":15,"y_axis_title_position":"Left","color_scheme":"redToYellow","seriesType":"bar","opacity":0.2,"markerSize":6,"seriesTypeB":"line","opacityB":0.2,"markerSizeB":6,"show_legend":true,"legendType":"scroll","legendOrientation":"bottom","legendMargin":10,"x_axis_time_format":"smart_date","rich_tooltip":true,"tooltipTimeFormat":"smart_date","truncateXAxis":true,"y_axis_bounds":[null,null],"y_axis_format":"SMART_NUMBER","y_axis_bounds_secondary":[null,null],"y_axis_format_secondary":"SMART_NUMBER","extra_form_data":{},"dashboards":[2],"force":false,"result_format":"json","result_type":"full"},"result_format":"json","result_type":"full"}'
+cache_timeout: null
+uuid: 0f9b90fd-3b0c-426f-bb35-1ac6d1b7d379
+version: 1.0.0
+dataset_uuid: 26a4a8b2-b483-4e02-a1d7-8cfb7cac971e

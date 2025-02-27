@@ -1,0 +1,111 @@
+table_name: alertperlabel
+main_dttm_col: null
+description: null
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+schema: main
+sql:
+  "WITH alert_metrics AS (\n  SELECT \n    strftime('%Y-%m-%d %H:%M', timestamp)\
+  \ as minute,\n    json_extract(event, '$.service') as service,\n    json_extract(event,\
+  \ '$.environment') as environment,\n    json_extract(event, '$.status') as status,\n\
+  \    json_extract(event, '$.severity') as severity,\n    COUNT(*) as event_count\n\
+  \  FROM alert\n  GROUP BY \n    strftime('%Y-%m-%d %H:%M', timestamp),\n    json_extract(event,\
+  \ '$.service'),\n    json_extract(event, '$.environment'),\n    json_extract(event,\
+  \ '$.status'),\n    json_extract(event, '$.severity')\n  ORDER BY minute\n)\nSELECT\
+  \ \n  minute,\n  service,\n  environment,\n  status,\n  severity,\n  event_count\n\
+  FROM alert_metrics;"
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+uuid: 26a4a8b2-b483-4e02-a1d7-8cfb7cac971e
+metrics:
+  - metric_name: count
+    verbose_name: COUNT(*)
+    metric_type: count
+    expression: COUNT(*)
+    description: null
+    d3format: null
+    currency: null
+    extra: null
+    warning_text: null
+columns:
+  - column_name: status
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: STRING
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+  - column_name: environment
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: STRING
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+  - column_name: severity
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: STRING
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+  - column_name: minute
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: STRING
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+  - column_name: event_count
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: INT
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+  - column_name: service
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: null
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: null
+version: 1.0.0
+database_uuid: a31681c4-8e40-4153-aec6-69167d4d2627

@@ -32,6 +32,8 @@ SQLALCHEMY_DATABASE_URI = "sqlite:////app/pythonpath/superset.db"
 KEEP_DATABASE_URI = "sqlite:////shared-db/dbtest.db?check_same_thread=false"
 SECRET_KEY = "u/ZysbeXJxNuQQXLuBTyX2M6QKYMIkMqd9BvEm8XbEiw2NG1mibbMvLO"
 
+"sqlite:////shared-db/github_issues.db?check_same_thread=false"
+
 CORS_OPTIONS = {
     "supports_credentials": True,
     "allow_headers": ["*"],
