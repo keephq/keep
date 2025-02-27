@@ -598,6 +598,7 @@ def test_rule_multiple_alerts(db_session, create_alert):
         },
         timeframe=600,
         timeunit="seconds",
+        require_approve=False,
         definition_cel='(severity == "critical") || (severity == "high")',
         created_by="test@keephq.dev",
         create_on=CreateIncidentOn.ALL.value,
@@ -1616,6 +1617,60 @@ def test_same_incident_in_the_past_id_set(db_session, client, test_app):
     assert incident2.rule_fingerprint == incident1.rule_fingerprint
     assert incident2.user_generated_name == "test-rule"
     assert incident2.same_incident_in_the_past_id == incident1.id
+
+
+def test_correlation_to_incident_candidate(db_session):
+    """
+    Test that a candidate incident is created and not confirmed until explicitly approved,
+    and that the correlation mechanism works correctly for incidents requiring approval.
+    Regression test for https://github.com/keephq/keep/issues/3719
+    """
+
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+
+    # Create a rule that generates incidents based on severity
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={"sql": "N/A", "params": {}},
+        timeframe=600,
+        timeunit="seconds",
+        require_approve=True,
+        definition_cel='severity == "critical"',
+        created_by="test@keephq.dev",
+    )
+
+    # First alert creates an incident
+    alert_dto = AlertDto(
+        id="alert-1",
+        source=["grafana"],
+        name="First critical alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+    )
+
+    alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert_dto.dict(),
+        fingerprint=alert_dto.fingerprint,
+    )
+    db_session.add(alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
+
+    alert_dto.event_id = alert.id
+    results = rules_engine.run_rules([alert_dto], session=db_session)
+    assert len(results) == 1
+    incident = results[0]
+
+    # Ensure the first incident is created
+    assert incident.user_generated_name == "test-rule"
+    assert incident.same_incident_in_the_past_id is None
+    assert incident.is_confirmed is False
+
 
 
 # Next steps:
