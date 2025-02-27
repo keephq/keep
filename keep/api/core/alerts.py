@@ -32,7 +32,7 @@ from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 
 logger = logging.getLogger(__name__)
 
-alerts_hard_limit = int(os.environ.get("KEEP_LAST_ALERTS_LIMIT", 1000))
+alerts_hard_limit = int(os.environ.get("KEEP_LAST_ALERTS_LIMIT", 50000))
 
 alert_field_configurations = [
     FieldMappingConfiguration("source", "filter_provider_type"),
