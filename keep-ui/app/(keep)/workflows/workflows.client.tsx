@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { ChangeEvent, useRef, useState } from "react";
 import { Subtitle } from "@tremor/react";
 import {
   ArrowUpOnSquareStackIcon,
@@ -15,10 +15,10 @@ import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
 import { WorkflowTemplates } from "./mockworkflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/api";
-import { showErrorToast, Input, ErrorComponent } from "@/shared/ui";
+import { Input, ErrorComponent } from "@/shared/ui";
 import { Textarea } from "@/components/ui";
 import { useWorkflowsV2 } from "utils/hooks/useWorkflowsV2";
+import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 
 const EXAMPLE_WORKFLOW_DEFINITIONS = {
   slack: `
@@ -82,6 +82,7 @@ export default function WorkflowsPage() {
           ->last_execution_started: Used for showing the start time of execution in real-time.
   **/
   const { workflows, error, isLoading } = useWorkflowsV2();
+  const { uploadWorkflowFiles } = useWorkflowActions();
 
   if (error) {
     return <ErrorComponent error={error} reset={() => {}} />;
@@ -91,47 +92,22 @@ export default function WorkflowsPage() {
     return <KeepLoader />;
   }
 
-  const onDrop = async (files: any) => {
-    const fileUpload = async (
-      formData: FormData,
-      fName: string,
-      reload: boolean
-    ) => {
-      try {
-        const response = await api.request(`/workflows`, {
-          method: "POST",
-          body: formData,
-        });
+  const onDrop = async (files: ChangeEvent<HTMLInputElement>) => {
+    if (!files.target.files) {
+      return;
+    }
 
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-        if (reload) {
-          window.location.reload();
-        }
-      } catch (error) {
-        if (error instanceof KeepApiError) {
-          showErrorToast(error, `Failed to upload ${fName}: ${error.message}`);
-        } else {
-          showErrorToast(error, "Failed to upload file");
-        }
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-      }
-    };
+    const uploadedWorkflowsIds = await uploadWorkflowFiles(files.target.files);
 
-    const formData = new FormData();
-    var reload = false;
+    if (fileInputRef.current) {
+      // Reset the file input to allow for multiple uploads
+      fileInputRef.current.value = "";
+    }
 
-    for (let i = 0; i < files.target.files.length; i++) {
-      const file = files.target.files[i];
-      const fName = file.name;
-      formData.set("file", file);
-      if (files.target.files.length === i + 1) {
-        reload = true;
-      }
-      await fileUpload(formData, fName, reload);
+    setIsModalOpen(false);
+    if (uploadedWorkflowsIds.length === 1) {
+      // If there is only one file, redirect to the workflow detail page
+      router.push(`/workflows/${uploadedWorkflowsIds[0]}`);
     }
   };
 

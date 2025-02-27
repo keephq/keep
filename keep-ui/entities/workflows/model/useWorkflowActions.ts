@@ -6,6 +6,7 @@ import { Definition } from "@/entities/workflows/model/types";
 import { stringify } from "yaml";
 import { useCallback } from "react";
 import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
+import { KeepApiError } from "@/shared/api/KeepApiError";
 
 function getBodyFromStringOrDefinitionOrObject(
   definition: Definition | string | Record<string, unknown>
@@ -20,6 +21,7 @@ function getBodyFromStringOrDefinitionOrObject(
 }
 
 type UseWorkflowActionsReturn = {
+  uploadWorkflowFiles: (files: FileList) => Promise<string[]>;
   createWorkflow: (
     definition: Definition | string
   ) => Promise<CreateOrUpdateWorkflowResponse | null>;
@@ -42,6 +44,61 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
   const refreshWorkflows = useCallback(() => {
     revalidateMultiple(["/workflows?is_v2=true"], { isExact: true });
   }, [revalidateMultiple]);
+
+  const uploadWorkflowFiles = useCallback(
+    async (files: FileList) => {
+      const uploadFile = async (formData: FormData, fName: string) => {
+        try {
+          const response = await api.request<CreateOrUpdateWorkflowResponse>(
+            `/workflows`,
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+
+          refreshWorkflows();
+
+          return response;
+        } catch (error) {
+          if (error instanceof KeepApiError) {
+            showErrorToast(
+              error,
+              `Failed to upload ${fName}: ${error.message}`
+            );
+          } else {
+            showErrorToast(error, "Failed to upload file");
+          }
+        }
+      };
+
+      const formData = new FormData();
+      const uploadedWorkflowsIds: string[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fName = file.name;
+        formData.set("file", file);
+        const response = await uploadFile(formData, fName);
+        if (response?.workflow_id) {
+          uploadedWorkflowsIds.push(response.workflow_id);
+        }
+      }
+
+      if (uploadedWorkflowsIds.length === 0) {
+        return [];
+      }
+
+      const plural =
+        uploadedWorkflowsIds.length === 1 ? "workflow" : "workflows";
+      refreshWorkflows();
+      showSuccessToast(
+        `${uploadedWorkflowsIds.length} ${plural} uploaded successfully`
+      );
+      return uploadedWorkflowsIds;
+    },
+    [api, refreshWorkflows]
+  );
 
   const createWorkflow = useCallback(
     async (definition: Definition | string) => {
@@ -120,5 +177,6 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
     createWorkflow,
     updateWorkflow,
     deleteWorkflow,
+    uploadWorkflowFiles,
   };
 }

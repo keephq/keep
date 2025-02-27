@@ -177,7 +177,7 @@ export function WorkflowBuilderWidget({
           </div>
         </div>
         <WorkflowBuilderCard
-          fileContents={fileContents}
+          loadedYamlFileContents={fileContents}
           workflowRaw={workflowRaw}
           workflowId={workflowId}
           standalone={standalone}

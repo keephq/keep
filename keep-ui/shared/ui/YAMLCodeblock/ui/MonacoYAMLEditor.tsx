@@ -6,10 +6,7 @@ import { Button } from "@tremor/react";
 import { LogEntry } from "@/shared/api/workflow-executions";
 import { getStepStatus } from "@/shared/lib/logs-utils";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import {
-  getOrderedWorkflowYamlString,
-  parseWorkflowYamlStringToJSON,
-} from "@/entities/workflows/lib/reorderWorkflowSections";
+import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/reorderWorkflowSections";
 import "./MonacoYAMLEditor.css";
 
 interface Props {
@@ -23,6 +20,7 @@ interface Props {
   selectedStep?: string | null;
   setSelectedStep?: (step: string | null) => void;
   readOnly?: boolean;
+  "data-testid"?: string;
 }
 
 const MonacoYAMLEditor = ({
@@ -36,6 +34,7 @@ const MonacoYAMLEditor = ({
   selectedStep,
   setSelectedStep,
   readOnly = false,
+  "data-testid": dataTestId = "yaml-editor",
 }: Props) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const { updateWorkflow } = useWorkflowActions();
@@ -69,6 +68,7 @@ const MonacoYAMLEditor = ({
 
   const stepDecorationsRef = useRef<string[]>([]);
   const hoverDecorationsRef = useRef<string[]>([]);
+  const [isEditorMounted, setIsEditorMounted] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
@@ -361,6 +361,8 @@ const MonacoYAMLEditor = ({
         disposable.dispose();
       };
     }
+
+    setIsEditorMounted(true);
   };
 
   useEffect(() => {
@@ -433,7 +435,10 @@ const MonacoYAMLEditor = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div
+      className="w-full h-full flex flex-col"
+      data-testid={dataTestId + "-container"}
+    >
       <div
         className="relative flex-1 min-h-0"
         style={{ height: "calc(100vh - 300px)" }}
@@ -447,6 +452,7 @@ const MonacoYAMLEditor = ({
               onClick={handleSaveWorkflow}
               variant="secondary"
               disabled={!hasChanges}
+              data-testid="save-yaml-button"
             >
               <Save className="h-4 w-4" />
             </Button>
@@ -457,6 +463,8 @@ const MonacoYAMLEditor = ({
             className="h-8 px-2 bg-white"
             onClick={copyToClipboard}
             variant="secondary"
+            data-testid="copy-yaml-button"
+            disabled={!isEditorMounted}
           >
             {isCopied ? (
               <Check className="h-4 w-4 text-green-500" />
@@ -470,11 +478,14 @@ const MonacoYAMLEditor = ({
             className="h-8 px-2 bg-white"
             onClick={downloadYaml}
             variant="secondary"
+            data-testid="download-yaml-button"
+            disabled={!isEditorMounted}
           >
             <Download className="h-4 w-4" />
           </Button>
         </div>
         <Editor
+          wrapperProps={{ "data-testid": dataTestId }}
           height="100%"
           defaultLanguage="yaml"
           defaultValue={getOrderedWorkflowYamlString(workflowRaw)}
