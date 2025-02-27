@@ -53,7 +53,9 @@ class AwsSecretManager(BaseSecretManager):
                     try:
                         # Create new secret if it doesn't exist
                         self.client.create_secret(
-                            Name=secret_name, SecretString=secret_value
+                            Name=secret_name,
+                            SecretString=secret_value,
+                            KmsKeyId=os.environ.get("AWS_KMS_KEY_ID", None),
                         )
                         self.logger.info(
                             "Secret created successfully",
