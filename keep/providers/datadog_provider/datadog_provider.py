@@ -22,7 +22,6 @@ from datadog_api_client.exceptions import (
     ForbiddenException,
     NotFoundException,
 )
-from datadog_api_client.v1.api.events_api import EventsApi
 from datadog_api_client.v1.api.logs_api import LogsApi
 from datadog_api_client.v1.api.metrics_api import MetricsApi
 from datadog_api_client.v1.api.monitors_api import MonitorsApi
@@ -31,6 +30,9 @@ from datadog_api_client.v1.model.monitor import Monitor
 from datadog_api_client.v1.model.monitor_options import MonitorOptions
 from datadog_api_client.v1.model.monitor_thresholds import MonitorThresholds
 from datadog_api_client.v1.model.monitor_type import MonitorType
+
+# from datadog_api_client.v1.api.events_api import EventsApi
+from datadog_api_client.v2.api.events_api import EventsApi
 from datadog_api_client.v2.api.incidents_api import IncidentsApi
 from datadog_api_client.v2.api.service_definition_api import ServiceDefinitionApi
 from datadog_api_client.v2.api.users_api import UsersApi, UsersResponse
@@ -745,10 +747,12 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
             end = datetime.datetime.now()
             # tb: we can make timedelta configurable by the user if we want
             start = datetime.datetime.now() - datetime.timedelta(days=1)
+            filter_from = str(int(start.timestamp() * 1000))
+            filter_to = str(int(end.timestamp() * 1000))
             results = api.list_events(
-                start=int(start.timestamp()),
-                end=int(end.timestamp()),
-                tags="source:alert",
+                filter_from=filter_from,
+                filter_to=filter_to,
+                filter_query="source:alert",
             )
             # Filter out events that are related to this monitor only
             # tb: We might want to exclude some fields from event.to_dict() but let's wait for user feedback
@@ -839,9 +843,12 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
                         api = EventsApi(api_client)
                         end = datetime.datetime.now()
                         start = datetime.datetime.now() - datetime.timedelta(hours=1)
-                        api.list_events(
-                            start=int(start.timestamp()), end=int(end.timestamp())
-                        )
+
+                        # Convert to milliseconds and ensure they're strings
+                        filter_from = str(int(start.timestamp() * 1000))
+                        filter_to = str(int(end.timestamp() * 1000))
+                        api.list_events(filter_from=filter_from, filter_to=filter_to)
+
                     elif scope.name == "apm_read":
                         api_instance = ServiceDefinitionApi(api_client)
                         api_instance.list_service_definitions(schema_version="v1")
@@ -929,10 +936,13 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
             end = datetime.datetime.now()
             # tb: we can make timedelta configurable by the user if we want
             start = datetime.datetime.now() - datetime.timedelta(days=14)
+            # Convert to milliseconds and ensure they're strings
+            filter_from = str(int(start.timestamp() * 1000))
+            filter_to = str(int(end.timestamp() * 1000))
             results = api.list_events(
-                start=int(start.timestamp()),
-                end=int(end.timestamp()),
-                tags="source:alert",
+                filter_from=filter_from,
+                filter_to=filter_to,
+                filter_query="source:alert",
             )
             events = results.get("events", [])
             for event in events:
