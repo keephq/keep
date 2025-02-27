@@ -145,18 +145,19 @@ class RulesEngine:
 
                             rule_groups = self._extract_subrules(rule.definition_cel)
 
-                            if rule.create_on == "any" or (
-                                rule.create_on == "all"
-                                and len(rule_groups) == len(matched_rules)
-                            ):
-                                self.logger.info(
-                                    "Single event is enough, so creating incident"
-                                )
-                                incident.is_confirmed = True
-                            elif rule.create_on == "all":
-                                incident = self._process_event_for_history_based_rule(
-                                    incident, rule, session
-                                )
+                            if not rule.require_approve:
+                                if rule.create_on == "any" or (
+                                    rule.create_on == "all"
+                                    and len(rule_groups) == len(matched_rules)
+                                ):
+                                    self.logger.info(
+                                        "Single event is enough, so creating incident"
+                                    )
+                                    incident.is_confirmed = True
+                                elif rule.create_on == "all":
+                                    incident = self._process_event_for_history_based_rule(
+                                        incident, rule, session
+                                    )
 
                             send_created_event = incident.is_confirmed
 
