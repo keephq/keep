@@ -1,0 +1,19 @@
+id: run-gh-action
+name: Test Docs one more time
+description: Running GitHub action
+triggers:
+  - type: manual
+
+actions:
+  - name: run-gh-action
+    provider:
+      config: "{{ providers.github }}"
+      type: github
+      with:
+        run_action: true
+        repo_owner: keephq
+        repo_name: keep
+        workflow: test-docs.yml
+        inputs:
+          input1: value1
+          input2: value2
