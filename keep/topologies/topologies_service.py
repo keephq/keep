@@ -706,11 +706,49 @@ class TopologiesService:
             session.close()
 
     @staticmethod
+    def clean_before_import(tenant_id: str, session: Session):
+        """Removes all services and applications for a given tenant before importing a new topology."""
+        try:
+            # Delete all dependencies for this tenant
+            session.query(TopologyServiceDependency).filter(
+                TopologyServiceDependency.service.has(
+                    TopologyService.tenant_id == tenant_id
+                )
+            ).delete(synchronize_session=False)
+    
+            # Delete all service-application links for this tenant
+            session.query(TopologyServiceApplication).filter(
+                TopologyServiceApplication.service.has(
+                    TopologyService.tenant_id == tenant_id
+                )
+            ).delete(synchronize_session=False)
+    
+            # Delete all applications for this tenant
+            session.query(TopologyApplication).filter(
+                TopologyApplication.tenant_id == tenant_id
+            ).delete(synchronize_session=False)
+    
+            # Delete all services for this tenant
+            session.query(TopologyService).filter(
+                TopologyService.tenant_id == tenant_id
+            ).delete(synchronize_session=False)
+    
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error during cleanup before import: {e}")
+            raise e
+        
+
+    @staticmethod
     def import_to_db(topology_data: dict, session: Session, tenant_id: str):
         all_services: list[TopologyServiceYAML] = []
         all_applications: list[TopologyApplicationDtoIn] = []
         all_dependencies: list[TopologyServiceDependencyCreateRequestDto] = []
         try:
+            # Clean existing data for the tenant before import
+            TopologiesService.clean_before_import(tenant_id=tenant_id, session=session)
+
             for service in topology_data["services"]:
                 all_services.append(TopologyServiceYAML(**service))
 
