@@ -15,7 +15,7 @@ import { WorkflowMetadataModal } from "@/features/workflows/edit-metadata";
 import { WorkflowTestRunModal } from "@/features/workflows/test-run";
 import { WorkflowEnabledSwitch } from "@/features/workflows/enable-disable";
 import { WorkflowSyncStatus } from "@/app/(keep)/workflows/[workflow_id]/workflow-sync-status";
-import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/reorderWorkflowSections";
+import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 import clsx from "clsx";
 
 export interface WorkflowBuilderWidgetProps {

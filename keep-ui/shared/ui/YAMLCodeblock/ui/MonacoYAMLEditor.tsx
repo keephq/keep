@@ -6,7 +6,7 @@ import { Button } from "@tremor/react";
 import { LogEntry } from "@/shared/api/workflow-executions";
 import { getStepStatus } from "@/shared/lib/logs-utils";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/reorderWorkflowSections";
+import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 import "./MonacoYAMLEditor.css";
 
 interface Props {

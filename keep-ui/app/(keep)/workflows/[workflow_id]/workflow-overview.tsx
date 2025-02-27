@@ -10,7 +10,7 @@ import { ExecutionTable } from "./workflow-execution-table";
 import { WorkflowOverviewSkeleton } from "./workflow-overview-skeleton";
 import { WorkflowProviders } from "./workflow-providers";
 import { WorkflowSteps } from "../mockworkflows";
-import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/reorderWorkflowSections";
+import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 interface Pagination {
   limit: number;
   offset: number;

@@ -16,7 +16,7 @@ import {
   YamlThresholdCondition,
   YamlWorkflowDefinition,
 } from "@/entities/workflows/model/yaml.types";
-import { parseWorkflowYamlStringToJSON } from "./reorderWorkflowSections";
+import { parseWorkflowYamlStringToJSON } from "./yaml-utils";
 
 function getActionOrStepObj(
   actionOrStep: YamlStepOrAction,
