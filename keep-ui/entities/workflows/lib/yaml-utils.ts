@@ -1,4 +1,4 @@
-import { parseDocument, Document } from "yaml";
+import { parseDocument, Document, YAMLMap, Pair, Scalar } from "yaml";
 
 const YAML_STRINGIFY_OPTIONS = {
   indent: 2,
@@ -22,7 +22,6 @@ export function getOrderedWorkflowYamlString(yamlString: string) {
  * @returns
  */
 function orderDocument(doc: Document) {
-  const workflowSeq = doc.get("workflow");
   const fieldsOrder = [
     "id",
     "name",
@@ -40,10 +39,14 @@ function orderDocument(doc: Document) {
   const providerFieldsOrder = ["config", "type", "with"];
   // TODO: sort step props and provider props according to the order of the fields
   try {
-    workflowSeq.items.sort((a, b) => {
+    const workflowSeq = doc.get("workflow");
+    if (!workflowSeq || !(workflowSeq instanceof YAMLMap)) {
+      throw new Error("Workflow section not found");
+    }
+    workflowSeq.items.sort((a: Pair, b: Pair) => {
       // TODO: sort according to the order of the sections
-      const aIndex = fieldsOrder.indexOf(a.key.value);
-      const bIndex = fieldsOrder.indexOf(b.key.value);
+      const aIndex = fieldsOrder.indexOf((a.key as Scalar).value as string);
+      const bIndex = fieldsOrder.indexOf((b.key as Scalar).value as string);
       return aIndex > bIndex ? 1 : -1;
     });
   } catch (error) {
