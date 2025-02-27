@@ -1,0 +1,99 @@
+table_name: automationsnew
+main_dttm_col: execution_time
+description: null
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+schema: main
+sql:
+  "WITH execution_stats AS (\n  SELECT \n    w.name as workflow_name,\n    COUNT(CASE\
+  \ WHEN we.status = 'COMPLETED' THEN 1 END) as successful_executions,\n    COUNT(*)\
+  \ as total_executions,\n    ROUND(COUNT(CASE WHEN we.status = 'COMPLETED' THEN 1\
+  \ END) * 100.0 / NULLIF(COUNT(*), 0), 2) as success_rate,\n    we.started as execution_time\n\
+  \  FROM workflow w\n  LEFT JOIN workflowexecution we ON w.id = we.workflow_id \n\
+  \  WHERE w.is_deleted = FALSE \n    AND w.is_disabled = FALSE\n  GROUP BY w.name,\
+  \ we.started\n)\nSELECT \n  workflow_name,\n  successful_executions,\n  total_executions,\n\
+  \  success_rate,\n  execution_time\nFROM execution_stats"
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+uuid: 6d9b78fd-f462-4e2a-9972-70bc18a1a014
+metrics:
+  - metric_name: count
+    verbose_name: COUNT(*)
+    metric_type: count
+    expression: COUNT(*)
+    description: null
+    d3format: null
+    currency: null
+    extra:
+      warning_markdown: ""
+    warning_text: null
+columns:
+  - column_name: success_rate
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: FLOAT
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: {}
+  - column_name: workflow_name
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: STRING
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: {}
+  - column_name: total_executions
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: INT
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: {}
+  - column_name: successful_executions
+    verbose_name: null
+    is_dttm: false
+    is_active: true
+    type: INT
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: {}
+  - column_name: execution_time
+    verbose_name: null
+    is_dttm: true
+    is_active: true
+    type: null
+    advanced_data_type: null
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    python_date_format: null
+    extra: {}
+version: 1.0.0
+database_uuid: a31681c4-8e40-4153-aec6-69167d4d2627

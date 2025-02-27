@@ -223,3 +223,6 @@ keep/providers/grafana_provider/grafana/png/*
 superset/shared-db/
 superset/dbs/
 keepdemo.db.backup
+
+scripts/repo.py
+scripts/repo.json
