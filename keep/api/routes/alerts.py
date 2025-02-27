@@ -15,6 +15,7 @@ from arq import ArqRedis
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pusher import Pusher
+from sqlalchemy_utils import UUIDType
 from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
@@ -820,8 +821,12 @@ def _enrich_alert(
         )
         if dispose_on_new_alert:
             # Create instance-wide enrichment for history
+
+            # For better database-native UUID support
+            alert_id = UUIDType(binary=False).process_bind_param(last_alert.alert_id, session.bind.dialect)
+
             enrichement_bl.enrich_entity(
-                fingerprint=str(last_alert.alert_id),
+                fingerprint=alert_id,
                 enrichments=enrich_data.enrichments,
                 action_type=action_type,
                 action_callee=authenticated_entity.email,
