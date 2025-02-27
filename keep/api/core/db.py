@@ -1893,7 +1893,7 @@ def create_incident_for_grouping_rule(
             user_generated_name=incident_name or f"{rule.name}",
             rule_id=rule.id,
             rule_fingerprint=rule_fingerprint,
-            is_predicted=False,
+            is_predicted=True,
             is_confirmed=rule.create_on == CreateIncidentOn.ANY.value
             and not rule.require_approve,
             incident_type=IncidentType.RULE.value,
