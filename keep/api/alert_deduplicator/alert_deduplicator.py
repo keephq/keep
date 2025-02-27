@@ -467,7 +467,7 @@ class AlertDeduplicator:
 
         if "null" in provider_key:
             # for linked providers without an id ("main")
-            # see this ticket -
+            # see this ticket - https://github.com/keephq/keep/issues/3729
             provider_key = provider_key.replace("null", "None")
             rule.provider_id = None
         for p in installed_providers + linked_providers:
