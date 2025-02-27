@@ -35,3 +35,28 @@ for i in {1..100}; do
   }"
 done
 ```
+
+3. To add authentication to VictoriaLogs, you can use [VMauth](https://docs.victoriametrics.com/vmauth/) from VictoriaMetrics.
+
+4. Just download `vmutils-*` archive from [releases page](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/latest), unpack it and pass the following flag to vmauth binary in order to start authorizing and proxying requests
+
+```bash
+/path/to/vmauth -auth.config=/path/to/auth/config.yml
+```
+
+5. Use the following configuration as config.yml
+
+```yaml
+users:
+- bearer_token: "1234"
+  url_prefix: "http://localhost:9428"
+
+- bearer_token: "123"
+  url_prefix: "http://localhost:9428"
+  headers:
+  - "X-Scope-OrgID: foobar"
+
+- username: "admin"
+  password: "1234"
+  url_prefix: "http://localhost:9428"
+```

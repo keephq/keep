@@ -13,6 +13,20 @@ VictoriaLogs is open source user-friendly database for logs from VictoriaMetrics
 The VictoriaLogs provider requires the following authentication parameters:
 
 - `VictoriaLogs Host URL`: The URL of the VictoriaLogs instance.
+- `Authentication Type` : The type of authentication to use. Supported types are `NoAuth`, `Basic`, and `Bearer`.
+
+Note: To add authentication VMAuth should be configured. For more information, refer to the [VMauth documentation](https://docs.victoriametrics.com/vmauth/).
+
+### NoAuth
+- No additional parameters are required, only the `Grafana Loki Host URL` is required.
+
+### HTTP basic authentication
+- `HTTP basic authentication - Username`: The username to use for HTTP basic authentication.
+- `HTTP basic authentication - Password`: The password to use for HTTP basic authentication.
+
+### Bearer
+- `Bearer Token` : The bearer token to use for authentication.
+- `X-Scope-OrgID Header`: The organization ID to use for VictoriaLogs Multi-tenancy support. (Optional)
 
 ## Querying VictoriaLogs
 
@@ -50,3 +64,4 @@ The VictoriaLogs provider allows you to query logs from VictoriaLogs through the
 ## Useful Links
 
 - [VictoriaLogs](https://docs.victoriametrics.com/victorialogs/)
+- [VMauth documentation](https://docs.victoriametrics.com/vmauth/)

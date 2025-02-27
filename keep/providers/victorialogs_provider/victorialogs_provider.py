@@ -4,7 +4,9 @@ VictoriaLogsProvider is a class that allows you to query logs from VictoriaLogs.
 import dataclasses
 
 import json
+import base64
 import pydantic
+import typing
 import requests
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -28,6 +30,62 @@ class VictorialogsProviderAuthConfig:
         }
     )
 
+    authentication_type: typing.Literal["NoAuth", "Basic", "Bearer"] = dataclasses.field(
+        default=typing.cast(typing.Literal["NoAuth", "Basic", "Bearer"], "NoAuth"),
+        metadata={
+            "required": True,
+            "description": "Authentication Type",
+            "type": "select",
+            "options": ["NoAuth", "Basic", "Bearer"],
+        },
+    )
+
+    # Basic Authentication
+    username: typing.Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "HTTP basic authentication - Username",
+            "sensitive": False,
+            "config_sub_group": "basic_authentication",
+            "config_main_group": "authentication",
+        },
+    )
+
+    password: typing.Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "HTTP basic authentication - Password",
+            "sensitive": True,
+            "config_sub_group": "basic_authentication",
+            "config_main_group": "authentication",
+        },
+    )
+
+    # Bearer Token
+    bearer_token: typing.Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "Bearer Token",
+            "sensitive": True,
+            "config_sub_group": "bearer_token",
+            "config_main_group": "authentication",
+        },
+    )
+
+    x_scope_orgid: typing.Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "X-Scope-OrgID Header",
+            "sensitive": False,
+            "config_sub_group": "bearer_token",
+            "config_main_group": "authentication",
+        },
+    )
+
 class VictorialogsProvider(BaseProvider):
     """
     VictoriaLogsProvider is a class that allows
@@ -38,8 +96,8 @@ class VictorialogsProvider(BaseProvider):
 
     PROVIDER_SCOPES = [
         ProviderScope(
-            name="valid_instance",
-            description="The instance is valid",
+            name="authenticated",
+            description="The instance is valid and the user is authenticated",
         ),
     ]
 
@@ -69,6 +127,7 @@ class VictorialogsProvider(BaseProvider):
             url = self._get_url("/")
             response = requests.get(
                 url=url,
+                headers=self.generate_auth_headers()
             )
 
             if response.status_code != 200:
@@ -76,14 +135,33 @@ class VictorialogsProvider(BaseProvider):
 
             self.logger.info("Successfully validate scopes")
 
-            return {"valid_instance": True}
+            return {"authenticated": True}
         
         except Exception as e:
             self.logger.exception("Failed to validate scopes", extra={"error": str(e)})
-            return {"valid_instance": str(e)}
+            return {"authenticated": str(e)}
 
     def _get_url(self, endpoint: str):
         return f"{self.authentication_config.host_url}{endpoint}"
+    
+    def generate_auth_headers(self):
+        """
+        Generate the authentication headers.
+        """
+        if self.authentication_config.authentication_type == "Basic":
+            credentials = f"{self.authentication_config.username}:{self.authentication_config.password}".encode("utf-8")
+            encoded_credentials = base64.b64encode(credentials).decode("utf-8")
+            return {
+                "Authorization": f"Basic {encoded_credentials}"
+            }
+        
+        if self.authentication_config.authentication_type == "Bearer":
+            headers = {}
+            if self.authentication_config.bearer_token:
+                headers["Authorization"] = f"Bearer {self.authentication_config.bearer_token}"
+            if self.authentication_config.x_scope_orgid:
+                headers["X-Scope-OrgID"] = self.authentication_config.x_scope_orgid
+            return headers
     
     def _convert_to_json(self, response: str) -> dict:
         """
@@ -111,10 +189,11 @@ class VictorialogsProvider(BaseProvider):
             }
             params = {k: v for k, v in params.items() if v}
 
-            headers = {
+            headers = self.generate_auth_headers()
+            headers.update({
                 "AccountID": account_id,
                 "ProjectID": project_id
-            }
+            })
             headers = {k: v for k, v in headers.items() if v}
 
             response = requests.post(
@@ -140,10 +219,11 @@ class VictorialogsProvider(BaseProvider):
             }
             params = {k: v for k, v in params.items() if v}
 
-            headers = {
+            headers = self.generate_auth_headers()
+            headers.update({
                 "AccountID": account_id,
                 "ProjectID": project_id
-            }
+            })
             headers = {k: v for k, v in headers.items() if v}
 
             response = requests.post(
@@ -170,6 +250,7 @@ class VictorialogsProvider(BaseProvider):
             response = requests.post(
                 url=url,
                 data=params,
+                headers=self.generate_auth_headers()
             )
 
             try:
@@ -192,6 +273,7 @@ class VictorialogsProvider(BaseProvider):
             response = requests.post(
                 url=url,
                 data=params,
+                headers=self.generate_auth_headers()
             )
 
             try:
