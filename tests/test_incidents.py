@@ -1633,6 +1633,3 @@ def test_correlation_with_mapping(db_session, create_alert):
 
     assert total == 1
     assert incidents[0].alerts_count == 3
-
-
-def test
