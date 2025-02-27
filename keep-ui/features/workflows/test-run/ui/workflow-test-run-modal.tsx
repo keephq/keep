@@ -13,10 +13,14 @@ import Modal from "@/components/ui/Modal";
 import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
 import { stringify } from "yaml";
 import { v4 as uuidv4 } from "uuid";
+import { Button } from "@/components/ui";
+import { PlayIcon } from "@heroicons/react/20/solid";
 
 // It listens for the runRequestCount and triggers the test run of the workflow, opening the modal with the results.
-export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
-  const { definition, runRequestCount } = useWorkflowStore();
+export function WorkflowTestRunButton({ workflowId }: { workflowId: string }) {
+  const { definition } = useWorkflowStore();
+  const isValid = useWorkflowStore((state) => !!state.definition?.isValid);
+
   const api = useApi();
   const [testRunModalOpen, setTestRunModalOpen] = useState(false);
   const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<
@@ -30,13 +34,6 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
     setRunningWorkflowExecution(null);
   };
 
-  useEffect(() => {
-    if (runRequestCount) {
-      testRunWorkflow();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runRequestCount]);
-
   const testRunWorkflow = () => {
     if (!definition?.value) {
       showErrorToast(new Error("Workflow is not initialized"));
@@ -46,6 +43,7 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
       showErrorToast(new Error("Workflow is already running"));
       return;
     }
+    // TODO: handle workflows with alert triggers, like in useWorkflowRun.ts
     const requestId = uuidv4();
     currentRequestId.current = requestId;
     setTestRunModalOpen(true);
@@ -86,16 +84,30 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
   };
 
   return (
-    <Modal
-      isOpen={testRunModalOpen}
-      onClose={closeWorkflowExecutionResultsModal}
-      className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
-    >
-      <BuilderWorkflowTestRunModalContent
-        closeModal={closeWorkflowExecutionResultsModal}
-        workflowExecution={runningWorkflowExecution}
-        workflowId={workflowId ?? ""}
-      />
-    </Modal>
+    <>
+      <Button
+        variant="primary"
+        color="orange"
+        size="md"
+        className="min-w-28 disabled:opacity-70"
+        icon={PlayIcon}
+        disabled={!isValid}
+        // TODO: check if it freezes UI
+        onClick={testRunWorkflow}
+      >
+        Test Run
+      </Button>
+      <Modal
+        isOpen={testRunModalOpen}
+        onClose={closeWorkflowExecutionResultsModal}
+        className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
+      >
+        <BuilderWorkflowTestRunModalContent
+          closeModal={closeWorkflowExecutionResultsModal}
+          workflowExecution={runningWorkflowExecution}
+          workflowId={workflowId ?? ""}
+        />
+      </Modal>
+    </>
   );
 }

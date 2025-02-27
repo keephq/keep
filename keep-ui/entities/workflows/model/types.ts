@@ -400,12 +400,12 @@ export interface WorkflowStateValues {
   // UI
   editorOpen: boolean;
   saveRequestCount: number;
-  runRequestCount: number;
+  testRunRequestCount: number;
 }
 
 export interface WorkflowState extends WorkflowStateValues {
   triggerSave: () => void;
-  triggerRun: () => void;
+  triggerTestRun: () => void;
   setIsSaving: (state: boolean) => void;
   setCanDeploy: (deploy: boolean) => void;
   setEditorSynced: (sync: boolean) => void;
