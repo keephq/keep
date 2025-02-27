@@ -1,0 +1,25 @@
+workflow:
+  id: thousandeyes-alert-notification
+  description: Fetch alerts from ThousandEyes and notify via Slack.
+  triggers:
+    - type: manual 
+  providers:
+    - type: thousandeyes
+      config: "{{ providers.thousandeyes }}" 
+    - type: slack
+      config: "{{ providers.slack }}" 
+  actions:
+    - name: fetch-thousandeyes-alerts
+      provider:
+        type: thousandeyes
+        config: "{{ providers.thousandeyes }}"
+        with:
+          action: get_alerts
+    - name: notify-slack-alerts
+      if: "len(keep.get_step_results('fetch-thousandeyes-alerts')) > 0"
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+        with:
+          message: |
+            "New ThousandEyes Alerts: {{ keep.get_step_results('fetch-thousandeyes-alerts') }}"
