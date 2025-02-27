@@ -3,6 +3,7 @@ import time
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+from sqlalchemy import text
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -704,3 +705,107 @@ def test_run_mapping_rules_enrichments_filtering(mock_session, mock_alert_dto):
     assert mock_alert_dto.service == "high_priority_service"
     assert mock_alert_dto.team == "on-call"
     assert mock_alert_dto.priority == "P1"
+
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_disposable_enrichment_and_alert_history(
+    db_session, client, test_app, mock_alert_dto
+):
+    """
+    Test instance-level enrichment with disposal and verify the alert-history endpoint.
+    """
+
+    # STEP 1: Add a mapping rule to the database for enrichment
+    rule = MappingRule(
+        id=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        priority=1,
+        matchers=[["name"], ["severity"]],
+        rows=[
+            {"name": "Test Alert", "service": "new_service"},
+            {"severity": "high", "service": "high_severity_service"},
+        ],
+        name="disposal_rule",
+        disabled=False,
+        type="csv",
+    )
+    db_session.add(rule)
+    db_session.commit()
+
+    # STEP 2: Send a new alert event
+    response = client.post(
+        "/alerts/event",
+        headers={"x-api-key": "some-key"},
+        json=mock_alert_dto.dict(),
+    )
+    assert response.status_code == 202
+
+    while client.get(f"/alerts/{mock_alert_dto.fingerprint}", headers={"x-api-key": "some-key"}).status_code != 200:
+        time.sleep(0.1)
+
+    # STEP 3: Send a disposable enrichment to the alert
+    disposable_enrichment = {
+        "fingerprint": mock_alert_dto.fingerprint,
+        "enrichments": {"status": "acknowledged"},
+    }
+    response = client.post(
+        "/alerts/enrich?dispose_on_new_alert=true",
+        headers={"x-api-key": "some-key"},
+        json=disposable_enrichment,
+    )
+    assert response.status_code == 200
+
+    # STEP 4: Verify the alert reflects the disposable enrichment
+    response = client.get(
+        "/preset/feed/alerts",
+        headers={"x-api-key": "some-key"},
+    )
+    alerts = response.json()
+    assert len(alerts) == 1
+    alert = alerts[0]
+    assert alert["status"] == "acknowledged", "Disposable enrichment not applied"
+
+    # STEP 5: Send a new alert with the same fingerprint and ensure enrichment is reset
+    mock_alert_dto.status = "firing"  # Reset status to firing
+    setattr(mock_alert_dto, "avoid_dedup", "test-value")  # Ensure no deduplication
+    response = client.post(
+        "/alerts/event",
+        headers={"x-api-key": "some-key"},
+        json=mock_alert_dto.dict(),
+    )
+    assert response.status_code == 202
+
+    # 1 enrichment for fingerprint + 1 for alert.id
+    assert db_session.execute(text("SELECT count(1) from alertenrichment")).scalar() == 2
+
+    # Verify the disposable enrichment is reset
+    response = client.get(
+        "/preset/feed/alerts",
+        headers={"x-api-key": "some-key"},
+    )
+    alerts = response.json()
+    while alerts[0]["status"] != "firing":
+        time.sleep(0.1)
+        response = client.get(
+            "/preset/feed/alerts",
+            headers={"x-api-key": "some-key"},
+        )
+        alerts = response.json()
+
+    assert len(alerts) == 1
+    alert = alerts[0]
+    assert alert["status"] == "firing", "Disposable enrichment was not reset"
+
+    # STEP 6: Validate alert history reflects known changes
+    response = client.get(
+        f"/alerts/{mock_alert_dto.fingerprint}/history",
+        headers={"x-api-key": "some-key"},
+    )
+    assert response.status_code == 200
+    history_entries = response.json()
+    assert len(history_entries) >= 2, "History does not record all changes"
+
+    # Verify the history reflects status transitions
+    statuses = [entry["status"] for entry in history_entries]
+    assert "acknowledged" in statuses, "Acknowledged state missing in history"
+    assert "firing" in statuses, "Firing state missing in history"
