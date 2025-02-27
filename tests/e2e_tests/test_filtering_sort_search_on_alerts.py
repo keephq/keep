@@ -531,7 +531,8 @@ def test_alerts_stream(browser):
     expect(
         browser.locator("[data-testid='alerts-table'] table tbody tr")
     ).to_have_count(len(simulated_alerts))
-    current_alerts = query_allerts(cell_query=cel_to_filter_alerts)["results"]
+    query_result = query_allerts(cell_query=cel_to_filter_alerts, limit=1000)
+    current_alerts = query_result["results"]
     assert_facet(browser, facet_name, current_alerts, alert_property_name)
 
     assert_alerts_by_column(
