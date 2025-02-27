@@ -1038,6 +1038,10 @@ Example: 'node_123__empty_true'`,
   //   },
   // });
 
+  const handleSubmitMessage = useCallback((_message: string) => {
+    capture("workflow_chat_message_submitted");
+  }, []);
+
   const [debugInfoVisible, setDebugInfoVisible] = useState(false);
   const chatInstructions =
     GENERAL_INSTRUCTIONS +
@@ -1091,6 +1095,7 @@ Example: 'node_123__empty_true'`,
             "For example: For each alert about CPU > 80%, send a slack message to the channel #alerts",
         }}
         className="h-full flex-1"
+        onSubmitMessage={handleSubmitMessage}
       />
     </div>
   );
