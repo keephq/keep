@@ -1,0 +1,44 @@
+slice_name: Automations Per Workflow
+description: null
+certified_by: null
+certification_details: null
+viz_type: gauge_chart
+params:
+  datasource: 17__table
+  viz_type: gauge_chart
+  slice_id: 12
+  groupby:
+    - workflow_name
+  metric: count
+  adhoc_filters:
+    - clause: WHERE
+      comparator: No filter
+      expressionType: SIMPLE
+      operator: TEMPORAL_RANGE
+      subject: execution_time
+  row_limit: 1000
+  start_angle: 225
+  end_angle: -45
+  color_scheme: redToYellow
+  font_size: 10
+  number_format: SMART_NUMBER
+  value_formatter: "{value}"
+  show_pointer: true
+  animation: true
+  show_axis_tick: false
+  show_split_line: false
+  split_number: 10
+  show_progress: true
+  overlap: true
+  round_cap: true
+  extra_form_data: {}
+  dashboards:
+    - 2
+query_context:
+  '{"datasource":{"id":17,"type":"table"},"force":false,"queries":[{"filters":[{"col":"execution_time","op":"TEMPORAL_RANGE","val":"No
+  filter"}],"extras":{"having":"","where":""},"applied_time_extras":{},"columns":["workflow_name"],"metrics":["count"],"annotation_layers":[],"row_limit":1000,"series_limit":0,"order_desc":true,"url_params":{},"custom_params":{},"custom_form_data":{}}],"form_data":{"datasource":"17__table","viz_type":"gauge_chart","slice_id":12,"groupby":["workflow_name"],"metric":"count","adhoc_filters":[{"clause":"WHERE","comparator":"No
+  filter","expressionType":"SIMPLE","operator":"TEMPORAL_RANGE","subject":"execution_time"}],"row_limit":1000,"start_angle":225,"end_angle":-45,"color_scheme":"redToYellow","font_size":10,"number_format":"SMART_NUMBER","value_formatter":"{value}","show_pointer":true,"animation":true,"show_axis_tick":false,"show_split_line":false,"split_number":10,"show_progress":true,"overlap":true,"round_cap":true,"extra_form_data":{},"dashboards":[2],"force":false,"result_format":"json","result_type":"full"},"result_format":"json","result_type":"full"}'
+cache_timeout: null
+uuid: 9db029e0-ff8f-481b-af57-2be82bc3db62
+version: 1.0.0
+dataset_uuid: 6d9b78fd-f462-4e2a-9972-70bc18a1a014

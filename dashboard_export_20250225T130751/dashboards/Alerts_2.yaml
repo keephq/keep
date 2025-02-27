@@ -1,0 +1,282 @@
+dashboard_title: Alerts
+description: null
+css:
+  "/* Filter bar background */\ndiv[data-test=filter-bar] > div {\n  background:\
+  \ #fff3e0;\n}\n\n/* Filter buttons */\n.filter-card .ant-select-selector,\n.filter-card\
+  \ .ant-picker,\n.filter-card .ant-input-number,\n.filter-card .ant-input {\n  border-color:\
+  \ #ff9800 !important;\n}\n\n/* Active filter states */\n.filter-card .ant-select-focused\
+  \ .ant-select-selector,\n.filter-card .ant-picker-focused,\n.filter-card .ant-input-number-focused,\n\
+  .filter-card .ant-input-focused {\n  border-color: #f57c00 !important;\n  box-shadow:\
+  \ 0 0 0 2px rgba(255, 152, 0, 0.2) !important;\n}\n\n/* Filter dropdowns */\n.ant-select-dropdown\
+  \ {\n  border: 1px solid #ff9800;\n}\n\n/* Selected filter options */\n.ant-select-item-option-selected:not(.ant-select-item-option-disabled)\
+  \ {\n  background-color: #fff3e0 !important;\n  color: #f57c00 !important;\n}\n\n\
+  /* Filter icons */\n.filter-card .anticon {\n  color: #ff9800;\n}\n\n/* Apply button\
+  \ */\n.ant-btn.superset-button.superset-button-primary.cta {\n  background: #ff9800\
+  \ !important;\n  border-color: #f57c00 !important;\n}\n\n.ant-btn.superset-button.superset-button-primary.cta:hover\
+  \ {\n  background: #f57c00 !important;\n  border-color: #ef6c00 !important;\n}\n\
+  \n/* Secondary buttons */\n.ant-btn.superset-button.superset-button-secondary.cta\
+  \ {\n  color: #ff9800 !important;\n  border-color: #ff9800 !important;\n  background:\
+  \ transparent !important;\n}\n\n.ant-btn.superset-button.superset-button-secondary.cta:hover\
+  \ {\n  color: #f57c00 !important;\n  border-color: #f57c00 !important;\n  background:\
+  \ #fff3e0 !important;\n}\n\n/* Radio buttons */\n.ant-radio-wrapper .ant-radio-checked\
+  \ .ant-radio-inner {\n  border-color: #ff9800 !important;\n  background-color: #ff9800\
+  \ !important;\n}\n\n.ant-radio-wrapper .ant-radio:hover .ant-radio-inner {\n  border-color:\
+  \ #ff9800 !important;\n}\n\n.ant-radio-wrapper .ant-radio-input:focus + .ant-radio-inner\
+  \ {\n  box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2) !important;\n}\n\n/* Filter\
+  \ badges */\n.filter-indicator {\n  background-color: #ff9800 !important;\n  color:\
+  \ white !important;\n}\n\n/* Filter card borders */\n.filter-card {\n  border: 1px\
+  \ solid #ffe0b2;\n  border-radius: 4px;\n}"
+slug: null
+certified_by: ""
+certification_details: ""
+published: false
+uuid: 9dbbde33-fccd-49e2-ac3e-7f4abdc80d72
+position:
+  CHART-explore-10-1:
+    children: []
+    id: CHART-explore-10-1
+    meta:
+      chartId: 10
+      height: 67
+      sliceName: Severity Breakdown
+      uuid: e4228755-696b-4aec-9722-74b2705f9987
+      width: 6
+    parents:
+      - ROOT_ID
+      - GRID_ID
+      - ROW-IbYIHWFLeiYYDf0xgsyIb
+    type: CHART
+  CHART-explore-11-1:
+    children: []
+    id: CHART-explore-11-1
+    meta:
+      chartId: 11
+      height: 70
+      sliceName: Deduplications Per Provider
+      uuid: ce74f3eb-b164-4ae3-91bf-9375efbf8491
+      width: 4
+    parents:
+      - ROOT_ID
+      - GRID_ID
+      - ROW-aV3_xgggG5NpbqBC_7w5g
+    type: CHART
+  CHART-explore-12-1:
+    children: []
+    id: CHART-explore-12-1
+    meta:
+      chartId: 12
+      height: 70
+      sliceName: automations
+      uuid: 9db029e0-ff8f-481b-af57-2be82bc3db62
+      width: 4
+    parents:
+      - ROOT_ID
+      - GRID_ID
+      - ROW-aV3_xgggG5NpbqBC_7w5g
+    type: CHART
+  CHART-explore-6-1:
+    children: []
+    id: CHART-explore-6-1
+    meta:
+      chartId: 6
+      height: 67
+      sliceName: Status Breakdown
+      uuid: 0f9b90fd-3b0c-426f-bb35-1ac6d1b7d379
+      width: 6
+    parents:
+      - ROOT_ID
+      - GRID_ID
+      - ROW-IbYIHWFLeiYYDf0xgsyIb
+    type: CHART
+  CHART-explore-8-1:
+    children: []
+    id: CHART-explore-8-1
+    meta:
+      chartId: 8
+      height: 63
+      sliceName: Enrichments
+      uuid: efab8529-cef4-4796-b18f-40bc1571a196
+      width: 4
+    parents:
+      - ROOT_ID
+      - GRID_ID
+      - ROW-aV3_xgggG5NpbqBC_7w5g
+    type: CHART
+  DASHBOARD_VERSION_KEY: v2
+  GRID_ID:
+    children:
+      - ROW-aV3_xgggG5NpbqBC_7w5g
+      - ROW-IbYIHWFLeiYYDf0xgsyIb
+    id: GRID_ID
+    parents:
+      - ROOT_ID
+    type: GRID
+  HEADER_ID:
+    id: HEADER_ID
+    meta:
+      text: Alerts
+    type: HEADER
+  ROOT_ID:
+    children:
+      - GRID_ID
+    id: ROOT_ID
+    type: ROOT
+  ROW-IbYIHWFLeiYYDf0xgsyIb:
+    children:
+      - CHART-explore-6-1
+      - CHART-explore-10-1
+    id: ROW-IbYIHWFLeiYYDf0xgsyIb
+    meta:
+      background: BACKGROUND_TRANSPARENT
+    parents:
+      - ROOT_ID
+      - GRID_ID
+    type: ROW
+  ROW-aV3_xgggG5NpbqBC_7w5g:
+    children:
+      - CHART-explore-8-1
+      - CHART-explore-11-1
+      - CHART-explore-12-1
+    id: ROW-aV3_xgggG5NpbqBC_7w5g
+    meta:
+      "0": ROOT_ID
+      background: BACKGROUND_TRANSPARENT
+    parents:
+      - ROOT_ID
+      - GRID_ID
+    type: ROW
+metadata:
+  chart_configuration:
+    "6":
+      id: 6
+      crossFilters:
+        scope: global
+        chartsInScope:
+          - 8
+          - 10
+          - 11
+          - 12
+    "8":
+      id: 8
+      crossFilters:
+        scope: global
+        chartsInScope:
+          - 6
+          - 10
+          - 11
+          - 12
+    "10":
+      id: 10
+      crossFilters:
+        scope: global
+        chartsInScope:
+          - 6
+          - 8
+          - 11
+          - 12
+    "11":
+      id: 11
+      crossFilters:
+        scope: global
+        chartsInScope:
+          - 6
+          - 8
+          - 10
+          - 12
+    "12":
+      id: 12
+      crossFilters:
+        scope: global
+        chartsInScope:
+          - 6
+          - 8
+          - 10
+          - 11
+  global_chart_configuration:
+    scope:
+      rootPath:
+        - ROOT_ID
+      excluded: []
+    chartsInScope:
+      - 6
+      - 8
+      - 10
+      - 11
+      - 12
+  color_scheme: redToYellow
+  refresh_frequency: 0
+  expanded_slices: {}
+  label_colors: {}
+  timed_refresh_immune_slices: []
+  cross_filters_enabled: true
+  native_filter_configuration:
+    - id: NATIVE_FILTER-8roNaqMpKO_QHKl36C1hD
+      controlValues:
+        enableEmptyFilter: false
+        defaultToFirstItem: false
+        multiSelect: true
+        searchAllOptions: false
+        inverseSelection: false
+      name: service
+      filterType: filter_select
+      targets:
+        - column:
+            name: c
+          datasetUuid: 6e9d6286-4192-4c53-9123-5593b766bc8b
+      defaultDataMask:
+        extraFormData: {}
+        filterState: {}
+        ownState: {}
+      cascadeParentIds: []
+      scope:
+        rootPath:
+          - ROOT_ID
+        excluded:
+          - 7
+          - 8
+          - 9
+      type: NATIVE_FILTER
+      description: ""
+      chartsInScope:
+        - 6
+        - 10
+      tabsInScope: []
+    - id: NATIVE_FILTER-ufKvfnaLnrpebBXbc7Wzu
+      controlValues:
+        enableEmptyFilter: false
+      name: Time
+      filterType: filter_time
+      targets:
+        - {}
+      defaultDataMask:
+        extraFormData: {}
+        filterState: {}
+        ownState: {}
+      cascadeParentIds: []
+      scope:
+        rootPath:
+          - ROOT_ID
+        excluded:
+          - 6
+          - 8
+          - 9
+          - 10
+      type: NATIVE_FILTER
+      description: ""
+      chartsInScope:
+        - 7
+        - 11
+      tabsInScope: []
+  default_filters: "{}"
+  color_scheme_domain: []
+  shared_label_colors:
+    "0": "#90042A"
+    "1": "#D60039"
+    "2": "#D1353B"
+    "3": "#E45233"
+    "4": "#F47028"
+    "5": "#FE8E17"
+    "6": "#FFAD00"
+    "7": "#FFCC00"
+  filter_bar_orientation: HORIZONTAL
+version: 1.0.0
