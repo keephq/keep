@@ -35,6 +35,7 @@ from keep.api.core.workflows import (
 )
 from keep.api.models.alert import AlertDto, IncidentDto
 from keep.api.models.facet import FacetOptionsQueryDto
+from keep.api.models.query import QueryDto
 from keep.api.models.workflow import (
     WorkflowCreateOrUpdateDTO,
     WorkflowDTO,
@@ -165,16 +166,27 @@ def fetch_facet_fields(
     "",
     description="Get workflows",
 )
+# TODO: this should be deprecated and removed
 def get_workflows(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
     is_v2: Optional[bool] = Query(False, alias="is_v2", type=bool),
-    cel=Query(None),
-    limit: int = Query(1000),
-    offset: int = Query(0),
-    sort_by=Query(None),
-    sort_dir=Query(None),
+) -> list[WorkflowDTO] | list[dict]:
+    query_result = query_workflows(QueryDto(), authenticated_entity, is_v2)
+    return query_result["results"]
+
+
+@router.post(
+    "/query",
+    description="Query workflows",
+)
+def query_workflows(
+    query: QueryDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+    is_v2: Optional[bool] = Query(False, alias="is_v2", type=bool),
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
@@ -193,11 +205,11 @@ def get_workflows(
     # get all workflows
     workflows, count = workflowstore.get_all_workflows_with_last_execution(
         tenant_id=tenant_id,
-        cel=cel,
-        limit=limit,
-        offset=offset,
-        sort_by=sort_by,
-        sort_dir=sort_dir,
+        cel=query.cel,
+        limit=query.limit,
+        offset=query.offset,
+        sort_by=query.sort_by,
+        sort_dir=query.sort_dir,
         is_v2=is_v2,
     )
 
@@ -263,8 +275,8 @@ def get_workflows(
     return {
         "count": count,
         "results": workflows_dto,
-        "limit": limit,
-        "offset": offset,
+        "limit": query.limit,
+        "offset": query.offset,
     }
 
 

@@ -11,48 +11,44 @@ export interface WorkflowsQuery {
   sortDir?: "asc" | "desc";
 }
 
-export function useWorkflowsV2(
-  workflowsQuery: WorkflowsQuery | null,
-  foo?: boolean
-) {
+export function useWorkflowsV2(workflowsQuery: WorkflowsQuery | null) {
   const api = useApi();
-  const urlSearchParams = new URLSearchParams();
-
-  urlSearchParams.append("is_v2", "true");
+  const queryToPost: { [key: string]: any } = {};
 
   if (workflowsQuery?.cel) {
-    urlSearchParams.append("cel", workflowsQuery.cel);
+    queryToPost.cel = workflowsQuery.cel;
   }
 
   if (workflowsQuery?.limit !== undefined) {
-    urlSearchParams.append("limit", workflowsQuery.limit.toString());
+    queryToPost.limit = workflowsQuery.limit;
   }
 
   if (workflowsQuery?.offset !== undefined) {
-    urlSearchParams.append("offset", workflowsQuery.offset.toString());
+    queryToPost.offset = workflowsQuery.offset;
   }
 
   if (workflowsQuery?.sortBy) {
-    urlSearchParams.append("sort_by", workflowsQuery.sortBy);
+    queryToPost.sort_by = workflowsQuery.sortBy;
   }
 
   if (workflowsQuery?.sortDir) {
-    urlSearchParams.append("sort_dir", workflowsQuery.sortDir);
+    queryToPost.sort_dir = workflowsQuery.sortDir;
   }
 
-  let requestUrl = "/workflows";
+  let requestUrl = "/workflows/query?is_v2=true";
 
-  if (urlSearchParams.toString()) {
-    requestUrl += `?${urlSearchParams.toString()}`;
-  }
   const [isLoading, setIsLoading] = useState(true);
   const {
     data,
     error,
     isLoading: isLoadingSwr,
   } = useSWR<any>(
-    api.isReady() && workflowsQuery ? requestUrl : null,
-    (url: string) => api.get(url)
+    api.isReady() && workflowsQuery
+      ? Object.entries(queryToPost)
+          .map(([key, value]) => `${key}=${value}`)
+          .join(";")
+      : null,
+    () => api.post(requestUrl, queryToPost)
   );
   useEffect(() => setIsLoading(isLoadingSwr), [isLoadingSwr]);
 
