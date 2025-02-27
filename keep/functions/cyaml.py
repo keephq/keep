@@ -1,4 +1,8 @@
 import yaml
+from yaml import YAMLError
+
+# Define what symbols are exported from this module
+__all__ = ['YAMLError', 'safe_load', 'dump', 'add_representer']
 
 class QuotedString(str):
     """A string that remembers if it was quoted in the original YAML."""
