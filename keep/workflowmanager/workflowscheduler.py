@@ -299,7 +299,8 @@ class WorkflowScheduler:
                 result_queue.put((errors, results))
             except Exception as e:
                 print(f"Exception in workflow: {e}")
-                result_queue.put((str(e), None))
+                # errors are expected to be a list of strings, so we wrap it
+                result_queue.put(([str(e)], None))
 
         future = self.executor.submit(
             run_workflow_wrapper,
