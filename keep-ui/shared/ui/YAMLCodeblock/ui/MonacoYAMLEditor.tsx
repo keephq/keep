@@ -379,9 +379,9 @@ const MonacoYAMLEditor = ({
     }
 
     const content = editorRef.current.getValue();
-    console.log("content", JSON.stringify(content));
     try {
-      // const json = parseWorkflowYamlStringToJSON(content);
+      // sending the yaml string to the backend
+      // TODO: validate the yaml content and show useful (inline) errors
       await updateWorkflow(workflowId, content);
 
       setOriginalContent(content);
