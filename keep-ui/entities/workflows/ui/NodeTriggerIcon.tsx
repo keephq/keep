@@ -1,20 +1,22 @@
 import { DynamicImageProviderIcon } from "@/components/ui/DynamicProviderIcon";
-import { FlowNode } from "../model/types";
 import {
   ClockIcon,
   CursorArrowRaysIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
+import { NodeData } from "../model/types";
 
-export function NodeTriggerIcon({ nodeData }: { nodeData: FlowNode["data"] }) {
-  const { type } = nodeData;
-  switch (type) {
+export function NodeTriggerIcon({ nodeData }: { nodeData: NodeData }) {
+  if (nodeData.componentType !== "trigger") {
+    return null;
+  }
+  switch (nodeData.type) {
     case "manual":
       return <CursorArrowRaysIcon className="size-8" />;
     case "interval":
       return <ClockIcon className="size-8" />;
     case "alert": {
-      const alertSource = nodeData.properties?.source;
+      const alertSource = nodeData.properties?.alert?.source;
       if (alertSource) {
         return (
           <DynamicImageProviderIcon

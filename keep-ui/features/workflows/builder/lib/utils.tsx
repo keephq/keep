@@ -197,14 +197,22 @@ export function edgeCanHaveAddButton(source: string, target: string) {
   return showAddButton;
 }
 
-export function edgeCanAddTrigger(source: string, target: string) {
+export function canAddTriggerBeforeEdge(source: string, target: string) {
   return source?.includes("trigger_start") && target?.includes("trigger_end");
 }
 
-export function edgeCanAddStep(source: string, target: string) {
+export function canAddStepBeforeEdge(source: string, target: string) {
   return (
     !source?.includes("empty") &&
     !target?.includes("trigger_end") &&
     source !== "start"
   );
+}
+
+export function canAddConditionBeforeEdge(source: string, target: string) {
+  return !target?.endsWith("empty_true") && !target?.endsWith("empty_false");
+}
+
+export function canAddForeachBeforeEdge(source: string, target: string) {
+  return !target?.endsWith("foreach");
 }

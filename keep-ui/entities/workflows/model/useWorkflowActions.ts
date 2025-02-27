@@ -5,7 +5,19 @@ import { showErrorToast } from "@/shared/ui";
 import { Definition } from "@/entities/workflows/model/types";
 import { stringify } from "yaml";
 import { useCallback } from "react";
-import { getWorkflowFromDefinition } from "@/entities/workflows/lib/parser";
+import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
+
+function getBodyFromStringOrDefinitionOrObject(
+  definition: Definition | string | Record<string, unknown>
+) {
+  if (typeof definition === "string") {
+    return definition;
+  }
+  if (typeof definition === "object" && "workflow" in definition) {
+    return stringify(definition);
+  }
+  return stringify(getYamlWorkflowDefinition(definition as Definition));
+}
 
 type UseWorkflowActionsReturn = {
   createWorkflow: (
@@ -34,14 +46,7 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
   const createWorkflow = useCallback(
     async (definition: Definition | string) => {
       try {
-        const body =
-          typeof definition === "string"
-            ? definition
-            : stringify(
-                "workflow" in definition
-                  ? definition
-                  : getWorkflowFromDefinition(definition as Definition)
-              );
+        const body = getBodyFromStringOrDefinitionOrObject(definition);
         const response = await api.request<CreateOrUpdateWorkflowResponse>(
           "/workflows/json",
           {
@@ -67,17 +72,7 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
       definition: Definition | Record<string, unknown> | string
     ) => {
       try {
-        console.log("typeof definition", typeof definition);
-        console.log("definition", JSON.stringify(definition));
-        const body =
-          typeof definition === "string"
-            ? definition
-            : stringify(
-                "workflow" in definition
-                  ? definition
-                  : getWorkflowFromDefinition(definition as Definition)
-              );
-        console.log("body", JSON.stringify(body));
+        const body = getBodyFromStringOrDefinitionOrObject(definition);
         const response = await api.request<CreateOrUpdateWorkflowResponse>(
           `/workflows/${workflowId}`,
           {

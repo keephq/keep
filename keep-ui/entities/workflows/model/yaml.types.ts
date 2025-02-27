@@ -4,31 +4,32 @@ interface YamlProvider {
   with: { [key: string]: string | number | boolean | object };
 }
 
-export interface YamlStep {
+export interface YamlStepOrAction {
   name: string;
   provider: YamlProvider;
+  id?: string;
   if?: string;
   vars?: Record<string, string>;
+  condition?: (YamlThresholdCondition | YamlAssertCondition)[];
+  foreach?: string;
 }
 
 interface YamlCondition {
+  id?: string;
   name: string;
-  type: string;
+  alias?: string;
 }
 
-interface YamlThresholdCondition extends YamlCondition {
+export interface YamlThresholdCondition extends YamlCondition {
+  type: "threshold";
   value: string;
   compare_to: string;
   level?: string;
 }
 
-interface YamlAssertCondition extends YamlCondition {
+export interface YamlAssertCondition extends YamlCondition {
+  type: "assert";
   assert: string;
-}
-
-export interface YamlAction extends YamlStep {
-  condition?: YamlThresholdCondition | YamlAssertCondition[];
-  foreach?: string;
 }
 
 export interface YamlWorkflowDefinition {
@@ -37,8 +38,8 @@ export interface YamlWorkflowDefinition {
   description?: string;
   owners?: string[];
   services?: string[];
-  steps: YamlStep[];
-  actions?: YamlAction[];
+  steps: YamlStepOrAction[];
+  actions?: YamlStepOrAction[];
   triggers?: any;
   name?: string;
   consts?: Record<string, string>;
