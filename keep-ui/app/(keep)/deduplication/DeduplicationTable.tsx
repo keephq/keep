@@ -154,32 +154,38 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       }),
       columnHelper.accessor("description", {
         header: "Description",
-        cell: (info) => (
-          <div className="flex items-center justify-between max-w-[320px]">
-            <span className="truncate lg:whitespace-normal">
-              {providers.installed_providers.find(
-                (provider) => provider.id === info.row.original.provider_id
-              )?.details.name ||
-                info.row.original.provider_id ||
-                "Keep"}{" "}
-              deduplication rule
-            </span>
-            {info.row.original.default ? (
-              <Badge color="orange" size="xs" className="ml-2">
-                Default
-              </Badge>
-            ) : (
-              <Badge color="orange" size="xs" className="ml-2">
-                Custom
-              </Badge>
-            )}
-            {info.row.original.full_deduplication && (
-              <Badge color="orange" size="xs" className="ml-2">
-                Full Deduplication
-              </Badge>
-            )}
-          </div>
-        ),
+        cell: (info) => {
+          const matchingProvider = providers.installed_providers.find(
+            (provider) => provider.id === info.row.original.provider_id
+          );
+          const providerName =
+            matchingProvider?.details.name ||
+            info.row.original.provider_id ||
+            "Keep";
+
+          return (
+            <div className="flex items-center justify-between max-w-[320px]">
+              <span className="truncate lg:whitespace-normal">
+                {info.row.original.description ||
+                  `${providerName} deduplication rule`}
+              </span>
+              {info.row.original.default ? (
+                <Badge color="orange" size="xs" className="ml-2">
+                  Default
+                </Badge>
+              ) : (
+                <Badge color="orange" size="xs" className="ml-2">
+                  Custom
+                </Badge>
+              )}
+              {info.row.original.full_deduplication && (
+                <Badge color="orange" size="xs" className="ml-2">
+                  Full Deduplication
+                </Badge>
+              )}
+            </div>
+          );
+        },
       }),
       columnHelper.accessor("ingested", {
         header: "Ingested",

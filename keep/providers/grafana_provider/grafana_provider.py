@@ -268,10 +268,10 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 description=description,
                 source=["grafana"],
                 labels=labels,
-                url=url,
-                imageUrl=image_url,
-                dashboardUrl=dashboard_url,
-                panelUrl=panel_url,
+                url=url or None,
+                imageUrl=image_url or None,
+                dashboardUrl=dashboard_url or None,
+                panelUrl=panel_url or None,
                 valueString=valueString,
                 **extra,  # add annotations and values
             )

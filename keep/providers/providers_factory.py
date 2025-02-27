@@ -360,7 +360,9 @@ class ProvidersFactory:
                 )
                 can_fetch_topology = issubclass(provider_class, BaseTopologyProvider)
                 can_fetch_incidents = issubclass(provider_class, BaseIncidentProvider)
-                pulling_available = can_fetch_alerts or can_fetch_topology or can_fetch_incidents
+                pulling_available = (
+                    can_fetch_alerts or can_fetch_topology or can_fetch_incidents
+                )
 
                 provider_tags = set(provider_class.PROVIDER_TAGS)
                 if can_fetch_topology:
@@ -487,7 +489,7 @@ class ProvidersFactory:
                 if include_details:
                     provider_auth.update(
                         secret_manager.read_secret(
-                            secret_name=f"{tenant_id}_{p.type}_{p.id}", is_json=True
+                            secret_name=p.configuration_key, is_json=True
                         )
                     )
                 if READ_ONLY_MODE and not override_readonly:
@@ -499,9 +501,9 @@ class ProvidersFactory:
                         }
             # Somehow the provider is installed but the secret is missing, probably bug in deletion
             # TODO: solve its root cause
-            except Exception:
+            except Exception as e:
                 logger.warning(
-                    f"Could not get provider {provider_copy.id} auth config from secret manager"
+                    f"Could not get provider {provider_copy.id} auth config from secret manager: {e}"
                 )
                 continue
             provider_copy.details = provider_auth
