@@ -51,7 +51,6 @@ from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.parser.parser import Parser
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
-import time
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
