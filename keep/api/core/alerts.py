@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Tuple
 
 from sqlalchemy import and_, asc, desc, func, literal_column, select
@@ -30,6 +31,8 @@ from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 
 logger = logging.getLogger(__name__)
+
+alerts_hard_limit = int(os.environ.get("KEEP_CEL_LIMIT", 1000))
 
 alert_field_configurations = [
     FieldMappingConfiguration("source", "filter_provider_type"),
@@ -173,9 +176,12 @@ def __build_query_for_filtering(tenant_id: str):
     )
 
 
-def build_total_alerts_query(tenant_id, cel=None):
+def build_total_alerts_query(tenant_id, cel=None, limit=None, offset=None):
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     base = __build_query_for_filtering(tenant_id)
+
+    if limit is not None:
+        base = base.limit(limit)
 
     query = (
         select(
@@ -288,6 +294,9 @@ def build_alerts_query(
 def query_last_alerts(
     tenant_id, limit=1000, offset=0, cel=None, sort_by=None, sort_dir=None
 ) -> Tuple[list[Alert], int]:
+    if limit is None:
+        limit = 1000
+
     with Session(engine) as session:
         # Shahar: this happens when the frontend query builder fails to build a query
         if cel == "1 == 1":
@@ -295,13 +304,18 @@ def query_last_alerts(
             cel = ""
 
         total_count_query = build_total_alerts_query(
-            tenant_id=tenant_id,
-            cel=cel,
+            tenant_id=tenant_id, cel=cel, limit=alerts_hard_limit
         )
         total_count = session.exec(total_count_query).one()[0]
 
         if not limit:
             return [], total_count
+
+        if offset >= alerts_hard_limit:
+            return [], total_count
+
+        if offset + limit > alerts_hard_limit:
+            limit = alerts_hard_limit - offset
 
         data_query = build_alerts_query(
             tenant_id, cel, sort_by, sort_dir, limit, offset
@@ -328,11 +342,16 @@ def get_alert_facets_data(
         facets = get_alert_facets(tenant_id, facet_options_query.facet_queries.keys())
     else:
         facets = static_facets
-
-    base_query = select(
-        # here it creates aliases for table columns that will be used in filtering and faceting
-        text(",".join(["entity_id"] + [key for key in alias_column_mapping.keys()]))
-    ).select_from(__build_query_for_filtering(tenant_id).cte("alerts_query"))
+    base_query_cte = __build_query_for_filtering(tenant_id).cte("alerts_query")
+    base_query = (
+        select(
+            # here it creates aliases for table columns that will be used in filtering and faceting
+            text(",".join(["entity_id"] + [key for key in alias_column_mapping.keys()]))
+        )
+        .select_from(base_query_cte)
+        .order_by(desc(literal_column("filter_last_received")))
+        .limit(alerts_hard_limit)
+    )
 
     return get_facet_options(
         base_query=base_query,
