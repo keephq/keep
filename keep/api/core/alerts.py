@@ -296,6 +296,8 @@ def query_last_alerts(
 ) -> Tuple[list[Alert], int]:
     if limit is None:
         limit = 1000
+    if offset is None:
+        offset = 0
 
     with Session(engine) as session:
         # Shahar: this happens when the frontend query builder fails to build a query
