@@ -87,7 +87,7 @@ export function IncidentList({
     mutate: mutateIncidents,
     error: incidentsError,
   } = useIncidents(
-    true,
+    null,
     null,
     incidentsPagination.limit,
     incidentsPagination.offset,
