@@ -392,7 +392,7 @@ def update_incident(
     description="Delete incidents in bulk",
 )
 def bulk_delete_incidents(
-    incident_ids: List[str] = Body(..., embed=True),
+    incident_ids: List[UUID] = Body(..., embed=True),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
