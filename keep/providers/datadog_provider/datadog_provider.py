@@ -316,9 +316,13 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
 
     SEVERITIES_MAP = {
         "P4": AlertSeverity.INFO,
+        4: AlertSeverity.INFO,
         "P3": AlertSeverity.WARNING,
+        3: AlertSeverity.WARNING,
         "P2": AlertSeverity.HIGH,
+        2: AlertSeverity.HIGH,
         "P1": AlertSeverity.CRITICAL,
+        1: AlertSeverity.CRITICAL,
     }
 
     STATUS_MAP = {
@@ -946,7 +950,7 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
         filter_to,
         filter_query=None,
         page_limit=1000,
-        total_limit=0,
+        total_limit=10000,  # dont pull more than 10k events unless specified
     ):
         """
         Retrieve all events by handling pagination automatically.
@@ -1116,11 +1120,17 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
                         else AlertStatus.SUPPRESSED
                     )
 
-                    # Determine severity - if we can't parse from title, use priority
-                    severity_str = nested_attributes.get("priority")
-                    severity = DatadogProvider.SEVERITIES_MAP.get(
-                        severity_str, AlertSeverity.INFO
-                    )
+                    if monitor:
+                        severity = monitor.priority
+                        severity = DatadogProvider.SEVERITIES_MAP.get(
+                            severity, AlertSeverity.INFO
+                        )
+                    else:
+                        # Determine severity - if we can't parse from title, use priority
+                        severity_str = nested_attributes.get("priority")
+                        severity = DatadogProvider.SEVERITIES_MAP.get(
+                            severity_str, AlertSeverity.INFO
+                        )
 
                     # Convert timestamp to datetime - in v2 it's a ISO string in attributes.timestamp
                     # or milliseconds in attributes.attributes.timestamp
@@ -1151,6 +1161,7 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
                         lastReceived=received.isoformat(),
                         severity=severity,
                         message=event_attributes.get("message", ""),
+                        description=event_attributes.get("message", ""),
                         monitor_id=monitor_id,
                         groups=monitor_groups,
                         source=["datadog"],
