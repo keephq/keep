@@ -19,6 +19,7 @@ interface GroupedRowProps {
   onRowClick?: (e: React.MouseEvent, alert: AlertDto) => void;
   viewedAlerts: ViewedAlert[];
   lastViewedAlert: string | null;
+  rowStyle: RowStyle;
 }
 
 export const GroupedRow = ({
@@ -28,8 +29,23 @@ export const GroupedRow = ({
   onRowClick,
   viewedAlerts,
   lastViewedAlert,
+  rowStyle,
 }: GroupedRowProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
+
+  const getRowClassName = (row: any) => {
+    const severity = row.original.severity || "info";
+    const rowBgColor = theme[severity] || "bg-white";
+
+    return clsx(
+      "cursor-pointer group",
+      rowBgColor,
+      rowStyle === "dense" ? "h-8" : "h-12",
+      rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3",
+      "hover:bg-orange-100",
+      "[&>td]:group-hover:bg-orange-100"
+    );
+  };
 
   if (row.getIsGrouped()) {
     const groupingColumnId = row.groupingColumnId;
@@ -68,12 +84,7 @@ export const GroupedRow = ({
           row.subRows.map((subRow) => (
             <TableRow
               key={subRow.id}
-              className={clsx(
-                "hover:bg-gray-50 cursor-pointer group",
-                theme[subRow.original.severity as Severity],
-                subRow.getIsSelected() && "bg-blue-50 hover:bg-blue-100",
-                "ml-4"
-              )}
+              className={getRowClassName(subRow)}
               onClick={(e) => onRowClick?.(e, subRow.original)}
             >
               {subRow.getVisibleCells().map((cell) => {
@@ -109,9 +120,6 @@ export const GroupedRow = ({
   }
 
   // Regular non-grouped row
-  const severity = row.original.severity || "info";
-  const rowBgColor = theme[severity] || "bg-white";
-  const isLastViewed = row.original.fingerprint === lastViewedAlert;
   const viewedAlert = viewedAlerts?.find(
     (a) => a.fingerprint === row.original.fingerprint
   );
@@ -119,7 +127,7 @@ export const GroupedRow = ({
     <TableRow
       id={`alert-row-${row.original.fingerprint}`}
       key={row.id}
-      className="cursor-pointer relative group"
+      className={getRowClassName(row)}
       onClick={(e) => onRowClick?.(e, row.original)}
     >
       {row.getVisibleCells().map((cell) => {
@@ -134,9 +142,9 @@ export const GroupedRow = ({
             className={clsx(
               cell.column.columnDef.meta?.tdClassName,
               className,
-              rowBgColor,
-              "group-hover:bg-orange-100",
-              isLastViewed && "bg-orange-50"
+              rowStyle === "dense" &&
+                cell.column.id === "name" &&
+                "overflow-hidden"
             )}
             style={style}
           >
