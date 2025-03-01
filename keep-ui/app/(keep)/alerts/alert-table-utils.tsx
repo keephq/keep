@@ -423,8 +423,8 @@ export const useAlertTableCols = (
       id: "lastReceived",
       header: "Last Received",
       filterFn: isDateWithinRange,
-      minSize: 50,
-      maxSize: 50,
+      minSize: 80,
+      maxSize: 80,
       // data is a Date object (converted in usePresetAlerts)
       cell: (context) => {
         const value = context.getValue();
