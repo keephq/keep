@@ -1,19 +1,23 @@
-import { TableBody, TableRow, TableCell } from "@tremor/react";
+import { TableBody, TableRow, TableCell, Icon } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { Table } from "@tanstack/react-table";
+import { Table, flexRender } from "@tanstack/react-table";
 import React, { useState } from "react";
 import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
-import { MagnifyingGlassIcon, FunnelIcon } from "@heroicons/react/24/outline";
+import {
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  EyeIcon,
+} from "@heroicons/react/24/outline";
 import { GroupedRow } from "./alert-grouped-row";
 import { ViewedAlert } from "./alert-table";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { RowStyle } from "./RowStyleSelection";
 import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
-import { flexRender } from "@tanstack/react-table";
+import { format } from "date-fns";
 
 interface Props {
   table: Table<AlertDto>;
@@ -219,7 +223,23 @@ export function AlertsTableBody({
                   }}
                   title={isNameCell ? row.original.name : undefined}
                 >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  {viewedAlert && cell.column.id === "alertMenu" ? (
+                    <div className="flex justify-end items-center gap-2">
+                      <Icon
+                        icon={EyeIcon}
+                        tooltip={`Viewed ${format(
+                          new Date(viewedAlert.viewedAt),
+                          "MMM d, yyyy HH:mm"
+                        )}`}
+                      />
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </div>
+                  ) : (
+                    flexRender(cell.column.columnDef.cell, cell.getContext())
+                  )}
                 </TableCell>
               );
             })}

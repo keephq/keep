@@ -10,6 +10,7 @@ import {
   getCommonPinningStylesAndClassNames,
 } from "@/shared/ui";
 import { ViewedAlert } from "./alert-table";
+import { RowStyle } from "./RowStyleSelection";
 import { format } from "date-fns";
 
 interface GroupedRowProps {
@@ -39,11 +40,13 @@ export const GroupedRow = ({
     const isLastViewed = row.original.fingerprint === lastViewedAlert;
 
     return clsx(
-      "cursor-pointer group hover:bg-gray-50", // Simplified hover
+      "cursor-pointer group",
       rowBgColor,
       isLastViewed && "bg-orange-50",
       rowStyle === "dense" ? "h-8" : "h-12",
-      rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3"
+      rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3",
+      "hover:bg-orange-100",
+      "[&>td]:group-hover:bg-orange-100"
     );
   };
 
@@ -81,41 +84,63 @@ export const GroupedRow = ({
 
         {/* Child Rows */}
         {isExpanded &&
-          row.subRows.map((subRow) => (
-            <TableRow
-              key={subRow.id}
-              className={getRowClassName(subRow)}
-              onClick={(e) => onRowClick?.(e, subRow.original)}
-            >
-              {subRow.getVisibleCells().map((cell) => {
-                const { style, className } =
-                  getCommonPinningStylesAndClassNames(
-                    cell.column,
-                    table.getState().columnPinning.left?.length,
-                    table.getState().columnPinning.right?.length
+          row.subRows.map((subRow) => {
+            const viewedAlert = viewedAlerts?.find(
+              (a) => a.fingerprint === subRow.original.fingerprint
+            );
+
+            return (
+              <TableRow
+                key={subRow.id}
+                className={getRowClassName(subRow)}
+                onClick={(e) => onRowClick?.(e, subRow.original)}
+              >
+                {subRow.getVisibleCells().map((cell) => {
+                  const { style, className } =
+                    getCommonPinningStylesAndClassNames(
+                      cell.column,
+                      table.getState().columnPinning.left?.length,
+                      table.getState().columnPinning.right?.length
+                    );
+
+                  return (
+                    <TableCell
+                      key={cell.id}
+                      className={clsx(
+                        cell.column.columnDef.meta?.tdClassName,
+                        className,
+                        rowStyle === "dense" &&
+                          cell.column.id === "name" &&
+                          "overflow-hidden"
+                      )}
+                      style={style}
+                    >
+                      {viewedAlert && cell.column.id === "alertMenu" ? (
+                        <div className="flex justify-end items-center gap-2">
+                          <Icon
+                            icon={EyeIcon}
+                            tooltip={`Viewed ${format(
+                              new Date(viewedAlert.viewedAt),
+                              "MMM d, yyyy HH:mm"
+                            )}`}
+                          />
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </div>
+                      ) : (
+                        flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )
+                      )}
+                    </TableCell>
                   );
-
-                const severity = row.original.severity || "info";
-                const rowBgColor = theme[severity] || "bg-white";
-
-                return (
-                  <TableCell
-                    key={cell.id}
-                    className={clsx(
-                      cell.column.columnDef.meta?.tdClassName,
-                      className,
-                      rowStyle === "dense" &&
-                        cell.column.id === "name" &&
-                        "overflow-hidden"
-                    )}
-                    style={style}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                );
-              })}
-            </TableRow>
-          ))}
+                })}
+              </TableRow>
+            );
+          })}
       </>
     );
   }
@@ -124,6 +149,7 @@ export const GroupedRow = ({
   const viewedAlert = viewedAlerts?.find(
     (a) => a.fingerprint === row.original.fingerprint
   );
+
   return (
     <TableRow
       id={`alert-row-${row.original.fingerprint}`}
@@ -137,6 +163,7 @@ export const GroupedRow = ({
           table.getState().columnPinning.left?.length,
           table.getState().columnPinning.right?.length
         );
+
         return (
           <TableCell
             key={cell.id}
