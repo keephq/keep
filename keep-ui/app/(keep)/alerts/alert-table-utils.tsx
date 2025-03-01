@@ -181,11 +181,6 @@ export const useAlertTableCols = (
             );
           }
 
-          // Special handling for imageUrl
-          if (colName === "imageUrl" && value) {
-            return <AlertImage imageUrl={value as string} />;
-          }
-
           if (value) {
             return (
               <div className="truncate whitespace-pre-wrap line-clamp-3">
@@ -219,8 +214,8 @@ export const useAlertTableCols = (
       ? [
           columnHelper.display({
             id: "checkbox",
-            maxSize: 32,
-            minSize: 32,
+            maxSize: 16,
+            minSize: 16,
             meta: {
               tdClassName: "w-6 !py-2 !pl-2 !pr-1",
               thClassName: "w-6 !py-2 !pl-2 !pr-1 ",
@@ -290,8 +285,8 @@ export const useAlertTableCols = (
     columnHelper.accessor("source", {
       id: "source",
       header: () => <></>,
-      minSize: 40,
-      maxSize: 40,
+      minSize: 20,
+      maxSize: 20,
       enableSorting: false,
       enableGrouping: true,
       getGroupingValue: (row) => row.source,
@@ -327,12 +322,13 @@ export const useAlertTableCols = (
       id: "name",
       header: "Name",
       enableGrouping: true,
+      enableResizing: true,
       getGroupingValue: (row) => {
         console.log("Grouping value for row:", row.name);
         return row.name;
       },
       cell: (context) => (
-        <div>
+        <div className="w-full">
           <AlertName
             alert={context.row.original}
             setNoteModalAlert={setNoteModalAlert}
@@ -341,8 +337,8 @@ export const useAlertTableCols = (
         </div>
       ),
       meta: {
-        tdClassName: "!pl-0  w-4 sm:w-8",
-        thClassName: "!pl-1  w-4 sm:w-8", // Small padding for header text only
+        tdClassName: "!pl-0 w-full",
+        thClassName: "!pl-1 w-full", // Small padding for header text only
       },
     }),
     columnHelper.accessor("description", {
@@ -363,8 +359,8 @@ export const useAlertTableCols = (
       header: "Status",
       enableGrouping: true,
       getGroupingValue: (row) => row.status,
-      maxSize: 150,
-      size: 150,
+      maxSize: 50,
+      size: 50,
       cell: (context) => (
         <span className="flex items-center gap-1 capitalize">
           <Icon
@@ -381,7 +377,8 @@ export const useAlertTableCols = (
       id: "lastReceived",
       header: "Last Received",
       filterFn: isDateWithinRange,
-      minSize: 100,
+      minSize: 50,
+      maxSize: 50,
       // data is a Date object (converted in usePresetAlerts)
       cell: (context) => {
         const value = context.getValue();
