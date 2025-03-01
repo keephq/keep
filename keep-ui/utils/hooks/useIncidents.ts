@@ -25,7 +25,7 @@ export interface Filters {
 }
 
 export const useIncidents = (
-  confirmed: boolean = true,
+  confirmed: boolean | null = true,
   predicted: boolean | null = null,
   limit: number = 25,
   offset: number = 0,
@@ -39,7 +39,10 @@ export const useIncidents = (
 
   const filtersParams = new URLSearchParams();
 
-  filtersParams.set("confirmed", confirmed.toString());
+  if (typeof confirmed === "boolean") {
+    filtersParams.set("confirmed", confirmed.toString());
+  }
+
   if (predicted !== undefined && predicted !== null) {
     filtersParams.set("predicted", predicted.toString());
   }
