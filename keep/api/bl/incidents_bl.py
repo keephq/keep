@@ -262,6 +262,10 @@ class IncidentBl:
         self.update_client_on_incident_change()
         self.send_workflow_event(incident_dto, "deleted")
 
+    def bulk_delete_incidents(self, incident_ids: List[UUID]) -> None:
+        for incident_id in incident_ids:
+            self.delete_incident(incident_id)
+
     def update_incident(
         self,
         incident_id: UUID,
