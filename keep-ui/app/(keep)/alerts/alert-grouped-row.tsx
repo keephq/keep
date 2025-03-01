@@ -45,8 +45,7 @@ export const GroupedRow = ({
       isLastViewed && "bg-orange-50",
       rowStyle === "dense" ? "h-8" : "h-12",
       rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3",
-      "hover:bg-orange-100",
-      "[&>td]:group-hover:bg-orange-100"
+      "hover:bg-orange-100"
     );
   };
 
@@ -111,7 +110,8 @@ export const GroupedRow = ({
                         className,
                         rowStyle === "dense" &&
                           cell.column.id === "name" &&
-                          "overflow-hidden"
+                          "overflow-hidden",
+                        "group-hover:bg-gray-50" // Add group-hover class
                       )}
                       style={style}
                     >
@@ -172,7 +172,8 @@ export const GroupedRow = ({
               className,
               rowStyle === "dense" &&
                 cell.column.id === "name" &&
-                "overflow-hidden"
+                "overflow-hidden",
+              "group-hover:bg-gray-50" // Add group-hover class
             )}
             style={style}
           >

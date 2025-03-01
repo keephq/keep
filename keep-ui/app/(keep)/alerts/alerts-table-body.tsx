@@ -66,8 +66,7 @@ export function AlertsTableBody({
       isLastViewed && "bg-orange-50",
       rowStyle === "dense" ? "h-8" : "h-12",
       rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3",
-      "hover:bg-orange-100",
-      "[&>td]:group-hover:bg-orange-100"
+      "hover:bg-orange-100"
     );
   };
 
@@ -209,7 +208,8 @@ export function AlertsTableBody({
                 className,
                 isNameCell && "name-cell",
                 // For dense rows, make sure name cells don't expand too much
-                rowStyle === "dense" && isNameCell && "w-auto max-w-2xl"
+                rowStyle === "dense" && isNameCell && "w-auto max-w-2xl",
+                "group-hover:bg-orange-100" // Add group-hover class to cells
               );
 
               return (
