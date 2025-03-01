@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Subtitle } from "@tremor/react";
 import {
   ArrowUpOnSquareStackIcon,
@@ -18,7 +18,18 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { showErrorToast, Input, ErrorComponent } from "@/shared/ui";
 import { Textarea } from "@/components/ui";
-import { useWorkflowsV2 } from "utils/hooks/useWorkflowsV2";
+import { useWorkflowsV2, WorkflowsQuery } from "utils/hooks/useWorkflowsV2";
+import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
+import { Pagination, SearchInput } from "@/features/filter";
+import { InitialFacetsData } from "@/features/filter/api";
+import { FacetsConfig } from "@/features/filter/models";
+import { UserStatefulAvatar } from "@/entities/users/ui";
+import { useUser } from "@/entities/users/model/useUser";
+import {
+  CheckCircleIcon,
+  XCircleIcon,
+  ExclamationCircleIcon,
+} from "@heroicons/react/24/outline";
 
 const EXAMPLE_WORKFLOW_DEFINITIONS = {
   slack: `
@@ -61,12 +72,59 @@ const EXAMPLE_WORKFLOW_DEFINITIONS = {
 
 type ExampleWorkflowKey = keyof typeof EXAMPLE_WORKFLOW_DEFINITIONS;
 
-export default function WorkflowsPage() {
+const AssigneeLabel = ({ email }: { email: string }) => {
+  const user = useUser(email);
+  return user ? user.name : email;
+};
+
+export default function WorkflowsPage({
+  initialFacetsData,
+}: {
+  initialFacetsData?: InitialFacetsData;
+}) {
   const api = useApi();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [workflowDefinition, setWorkflowDefinition] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filterCel, setFilterCel] = useState<string | null>(null);
+  const [searchedValue, setSearchedValue] = useState<string | null>(null);
+  const [paginationState, setPaginationState] = useState<{
+    offset: number;
+    limit: number;
+  } | null>(null);
+  const [workflowsQuery, setWorkflowsQuery] = useState<WorkflowsQuery | null>(
+    null
+  );
+
+  const searchCel = useMemo(() => {
+    if (!searchedValue) {
+      return;
+    }
+
+    return `name.contains("${searchedValue}") || description.contains("${searchedValue}")`;
+  }, [searchedValue]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (!paginationState) {
+        return;
+      }
+
+      const celList = [searchCel, filterCel].filter((cel) => cel);
+      const cel = celList.join(" && ");
+      const query: WorkflowsQuery = {
+        cel,
+        limit: paginationState?.limit,
+        offset: paginationState?.offset,
+        sortBy: "createdAt",
+        sortDir: "desc",
+      };
+
+      setWorkflowsQuery(query);
+    }, 100);
+    return () => clearTimeout(timeoutId);
+  }, [searchCel, filterCel, paginationState]);
 
   // Only fetch data when the user is authenticated
   /**
@@ -81,14 +139,76 @@ export default function WorkflowsPage() {
           -> last_executions: Used for the workflow execution graph.
           ->last_execution_started: Used for showing the start time of execution in real-time.
   **/
-  const { workflows, error, isLoading } = useWorkflowsV2();
+  const {
+    workflows: filteredWorkflows,
+    totalCount: filteredWorkflowsCount,
+    error,
+    isLoading: isFilteredWorkflowsLoading,
+  } = useWorkflowsV2(workflowsQuery, true);
+
+  const isEmptyState =
+    !isFilteredWorkflowsLoading &&
+    filteredWorkflowsCount === 0 &&
+    !workflowsQuery?.cel;
+
+  const setPaginationStateCallback = useCallback(
+    (pageIndex: number, limit: number, offset: number) => {
+      setPaginationState({ limit, offset });
+    },
+    [setPaginationState]
+  );
+
+  const facetsConfig: FacetsConfig = useMemo(() => {
+    return {
+      ["Status"]: {
+        renderOptionIcon: (facetOption) => {
+          switch (facetOption.value) {
+            case "success": {
+              return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
+            }
+            case "failed": {
+              return <XCircleIcon className="w-5 h-5 text-red-500" />;
+            }
+            default: {
+              return (
+                <ExclamationCircleIcon className="w-5 h-5 text-orange-500" />
+              );
+            }
+          }
+        },
+        renderOptionLabel: (facetOption) => {
+          if (!facetOption.value) {
+            return "Not run yet";
+          }
+
+          return (
+            facetOption.display_name.charAt(0).toUpperCase() +
+            facetOption.display_name.slice(1)
+          );
+        },
+      },
+      ["Created by"]: {
+        renderOptionIcon: (facetOption) => (
+          <UserStatefulAvatar email={facetOption.display_name} size="xs" />
+        ),
+        renderOptionLabel: (facetOption) => {
+          if (facetOption.display_name === "null") {
+            return "Not assigned";
+          }
+          return <AssigneeLabel email={facetOption.display_name} />;
+        },
+      },
+      ["Enabling status"]: {
+        renderOptionLabel: (facetOption) =>
+          facetOption.display_name.toLocaleLowerCase() === "true"
+            ? "Disabled"
+            : "Enabled",
+      },
+    };
+  }, []);
 
   if (error) {
     return <ErrorComponent error={error} reset={() => {}} />;
-  }
-
-  if (isLoading || !workflows) {
-    return <KeepLoader />;
   }
 
   const onDrop = async (files: any) => {
@@ -169,17 +289,22 @@ export default function WorkflowsPage() {
 
   return (
     <>
-      <main className="pt-4 flex flex-col gap-8">
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-center">
+      <main className="pt-4 flex flex-col gap-8 relative">
+        <div className={`flex flex-col gap-4`}>
+          <div className="flex justify-between items-end">
             <div>
               <Title className="text-2xl line-clamp-2 font-bold">
-                Workflows
+                My Workflows
               </Title>
               <Subtitle>
                 Automate your alert management with workflows.
               </Subtitle>
             </div>
+            <SearchInput
+              className="flex-1 mx-4"
+              placeholder="Search workflows"
+              onValueChange={setSearchedValue}
+            />
             <div>
               <Button
                 className="mr-2.5"
@@ -204,18 +329,53 @@ export default function WorkflowsPage() {
               </Button>
             </div>
           </div>
-          {workflows.length === 0 ? (
+          {isEmptyState ? (
             <WorkflowsEmptyState isNewUI={true} />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
-              {workflows.map((workflow) => (
-                <WorkflowTile key={workflow.id} workflow={workflow} />
-              ))}
+            <div className="flex gap-4">
+              <FacetsPanelServerSide
+                entityName={"workflows"}
+                facetsConfig={facetsConfig}
+                facetOptionsCel={searchCel}
+                usePropertyPathsSuggestions={true}
+                // clearFiltersToken={clearFiltersToken}
+                initialFacetsData={initialFacetsData}
+                // uncheckedByDefaultOptionValues={uncheckedFacetOptionsByDefault}
+                onCelChange={(cel) => setFilterCel(cel)}
+                // revalidationToken={filterRevalidationToken}
+              />
+
+              <div className="flex flex-col flex-1">
+                {isFilteredWorkflowsLoading && (
+                  <div className="flex items-center justify-center h-96 w-full">
+                    <KeepLoader includeMinHeight={false} />
+                  </div>
+                )}
+                {!isFilteredWorkflowsLoading && (
+                  <div className="self-start grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
+                    {filteredWorkflows?.map((workflow) => (
+                      <WorkflowTile key={workflow.id} workflow={workflow} />
+                    ))}
+                  </div>
+                )}
+                <div
+                  className={`mt-4 ${isFilteredWorkflowsLoading ? "invisible" : ""}`}
+                >
+                  <Pagination
+                    totalCount={filteredWorkflowsCount}
+                    isRefreshAllowed={false}
+                    isRefreshing={false}
+                    pageSizeOptions={[12, 24, 48]}
+                    onRefresh={() => {}}
+                    onStateChange={setPaginationStateCallback}
+                  />
+                </div>
+              </div>
             </div>
           )}
-        </div>
-        <div className="flex flex-col gap-4">
-          <WorkflowTemplates />
+          <div className="flex flex-col gap-4">
+            <WorkflowTemplates />
+          </div>
         </div>
       </main>
       <Modal

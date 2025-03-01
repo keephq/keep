@@ -28,7 +28,14 @@ from keep.api.core.db import (
     get_workflow_by_name,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
+from keep.api.core.workflows import (
+    get_workflow_facets,
+    get_workflow_facets_data,
+    get_workflow_potential_facet_fields,
+)
 from keep.api.models.alert import AlertDto, IncidentDto
+from keep.api.models.facet import FacetOptionsQueryDto
+from keep.api.models.query import QueryDto
 from keep.api.models.workflow import (
     WorkflowCreateOrUpdateDTO,
     WorkflowDTO,
@@ -52,6 +59,98 @@ tracer = trace.get_tracer(__name__)
 PLATFORM_URL = config("KEEP_PLATFORM_URL", default="https://platform.keephq.dev")
 
 
+@router.post(
+    "/facets/options",
+    description="Query alert facet options. Accepts dictionary where key is facet id and value is cel to query facet",
+)
+def fetch_facet_options(
+    facet_options_query: FacetOptionsQueryDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching workflow facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    facet_options = get_workflow_facets_data(
+        tenant_id=tenant_id, facet_options_query=facet_options_query
+    )
+
+    logger.info(
+        "Fetched workflow facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facet_options
+
+
+@router.get(
+    "/facets",
+    description="Get workflow facets",
+)
+def fetch_facets(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching workflow facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    facets = get_workflow_facets(tenant_id=tenant_id)
+
+    logger.info(
+        "Fetched workflow facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facets
+
+
+@router.get(
+    "/facets/fields",
+    description="Get potential fields for alert facets",
+)
+def fetch_facet_fields(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching workflow facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    fields = get_workflow_potential_facet_fields(tenant_id=tenant_id)
+
+    logger.info(
+        "Fetched workflow facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    return fields
+
+
 # Redesign the workflow Card
 #   The workflow card needs execution records (currently limited to 15) for the graph. To achieve this, the following changes
 #   were made in the backend:
@@ -66,12 +165,28 @@ PLATFORM_URL = config("KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
     "",
     description="Get workflows",
 )
+# TODO: this should be deprecated and removed
 def get_workflows(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
     is_v2: Optional[bool] = Query(False, alias="is_v2", type=bool),
 ) -> list[WorkflowDTO] | list[dict]:
+    query_result = query_workflows(QueryDto(), authenticated_entity, is_v2)
+    return query_result["results"]
+
+
+@router.post(
+    "/query",
+    description="Query workflows",
+)
+def query_workflows(
+    query: QueryDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+    is_v2: Optional[bool] = Query(False, alias="is_v2", type=bool),
+) -> dict:
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
     workflows_dto = []
@@ -87,8 +202,14 @@ def get_workflows(
                 installed_provider.name
             ] = installed_provider
     # get all workflows
-    workflows = workflowstore.get_all_workflows_with_last_execution(
-        tenant_id=tenant_id, is_v2=is_v2
+    workflows, count = workflowstore.get_all_workflows_with_last_execution(
+        tenant_id=tenant_id,
+        cel=query.cel,
+        limit=query.limit,
+        offset=query.offset,
+        sort_by=query.sort_by,
+        sort_dir=query.sort_dir,
+        is_v2=is_v2,
     )
 
     # Group last workflow executions by workflow
@@ -150,7 +271,12 @@ def get_workflows(
             logger.error(f"Error creating workflow DTO: {e}")
             continue
         workflows_dto.append(workflow_dto)
-    return workflows_dto
+    return {
+        "count": count,
+        "results": workflows_dto,
+        "limit": query.limit,
+        "offset": query.offset,
+    }
 
 
 @router.get(
