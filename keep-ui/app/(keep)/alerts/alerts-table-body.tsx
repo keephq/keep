@@ -15,9 +15,9 @@ import { GroupedRow } from "./alert-grouped-row";
 import { ViewedAlert } from "./alert-table";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { RowStyle } from "./RowStyleSelection";
-import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import { format } from "date-fns";
+import { getRowClassName, getCellClassName } from "./alert-table-utils";
 
 interface Props {
   table: Table<AlertDto>;
@@ -54,21 +54,6 @@ export function AlertsTableBody({
 
   const handleModalClose = () => setModalOpen(false);
   const handleModalOpen = () => setModalOpen(true);
-
-  const getRowClassName = (row: any) => {
-    const severity = row.original.severity || "info";
-    const rowBgColor = theme[severity] || "bg-white";
-    const isLastViewed = row.original.fingerprint === lastViewedAlert;
-
-    return clsx(
-      "cursor-pointer group",
-      rowBgColor,
-      isLastViewed && "bg-orange-50",
-      rowStyle === "dense" ? "h-8" : "h-12",
-      rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3",
-      "hover:bg-orange-100"
-    );
-  };
 
   if (!showSkeleton) {
     if (
@@ -187,11 +172,12 @@ export function AlertsTableBody({
         const viewedAlert = viewedAlerts?.find(
           (a) => a.fingerprint === row.original.fingerprint
         );
+        const isLastViewed = row.original.fingerprint === lastViewedAlert;
 
         return (
           <TableRow
             key={row.id}
-            className={getRowClassName(row)}
+            className={getRowClassName(row, theme, lastViewedAlert, rowStyle)}
             onClick={(e) => handleRowClick(e, row.original)}
           >
             {row.getVisibleCells().map((cell) => {
@@ -201,27 +187,25 @@ export function AlertsTableBody({
                 table.getState().columnPinning.right?.length
               );
 
-              // Apply special styles for name cell
-              const isNameCell = cell.column.id === "name";
-              const cellClassNames = clsx(
-                cell.column.columnDef.meta?.tdClassName,
-                className,
-                isNameCell && "name-cell",
-                // For dense rows, make sure name cells don't expand too much
-                rowStyle === "dense" && isNameCell && "w-auto max-w-2xl",
-                "group-hover:bg-orange-100" // Add group-hover class to cells
-              );
-
               return (
                 <TableCell
                   key={cell.id}
-                  className={cellClassNames}
+                  className={getCellClassName(
+                    cell,
+                    className,
+                    rowStyle,
+                    isLastViewed
+                  )}
                   style={{
                     ...style,
                     maxWidth:
-                      rowStyle === "dense" && isNameCell ? "600px" : undefined,
+                      rowStyle === "dense" && cell.column.id === "name"
+                        ? "600px"
+                        : undefined,
                   }}
-                  title={isNameCell ? row.original.name : undefined}
+                  title={
+                    cell.column.id === "name" ? row.original.name : undefined
+                  }
                 >
                   {viewedAlert && cell.column.id === "alertMenu" ? (
                     <div className="flex justify-end items-center gap-2">

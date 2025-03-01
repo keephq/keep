@@ -26,6 +26,8 @@ import {
   UISeverity,
 } from "@/shared/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import clsx from "clsx";
+import { RowStyle } from "./RowStyleSelection";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -84,6 +86,50 @@ export const isDateWithinRange: FilterFn<AlertDto> = (row, columnId, value) => {
   }
 
   return true;
+};
+
+/**
+ * Utility function to get consistent row class names across all table components
+ */
+export const getRowClassName = (
+  row: any,
+  theme: Record<string, string>,
+  lastViewedAlert: string | null,
+  rowStyle: RowStyle
+) => {
+  const severity = row.original.severity || "info";
+  const rowBgColor = theme[severity] || "bg-white";
+  const isLastViewed = row.original.fingerprint === lastViewedAlert;
+
+  return clsx(
+    "cursor-pointer group",
+    isLastViewed ? "bg-orange-50" : rowBgColor,
+    rowStyle === "dense" ? "h-8" : "h-12",
+    rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3",
+    "hover:bg-orange-100"
+  );
+};
+
+/**
+ * Utility function to get consistent cell class names
+ */
+export const getCellClassName = (
+  cell: any,
+  className: string,
+  rowStyle: RowStyle,
+  isLastViewed: boolean
+) => {
+  const isNameCell = cell.column.id === "name";
+
+  return clsx(
+    cell.column.columnDef.meta?.tdClassName,
+    className,
+    isNameCell && "name-cell",
+    // For dense rows, make sure name cells don't expand too much
+    rowStyle === "dense" && isNameCell && "w-auto max-w-2xl",
+    "group-hover:bg-orange-100", // Group hover styling
+    isLastViewed && "bg-orange-50" // Override with highlight if this is the last viewed row
+  );
 };
 
 const columnHelper = createColumnHelper<AlertDto>();

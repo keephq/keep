@@ -1,17 +1,14 @@
-import { TableBody, TableRow, TableCell, Icon } from "@tremor/react";
-import { AlertDto, Severity } from "@/entities/alerts/model";
+import { TableRow, TableCell, Icon } from "@tremor/react";
+import { AlertDto } from "@/entities/alerts/model";
 import { Table, flexRender, Row } from "@tanstack/react-table";
 import { ChevronDownIcon, EyeIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import { useState } from "react";
-import {
-  TableSeverityCell,
-  UISeverity,
-  getCommonPinningStylesAndClassNames,
-} from "@/shared/ui";
+import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import { ViewedAlert } from "./alert-table";
 import { RowStyle } from "./RowStyleSelection";
 import { format } from "date-fns";
+import { getRowClassName, getCellClassName } from "./alert-table-utils";
 
 interface GroupedRowProps {
   row: Row<AlertDto>;
@@ -33,21 +30,6 @@ export const GroupedRow = ({
   rowStyle,
 }: GroupedRowProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
-
-  const getRowClassName = (row: any) => {
-    const severity = row.original.severity || "info";
-    const rowBgColor = theme[severity] || "bg-white";
-    const isLastViewed = row.original.fingerprint === lastViewedAlert;
-
-    return clsx(
-      "cursor-pointer group",
-      rowBgColor,
-      isLastViewed && "bg-orange-50",
-      rowStyle === "dense" ? "h-8" : "h-12",
-      rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3",
-      "hover:bg-orange-100"
-    );
-  };
 
   if (row.getIsGrouped()) {
     const groupingColumnId = row.groupingColumnId;
@@ -87,11 +69,18 @@ export const GroupedRow = ({
             const viewedAlert = viewedAlerts?.find(
               (a) => a.fingerprint === subRow.original.fingerprint
             );
+            const isLastViewed =
+              subRow.original.fingerprint === lastViewedAlert;
 
             return (
               <TableRow
                 key={subRow.id}
-                className={getRowClassName(subRow)}
+                className={getRowClassName(
+                  subRow,
+                  theme,
+                  lastViewedAlert,
+                  rowStyle
+                )}
                 onClick={(e) => onRowClick?.(e, subRow.original)}
               >
                 {subRow.getVisibleCells().map((cell) => {
@@ -105,13 +94,11 @@ export const GroupedRow = ({
                   return (
                     <TableCell
                       key={cell.id}
-                      className={clsx(
-                        cell.column.columnDef.meta?.tdClassName,
+                      className={getCellClassName(
+                        cell,
                         className,
-                        rowStyle === "dense" &&
-                          cell.column.id === "name" &&
-                          "overflow-hidden",
-                        "group-hover:bg-gray-50" // Add group-hover class
+                        rowStyle,
+                        isLastViewed
                       )}
                       style={style}
                     >
@@ -149,12 +136,13 @@ export const GroupedRow = ({
   const viewedAlert = viewedAlerts?.find(
     (a) => a.fingerprint === row.original.fingerprint
   );
+  const isLastViewed = row.original.fingerprint === lastViewedAlert;
 
   return (
     <TableRow
       id={`alert-row-${row.original.fingerprint}`}
       key={row.id}
-      className={getRowClassName(row)}
+      className={getRowClassName(row, theme, lastViewedAlert, rowStyle)}
       onClick={(e) => onRowClick?.(e, row.original)}
     >
       {row.getVisibleCells().map((cell) => {
@@ -167,13 +155,11 @@ export const GroupedRow = ({
         return (
           <TableCell
             key={cell.id}
-            className={clsx(
-              cell.column.columnDef.meta?.tdClassName,
+            className={getCellClassName(
+              cell,
               className,
-              rowStyle === "dense" &&
-                cell.column.id === "name" &&
-                "overflow-hidden",
-              "group-hover:bg-gray-50" // Add group-hover class
+              rowStyle,
+              isLastViewed
             )}
             style={style}
           >
