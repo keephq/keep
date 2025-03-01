@@ -316,9 +316,13 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
 
     SEVERITIES_MAP = {
         "P4": AlertSeverity.INFO,
+        4: AlertSeverity.INFO,
         "P3": AlertSeverity.WARNING,
+        3: AlertSeverity.WARNING,
         "P2": AlertSeverity.HIGH,
+        2: AlertSeverity.HIGH,
         "P1": AlertSeverity.CRITICAL,
+        1: AlertSeverity.CRITICAL,
     }
 
     STATUS_MAP = {
@@ -335,7 +339,7 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
-        self.configuration = Configuration(request_timeout=5)
+        self.configuration = Configuration(request_timeout=60)
         if self.authentication_config.api_key and self.authentication_config.app_key:
             self.configuration.api_key["apiKeyAuth"] = (
                 self.authentication_config.api_key
@@ -939,16 +943,106 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
                 )
         return monitors
 
+    def _get_all_events(
+        self,
+        api,
+        filter_from,
+        filter_to,
+        filter_query=None,
+        page_limit=1000,
+        total_limit=10000,  # dont pull more than 10k events unless specified
+    ):
+        """
+        Retrieve all events by handling pagination automatically.
+
+        Args:
+            api: The EventsApi instance
+            filter_from: Minimum timestamp in milliseconds (as string)
+            filter_to: Maximum timestamp in milliseconds (as string)
+            filter_query: Optional query filter (e.g., "source:alert")
+            page_limit: Number of events per page
+
+        Returns:
+            List of all events matching the criteria
+        """
+        all_events = []
+        page_cursor = None
+        has_more = True
+
+        while has_more:
+            try:
+                # Base parameters
+                self.logger.info(f"Pulling events, events so far {len(all_events)}")
+                params = {
+                    "filter_from": filter_from,
+                    "filter_to": filter_to,
+                    "page_limit": page_limit,
+                }
+
+                # Add optional parameters only if they have values
+                if filter_query:
+                    params["filter_query"] = filter_query
+
+                if page_cursor:
+                    params["page_cursor"] = page_cursor
+
+                # Make the API call with the constructed parameters
+                response = api.list_events(**params)
+
+                # Add this batch of events to our collection
+                if response.data:
+                    all_events.extend(response.data)
+
+                # Check if there are more pages
+                if (
+                    hasattr(response.meta, "page")
+                    and hasattr(response.meta.page, "after")
+                    and response.meta.page.after
+                ):
+                    page_cursor = response.meta.page.after
+                else:
+                    has_more = False
+
+                if total_limit and len(all_events) >= total_limit:
+                    break
+
+            except Exception as e:
+                print(f"Error retrieving events: {e}")
+                break
+
+        return all_events
+
     def _get_alerts(self) -> list[AlertDto]:
         formatted_alerts = []
         with ApiClient(self.configuration) as api_client:
             # tb: when it's out of beta, we should move to api v2
             # https://docs.datadoghq.com/api/latest/events/
             monitors_api = MonitorsApi(api_client)
-            all_monitors = {
-                monitor.id: monitor
-                for monitor in monitors_api.list_monitors(with_downtimes=True)
-            }
+            page = 0
+            page_size = 100
+            all_monitors = []
+
+            while True:
+                self.logger.info(
+                    f"Getting monitor batch {page}",
+                    extra={
+                        "page": page,
+                    },
+                )
+                monitors_batch = monitors_api.list_monitors(
+                    page=page, page_size=page_size, with_downtimes=True
+                )
+                if not monitors_batch:
+                    self.logger.info(
+                        "No more monitors to fetch",
+                        extra={
+                            "page": page,
+                        },
+                    )
+                    break
+                all_monitors.extend(monitors_batch)
+                page += 1
+            all_monitors = {monitor.id: monitor for monitor in all_monitors}
             api = EventsApi(api_client)
             end = datetime.datetime.now()
             # tb: we can make timedelta configurable by the user if we want
@@ -956,31 +1050,56 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
             # Convert to milliseconds and ensure they're strings
             filter_from = str(int(start.timestamp() * 1000))
             filter_to = str(int(end.timestamp() * 1000))
-            results = api.list_events(
-                filter_from=filter_from,
-                filter_to=filter_to,
-                filter_query="source:alert",
+            events = self._get_all_events(
+                api, filter_from, filter_to, filter_query="source:alert"
             )
-            events = results.get("events", [])
             for event in events:
                 try:
+                    # Extract the event attributes from the v2 structure
+                    event_data = event.to_dict()
+                    event_attributes = event_data.get("attributes", {})
+                    nested_attributes = event_attributes.get("attributes", {})
+
+                    base_datadog_url = str(self.authentication_config.domain).replace(
+                        "api.", "app."
+                    )
+                    monitor = nested_attributes.get("monitor", {})
+                    snap_url = monitor.get("result", {}).get("snap_url")
+                    alert_url = monitor.get("result", {}).get("alert_url")
+
+                    if alert_url:
+                        alert_url = base_datadog_url + alert_url
+                    logs_url = monitor.get("result", {}).get("logs_url")
+                    if logs_url:
+                        logs_url = base_datadog_url + logs_url
+
+                    process_url = monitor.get("result", {}).get("process_url")
+                    if process_url:
+                        process_url = base_datadog_url + process_url
+                    # Extract tags - in v2 they're in attributes.tags
+                    tags_list = event_attributes.get("tags", [])
                     tags = {
                         k: v
                         for k, v in map(
                             lambda tag: tag.split(":", 1),
-                            [tag for tag in event.tags if ":" in tag],
+                            [tag for tag in tags_list if ":" in tag],
                         )
                     }
-                    severity, status, title = event.title.split(" ", 2)
-                    severity = severity.lstrip("[").rstrip("]")
-                    severity = DatadogProvider.SEVERITIES_MAP.get(
-                        severity, AlertSeverity.INFO
+
+                    # Extract monitor info directly from the nested attributes
+                    monitor_id = nested_attributes.get("monitor_id")
+                    monitor_groups = nested_attributes.get("monitor_groups", [])
+
+                    # Get the title directly
+                    title = nested_attributes.get("title", "") or nested_attributes.get(
+                        "event_object", ""
                     )
-                    status = status.lstrip("[").rstrip("]")
-                    received = datetime.datetime.fromtimestamp(
-                        event.get("date_happened")
-                    )
-                    monitor = all_monitors.get(event.monitor_id)
+
+                    # Extract the status directly from the attributes instead of parsing the title
+                    status_str = monitor.get("transition", {}).get("destination_state")
+
+                    # Get monitor info for checking if it's muted
+                    monitor = all_monitors.get(monitor_id)
                     is_muted = (
                         False
                         if not monitor
@@ -988,46 +1107,103 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
                             [
                                 downtime
                                 for downtime in monitor.matching_downtimes
-                                if downtime.groups == event.monitor_groups
+                                if downtime.groups == monitor_groups
                                 or downtime.scope == ["*"]
                             ]
                         )
                     )
 
+                    # Map the status using the direct status field
                     status = (
-                        DatadogProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
+                        DatadogProvider.STATUS_MAP.get(status_str, AlertStatus.FIRING)
                         if not is_muted
                         else AlertStatus.SUPPRESSED
                     )
 
+                    if monitor:
+                        severity = monitor.priority
+                        severity = DatadogProvider.SEVERITIES_MAP.get(
+                            severity, AlertSeverity.INFO
+                        )
+                    else:
+                        # Determine severity - if we can't parse from title, use priority
+                        severity_str = nested_attributes.get("priority")
+                        severity = DatadogProvider.SEVERITIES_MAP.get(
+                            severity_str, AlertSeverity.INFO
+                        )
+
+                    # Convert timestamp to datetime - in v2 it's a ISO string in attributes.timestamp
+                    # or milliseconds in attributes.attributes.timestamp
+                    if (
+                        "timestamp" in event_attributes
+                        and event_attributes["timestamp"]
+                    ):
+                        # If timestamp is in ISO format
+                        if isinstance(event_attributes["timestamp"], str):
+                            received = datetime.datetime.fromisoformat(
+                                event_attributes["timestamp"].replace("Z", "+00:00")
+                            )
+                        else:
+                            received = datetime.datetime.now()
+                    elif "timestamp" in nested_attributes:
+                        # If timestamp is in milliseconds in the nested attributes
+                        received = datetime.datetime.fromtimestamp(
+                            nested_attributes["timestamp"] / 1000
+                        )
+                    else:
+                        received = datetime.datetime.now()
+
+                    # Create the alert DTO
                     alert = AlertDto(
-                        id=event.id,
+                        id=event_data.get("id"),
                         name=title,
                         status=status,
                         lastReceived=received.isoformat(),
                         severity=severity,
-                        message=event.text,
-                        monitor_id=event.monitor_id,
-                        # tb: sometimes referred as scopes
-                        groups=event.monitor_groups,
+                        message=event_attributes.get("message", ""),
+                        description=event_attributes.get("message", ""),
+                        monitor_id=monitor_id,
+                        groups=monitor_groups,
                         source=["datadog"],
                         tags=tags,
-                        environment=tags.get("environment", "undefined"),
-                        service=tags.get("service"),
+                        environment=tags.get("environment", None)
+                        or tags.get("env", "undefined"),
+                        service=nested_attributes.get("service") or tags.get("service"),
                         created_by=(
                             monitor.creator.email
-                            if monitor and monitor.creator
+                            if monitor
+                            and hasattr(monitor, "creator")
+                            and monitor.creator
                             else None
                         ),
                     )
+                    if snap_url:
+                        alert.imageUrl = snap_url
+
+                    if alert_url:
+                        alert.url = alert_url
+
+                    if logs_url:
+                        alert.logsUrl = logs_url
+
+                    if process_url:
+                        alert.processUrl = process_url
+
                     alert.fingerprint = self.get_alert_fingerprint(
                         alert, self.fingerprint_fields
                     )
                     formatted_alerts.append(alert)
-                except Exception:
+                except Exception as e:
                     self.logger.exception(
                         "Could not parse alert event",
-                        extra={"event_id": event.id, "monitor_id": event.monitor_id},
+                        extra={
+                            "event_id": (
+                                event_data.get("id")
+                                if "event_data" in locals()
+                                else None
+                            ),
+                            "error": str(e),
+                        },
                     )
                     continue
         return formatted_alerts
@@ -1454,7 +1630,11 @@ if __name__ == "__main__":
         provider_type="datadog",
         provider_config=provider_config,
     )
+
+    alerts = provider.get_alerts()
+    """
     result = provider.create_incident(
         "tal test from provider", "what will I tell you?", "Tal Borenstein"
     )
-    print(result)
+    """
+    # print(result)

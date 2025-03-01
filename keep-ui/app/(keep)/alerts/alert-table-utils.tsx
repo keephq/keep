@@ -26,6 +26,8 @@ import {
   UISeverity,
 } from "@/shared/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import clsx from "clsx";
+import { RowStyle } from "./RowStyleSelection";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -84,6 +86,50 @@ export const isDateWithinRange: FilterFn<AlertDto> = (row, columnId, value) => {
   }
 
   return true;
+};
+
+/**
+ * Utility function to get consistent row class names across all table components
+ */
+export const getRowClassName = (
+  row: any,
+  theme: Record<string, string>,
+  lastViewedAlert: string | null,
+  rowStyle: RowStyle
+) => {
+  const severity = row.original.severity || "info";
+  const rowBgColor = theme[severity] || "bg-white";
+  const isLastViewed = row.original.fingerprint === lastViewedAlert;
+
+  return clsx(
+    "cursor-pointer group",
+    isLastViewed ? "bg-orange-50" : rowBgColor,
+    rowStyle === "dense" ? "h-8" : "h-12",
+    rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3",
+    "hover:bg-orange-100"
+  );
+};
+
+/**
+ * Utility function to get consistent cell class names
+ */
+export const getCellClassName = (
+  cell: any,
+  className: string,
+  rowStyle: RowStyle,
+  isLastViewed: boolean
+) => {
+  const isNameCell = cell.column.id === "name";
+
+  return clsx(
+    cell.column.columnDef.meta?.tdClassName,
+    className,
+    isNameCell && "name-cell",
+    // For dense rows, make sure name cells don't expand too much
+    rowStyle === "dense" && isNameCell && "w-auto max-w-2xl",
+    "group-hover:bg-orange-100", // Group hover styling
+    isLastViewed && "bg-orange-50" // Override with highlight if this is the last viewed row
+  );
 };
 
 const columnHelper = createColumnHelper<AlertDto>();
@@ -181,11 +227,6 @@ export const useAlertTableCols = (
             );
           }
 
-          // Special handling for imageUrl
-          if (colName === "imageUrl" && value) {
-            return <AlertImage imageUrl={value as string} />;
-          }
-
           if (value) {
             return (
               <div className="truncate whitespace-pre-wrap line-clamp-3">
@@ -219,8 +260,8 @@ export const useAlertTableCols = (
       ? [
           columnHelper.display({
             id: "checkbox",
-            maxSize: 32,
-            minSize: 32,
+            maxSize: 16,
+            minSize: 16,
             meta: {
               tdClassName: "w-6 !py-2 !pl-2 !pr-1",
               thClassName: "w-6 !py-2 !pl-2 !pr-1 ",
@@ -290,8 +331,8 @@ export const useAlertTableCols = (
     columnHelper.accessor("source", {
       id: "source",
       header: () => <></>,
-      minSize: 40,
-      maxSize: 40,
+      minSize: 20,
+      maxSize: 20,
       enableSorting: false,
       enableGrouping: true,
       getGroupingValue: (row) => row.source,
@@ -327,12 +368,13 @@ export const useAlertTableCols = (
       id: "name",
       header: "Name",
       enableGrouping: true,
+      enableResizing: true,
       getGroupingValue: (row) => {
         console.log("Grouping value for row:", row.name);
         return row.name;
       },
       cell: (context) => (
-        <div>
+        <div className="w-full">
           <AlertName
             alert={context.row.original}
             setNoteModalAlert={setNoteModalAlert}
@@ -341,8 +383,8 @@ export const useAlertTableCols = (
         </div>
       ),
       meta: {
-        tdClassName: "!pl-0  w-4 sm:w-8",
-        thClassName: "!pl-1  w-4 sm:w-8", // Small padding for header text only
+        tdClassName: "!pl-0 w-full",
+        thClassName: "!pl-1 w-full", // Small padding for header text only
       },
     }),
     columnHelper.accessor("description", {
@@ -363,8 +405,8 @@ export const useAlertTableCols = (
       header: "Status",
       enableGrouping: true,
       getGroupingValue: (row) => row.status,
-      maxSize: 150,
-      size: 150,
+      maxSize: 50,
+      size: 50,
       cell: (context) => (
         <span className="flex items-center gap-1 capitalize">
           <Icon
@@ -381,7 +423,8 @@ export const useAlertTableCols = (
       id: "lastReceived",
       header: "Last Received",
       filterFn: isDateWithinRange,
-      minSize: 100,
+      minSize: 80,
+      maxSize: 80,
       // data is a Date object (converted in usePresetAlerts)
       cell: (context) => {
         const value = context.getValue();
