@@ -29,6 +29,11 @@ import {
 import { DynamicImageProviderIcon } from "@/components/ui";
 import clsx from "clsx";
 import { RowStyle } from "./RowStyleSelection";
+import {
+  formatDateTime,
+  TimeFormatOption,
+  isDateTimeColumn,
+} from "./alert-table-time-format";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -163,6 +168,10 @@ export const useAlertTableCols = (
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
   const [rowStyle] = useLocalStorage("alert-table-row-style", "default");
+  const [columnTimeFormats] = useLocalStorage<Record<string, TimeFormatOption>>(
+    `column-time-formats-${presetName}`,
+    {}
+  );
   const { data: configData } = useConfig();
   // check if noisy alerts are enabled
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
@@ -225,6 +234,22 @@ export const useAlertTableCols = (
                   </pre>
                 </AccordionBody>
               </Accordion>
+            );
+          }
+          let isDateColumn = isDateTimeColumn(context.column.id);
+          if (isDateColumn) {
+            const date =
+              value instanceof Date
+                ? value
+                : new Date(value as string | number);
+            const isoString = date.toISOString();
+            // Get the format from column format settings or use default
+            const formatOption =
+              columnTimeFormats[context.column.id] || "timeago";
+            return (
+              <span title={isoString}>
+                {formatDateTime(date, formatOption)}
+              </span>
             );
           }
 
@@ -438,15 +463,16 @@ export const useAlertTableCols = (
       filterFn: isDateWithinRange,
       minSize: 80,
       maxSize: 80,
-      // data is a Date object (converted in usePresetAlerts)
       cell: (context) => {
         const value = context.getValue();
         const date = value instanceof Date ? value : new Date(value);
         const isoString = date.toISOString();
+
+        // Get the format from column format settings or use default
+        const formatOption = columnTimeFormats[context.column.id] || "timeago";
+
         return (
-          <span>
-            <TimeAgo date={isoString} title={isoString} />
-          </span>
+          <span title={isoString}>{formatDateTime(date, formatOption)}</span>
         );
       },
     }),

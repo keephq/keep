@@ -52,6 +52,7 @@ import { AlertsQuery } from "@/utils/hooks/useAlerts";
 import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
 import { ViewedAlert } from "./alert-table";
+import { TimeFormatOption } from "./alert-table-time-format";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -122,7 +123,9 @@ export function AlertTableServerSide({
   const [dateRangeCel, setDateRangeCel] = useState<string>("");
   const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
-
+  const [columnTimeFormats, setColumnTimeFormats] = useLocalStorage<
+    Record<string, TimeFormatOption>
+  >(`column-time-formats-${presetName}`, {});
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
@@ -265,6 +268,10 @@ export function AlertTableServerSide({
         pageIndex: paginationState.pageIndex,
         pageSize: paginationState.pageSize,
       },
+    },
+    meta: {
+      columnTimeFormats: columnTimeFormats,
+      setColumnTimeFormats: setColumnTimeFormats,
     },
     enableGrouping: true,
     manualSorting: true,
@@ -540,6 +547,8 @@ export function AlertTableServerSide({
                       table={table}
                       presetName={presetName}
                       a11yContainerRef={a11yContainerRef}
+                      columnTimeFormats={columnTimeFormats}
+                      setColumnTimeFormats={setColumnTimeFormats}
                     />
                     <AlertsTableBody
                       table={table}
