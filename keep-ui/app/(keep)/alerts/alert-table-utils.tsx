@@ -13,6 +13,7 @@ import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
 import { isSameDay, isValid, isWithinInterval } from "date-fns";
+import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import {
   MdOutlineNotificationsActive,
   MdOutlineNotificationsOff,
@@ -44,7 +45,6 @@ export const DEFAULT_COLS_VISIBILITY = DEFAULT_COLS.reduce<VisibilityState>(
   (acc, colId) => ({ ...acc, [colId]: true }),
   {}
 );
-
 export const getColumnsIds = (columns: ColumnDef<AlertDto>[]) =>
   columns.map((column) => column.id as keyof AlertDto);
 
@@ -162,6 +162,7 @@ export const useAlertTableCols = (
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
+  const [rowStyle] = useLocalStorage("alert-table-row-style", "default");
   const { data: configData } = useConfig();
   // check if noisy alerts are enabled
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
@@ -229,7 +230,12 @@ export const useAlertTableCols = (
 
           if (value) {
             return (
-              <div className="truncate whitespace-pre-wrap line-clamp-3">
+              <div
+                className={clsx(
+                  "truncate whitespace-pre-wrap",
+                  rowStyle === "dense" ? "line-clamp-1" : "line-clamp-3"
+                )}
+              >
                 {value.toString()}
               </div>
             );
@@ -394,7 +400,14 @@ export const useAlertTableCols = (
       minSize: 100,
       cell: (context) => (
         <div title={context.getValue()}>
-          <div className="truncate line-clamp-3 whitespace-pre-wrap">
+          <div
+            className={clsx(
+              "whitespace-pre-wrap",
+              rowStyle === "dense"
+                ? "truncate line-clamp-1"
+                : "truncate line-clamp-3"
+            )}
+          >
             {context.getValue()}
           </div>
         </div>
