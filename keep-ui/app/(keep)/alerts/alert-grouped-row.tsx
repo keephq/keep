@@ -36,14 +36,14 @@ export const GroupedRow = ({
   const getRowClassName = (row: any) => {
     const severity = row.original.severity || "info";
     const rowBgColor = theme[severity] || "bg-white";
+    const isLastViewed = row.original.fingerprint === lastViewedAlert;
 
     return clsx(
-      "cursor-pointer group",
+      "cursor-pointer group hover:bg-gray-50", // Simplified hover
       rowBgColor,
+      isLastViewed && "bg-orange-50",
       rowStyle === "dense" ? "h-8" : "h-12",
-      rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3",
-      "hover:bg-orange-100",
-      "[&>td]:group-hover:bg-orange-100"
+      rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3"
     );
   };
 
@@ -104,8 +104,9 @@ export const GroupedRow = ({
                     className={clsx(
                       cell.column.columnDef.meta?.tdClassName,
                       className,
-                      rowBgColor,
-                      "group-hover:bg-orange-100"
+                      rowStyle === "dense" &&
+                        cell.column.id === "name" &&
+                        "overflow-hidden"
                     )}
                     style={style}
                   >
