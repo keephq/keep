@@ -17,7 +17,7 @@ import { WorkflowTemplates } from "./mockworkflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { showErrorToast, Input, ErrorComponent } from "@/shared/ui";
-import { Textarea } from "@/components/ui";
+import { EmptyStateCard, Textarea } from "@/components/ui";
 import { useWorkflowsV2, WorkflowsQuery } from "utils/hooks/useWorkflowsV2";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import { Pagination, SearchInput } from "@/features/filter";
@@ -30,6 +30,8 @@ import {
   XCircleIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, FunnelIcon } from "@heroicons/react/24/outline";
+import { v4 as uuidV4 } from "uuid";
 
 const EXAMPLE_WORKFLOW_DEFINITIONS = {
   slack: `
@@ -87,6 +89,9 @@ export default function WorkflowsPage({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [workflowDefinition, setWorkflowDefinition] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
+    null
+  );
   const [filterCel, setFilterCel] = useState<string | null>(null);
   const [searchedValue, setSearchedValue] = useState<string | null>(null);
   const [paginationState, setPaginationState] = useState<{
@@ -144,12 +149,15 @@ export default function WorkflowsPage({
     totalCount: filteredWorkflowsCount,
     error,
     isLoading: isFilteredWorkflowsLoading,
-  } = useWorkflowsV2(workflowsQuery, true);
+  } = useWorkflowsV2(workflowsQuery);
 
+  const isTableEmpty = filteredWorkflowsCount === 0;
   const isEmptyState =
-    !isFilteredWorkflowsLoading &&
-    filteredWorkflowsCount === 0 &&
-    !workflowsQuery?.cel;
+    !isFilteredWorkflowsLoading && isTableEmpty && !workflowsQuery?.cel;
+
+  const showFilterEmptyState = isTableEmpty && !!filterCel;
+  const showSearchEmptyState =
+    isTableEmpty && !!searchCel && !showFilterEmptyState;
 
   const setPaginationStateCallback = useCallback(
     (pageIndex: number, limit: number, offset: number) => {
@@ -287,6 +295,68 @@ export default function WorkflowsPage({
     setIsModalOpen(false);
   }
 
+  function renderFilterEmptyState() {
+    return (
+      <>
+        <div className="flex items-center h-full w-full">
+          <div className="flex flex-col justify-center items-center w-full p-4">
+            <EmptyStateCard
+              title="No workflows to display matching your filter"
+              buttonText="Reset filter"
+              renderIcon={() => (
+                <FunnelIcon className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
+              )}
+              onClick={() => setClearFiltersToken(uuidV4())}
+            />
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  function renderSearchEmptyState() {
+    return (
+      <>
+        <div className="flex items-center h-full w-full">
+          <div className="flex flex-col justify-center items-center w-full p-4">
+            <EmptyStateCard
+              title="No workflows to display matching your search"
+              buttonText="Clear search"
+              renderIcon={() => (
+                <MagnifyingGlassIcon className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
+              )}
+              onClick={() => setSearchedValue(null)}
+            />
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  function renderData() {
+    return (
+      <>
+        <div className="self-start grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
+          {filteredWorkflows?.map((workflow) => (
+            <WorkflowTile key={workflow.id} workflow={workflow} />
+          ))}
+        </div>
+        <div
+          className={`mt-4 ${isFilteredWorkflowsLoading ? "invisible" : ""}`}
+        >
+          <Pagination
+            totalCount={filteredWorkflowsCount}
+            isRefreshAllowed={false}
+            isRefreshing={false}
+            pageSizeOptions={[12, 24, 48]}
+            onRefresh={() => {}}
+            onStateChange={setPaginationStateCallback}
+          />
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <main className="pt-4 flex flex-col gap-8 relative">
@@ -303,6 +373,7 @@ export default function WorkflowsPage({
             <SearchInput
               className="flex-1 mx-4"
               placeholder="Search workflows"
+              value={searchedValue}
               onValueChange={setSearchedValue}
             />
             <div>
@@ -338,38 +409,24 @@ export default function WorkflowsPage({
                 facetsConfig={facetsConfig}
                 facetOptionsCel={searchCel}
                 usePropertyPathsSuggestions={true}
-                // clearFiltersToken={clearFiltersToken}
+                clearFiltersToken={clearFiltersToken}
                 initialFacetsData={initialFacetsData}
-                // uncheckedByDefaultOptionValues={uncheckedFacetOptionsByDefault}
                 onCelChange={(cel) => setFilterCel(cel)}
-                // revalidationToken={filterRevalidationToken}
               />
 
-              <div className="flex flex-col flex-1">
+              <div className="flex flex-col flex-1 relative">
                 {isFilteredWorkflowsLoading && (
                   <div className="flex items-center justify-center h-96 w-full">
                     <KeepLoader includeMinHeight={false} />
                   </div>
                 )}
                 {!isFilteredWorkflowsLoading && (
-                  <div className="self-start grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
-                    {filteredWorkflows?.map((workflow) => (
-                      <WorkflowTile key={workflow.id} workflow={workflow} />
-                    ))}
-                  </div>
+                  <>
+                    {showFilterEmptyState && renderFilterEmptyState()}
+                    {showSearchEmptyState && renderSearchEmptyState()}
+                    {!isTableEmpty && renderData()}
+                  </>
                 )}
-                <div
-                  className={`mt-4 ${isFilteredWorkflowsLoading ? "invisible" : ""}`}
-                >
-                  <Pagination
-                    totalCount={filteredWorkflowsCount}
-                    isRefreshAllowed={false}
-                    isRefreshing={false}
-                    pageSizeOptions={[12, 24, 48]}
-                    onRefresh={() => {}}
-                    onStateChange={setPaginationStateCallback}
-                  />
-                </div>
               </div>
             </div>
           )}
