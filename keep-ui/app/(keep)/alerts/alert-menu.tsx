@@ -201,6 +201,7 @@ export default function AlertMenu({
   }, [alert, presetName, router]);
 
   // Quick actions that appear in the action tray
+  // @tb: Create a dynamic component like Druids ActionTray that accepts a list of actions and renders them in a grid
   const quickActions = (
     <div
       className={clsx(
