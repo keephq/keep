@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-table";
 import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
-import { AlertName, AlertImage } from "@/entities/alerts/ui";
+import { AlertName } from "@/entities/alerts/ui";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
@@ -19,7 +19,6 @@ import {
   MdOutlineNotificationsOff,
 } from "react-icons/md";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
-import TimeAgo from "react-timeago";
 import { useConfig } from "utils/hooks/useConfig";
 import {
   TableIndeterminateCheckbox,
@@ -508,8 +507,8 @@ export const useAlertTableCols = (
       ? [
           columnHelper.display({
             id: "alertMenu",
-            minSize: 40,
-            maxSize: 48,
+            minSize: 76,
+            maxSize: 84,
             cell: (context) => (
               <div className="flex justify-end">
                 <AlertMenu

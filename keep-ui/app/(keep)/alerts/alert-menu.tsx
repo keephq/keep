@@ -204,11 +204,11 @@ export default function AlertMenu({
   const quickActions = (
     <div
       className={clsx(
-        "flex items-center gap-1",
+        "flex items-center",
         showActionsOnHover
           ? [
               "absolute right-full transition-all duration-200",
-              "transform translate-x-full opacity-0",
+              "transform translate-x-full opacity-0 bg-orange-100",
               "group-hover:translate-x-[-0.5rem] group-hover:opacity-100",
             ]
           : "opacity-100"
@@ -225,11 +225,12 @@ export default function AlertMenu({
             viewedAlert ? "text-orange-400" : ""
           )}
           tooltip={
-            viewedAlert &&
-            `Viewed ${format(
-              new Date(viewedAlert.viewedAt),
-              "MMM d, yyyy HH:mm"
-            )}`
+            viewedAlert
+              ? `Viewed ${format(
+                  new Date(viewedAlert.viewedAt),
+                  "MMM d, yyyy HH:mm"
+                )}`
+              : "View Alert Payload"
           }
         />
       </div>
@@ -260,11 +261,11 @@ export default function AlertMenu({
             window.open(url || generatorURL, "_blank");
           }}
           className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
-          title="Open Original Alert"
         >
           <Icon
             icon={ArrowTopRightOnSquareIcon}
             className="w-4 h-4 text-gray-500"
+            tooltip="Open Original Alert"
           />
         </button>
       )}
@@ -279,19 +280,19 @@ export default function AlertMenu({
             }
           }}
           className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
-          title={
-            ticketUrl
-              ? `Ticket Assigned ${
-                  ticketStatus ? `(status: ${ticketStatus})` : ""
-                }`
-              : "Click to assign Ticket"
-          }
         >
           <Icon
             icon={TicketIcon}
             className={`w-4 h-4 ${
               ticketUrl ? "text-green-500" : "text-gray-500"
             }`}
+            tooltip={
+              ticketUrl
+                ? `Ticket Assigned ${
+                    ticketStatus ? `(status: ${ticketStatus})` : ""
+                  }`
+                : "Click to assign Ticket"
+            }
           />
         </button>
       )}
@@ -314,11 +315,11 @@ export default function AlertMenu({
             setNoteModalAlert(alert);
           }}
           className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
-          title="Add/Edit Note"
         >
           <Icon
             icon={PencilSquareIcon}
             className={`w-4 h-4 ${note ? "text-green-500" : "text-gray-500"}`}
+            tooltip={note ? "Edit Note" : "Add Note"}
           />
         </button>
       )}
@@ -331,7 +332,6 @@ export default function AlertMenu({
             );
           }}
           className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
-          title={`Workflow ${relevantWorkflowExecution.workflow_status}`}
         >
           <Icon
             icon={Cog8ToothIcon}
@@ -342,6 +342,7 @@ export default function AlertMenu({
                 ? "text-red-500"
                 : "text-gray-500"
             }`}
+            tooltip={`Workflow ${relevantWorkflowExecution.workflow_status}`}
           />
         </button>
       )}
