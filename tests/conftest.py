@@ -543,11 +543,6 @@ def browser():
         browser = p.chromium.launch(headless=headless)
         context = browser.new_context(
             viewport={"width": 1920, "height": 1080},
-            # {
-            #     "viewport": {"width": 1920, "height": 1080},
-            #     # "record_video": {"dir": "tests/videos"},
-            #     # "record_har": {"dir": "tests/har"},
-            # }
         )
         context.grant_permissions(["clipboard-read", "clipboard-write"])
         page = context.new_page()
