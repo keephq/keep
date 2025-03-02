@@ -326,6 +326,12 @@
         </a>
   </td>
   <td align="center" width="150">
+  <a href="https://docs.keephq.dev/providers/documentation/thousandeyes-provider" target="_blank">
+    <img width="40" src="keep-ui/public/icons/thousandeyes-icon.png" alt="ThousandEyes"/><br/>
+    ThousandEyes
+        </a>
+ </td>
+  <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/uptimekuma-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/uptimekuma-icon.png" alt="UptimeKuma"/><br/>
           UptimeKuma
