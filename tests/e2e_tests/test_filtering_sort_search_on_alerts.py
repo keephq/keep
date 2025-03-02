@@ -236,7 +236,9 @@ def upload_alerts():
 
 
 def init_test(browser: Browser, alerts):
-    browser.goto(f"{KEEP_UI_URL}/alerts/feed", timeout=10000)
+    url = f"{KEEP_UI_URL}/alerts/feed"
+    browser.goto(url)
+    browser.wait_for_url(url)
     browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
     browser.wait_for_selector(f"text={alerts[0]['name']}", timeout=10000)
     rows_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()
