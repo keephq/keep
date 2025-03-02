@@ -405,9 +405,10 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                       <Badge
                         color="orange"
                         size="sm"
-                        className="cursor-pointer"
+                        className="cursor-pointer overflow-ellipsis"
+                        tooltip={incident.rule_fingerprint}
                       >
-                        {incident.rule_fingerprint}
+                        {incident.rule_fingerprint.length > 10 ? incident.rule_fingerprint.slice(0, 10) + "..." : incident.rule_fingerprint}
                       </Badge>
                     </div>
                   </div>
@@ -464,12 +465,6 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
             {incident.resolve_on}
           </Badge>
         </div>
-        {!!incident.rule_fingerprint && (
-          <div>
-            <FieldHeader>Group by value</FieldHeader>
-            <p>{incident.rule_fingerprint}</p>
-          </div>
-        )}
       </div>
     </div>
   );

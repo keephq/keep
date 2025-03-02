@@ -43,7 +43,6 @@ class WorkflowContextFilter(logging.Filter):
         if not workflow_id:
             return False
 
-        print("Adding workflow_id to log record")
         # Skip DEBUG logs unless debug mode is enabled
         if not getattr(thread, "workflow_debug", False) and record.levelname == "DEBUG":
             return False

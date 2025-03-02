@@ -4,9 +4,13 @@ import os
 import boto3
 import opentelemetry.trace as trace
 from botocore.exceptions import ClientError
+
+from keep.api.core.config import config
 from keep.secretmanager.secretmanager import BaseSecretManager
 
 tracer = trace.get_tracer(__name__)
+
+SECRET_MANAGER_TAGS = config("AWS_SECRET_MANAGER_TAGS", default=None)
 
 
 class AwsSecretManager(BaseSecretManager):
@@ -23,6 +27,18 @@ class AwsSecretManager(BaseSecretManager):
                 extra={"error": str(e)},
             )
             raise
+        self.tags = []
+        if SECRET_MANAGER_TAGS:
+            # we expect this format: key=value,key2=value2
+            try:
+                for tag in SECRET_MANAGER_TAGS.split(","):
+                    key, value = tag.split("=")
+                    self.tags.append({"Key": key, "Value": value})
+            except Exception as e:
+                self.logger.error(
+                    "Failed to parse SECRET_MANAGER_TAGS, skipping tags",
+                    extra={"error": str(e)},
+                )
 
     def write_secret(self, secret_name: str, secret_value: str) -> None:
         """
@@ -53,7 +69,10 @@ class AwsSecretManager(BaseSecretManager):
                     try:
                         # Create new secret if it doesn't exist
                         self.client.create_secret(
-                            Name=secret_name, SecretString=secret_value
+                            Name=secret_name,
+                            SecretString=secret_value,
+                            KmsKeyId=os.environ.get("AWS_KMS_KEY_ID", None),
+                            Tags=self.tags,
                         )
                         self.logger.info(
                             "Secret created successfully",

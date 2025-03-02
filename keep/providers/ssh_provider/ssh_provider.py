@@ -11,7 +11,7 @@ from paramiko import AutoAddPolicy, RSAKey, SSHClient
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 from keep.validation.fields import NoSchemeUrl, UrlPort
 
@@ -70,6 +70,13 @@ class SshProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "SSH"
     PROVIDER_CATEGORY = ["Cloud Infrastructure", "Developer Tools"]
+
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="ssh_access",
+            description="The provided credentials grant access to the SSH server",
+        ),
+    ]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -132,6 +139,17 @@ class SshProvider(BaseProvider):
 
         """
         self.authentication_config = SshProviderAuthConfig(**self.config.authentication)
+
+    def validate_scopes(self):
+        """
+        Validate the scopes of the provider
+        """
+        try:
+            if self.client.get_transport().is_authenticated():
+                return {"ssh_access": True}
+        except Exception:
+            self.logger.exception("Error validating scopes")
+        return {"ssh_access": "Authentication failed"}
 
     def _query(self, command: str, **kwargs: dict):
         """

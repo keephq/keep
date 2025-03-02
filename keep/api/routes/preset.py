@@ -233,13 +233,6 @@ def get_presets(
         presets_dto.append(STATIC_PRESETS["feed"])
     logger.info("Got all presets")
 
-    # get the number of alerts + noisy alerts for each preset
-    search_engine = SearchEngine(tenant_id=tenant_id)
-    # get the preset metatada
-    presets_dto = search_engine.search_preset_alerts(
-        presets=presets_dto, time_stamp=time_stamp
-    )
-
     return presets_dto
 
 

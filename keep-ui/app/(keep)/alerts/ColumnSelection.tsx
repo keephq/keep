@@ -3,32 +3,21 @@ import { Table } from "@tanstack/table-core";
 import { Button, TextInput } from "@tremor/react";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { VisibilityState, ColumnOrderState } from "@tanstack/react-table";
-import { FloatingArrow, arrow, offset, useFloating } from "@floating-ui/react";
-import { Popover } from "@headlessui/react";
-import { FiSettings, FiSearch } from "react-icons/fi";
+import { FiSearch } from "react-icons/fi";
 import { DEFAULT_COLS, DEFAULT_COLS_VISIBILITY } from "./alert-table-utils";
 import { AlertDto } from "@/entities/alerts/model";
 
 interface AlertColumnsSelectProps {
   table: Table<AlertDto>;
   presetName: string;
+  onClose?: () => void;
 }
 
 export default function ColumnSelection({
   table,
   presetName,
+  onClose,
 }: AlertColumnsSelectProps) {
-  const arrowRef = useRef(null);
-  const { refs, floatingStyles, context } = useFloating({
-    strategy: "fixed",
-    placement: "bottom-end",
-    middleware: [
-      offset({ mainAxis: 10 }),
-      arrow({
-        element: arrowRef,
-      }),
-    ],
-  });
   const tableColumns = table.getAllColumns();
 
   const [columnVisibility, setColumnVisibility] =
@@ -56,10 +45,7 @@ export default function ColumnSelection({
     column.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const onMultiSelectChange = (
-    event: FormEvent<HTMLFormElement>,
-    closePopover: VoidFunction
-  ) => {
+  const onMultiSelectChange = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
@@ -86,62 +72,41 @@ export default function ColumnSelection({
 
     setColumnVisibility(newColumnVisibility);
     setColumnOrder(finalOrder);
-    closePopover();
+    onClose?.();
   };
 
   return (
-    <Popover as={Fragment}>
-      {({ close }) => (
-        <>
-          <Popover.Button
-            variant="light"
-            color="gray"
-            as={Button}
-            icon={FiSettings}
-            ref={refs.setReference}
-          />
-          <Popover.Overlay className="fixed inset-0 bg-black opacity-30 z-20" />
-          <Popover.Panel
-            as="form"
-            className="bg-white z-30 p-4 rounded-sm"
-            ref={refs.setFloating}
-            style={floatingStyles}
-            onSubmit={(e) => onMultiSelectChange(e, close)}
-          >
-            <FloatingArrow
-              className="fill-white [&>path:last-of-type]:stroke-white"
-              ref={arrowRef}
-              context={context}
-            />
-            <span className="text-gray-400 text-sm">Set table fields</span>
-            <TextInput
-              icon={FiSearch}
-              placeholder="Search fields..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="mt-2"
-            />
-            <ul className="space-y-1 mt-3 max-h-96 overflow-auto">
-              {filteredColumns.map((column) => (
-                <li key={column}>
-                  <label className="cursor-pointer p-2">
-                    <input
-                      className="mr-2"
-                      name={column}
-                      type="checkbox"
-                      defaultChecked={columnVisibility[column]}
-                    />
-                    {column}
-                  </label>
-                </li>
-              ))}
-            </ul>
-            <Button className="mt-5" color="orange" type="submit">
-              Save changes
-            </Button>
-          </Popover.Panel>
-        </>
-      )}
-    </Popover>
+    <form onSubmit={onMultiSelectChange} className="flex flex-col h-full">
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <span className="text-gray-400 text-sm mb-2">Set table fields</span>
+        <TextInput
+          icon={FiSearch}
+          placeholder="Search fields..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="mb-3"
+        />
+        <div className="flex-1 overflow-y-auto max-h-[350px]">
+          <ul className="space-y-1">
+            {filteredColumns.map((column) => (
+              <li key={column}>
+                <label className="cursor-pointer p-2 flex items-center">
+                  <input
+                    className="mr-2"
+                    name={column}
+                    type="checkbox"
+                    defaultChecked={columnVisibility[column]}
+                  />
+                  {column}
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <Button className="mt-4" color="orange" type="submit">
+        Save changes
+      </Button>
+    </form>
   );
 }

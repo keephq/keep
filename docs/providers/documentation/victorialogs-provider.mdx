@@ -1,0 +1,67 @@
+---
+title: 'VictoriaLogs'
+sidebarTitle: 'VictoriaLogs Provider'
+description: 'VictoriaLogs provider allows you to query logs from VictoriaLogs.'
+---
+
+## Overview
+
+VictoriaLogs is open source user-friendly database for logs from VictoriaMetrics. It is optimized for high performance and low memory usage. It can handle high cardinality and high volume of logs.
+
+## Authentication Parameters
+
+The VictoriaLogs provider requires the following authentication parameters:
+
+- `VictoriaLogs Host URL`: The URL of the VictoriaLogs instance.
+- `Authentication Type` : The type of authentication to use. Supported types are `NoAuth`, `Basic`, and `Bearer`.
+
+Note: To add authentication VMAuth should be configured. For more information, refer to the [VMauth documentation](https://docs.victoriametrics.com/vmauth/).
+
+### NoAuth
+- No additional parameters are required, only the `Grafana Loki Host URL` is required.
+
+### HTTP basic authentication
+- `HTTP basic authentication - Username`: The username to use for HTTP basic authentication.
+- `HTTP basic authentication - Password`: The password to use for HTTP basic authentication.
+
+### Bearer
+- `Bearer Token` : The bearer token to use for authentication.
+- `X-Scope-OrgID Header`: The organization ID to use for VictoriaLogs Multi-tenancy support. (Optional)
+
+## Querying VictoriaLogs
+
+The VictoriaLogs provider allows you to query logs from VictoriaLogs through the `query`, `hits`, `stats_query` and `stats_query_range` types. The following are the parameters available for querying:
+
+1. `query` type:
+
+    - `query`: This is the query to perform.
+    - `limit`: The max number of matching entries to return.
+    - `timeout`: The query timeout in seconds.
+    - `AccountID`: The account ID to use for VictoriaLogs.
+    - `ProjectID`: The project ID to use for VictoriaLogs.
+
+2. `hits` type:
+
+    - `query`: This is the query to perform.
+    - `start`: The start time for the query.
+    - `end`: The end time for the query.
+    - `step`: The step for the query.
+    - `AccountID`: The account ID to use for VictoriaLogs.
+    - `ProjectID`: The project ID to use for VictoriaLogs.
+
+3. `stats_query` type:
+
+    - `query`: This is the query to perform.
+    - `time`: The evaluation time for the query.
+
+4. `stats_query_range` type:
+
+    - `query`: This is the query to perform.
+    - `start`: The start time for the query.
+    - `end`: The end time for the query.
+    - `step`: The step for the query.
+
+## Useful Links
+
+- [VictoriaLogs](https://docs.victoriametrics.com/victorialogs/)
+- [VMauth documentation](https://docs.victoriametrics.com/vmauth/)

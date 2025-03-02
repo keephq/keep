@@ -176,6 +176,7 @@ async def update_rule(
         create_on = body["createOn"]
         grouping_criteria = body.get("groupingCriteria", [])
         require_approve = body.get("requireApprove", [])
+        incident_template_name = body.get("incidentNameTemplate", None)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -224,6 +225,7 @@ async def update_rule(
         require_approve=require_approve,
         resolve_on=resolve_on,
         create_on=create_on,
+        incident_name_template=incident_template_name,
     )
 
     if rule:

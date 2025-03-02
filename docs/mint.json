@@ -236,6 +236,7 @@
             "providers/documentation/trello-provider",
             "providers/documentation/twilio-provider",
             "providers/documentation/uptimekuma-provider",
+            "providers/documentation/victorialogs-provider",
             "providers/documentation/victoriametrics-provider",
             "providers/documentation/vllm-provider",
             "providers/documentation/wazuh-provider",

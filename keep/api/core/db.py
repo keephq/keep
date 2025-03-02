@@ -1764,6 +1764,7 @@ def update_rule(
     require_approve,
     resolve_on,
     create_on,
+    incident_name_template,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -1786,6 +1787,7 @@ def update_rule(
             rule.update_time = datetime.utcnow()
             rule.resolve_on = resolve_on
             rule.create_on = create_on
+            rule.incident_name_template = incident_name_template
             session.commit()
             session.refresh(rule)
             return rule
@@ -1893,7 +1895,7 @@ def create_incident_for_grouping_rule(
             user_generated_name=incident_name or f"{rule.name}",
             rule_id=rule.id,
             rule_fingerprint=rule_fingerprint,
-            is_predicted=False,
+            is_predicted=True,
             is_confirmed=rule.create_on == CreateIncidentOn.ANY.value
             and not rule.require_approve,
             incident_type=IncidentType.RULE.value,
@@ -3593,7 +3595,9 @@ def update_incident_from_dto_by_id(
                         setattr(incident, key, value)
 
         if "same_incident_in_the_past_id" in updated_data:
-            incident.same_incident_in_the_past_id = updated_data["same_incident_in_the_past_id"]
+            incident.same_incident_in_the_past_id = updated_data[
+                "same_incident_in_the_past_id"
+            ]
 
         if generated_by_ai:
             incident.generated_summary = updated_incident_dto.user_summary

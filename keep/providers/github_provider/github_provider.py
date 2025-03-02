@@ -89,6 +89,25 @@ class GithubProvider(BaseProvider):
             **self.config.authentication
         )
 
+    def _notify(self, **kwargs):
+        if "run_action" in kwargs:
+            workflow_name = kwargs.get("workflow")
+            repo_name = kwargs.get("repo_name")
+            repo_owner = kwargs.get("repo_owner")
+            ref = kwargs.get("ref", "main")
+            inputs = kwargs.get("inputs", {})
+
+            # Initialize the GitHub client
+            github_client = self.__generate_client()
+
+            # Get the repository
+            repo = github_client.get_repo(f"{repo_owner}/{repo_name}")
+
+            # Trigger the workflow
+            workflow = repo.get_workflow(workflow_name)
+            run = workflow.create_dispatch(ref, inputs)
+            return run
+
 
 class GithubStarsProvider(GithubProvider):
     """

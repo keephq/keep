@@ -1,0 +1,15 @@
+id: retrieve-cloudwatch-logs
+name: Retrieve CloudWatch Logs
+description: Retrieve CloudWatch Logs
+triggers:
+  - type: manual
+
+steps:
+  - name: cw-logs
+    provider:
+      config: "{{ providers.cloudwatch }}"
+      type: cloudwatch
+      with:
+        log_group: "meow_logs"
+        query: "fields @timestamp, @message | sort @timestamp desc | limit 20"
+        hours: 12

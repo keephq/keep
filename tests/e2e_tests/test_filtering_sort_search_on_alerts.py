@@ -18,25 +18,24 @@ KEEP_API_URL = "http://localhost:8080"
 def query_allerts(cell_query: str = None, limit: int = None, offset: int = None):
     url = f"{KEEP_API_URL}/alerts/query"
 
-    query_params = {}
+    query = {}
 
     if cell_query:
-        query_params["cel"] = cell_query
+        query["cel"] = cell_query
 
     if limit is not None:
-        query_params["limit"] = limit
+        query["limit"] = limit
 
     if offset is not None:
-        query_params["offset"] = offset
+        query["offset"] = offset
 
-    if query_params:
-        url += "?" + "&".join([f"{k}={v}" for k, v in query_params.items()])
     result: dict = None
 
     for _ in range(5):
         try:
-            response = requests.get(
+            response = requests.post(
                 url,
+                json=query,
                 headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
                 timeout=5,
             )
@@ -532,7 +531,8 @@ def test_alerts_stream(browser):
     expect(
         browser.locator("[data-testid='alerts-table'] table tbody tr")
     ).to_have_count(len(simulated_alerts))
-    current_alerts = query_allerts(cell_query=cel_to_filter_alerts)["results"]
+    query_result = query_allerts(cell_query=cel_to_filter_alerts, limit=1000)
+    current_alerts = query_result["results"]
     assert_facet(browser, facet_name, current_alerts, alert_property_name)
 
     assert_alerts_by_column(

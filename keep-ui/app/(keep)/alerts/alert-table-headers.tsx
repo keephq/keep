@@ -41,6 +41,11 @@ import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import { DropdownMenu } from "@/shared/ui";
 import { DEFAULT_COLS_VISIBILITY } from "./alert-table-utils";
+import {
+  isDateTimeColumn,
+  TimeFormatOption,
+  createTimeFormatMenuItems,
+} from "./alert-table-time-format";
 
 interface DraggableHeaderCellProps {
   header: Header<AlertDto, unknown>;
@@ -49,6 +54,8 @@ interface DraggableHeaderCellProps {
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
+  columnTimeFormats: Record<string, TimeFormatOption>;
+  setColumnTimeFormats: (formats: Record<string, TimeFormatOption>) => void;
 }
 
 const DraggableHeaderCell = ({
@@ -58,6 +65,8 @@ const DraggableHeaderCell = ({
   children,
   className,
   style,
+  columnTimeFormats,
+  setColumnTimeFormats,
 }: DraggableHeaderCellProps) => {
   const { column, getResizeHandler } = header;
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
@@ -252,6 +261,13 @@ const DraggableHeaderCell = ({
                   label="Sort descending"
                   onClick={() => column.toggleSorting(true)}
                 />
+                {isDateTimeColumn(column.id) &&
+                  createTimeFormatMenuItems(
+                    column.id,
+                    columnTimeFormats,
+                    setColumnTimeFormats,
+                    DropdownMenu
+                  )}
                 {column.getCanGroup() !== false && (
                   <DropdownMenu.Item
                     icon={ArrowsUpDownIcon}
@@ -343,6 +359,8 @@ interface Props {
   table: Table<AlertDto>;
   presetName: string;
   a11yContainerRef: RefObject<HTMLDivElement>;
+  columnTimeFormats: Record<string, TimeFormatOption>;
+  setColumnTimeFormats: (formats: Record<string, TimeFormatOption>) => void;
 }
 
 export default function AlertsTableHeaders({
@@ -350,6 +368,8 @@ export default function AlertsTableHeaders({
   table,
   presetName,
   a11yContainerRef,
+  columnTimeFormats,
+  setColumnTimeFormats,
 }: Props) {
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
@@ -422,6 +442,8 @@ export default function AlertsTableHeaders({
                     presetName={presetName}
                     className={className}
                     style={style}
+                    columnTimeFormats={columnTimeFormats}
+                    setColumnTimeFormats={setColumnTimeFormats}
                   >
                     {header.isPlaceholder ? null : (
                       <div>

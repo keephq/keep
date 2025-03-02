@@ -129,41 +129,42 @@ export const useAlerts = () => {
     query: AlertsQuery | undefined,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
-    const filtersParams = new URLSearchParams();
+    const queryToPost: { [key: string]: any } = {};
 
     if (query?.offset !== undefined) {
-      filtersParams.set("offset", String(query.offset));
+      queryToPost.offset = query.offset;
     }
 
     if (query?.limit !== undefined) {
-      filtersParams.set("limit", String(query.limit));
+      queryToPost.limit = query.limit;
     }
 
     if (query?.cel) {
-      filtersParams.set("cel", query.cel);
+      queryToPost.cel = query.cel;
     }
 
     if (query?.sortBy) {
-      filtersParams.set("sort_by", query.sortBy);
+      queryToPost.sort_by = query.sortBy;
 
       switch (query?.sortDirection) {
         case "DESC":
-          filtersParams.set("sort_dir", "desc");
+          queryToPost.sort_dir = "desc";
           break;
         default:
-          filtersParams.set("sort_dir", "asc");
+          queryToPost.sort_dir = "asc";
       }
     }
 
     let requestUrl = `/alerts/query`;
 
-    if (filtersParams.toString()) {
-      requestUrl += `?${filtersParams.toString()}`;
-    }
-
     const swrValue = useSWR<any>(
-      () => (api.isReady() && query ? requestUrl : null),
-      () => api.get(requestUrl),
+      () =>
+        api.isReady()
+          ? Object.entries(queryToPost)
+              .map(([key, value]) => `${key}=${value}`)
+              .join(";")
+          : null,
+      () => api.post(requestUrl, queryToPost),
       options
     );
 

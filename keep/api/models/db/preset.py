@@ -83,8 +83,6 @@ class PresetDto(BaseModel, extra="ignore"):
     # if true, the preset should be do noise now
     #   meaning is_noisy + at least one alert is doing noise
     should_do_noise_now: Optional[bool] = Field(default=False)
-    # number of alerts
-    alerts_count: Optional[int] = Field(default=0)
     # static presets
     static: Optional[bool] = Field(default=False)
     tags: List[TagDto] = []
