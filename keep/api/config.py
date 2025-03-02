@@ -49,11 +49,14 @@ def provision_superset():
         logger.info("Superset is disabled")
         return
 
-    logger.info("Provisioning superset dashboards")
-    superset_client = SupersetClient()
-    # provision the initial dashboards for SINGLE_TENANT_UUID
-    superset_client.initial_provision()
-    logger.info("Superset dashboards provisioned successfully")
+    try:
+        logger.info("Provisioning superset dashboards")
+        superset_client = SupersetClient()
+        superset_client.initial_provision()
+        logger.info("Superset dashboards provisioned successfully")
+    except Exception:
+        # Keep will start without superset if it fails to provision
+        logger.exception("Failed to provision superset dashboards")
 
 
 def on_starting(server=None):

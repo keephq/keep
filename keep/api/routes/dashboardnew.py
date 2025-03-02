@@ -37,7 +37,9 @@ def get_dashboards_route(
 ):
     """Get all available dashboards from Superset"""
     try:
-        dashboards_data = superset_client.get_dashboards(authenticated_entity.tenant_id)
+        dashboards_data = superset_client.get_dashboards_by_tenant_id(
+            authenticated_entity.tenant_id, should_exist=True
+        )
 
         dashboards = [
             Dashboard(
