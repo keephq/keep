@@ -88,9 +88,10 @@ export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
           <Title>Roles Management</Title>
           <Subtitle>Manage roles</Subtitle>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex space-x-2 items-center">
           <Button
             color="orange"
+            size="md"
             onClick={() => {
               setSelectedRole(null);
               setIsSidebarOpen(true);
@@ -113,10 +114,10 @@ export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"
       />
-      <Card className="flex-grow overflow-auto h-full">
+      <Card className="overflow-auto p-0">
         <Table className="h-full">
           <TableHead>
-            <TableRow>
+            <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
               <TableHeaderCell className="w-4/24">Role Name</TableHeaderCell>
               <TableHeaderCell className="w-4/24">Description</TableHeaderCell>
               <TableHeaderCell className="w-15/24">Scopes</TableHeaderCell>

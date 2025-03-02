@@ -278,6 +278,18 @@ export default function SettingsPage() {
               type: "preset",
               assignments: ["user_noc@keephq.dev", "user_admin@keephq.dev"],
             },
+            {
+              id: "3",
+              name: "QA Preset",
+              type: "preset",
+              assignments: ["user_noc@keephq.dev", "user_admin@keephq.dev"],
+            },
+            {
+              id: "4",
+              name: "Prod Preset",
+              type: "preset",
+              assignments: ["user_noc@keephq.dev", "user_admin@keephq.dev"],
+            },
           ];
           return (
             <EmptyStateTable

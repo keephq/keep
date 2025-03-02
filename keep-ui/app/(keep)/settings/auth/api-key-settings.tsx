@@ -102,8 +102,8 @@ export default function ApiKeySettings({ selectedTab }: Props) {
   };
 
   return (
-    <div>
-      <div className="flex justify-between">
+    <div className="flex flex-col gap-4">
+      <header className="flex justify-between">
         <div className="flex flex-col">
           <PageTitle>API Keys</PageTitle>
           <PageSubtitle>Manage your tenant API keys</PageSubtitle>
@@ -125,12 +125,12 @@ export default function ApiKeySettings({ selectedTab }: Props) {
             Create API key
           </Button>
         </div>
-      </div>
-      <Card className="mt-2.5">
+      </header>
+      <Card className="p-0">
         {apiKeys.length ? (
           <Table>
             <TableHead>
-              <TableRow>
+              <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
                 <TableHeaderCell className="text-left">Name</TableHeaderCell>
                 <TableHeaderCell className="text-left w-1/4">
                   Key

@@ -16,8 +16,8 @@ export function EmptyStateTable({
   icon: Icon = CircleStackIcon,
 }: EmptyStateTableProps) {
   return (
-    <div className="h-full flex flex-col relative">
-      <Card className="p-0 w-full flex-grow overflow-auto">{children}</Card>
+    <div className="flex flex-col relative">
+      <Card className="p-0 w-full overflow-auto">{children}</Card>
 
       <div className="absolute inset-0 bg-white bg-opacity-50 dark:bg-gray-800 dark:bg-opacity-50 flex items-center justify-center">
         <Card className="w-full max-w-md bg-white bg-opacity-70 dark:bg-gray-800 dark:bg-opacity-70">

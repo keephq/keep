@@ -18,6 +18,7 @@ import { FaSlack } from "react-icons/fa";
 import { ThemeControl } from "@/shared/ui";
 import { HiOutlineDocumentText } from "react-icons/hi2";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
+import "./frigade-overrides.css";
 
 const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 
@@ -104,6 +105,7 @@ export const UserInfo = ({ session }: UserInfoProps) => {
           flow?.isCompleted === false && (
             <li>
               <Frigade.ProgressBadge
+                className="get-started-badge"
                 flowId={ONBOARDING_FLOW_ID}
                 onClick={() => setIsOnboardingOpen(true)}
               />

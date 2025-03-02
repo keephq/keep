@@ -112,12 +112,12 @@ export default function UsersSettings({
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex justify-between mb-4">
+      <header className="flex justify-between mb-4">
         <div className="flex flex-col">
           <Title>Users Management</Title>
           <Subtitle>Add or remove users from your tenant</Subtitle>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex space-x-2 items-center">
           <Button
             color="orange"
             size="md"
@@ -133,14 +133,14 @@ export default function UsersSettings({
             Add User
           </Button>
         </div>
-      </div>
+      </header>
       <TextInput
         placeholder="Search by username"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"
       />
-      <Card className="flex-grow overflow-auto h-full">
+      <Card className="overflow-auto p-0">
         <div className="h-full w-full overflow-auto">
           <UsersTable
             users={filteredUsers}
