@@ -72,9 +72,14 @@ export function IncidentList({
   });
 
   const mainCelQuery = useMemo(() => {
-    const filterArray = [dateRangeCel, filterCel];
+    const filterArray = ["is_confirmed == true", dateRangeCel];
     return filterArray.filter(Boolean).join(" && ");
-  }, [filterCel, dateRangeCel]);
+  }, [dateRangeCel]);
+
+  const incidentsCelQuery = useMemo(() => {
+    const filterArray = [mainCelQuery, filterCel];
+    return filterArray.filter(Boolean).join(" && ");
+  }, [filterCel, mainCelQuery]);
 
   const {
     data: incidents,
@@ -82,12 +87,12 @@ export function IncidentList({
     mutate: mutateIncidents,
     error: incidentsError,
   } = useIncidents(
-    true,
+    null,
     null,
     incidentsPagination.limit,
     incidentsPagination.offset,
     incidentsSorting[0],
-    mainCelQuery,
+    incidentsCelQuery,
     {
       revalidateOnFocus: false,
       revalidateOnMount: !initialData,
@@ -97,7 +102,10 @@ export function IncidentList({
 
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
     useIncidents(false, true);
-  const { incidentChangeToken } = usePollIncidents(mutateIncidents, dateRange.paused);
+  const { incidentChangeToken } = usePollIncidents(
+    mutateIncidents,
+    dateRange.paused
+  );
 
   const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
     null
@@ -347,7 +355,7 @@ export function IncidentList({
                   className="mt-14"
                   entityName={"incidents"}
                   facetsConfig={facetsConfig}
-                  facetOptionsCel={dateRangeCel}
+                  facetOptionsCel={mainCelQuery}
                   usePropertyPathsSuggestions={true}
                   clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}

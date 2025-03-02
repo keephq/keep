@@ -542,6 +542,7 @@ def browser():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
         context = browser.new_context()
+        context.grant_permissions(["clipboard-read", "clipboard-write"])
         page = context.new_page()
         page.set_default_timeout(5000)
         yield page

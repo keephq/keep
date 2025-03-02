@@ -26,6 +26,10 @@ type UseIncidentActionsValue = {
     incidentId: string,
     skipConfirmation?: boolean
   ) => Promise<boolean>;
+  bulkDeleteIncidents: (
+    incidentIds: string[],
+    skipConfirmation?: boolean
+  ) => Promise<boolean>;
   mergeIncidents: (
     sourceIncidents: IncidentDto[],
     destinationIncident: IncidentDto
@@ -208,6 +212,36 @@ export function useIncidentActions(): UseIncidentActionsValue {
     [api, mutateIncidentsList]
   );
 
+  const bulkDeleteIncidents = useCallback(
+    async (incidentIds: string[], skipConfirmation = false) => {
+      if (
+        !skipConfirmation &&
+        !confirm(
+          `Are you sure you want to delete ${
+            incidentIds.length === 1
+              ? "this incident?"
+              : `${incidentIds.length} incidents?`
+          }`
+        )
+      ) {
+        return false;
+      }
+      try {
+        const result = await api.delete("/incidents/bulk", {
+          incident_ids: incidentIds,
+        });
+        mutateIncidentsList();
+        toast.success("Incidents deleted successfully");
+        return true;
+      }
+      catch (error) {
+        showErrorToast(error, "Failed to delete incidents");
+        return false;
+      }
+    },
+    [api, mutateIncidentsList]
+  );
+
   const changeStatus = useCallback(
     async (incidentId: string, status: Status, comment?: string) => {
       if (!status) {
@@ -343,6 +377,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
     changeStatus,
     changeSeverity,
     deleteIncident,
+    bulkDeleteIncidents,
     mergeIncidents,
     confirmPredictedIncident,
     mutateIncidentsList,

@@ -119,7 +119,7 @@ export const CorrelationForm = ({
             {...register("incidentNameTemplate", {
               required: {
                 message: "Incident name template is required",
-                value: true,
+                value: false,
               },
             })}
             error={isSubmitted && !!get(errors, "incidentNameTemplate.message")}
