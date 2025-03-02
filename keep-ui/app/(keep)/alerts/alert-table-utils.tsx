@@ -194,7 +194,11 @@ export const useAlertTableCols = (
       },
       {
         id: colName,
-        header: colName,
+        header: ({ column }) => {
+          return (
+            <span onClick={column.getToggleSortingHandler()}>{colName}</span>
+          );
+        },
         minSize: 100,
         enableGrouping: true,
         getGroupingValue: (row) => {
@@ -397,7 +401,9 @@ export const useAlertTableCols = (
     // Name column butted up against source
     columnHelper.accessor("name", {
       id: "name",
-      header: "Name",
+      header: ({ column }) => {
+        return <span onClick={column.getToggleSortingHandler()}>Name</span>;
+      },
       enableGrouping: true,
       enableResizing: true,
       getGroupingValue: (row) => {
@@ -420,7 +426,11 @@ export const useAlertTableCols = (
     }),
     columnHelper.accessor("description", {
       id: "description",
-      header: "Description",
+      header: ({ column }) => {
+        return (
+          <span onClick={column.getToggleSortingHandler()}>Description</span>
+        );
+      },
       enableGrouping: true,
       minSize: 100,
       cell: (context) => (
@@ -440,7 +450,9 @@ export const useAlertTableCols = (
     }),
     columnHelper.accessor("status", {
       id: "status",
-      header: "Status",
+      header: ({ column }) => {
+        return <span onClick={column.getToggleSortingHandler()}>Status</span>;
+      },
       enableGrouping: true,
       getGroupingValue: (row) => row.status,
       maxSize: 50,
@@ -459,10 +471,15 @@ export const useAlertTableCols = (
     }),
     columnHelper.accessor("lastReceived", {
       id: "lastReceived",
-      header: "Last Received",
+      // header: "Last Received",
       filterFn: isDateWithinRange,
       minSize: 80,
       maxSize: 80,
+      header: ({ column }) => {
+        return (
+          <span onClick={column.getToggleSortingHandler()}>Last Received</span>
+        );
+      },
       cell: (context) => {
         const value = context.getValue();
         const date = value instanceof Date ? value : new Date(value);
@@ -478,7 +495,9 @@ export const useAlertTableCols = (
     }),
     columnHelper.accessor("assignee", {
       id: "assignee",
-      header: "Assignee",
+      header: ({ column }) => {
+        return <span onClick={column.getToggleSortingHandler()}>Assignee</span>;
+      },
       enableGrouping: true,
       getGroupingValue: (row) => row.assignee,
       minSize: 100,
@@ -486,7 +505,11 @@ export const useAlertTableCols = (
     }),
     columnHelper.display({
       id: "extraPayload",
-      header: "Extra Payload",
+      header: ({ column }) => {
+        return (
+          <span onClick={column.getToggleSortingHandler()}>Extra Payload</span>
+        );
+      },
       minSize: 200,
       cell: (context) => (
         <AlertExtraPayload
