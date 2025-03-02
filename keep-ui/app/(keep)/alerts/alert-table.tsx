@@ -35,6 +35,7 @@ import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { RowStyle } from "./RowStyleSelection";
 import clsx from "clsx";
+import { TimeFormatOption } from "./alert-table-time-format";
 
 interface PresetTab {
   name: string;
@@ -149,6 +150,9 @@ export function AlertTable({
     "table-sizes",
     {}
   );
+  const [columnTimeFormats, setColumnTimeFormats] = useLocalStorage<
+    Record<string, TimeFormatOption>
+  >(`column-time-formats-${presetName}`, {});
 
   const handleThemeChange = (newTheme: any) => {
     setTheme(newTheme);
@@ -395,6 +399,8 @@ export function AlertTable({
                       table={table}
                       presetName={presetName}
                       a11yContainerRef={a11yContainerRef}
+                      columnTimeFormats={columnTimeFormats}
+                      setColumnTimeFormats={setColumnTimeFormats}
                     />
                     <AlertsTableBody
                       table={table}

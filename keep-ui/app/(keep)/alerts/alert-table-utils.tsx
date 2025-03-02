@@ -13,6 +13,7 @@ import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
 import { isSameDay, isValid, isWithinInterval } from "date-fns";
+import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import {
   MdOutlineNotificationsActive,
   MdOutlineNotificationsOff,
@@ -28,6 +29,11 @@ import {
 import { DynamicImageProviderIcon } from "@/components/ui";
 import clsx from "clsx";
 import { RowStyle } from "./RowStyleSelection";
+import {
+  formatDateTime,
+  TimeFormatOption,
+  isDateTimeColumn,
+} from "./alert-table-time-format";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -44,7 +50,6 @@ export const DEFAULT_COLS_VISIBILITY = DEFAULT_COLS.reduce<VisibilityState>(
   (acc, colId) => ({ ...acc, [colId]: true }),
   {}
 );
-
 export const getColumnsIds = (columns: ColumnDef<AlertDto>[]) =>
   columns.map((column) => column.id as keyof AlertDto);
 
@@ -162,6 +167,11 @@ export const useAlertTableCols = (
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
+  const [rowStyle] = useLocalStorage("alert-table-row-style", "default");
+  const [columnTimeFormats] = useLocalStorage<Record<string, TimeFormatOption>>(
+    `column-time-formats-${presetName}`,
+    {}
+  );
   const { data: configData } = useConfig();
   // check if noisy alerts are enabled
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
@@ -226,10 +236,31 @@ export const useAlertTableCols = (
               </Accordion>
             );
           }
+          let isDateColumn = isDateTimeColumn(context.column.id);
+          if (isDateColumn) {
+            const date =
+              value instanceof Date
+                ? value
+                : new Date(value as string | number);
+            const isoString = date.toISOString();
+            // Get the format from column format settings or use default
+            const formatOption =
+              columnTimeFormats[context.column.id] || "timeago";
+            return (
+              <span title={isoString}>
+                {formatDateTime(date, formatOption)}
+              </span>
+            );
+          }
 
           if (value) {
             return (
-              <div className="truncate whitespace-pre-wrap line-clamp-3">
+              <div
+                className={clsx(
+                  "truncate whitespace-pre-wrap",
+                  rowStyle === "dense" ? "line-clamp-1" : "line-clamp-3"
+                )}
+              >
                 {value.toString()}
               </div>
             );
@@ -394,7 +425,14 @@ export const useAlertTableCols = (
       minSize: 100,
       cell: (context) => (
         <div title={context.getValue()}>
-          <div className="truncate line-clamp-3 whitespace-pre-wrap">
+          <div
+            className={clsx(
+              "whitespace-pre-wrap",
+              rowStyle === "dense"
+                ? "truncate line-clamp-1"
+                : "truncate line-clamp-3"
+            )}
+          >
             {context.getValue()}
           </div>
         </div>
@@ -425,15 +463,16 @@ export const useAlertTableCols = (
       filterFn: isDateWithinRange,
       minSize: 80,
       maxSize: 80,
-      // data is a Date object (converted in usePresetAlerts)
       cell: (context) => {
         const value = context.getValue();
         const date = value instanceof Date ? value : new Date(value);
         const isoString = date.toISOString();
+
+        // Get the format from column format settings or use default
+        const formatOption = columnTimeFormats[context.column.id] || "timeago";
+
         return (
-          <span>
-            <TimeAgo date={isoString} title={isoString} />
-          </span>
+          <span title={isoString}>{formatDateTime(date, formatOption)}</span>
         );
       },
     }),
