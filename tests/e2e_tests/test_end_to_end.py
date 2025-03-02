@@ -328,6 +328,43 @@ def test_add_workflow(browser):
         raise
 
 
+def test_paste_workflow_yaml_quotes_preserved(browser):
+    # browser is actually a page object
+    page = browser
+    log_entries = []
+    setup_console_listener(page, log_entries)
+
+    def get_workflow_yaml(file_name):
+        file_path = os.path.join(os.path.dirname(__file__), file_name)
+        with open(file_path, "r") as file:
+            return file.read()
+        
+    workflow_yaml = get_workflow_yaml("workflow-quotes-sample.yaml")
+
+    try:
+        page.goto("http://localhost:3000/workflows")
+        page.get_by_role("button", name="Upload Workflows").click()
+        page.get_by_test_id("text-area").click()
+        page.get_by_test_id("text-area").fill(workflow_yaml)
+        page.get_by_role("button", name="Load").click()
+        page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        page.get_by_role("tab", name="YAML Definition").click()
+        yaml_editor_container = page.get_by_test_id("wf-detail-yaml-editor-container")
+        # Copy the YAML content to the clipboard
+        yaml_editor_container.get_by_test_id("copy-yaml-button").click()
+        # Get the clipboard content
+        clipboard_text = page.evaluate("""async () => {
+            return await navigator.clipboard.readText();
+        }""")
+        # Remove all whitespace characters from the YAML content for comparison
+        normalized_original = re.sub(r'\s', '', workflow_yaml)
+        normalized_clipboard = re.sub(r'\s', '', clipboard_text)
+        assert normalized_clipboard == normalized_original
+    except Exception:
+        save_failure_artifacts(page, log_entries)
+        raise
+
+
 def test_add_upload_workflow_with_alert_trigger(browser):
     log_entries = []
     setup_console_listener(browser, log_entries)
@@ -336,20 +373,19 @@ def test_add_upload_workflow_with_alert_trigger(browser):
         browser.get_by_role("link", name="Workflows").hover()
         browser.get_by_role("link", name="Workflows").click()
         browser.get_by_role("button", name="Upload Workflows").click()
-        browser.wait_for_timeout(5000)
         file_input = browser.locator("#workflowFile")
         file_input.set_input_files(
             "./tests/e2e_tests/workflow-sample.yaml"
         )
         browser.get_by_role("button", name="Upload")
-        browser.wait_for_timeout(10000)
+        browser.wait_for_timeout(1000)
         trigger_alert("prometheus")
         browser.wait_for_timeout(3000)
-        browser.reload()
-        browser.wait_for_timeout(3000)
+        # new behavior: is redirecting to the detail page of the workflow, so we need to go back to the list page
+        browser.goto("http://localhost:3000/workflows")
         workflow_card = browser.locator(
-            "[data-sentry-component='WorkflowTile']",
-            has_text="9b3664f4-b248-4eda-8cc7-e69bc5a8bd92",
+            "[data-testid^='workflow-tile-']", 
+            has_text="9b3664f4-b248-4eda-8cc7-e69bc5a8bd92"
         )
         expect(workflow_card).not_to_contain_text("No data available")
     except Exception:

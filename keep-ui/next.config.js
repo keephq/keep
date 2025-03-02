@@ -85,6 +85,13 @@ const nextConfig = {
   productionBrowserSourceMaps:
     process.env.ENV === "development" || process.env.SENTRY_DISABLED !== "true",
   async redirects() {
+    const workflowRawYamlRedirects = [
+      {
+        source: "/workflows/:path*.yaml",
+        destination: "/raw/workflows/:path*.yaml",
+        permanent: false,
+      },
+    ];
     return process.env.DISABLE_REDIRECTS === "true"
       ? []
       : [
@@ -93,6 +100,7 @@ const nextConfig = {
             destination: "/incidents",
             permanent: process.env.ENV === "production",
           },
+          ...workflowRawYamlRedirects,
         ];
   },
   async headers() {

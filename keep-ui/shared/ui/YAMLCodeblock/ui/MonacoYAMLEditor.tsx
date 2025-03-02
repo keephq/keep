@@ -1,13 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { type editor } from "monaco-editor";
-import { load, dump } from "js-yaml";
 import { Download, Copy, Check, Save } from "lucide-react";
 import { Button } from "@tremor/react";
 import { LogEntry } from "@/shared/api/workflow-executions";
 import { getStepStatus } from "@/shared/lib/logs-utils";
-import yaml from "js-yaml";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
+import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 import "./MonacoYAMLEditor.css";
 
 interface Props {
@@ -21,6 +20,7 @@ interface Props {
   selectedStep?: string | null;
   setSelectedStep?: (step: string | null) => void;
   readOnly?: boolean;
+  "data-testid"?: string;
 }
 
 const MonacoYAMLEditor = ({
@@ -34,6 +34,7 @@ const MonacoYAMLEditor = ({
   selectedStep,
   setSelectedStep,
   readOnly = false,
+  "data-testid": dataTestId = "yaml-editor",
 }: Props) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const { updateWorkflow } = useWorkflowActions();
@@ -67,6 +68,7 @@ const MonacoYAMLEditor = ({
 
   const stepDecorationsRef = useRef<string[]>([]);
   const hoverDecorationsRef = useRef<string[]>([]);
+  const [isEditorMounted, setIsEditorMounted] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
@@ -83,76 +85,6 @@ const MonacoYAMLEditor = ({
     },
     [executionLogs, executionStatus]
   );
-
-  const reorderWorkflowSections = (yamlString: string) => {
-    const content = yamlString.startsWith('"')
-      ? JSON.parse(yamlString)
-      : yamlString;
-    const workflow = load(content) as any;
-    const workflowData = workflow.workflow;
-
-    const metadataFields = ["id", "name", "description", "disabled", "debug"];
-    const sectionOrder = [
-      "triggers",
-      "consts",
-      "owners",
-      "services",
-      "steps",
-      "actions",
-    ];
-    const stepActionOrder = ["name", "if", "provider"]; // Order for properties within steps/actions
-
-    const orderedWorkflow: any = {
-      workflow: {},
-    };
-
-    // Handle metadata fields first
-    metadataFields.forEach((field) => {
-      if (workflowData[field] !== undefined) {
-        orderedWorkflow.workflow[field] = workflowData[field];
-      }
-    });
-
-    // Handle sections
-    sectionOrder.forEach((section) => {
-      if (workflowData[section] !== undefined) {
-        if (section === "steps" || section === "actions") {
-          // Reorder properties within each step/action while maintaining array order
-          const orderedItems = workflowData[section].map((item: any) => {
-            const orderedItem: any = {};
-
-            // Add properties in the specified order
-            stepActionOrder.forEach((prop) => {
-              if (item[prop] !== undefined) {
-                orderedItem[prop] = item[prop];
-              }
-            });
-
-            // Add any remaining properties that weren't in the order list
-            Object.keys(item).forEach((prop) => {
-              if (!stepActionOrder.includes(prop)) {
-                orderedItem[prop] = item[prop];
-              }
-            });
-
-            return orderedItem;
-          });
-
-          orderedWorkflow.workflow[section] = orderedItems;
-        } else {
-          orderedWorkflow.workflow[section] = workflowData[section];
-        }
-      }
-    });
-
-    return dump(orderedWorkflow, {
-      indent: 2,
-      lineWidth: -1,
-      noRefs: true,
-      sortKeys: false,
-      quotingType: '"',
-    });
-  };
 
   const handleEditorDidMount = (
     editor: editor.IStandaloneCodeEditor,
@@ -429,10 +361,12 @@ const MonacoYAMLEditor = ({
         disposable.dispose();
       };
     }
+
+    setIsEditorMounted(true);
   };
 
   useEffect(() => {
-    setOriginalContent(reorderWorkflowSections(workflowRaw));
+    setOriginalContent(getOrderedWorkflowYamlString(workflowRaw));
   }, [workflowRaw]);
 
   const handleSaveWorkflow = async () => {
@@ -446,11 +380,9 @@ const MonacoYAMLEditor = ({
 
     const content = editorRef.current.getValue();
     try {
-      const parsedYaml = yaml.load(content) as {
-        workflow: Record<string, unknown>;
-      };
-      // update workflow
-      await updateWorkflow(workflowId, parsedYaml);
+      // sending the yaml string to the backend
+      // TODO: validate the yaml content and show useful (inline) errors
+      await updateWorkflow(workflowId, content);
 
       setOriginalContent(content);
       setHasChanges(false);
@@ -503,7 +435,10 @@ const MonacoYAMLEditor = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div
+      className="w-full h-full flex flex-col"
+      data-testid={dataTestId + "-container"}
+    >
       <div
         className="relative flex-1 min-h-0"
         style={{ height: "calc(100vh - 300px)" }}
@@ -517,6 +452,7 @@ const MonacoYAMLEditor = ({
               onClick={handleSaveWorkflow}
               variant="secondary"
               disabled={!hasChanges}
+              data-testid="save-yaml-button"
             >
               <Save className="h-4 w-4" />
             </Button>
@@ -527,6 +463,8 @@ const MonacoYAMLEditor = ({
             className="h-8 px-2 bg-white"
             onClick={copyToClipboard}
             variant="secondary"
+            data-testid="copy-yaml-button"
+            disabled={!isEditorMounted}
           >
             {isCopied ? (
               <Check className="h-4 w-4 text-green-500" />
@@ -540,14 +478,17 @@ const MonacoYAMLEditor = ({
             className="h-8 px-2 bg-white"
             onClick={downloadYaml}
             variant="secondary"
+            data-testid="download-yaml-button"
+            disabled={!isEditorMounted}
           >
             <Download className="h-4 w-4" />
           </Button>
         </div>
         <Editor
+          wrapperProps={{ "data-testid": dataTestId }}
           height="100%"
           defaultLanguage="yaml"
-          defaultValue={reorderWorkflowSections(workflowRaw)}
+          defaultValue={getOrderedWorkflowYamlString(workflowRaw)}
           onMount={handleEditorDidMount}
           options={editorOptions}
         />
