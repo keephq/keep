@@ -206,6 +206,7 @@ const DraggableHeaderCell = ({
         className={`flex items-center ${
           column.id === "checkbox" ? "justify-center" : "justify-between"
         }`}
+        onClick={column.getToggleSortingHandler()}
       >
         <div className="flex items-center" {...listeners} {...attributes}>
           {children}
@@ -224,8 +225,8 @@ const DraggableHeaderCell = ({
                   column.getNextSortingOrder() === "asc"
                     ? "Sort ascending"
                     : column.getNextSortingOrder() === "desc"
-                    ? "Sort descending"
-                    : "Clear sort"
+                      ? "Sort descending"
+                      : "Clear sort"
                 }
               >
                 {column.getIsSorted() ? (
