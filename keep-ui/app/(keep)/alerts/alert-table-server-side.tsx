@@ -59,6 +59,13 @@ interface PresetTab {
   filter: string;
   id?: string;
 }
+
+interface Tab {
+  name: string;
+  filter: (alert: AlertDto) => boolean;
+  id?: string;
+}
+
 interface Props {
   refreshToken: string | null;
   alerts: AlertDto[];
@@ -226,14 +233,14 @@ export function AlertTableServerSide({
     onReload && onReload(alertsQueryRef.current as AlertsQuery);
   }, [alertsQuery, onReload]);
 
-  const [tabs, setTabs] = useState([
+  const [tabs, setTabs] = useState<Tab[]>([
     { name: "All", filter: () => true },
     ...presetTabs.map((tab) => ({
       name: tab.name,
       filter: (alert: AlertDto) => evalWithContext(alert, tab.filter),
       id: tab.id,
     })),
-    { name: "+", filter: () => true }, // a special tab to add new tabs
+    { name: "+", filter: () => true },
   ]);
 
   const [selectedTab, setSelectedTab] = useState(0);
