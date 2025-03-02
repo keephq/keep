@@ -400,22 +400,15 @@ export const useAlertTableCols = (
       header: "Name",
       enableGrouping: true,
       enableResizing: true,
-      getGroupingValue: (row) => {
-        console.log("Grouping value for row:", row.name);
-        return row.name;
-      },
+      getGroupingValue: (row) => row.name,
       cell: (context) => (
         <div className="w-full">
-          <AlertName
-            alert={context.row.original}
-            setNoteModalAlert={setNoteModalAlert}
-            setTicketModalAlert={setTicketModalAlert}
-          />
+          <AlertName alert={context.row.original} className="flex-grow" />
         </div>
       ),
       meta: {
         tdClassName: "!pl-0 w-full",
-        thClassName: "!pl-1 w-full", // Small padding for header text only
+        thClassName: "!pl-1 w-full",
       },
     }),
     columnHelper.accessor("description", {
@@ -525,6 +518,8 @@ export const useAlertTableCols = (
                   setRunWorkflowModalAlert={setRunWorkflowModalAlert}
                   setDismissModalAlert={setDismissModalAlert}
                   setChangeStatusAlert={setChangeStatusAlert}
+                  setTicketModalAlert={setTicketModalAlert}
+                  setNoteModalAlert={setNoteModalAlert}
                 />
               </div>
             ),
