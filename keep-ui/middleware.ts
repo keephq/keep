@@ -54,7 +54,8 @@ export const middleware = auth(async (request) => {
     !pathname.startsWith("/health") &&
     !pathname.startsWith("/error")
   ) {
-    const redirectTo = request.nextUrl.href || "/incidents";
+    // redirect to the main dashboard
+    const redirectTo = request.nextUrl.href || "/overview/";
     console.log(
       `Redirecting ${pathname} to signin page because user is not authenticated`
     );
@@ -63,10 +64,11 @@ export const middleware = auth(async (request) => {
     );
   }
 
-  // If authenticated and on signin page, redirect to incidents
+  // If authenticated and on signin page, redirect to main dashboard
   if (isAuthenticated && pathname.startsWith("/signin")) {
+    // redirect to the main dashboard
     const redirectTo =
-      request.nextUrl.searchParams.get("callbackUrl") || "/incidents";
+      request.nextUrl.searchParams.get("callbackUrl") || "/overview/";
     console.log(
       `Redirecting to ${redirectTo} because user try to get /signin but already authenticated`
     );
