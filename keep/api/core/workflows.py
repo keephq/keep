@@ -241,8 +241,8 @@ def get_workflows_with_last_executions_v2(
 
         count = session.exec(total_count_query).one()[0]
 
-        if count == 0:
-            return [], count
+        # if count == 0:
+        #     return [], count
 
         workflows_query = build_workflows_query(
             tenant_id=tenant_id,
@@ -252,6 +252,12 @@ def get_workflows_with_last_executions_v2(
             sort_by=sort_by,
             sort_dir=sort_dir,
             fetch_last_executions=fetch_last_executions,
+        )
+
+        strq = str(
+            workflows_query.compile(
+                dialect=session.bind.dialect, compile_kwargs={"literal_binds": True}
+            )
         )
 
         query_result = session.execute(workflows_query).all()
