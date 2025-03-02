@@ -1,6 +1,6 @@
+import json
 import logging
 import os
-import tempfile
 
 import requests
 
@@ -99,7 +99,7 @@ class SupersetClient:
 
     def provision_dashboards_for_tenant(self, tenant_id: str):
         """
-        Provision dashboards for a specific tenant by copying template dashboards.
+        Provision dashboards for a specific tenant by copying template dashboards using the copy API.
 
         Args:
             tenant_id (str): The tenant ID to provision dashboards for
@@ -134,44 +134,78 @@ class SupersetClient:
         for template_dashboard in template_dashboards:
             dashboard_title = template_dashboard["dashboard_title"]
             dashboard_id = template_dashboard["id"]
+            new_dashboard_title = f"{dashboard_title} - {tenant_id}"
 
             try:
-                # Export the template dashboard
-                export_response = requests.get(
-                    f"{self.base_url}/api/v1/dashboard/export/?q=!({dashboard_id})",
+                # If dashboard with this title already exists for this tenant, delete it
+                if new_dashboard_title in existing_dashboard_titles:
+                    existing_id = existing_dashboard_titles[new_dashboard_title]
+                    self._delete_dashboard(existing_id)
+                    self.logger.info(
+                        f"Deleted existing dashboard '{new_dashboard_title}' for tenant {tenant_id}"
+                    )
+
+                # Get the dashboard details to extract json_metadata
+                dashboard_details_response = requests.get(
+                    f"{self.base_url}/api/v1/dashboard/{dashboard_id}",
                     headers=self.get_headers(),
                     cookies=self.get_cookies(),
                 )
-                export_response.raise_for_status()
+                dashboard_details_response.raise_for_status()
+                # get the metadata and positions
+                dashboard_metadata_json = (
+                    dashboard_details_response.json()
+                    .get("result", {})
+                    .get("json_metadata")
+                )
+                dashboard_positions = (
+                    dashboard_details_response.json()
+                    .get("result", {})
+                    .get("position_json")
+                )
 
-                # Create a temporary directory for processing
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    # Save the exported dashboard zip
-                    export_path = os.path.join(temp_dir, "dashboard_export.zip")
-                    with open(export_path, "wb") as f:
-                        f.write(export_response.content)
+                # Update the metadata with positions - it needs to be a dict
+                metadata_dict = json.loads(dashboard_metadata_json)
+                metadata_dict["positions"] = json.loads(dashboard_positions)
 
-                    # Prepare for import
-                    if dashboard_title in existing_dashboard_titles:
-                        # Delete existing dashboard for this tenant
-                        existing_id = existing_dashboard_titles[dashboard_title]
-                        self._delete_dashboard(existing_id)
-                        self.logger.info(
-                            f"Deleted existing dashboard '{dashboard_title}' for tenant {tenant_id}"
-                        )
+                # Copy the dashboard using the API
+                copy_payload = {
+                    "dashboard_title": new_dashboard_title,
+                    "duplicate_slices": True,
+                    "json_metadata": json.dumps(metadata_dict),
+                }
 
-                    # Import the dashboard for the tenant
-                    tenant_dashboard_info = self._import_dashboard_from_zip(export_path)
+                response = requests.post(
+                    f"{self.base_url}/api/v1/dashboard/{dashboard_id}/copy/",
+                    headers=self.get_headers(),
+                    cookies=self.get_cookies(),
+                    json=copy_payload,
+                )
+                response.raise_for_status()
 
-                    if tenant_dashboard_info and "id" in tenant_dashboard_info:
-                        # Apply the tenant tag
-                        self.apply_tag_to_dashboard(
-                            tenant_dashboard_info["id"], tenant_tag
-                        )
-                        provisioned_dashboards.append(tenant_dashboard_info)
-                        self.logger.info(
-                            f"Successfully provisioned dashboard '{dashboard_title}' for tenant {tenant_id}"
-                        )
+                new_dashboard = response.json().get("result")
+
+                if new_dashboard and "id" in new_dashboard:
+                    # Apply the tenant tag
+                    self.apply_tag_to_dashboard(new_dashboard["id"], tenant_tag)
+                    provisioned_dashboards.append(new_dashboard)
+                    self.logger.info(
+                        f"Successfully provisioned dashboard '{new_dashboard_title}' for tenant {tenant_id}"
+                    )
+
+                    # last step - make them embedded
+                    embedded_response = requests.post(
+                        f"{self.base_url}/api/v1/dashboard/{new_dashboard['id']}/embedded",
+                        headers=self.get_headers(),
+                        cookies=self.get_cookies(),
+                        json={
+                            "allowed_domains": [],
+                        },
+                    )
+                    embedded_response.raise_for_status()
+                    self.logger.info(
+                        f"Successfully embedded dashboard '{new_dashboard_title}' for tenant {tenant_id}"
+                    )
 
             except Exception as e:
                 self.logger.error(
@@ -307,7 +341,7 @@ class SupersetClient:
                 f"{self.base_url}/api/v1/tag/3/{dashboard_id}/",
                 headers=self.get_headers(),
                 cookies=self.get_cookies(),
-                json={"tags": [tag_name]},
+                json={"properties": {"tags": [tag_name]}},
             )
             response.raise_for_status()
             return True
@@ -405,6 +439,36 @@ class SupersetClient:
         except Exception as e:
             self.logger.error(f"Error getting dashboards by tag {tag_name}: {str(e)}")
             return []
+
+    def get_dashboards_by_tenant_id(self, tenant_id: str, should_exist: bool = False):
+        """
+        Get all dashboards for a specific tenant
+
+        Args:
+            tenant_id (str): The tenant ID to get dashboards for
+            should_exist (bool): If True, will provision dashboards for the tenant if none exist
+
+        Returns:
+            list: List of dashboard objects for the tenant
+        """
+        tenant_tag = f"keep_tenant_{tenant_id}"
+        dashboards = self.get_dashboards_by_tag(tenant_tag)
+
+        # If should_exist is True and no dashboards found, provision them
+        if should_exist and not dashboards:
+            self.logger.info(
+                f"No dashboards found for tenant {tenant_id}, provisioning them"
+            )
+            self.provision_dashboards_for_tenant(tenant_id)
+            # Get the newly provisioned dashboards
+            dashboards = self.get_dashboards_by_tag(tenant_tag)
+            # if still no dashboards - warning error since it should have been provisioned
+            if not dashboards:
+                self.logger.error(
+                    f"No dashboards found for tenant {tenant_id} after provisioning"
+                )
+
+        return dashboards
 
     def get_guest_token(self, dashboard_id: str):
         """
