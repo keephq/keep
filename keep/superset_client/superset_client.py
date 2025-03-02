@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+import time
+from typing import Optional
 
 import requests
 
@@ -19,12 +21,40 @@ class SupersetClient:
         self.dashboards_templates_dir = config(
             "SUPERSET_DASHBOARDS_TEMPLATES_DIR", default="superset/dashboards"
         )
-        self.access_token = None
+        self._access_token = None
+        self._token_expiry = 0  # Unix timestamp when token expires
         self.csrf_token = None
         self.session_cookie = None
         self.logger = logging.getLogger(__name__)
         # Template dashboards tag
         self.template_tag = "keep_template_dashboards"
+        # Token expiration buffer (5 minutes) to refresh before actual expiry
+        self.token_expiry_buffer = 300
+
+    @property
+    def access_token(self) -> Optional[str]:
+        """
+        Property for access_token that checks if the token is expired or about to expire.
+        Automatically refreshes the token if needed.
+
+        Returns:
+            str: The current valid access token or None if authentication fails
+        """
+        current_time = time.time()
+
+        # If token doesn't exist or is about to expire, refresh it
+        if not self._access_token or current_time > (
+            self._token_expiry - self.token_expiry_buffer
+        ):
+            try:
+                self.logger.info("Refreshing superset access token")
+                self.authenticate()
+                self.logger.info("Successfully refreshed superset access token")
+            except Exception as e:
+                self.logger.error(f"Error refreshing access token: {str(e)}")
+                return None
+
+        return self._access_token
 
     # SHAHAR: this assume empty superset!
     def initial_provision(self):
@@ -36,7 +66,8 @@ class SupersetClient:
             list: List of provisioned template dashboards
         """
         if not self.access_token:
-            self.authenticate()
+            self.logger.error("Failed to authenticate to Superset")
+            return []
 
         # first, check if dashboards already exists - if so, abort
         dashboards = self.get_dashboards()
@@ -108,7 +139,8 @@ class SupersetClient:
             list: List of provisioned dashboards for the tenant
         """
         if not self.access_token:
-            self.authenticate()
+            self.logger.error("Failed to authenticate to Superset")
+            return []
 
         tenant_tag = f"keep_tenant_{tenant_id}"
         provisioned_dashboards = []
@@ -353,30 +385,60 @@ class SupersetClient:
             return False
 
     def authenticate(self):
-        # Step 1: Login and get access token
-        auth_response = requests.post(
-            f"{self.base_url}/api/v1/security/login",
-            json={
-                "username": self.username,
-                "password": self.password,
-                "provider": "db",
-            },
-        )
-        auth_response.raise_for_status()
-        self.access_token = auth_response.json()["access_token"]
+        """
+        Authenticate with Superset API and get access token, CSRF token and session cookie.
+        Also extracts token expiration time from response.
 
-        # Step 2: Get CSRF token
-        csrf_response = requests.get(
-            f"{self.base_url}/api/v1/security/csrf_token/",
-            headers={"Authorization": f"Bearer {self.access_token}"},
-        )
-        csrf_response.raise_for_status()
-        self.csrf_token = csrf_response.json()["result"]
-        self.session_cookie = csrf_response.cookies.get("session")
+        Returns:
+            self: The client instance for method chaining
+        """
+        try:
+            # Step 1: Login and get access token
+            auth_response = requests.post(
+                f"{self.base_url}/api/v1/security/login",
+                json={
+                    "username": self.username,
+                    "password": self.password,
+                    "provider": "db",
+                },
+            )
+            auth_response.raise_for_status()
+            auth_data = auth_response.json()
+            self._access_token = auth_data["access_token"]
 
-        return self
+            # Extract token expiry time - default to 1 hour if not provided
+            # Superset typically returns 'refresh_token_expires_at' in seconds from now
+            expiry_seconds = auth_data.get("refresh_token_expires_at", 3600)
+            self._token_expiry = time.time() + expiry_seconds
+
+            self.logger.debug(f"Token will expire at: {self._token_expiry}")
+
+            # Step 2: Get CSRF token
+            csrf_response = requests.get(
+                f"{self.base_url}/api/v1/security/csrf_token/",
+                headers={"Authorization": f"Bearer {self._access_token}"},
+            )
+            csrf_response.raise_for_status()
+            self.csrf_token = csrf_response.json()["result"]
+            self.session_cookie = csrf_response.cookies.get("session")
+
+            return self
+        except Exception as e:
+            self.logger.error(f"Authentication failed: {str(e)}")
+            # Reset tokens on authentication failure
+            self._access_token = None
+            self._token_expiry = 0
+            self.csrf_token = None
+            self.session_cookie = None
+            raise
 
     def get_headers(self):
+        """
+        Get the headers for API requests, including fresh access token
+
+        Returns:
+            dict: Headers dictionary with Authorization and CSRF token
+        """
         return {
             "Authorization": f"Bearer {self.access_token}",
             "X-CSRFToken": self.csrf_token,
@@ -386,6 +448,10 @@ class SupersetClient:
         return {"session": self.session_cookie}
 
     def get_dashboards(self):
+        if not self.access_token:
+            self.logger.error("Failed to authenticate to Superset")
+            return []
+
         dashboards_response = requests.get(
             f"{self.base_url}/api/v1/dashboard/",
             headers=self.get_headers(),
@@ -406,7 +472,8 @@ class SupersetClient:
             list: List of dashboard objects
         """
         if not self.access_token:
-            self.authenticate()
+            self.logger.error("Failed to authenticate to Superset")
+            return []
 
         q = f"(filters:!((col:tags,opr:dashboard_tags,value:{tag_name})))"
         try:
@@ -481,7 +548,8 @@ class SupersetClient:
             str: The guest token
         """
         if not self.access_token:
-            self.authenticate()
+            self.logger.error("Failed to authenticate to Superset")
+            return None
 
         response = requests.post(
             f"{self.base_url}/api/v1/security/guest_token/",
