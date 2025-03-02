@@ -15,6 +15,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import ColumnSelection from "./ColumnSelection";
 import { ThemeSelection } from "./ThemeSelection";
 import { RowStyleSelection } from "./RowStyleSelection";
+import { ActionTraySelection } from "./ActionTraySelection";
 
 interface SettingsSelectionProps {
   table: Table<AlertDto>;
@@ -74,6 +75,7 @@ export default function SettingsSelection({
                   <Tab>Columns</Tab>
                   <Tab>Theme</Tab>
                   <Tab>Row Style</Tab>
+                  <Tab>Action Tray</Tab>
                 </TabList>
                 <TabPanels className="flex-1 overflow-hidden">
                   <TabPanel className="h-full">
@@ -91,6 +93,9 @@ export default function SettingsSelection({
                   </TabPanel>
                   <TabPanel className="h-full">
                     <RowStyleSelection onClose={close} />
+                  </TabPanel>
+                  <TabPanel className="h-full">
+                    <ActionTraySelection onClose={close} />
                   </TabPanel>
                 </TabPanels>
               </TabGroup>

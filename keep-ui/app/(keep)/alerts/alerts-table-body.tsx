@@ -18,6 +18,7 @@ import { RowStyle } from "./RowStyleSelection";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import { format } from "date-fns";
 import { getRowClassName, getCellClassName } from "./alert-table-utils";
+import clsx from "clsx";
 
 interface Props {
   table: Table<AlertDto>;
@@ -177,7 +178,10 @@ export function AlertsTableBody({
         return (
           <TableRow
             key={row.id}
-            className={getRowClassName(row, theme, lastViewedAlert, rowStyle)}
+            className={clsx(
+              "group/row",
+              getRowClassName(row, theme, lastViewedAlert, rowStyle)
+            )}
             onClick={(e) => handleRowClick(e, row.original)}
           >
             {row.getVisibleCells().map((cell) => {
