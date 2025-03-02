@@ -10,7 +10,6 @@ import IncidentsTable from "./incidents-table";
 import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
 import { IncidentListPlaceholder } from "./incident-list-placeholder";
 import Modal from "@/components/ui/Modal";
-import { PlusCircleIcon } from "@heroicons/react/24/outline";
 import PredictedIncidentsTable from "@/app/(keep)/incidents/predicted-incidents-table";
 import { SortingState } from "@tanstack/react-table";
 import { IncidentListError } from "@/features/incident-list/ui/incident-list-error";
@@ -38,9 +37,7 @@ import { FacetsConfig } from "@/features/filter/models";
 import EnhancedDateRangePicker, {
   TimeFrame,
 } from "@/components/ui/DateRangePicker";
-import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
-import { AlertsQuery } from "@/utils/hooks/useAlerts";
-
+import { PlusIcon } from "@heroicons/react/20/solid";
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
@@ -339,11 +336,13 @@ export function IncidentList({
               <PageSubtitle>Group alerts into incidents</PageSubtitle>
             </div>
 
-            <div>
+            <div className="flex gap-2">
+              {renderDateTimePicker()}
               <Button
                 color="orange"
                 size="md"
-                icon={PlusCircleIcon}
+                icon={PlusIcon}
+                variant="primary"
                 onClick={() => setIsFormOpen(true)}
               >
                 Create Incident
@@ -371,7 +370,6 @@ export function IncidentList({
                   revalidationToken={filterRevalidationToken}
                 />
                 <div className="flex flex-col gap-5 flex-1 min-w-0">
-                  {renderDateTimePicker()}
                   {renderIncidents()}
                 </div>
               </div>

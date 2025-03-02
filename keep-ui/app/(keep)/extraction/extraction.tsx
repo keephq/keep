@@ -1,17 +1,15 @@
 "use client";
-import { Callout, Card, Title, Subtitle } from "@tremor/react";
+import { Callout, Card } from "@tremor/react";
 import CreateOrUpdateExtractionRule from "./create-or-update-extraction-rule";
 import ExtractionsTable from "./extractions-table";
 import { useExtractions } from "utils/hooks/useExtractionRules";
-import Loading from "@/app/(keep)/loading";
+import { KeepLoader, PageTitle, PageSubtitle } from "@/shared/ui";
 import { MdWarning } from "react-icons/md";
 import { ExtractionRule } from "./model";
 import React, { useEffect, useState } from "react";
 import { Button } from "@tremor/react";
 import SidePanel from "@/components/SidePanel";
-import { PlusCircleIcon } from "@heroicons/react/24/outline";
-import { PageSubtitle } from "@/shared/ui";
-import { PageTitle } from "@/shared/ui";
+import { PlusIcon } from "@heroicons/react/20/solid";
 
 export default function Extraction() {
   const { data: extractions, isLoading } = useExtractions();
@@ -50,7 +48,7 @@ export default function Extraction() {
             size="md"
             type="submit"
             onClick={() => setIsSidePanelOpen(true)}
-            icon={PlusCircleIcon}
+            icon={PlusIcon}
           >
             Create Extraction
           </Button>
@@ -70,7 +68,7 @@ export default function Extraction() {
         <div>
           <div>
             {isLoading ? (
-              <Loading />
+              <KeepLoader />
             ) : extractions && extractions.length > 0 ? (
               <ExtractionsTable
                 extractions={extractions}
@@ -83,7 +81,7 @@ export default function Extraction() {
                 icon={MdWarning}
               >
                 No extraction rules found. Configure new extraction rule using
-                the + Create Extraction
+                the Create Extraction button.
               </Callout>
             )}
           </div>

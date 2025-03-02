@@ -67,7 +67,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
             {renderIcon && renderIcon()}
           </div>
         )}
-        <Text className="truncate" title={label}>
+        <Text className="truncate flex-1" title={label}>
           {renderLabel ? (
             renderLabel()
           ) : (

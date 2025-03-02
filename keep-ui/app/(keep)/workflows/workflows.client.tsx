@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui";
 import { useWorkflowsV2 } from "utils/hooks/useWorkflowsV2";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { PageSubtitle } from "@/shared/ui/PageSubtitle";
+import { PlusIcon } from "@heroicons/react/20/solid";
 
 const EXAMPLE_WORKFLOW_DEFINITIONS = {
   slack: `
@@ -154,20 +155,11 @@ export default function WorkflowsPage() {
                 Automate your alert management with workflows
               </PageSubtitle>
             </div>
-            <div>
+            <div className="flex gap-2">
               <Button
-                className="mr-2.5"
                 color="orange"
                 size="md"
                 variant="secondary"
-                onClick={() => router.push("/workflows/builder")}
-                icon={PlusCircleIcon}
-              >
-                Create a workflow
-              </Button>
-              <Button
-                color="orange"
-                size="md"
                 onClick={() => {
                   setIsModalOpen(true);
                 }}
@@ -175,6 +167,15 @@ export default function WorkflowsPage() {
                 id="uploadWorkflowButton"
               >
                 Upload Workflows
+              </Button>
+              <Button
+                color="orange"
+                size="md"
+                variant="primary"
+                onClick={() => router.push("/workflows/builder")}
+                icon={PlusIcon}
+              >
+                Create Workflow
               </Button>
             </div>
           </div>

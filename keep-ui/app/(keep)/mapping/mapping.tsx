@@ -10,7 +10,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@tremor/react";
 import SidePanel from "@/components/SidePanel";
 import { PageSubtitle, PageTitle } from "@/shared/ui";
-import { PlusCircleIcon } from "@heroicons/react/24/outline";
+import { PlusIcon } from "@heroicons/react/20/solid";
 
 export default function Mapping() {
   const { data: mappings, isLoading } = useMappings();
@@ -50,7 +50,7 @@ export default function Mapping() {
             size="md"
             type="submit"
             onClick={() => setIsSidePanelOpen(true)}
-            icon={PlusCircleIcon}
+            icon={PlusIcon}
           >
             Create Mapping
           </Button>

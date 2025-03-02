@@ -26,9 +26,9 @@ import { DefaultRuleGroupType, parseCEL } from "react-querybuilder";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormattedQueryCell } from "./FormattedQueryCell";
 import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
-import { PlusIcon } from "@radix-ui/react-icons";
 import { CorrelationFormType } from "./CorrelationSidebar/types";
 import { PageSubtitle, PageTitle } from "@/shared/ui";
+import { PlusIcon } from "@heroicons/react/20/solid";
 
 const TIMEFRAME_UNITS_FROM_SECONDS = {
   seconds: (amount: number) => amount,
@@ -172,11 +172,17 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
             Manually setup flexible rules for alert to incident correlation
           </PageSubtitle>
         </div>
-        <Button color="orange" onClick={() => onCorrelationClick()}>
+        <Button
+          color="orange"
+          size="md"
+          variant="primary"
+          onClick={() => onCorrelationClick()}
+          icon={PlusIcon}
+        >
           Create correlation
         </Button>
       </div>
-      <Card className="flex-1 p-0">
+      <Card className="p-0">
         <Table>
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (

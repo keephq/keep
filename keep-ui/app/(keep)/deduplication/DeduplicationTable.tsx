@@ -2,14 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Card,
-  Subtitle,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeaderCell,
   TableRow,
-  Title,
   Badge,
   SparkAreaChart,
 } from "@tremor/react";
@@ -28,7 +26,8 @@ import {
 } from "@tanstack/react-table";
 import { DeduplicationRule } from "@/app/(keep)/deduplication/models";
 import DeduplicationSidebar from "@/app/(keep)/deduplication/DeduplicationSidebar";
-import { TrashIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { TrashIcon } from "@heroicons/react/24/outline";
+import { PlusIcon } from "@heroicons/react/20/solid";
 import { QuestionMarkCircleIcon } from "@heroicons/react/16/solid";
 import { useProviders } from "utils/hooks/useProviders";
 import { useApi } from "@/shared/lib/hooks/useApi";
@@ -141,7 +140,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       columnHelper.accessor("provider_type", {
         header: "",
         cell: (info) => (
-          <div className="flex justify-center items-center w-6">
+          <div className="flex justify-center items-center">
             <DynamicImageProviderIcon
               className="inline-block"
               key={info.getValue()}
@@ -325,7 +324,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       <div className="flex items-center justify-between">
         <div>
           <PageTitle>
-            Deduplication rules{" "}
+            Deduplication Rules{" "}
             <span className="text-gray-400">
               ({deduplicationRules?.length})
             </span>
@@ -340,11 +339,14 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
             setSelectedDeduplicationRule(null);
             setIsSidebarOpen(true);
           }}
+          icon={PlusIcon}
+          variant="primary"
+          size="md"
         >
-          Create deduplication rule
+          Create Deduplication Rule
         </Button>
       </div>
-      <Card className="flex-1 p-0">
+      <Card className="p-0">
         <Table>
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (

@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import debounce from "lodash.debounce";
-import { PageSubtitle } from "@/shared/ui";
+import { KeepLoader, PageSubtitle } from "@/shared/ui";
 import { PageTitle } from "@/shared/ui";
 
 function RangeInputWithLabel({
@@ -82,7 +82,7 @@ export default function Ai() {
           <div>
             <div className="grid grid-cols-1 gap-4">
               {isLoading ? (
-                <p>Loading algorithms and their settings...</p>
+                <KeepLoader loadingText="Loading algorithms and their settings..." />
               ) : null}
               {aistats?.algorithm_configs?.length === 0 && (
                 <div className="flex flex-row">

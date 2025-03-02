@@ -8,6 +8,7 @@ import {
 } from "./models";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import "react-loading-skeleton/dist/skeleton.css";
+import clsx from "clsx";
 
 /**
  * It's facets state. Key is the facet id, and value is Set<string> of unselected options.
@@ -264,7 +265,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   return (
     <section
       id={`${panelId}-facets`}
-      className={"min-w-48 max-w-48 " + className}
+      className={clsx("w-48 lg:w-56", className)}
       data-testid="facets-panel"
     >
       <div className="space-y-2">
@@ -275,7 +276,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-1"
           >
             <PlusIcon className="h-4 w-4" />
-            Add facet
+            Add Facet
           </button>
           <button
             onClick={() => clearFilters()}
