@@ -50,6 +50,12 @@ class DeepseekProvider(BaseProvider):
         system_prompt=None,
         structured_output_format=None,
     ):
+
+        try:
+            max_tokens = int(max_tokens)
+        except (TypeError, ValueError):
+            max_tokens = 1024
+
         client = OpenAI(
             api_key=self.authentication_config.api_key,
             base_url=self.BASE_URL,
