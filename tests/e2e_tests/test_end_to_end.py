@@ -297,7 +297,7 @@ def test_add_workflow(browser):
     try:
         page.goto("http://localhost:3000/signin")
         page.get_by_role("link", name="Workflows").click()
-        page.get_by_role("button", name="Create a workflow").click()
+        page.get_by_role("button", name="Create Workflow").click()
         page.get_by_placeholder("Set the name").click()
         page.get_by_placeholder("Set the name").press("ControlOrMeta+a")
         page.get_by_placeholder("Set the name").fill("Example Console Workflow")
