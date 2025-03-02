@@ -5,6 +5,7 @@
   "main": "next.config.js",
   "scripts": {
     "dev": "next dev -p 3000",
+    "dev:turbo": "NEXT_TURBO=true next dev -p 3000",
     "build": "./next_build.sh",
     "start": "next start",
     "lint": "next lint",
