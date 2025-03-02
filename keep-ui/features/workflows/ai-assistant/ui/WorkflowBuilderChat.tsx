@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Provider } from "@/shared/api/providers";
 import {
   DefinitionV2,
@@ -40,6 +40,7 @@ import {
 } from "@/features/workflows/ai-assistant/lib/utils";
 import { AddTriggerOrStepSkeleton } from "@/features/workflows/ai-assistant/ui/AddTriggerOrStepSkeleton";
 import { foreachTemplate, getTriggerTemplate } from "../../builder/lib/utils";
+import { capture } from "@/shared/lib/capture";
 import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
 export interface WorkflowBuilderChatProps {
