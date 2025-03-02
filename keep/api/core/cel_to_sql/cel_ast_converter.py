@@ -304,9 +304,9 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
 
             if not self.is_number(value) and self.is_date(value):
                 value = parse(value)
-
-            # this code is to handle the case when string literal contains escaped single/double quotes
-            value = value.encode("utf-8").decode("unicode_escape")
+            else:
+                # this code is to handle the case when string literal contains escaped single/double quotes
+                value = value.encode("utf-8").decode("unicode_escape")
         elif value == 'true' or value == 'false':
             value = value == 'true'
         elif '.' in value and self.is_float(value):
