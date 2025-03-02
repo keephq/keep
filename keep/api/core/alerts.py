@@ -344,14 +344,17 @@ def get_alert_facets_data(
         facets = get_alert_facets(tenant_id, facet_options_query.facet_queries.keys())
     else:
         facets = static_facets
-    base_query_cte = __build_query_for_filtering(tenant_id).cte("alerts_query")
+    base_query_cte = (
+        __build_query_for_filtering(tenant_id)
+        .order_by(desc(literal_column("lastalert.timestamp")))
+        .cte("alerts_query")
+    )
     base_query = (
         select(
             # here it creates aliases for table columns that will be used in filtering and faceting
             text(",".join(["entity_id"] + [key for key in alias_column_mapping.keys()]))
         )
         .select_from(base_query_cte)
-        .order_by(desc(literal_column("filter_last_received")))
         .limit(alerts_hard_limit)
     )
 
