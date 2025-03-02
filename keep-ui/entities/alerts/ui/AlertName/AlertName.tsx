@@ -7,12 +7,14 @@ import {
   TrashIcon,
   PencilSquareIcon,
   Cog8ToothIcon,
+  EyeIcon,
 } from "@heroicons/react/24/outline";
 import { Icon } from "@tremor/react";
 import { AlertDto, AlertToWorkflowExecution } from "@/entities/alerts/model";
 import { useRouter } from "next/navigation";
 import { useWorkflowExecutions } from "@/utils/hooks/useWorkflowExecutions";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
+import { clsx } from "clsx";
 
 // Define the tooltip position type
 type TooltipPosition = { x: number; y: number } | null;
@@ -67,6 +69,7 @@ export function AlertName({
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>(null);
   const imageContainerRef = useRef<HTMLDivElement | null>(null);
   const [rowStyle] = useLocalStorage("alert-table-row-style", "default");
+  const [showActionsOnHover] = useLocalStorage("alert-action-tray-hover", true);
 
   const handleNoteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -163,134 +166,129 @@ export function AlertName({
       >
         {name}
       </div>
-      <div
-        className={`flex items-center ml-2 ${
-          isDense ? "flex-shrink-0" : ""
-        } prevent-row-click`}
-      >
-        {(url ?? generatorURL) && (
-          <a
-            href={url || generatorURL}
-            target="_blank"
-            onClick={(e) => e.stopPropagation()}
-            className="prevent-row-click"
-          >
-            <Icon
-              icon={ArrowTopRightOnSquareIcon}
-              tooltip="Open Original Alert"
-              color="green"
-              variant="solid"
-              size="xs"
-              className="ml-1 prevent-row-click"
-            />
-          </a>
-        )}
 
-        {setTicketModalAlert && (
-          <Icon
-            icon={TicketIcon}
-            tooltip={
-              ticketUrl
-                ? `Ticket Assigned ${
-                    ticketStatus ? `(status: ${ticketStatus})` : ""
-                  }`
-                : "Click to assign Ticket"
-            }
-            size="xs"
-            color={ticketUrl ? "green" : "gray"}
-            className="ml-1 cursor-pointer prevent-row-click"
-            variant="solid"
-            onClick={handleTicketClick}
-          />
-        )}
+      <div className="flex items-center h-full pl-2">
+        <div
+          className={clsx(
+            "flex items-center gap-1 transition-all duration-200",
+            showActionsOnHover
+              ? [
+                  "transform translate-x-2 opacity-0",
+                  "group-hover/row:translate-x-0 group-hover/row:opacity-100",
+                ]
+              : "opacity-100"
+          )}
+        >
+          {(url ?? generatorURL) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(url || generatorURL, "_blank");
+              }}
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
+              title="Open Original Alert"
+            >
+              <Icon
+                icon={ArrowTopRightOnSquareIcon}
+                size="sm"
+                className="text-gray-500"
+              />
+            </button>
+          )}
 
-        {playbook_url && (
-          <a
-            href={playbook_url}
-            target="_blank"
-            onClick={(e) => e.stopPropagation()}
-            className="prevent-row-click"
-          >
-            <Icon
-              icon={BookOpenIcon}
-              tooltip="Playbook"
-              size="xs"
-              color="gray"
-              className="ml-1 prevent-row-click"
-              variant="solid"
-            />
-          </a>
-        )}
+          {setTicketModalAlert && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTicketClick(e);
+              }}
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
+              title={
+                ticketUrl
+                  ? `Ticket Assigned ${
+                      ticketStatus ? `(status: ${ticketStatus})` : ""
+                    }`
+                  : "Click to assign Ticket"
+              }
+            >
+              <Icon
+                icon={TicketIcon}
+                size="sm"
+                className={`text-${ticketUrl ? "green" : "gray"}-500`}
+              />
+            </button>
+          )}
 
-        {setNoteModalAlert && (
-          <Icon
-            icon={PencilSquareIcon}
-            tooltip="Click to add note"
-            size="xs"
-            color={note ? "green" : "gray"}
-            className="ml-1 cursor-pointer prevent-row-click"
-            variant="solid"
-            onClick={handleNoteClick}
-          />
-        )}
+          {playbook_url && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(playbook_url, "_blank");
+              }}
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
+              title="View Playbook"
+            >
+              <Icon icon={BookOpenIcon} size="sm" className="text-gray-500" />
+            </button>
+          )}
 
-        {deleted && (
-          <Icon
-            icon={TrashIcon}
-            tooltip="This alert has been deleted"
-            size="xs"
-            color="gray"
-            className="ml-1 prevent-row-click"
-            variant="solid"
-          />
-        )}
+          {setNoteModalAlert && (
+            <button
+              onClick={(e) => handleNoteClick(e)}
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
+              title="Add/Edit Note"
+            >
+              <Icon
+                icon={PencilSquareIcon}
+                size="sm"
+                className={`text-${note ? "green" : "gray"}-500`}
+              />
+            </button>
+          )}
 
-        {relevantWorkflowExecution && (
-          <Icon
-            icon={Cog8ToothIcon}
-            size="xs"
-            color={`${
-              relevantWorkflowExecution.workflow_status === "success"
-                ? "green"
-                : relevantWorkflowExecution.workflow_status === "error"
-                ? "red"
-                : "gray"
-            }`}
-            tooltip={`${
-              relevantWorkflowExecution.workflow_status === "success"
-                ? "Last workflow executed successfully"
-                : relevantWorkflowExecution.workflow_status === "error"
-                ? "Last workflow execution failed"
-                : undefined
-            }`}
-            onClick={(e) => handleWorkflowClick(e, relevantWorkflowExecution)}
-            className="ml-1 cursor-pointer prevent-row-click"
-            variant="solid"
-          />
-        )}
+          {relevantWorkflowExecution && (
+            <button
+              onClick={(e) => handleWorkflowClick(e, relevantWorkflowExecution)}
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
+              title={`Workflow ${relevantWorkflowExecution.workflow_status}`}
+            >
+              <Icon
+                icon={Cog8ToothIcon}
+                size="sm"
+                className={`text-${
+                  relevantWorkflowExecution.workflow_status === "success"
+                    ? "green"
+                    : relevantWorkflowExecution.workflow_status === "error"
+                    ? "red"
+                    : "gray"
+                }-500`}
+              />
+            </button>
+          )}
 
-        {imageUrl && !imageError && (
-          <div
-            ref={imageContainerRef}
-            className="ml-1 rounded bg-gray-200 border border-gray-200 p-1 flex items-center justify-center cursor-pointer relative hover:bg-gray-300 transition-all duration-150 prevent-row-click"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            onClick={handleImageClick}
-            style={{ width: "28px", height: "28px" }}
-          >
-            <img
-              src={imageUrl}
-              alt="Preview"
-              className="h-5 w-5 object-cover rounded prevent-row-click"
-              onError={() => setImageError(true)}
-            />
-          </div>
-        )}
-
-        {tooltipPosition && imageUrl && !imageError && (
-          <ImagePreviewTooltip imageUrl={imageUrl} position={tooltipPosition} />
-        )}
+          {imageUrl && !imageError && (
+            <div
+              ref={imageContainerRef}
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              onClick={handleImageClick}
+              title="View Image"
+            >
+              <img
+                src={imageUrl}
+                alt="Preview"
+                className="h-4 w-4 object-cover rounded prevent-row-click"
+                onError={() => setImageError(true)}
+              />
+            </div>
+          )}
+        </div>
       </div>
+
+      {tooltipPosition && imageUrl && !imageError && (
+        <ImagePreviewTooltip imageUrl={imageUrl} position={tooltipPosition} />
+      )}
     </div>
   );
 }
