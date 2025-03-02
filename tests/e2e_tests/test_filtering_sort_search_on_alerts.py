@@ -455,10 +455,12 @@ def test_search_by_cel(browser, search_test_case, setup_test_data):
 sort_tescases = {
     "sort by lastReceived asc/dsc": {
         "column_name": "Last Received",
+        "column_id": "lastReceived",
         "sort_callback": lambda alert: alert["lastReceived"],
     },
     "sort by description asc/dsc": {
         "column_name": "description",
+        "column_id": "description",
         "sort_callback": lambda alert: alert["description"],
     },
 }
@@ -468,6 +470,7 @@ sort_tescases = {
 def test_sort_asc_dsc(browser, sort_test_case, setup_test_data):
     test_case = sort_tescases[sort_test_case]
     coumn_name = test_case["column_name"]
+    column_id = test_case["column_id"]
     sort_callback = test_case["sort_callback"]
     current_alerts = setup_test_data
     init_test(browser, current_alerts)
@@ -486,7 +489,8 @@ def test_sort_asc_dsc(browser, sort_test_case, setup_test_data):
             sorted_alerts = list(reversed(sorted_alerts))
 
         column_header_locator = browser.locator(
-            "[data-testid='alerts-table'] table thead th div", has_text=coumn_name
+            f"[data-testid='alerts-table'] table thead th [data-testid='header-cell-{column_id}']",
+            has_text=coumn_name,
         )
         expect(column_header_locator).to_be_visible()
         column_header_locator.click()
