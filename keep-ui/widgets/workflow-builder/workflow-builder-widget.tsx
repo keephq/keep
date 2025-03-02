@@ -17,6 +17,7 @@ import { WorkflowEnabledSwitch } from "@/features/workflows/enable-disable";
 import { WorkflowSyncStatus } from "@/app/(keep)/workflows/[workflow_id]/workflow-sync-status";
 import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 import clsx from "clsx";
+import { WorkflowTestRunButton } from "@/features/workflows/test-run/ui/workflow-test-run-modal";
 
 export interface WorkflowBuilderWidgetProps {
   workflowRaw: string | undefined;
@@ -35,7 +36,7 @@ export function WorkflowBuilderWidget({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const {
     triggerSave,
-    triggerRun,
+    triggerTestRun,
     updateV2Properties,
     isInitialized,
     isEditorSyncedWithNodes,
@@ -153,16 +154,7 @@ export function WorkflowBuilderWidget({
                 Edit Metadata
               </Button>
             )}
-            <Button
-              color="orange"
-              size="md"
-              className="min-w-28 disabled:opacity-70"
-              icon={PlayIcon}
-              disabled={!isValid}
-              onClick={() => triggerRun()}
-            >
-              Test Run
-            </Button>
+            <WorkflowTestRunButton workflowId={workflowId ?? ""} />
             <Button
               color="orange"
               size="md"
@@ -183,7 +175,6 @@ export function WorkflowBuilderWidget({
           standalone={standalone}
         />
       </main>
-      <WorkflowTestRunModal workflowId={workflowId ?? ""} />
       <WorkflowMetadataModal
         isOpen={isEditModalOpen}
         workflow={{
