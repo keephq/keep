@@ -110,7 +110,7 @@ export function WorkflowTemplates() {
 
   return (
     <div className="w-full flex flex-col gap-6">
-      <h2 className="text-xl font-semibold flex justify-between">
+      <h2 className="text-xl font-semibold flex justify-between items-baseline">
         Discover workflow templates
         <div className="flex justify-end">
           <Button

@@ -12,7 +12,12 @@ import UsersSidebar from "./users-sidebar";
 import { User } from "@/app/(keep)/settings/models";
 import { UsersTable } from "./users-table";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast, ErrorComponent } from "@/shared/ui";
+import {
+  showErrorToast,
+  ErrorComponent,
+  PageTitle,
+  PageSubtitle,
+} from "@/shared/ui";
 
 interface Props {
   currentUser?: AuthUser;
@@ -114,8 +119,8 @@ export default function UsersSettings({
     <div className="h-full flex flex-col">
       <header className="flex justify-between mb-4">
         <div className="flex flex-col">
-          <Title>Users Management</Title>
-          <Subtitle>Add or remove users from your tenant</Subtitle>
+          <PageTitle>Users Management</PageTitle>
+          <PageSubtitle>Add or remove users from your tenant</PageSubtitle>
         </div>
         <div className="flex space-x-2 items-center">
           <Button

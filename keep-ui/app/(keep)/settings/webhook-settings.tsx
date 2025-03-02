@@ -16,7 +16,6 @@ import {
 } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { useRouter } from "next/navigation";
-import { CodeBlock, a11yLight } from "react-code-blocks";
 import useSWR from "swr";
 import { toast } from "react-toastify";
 import { v4 as uuidv4 } from "uuid";
@@ -26,6 +25,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { PageSubtitle } from "@/shared/ui";
 import { PageTitle } from "@/shared/ui";
+import { Editor } from "@monaco-editor/react";
 
 interface Webhook {
   webhookApi: string;
@@ -182,7 +182,7 @@ req.end();
       </header>
       <Card>
         <div className="flex divide-x">
-          <div className="flex-1 pr-2 flex flex-col gap-y-2">
+          <div className="flex-1 basis-4/12 pr-2 flex flex-col gap-y-2">
             <Title>URL: {data.webhookApi}</Title>
             <Subtitle>API Key: {data.apiKey}</Subtitle>
             <div>
@@ -200,12 +200,13 @@ req.end();
             </div>
           </div>
           <TabGroup
-            className="flex-1 min-w-0 pl-2"
+            className="flex-1 basis-8/12 min-w-0 pl-2"
             index={codeTabIndex}
             onIndexChange={setCodeTabIndex}
           >
             <div className="flex justify-between items-center">
-              <TabList variant="solid" color="orange">
+              {/* ml-6 to match the editor left padding */}
+              <TabList variant="solid" color="orange" className="ml-6">
                 {languages.map(({ title }) => (
                   <Tab key={title}>{title}</Tab>
                 ))}
@@ -222,14 +223,22 @@ req.end();
             <TabPanels>
               {languages.map(({ title, language, code }) => (
                 <TabPanel key={title}>
-                  <CodeBlock
-                    language={language}
-                    theme={a11yLight}
-                    // @ts-ignore - `text` isn't a valid prop, but it appears in the docs
-                    text={code}
-                    customStyle={{ overflowY: "scroll" }}
-                    showLineNumbers={false}
-                  />
+                  <div className="h-[calc(100vh-20rem)]">
+                    <Editor
+                      value={code}
+                      language={language}
+                      theme="vs-light"
+                      options={{
+                        readOnly: true,
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        fontSize: 12,
+                        lineNumbers: "off",
+                        folding: true,
+                        wordWrap: "on",
+                      }}
+                    />
+                  </div>
                 </TabPanel>
               ))}
             </TabPanels>

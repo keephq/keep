@@ -376,7 +376,10 @@ export default function SettingsPage() {
         </TabList>
         <TabPanels className="flex-grow overflow-hidden p-px">
           <TabPanel className="h-full">
-            <TabGroup index={userSubTabIndex} className="h-full flex flex-col">
+            <TabGroup
+              index={userSubTabIndex}
+              className="h-full flex flex-col gap-4"
+            >
               <TabList color="orange">
                 <Tab
                   icon={UsersIcon}
@@ -437,10 +440,10 @@ export default function SettingsPage() {
               </TabPanels>
             </TabGroup>
           </TabPanel>
-          <TabPanel className="h-full">
+          <TabPanel className="h-full pt-4">
             <WebhookSettings selectedTab={selectedTab} />
           </TabPanel>
-          <TabPanel className="h-full">
+          <TabPanel className="h-full pt-4">
             <SmtpSettings selectedTab={selectedTab} />
           </TabPanel>
         </TabPanels>

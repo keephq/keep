@@ -2,7 +2,6 @@ import {
   Badge,
   Button,
   Card,
-  Subtitle,
   Table,
   TableBody,
   TableCell,
@@ -10,7 +9,6 @@ import {
   TableHeaderCell,
   TableRow,
   Text,
-  Title,
 } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { a11yLight, CopyBlock } from "react-code-blocks";
@@ -106,7 +104,6 @@ export default function ApiKeySettings({ selectedTab }: Props) {
       <header className="flex justify-between">
         <div className="flex flex-col">
           <PageTitle>API Keys</PageTitle>
-          <PageSubtitle>Manage your tenant API keys</PageSubtitle>
         </div>
 
         <div>
@@ -193,7 +190,7 @@ export default function ApiKeySettings({ selectedTab }: Props) {
             </TableBody>
           </Table>
         ) : (
-          <div> There are no active API keys </div>
+          <div className="p-4"> There are no active API keys </div>
         )}
       </Card>
       <CreateApiKeyModal
