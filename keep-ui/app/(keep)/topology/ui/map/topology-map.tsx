@@ -65,6 +65,7 @@ import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { DropdownMenu } from "@/shared/ui";
 import { downloadFileFromString } from "@/shared/ui/YAMLCodeblock/ui/YAMLCodeblock";
+import { PlusIcon } from "@heroicons/react/20/solid";
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
@@ -186,7 +187,12 @@ export function TopologyMap({
     {
       label: "Import",
       icon: ArrowUpTrayIcon,
-      onClick: () => window.confirm("Current topology will be completely replaced. Do you want to continue?")? document.getElementById("fileInput")?.click() : null,
+      onClick: () =>
+        window.confirm(
+          "Current topology will be completely replaced. Do you want to continue?"
+        )
+          ? document.getElementById("fileInput")?.click()
+          : null,
     },
     {
       label: "Export",
@@ -574,8 +580,14 @@ export function TopologyMap({
               ))}
             </MultiSelect>
           </div>
-          <Button onClick={() => setIsSidePanelOpen(true)}>+ Add Node</Button>
-
+          <Button
+            onClick={() => setIsSidePanelOpen(true)}
+            variant="primary"
+            size="md"
+            icon={PlusIcon}
+          >
+            Add Node
+          </Button>
           <div className="h-full">
             <DropdownMenu.Menu
               icon={EllipsisVerticalIcon}

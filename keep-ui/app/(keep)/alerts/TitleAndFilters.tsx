@@ -6,6 +6,7 @@ import EnhancedDateRangePicker, {
   TimeFrame,
 } from "@/components/ui/DateRangePicker";
 import { useEffect, useState } from "react";
+import { PageTitle } from "@/shared/ui";
 
 type Theme = {
   [key: string]: string;
@@ -104,10 +105,8 @@ export const TitleAndFilters = ({
   };
 
   return (
-    <div className="pt-4 flex justify-between">
-      <div className="text-xl">
-        <Title className="capitalize inline">{presetName}</Title>
-      </div>
+    <div className="flex justify-between">
+      <PageTitle className="capitalize inline">{presetName}</PageTitle>
       <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">
         <EnhancedDateRangePicker
           timeFrame={timeFrame}

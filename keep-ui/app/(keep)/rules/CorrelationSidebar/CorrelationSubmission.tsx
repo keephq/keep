@@ -27,11 +27,7 @@ export const CorrelationSubmission = ({
         <Button type="button" variant="light" color="orange" onClick={toggle}>
           Cancel
         </Button>
-        <Button
-          className="rounded-none"
-          color="orange"
-          disabled={!isValid || exceeds14Days}
-        >
+        <Button color="orange" disabled={!isValid || exceeds14Days}>
           {isRuleBeingEdited ? "Save correlation" : "Create correlation"}
         </Button>
       </div>

@@ -2,7 +2,6 @@ import {
   Badge,
   Button,
   Card,
-  Subtitle,
   Table,
   TableBody,
   TableCell,
@@ -10,7 +9,6 @@ import {
   TableHeaderCell,
   TableRow,
   Text,
-  Title,
 } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { a11yLight, CopyBlock } from "react-code-blocks";
@@ -23,7 +21,7 @@ import { useRoles } from "utils/hooks/useRoles";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
-import { showErrorToast } from "@/shared/ui";
+import { PageSubtitle, PageTitle, showErrorToast } from "@/shared/ui";
 import { ApiKey } from "@/app/(keep)/settings/auth/types";
 
 interface Props {
@@ -102,11 +100,10 @@ export default function ApiKeySettings({ selectedTab }: Props) {
   };
 
   return (
-    <div className="mt-10">
-      <div className="flex justify-between">
+    <div className="flex flex-col gap-4">
+      <header className="flex justify-between">
         <div className="flex flex-col">
-          <Title>API Keys</Title>
-          <Subtitle>Manage your tenant API keys</Subtitle>
+          <PageTitle>API Keys</PageTitle>
         </div>
 
         <div>
@@ -125,12 +122,12 @@ export default function ApiKeySettings({ selectedTab }: Props) {
             Create API key
           </Button>
         </div>
-      </div>
-      <Card className="mt-2.5">
+      </header>
+      <Card className="p-0">
         {apiKeys.length ? (
           <Table>
             <TableHead>
-              <TableRow>
+              <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
                 <TableHeaderCell className="text-left">Name</TableHeaderCell>
                 <TableHeaderCell className="text-left w-1/4">
                   Key
@@ -193,7 +190,7 @@ export default function ApiKeySettings({ selectedTab }: Props) {
             </TableBody>
           </Table>
         ) : (
-          <div> There are no active API keys </div>
+          <div className="p-4"> There are no active API keys </div>
         )}
       </Card>
       <CreateApiKeyModal
