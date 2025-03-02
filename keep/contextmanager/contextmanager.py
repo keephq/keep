@@ -34,6 +34,7 @@ class ContextManager:
         self.consts_context = {}
         self.current_step_vars = {}
         self.current_step_aliases = {}
+        self.secrets_context = {}
         # cli context
         try:
             self.click_context = click.get_current_context()
@@ -142,6 +143,7 @@ class ContextManager:
             "consts": self.consts_context,
             "vars": self.current_step_vars,
             "aliases": self.current_step_aliases,
+            "secrets": self.secrets_context,
         }
 
         if not exclude_providers:
