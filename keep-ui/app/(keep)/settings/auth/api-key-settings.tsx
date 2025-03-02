@@ -23,7 +23,7 @@ import { useRoles } from "utils/hooks/useRoles";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
-import { showErrorToast } from "@/shared/ui";
+import { PageSubtitle, PageTitle, showErrorToast } from "@/shared/ui";
 import { ApiKey } from "@/app/(keep)/settings/auth/types";
 
 interface Props {
@@ -102,11 +102,11 @@ export default function ApiKeySettings({ selectedTab }: Props) {
   };
 
   return (
-    <div className="mt-10">
+    <div>
       <div className="flex justify-between">
         <div className="flex flex-col">
-          <Title>API Keys</Title>
-          <Subtitle>Manage your tenant API keys</Subtitle>
+          <PageTitle>API Keys</PageTitle>
+          <PageSubtitle>Manage your tenant API keys</PageSubtitle>
         </div>
 
         <div>

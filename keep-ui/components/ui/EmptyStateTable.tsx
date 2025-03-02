@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import { Button, Card } from "@tremor/react";
 import { CircleStackIcon } from "@heroicons/react/24/outline";
 
@@ -17,9 +17,7 @@ export function EmptyStateTable({
 }: EmptyStateTableProps) {
   return (
     <div className="h-full flex flex-col relative">
-      <Card className="w-full flex-grow overflow-auto">
-        {children}
-      </Card>
+      <Card className="p-0 w-full flex-grow overflow-auto">{children}</Card>
 
       <div className="absolute inset-0 bg-white bg-opacity-50 dark:bg-gray-800 dark:bg-opacity-50 flex items-center justify-center">
         <Card className="w-full max-w-md bg-white bg-opacity-70 dark:bg-gray-800 dark:bg-opacity-70">
@@ -34,7 +32,7 @@ export function EmptyStateTable({
             <Button
               className="mt-4"
               color="orange"
-              onClick={() => window.open(documentationURL, '_blank')}
+              onClick={() => window.open(documentationURL, "_blank")}
             >
               View Documentation
             </Button>

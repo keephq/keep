@@ -596,7 +596,7 @@ export const AlertsRulesBuilder = ({
                 <Textarea
                   ref={textAreaRef}
                   rows={1}
-                  className="resize-none overflow-hidden w-full pr-9 pl-9 min-h-[38px]" // Added pl-9 for left padding to accommodate icon
+                  className="resize-none overflow-hidden w-full pr-9 pl-9 min-h-10" // Added pl-9 for left padding to accommodate icon
                   value={celRules}
                   onValueChange={onValueChange}
                   onKeyDown={handleKeyDown}

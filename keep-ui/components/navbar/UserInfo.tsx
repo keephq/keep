@@ -128,7 +128,7 @@ export const UserInfo = ({ session }: UserInfoProps) => {
             className="w-auto pr-3.5"
             target="_blank"
           >
-            Join Slack
+            Slack
           </LinkWithIcon>
           <LinkWithIcon
             icon={HiOutlineDocumentText}

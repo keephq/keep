@@ -116,8 +116,8 @@ const DraggableHeaderCell = ({
       column.id === "checkbox"
         ? "32px !important"
         : column.id === "source"
-        ? "40px !important"
-        : column.getSize(),
+          ? "40px !important"
+          : column.getSize(),
     opacity: isDragging ? 0.5 : 1,
     transform: CSS.Translate.toString(transform),
     transition,
@@ -125,8 +125,8 @@ const DraggableHeaderCell = ({
       column.getIsPinned() !== false
         ? "default"
         : isDragging
-        ? "grabbing"
-        : "grab",
+          ? "grabbing"
+          : "grab",
   };
 
   // Hide menu for checkbox, source, severity and alertMenu columns
@@ -224,8 +224,8 @@ const DraggableHeaderCell = ({
                   column.getNextSortingOrder() === "asc"
                     ? "Sort ascending"
                     : column.getNextSortingOrder() === "desc"
-                    ? "Sort descending"
-                    : "Clear sort"
+                      ? "Sort descending"
+                      : "Clear sort"
                 }
               >
                 {column.getIsSorted() ? (
@@ -422,7 +422,10 @@ export default function AlertsTableHeaders({
             container: a11yContainerRef.current ?? undefined,
           }}
         >
-          <TableRow key={headerGroup.id}>
+          <TableRow
+            key={headerGroup.id}
+            className="border-b border-tremor-border dark:border-dark-tremor-border"
+          >
             <SortableContext
               items={headerGroup.headers}
               strategy={horizontalListSortingStrategy}
@@ -440,7 +443,7 @@ export default function AlertsTableHeaders({
                     header={header}
                     table={table}
                     presetName={presetName}
-                    className={className}
+                    className={clsx(className, "py-2")}
                     style={style}
                     columnTimeFormats={columnTimeFormats}
                     setColumnTimeFormats={setColumnTimeFormats}

@@ -139,7 +139,7 @@ export function AlertsTableBody({
   if (showSkeleton) {
     return (
       <TableBody>
-        {Array.from({ length: 10 }).map((_, index) => (
+        {Array.from({ length: 20 }).map((_, index) => (
           <TableRow key={index}>
             {Array.from({ length: 5 }).map((_, cellIndex) => (
               <TableCell key={cellIndex}>

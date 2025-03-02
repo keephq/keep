@@ -1,17 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Facet } from "./facet";
 import {
-  CreateFacetDto,
   FacetDto,
   FacetOptionDto,
   FacetOptionsQueries,
   FacetsConfig,
 } from "./models";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
-import { AddFacetModal } from "./add-facet-modal";
 import "react-loading-skeleton/dist/skeleton.css";
-import clsx from "clsx";
 
 /**
  * It's facets state. Key is the facet id, and value is Set<string> of unselected options.
@@ -268,7 +264,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   return (
     <section
       id={`${panelId}-facets`}
-      className={"min-w-52 max-w-52 " + className}
+      className={"min-w-48 max-w-48 " + className}
       data-testid="facets-panel"
     >
       <div className="space-y-2">

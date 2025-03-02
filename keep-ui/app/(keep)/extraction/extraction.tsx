@@ -9,6 +9,9 @@ import { ExtractionRule } from "./model";
 import React, { useEffect, useState } from "react";
 import { Button } from "@tremor/react";
 import SidePanel from "@/components/SidePanel";
+import { PlusCircleIcon } from "@heroicons/react/24/outline";
+import { PageSubtitle } from "@/shared/ui";
+import { PageTitle } from "@/shared/ui";
 
 export default function Extraction() {
   const { data: extractions, isLoading } = useExtractions();
@@ -33,27 +36,28 @@ export default function Extraction() {
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
       <div className="flex flex-row items-center justify-between">
-        <div className="p-4 md:p-4">
-          <Title>Extractions</Title>
-          <Subtitle>
+        <div>
+          <PageTitle>Extractions</PageTitle>
+          <PageSubtitle>
             Easily extract more attributes from your alerts using Regex
-          </Subtitle>
+          </PageSubtitle>
         </div>
         <div>
           <Button
             color="orange"
-            size="xs"
+            size="md"
             type="submit"
             onClick={() => setIsSidePanelOpen(true)}
+            icon={PlusCircleIcon}
           >
-            + Create Extraction
+            Create Extraction
           </Button>
         </div>
       </div>
 
-      <Card className="mt-5 p-4 md:p-10 mx-auto">
+      <Card className="p-0 overflow-hidden">
         <SidePanel
           isOpen={isSidePanelOpen}
           onClose={() => handleSidePanelExit(null)}
@@ -85,6 +89,6 @@ export default function Extraction() {
           </div>
         </div>
       </Card>
-    </>
+    </div>
   );
 }

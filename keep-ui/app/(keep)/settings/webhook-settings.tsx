@@ -24,6 +24,8 @@ import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import * as Frigade from "@frigade/react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { PageSubtitle } from "@/shared/ui";
+import { PageTitle } from "@/shared/ui";
 
 interface Webhook {
   webhookApi: string;
@@ -173,10 +175,12 @@ req.end();
   };
 
   return (
-    <div className="mt-10">
-      <Title>Webhook Settings</Title>
-      <Subtitle>View your tenant webhook settings</Subtitle>
-      <Card className="mt-2.5">
+    <div className="flex flex-col gap-4">
+      <header>
+        <PageTitle>Webhook Settings</PageTitle>
+        <PageSubtitle>View your tenant webhook settings</PageSubtitle>
+      </header>
+      <Card>
         <div className="flex divide-x">
           <div className="flex-1 pr-2 flex flex-col gap-y-2">
             <Title>URL: {data.webhookApi}</Title>

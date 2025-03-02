@@ -14,7 +14,7 @@ export const CorrelationPlaceholder = () => {
     <Fragment>
       <Card className="flex flex-col items-center justify-center gap-y-8 h-full">
         <div className="text-center space-y-3">
-          <Title className="text-2xl">No Correlations Yet</Title>
+          <Title className="text-2xl">No correlations yet</Title>
           <Subtitle className="text-gray-400">
             Start building correlations to group alerts into incidents.
           </Subtitle>
@@ -24,7 +24,7 @@ export const CorrelationPlaceholder = () => {
           color="orange"
           onClick={() => onCorrelationClick()}
         >
-          Create Correlation
+          Create correlation
         </Button>
         <PlaceholderSankey className="max-w-full" />
       </Card>

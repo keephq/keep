@@ -16,7 +16,7 @@ export const FormattedQueryCell = ({ query }: FormattedQueryCellProps) => {
       {anyCombinator ? (
         query.rules.map((group, groupI) => (
           <Fragment key={groupI}>
-            <div className="p-2 bg-gray-50 border rounded space-x-2">
+            <div className="px-2 py-1 bg-gray-50 border rounded space-x-2">
               {"combinator" in group
                 ? group.rules.map((rule, ruleI) => (
                     <Fragment key={ruleI}>
@@ -24,7 +24,9 @@ export const FormattedQueryCell = ({ query }: FormattedQueryCellProps) => {
                         <span className="space-x-2">
                           <b>{rule.field}</b>{" "}
                           <code className="font-mono">{rule.operator}</code>
-                          <Badge color="orange">{rule.value}</Badge>
+                          <Badge color="orange" className="px-1 min-w-6">
+                            {rule.value}
+                          </Badge>
                         </span>
                       ) : undefined}
                     </Fragment>

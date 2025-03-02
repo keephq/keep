@@ -362,7 +362,7 @@ export default function SettingsPage() {
             SMTP
           </Tab>
         </TabList>
-        <TabPanels className="flex-grow overflow-hidden">
+        <TabPanels className="flex-grow overflow-hidden p-px">
           <TabPanel className="h-full">
             <TabGroup index={userSubTabIndex} className="h-full flex flex-col">
               <TabList color="orange">
@@ -403,23 +403,23 @@ export default function SettingsPage() {
                   SSO
                 </Tab>
               </TabList>
-              <TabPanels className="flex-grow overflow-hidden">
-                <TabPanel className="h-full mt-6">
+              <TabPanels className="flex-grow overflow-hidden p-px">
+                <TabPanel className="h-full">
                   {renderUserSubTabContent("users")}
                 </TabPanel>
-                <TabPanel className="h-full mt-6">
+                <TabPanel className="h-full">
                   {renderUserSubTabContent("groups")}
                 </TabPanel>
-                <TabPanel className="h-full mt-6">
+                <TabPanel className="h-full">
                   {renderUserSubTabContent("roles")}
                 </TabPanel>
-                <TabPanel className="h-full mt-6">
+                <TabPanel className="h-full">
                   {renderUserSubTabContent("permissions")}
                 </TabPanel>
-                <TabPanel className="h-full mt-6">
+                <TabPanel className="h-full">
                   {renderUserSubTabContent("api-keys")}
                 </TabPanel>
-                <TabPanel className="h-full mt-6">
+                <TabPanel className="h-full">
                   {renderUserSubTabContent("sso")}
                 </TabPanel>
               </TabPanels>

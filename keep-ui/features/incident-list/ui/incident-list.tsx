@@ -1,6 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -18,7 +18,12 @@ import { InitialFacetsData } from "@/features/filter/api";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import Image from "next/image";
 import { Icon } from "@tremor/react";
-import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
+import {
+  PageSubtitle,
+  PageTitle,
+  SeverityBorderIcon,
+  UISeverity,
+} from "@/shared/ui";
 import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
@@ -330,8 +335,8 @@ export function IncidentList({
         <div className="h-full flex flex-col gap-5">
           <div className="flex justify-between items-center">
             <div>
-              <Title>Incidents</Title>
-              <Subtitle>Manage your incidents</Subtitle>
+              <PageTitle>Incidents</PageTitle>
+              <PageSubtitle>Group alerts into incidents</PageSubtitle>
             </div>
 
             <div>

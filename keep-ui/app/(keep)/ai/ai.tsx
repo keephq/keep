@@ -6,6 +6,8 @@ import { toast } from "react-toastify";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import debounce from "lodash.debounce";
+import { PageSubtitle } from "@/shared/ui";
+import { PageTitle } from "@/shared/ui";
 
 function RangeInputWithLabel({
   setting,
@@ -30,11 +32,11 @@ function RangeInputWithLabel({
   }, [debouncedOnChange]);
 
   return (
-    <div>
-      <p>Value: {value}</p>
+    <div className="flex flex-col gap-1 items-end">
+      <p className="text-right text-sm text-gray-500">value: {value}</p>
       <input
         type="range"
-        className="bg-orange-500 accent-orange-500"
+        className="bg-orange-500 accent-orange-500 [&::-webkit-slider-runnable-track]:bg-gray-100 [&::-webkit-slider-runnable-track]:rounded-full"
         step={(setting.max - setting.min) / 100}
         min={setting.min}
         max={setting.max}
@@ -66,14 +68,16 @@ export default function Ai() {
   }, [refetchAIStats]);
 
   return (
-    <main className="p-4 md:p-10 mx-auto max-w-full">
-      <div className="flex justify-between items-center">
+    <main className="flex flex-col gap-6">
+      <header className="flex justify-between items-center">
         <div>
-          <Title>AI Plugins</Title>
-          <Subtitle>For correlation, summarization, and enrichment</Subtitle>
+          <PageTitle>AI Plugins</PageTitle>
+          <PageSubtitle>
+            For correlation, summarization, and enrichment
+          </PageSubtitle>
         </div>
-      </div>
-      <Card className="mt-10 p-4 md:p-10 mx-auto">
+      </header>
+      <Card className="p-0 overflow-hidden">
         <div>
           <div>
             <div className="grid grid-cols-1 gap-4">
@@ -120,20 +124,19 @@ export default function Ai() {
                   key={index}
                   className="p-4 flex flex-col justify-between w-full border-white border-2"
                 >
-                  <h3 className="text-lg sm:text-xl font-semibold line-clamp-2">
+                  <h3 className="text-md font-semibold line-clamp-2">
                     {algorithm_config.algorithm.name}
                   </h3>
                   <p className="text-sm">
                     {algorithm_config.algorithm.description}
                   </p>
                   <div className="flex flex-row">
-                    <Card className="m-2 mt-4 p-2">
+                    <div className="my-4 p-2 border-y border-gray-200 flex flex-col gap-4">
                       {algorithm_config.settings.map((setting: any) => (
-                        <div key={setting} className="mt-2">
-                          {setting.name}
-                          <p className="text-sm text-gray-500">
-                            {setting.description}
-                          </p>
+                        <div
+                          key={setting}
+                          className="flex flex-row items-start gap-2"
+                        >
                           {setting.type === "bool" ? (
                             <input
                               type="checkbox"
@@ -152,46 +155,62 @@ export default function Ai() {
                                 toast.success("Settings updated successfully!");
                                 refetchAIStats();
                               }}
-                              className="mt-2 bg-orange-500 accent-orange-500"
+                              className="mt-2 bg-orange-500 accent-orange-200"
                             />
                           ) : null}
+                          <div>
+                            <p className="text-sm font-medium">
+                              {setting.name}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {setting.description}
+                            </p>
+                          </div>
                           {setting.type === "float" ? (
-                            <RangeInputWithLabel
-                              key={setting.value}
-                              setting={setting}
-                              onChange={(newValue) => {
-                                setting.value = newValue;
-                                algorithm_config.settings_proposed_by_algorithm =
-                                  null;
-                                updateAISettings(
-                                  algorithm_config.algorithm_id,
-                                  algorithm_config
-                                );
-                                toast.success("Settings updated successfully!");
-                                refetchAIStats();
-                              }}
-                            />
+                            <div className="flex-1">
+                              <RangeInputWithLabel
+                                key={setting.value}
+                                setting={setting}
+                                onChange={(newValue) => {
+                                  setting.value = newValue;
+                                  algorithm_config.settings_proposed_by_algorithm =
+                                    null;
+                                  updateAISettings(
+                                    algorithm_config.algorithm_id,
+                                    algorithm_config
+                                  );
+                                  toast.success(
+                                    "Settings updated successfully!"
+                                  );
+                                  refetchAIStats();
+                                }}
+                              />
+                            </div>
                           ) : null}
                           {setting.type === "int" ? (
-                            <RangeInputWithLabel
-                              key={setting.value}
-                              setting={setting}
-                              onChange={(newValue) => {
-                                setting.value = newValue;
-                                algorithm_config.settings_proposed_by_algorithm =
-                                  null;
-                                updateAISettings(
-                                  algorithm_config.algorithm_id,
-                                  algorithm_config
-                                );
-                                toast.success("Settings updated successfully!");
-                                refetchAIStats();
-                              }}
-                            />
+                            <div className="flex-1">
+                              <RangeInputWithLabel
+                                key={setting.value}
+                                setting={setting}
+                                onChange={(newValue) => {
+                                  setting.value = newValue;
+                                  algorithm_config.settings_proposed_by_algorithm =
+                                    null;
+                                  updateAISettings(
+                                    algorithm_config.algorithm_id,
+                                    algorithm_config
+                                  );
+                                  toast.success(
+                                    "Settings updated successfully!"
+                                  );
+                                  refetchAIStats();
+                                }}
+                              />
+                            </div>
                           ) : null}
                         </div>
                       ))}
-                    </Card>
+                    </div>
 
                     {algorithm_config.settings_proposed_by_algorithm &&
                       JSON.stringify(algorithm_config.settings) !==
