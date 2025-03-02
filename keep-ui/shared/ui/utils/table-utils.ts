@@ -39,11 +39,7 @@ export const getCommonPinningStylesAndClassNames = (
     className: clsx(
       "bg-tremor-background",
       isPinned ? "sticky" : "relative",
-      isLastLeftPinnedColumn
-        ? "animate-scroll-shadow-left"
-        : isFirstRightPinnedColumn
-          ? "animate-scroll-shadow-right"
-          : undefined
+      isLastLeftPinnedColumn ? "animate-scroll-shadow-left" : undefined
     ),
   };
 };
