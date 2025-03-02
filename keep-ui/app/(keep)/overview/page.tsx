@@ -2,5 +2,5 @@
 import { redirect } from "next/navigation";
 
 export default function OverviewPage() {
-  redirect("/overview/1");
+  redirect("/overview/");
 }
