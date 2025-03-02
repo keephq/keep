@@ -157,9 +157,7 @@ class AlertDto(BaseModel):
     fingerprint: str | None = (
         None  # The fingerprint of the alert (used for alert de-duplication)
     )
-    deleted: bool = (
-        False  # @tal: Obselete field since we have dismissed, but kept for backwards compatibility
-    )
+    deleted: bool = False  # @tal: Obselete field since we have dismissed, but kept for backwards compatibility
     dismissUntil: str | None = None  # The time until the alert is dismissed
     # DO NOT MOVE DISMISSED ABOVE dismissedUntil since it is used in root_validator
     dismissed: bool = False  # Whether the alert has been dismissed
@@ -167,9 +165,7 @@ class AlertDto(BaseModel):
     providerId: str | None = None  # The provider id
     providerType: str | None = None  # The provider type
     note: str | None = None  # The note of the alert
-    startedAt: str | None = (
-        None  # The time the alert started - e.g. if alert triggered multiple times, it will be the time of the first trigger (calculated on querying)
-    )
+    startedAt: str | None = None  # The time the alert started - e.g. if alert triggered multiple times, it will be the time of the first trigger (calculated on querying)
     isNoisy: bool = False  # Whether the alert is noisy
 
     enriched_fields: list = []
@@ -393,7 +389,7 @@ class AlertWithIncidentLinkMetadataDto(AlertDto):
 
 class DeleteRequestBody(BaseModel):
     fingerprint: str
-    lastReceived: str
+    lastReceived: Optional[str] = None
     restore: bool = False
 
 
@@ -535,7 +531,6 @@ class IncidentDto(IncidentDtoIn):
 
     @classmethod
     def from_db_incident(cls, db_incident: "Incident", rule: "Rule" = None):
-
         severity = (
             IncidentSeverity.from_number(db_incident.severity)
             if isinstance(db_incident.severity, int)

@@ -317,7 +317,7 @@ def delete_alert(
             # Restore all timestamps
             deleted_last_received = []
     else:
-        if delete_alert.lastReceived:
+        if delete_alert.lastReceived is None:
             # Delete a single timestamp if it’s not already deleted
             if delete_alert.lastReceived not in deleted_last_received:
                 deleted_last_received.append(delete_alert.lastReceived)
