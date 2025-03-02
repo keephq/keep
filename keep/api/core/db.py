@@ -1047,31 +1047,18 @@ def enrich_entity(
     force=False,
     audit_enabled=True,
 ):
-    # else, the enrichment doesn't exist, create it
-    if not session:
-        with Session(engine) as session:
-            return _enrich_entity(
-                session,
-                tenant_id,
-                fingerprint,
-                enrichments,
-                action_type,
-                action_callee,
-                action_description,
-                force=force,
-                audit_enabled=audit_enabled,
-            )
-    return _enrich_entity(
-        session,
-        tenant_id,
-        fingerprint,
-        enrichments,
-        action_type,
-        action_callee,
-        action_description,
-        force=force,
-        audit_enabled=audit_enabled,
-    )
+    with existed_or_new_session(session) as session:
+        return _enrich_entity(
+            session,
+            tenant_id,
+            fingerprint,
+            enrichments,
+            action_type,
+            action_callee,
+            action_description,
+            force=force,
+            audit_enabled=audit_enabled,
+        )
 
 
 def count_alerts(
@@ -1456,7 +1443,7 @@ def get_last_alerts(
 
 
 def get_alerts_by_fingerprint(
-    tenant_id: str, fingerprint: str, limit=1, status=None
+    tenant_id: str, fingerprint: str, limit=1, status=None, with_alert_instance_enrichment=False,
 ) -> List[Alert]:
     """
     Get all alerts for a given fingerprint.
@@ -1474,6 +1461,9 @@ def get_alerts_by_fingerprint(
 
         # Apply subqueryload to force-load the alert_enrichment relationship
         query = query.options(subqueryload(Alert.alert_enrichment))
+
+        if with_alert_instance_enrichment:
+            query = query.options(subqueryload(Alert.alert_instance_enrichment))
 
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)

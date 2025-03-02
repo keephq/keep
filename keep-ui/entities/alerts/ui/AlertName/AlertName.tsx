@@ -54,6 +54,7 @@ interface Props {
   alert: AlertDto;
   setNoteModalAlert?: (alert: AlertDto) => void;
   setTicketModalAlert?: (alert: AlertDto) => void;
+  noteReadOnly?: boolean;
   className?: string;
 }
 
@@ -62,6 +63,7 @@ export function AlertName({
   setNoteModalAlert,
   setTicketModalAlert,
   className,
+  noteReadOnly = false,
 }: Props) {
   const router = useRouter();
   const { data: executions } = useWorkflowExecutions();
@@ -232,8 +234,8 @@ export function AlertName({
             </button>
           )}
 
-          {setNoteModalAlert && (
-            <button
+        {setNoteModalAlert && ((noteReadOnly && note) || !noteReadOnly) && (
+          <button
               onClick={(e) => handleNoteClick(e)}
               className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
               title="Add/Edit Note"
@@ -256,21 +258,21 @@ export function AlertName({
                 icon={Cog8ToothIcon}
                 size="sm"
                 className={`text-${
-                  relevantWorkflowExecution.workflow_status === "success"
-                    ? "green"
-                    : relevantWorkflowExecution.workflow_status === "error"
-                    ? "red"
-                    : "gray"
-                }-500`}
+              relevantWorkflowExecution.workflow_status === "success"
+                ? "green"
+                : relevantWorkflowExecution.workflow_status === "error"
+                  ? "red"
+                  : "gray"
+            }-500`}
               />
             </button>
           )}
 
           {imageUrl && !imageError && (
             <div
-              ref={imageContainerRef}
+                  ref={imageContainerRef}
               className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
-              onMouseEnter={handleMouseEnter}
+                  onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
               onClick={handleImageClick}
               title="View Image"
