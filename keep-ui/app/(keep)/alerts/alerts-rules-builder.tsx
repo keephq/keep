@@ -596,7 +596,7 @@ export const AlertsRulesBuilder = ({
                 <Textarea
                   ref={textAreaRef}
                   rows={1}
-                  className="resize-none overflow-hidden w-full pr-9 pl-9 min-h-[38px]" // Added pl-9 for left padding to accommodate icon
+                  className="resize-none overflow-hidden w-full pr-9 pl-9 min-h-10" // Added pl-9 for left padding to accommodate icon
                   value={celRules}
                   onValueChange={onValueChange}
                   onKeyDown={handleKeyDown}
@@ -706,7 +706,7 @@ export const AlertsRulesBuilder = ({
         }} // Clear the error when closing the modal
         title="Import from SQL"
       >
-        <div className="space-y-4 p-4">
+        <div className="space-y-4 pt-4">
           <Textarea
             className="min-h-[8em] h-auto" // This sets a minimum height and allows it to auto-adjust
             placeholder={SQL_QUERY_PLACEHOLDER}
@@ -715,13 +715,15 @@ export const AlertsRulesBuilder = ({
           {sqlError && (
             <div className="text-red-500 text-sm mb-2">Error: {sqlError}</div>
           )}
-          <Button
-            color="orange"
-            onClick={onImportSQLSubmit}
-            disabled={!(sqlQuery.length > 0)}
-          >
-            Convert to CEL
-          </Button>
+          <div className="flex justify-end">
+            <Button
+              color="orange"
+              onClick={onImportSQLSubmit}
+              disabled={!(sqlQuery.length > 0)}
+            >
+              Convert to CEL
+            </Button>
+          </div>
         </div>
       </Modal>
 

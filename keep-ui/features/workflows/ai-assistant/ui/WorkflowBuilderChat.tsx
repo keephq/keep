@@ -1050,8 +1050,9 @@ Example: 'node_123__empty_true'`,
       Then asked to create a complete workflow, you break down the workflow into steps, outline the steps, show them to user, and then iterate over the steps one by one, generate step definition, show it to user to decide if they want to add them to the workflow.`;
 
   return (
+    // using 'workflow-chat' class to apply styles only to that chat component
     <div
-      className="flex flex-col h-full max-h-screen grow-0 overflow-auto"
+      className="flex flex-col h-full max-h-screen grow-0 overflow-auto workflow-chat"
       style={
         {
           "--copilot-kit-primary-color":

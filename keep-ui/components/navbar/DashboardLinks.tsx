@@ -83,7 +83,7 @@ export const DashboardLinks = () => {
 
   return (
     <Disclosure as="div" className="space-y-1" defaultOpen>
-      <Disclosure.Button className="w-full flex justify-between items-center p-2">
+      <Disclosure.Button className="w-full flex justify-between items-center px-2">
         {({ open }) => (
           <>
             <div className="flex justify-between items-center w-full">
@@ -107,7 +107,8 @@ export const DashboardLinks = () => {
       </Disclosure.Button>
       <Disclosure.Panel
         as="ul"
-        className="space-y-2 overflow-auto min-w-[max-content] p-2"
+        // pr-4 to make space for scrollbar
+        className="space-y-2 overflow-auto px-2 pr-4"
       >
         <DndContext
           sensors={sensors}

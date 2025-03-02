@@ -1,6 +1,4 @@
 import {
-  Title,
-  Subtitle,
   Card,
   Table,
   TableBody,
@@ -24,6 +22,7 @@ import "./multiselect.css";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { MdAddModerator } from "react-icons/md";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { PageTitle } from "@/shared/ui";
 
 interface RolesTabProps {
   customRolesAllowed: boolean;
@@ -85,12 +84,12 @@ export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
     <div className="h-full flex flex-col">
       <div className="flex justify-between mb-4">
         <div className="flex flex-col">
-          <Title>Roles Management</Title>
-          <Subtitle>Manage roles</Subtitle>
+          <PageTitle>Roles Management</PageTitle>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex space-x-2 items-center">
           <Button
             color="orange"
+            size="md"
             onClick={() => {
               setSelectedRole(null);
               setIsSidebarOpen(true);
@@ -113,10 +112,10 @@ export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"
       />
-      <Card className="flex-grow overflow-auto h-full">
+      <Card className="overflow-auto p-0">
         <Table className="h-full">
           <TableHead>
-            <TableRow>
+            <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
               <TableHeaderCell className="w-4/24">Role Name</TableHeaderCell>
               <TableHeaderCell className="w-4/24">Description</TableHeaderCell>
               <TableHeaderCell className="w-15/24">Scopes</TableHeaderCell>

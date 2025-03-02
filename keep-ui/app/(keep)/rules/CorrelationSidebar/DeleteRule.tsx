@@ -1,4 +1,4 @@
-import { TrashIcon } from "@radix-ui/react-icons";
+import { TrashIcon } from "@heroicons/react/24/outline";
 import { Button } from "@tremor/react";
 import { MouseEvent } from "react";
 import { useRules } from "utils/hooks/useRules";
@@ -33,9 +33,8 @@ export const DeleteRuleCell = ({ ruleId }: DeleteRuleCellProps) => {
       onClick={onDeleteRule}
       variant="secondary"
       color="red"
-      size="xl"
-    >
-      <TrashIcon />
-    </Button>
+      size="xs"
+      icon={TrashIcon}
+    />
   );
 };
