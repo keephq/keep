@@ -167,12 +167,13 @@ export function AlertName({
         {name}
       </div>
 
-      <div className="flex items-center h-full pl-2">
+      <div className="flex items-center h-full">
         <div
           className={clsx(
-            "flex items-center gap-1 transition-all duration-200",
+            "flex items-center gap-1",
             showActionsOnHover
               ? [
+                  "transition-all duration-200",
                   "transform translate-x-2 opacity-0",
                   "group-hover/row:translate-x-0 group-hover/row:opacity-100",
                 ]
@@ -185,24 +186,20 @@ export function AlertName({
                 e.stopPropagation();
                 window.open(url || generatorURL, "_blank");
               }}
-              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
+              className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
               title="Open Original Alert"
             >
               <Icon
                 icon={ArrowTopRightOnSquareIcon}
-                size="sm"
-                className="text-gray-500"
+                className="w-4 h-4 text-gray-500"
               />
             </button>
           )}
 
           {setTicketModalAlert && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleTicketClick(e);
-              }}
-              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
+              onClick={handleTicketClick}
+              className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
               title={
                 ticketUrl
                   ? `Ticket Assigned ${
@@ -213,8 +210,9 @@ export function AlertName({
             >
               <Icon
                 icon={TicketIcon}
-                size="sm"
-                className={`text-${ticketUrl ? "green" : "gray"}-500`}
+                className={`w-4 h-4 ${
+                  ticketUrl ? "text-green-500" : "text-gray-500"
+                }`}
               />
             </button>
           )}
@@ -225,23 +223,24 @@ export function AlertName({
                 e.stopPropagation();
                 window.open(playbook_url, "_blank");
               }}
-              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
+              className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
               title="View Playbook"
             >
-              <Icon icon={BookOpenIcon} size="sm" className="text-gray-500" />
+              <Icon icon={BookOpenIcon} className="w-4 h-4 text-gray-500" />
             </button>
           )}
 
           {setNoteModalAlert && (
             <button
               onClick={(e) => handleNoteClick(e)}
-              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
+              className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
               title="Add/Edit Note"
             >
               <Icon
                 icon={PencilSquareIcon}
-                size="sm"
-                className={`text-${note ? "green" : "gray"}-500`}
+                className={`w-4 h-4 ${
+                  note ? "text-green-500" : "text-gray-500"
+                }`}
               />
             </button>
           )}
@@ -249,27 +248,25 @@ export function AlertName({
           {relevantWorkflowExecution && (
             <button
               onClick={(e) => handleWorkflowClick(e, relevantWorkflowExecution)}
-              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
+              className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
               title={`Workflow ${relevantWorkflowExecution.workflow_status}`}
             >
               <Icon
                 icon={Cog8ToothIcon}
-                size="sm"
-                className={`text-${
+                className={`w-4 h-4 ${
                   relevantWorkflowExecution.workflow_status === "success"
-                    ? "green"
+                    ? "text-green-500"
                     : relevantWorkflowExecution.workflow_status === "error"
-                    ? "red"
-                    : "gray"
-                }-500`}
+                    ? "text-red-500"
+                    : "text-gray-500"
+                }`}
               />
             </button>
           )}
-
           {imageUrl && !imageError && (
             <div
               ref={imageContainerRef}
-              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors prevent-row-click"
+              className="DropdownMenuButton group text-gray-500"
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
               onClick={handleImageClick}
