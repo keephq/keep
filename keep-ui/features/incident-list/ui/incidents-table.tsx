@@ -118,7 +118,7 @@ export default function IncidentsTable({
   setSorting,
   editCallback,
 }: Props) {
-  const { deleteIncident } = useIncidentActions();
+  const { bulkDeleteIncidents } = useIncidentActions();
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [pagination, setTablePagination] = useState({
     pageIndex: Math.ceil(incidents.offset / incidents.limit),
@@ -355,11 +355,8 @@ export default function IncidentsTable({
       return;
     }
 
-    for (let i = 0; i < selectedRowIds.length; i++) {
-      const incidentId = selectedRowIds[i];
-      deleteIncident(incidentId, true);
-    }
-  }, [deleteIncident, selectedRowIds]);
+    bulkDeleteIncidents(selectedRowIds, true);
+  }, [bulkDeleteIncidents, selectedRowIds]);
 
   const generateReport = useCallback(
     () => setIsGenerateReportModalOpen(true),

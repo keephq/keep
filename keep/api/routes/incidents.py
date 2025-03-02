@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from arq import ArqRedis
 from fastapi import (
+    Body,
     APIRouter,
     BackgroundTasks,
     Depends,
@@ -413,6 +414,23 @@ def update_incident(
         incident_id, updated_incident_dto, generated_by_ai
     )
     return new_incident_dto
+
+@router.delete(
+    "/bulk",
+    description="Delete incidents in bulk",
+)
+def bulk_delete_incidents(
+    incident_ids: List[UUID] = Body(..., embed=True),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+    session: Session = Depends(get_session),
+):
+    tenant_id = authenticated_entity.tenant_id
+    incident_bl = IncidentBl(tenant_id, session, pusher_client)
+    incident_bl.bulk_delete_incidents(incident_ids)
+    return Response(status_code=202)
 
 
 @router.delete(

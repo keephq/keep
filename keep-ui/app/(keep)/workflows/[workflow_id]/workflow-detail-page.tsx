@@ -121,12 +121,13 @@ export default function WorkflowDetailPage({
             {!workflow ? (
               <Skeleton className="w-full h-full" />
             ) : (
-              <Card className="h-[calc(100vh-200px)]">
+              <Card className="h-[calc(100vh-200px)] p-0 overflow-hidden">
                 <MonacoYAMLEditor
                   key={workflow.workflow_raw!}
                   workflowRaw={workflow.workflow_raw!}
                   filename={workflow.id ?? "workflow"}
                   workflowId={workflow.id}
+                  data-testid="wf-detail-yaml-editor"
                 />
               </Card>
             )}
