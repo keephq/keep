@@ -203,9 +203,11 @@ const DraggableHeaderCell = ({
       ref={setNodeRef}
     >
       <div
+        data-testid={`header-cell-${column.id}`}
         className={`flex items-center ${
           column.id === "checkbox" ? "justify-center" : "justify-between"
         }`}
+        onClick={column.getToggleSortingHandler()}
       >
         <div className="flex items-center" {...listeners} {...attributes}>
           {children}
