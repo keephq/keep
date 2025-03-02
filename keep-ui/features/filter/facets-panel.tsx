@@ -40,7 +40,8 @@ function buildCel(
         )
         .map((option) => {
           if (typeof option.value === "string") {
-            return `'${option.value}'`;
+            const optionValue = option.value.replace(/'/g, "\\'");
+            return `'${optionValue}'`;
           } else if (option.value == null) {
             return "null";
           }
