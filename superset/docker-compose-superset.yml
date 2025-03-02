@@ -41,6 +41,4 @@ services:
       - ./entrypoint.sh:/entrypoint.sh:ro
       - ./dashboards:/app/dashboards:ro
       - ./dbs:/app/dbs:ro
-    environment:
-      - KEEP_SUPERSET_DB=/app/dbs/db2
     entrypoint: ["/bin/bash", "/entrypoint.sh"]
