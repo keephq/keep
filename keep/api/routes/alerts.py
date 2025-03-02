@@ -300,30 +300,39 @@ def delete_alert(
     )
 
     deleted_last_received = []  # the last received(s) that are deleted
-    assignees_last_receievd = {}  # the last received(s) that are assigned to someone
+    assignees_last_received = {}  # the last received(s) that are assigned to someone
 
     # If we enriched before, get the enrichment
     enrichment = get_enrichment(tenant_id, delete_alert.fingerprint)
     if enrichment:
         deleted_last_received = enrichment.enrichments.get("deletedAt", [])
-        assignees_last_receievd = enrichment.enrichments.get("assignees", {})
+        assignees_last_received = enrichment.enrichments.get("assignees", {})
 
-    if (
-        delete_alert.restore is True
-        and delete_alert.lastReceived in deleted_last_received
-    ):
-        # Restore deleted alert
-        deleted_last_received.remove(delete_alert.lastReceived)
-    elif (
-        delete_alert.restore is False
-        and delete_alert.lastReceived not in deleted_last_received
-    ):
-        # Delete the alert if it's not already deleted (wtf basically, shouldn't happen)
-        deleted_last_received.append(delete_alert.lastReceived)
+    if delete_alert.restore is True:
+        if delete_alert.lastReceived:
+            # Restore a single timestamp
+            if delete_alert.lastReceived in deleted_last_received:
+                deleted_last_received.remove(delete_alert.lastReceived)
+        else:
+            # Restore all timestamps
+            deleted_last_received = []
+    else:
+        if delete_alert.lastReceived:
+            # Delete a single timestamp if it’s not already deleted
+            if delete_alert.lastReceived not in deleted_last_received:
+                deleted_last_received.append(delete_alert.lastReceived)
+        else:
+            # Delete all timestamps
+            deleted_last_received = list(assignees_last_received.keys())
 
-    if delete_alert.lastReceived not in assignees_last_receievd:
-        # auto-assign the deleting user to the alert
-        assignees_last_receievd[delete_alert.lastReceived] = user_email
+    # Auto-assign user to all deleted timestamps if applicable
+    if delete_alert.lastReceived:
+        if delete_alert.lastReceived not in assignees_last_received:
+            assignees_last_received[delete_alert.lastReceived] = user_email
+    else:
+        # Assign the deleting user to all deleted alerts
+        for ts in deleted_last_received:
+            assignees_last_received[ts] = user_email
 
     # overwrite the enrichment
     enrichment_bl = EnrichmentsBl(tenant_id)
@@ -331,7 +340,7 @@ def delete_alert(
         fingerprint=delete_alert.fingerprint,
         enrichments={
             "deletedAt": deleted_last_received,
-            "assignees": assignees_last_receievd,
+            "assignees": assignees_last_received,
         },
         action_type=ActionType.DELETE_ALERT,
         action_description=f"Alert deleted by {user_email}",
@@ -372,18 +381,18 @@ def assign_alert(
         },
     )
 
-    assignees_last_receievd = {}  # the last received(s) that are assigned to someone
+    assignees_last_received = {}  # the last received(s) that are assigned to someone
     status = "acknowledged"
     enrichment = get_enrichment(tenant_id, fingerprint)
     if enrichment:
-        assignees_last_receievd = enrichment.enrichments.get("assignees", {})
+        assignees_last_received = enrichment.enrichments.get("assignees", {})
         status = enrichment.enrichments.get("status", "acknowledged")
     if unassign:
-        assignees_last_receievd.pop(last_received, None)
+        assignees_last_received.pop(last_received, None)
     else:
-        assignees_last_receievd[last_received] = user_email
+        assignees_last_received[last_received] = user_email
 
-    enrichments = {"assignees": assignees_last_receievd, "status": status}
+    enrichments = {"assignees": assignees_last_received, "status": status}
 
     enrichment_bl = EnrichmentsBl(tenant_id)
     enrichment_bl.enrich_entity(
