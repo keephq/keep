@@ -299,8 +299,6 @@ def query_last_alerts(
     if offset is None:
         offset = 0
 
-    len_cel = len(cel) if cel else 0
-
     with Session(engine) as session:
         # Shahar: this happens when the frontend query builder fails to build a query
         if cel == "1 == 1":
