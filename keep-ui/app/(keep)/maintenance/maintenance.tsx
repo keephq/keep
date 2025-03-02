@@ -16,7 +16,7 @@ export default function Maintenance() {
   const router = useRouter();
 
   return (
-    <Card className="mt-10 p-4 md:p-10 mx-auto">
+    <Card className="p-2">
       <div className="flex divide-x p-2">
         <div className="w-2/5 pr-2.5">
           <CreateOrUpdateMaintenanceRule

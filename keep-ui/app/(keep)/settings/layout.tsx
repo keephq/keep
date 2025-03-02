@@ -1,14 +1,15 @@
-import { Card, Title, Subtitle } from "@tremor/react";
+import { PageSubtitle, PageTitle } from "@/shared/ui";
+import { Card } from "@tremor/react";
 
 export default function Layout({ children }: { children: any }) {
   return (
     <>
       <main className="flex flex-col h-full">
         <div className="mb-4">
-          <Title>Settings</Title>
-          <Subtitle>Setup and configure Keep</Subtitle>
+          <PageTitle>Settings</PageTitle>
+          <PageSubtitle>Setup and configure Keep</PageSubtitle>
         </div>
-        <Card className="flex-grow overflow-auto">{children}</Card>
+        {children}
       </main>
     </>
   );

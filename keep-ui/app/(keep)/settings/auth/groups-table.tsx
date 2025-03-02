@@ -34,7 +34,7 @@ export function GroupsTable({
   return (
     <Table>
       <TableHead>
-        <TableRow>
+        <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
           <TableHeaderCell className="w-3/24">Group Name</TableHeaderCell>
           <TableHeaderCell className="w-5/12">Members</TableHeaderCell>
           <TableHeaderCell className="w-5/12">Roles</TableHeaderCell>

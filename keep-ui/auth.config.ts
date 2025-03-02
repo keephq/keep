@@ -185,7 +185,7 @@ const baseProviderConfigs = {
 let isDebug =
   process.env.AUTH_DEBUG == "true" || process.env.NODE_ENV === "development";
 if (isDebug) {
-  console.log("Auth deubg mode enabled");
+  console.log("Auth debug mode enabled");
 }
 
 export const config = {

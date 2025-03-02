@@ -16,8 +16,8 @@ export const CorrelationSidebarHeader = ({
   return (
     <div className="flex justify-between">
       <div>
-        <Dialog.Title className="text-3xl font-bold" as={Title}>
-          {isRuleBeingEdited ? "Edit" : "Create"} Correlation
+        <Dialog.Title className="font-bold" as={Title}>
+          {isRuleBeingEdited ? "Edit" : "Create"} correlation
         </Dialog.Title>
         <Dialog.Description as={Subtitle}>
           Group multiple alerts into a single incident

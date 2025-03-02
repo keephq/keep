@@ -40,7 +40,7 @@ export function UsersTable({
   return (
     <Table>
       <TableHead>
-        <TableRow>
+        <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
           <TableHeaderCell className="w-1/24">{/** Image */}</TableHeaderCell>
           <TableHeaderCell className="w-3/12">
             {authType === AuthType.AUTH0 || authType === AuthType.KEYCLOAK

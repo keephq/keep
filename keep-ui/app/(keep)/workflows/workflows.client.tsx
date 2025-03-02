@@ -1,15 +1,14 @@
 "use client";
 
 import { ChangeEvent, useRef, useState } from "react";
-import { Subtitle } from "@tremor/react";
+import { Subtitle, Button } from "@tremor/react";
 import {
   ArrowUpOnSquareStackIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
-import { KeepLoader } from "@/shared/ui";
+import { KeepLoader, PageTitle } from "@/shared/ui";
 import WorkflowsEmptyState from "./noworkflows";
 import WorkflowTile from "./workflow-tile";
-import { Button, Title } from "@tremor/react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
@@ -19,6 +18,8 @@ import { Input, ErrorComponent } from "@/shared/ui";
 import { Textarea } from "@/components/ui";
 import { useWorkflowsV2 } from "utils/hooks/useWorkflowsV2";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
+import { PageSubtitle } from "@/shared/ui/PageSubtitle";
+import { PlusIcon } from "@heroicons/react/20/solid";
 
 const EXAMPLE_WORKFLOW_DEFINITIONS = {
   slack: `
@@ -145,31 +146,20 @@ export default function WorkflowsPage() {
 
   return (
     <>
-      <main className="pt-4 flex flex-col gap-8">
-        <div className="flex flex-col gap-4">
+      <main className="flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
           <div className="flex justify-between items-center">
             <div>
-              <Title className="text-2xl line-clamp-2 font-bold">
-                Workflows
-              </Title>
-              <Subtitle>
-                Automate your alert management with workflows.
-              </Subtitle>
+              <PageTitle>Workflows</PageTitle>
+              <PageSubtitle>
+                Automate your alert management with workflows
+              </PageSubtitle>
             </div>
-            <div>
+            <div className="flex gap-2">
               <Button
-                className="mr-2.5"
                 color="orange"
                 size="md"
                 variant="secondary"
-                onClick={() => router.push("/workflows/builder")}
-                icon={PlusCircleIcon}
-              >
-                Create a workflow
-              </Button>
-              <Button
-                color="orange"
-                size="md"
                 onClick={() => {
                   setIsModalOpen(true);
                 }}
@@ -177,6 +167,15 @@ export default function WorkflowsPage() {
                 id="uploadWorkflowButton"
               >
                 Upload Workflows
+              </Button>
+              <Button
+                color="orange"
+                size="md"
+                variant="primary"
+                onClick={() => router.push("/workflows/builder")}
+                icon={PlusIcon}
+              >
+                Create Workflow
               </Button>
             </div>
           </div>

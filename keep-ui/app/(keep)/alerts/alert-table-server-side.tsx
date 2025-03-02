@@ -469,7 +469,7 @@ export function AlertTableServerSide({
     // Add h-screen to make it full height and remove the default flex-col gap
     <div className="h-screen flex flex-col gap-4">
       {/* Add padding to account for any top nav/header */}
-      <div className="px-4 flex-none">
+      <div className="flex-none">
         <TitleAndFilters
           table={table}
           alerts={alerts}
@@ -482,7 +482,7 @@ export function AlertTableServerSide({
       </div>
 
       {/* Make actions/presets section fixed height */}
-      <div className="h-14 px-4 flex-none">
+      <div className="h-14 flex-none">
         {selectedRowIds.length ? (
           <AlertActions
             selectedRowIds={selectedRowIds}
@@ -503,9 +503,8 @@ export function AlertTableServerSide({
         )}
       </div>
 
-      {/* Main content area - uses flex-grow to fill remaining space */}
-      <div className="flex-grow px-4 pb-4">
-        <div className="h-full flex gap-6">
+      <div className="pb-4">
+        <div className="flex gap-6">
           {/* Facets sidebar */}
           <div className="w-33 min-w-[12rem] overflow-y-auto">
             <FacetsPanelServerSide
@@ -522,8 +521,8 @@ export function AlertTableServerSide({
           </div>
 
           {/* Table section */}
-          <div className="flex-1 flex flex-col min-w-0">
-            <Card className="h-full flex flex-col p-0 overflow-x-auto">
+          <div className="flex-1 flex flex-col min-w-0 gap-4">
+            <Card className="flex flex-col p-0 overflow-x-auto">
               <div className="flex-grow flex flex-col">
                 {!presetStatic && (
                   <div className="flex-none">
@@ -567,20 +566,19 @@ export function AlertTableServerSide({
                 </div>
               </div>
             </Card>
+            {/* Pagination footer - fixed height */}
+            <div className="h-16 flex-none">
+              <AlertPaginationServerSide
+                table={table}
+                isRefreshing={isAsyncLoading}
+                isRefreshAllowed={isRefreshAllowed}
+                onRefresh={() =>
+                  onReload && onReload(alertsQueryRef.current as AlertsQuery)
+                }
+              />
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Pagination footer - fixed height */}
-      <div className="h-16 px-4 flex-none pl-[14rem]">
-        <AlertPaginationServerSide
-          table={table}
-          isRefreshing={isAsyncLoading}
-          isRefreshAllowed={isRefreshAllowed}
-          onRefresh={() =>
-            onReload && onReload(alertsQueryRef.current as AlertsQuery)
-          }
-        />
       </div>
 
       <AlertSidebar

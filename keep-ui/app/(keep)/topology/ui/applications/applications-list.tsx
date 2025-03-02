@@ -14,6 +14,7 @@ import {
 } from "../../TopologySearchContext";
 import { ApplicationModal } from "@/app/(keep)/topology/ui/applications/application-modal";
 import { showErrorToast } from "@/shared/ui";
+import { PlusIcon } from "@heroicons/react/20/solid";
 
 type ModalState = {
   isOpen: boolean;
@@ -135,6 +136,7 @@ export function ApplicationsList({
                 onClick={() => {
                   setModalState({ ...initialModalState, isOpen: true });
                 }}
+                icon={PlusIcon}
               >
                 Add Application
               </Button>

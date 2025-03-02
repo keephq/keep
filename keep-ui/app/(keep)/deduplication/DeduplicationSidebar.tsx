@@ -193,7 +193,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
     <SidePanel isOpen={isOpen} onClose={handleToggle}>
       <div className="flex justify-between mb-4">
         <div>
-          <Dialog.Title className="text-3xl font-bold" as={Title}>
+          <Dialog.Title className="font-bold" as={Title}>
             {selectedDeduplicationRule
               ? `Edit ${selectedDeduplicationRule.name}`
               : "Add deduplication rule"}
@@ -536,7 +536,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
             type="submit"
             disabled={isSubmitting || selectedDeduplicationRule?.is_provisioned}
           >
-            {isSubmitting ? "Saving..." : "Save Rule"}
+            {isSubmitting ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

@@ -20,7 +20,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
     25,
     0,
     { id: "creation_time", desc: false },
-    '!(status in [\'deleted\', \'resolved\'])',
+    "!(status in ['deleted', 'resolved'])",
     {}
   );
   usePollIncidents(mutate);
@@ -31,7 +31,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
 
   return (
     <Disclosure as="div" className="space-y-1" defaultOpen>
-      <Disclosure.Button className="w-full flex justify-between items-center p-2">
+      <Disclosure.Button className="w-full flex justify-between items-center px-2">
         {({ open }) => (
           <>
             <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
@@ -44,7 +44,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
         )}
       </Disclosure.Button>
 
-      <Disclosure.Panel as="ul" className="space-y-2 p-2 pr-4 relative">
+      <Disclosure.Panel as="ul" className="space-y-2 px-2 relative">
         <li className="relative">
           <LinkWithIcon
             href="/incidents"

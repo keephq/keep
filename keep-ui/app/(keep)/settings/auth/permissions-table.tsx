@@ -24,7 +24,7 @@ export function PermissionsTable({
   return (
     <Table className="h-full">
       <TableHead>
-        <TableRow>
+        <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
           <TableHeaderCell className="w-8/24">Resource Name</TableHeaderCell>
           <TableHeaderCell className="w-4/24">Resource Type</TableHeaderCell>
           <TableHeaderCell className="w-12/24">Assigned To</TableHeaderCell>

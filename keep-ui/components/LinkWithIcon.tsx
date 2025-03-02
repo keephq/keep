@@ -69,7 +69,7 @@ export const LinkWithIcon = ({
   return (
     <div
       className={clsx(
-        "flex items-center justify-between text-sm p-1 font-medium rounded-lg focus:ring focus:ring-orange-300 group w-full",
+        "flex items-center justify-between p-1 font-medium rounded-lg focus:ring focus:ring-orange-300 group w-full min-w-0",
         {
           "bg-stone-200/50": isActive,
           "hover:bg-stone-200/50": !isActive,
@@ -82,7 +82,7 @@ export const LinkWithIcon = ({
       <Link
         tabIndex={tabIndex}
         {...restOfLinkProps}
-        className="flex items-center space-x-2 flex-1"
+        className="flex items-center space-x-2 flex-1 min-w-0"
         onClick={onClick}
         data-testid={`${testId}-link`}
       >
@@ -91,7 +91,12 @@ export const LinkWithIcon = ({
       </Link>
       <div className="flex items-center">
         {count !== undefined && count !== null && (
-          <Badge size="xs" color="orange" data-testid={`${testId}-badge`}>
+          <Badge
+            size="xs"
+            color="orange"
+            data-testid={`${testId}-badge`}
+            className="px-1 mr-1 min-w-5"
+          >
             <ShortNumber value={count}></ShortNumber>
           </Badge>
         )}
@@ -103,9 +108,7 @@ export const LinkWithIcon = ({
         {isDeletable && onDelete && (
           <button
             onClick={onDelete}
-            className={`flex items-center text-slate-400 hover:text-red-500 p-0 ${
-              isHovered ? "ml-2" : ""
-            }`}
+            className={`flex items-center text-slate-400 hover:text-red-500 p-0`}
           >
             <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block hidden h-4 w-4" />
           </button>
