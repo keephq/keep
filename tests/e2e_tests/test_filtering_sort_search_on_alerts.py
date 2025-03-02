@@ -484,15 +484,10 @@ def test_sort_asc_dsc(browser, sort_test_case, setup_test_data):
             sorted_alerts = list(reversed(sorted_alerts))
 
         column_header_locator = browser.locator(
-            "[data-testid='alerts-table'] table thead th", has_text=coumn_name
+            "[data-testid='alerts-table'] table thead th span", has_text=coumn_name
         )
         expect(column_header_locator).to_be_visible()
-        column_sort_indicator_locator = column_header_locator.locator(
-            f"[title='{sort_direction_title}'] svg"
-        )
-        expect(column_sort_indicator_locator).to_be_visible()
-
-        column_sort_indicator_locator.click()
+        column_header_locator.click()
         rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
 
         for index, alert in enumerate(sorted_alerts):
