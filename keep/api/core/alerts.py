@@ -299,6 +299,8 @@ def query_last_alerts(
     if offset is None:
         offset = 0
 
+    len_cel = len(cel) if cel else 0
+
     with Session(engine) as session:
         # Shahar: this happens when the frontend query builder fails to build a query
         if cel == "1 == 1":
@@ -321,6 +323,11 @@ def query_last_alerts(
 
         data_query = build_alerts_query(
             tenant_id, cel, sort_by, sort_dir, limit, offset
+        )
+        strq = str(
+            data_query.compile(
+                dialect=session.bind.dialect, compile_kwargs={"literal_binds": True}
+            )
         )
         alerts_with_start = session.execute(data_query).all()
 
