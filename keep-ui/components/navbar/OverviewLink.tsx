@@ -9,12 +9,19 @@ import { Session } from "next-auth";
 import clsx from "clsx";
 import { useSupersetDashboards } from "@/utils/hooks/useSupersetDashboards";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
+import { KeepApiError } from "@/shared/api";
 
 type OverviewLinksProps = { session: Session | null };
 
 export const OverviewLinks = ({ session }: OverviewLinksProps) => {
   const isMounted = useMounted();
   const { dashboards, isLoading, error } = useSupersetDashboards();
+
+  // Don't render the menu at all if there's a KeepApiError
+  // which means the backend doesn't work with dashboards
+  if (error instanceof KeepApiError) {
+    return null;
+  }
 
   if (error) {
     return (
@@ -77,18 +84,16 @@ export const OverviewLinks = ({ session }: OverviewLinksProps) => {
 
             {isMounted &&
               !isLoading &&
-              [...dashboards]
-                .sort((a, b) => Number(a.id) - Number(b.id))
-                .map((dashboard) => (
-                  <li key={dashboard.uuid}>
-                    <LinkWithIcon
-                      href={`/overview/${dashboard.id}`}
-                      icon={LuLayoutDashboard}
-                    >
-                      <Subtitle>{dashboard.title}</Subtitle>
-                    </LinkWithIcon>
-                  </li>
-                ))}
+              dashboards.map((dashboard) => (
+                <li key={dashboard.uuid}>
+                  <LinkWithIcon
+                    href={`/overview/${dashboard.id}`}
+                    icon={LuLayoutDashboard}
+                  >
+                    <Subtitle>{dashboard.title}</Subtitle>
+                  </LinkWithIcon>
+                </li>
+              ))}
           </Disclosure.Panel>
         </>
       )}
