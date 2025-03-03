@@ -36,7 +36,7 @@ export default function AlertExtraPayload({
 
   return (
     <Accordion defaultOpen={isToggled}>
-      <AccordionHeader onClick={onAccordionToggle}>
+      <AccordionHeader onClick={onAccordionToggle} className="p-1">
         Extra Payload
       </AccordionHeader>
       <AccordionBody>

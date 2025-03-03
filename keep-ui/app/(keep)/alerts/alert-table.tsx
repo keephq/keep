@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState } from "react";
 import { Table, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "@/entities/alerts/model";
@@ -117,8 +117,6 @@ export function AlertTable({
     []
   );
   const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
-
-  const [rowStyle] = useAlertRowStyle();
 
   const handleFacetDelete = (facetKey: string) => {
     setDynamicFacets((prevFacets) =>
@@ -280,8 +278,6 @@ export function AlertTable({
 
   let showSkeleton =
     table.getFilteredRowModel().rows.length === 0 && isAsyncLoading;
-  let showEmptyState =
-    table.getFilteredRowModel().rows.length === 0 && !isAsyncLoading;
 
   const handleRowClick = (alert: AlertDto) => {
     // if presetName is alert-history, do not open sidebar
@@ -312,15 +308,6 @@ export function AlertTable({
   const handleSidebarClose = () => {
     setIsSidebarOpen(false);
   };
-
-  // FIX: should it be used or removed?
-  const tableRowClassName = useMemo(() => {
-    return clsx(
-      "hover:bg-gray-50 cursor-pointer group",
-      rowStyle === "default" ? "h-8" : "h-12",
-      rowStyle === "default" ? "[&>td]:py-1" : "[&>td]:py-3"
-    );
-  }, [rowStyle]);
 
   return (
     // Add h-screen to make it full height and remove the default flex-col gap

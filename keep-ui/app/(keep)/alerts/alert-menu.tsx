@@ -206,7 +206,7 @@ export default function AlertMenu({
   }, [alert, presetName, router]);
 
   const actionIconButtonClassName = clsx(
-    "text-gray-500 leading-none p-2 prevent-row-click hover:bg-slate-200",
+    "text-gray-500 leading-none p-2 prevent-row-click hover:bg-slate-200 [&>[role='tooltip']]:z-50",
     rowStyle === "relaxed" || isInSidebar
       ? "rounded-tremor-default"
       : "rounded-none"
@@ -220,7 +220,7 @@ export default function AlertMenu({
         "flex items-center",
         showActionsOnHover
           ? [
-              "transition-all duration-100",
+              "transition-opacity duration-100",
               "opacity-0 bg-orange-100",
               "group-hover:opacity-100",
             ]
@@ -558,13 +558,12 @@ export default function AlertMenu({
   }
 
   return (
-    <div className="flex items-center justify-end relative group min-w-[2rem]">
+    <div className="flex items-center justify-end relative group">
       {quickActions}
       <DropdownMenu.Menu
         icon={EllipsisHorizontalIcon}
         iconClassName={rowStyle !== "relaxed" ? "!rounded-none" : undefined}
         label=""
-        className="transition-transform duration-200"
       >
         {visibleMenuItems.map((item, index) => (
           <DropdownMenu.Item

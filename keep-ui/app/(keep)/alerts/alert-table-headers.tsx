@@ -1,4 +1,10 @@
-import { CSSProperties, ReactNode, RefObject } from "react";
+import {
+  CSSProperties,
+  ReactNode,
+  RefObject,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   closestCenter,
   DndContext,
@@ -26,7 +32,6 @@ import { TableHead, TableHeaderCell, TableRow } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { getColumnsIds } from "./alert-table-utils";
-import { FaArrowUp, FaArrowDown, FaArrowRight } from "react-icons/fa";
 import {
   ChevronDownIcon,
   ArrowsUpDownIcon,
@@ -34,6 +39,7 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
 } from "@heroicons/react/24/outline";
+import { ArrowDownIcon, ArrowUpIcon } from "@heroicons/react/24/solid";
 import { BsSortAlphaDown } from "react-icons/bs";
 import { BsSortAlphaDownAlt } from "react-icons/bs";
 
@@ -74,6 +80,7 @@ const DraggableHeaderCell = ({
     `column-order-${presetName}`,
     getColumnsIds(table.getAllLeafColumns().map((col) => col.columnDef))
   );
+  const [rowStyle] = useAlertRowStyle();
 
   const [columnVisibility, setColumnVisibility] =
     useLocalStorage<VisibilityState>(
@@ -92,6 +99,18 @@ const DraggableHeaderCell = ({
     id: column.id,
     disabled: column.getIsPinned() !== false,
   });
+
+  const handleSortingMenuClick = useMemo(() => {
+    return column.getToggleSortingHandler();
+  }, [column]);
+
+  const handleColumnNameClick = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      listeners?.onClick?.(event);
+      handleSortingMenuClick?.(event);
+    },
+    [listeners, handleSortingMenuClick]
+  );
 
   const moveColumn = (direction: "left" | "right") => {
     const currentIndex = columnOrder.indexOf(column.id);
@@ -197,7 +216,7 @@ const DraggableHeaderCell = ({
         "relative group",
         column.columnDef.meta?.thClassName,
         (column.getIsPinned() === false || column.id == "name") &&
-          "hover:bg-orange-200",
+          "hover:bg-orange-100",
         className
       )}
       style={{ ...dragStyle, ...style }}
@@ -205,24 +224,30 @@ const DraggableHeaderCell = ({
     >
       <div
         data-testid={`header-cell-${column.id}`}
-        className={`flex items-center ${
+        className={clsx(
+          column.columnDef.meta?.thClassName,
+          "flex items-center",
           column.id === "checkbox" ? "justify-center" : "justify-between"
-        }`}
-        onClick={column.getToggleSortingHandler()}
+        )}
       >
-        <div className="flex items-center" {...listeners} {...attributes}>
-          {children}
+        <button
+          className={clsx(
+            "flex items-center flex-1 min-w-0",
+            rowStyle === "default" && "px-1 py-0",
+            rowStyle === "relaxed" && "px-2 py-1"
+          )}
+          {...listeners}
+          onClick={handleColumnNameClick}
+          {...attributes}
+        >
+          <span className="truncate text-ellipsis [&>*]:truncate">
+            {children}
+          </span>
 
-          {column.getCanSort() && (
+          {column.getCanSort() && column.getIsSorted() && (
             <>
-              <div className="w-px h-5 mx-2 bg-gray-400"></div>
               <span
-                className="cursor-pointer"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  const toggleSorting = column.getToggleSortingHandler();
-                  if (toggleSorting) toggleSorting(event);
-                }}
+                className="cursor-pointer mx-1"
                 title={
                   column.getNextSortingOrder() === "asc"
                     ? "Sort ascending"
@@ -231,26 +256,26 @@ const DraggableHeaderCell = ({
                       : "Clear sort"
                 }
               >
-                {column.getIsSorted() ? (
-                  column.getIsSorted() === "asc" ? (
-                    <FaArrowDown />
-                  ) : (
-                    <FaArrowUp />
-                  )
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowDownIcon className="w-4 h-4" />
                 ) : (
-                  <FaArrowRight />
+                  <ArrowUpIcon className="w-4 h-4" />
                 )}
               </span>
             </>
           )}
-        </div>
+        </button>
 
         {shouldShowMenu && (
           <DropdownMenu.Menu
             icon={ChevronDownIcon}
             label=""
-            className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            iconClassName="group-hover:text-orange-500 transition-colors"
+            className="opacity-0 group-hover:opacity-100 transition-opacity border-l !border-orange-500 hover:!bg-orange-500 text-orange-500 hover:text-white dark:hover:text-gray-900 !rounded-none"
+            iconClassName=" "
+            onClick={(event) => {
+              // prevent click propagation, so the header cell is not clicked
+              event.stopPropagation();
+            }}
           >
             {column.getCanSort() && (
               <>
@@ -430,8 +455,7 @@ export default function AlertsTableHeaders({
             key={headerGroup.id}
             className={clsx(
               "border-b border-tremor-border dark:border-dark-tremor-border",
-              rowStyle === "default" && "[&>th]:px-0.5 [&>th]:py-0",
-              rowStyle === "relaxed" && "[&>th]:px-2 [&>th]:py-1"
+              "[&>th]:p-0"
             )}
           >
             <SortableContext

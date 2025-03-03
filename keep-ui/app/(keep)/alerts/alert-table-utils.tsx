@@ -311,10 +311,6 @@ export const useAlertTableCols = (
             id: "checkbox",
             maxSize: 16,
             minSize: 16,
-            meta: {
-              tdClassName: "w-6 !py-2 !pl-2 !pr-1",
-              thClassName: "w-6 !py-2 !pl-2 !pr-1 ",
-            },
             header: (context) => (
               <TableIndeterminateCheckbox
                 checked={context.table.getIsAllRowsSelected()}
@@ -531,20 +527,17 @@ export const useAlertTableCols = (
       ? [
           columnHelper.display({
             id: "alertMenu",
-            minSize: 76,
-            maxSize: 170,
+            minSize: 170,
             cell: (context) => (
-              <div className="flex justify-end">
-                <AlertMenu
-                  presetName={presetName.toLowerCase()}
-                  alert={context.row.original}
-                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-                  setDismissModalAlert={setDismissModalAlert}
-                  setChangeStatusAlert={setChangeStatusAlert}
-                  setTicketModalAlert={setTicketModalAlert}
-                  setNoteModalAlert={setNoteModalAlert}
-                />
-              </div>
+              <AlertMenu
+                presetName={presetName.toLowerCase()}
+                alert={context.row.original}
+                setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+                setDismissModalAlert={setDismissModalAlert}
+                setChangeStatusAlert={setChangeStatusAlert}
+                setTicketModalAlert={setTicketModalAlert}
+                setNoteModalAlert={setNoteModalAlert}
+              />
             ),
             meta: {
               tdClassName: "p-0 md:p-2",
