@@ -250,8 +250,8 @@ def get_workflows_with_last_executions_v2(
 
         count = session.exec(total_count_query).one()[0]
 
-        # if count == 0:
-        #     return [], count
+        if count == 0:
+            return [], count
 
         workflows_query = build_workflows_query(
             tenant_id=tenant_id,
@@ -266,6 +266,8 @@ def get_workflows_with_last_executions_v2(
         query_result = session.execute(workflows_query).all()
         result = []
         for workflow, started, execution_time, status in query_result:
+            # workaround for filter. In query status is empty string if it is NULL in DB
+            status = workflow if workflow == "" else None
             result.append(tuple([workflow, started, execution_time, status]))
 
     return result, count
