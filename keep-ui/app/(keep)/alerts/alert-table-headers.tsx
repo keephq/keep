@@ -46,6 +46,7 @@ import {
   TimeFormatOption,
   createTimeFormatMenuItems,
 } from "./alert-table-time-format";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 
 interface DraggableHeaderCellProps {
   header: Header<AlertDto, unknown>;
@@ -373,6 +374,7 @@ export default function AlertsTableHeaders({
   columnTimeFormats,
   setColumnTimeFormats,
 }: Props) {
+  const [rowStyle] = useAlertRowStyle();
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
     getColumnsIds(columns)
@@ -426,7 +428,11 @@ export default function AlertsTableHeaders({
         >
           <TableRow
             key={headerGroup.id}
-            className="border-b border-tremor-border dark:border-dark-tremor-border"
+            className={clsx(
+              "border-b border-tremor-border dark:border-dark-tremor-border",
+              rowStyle === "default" && "[&>th]:px-0.5 [&>th]:py-0",
+              rowStyle === "relaxed" && "[&>th]:px-2 [&>th]:py-1"
+            )}
           >
             <SortableContext
               items={headerGroup.headers}
@@ -445,7 +451,10 @@ export default function AlertsTableHeaders({
                     header={header}
                     table={table}
                     presetName={presetName}
-                    className={clsx(className, "py-2")}
+                    className={clsx(
+                      className,
+                      header.column.id === "name" && "px-0"
+                    )}
                     style={style}
                     columnTimeFormats={columnTimeFormats}
                     setColumnTimeFormats={setColumnTimeFormats}

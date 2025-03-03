@@ -1,5 +1,5 @@
 import { useRef, useState, useMemo } from "react";
-import { Table, Card, TableRow } from "@tremor/react";
+import { Table, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "@/entities/alerts/model";
 import {
@@ -33,7 +33,7 @@ import AlertSidebar from "./alert-sidebar";
 import { AlertFacets } from "./alert-table-alert-facets";
 import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
 import { useConfig } from "@/utils/hooks/useConfig";
-import { RowStyle } from "./RowStyleSelection";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 import clsx from "clsx";
 import { TimeFormatOption } from "./alert-table-time-format";
 
@@ -118,10 +118,7 @@ export function AlertTable({
   );
   const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
 
-  const [rowStyle] = useLocalStorage<RowStyle>(
-    "alert-table-row-style",
-    "default"
-  );
+  const [rowStyle] = useAlertRowStyle();
 
   const handleFacetDelete = (facetKey: string) => {
     setDynamicFacets((prevFacets) =>
@@ -316,11 +313,12 @@ export function AlertTable({
     setIsSidebarOpen(false);
   };
 
+  // FIX: should it be used or removed?
   const tableRowClassName = useMemo(() => {
     return clsx(
       "hover:bg-gray-50 cursor-pointer group",
-      rowStyle === "dense" ? "h-8" : "h-12",
-      rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3"
+      rowStyle === "default" ? "h-8" : "h-12",
+      rowStyle === "default" ? "[&>td]:py-1" : "[&>td]:py-3"
     );
   }, [rowStyle]);
 

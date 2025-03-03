@@ -13,7 +13,10 @@ import { Table } from "@tanstack/react-table";
 import { Select } from "@/shared/ui";
 import { useEffect } from "react";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
-import { RowStyle } from "./RowStyleSelection";
+import {
+  RowStyle,
+  useAlertRowStyle,
+} from "@/entities/alerts/model/useAlertRowStyle";
 
 interface Props {
   table: Table<AlertDto>;
@@ -45,10 +48,7 @@ export default function AlertPaginationServerSide({
 }: Props) {
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
-  const [rowStyle] = useLocalStorage<RowStyle>(
-    "alert-table-row-style",
-    "default"
-  );
+  const [rowStyle] = useAlertRowStyle();
 
   // Track if the user has manually changed the page size
   const [userPageSizePreference, setUserPageSizePreference] =
@@ -71,14 +71,14 @@ export default function AlertPaginationServerSide({
       return;
     }
 
-    // If switching from default to dense, and current page size is the default (20)
-    if (rowStyle === "dense" && currentPageSize === 20) {
+    // If switching from relaxed to dense, and current page size is the default (20)
+    if (rowStyle === "relaxed" && currentPageSize === 20) {
       table.setPageSize(50);
     }
-    // If switching from dense to default, and current page size is 50 (the dense default)
+    // If switching from default (dense) to relaxed, and current page size is 50 (the dense default)
     else if (
-      rowStyle === "default" &&
-      previousRowStyle === "dense" &&
+      rowStyle === "relaxed" &&
+      previousRowStyle === "default" &&
       currentPageSize === 50
     ) {
       table.setPageSize(20);
