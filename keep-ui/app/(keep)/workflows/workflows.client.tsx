@@ -119,7 +119,6 @@ export default function WorkflowsPage({
   }, [searchedValue]);
 
   useEffect(() => {
-    // const timeoutId = setTimeout(() => {
     if (!paginationState) {
       return;
     }
@@ -135,8 +134,6 @@ export default function WorkflowsPage({
     };
 
     setWorkflowsQuery(query);
-    // }, 100);
-    // return () => clearTimeout(timeoutId);
   }, [searchCel, filterCel, paginationState]);
 
   // Only fetch data when the user is authenticated
