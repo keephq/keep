@@ -73,7 +73,6 @@ export interface FacetsPanelProps {
    * Object with facets that should be unchecked by default.
    * Key is the facet name, value is the list of option values to uncheck.
    **/
-  uncheckedByDefaultOptionValues?: { [key: string]: string[] };
   facetsConfig?: FacetsConfig;
   renderFacetOptionLabel?: (
     facetName: string,
@@ -252,7 +251,16 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   }
 
   function clearFilters(): void {
-    setFacetsState({});
+    Object.keys(facetsState).forEach((facetId) => facetsState[facetId].clear());
+    defaultStateHandledForFacetIds.clear();
+
+    const newFacetsState: FacetState = {};
+
+    facets.forEach((facet) => {
+      newFacetsState[facet.id] = getFacetState(facet.id);
+    });
+
+    setFacetsState(newFacetsState);
   }
 
   useEffect(
