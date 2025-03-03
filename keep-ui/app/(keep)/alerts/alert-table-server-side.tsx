@@ -505,7 +505,7 @@ export function AlertTableServerSide({
       </div>
 
       <div className="pb-4">
-        <div className="flex gap-6">
+        <div className="flex gap-4">
           {/* Facets sidebar */}
           <div className="w-33 min-w-[12rem] overflow-y-auto">
             <FacetsPanelServerSide

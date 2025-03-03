@@ -22,7 +22,6 @@ import { Preset } from "@/entities/presets/model/types";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
 import { FacetDto } from "@/features/filter";
-import { v4 as uuidV4 } from "uuid";
 
 const defaultPresets: Preset[] = [
   {

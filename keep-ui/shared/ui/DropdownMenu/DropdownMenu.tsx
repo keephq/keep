@@ -167,6 +167,10 @@ const MenuComponent = React.forwardRef<
         {...getReferenceProps(
           parent.getItemProps({
             ...props,
+            onClick(event: React.MouseEvent<HTMLButtonElement>) {
+              props.onClick?.(event);
+              tree?.events.emit("click");
+            },
             onFocus(event: React.FocusEvent<HTMLButtonElement>) {
               props.onFocus?.(event);
               setHasFocusInside(false);

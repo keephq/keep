@@ -17,6 +17,7 @@ import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { DynamicImageProviderIcon } from "@/components/ui";
 
 interface PushAlertToServerModalProps {
+  isOpen: boolean;
   handleClose: () => void;
   presetName: string;
 }
@@ -28,6 +29,7 @@ interface AlertSource {
 }
 
 const PushAlertToServerModal = ({
+  isOpen,
   handleClose,
   presetName,
 }: PushAlertToServerModalProps) => {
@@ -107,12 +109,15 @@ const PushAlertToServerModal = ({
 
   return (
     <Modal
-      isOpen={true}
+      isOpen={isOpen}
       onClose={handleClose}
-      title="Simulate alert"
+      title="Simulate Alert"
       className="w-[600px]"
     >
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="flex flex-col gap-2 mt-4"
+      >
         <label className="block text-sm font-medium text-gray-700">
           Alert Source
         </label>
@@ -121,6 +126,7 @@ const PushAlertToServerModal = ({
           control={control}
           rules={{ required: "Alert source is required" }}
           render={({ field: { value, onChange, ...field } }) => (
+            // FIX: Select prevent modal from closing on Escape key
             <Select
               {...field}
               value={value}

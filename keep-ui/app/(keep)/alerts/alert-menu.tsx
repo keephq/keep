@@ -6,14 +6,15 @@ import {
   PlusIcon,
   UserPlusIcon,
   PlayIcon,
-  EyeIcon,
   AdjustmentsHorizontalIcon,
-  ArrowTopRightOnSquareIcon,
   BookOpenIcon,
-  TicketIcon,
-  PencilSquareIcon,
-  Cog8ToothIcon,
+  XCircleIcon,
 } from "@heroicons/react/24/outline";
+import {
+  CheckCircleIcon,
+  ClockIcon,
+  LinkIcon,
+} from "@heroicons/react/20/solid";
 import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import { IoNotificationsOffOutline } from "react-icons/io5";
 import { Icon } from "@tremor/react";
@@ -25,13 +26,16 @@ import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { DropdownMenu } from "@/shared/ui";
 import { ElementType } from "react";
-import { DynamicImageProviderIcon } from "@/components/ui";
+import { Button, DynamicImageProviderIcon } from "@/components/ui";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { clsx } from "clsx";
 import { useWorkflowExecutions } from "@/utils/hooks/useWorkflowExecutions";
 import { createPortal } from "react-dom";
 import { ViewedAlert } from "./alert-table";
 import { format } from "date-fns";
+import { TbCodeDots, TbTicket } from "react-icons/tb";
+import { RiStickyNoteAddLine, RiStickyNoteLine } from "react-icons/ri";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 
 interface Props {
   alert: AlertDto;
@@ -105,6 +109,7 @@ export default function AlertMenu({
   const api = useApi();
   const router = useRouter();
   const { data: executions } = useWorkflowExecutions();
+  const [rowStyle] = useAlertRowStyle();
   const [viewedAlerts, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
     `viewed-alerts-${presetName}`,
     []
@@ -200,6 +205,13 @@ export default function AlertMenu({
     );
   }, [alert, presetName, router]);
 
+  const actionIconButtonClassName = clsx(
+    "text-gray-500 leading-none p-2 prevent-row-click hover:bg-slate-200 [&>[role='tooltip']]:z-50",
+    rowStyle === "relaxed" || isInSidebar
+      ? "rounded-tremor-default"
+      : "rounded-none"
+  );
+
   // Quick actions that appear in the action tray
   // @tb: Create a dynamic component like Druids ActionTray that accepts a list of actions and renders them in a grid
   const quickActions = (
@@ -208,33 +220,35 @@ export default function AlertMenu({
         "flex items-center",
         showActionsOnHover
           ? [
-              "absolute right-full transition-all duration-200",
-              "transform translate-x-full opacity-0 bg-orange-100",
-              "group-hover:translate-x-[-0.5rem] group-hover:opacity-100",
+              "transition-opacity duration-100",
+              "opacity-0 bg-orange-100",
+              "group-hover:opacity-100",
             ]
           : "opacity-100"
       )}
     >
-      <div
-        className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
+      <Button
+        className={actionIconButtonClassName}
         onClick={openAlertPayloadModal}
-      >
-        <Icon
-          icon={EyeIcon}
-          className={clsx(
-            "w-4 h-4 object-cover rounded prevent-row-click text-gray-500",
-            viewedAlert ? "text-orange-400" : ""
-          )}
-          tooltip={
-            viewedAlert
-              ? `Viewed ${format(
-                  new Date(viewedAlert.viewedAt),
-                  "MMM d, yyyy HH:mm"
-                )}`
-              : "View Alert Payload"
-          }
-        />
-      </div>
+        variant="light"
+        icon={() => (
+          <Icon
+            icon={TbCodeDots}
+            className={clsx(
+              "w-4 h-4 object-cover rounded text-gray-500",
+              viewedAlert ? "text-orange-400" : ""
+            )}
+          />
+        )}
+        tooltip={
+          viewedAlert
+            ? `Viewed ${format(
+                new Date(viewedAlert.viewedAt),
+                "MMM d, yyyy HH:mm"
+              )}`
+            : "View Alert Payload"
+        }
+      />
 
       {imageUrl && !imageError && (
         <div
@@ -256,22 +270,22 @@ export default function AlertMenu({
         </div>
       )}
       {(url ?? generatorURL) && (
-        <button
+        <Button
+          variant="light"
           onClick={(e) => {
             e.stopPropagation();
             window.open(url || generatorURL, "_blank");
           }}
-          className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
-        >
-          <Icon
-            icon={ArrowTopRightOnSquareIcon}
-            className="w-4 h-4 text-gray-500"
-            tooltip="Open Original Alert"
-          />
-        </button>
+          className={actionIconButtonClassName}
+          tooltip="Open Original Alert"
+          icon={() => (
+            <Icon icon={LinkIcon} className="w-4 h-4 text-gray-500" />
+          )}
+        />
       )}
       {setTicketModalAlert && (
-        <button
+        <Button
+          variant="light"
           onClick={(e) => {
             e.stopPropagation();
             if (!ticketUrl && setTicketModalAlert) {
@@ -280,72 +294,89 @@ export default function AlertMenu({
               window.open(ticketUrl, "_blank");
             }
           }}
-          className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
-        >
-          <Icon
-            icon={TicketIcon}
-            className={`w-4 h-4 ${
-              ticketUrl ? "text-green-500" : "text-gray-500"
-            }`}
-            tooltip={
-              ticketUrl
-                ? `Ticket Assigned ${
-                    ticketStatus ? `(status: ${ticketStatus})` : ""
-                  }`
-                : "Click to assign Ticket"
-            }
-          />
-        </button>
+          className={actionIconButtonClassName}
+          tooltip={
+            ticketUrl
+              ? `Ticket Assigned ${
+                  ticketStatus ? `(status: ${ticketStatus})` : ""
+                }`
+              : "Assign Ticket"
+          }
+          icon={() => (
+            <Icon
+              icon={TbTicket}
+              className={`w-4 h-4 ${
+                ticketUrl ? "text-green-500" : "text-gray-500"
+              }`}
+            />
+          )}
+        />
       )}
       {playbook_url && (
-        <button
+        <Button
+          variant="light"
           onClick={(e) => {
             e.stopPropagation();
             window.open(playbook_url, "_blank");
           }}
-          className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
-          title="View Playbook"
-        >
-          <Icon icon={BookOpenIcon} className="w-4 h-4 text-gray-500" />
-        </button>
+          className={actionIconButtonClassName}
+          tooltip="View Playbook"
+          icon={() => (
+            <Icon icon={BookOpenIcon} className="w-4 h-4 text-gray-500" />
+          )}
+        />
       )}
       {setNoteModalAlert && (
-        <button
+        <Button
+          variant="light"
           onClick={(e) => {
             e.stopPropagation();
             setNoteModalAlert(alert);
           }}
-          className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
-        >
-          <Icon
-            icon={PencilSquareIcon}
-            className={`w-4 h-4 ${note ? "text-green-500" : "text-gray-500"}`}
-            tooltip={note ? "Edit Note" : "Add Note"}
-          />
-        </button>
+          className={actionIconButtonClassName}
+          tooltip={note ? "Edit Note" : "Add Note"}
+          icon={() => (
+            <Icon
+              icon={note ? RiStickyNoteLine : RiStickyNoteAddLine}
+              className={`w-4 h-4 ${note ? "text-green-500" : "text-gray-500"}`}
+            />
+          )}
+        />
       )}
       {relevantWorkflowExecution && (
-        <button
+        <Button
+          variant="light"
           onClick={(e) => {
             e.stopPropagation();
-            router.push(
-              `/workflows/${relevantWorkflowExecution.workflow_id}/runs/${relevantWorkflowExecution.workflow_execution_id}`
+            window.open(
+              `/workflows/${relevantWorkflowExecution.workflow_id}/runs/${relevantWorkflowExecution.workflow_execution_id}`,
+              "_blank"
             );
           }}
-          className="DropdownMenuButton group text-gray-500 leading-none flex items-center justify-center"
-        >
-          <Icon
-            icon={Cog8ToothIcon}
-            className={`w-4 h-4 ${
-              relevantWorkflowExecution.workflow_status === "success"
-                ? "text-green-500"
-                : relevantWorkflowExecution.workflow_status === "error"
-                ? "text-red-500"
-                : "text-gray-500"
-            }`}
-            tooltip={`Workflow ${relevantWorkflowExecution.workflow_status}`}
-          />
-        </button>
+          className={actionIconButtonClassName}
+          tooltip={`Workflow ${relevantWorkflowExecution.workflow_status} at ${format(
+            new Date(relevantWorkflowExecution.workflow_started),
+            "MMM d, yyyy HH:mm"
+          )}`}
+          icon={() => (
+            <Icon
+              icon={
+                relevantWorkflowExecution.workflow_status === "success"
+                  ? CheckCircleIcon
+                  : relevantWorkflowExecution.workflow_status === "error"
+                    ? XCircleIcon
+                    : ClockIcon
+              }
+              className={`w-4 h-4 ${
+                relevantWorkflowExecution.workflow_status === "success"
+                  ? "text-green-500"
+                  : relevantWorkflowExecution.workflow_status === "error"
+                    ? "text-red-500"
+                    : "text-gray-500"
+              }`}
+            />
+          )}
+        />
       )}
     </div>
   );
@@ -446,11 +477,6 @@ export default function AlertMenu({
         onClick: () => callAssignEndpoint(),
         show: canAssign,
       },
-      {
-        icon: EyeIcon,
-        label: "View Alert",
-        onClick: openAlertPayloadModal,
-      },
       ...(provider?.methods?.map((method) => ({
         icon: (props: any) => (
           <DynamicImageProviderIcon
@@ -507,8 +533,8 @@ export default function AlertMenu({
   if (isInSidebar) {
     return (
       <Menu as="div" className="w-full">
-        <div className="flex space-x-2 w-full overflow-x-scroll">
-          {quickActions}
+        <div className="flex space-x-2 w-full flex-wrap">
+          <div className="px-2">{quickActions}</div>
           {visibleMenuItems.map((item, index) => {
             const Icon = item.icon;
             return (
@@ -519,7 +545,7 @@ export default function AlertMenu({
                   toggleSidebar?.();
                 }}
                 disabled={item.disabled}
-                className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 rounded-tremor-default"
               >
                 <Icon className="w-4 h-4" />
                 <span>{item.label}</span>
@@ -532,12 +558,12 @@ export default function AlertMenu({
   }
 
   return (
-    <div className="flex items-center justify-end relative group min-w-[2rem]">
+    <div className="flex items-center justify-end relative group">
       {quickActions}
       <DropdownMenu.Menu
         icon={EllipsisHorizontalIcon}
+        iconClassName={rowStyle !== "relaxed" ? "!rounded-none" : undefined}
         label=""
-        className="transition-transform duration-200"
       >
         {visibleMenuItems.map((item, index) => (
           <DropdownMenu.Item
