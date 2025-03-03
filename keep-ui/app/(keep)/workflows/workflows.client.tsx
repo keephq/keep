@@ -271,18 +271,6 @@ export default function WorkflowsPage({
             <WorkflowTile key={workflow.id} workflow={workflow} />
           ))}
         </div>
-        <div
-          className={`mt-4 ${isFilteredWorkflowsLoading ? "invisible" : ""}`}
-        >
-          <Pagination
-            totalCount={filteredWorkflowsCount}
-            isRefreshAllowed={false}
-            isRefreshing={false}
-            pageSizeOptions={[12, 24, 48]}
-            onRefresh={() => {}}
-            onStateChange={setPaginationStateCallback}
-          />
-        </div>
       </>
     );
   }
@@ -410,6 +398,18 @@ export default function WorkflowsPage({
                     {!isTableEmpty && renderData()}
                   </>
                 )}
+                <div
+                  className={`mt-4 ${isFilteredWorkflowsLoading ? "hidden" : ""}`}
+                >
+                  <Pagination
+                    totalCount={filteredWorkflowsCount}
+                    isRefreshAllowed={false}
+                    isRefreshing={false}
+                    pageSizeOptions={[12, 24, 48]}
+                    onRefresh={() => {}}
+                    onStateChange={setPaginationStateCallback}
+                  />
+                </div>
               </div>
             </div>
           )}
