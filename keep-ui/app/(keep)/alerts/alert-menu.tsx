@@ -207,7 +207,9 @@ export default function AlertMenu({
 
   const actionIconButtonClassName = clsx(
     "text-gray-500 leading-none p-2 prevent-row-click hover:bg-slate-200",
-    rowStyle === "relaxed" ? "rounded-tremor-default" : "rounded-none"
+    rowStyle === "relaxed" || isInSidebar
+      ? "rounded-tremor-default"
+      : "rounded-none"
   );
 
   // Quick actions that appear in the action tray
@@ -531,8 +533,8 @@ export default function AlertMenu({
   if (isInSidebar) {
     return (
       <Menu as="div" className="w-full">
-        <div className="flex space-x-2 w-full overflow-x-scroll">
-          {quickActions}
+        <div className="flex space-x-2 w-full flex-wrap">
+          <div className="px-2">{quickActions}</div>
           {visibleMenuItems.map((item, index) => {
             const Icon = item.icon;
             return (
@@ -543,7 +545,7 @@ export default function AlertMenu({
                   toggleSidebar?.();
                 }}
                 disabled={item.disabled}
-                className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 rounded-tremor-default"
               >
                 <Icon className="w-4 h-4" />
                 <span>{item.label}</span>

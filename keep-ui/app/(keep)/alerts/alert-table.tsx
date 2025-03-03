@@ -355,7 +355,7 @@ export function AlertTable({
 
       {/* Main content area - uses flex-grow to fill remaining space */}
       <div className="flex-grow px-4 pb-4">
-        <div className="h-full flex gap-6">
+        <div className="h-full flex gap-4">
           {/* Facets sidebar */}
           <div className="w-32 min-w-[12rem] overflow-y-auto">
             <AlertFacets
