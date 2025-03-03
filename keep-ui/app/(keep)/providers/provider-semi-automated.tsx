@@ -21,8 +21,11 @@ interface Props {
 
 export const ProviderSemiAutomated = ({ provider }: Props) => {
   const api = useApi();
+  const uri = provider.installed
+    ? `/providers/${provider.type}/webhook?provider_id=${provider.id}`
+    : `/providers/${provider.type}/webhook`;
   const { data, error, isLoading } = useSWR<WebhookSettings>(
-    `/providers/${provider.type}/webhook`,
+    uri,
     (url: string) => api.get(url)
   );
 
