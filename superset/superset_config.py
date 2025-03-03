@@ -1,6 +1,7 @@
 # Based on https://medium.com/@khushbu.adav/embedding-superset-dashboards-in-your-react-application-7f282e3dbd88
 # Set logging level
 import logging
+import os
 from logging.config import dictConfig
 
 SESSION_COOKIE_SAMESITE = None
@@ -28,11 +29,12 @@ FEATURE_FLAGS = {
 }
 # allow sqlite to be used for superset
 PREVENT_UNSAFE_DB_CONNECTIONS = False
-SQLALCHEMY_DATABASE_URI = "sqlite:////app/pythonpath/superset.db"
-KEEP_DATABASE_URI = "sqlite:////shared-db/dbtest.db?check_same_thread=false"
+# mysql  "mysql+pymysql://root:keep@localhost:3306/keep"
+SQLALCHEMY_DATABASE_URI = (
+    os.environ.get("SUPERSET_DATABASE_URI") or "sqlite:////app/pythonpath/superset.db"
+)
 SECRET_KEY = "u/ZysbeXJxNuQQXLuBTyX2M6QKYMIkMqd9BvEm8XbEiw2NG1mibbMvLO"
 
-"sqlite:////shared-db/github_issues.db?check_same_thread=false"
 
 CORS_OPTIONS = {
     "supports_credentials": True,
