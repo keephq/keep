@@ -5120,15 +5120,19 @@ def set_last_alert(
                     logger.info(
                         f"No such savepoint while updating lastalert for `{alert.fingerprint}`, retry #{attempt}"
                     )
+                    session.rollback()
                     if attempt >= max_retries:
                         raise ex
+                    continue
 
                 if "Deadlock found" in ex.args[0]:
                     logger.info(
                         f"Deadlock found while updating lastalert for `{alert.fingerprint}`, retry #{attempt}"
                     )
+                    session.rollback()
                     if attempt >= max_retries:
                         raise ex
+                    continue
             except NoActiveSqlTransaction:
                 logger.exception(
                     f"No active sql transaction while updating lastalert for `{alert.fingerprint}`, retry #{attempt}",
@@ -5138,6 +5142,7 @@ def set_last_alert(
                         "fingerprint": alert.fingerprint,
                     },
                 )
+                continue
             logger.debug(
                 f"Successfully updated lastalert for `{alert.fingerprint}`",
                 extra={

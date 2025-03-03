@@ -244,6 +244,7 @@ export default function IncidentsTable({
       id: "services",
       header: "Involved Services",
       cell: ({ row }) => {
+        const maxServices = 2;
         const notNullServices = row.original.services.filter(
           (service) => service !== "null"
         );
@@ -251,12 +252,12 @@ export default function IncidentsTable({
           <div className="flex flex-wrap items-baseline gap-1">
             {notNullServices
               .map((service) => <Badge key={service}>{service}</Badge>)
-              .slice(0, 3)}
-            {notNullServices.length > 3 ? (
+              .slice(0, maxServices)}
+            {notNullServices.length > maxServices ? (
               <span>
                 and{" "}
                 <Link href={`/incidents/${row.original.id}/alerts`}>
-                  {notNullServices.length - 3} more
+                  {notNullServices.length - maxServices} more
                 </Link>
               </span>
             ) : null}

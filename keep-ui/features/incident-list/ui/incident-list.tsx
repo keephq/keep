@@ -1,6 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -10,7 +10,6 @@ import IncidentsTable from "./incidents-table";
 import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
 import { IncidentListPlaceholder } from "./incident-list-placeholder";
 import Modal from "@/components/ui/Modal";
-import { PlusCircleIcon } from "@heroicons/react/24/outline";
 import PredictedIncidentsTable from "@/app/(keep)/incidents/predicted-incidents-table";
 import { SortingState } from "@tanstack/react-table";
 import { IncidentListError } from "@/features/incident-list/ui/incident-list-error";
@@ -18,7 +17,12 @@ import { InitialFacetsData } from "@/features/filter/api";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import Image from "next/image";
 import { Icon } from "@tremor/react";
-import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
+import {
+  PageSubtitle,
+  PageTitle,
+  SeverityBorderIcon,
+  UISeverity,
+} from "@/shared/ui";
 import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
@@ -33,9 +37,7 @@ import { FacetsConfig } from "@/features/filter/models";
 import EnhancedDateRangePicker, {
   TimeFrame,
 } from "@/components/ui/DateRangePicker";
-import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
-import { AlertsQuery } from "@/utils/hooks/useAlerts";
-
+import { PlusIcon } from "@heroicons/react/20/solid";
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
@@ -331,15 +333,17 @@ export function IncidentList({
         <div className="h-full flex flex-col gap-5">
           <div className="flex justify-between items-center">
             <div>
-              <Title>Incidents</Title>
-              <Subtitle>Manage your incidents</Subtitle>
+              <PageTitle>Incidents</PageTitle>
+              <PageSubtitle>Group alerts into incidents</PageSubtitle>
             </div>
 
-            <div>
+            <div className="flex gap-2">
+              {renderDateTimePicker()}
               <Button
                 color="orange"
                 size="md"
-                icon={PlusCircleIcon}
+                icon={PlusIcon}
+                variant="primary"
                 onClick={() => setIsFormOpen(true)}
               >
                 Create Incident
@@ -367,7 +371,6 @@ export function IncidentList({
                   revalidationToken={filterRevalidationToken}
                 />
                 <div className="flex flex-col gap-5 flex-1 min-w-0">
-                  {renderDateTimePicker()}
                   {renderIncidents()}
                 </div>
               </div>

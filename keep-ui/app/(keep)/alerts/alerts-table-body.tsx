@@ -23,28 +23,24 @@ import clsx from "clsx";
 interface Props {
   table: Table<AlertDto>;
   showSkeleton: boolean;
-  showEmptyState: boolean;
   showFilterEmptyState?: boolean;
   showSearchEmptyState?: boolean;
   theme: { [key: string]: string };
   onRowClick: (alert: AlertDto) => void;
   onClearFiltersClick?: () => void;
   presetName: string;
-  viewedAlerts: ViewedAlert[];
   lastViewedAlert: string | null;
 }
 
 export function AlertsTableBody({
   table,
   showSkeleton,
-  showEmptyState,
   theme,
   onRowClick,
   onClearFiltersClick,
   presetName,
   showFilterEmptyState,
   showSearchEmptyState,
-  viewedAlerts,
   lastViewedAlert,
 }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -139,7 +135,7 @@ export function AlertsTableBody({
   if (showSkeleton) {
     return (
       <TableBody>
-        {Array.from({ length: 10 }).map((_, index) => (
+        {Array.from({ length: 20 }).map((_, index) => (
           <TableRow key={index}>
             {Array.from({ length: 5 }).map((_, cellIndex) => (
               <TableCell key={cellIndex}>
@@ -163,16 +159,12 @@ export function AlertsTableBody({
               table={table}
               theme={theme}
               onRowClick={handleRowClick}
-              viewedAlerts={viewedAlerts}
               lastViewedAlert={lastViewedAlert}
               rowStyle={rowStyle}
             />
           );
         }
 
-        const viewedAlert = viewedAlerts?.find(
-          (a) => a.fingerprint === row.original.fingerprint
-        );
         const isLastViewed = row.original.fingerprint === lastViewedAlert;
 
         return (
@@ -211,23 +203,7 @@ export function AlertsTableBody({
                     cell.column.id === "name" ? row.original.name : undefined
                   }
                 >
-                  {viewedAlert && cell.column.id === "alertMenu" ? (
-                    <div className="flex justify-end items-center gap-2">
-                      <Icon
-                        icon={EyeIcon}
-                        tooltip={`Viewed ${format(
-                          new Date(viewedAlert.viewedAt),
-                          "MMM d, yyyy HH:mm"
-                        )}`}
-                      />
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </div>
-                  ) : (
-                    flexRender(cell.column.columnDef.cell, cell.getContext())
-                  )}
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               );
             })}
