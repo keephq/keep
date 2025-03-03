@@ -171,7 +171,7 @@ def build_workflows_query(
     fetch_last_executions: int = 15,
 ):
     limit = limit if limit is not None else 20
-    offset = offset is not None if offset else 0
+    offset = offset if offset is not None else 0
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
 
     base_query = __build_base_query(tenant_id, fetch_last_executions).cte("base_query")
