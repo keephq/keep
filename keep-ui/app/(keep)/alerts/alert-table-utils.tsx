@@ -8,17 +8,17 @@ import {
 } from "@tanstack/react-table";
 import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
-import { AlertName, AlertImage } from "@/entities/alerts/ui";
+import { AlertName } from "@/entities/alerts/ui";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
 import { isSameDay, isValid, isWithinInterval } from "date-fns";
+import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import {
   MdOutlineNotificationsActive,
   MdOutlineNotificationsOff,
 } from "react-icons/md";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
-import TimeAgo from "react-timeago";
 import { useConfig } from "utils/hooks/useConfig";
 import {
   TableIndeterminateCheckbox,
@@ -26,6 +26,13 @@ import {
   UISeverity,
 } from "@/shared/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import clsx from "clsx";
+import { RowStyle } from "./RowStyleSelection";
+import {
+  formatDateTime,
+  TimeFormatOption,
+  isDateTimeColumn,
+} from "./alert-table-time-format";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -42,7 +49,6 @@ export const DEFAULT_COLS_VISIBILITY = DEFAULT_COLS.reduce<VisibilityState>(
   (acc, colId) => ({ ...acc, [colId]: true }),
   {}
 );
-
 export const getColumnsIds = (columns: ColumnDef<AlertDto>[]) =>
   columns.map((column) => column.id as keyof AlertDto);
 
@@ -86,6 +92,50 @@ export const isDateWithinRange: FilterFn<AlertDto> = (row, columnId, value) => {
   return true;
 };
 
+/**
+ * Utility function to get consistent row class names across all table components
+ */
+export const getRowClassName = (
+  row: any,
+  theme: Record<string, string>,
+  lastViewedAlert: string | null,
+  rowStyle: RowStyle
+) => {
+  const severity = row.original.severity || "info";
+  const rowBgColor = theme[severity] || "bg-white";
+  const isLastViewed = row.original.fingerprint === lastViewedAlert;
+
+  return clsx(
+    "cursor-pointer group",
+    isLastViewed ? "bg-orange-50" : rowBgColor,
+    rowStyle === "dense" ? "h-8" : "h-12",
+    rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3",
+    "hover:bg-orange-100"
+  );
+};
+
+/**
+ * Utility function to get consistent cell class names
+ */
+export const getCellClassName = (
+  cell: any,
+  className: string,
+  rowStyle: RowStyle,
+  isLastViewed: boolean
+) => {
+  const isNameCell = cell.column.id === "name";
+
+  return clsx(
+    cell.column.columnDef.meta?.tdClassName,
+    className,
+    isNameCell && "name-cell",
+    // For dense rows, make sure name cells don't expand too much
+    rowStyle === "dense" && isNameCell && "w-auto max-w-2xl",
+    "group-hover:bg-orange-100", // Group hover styling
+    isLastViewed && "bg-orange-50" // Override with highlight if this is the last viewed row
+  );
+};
+
 const columnHelper = createColumnHelper<AlertDto>();
 
 interface GenerateAlertTableColsArg {
@@ -116,6 +166,11 @@ export const useAlertTableCols = (
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
+  const [rowStyle] = useLocalStorage("alert-table-row-style", "default");
+  const [columnTimeFormats] = useLocalStorage<Record<string, TimeFormatOption>>(
+    `column-time-formats-${presetName}`,
+    {}
+  );
   const { data: configData } = useConfig();
   // check if noisy alerts are enabled
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
@@ -180,10 +235,31 @@ export const useAlertTableCols = (
               </Accordion>
             );
           }
+          let isDateColumn = isDateTimeColumn(context.column.id);
+          if (isDateColumn) {
+            const date =
+              value instanceof Date
+                ? value
+                : new Date(value as string | number);
+            const isoString = date.toISOString();
+            // Get the format from column format settings or use default
+            const formatOption =
+              columnTimeFormats[context.column.id] || "timeago";
+            return (
+              <span title={isoString}>
+                {formatDateTime(date, formatOption)}
+              </span>
+            );
+          }
 
           if (value) {
             return (
-              <div className="truncate whitespace-pre-wrap line-clamp-3">
+              <div
+                className={clsx(
+                  "truncate whitespace-pre-wrap",
+                  rowStyle === "dense" ? "line-clamp-1" : "line-clamp-3"
+                )}
+              >
                 {value.toString()}
               </div>
             );
@@ -323,22 +399,15 @@ export const useAlertTableCols = (
       header: "Name",
       enableGrouping: true,
       enableResizing: true,
-      getGroupingValue: (row) => {
-        console.log("Grouping value for row:", row.name);
-        return row.name;
-      },
+      getGroupingValue: (row) => row.name,
       cell: (context) => (
         <div className="w-full">
-          <AlertName
-            alert={context.row.original}
-            setNoteModalAlert={setNoteModalAlert}
-            setTicketModalAlert={setTicketModalAlert}
-          />
+          <AlertName alert={context.row.original} className="flex-grow" />
         </div>
       ),
       meta: {
         tdClassName: "!pl-0 w-full",
-        thClassName: "!pl-1 w-full", // Small padding for header text only
+        thClassName: "!pl-1 w-full",
       },
     }),
     columnHelper.accessor("description", {
@@ -348,7 +417,14 @@ export const useAlertTableCols = (
       minSize: 100,
       cell: (context) => (
         <div title={context.getValue()}>
-          <div className="truncate line-clamp-3 whitespace-pre-wrap">
+          <div
+            className={clsx(
+              "whitespace-pre-wrap",
+              rowStyle === "dense"
+                ? "truncate line-clamp-1"
+                : "truncate line-clamp-3"
+            )}
+          >
             {context.getValue()}
           </div>
         </div>
@@ -377,17 +453,18 @@ export const useAlertTableCols = (
       id: "lastReceived",
       header: "Last Received",
       filterFn: isDateWithinRange,
-      minSize: 50,
-      maxSize: 50,
-      // data is a Date object (converted in usePresetAlerts)
+      minSize: 80,
+      maxSize: 80,
       cell: (context) => {
         const value = context.getValue();
         const date = value instanceof Date ? value : new Date(value);
         const isoString = date.toISOString();
+
+        // Get the format from column format settings or use default
+        const formatOption = columnTimeFormats[context.column.id] || "timeago";
+
         return (
-          <span>
-            <TimeAgo date={isoString} title={isoString} />
-          </span>
+          <span title={isoString}>{formatDateTime(date, formatOption)}</span>
         );
       },
     }),
@@ -430,8 +507,8 @@ export const useAlertTableCols = (
       ? [
           columnHelper.display({
             id: "alertMenu",
-            minSize: 40,
-            maxSize: 48,
+            minSize: 76,
+            maxSize: 84,
             cell: (context) => (
               <div className="flex justify-end">
                 <AlertMenu
@@ -440,6 +517,8 @@ export const useAlertTableCols = (
                   setRunWorkflowModalAlert={setRunWorkflowModalAlert}
                   setDismissModalAlert={setDismissModalAlert}
                   setChangeStatusAlert={setChangeStatusAlert}
+                  setTicketModalAlert={setTicketModalAlert}
+                  setNoteModalAlert={setNoteModalAlert}
                 />
               </div>
             ),

@@ -1,24 +1,25 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Subtitle } from "@tremor/react";
+import { ChangeEvent, useRef, useState } from "react";
+import { Subtitle, Button } from "@tremor/react";
 import {
   ArrowUpOnSquareStackIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
-import { KeepLoader } from "@/shared/ui";
+import { KeepLoader, PageTitle } from "@/shared/ui";
 import WorkflowsEmptyState from "./noworkflows";
 import WorkflowTile from "./workflow-tile";
-import { Button, Title } from "@tremor/react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
 import { WorkflowTemplates } from "./mockworkflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/api";
-import { showErrorToast, Input, ErrorComponent } from "@/shared/ui";
+import { Input, ErrorComponent } from "@/shared/ui";
 import { Textarea } from "@/components/ui";
 import { useWorkflowsV2 } from "utils/hooks/useWorkflowsV2";
+import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
+import { PageSubtitle } from "@/shared/ui/PageSubtitle";
+import { PlusIcon } from "@heroicons/react/20/solid";
 
 const EXAMPLE_WORKFLOW_DEFINITIONS = {
   slack: `
@@ -82,6 +83,7 @@ export default function WorkflowsPage() {
           ->last_execution_started: Used for showing the start time of execution in real-time.
   **/
   const { workflows, error, isLoading } = useWorkflowsV2();
+  const { uploadWorkflowFiles } = useWorkflowActions();
 
   if (error) {
     return <ErrorComponent error={error} reset={() => {}} />;
@@ -91,47 +93,22 @@ export default function WorkflowsPage() {
     return <KeepLoader />;
   }
 
-  const onDrop = async (files: any) => {
-    const fileUpload = async (
-      formData: FormData,
-      fName: string,
-      reload: boolean
-    ) => {
-      try {
-        const response = await api.request(`/workflows`, {
-          method: "POST",
-          body: formData,
-        });
+  const onDrop = async (files: ChangeEvent<HTMLInputElement>) => {
+    if (!files.target.files) {
+      return;
+    }
 
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-        if (reload) {
-          window.location.reload();
-        }
-      } catch (error) {
-        if (error instanceof KeepApiError) {
-          showErrorToast(error, `Failed to upload ${fName}: ${error.message}`);
-        } else {
-          showErrorToast(error, "Failed to upload file");
-        }
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-      }
-    };
+    const uploadedWorkflowsIds = await uploadWorkflowFiles(files.target.files);
 
-    const formData = new FormData();
-    var reload = false;
+    if (fileInputRef.current) {
+      // Reset the file input to allow for multiple uploads
+      fileInputRef.current.value = "";
+    }
 
-    for (let i = 0; i < files.target.files.length; i++) {
-      const file = files.target.files[i];
-      const fName = file.name;
-      formData.set("file", file);
-      if (files.target.files.length === i + 1) {
-        reload = true;
-      }
-      await fileUpload(formData, fName, reload);
+    setIsModalOpen(false);
+    if (uploadedWorkflowsIds.length === 1) {
+      // If there is only one file, redirect to the workflow detail page
+      router.push(`/workflows/${uploadedWorkflowsIds[0]}`);
     }
   };
 
@@ -169,31 +146,20 @@ export default function WorkflowsPage() {
 
   return (
     <>
-      <main className="pt-4 flex flex-col gap-8">
-        <div className="flex flex-col gap-4">
+      <main className="flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
           <div className="flex justify-between items-center">
             <div>
-              <Title className="text-2xl line-clamp-2 font-bold">
-                Workflows
-              </Title>
-              <Subtitle>
-                Automate your alert management with workflows.
-              </Subtitle>
+              <PageTitle>Workflows</PageTitle>
+              <PageSubtitle>
+                Automate your alert management with workflows
+              </PageSubtitle>
             </div>
-            <div>
+            <div className="flex gap-2">
               <Button
-                className="mr-2.5"
                 color="orange"
                 size="md"
                 variant="secondary"
-                onClick={() => router.push("/workflows/builder")}
-                icon={PlusCircleIcon}
-              >
-                Create a workflow
-              </Button>
-              <Button
-                color="orange"
-                size="md"
                 onClick={() => {
                   setIsModalOpen(true);
                 }}
@@ -201,6 +167,15 @@ export default function WorkflowsPage() {
                 id="uploadWorkflowButton"
               >
                 Upload Workflows
+              </Button>
+              <Button
+                color="orange"
+                size="md"
+                variant="primary"
+                onClick={() => router.push("/workflows/builder")}
+                icon={PlusIcon}
+              >
+                Create Workflow
               </Button>
             </div>
           </div>

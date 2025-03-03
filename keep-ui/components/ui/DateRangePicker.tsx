@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { type DateRange } from "react-day-picker";
+import clsx from "clsx";
 
 const ONE_MINUTE = 60 * 1000;
 const ONE_HOUR = 60 * ONE_MINUTE;
@@ -453,13 +454,16 @@ export default function EnhancedDateRangePicker({
           <Button
             size="xs"
             variant="secondary"
-            className="justify-start rounded-none first:rounded-t border-b border-gray-200 hover:bg-gray-200"
+            className={clsx(
+              "justify-start rounded border-b border-gray-200 hover:bg-gray-200",
+              isOpen && "rounded-b-none"
+            )}
             disabled={disabled}
           >
             <div className="flex items-center w-full">
               <Badge
                 color={isPaused ? "gray" : "green"}
-                className={`mr-2 min-w-[4rem] justify-center ${isPaused ? "" : "bg-green-700"}`}
+                className={`mr-2 min-w-14 justify-center ${isPaused ? "" : "bg-green-700"}`}
               >
                 {getSelectedBadgeText()}
               </Badge>
@@ -473,7 +477,7 @@ export default function EnhancedDateRangePicker({
 
         <Popover.Portal>
           <Popover.Content
-            className="z-50 w-[var(--radix-popover-trigger-width)] rounded-md border bg-white shadow-md outline-none"
+            className="z-50 w-[var(--radix-popover-trigger-width)] -mt-px rounded-md rounded-t-none border bg-white shadow-md outline-none"
             align="start"
           >
             {!showCalendar ? (
@@ -483,12 +487,12 @@ export default function EnhancedDateRangePicker({
                     <Button
                       key={index}
                       variant="secondary"
-                      className="w-full justify-start rounded-none border-transparent first:rounded-t h-8 hover:bg-gray-200"
+                      className="w-full justify-start rounded-none border-transparent first:rounded-t h-8 hover:bg-gray-200 px-2"
                       onClick={() => handlePresetSelect(preset)}
                     >
                       <Badge
                         color="gray"
-                        className="mr-2 min-w-[4rem] justify-center text-sm"
+                        className="mr-2 min-w-14 justify-center text-sm"
                       >
                         {preset.badge}
                       </Badge>
@@ -500,13 +504,13 @@ export default function EnhancedDateRangePicker({
 
                   <Button
                     variant="secondary"
-                    className="w-full justify-start rounded-none border-transparent h-8 hover:bg-gray-200"
+                    className="w-full justify-start rounded-none border-transparent h-8 hover:bg-gray-200 px-2"
                     onClick={() => setShowCalendar(true)}
                   >
                     <div className="flex items-center w-full">
                       <Badge
                         color="gray"
-                        className="mr-2 min-w-[4rem] justify-center"
+                        className="mr-2 min-w-14 justify-center"
                       >
                         <CalendarIcon size={16} />
                       </Badge>
@@ -518,13 +522,13 @@ export default function EnhancedDateRangePicker({
 
                   <Button
                     variant="secondary"
-                    className="w-full justify-start rounded-none border-transparent last:rounded-b h-8 hover:bg-gray-200"
+                    className="w-full justify-start rounded-none border-transparent last:rounded-b h-8 hover:bg-gray-200 px-2"
                     onClick={() => setShowMoreOptions(!showMoreOptions)}
                   >
                     <div className="flex items-center w-full">
                       <Badge
                         color="gray"
-                        className="mr-2 min-w-[4rem] justify-center"
+                        className="mr-2 min-w-14 justify-center"
                       >
                         <ChevronRight size={16} />
                       </Badge>
@@ -593,14 +597,14 @@ export default function EnhancedDateRangePicker({
         </Popover.Portal>
       </Popover.Root>
 
-      <div className="flex items-center relative z-0 gap-x-2 ml-2">
-        <div className="flex">
+      <div className="flex items-center relative z-0 gap-x-2 ml-2 h-full">
+        <div className="flex h-full">
           {hasPlay && (
             <Button
               size="xs"
               color="gray"
               variant="secondary"
-              className="justify-start rounded-none first:rounded-t border-b border-gray-200"
+              className="justify-start rounded-none first:rounded-l last:rounded-r border-b border-gray-200 h-full"
               onClick={togglePlayPause}
               disabled={disabled}
               icon={isPaused ? Play : Pause}
@@ -612,7 +616,7 @@ export default function EnhancedDateRangePicker({
               size="xs"
               color="gray"
               variant="secondary"
-              className="justify-start rounded-none first:rounded-t border-b border-gray-200"
+              className="justify-start rounded-none first:rounded-l last:rounded-r border-b border-gray-200"
               onClick={handleRewind}
               disabled={disabled}
               icon={Rewind}
@@ -624,7 +628,7 @@ export default function EnhancedDateRangePicker({
               size="xs"
               color="gray"
               variant="secondary"
-              className="justify-start rounded-none first:rounded-t border-b border-gray-200"
+              className="justify-start rounded-none first:rounded-l last:rounded-r border-b border-gray-200"
               onClick={handleForward}
               disabled={disabled}
               icon={FastForward}
@@ -637,7 +641,7 @@ export default function EnhancedDateRangePicker({
             size="xs"
             color="gray"
             variant="secondary"
-            className="justify-start rounded-none first:rounded-t border-b border-gray-200"
+            className="justify-start rounded-none first:rounded-l last:rounded-r border-b border-gray-200"
             onClick={handleZoomOut}
             disabled={disabled}
             icon={ZoomOut}
