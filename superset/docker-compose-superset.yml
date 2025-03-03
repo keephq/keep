@@ -1,44 +1,49 @@
 version: "3"
 
 services:
-  keep-frontend:
-    extends:
-      file: ../docker-compose.common.yml
-      service: keep-frontend-common
-    image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
-    environment:
-      - AUTH_TYPE=NO_AUTH
-      - API_URL=http://keep-backend:8080
-    volumes:
-      - ./state:/state
-    depends_on:
-      - keep-backend
-
-  keep-backend:
-    extends:
-      file: ../docker-compose.common.yml
-      service: keep-backend-common
-    image: us-central1-docker.pkg.dev/keephq/keep/keep-api
-    environment:
-      - AUTH_TYPE=NO_AUTH
-      - DATABASE_CONNECTION_STRING=sqlite:////shared-db/db.sqlite3?check_same_thread=False
-    volumes:
-      - ./state:/state
-    user: "${UID}:${GID}"
-
-  keep-websocket-server:
-    extends:
-      file: ../docker-compose.common.yml
-      service: keep-websocket-server-common
-
   superset:
-    image: apache/superset
+    # image: apache/superset
+    image: keep-superset
     container_name: superset
     ports:
       - "8088:8088"
+    environment:
+      - SUPERSET_DATABASE_URI=mysql+pymysql://root:keep@mysql:3306/superset
     volumes:
       - ./superset_config.py:/app/pythonpath/superset_config.py
       - ./entrypoint.sh:/entrypoint.sh:ro
-      - ./dashboards:/app/dashboards:ro
-      - ./dbs:/app/dbs:ro
+      # - ./dashboards:/app/dashboards:ro
+      # - ./dbs:/app/dbs:ro
     entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:latest
+    container_name: superset-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=keep
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysqlinit:/docker-entrypoint-initdb.d
+    ports:
+      - "0.0.0.0:3306:3306"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-psuperset",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql-data:

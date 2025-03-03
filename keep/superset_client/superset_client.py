@@ -1,9 +1,13 @@
 import json
 import logging
 import os
+import shutil
+import tempfile
 import time
+import zipfile
 from typing import Optional
 
+import jwt
 import requests
 
 from keep.api.core.config import config
@@ -23,14 +27,13 @@ class SupersetClient:
             default="superset/dashboards",
         )
         self._access_token = None
-        self._token_expiry = 0  # Unix timestamp when token expires
         self.csrf_token = None
         self.session_cookie = None
         self.logger = logging.getLogger(__name__)
         # Template dashboards tag
         self.template_tag = "keep_template_dashboards"
-        # Token expiration buffer (5 minutes) to refresh before actual expiry
-        self.token_expiry_buffer = 300
+        # for optimization, we keep the dataset ids
+        self.dataset_ids = []
 
     @property
     def access_token(self) -> Optional[str]:
@@ -44,16 +47,27 @@ class SupersetClient:
         current_time = time.time()
 
         # If token doesn't exist or is about to expire, refresh it
-        if not self._access_token or current_time > (
-            self._token_expiry - self.token_expiry_buffer
-        ):
+        if not self._access_token:
             try:
-                self.logger.info("Refreshing superset access token")
+                self.logger.info("Authenticating to Superset")
                 self.authenticate()
-                self.logger.info("Successfully refreshed superset access token")
+                self.logger.info("Successfully authenticated to Superset")
             except Exception as e:
                 self.logger.error(f"Error refreshing access token: {str(e)}")
                 return None
+        else:
+            exp = jwt.decode(self._access_token, options={"verify_signature": False})[
+                "exp"
+            ]
+            # Refresh token if it's about to expire
+            if exp - current_time < 0:
+                try:
+                    self.logger.info("Refreshing access token")
+                    self.authenticate()
+                    self.logger.info("Successfully refreshed access token")
+                except Exception as e:
+                    self.logger.error(f"Error refreshing access token: {str(e)}")
+                    return None
 
         return self._access_token
 
@@ -84,6 +98,9 @@ class SupersetClient:
         # 1. Read the dashboards from the templates directory
         try:
             dashboard_templates = os.listdir(self.dashboards_templates_dir)
+            dashboard_templates = [
+                dt for dt in dashboard_templates if dt.endswith(".zip")
+            ]
         except FileNotFoundError:
             self.logger.error(
                 f"Dashboard templates directory not found: {self.dashboards_templates_dir}"
@@ -250,34 +267,165 @@ class SupersetClient:
 
     def _import_dashboard_from_zip(self, zip_path):
         """
-        Import a dashboard from a zip file
+        Import a dashboard from a zip file, modifying the database URI to use
+        environment variable DATABASE_CONNECTION_STRING
 
         Args:
             zip_path (str): Path to the zip file
 
         Returns:
-            dict: Dashboard information if successful, None otherwise
+            bool: True if successful, None otherwise
         """
         try:
-            with open(zip_path, "rb") as f:
-                zip_content = f.read()
+            # Create a temporary directory to work in
+            temp_dir = tempfile.mkdtemp()
+            modified_zip_path = f"{zip_path.rsplit('.', 1)[0]}_modified.zip"
 
-            files = {
-                "formData": (zip_path, zip_content, "application/zip"),
-            }
-            data = {
-                "overwrite": "true",
-            }
+            try:
+                # Extract the zip file
+                with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                    zip_ref.extractall(temp_dir)
 
-            response = requests.post(
-                f"{self.base_url}/api/v1/dashboard/import/",
-                headers=self.get_headers(),
-                cookies=self.get_cookies(),
-                files=files,
-                data=data,
-            )
-            response.raise_for_status()
-            return True
+                # Use glob to find all database YAML files in any subdirectory
+                import glob
+
+                # we need to inject:
+                # 1. the database connection string
+                # 2. the schema (on SQLite its "main", whereas on mysql its "keep")
+                # Let's start with the database connection string
+                # Find all YAML files in databases directories (handles nested structure)
+                db_yaml_files = glob.glob(
+                    os.path.join(temp_dir, "**", "databases", "*.yaml"), recursive=True
+                )
+
+                if not db_yaml_files:
+                    self.logger.warning(f"No database YAML files found in {zip_path}")
+
+                for db_path in db_yaml_files:
+                    try:
+                        # Read the database config file
+                        with open(db_path, "r") as f:
+                            content = f.read()
+
+                        # Find and replace the sqlalchemy_uri line
+                        uri_line = content.find("sqlalchemy_uri:")
+                        if uri_line != -1:
+                            # Find the end of the line
+                            line_end = content.find("\n", uri_line)
+                            if line_end == -1:  # If it's the last line
+                                line_end = len(content)
+
+                            # Extract the specific URI part
+                            uri_value = content[uri_line:line_end]
+                            # TODO: IAM?
+                            db_connection_string = os.environ.get(
+                                "SUPERSET_DATABASE_CONNECTION_STRING"
+                            ) or os.environ.get("DATABASE_CONNECTION_STRING")
+                            new_uri_value = f"sqlalchemy_uri: {db_connection_string}"
+
+                            # Replace just that specific line
+                            modified_content = content.replace(uri_value, new_uri_value)
+
+                            # Write the modified content back
+                            with open(db_path, "w") as f:
+                                f.write(modified_content)
+
+                            self.logger.info(
+                                f"Modified database URI in {os.path.basename(db_path)} to use environment variable"
+                            )
+                    except Exception as e:
+                        self.logger.error(f"Error modifying {db_path}: {str(e)}")
+
+                datasets_yaml_file = glob.glob(
+                    os.path.join(temp_dir, "**", "datasets", "*/*"), recursive=True
+                )
+
+                if not datasets_yaml_file:
+                    self.logger.warning(f"No database YAML files found in {zip_path}")
+
+                # TODO: do it nicer
+                if "sqlite" in db_connection_string:
+                    schema = "main"
+                elif "mysql" in db_connection_string:
+                    schema = "keep"
+                elif "postgresql" in db_connection_string:
+                    schema = "public"
+                else:
+                    schema = "public"
+
+                for dataset_path in datasets_yaml_file:
+                    try:
+                        # Read the database config file
+                        with open(dataset_path, "r") as f:
+                            content = f.read()
+
+                        # Find and replace the sqlalchemy_uri line
+                        uri_line = content.find("schema:")
+                        if uri_line != -1:
+                            # Find the end of the line
+                            line_end = content.find("\n", uri_line)
+                            if line_end == -1:  # If it's the last line
+                                line_end = len(content)
+
+                            # Extract the specific URI part
+                            uri_value = content[uri_line:line_end]
+                            new_uri_value = f"schema: {schema}"
+
+                            # Replace just that specific line
+                            modified_content = content.replace(uri_value, new_uri_value)
+
+                            # Write the modified content back
+                            with open(dataset_path, "w") as f:
+                                f.write(modified_content)
+
+                            self.logger.info(
+                                f"Modified database URI in {os.path.basename(dataset_path)} to use environment variable"
+                            )
+                    except Exception as e:
+                        self.logger.error(f"Error modifying {db_path}: {str(e)}")
+
+                # Create a new zip file with the modified contents
+                with zipfile.ZipFile(
+                    modified_zip_path, "w", zipfile.ZIP_DEFLATED
+                ) as zipf:
+                    for root, _, files in os.walk(temp_dir):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.relpath(file_path, temp_dir)
+                            zipf.write(file_path, arcname)
+
+                self.logger.info(f"Created modified zip file: {modified_zip_path}")
+
+                # Upload the modified zip
+                with open(modified_zip_path, "rb") as f:
+                    zip_content = f.read()
+
+                files = {
+                    "formData": (
+                        os.path.basename(modified_zip_path),
+                        zip_content,
+                        "application/zip",
+                    ),
+                }
+                data = {
+                    "overwrite": "true",
+                }
+
+                response = requests.post(
+                    f"{self.base_url}/api/v1/dashboard/import/",
+                    headers=self.get_headers(),
+                    cookies=self.get_cookies(),
+                    files=files,
+                    data=data,
+                )
+                response.raise_for_status()
+                return True
+
+            finally:
+                # Clean up temporary files
+                shutil.rmtree(temp_dir)
+                if os.path.exists(modified_zip_path):
+                    os.remove(modified_zip_path)
 
         except Exception as e:
             self.logger.error(f"Error importing dashboard from zip: {str(e)}")
@@ -538,6 +686,29 @@ class SupersetClient:
 
         return dashboards
 
+    def _fetch_dataset_ids(self):
+        """
+        Fetch all dataset ids from Superset
+
+        Returns:
+            list: List of dataset IDs
+        """
+        if not self.access_token:
+            self.logger.error("Failed to authenticate to Superset")
+            return []
+
+        self.logger.info("Fetching dataset IDs from Superset")
+        datasets_response = requests.get(
+            f"{self.base_url}/api/v1/dataset/",
+            headers=self.get_headers(),
+            cookies=self.get_cookies(),
+        )
+        datasets_response.raise_for_status()
+        datasets = datasets_response.json()["result"]
+        self.dataset_ids = [dataset["id"] for dataset in datasets]
+        self.logger.info(f"Fetched {len(self.dataset_ids)} dataset IDs")
+        return self.dataset_ids
+
     def get_guest_token(self, dashboard_id: str, tenant_id: str):
         """
         Get a guest token for a dashboard
@@ -552,12 +723,15 @@ class SupersetClient:
             self.logger.error("Failed to authenticate to Superset")
             return None
 
-        dataset_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        # fetch the dataset ids
+        if not self.dataset_ids:
+            self._fetch_dataset_ids()
+
         rls = []
-        for dataset_id in dataset_ids:
+        for dataset_id in self.dataset_ids:
             rls.append(
                 {
-                    "clause": "tenant_id = 'k22p'",
+                    "clause": f"tenant_id = '{tenant_id}'",
                     "dataset": dataset_id,
                 }
             )
