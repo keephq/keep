@@ -288,6 +288,14 @@ class Alert(SQLModel, table=True):
         }
     )
 
+    alert_instance_enrichment: "AlertEnrichment" = Relationship(
+        sa_relationship_kwargs={
+            "primaryjoin": "and_(cast(Alert.id, String) == foreign(AlertEnrichment.alert_fingerprint), Alert.tenant_id == AlertEnrichment.tenant_id)",
+            "uselist": False,
+            "viewonly": True,
+        },
+    )
+
     _incidents: List[Incident] = PrivateAttr(default_factory=list)
 
     __table_args__ = (
