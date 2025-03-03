@@ -1,19 +1,22 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { embedDashboard, EmbeddedDashboard } from "@superset-ui/embedded-sdk";
 import { useSupersetToken } from "@/utils/hooks/useSupersetToken";
 import { Loader2 } from "lucide-react";
 import { useSupersetDashboards } from "@/utils/hooks/useSupersetDashboards";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface SupersetDashboardProps {
   dashboardId: string;
 }
 
 export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
+  const { data: config } = useConfig();
   const { token, isLoading, error } = useSupersetToken({ dashboardId });
   const containerRef = useRef<HTMLDivElement>(null);
   const dashboardRef = useRef<EmbeddedDashboard | null>(null);
+  const [authError, setAuthError] = useState<boolean>(false);
   const {
     dashboards,
     error: dashboardError,
@@ -21,6 +24,13 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
   } = useSupersetDashboards();
 
   const embeddedId = dashboards.find((d) => d.id === dashboardId)?.uuid;
+
+  useEffect(() => {
+    if (authError) {
+      // Refresh the page if we detect an auth error
+      window.location.reload();
+    }
+  }, [authError]);
 
   useEffect(() => {
     if (!token || !containerRef.current || dashboardRef.current) return;
@@ -32,7 +42,9 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
       try {
         const dashboard = await embedDashboard({
           id: embeddedId!,
-          supersetDomain: "http://localhost:8088",
+          // if no config.KEEP_SUPERSET_URL, the navbar will not render the menu anyway
+          // so we don't need to check for it here
+          supersetDomain: config?.KEEP_SUPERSET_URL!,
           mountPoint,
           fetchGuestToken: () => Promise.resolve(token),
           dashboardUiConfig: {
@@ -54,6 +66,14 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
         }
       } catch (err) {
         console.error("Error embedding dashboard:", err);
+        // Check if the error is a SupersetApiError with "Not authorized" message
+        if (
+          err instanceof Error &&
+          err.message.includes("SupersetApiError: Not authorized")
+        ) {
+          console.log("Token expired, refreshing page...");
+          setAuthError(true);
+        }
       }
     };
 
@@ -64,7 +84,7 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
         dashboardRef.current = null;
       }
     };
-  }, [token, embeddedId]);
+  }, [token, embeddedId, authError]);
 
   if (isLoading) {
     return (

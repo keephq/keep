@@ -65,5 +65,6 @@ export function getConfig(): InternalConfig {
     KEEP_DOCS_URL: process.env.KEEP_DOCS_URL || "https://docs.keephq.dev",
     KEEP_CONTACT_US_URL:
       process.env.KEEP_CONTACT_US_URL || "https://slack.keephq.dev/",
+    KEEP_SUPERSET_URL: process.env.KEEP_SUPERSET_URL || "http://localhost:8088",
   };
 }

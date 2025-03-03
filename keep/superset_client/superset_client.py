@@ -14,12 +14,13 @@ class SupersetClient:
         self, base_url: str = None, username: str = None, password: str = None
     ):
         self.base_url = base_url or config(
-            "SUPERSET_URL", default="http://localhost:8088"
+            "KEEP_SUPERSET_URL", default="http://localhost:8088"
         )
-        self.username = username or config("SUPERSET_USER", default="admin")
-        self.password = password or config("SUPERSET_PASSWORD", default="admin")
+        self.username = username or config("KEEP_SUPERSET_USER", default="admin")
+        self.password = password or config("KEEP_SUPERSET_PASSWORD", default="admin")
         self.dashboards_templates_dir = config(
-            "SUPERSET_DASHBOARDS_TEMPLATES_DIR", default="superset/dashboards"
+            "KEEP_KEEP_SUPERSET_URLSUPERSET_DASHBOARDS_TEMPLATES_DIR",
+            default="superset/dashboards",
         )
         self._access_token = None
         self._token_expiry = 0  # Unix timestamp when token expires
@@ -537,7 +538,7 @@ class SupersetClient:
 
         return dashboards
 
-    def get_guest_token(self, dashboard_id: str):
+    def get_guest_token(self, dashboard_id: str, tenant_id: str):
         """
         Get a guest token for a dashboard
 
@@ -551,6 +552,15 @@ class SupersetClient:
             self.logger.error("Failed to authenticate to Superset")
             return None
 
+        dataset_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        rls = []
+        for dataset_id in dataset_ids:
+            rls.append(
+                {
+                    "clause": "tenant_id = 'k22p'",
+                    "dataset": dataset_id,
+                }
+            )
         response = requests.post(
             f"{self.base_url}/api/v1/security/guest_token/",
             headers=self.get_headers(),
@@ -558,7 +568,7 @@ class SupersetClient:
             json={
                 "user": {"username": "apiuser"},
                 "resources": [{"type": "dashboard", "id": dashboard_id}],
-                "rls": [],
+                "rls": rls,
             },
         )
         response.raise_for_status()

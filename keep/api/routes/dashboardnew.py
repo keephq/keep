@@ -112,7 +112,9 @@ def get_guest_token_route(
 ):
     """Get a guest token for a specific dashboard"""
     try:
-        guest_token = superset_client.get_guest_token(dashboard_id)
+        guest_token = superset_client.get_guest_token(
+            dashboard_id, authenticated_entity.tenant_id
+        )
         return GuestTokenResponse(token=guest_token)
     except Exception as e:
         logger.error(f"Failed to generate guest token: {str(e)}")
