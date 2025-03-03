@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-table";
 import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
-import { AlertName, AlertImage } from "@/entities/alerts/ui";
+import { AlertName } from "@/entities/alerts/ui";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
@@ -19,7 +19,6 @@ import {
   MdOutlineNotificationsOff,
 } from "react-icons/md";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
-import TimeAgo from "react-timeago";
 import { useConfig } from "utils/hooks/useConfig";
 import {
   TableIndeterminateCheckbox,
@@ -400,22 +399,15 @@ export const useAlertTableCols = (
       header: "Name",
       enableGrouping: true,
       enableResizing: true,
-      getGroupingValue: (row) => {
-        console.log("Grouping value for row:", row.name);
-        return row.name;
-      },
+      getGroupingValue: (row) => row.name,
       cell: (context) => (
         <div className="w-full">
-          <AlertName
-            alert={context.row.original}
-            setNoteModalAlert={setNoteModalAlert}
-            setTicketModalAlert={setTicketModalAlert}
-          />
+          <AlertName alert={context.row.original} className="flex-grow" />
         </div>
       ),
       meta: {
         tdClassName: "!pl-0 w-full",
-        thClassName: "!pl-1 w-full", // Small padding for header text only
+        thClassName: "!pl-1 w-full",
       },
     }),
     columnHelper.accessor("description", {
@@ -515,8 +507,8 @@ export const useAlertTableCols = (
       ? [
           columnHelper.display({
             id: "alertMenu",
-            minSize: 40,
-            maxSize: 48,
+            minSize: 76,
+            maxSize: 84,
             cell: (context) => (
               <div className="flex justify-end">
                 <AlertMenu
@@ -525,6 +517,8 @@ export const useAlertTableCols = (
                   setRunWorkflowModalAlert={setRunWorkflowModalAlert}
                   setDismissModalAlert={setDismissModalAlert}
                   setChangeStatusAlert={setChangeStatusAlert}
+                  setTicketModalAlert={setTicketModalAlert}
+                  setNoteModalAlert={setNoteModalAlert}
                 />
               </div>
             ),

@@ -228,6 +228,8 @@ def __save_to_db(
                 )
                 session.add(audit)
 
+            session.commit()
+            session.flush()
             set_last_alert(tenant_id, alert, session=session)
 
             # Mapping

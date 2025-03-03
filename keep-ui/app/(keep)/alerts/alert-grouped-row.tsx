@@ -1,13 +1,11 @@
-import { TableRow, TableCell, Icon } from "@tremor/react";
+import { TableRow, TableCell } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
 import { Table, flexRender, Row } from "@tanstack/react-table";
-import { ChevronDownIcon, EyeIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import { useState } from "react";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
-import { ViewedAlert } from "./alert-table";
 import { RowStyle } from "./RowStyleSelection";
-import { format } from "date-fns";
 import { getRowClassName, getCellClassName } from "./alert-table-utils";
 
 interface GroupedRowProps {
@@ -15,7 +13,6 @@ interface GroupedRowProps {
   table: Table<AlertDto>;
   theme: Record<string, string>;
   onRowClick?: (e: React.MouseEvent, alert: AlertDto) => void;
-  viewedAlerts: ViewedAlert[];
   lastViewedAlert: string | null;
   rowStyle: RowStyle;
 }
@@ -25,7 +22,6 @@ export const GroupedRow = ({
   table,
   theme,
   onRowClick,
-  viewedAlerts,
   lastViewedAlert,
   rowStyle,
 }: GroupedRowProps) => {
@@ -66,9 +62,6 @@ export const GroupedRow = ({
         {/* Child Rows */}
         {isExpanded &&
           row.subRows.map((subRow) => {
-            const viewedAlert = viewedAlerts?.find(
-              (a) => a.fingerprint === subRow.original.fingerprint
-            );
             const isLastViewed =
               subRow.original.fingerprint === lastViewedAlert;
 
@@ -102,25 +95,9 @@ export const GroupedRow = ({
                       )}
                       style={style}
                     >
-                      {viewedAlert && cell.column.id === "alertMenu" ? (
-                        <div className="flex justify-end items-center gap-2">
-                          <Icon
-                            icon={EyeIcon}
-                            tooltip={`Viewed ${format(
-                              new Date(viewedAlert.viewedAt),
-                              "MMM d, yyyy HH:mm"
-                            )}`}
-                          />
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </div>
-                      ) : (
-                        flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
                       )}
                     </TableCell>
                   );
@@ -133,9 +110,6 @@ export const GroupedRow = ({
   }
 
   // Regular non-grouped row
-  const viewedAlert = viewedAlerts?.find(
-    (a) => a.fingerprint === row.original.fingerprint
-  );
   const isLastViewed = row.original.fingerprint === lastViewedAlert;
 
   return (
@@ -163,20 +137,7 @@ export const GroupedRow = ({
             )}
             style={style}
           >
-            {viewedAlert && cell.column.id === "alertMenu" ? (
-              <div className="flex justify-end items-center gap-2">
-                <Icon
-                  icon={EyeIcon}
-                  tooltip={`Viewed ${format(
-                    new Date(viewedAlert.viewedAt),
-                    "MMM d, yyyy HH:mm"
-                  )}`}
-                />
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </div>
-            ) : (
-              flexRender(cell.column.columnDef.cell, cell.getContext())
-            )}
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </TableCell>
         );
       })}

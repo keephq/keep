@@ -72,11 +72,7 @@ export default function AlertPaginationServerSide({
     }
 
     // If switching from default to dense, and current page size is the default (20)
-    if (
-      rowStyle === "dense" &&
-      previousRowStyle === "default" &&
-      currentPageSize === 20
-    ) {
+    if (rowStyle === "dense" && currentPageSize === 20) {
       table.setPageSize(50);
     }
     // If switching from dense to default, and current page size is 50 (the dense default)

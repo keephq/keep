@@ -405,11 +405,9 @@ export function AlertTable({
                     <AlertsTableBody
                       table={table}
                       showSkeleton={showSkeleton}
-                      showEmptyState={showEmptyState}
                       theme={theme}
                       onRowClick={handleRowClick}
                       presetName={presetName}
-                      viewedAlerts={viewedAlerts}
                       lastViewedAlert={lastViewedAlert}
                     />
                   </Table>
