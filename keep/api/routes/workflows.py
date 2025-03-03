@@ -363,6 +363,8 @@ def run_workflow(
 
             try:
                 event = event_class(**event_body)
+                if isinstance(event, IncidentDto):
+                    event._tenant_id = tenant_id
             except TypeError:
                 raise HTTPException(
                     status_code=400,

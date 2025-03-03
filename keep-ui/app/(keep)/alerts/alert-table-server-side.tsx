@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Table, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
-import {
-  AlertDto,
-  reverseSeverityMapping,
-  Severity,
-  Status,
-} from "@/entities/alerts/model";
+import { AlertDto, reverseSeverityMapping } from "@/entities/alerts/model";
 import {
   getCoreRowModel,
   useReactTable,
@@ -52,6 +47,7 @@ import { AlertsQuery } from "@/utils/hooks/useAlerts";
 import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
 import { ViewedAlert } from "./alert-table";
+import { TimeFormatOption } from "./alert-table-time-format";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -63,6 +59,13 @@ interface PresetTab {
   filter: string;
   id?: string;
 }
+
+interface Tab {
+  name: string;
+  filter: (alert: AlertDto) => boolean;
+  id?: string;
+}
+
 interface Props {
   refreshToken: string | null;
   alerts: AlertDto[];
@@ -122,7 +125,9 @@ export function AlertTableServerSide({
   const [dateRangeCel, setDateRangeCel] = useState<string>("");
   const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
-
+  const [columnTimeFormats, setColumnTimeFormats] = useLocalStorage<
+    Record<string, TimeFormatOption>
+  >(`column-time-formats-${presetName}`, {});
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
@@ -167,7 +172,7 @@ export function AlertTableServerSide({
     pageSize: 20,
   });
 
-  const [viewedAlerts, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
+  const [, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
     `viewed-alerts-${presetName}`,
     []
   );
@@ -228,14 +233,14 @@ export function AlertTableServerSide({
     onReload && onReload(alertsQueryRef.current as AlertsQuery);
   }, [alertsQuery, onReload]);
 
-  const [tabs, setTabs] = useState([
-    { name: "All", filter: (alert: AlertDto) => true },
+  const [tabs, setTabs] = useState<Tab[]>([
+    { name: "All", filter: () => true },
     ...presetTabs.map((tab) => ({
       name: tab.name,
       filter: (alert: AlertDto) => evalWithContext(alert, tab.filter),
       id: tab.id,
     })),
-    { name: "+", filter: (alert: AlertDto) => true }, // a special tab to add new tabs
+    { name: "+", filter: () => true },
   ]);
 
   const [selectedTab, setSelectedTab] = useState(0);
@@ -265,6 +270,10 @@ export function AlertTableServerSide({
         pageIndex: paginationState.pageIndex,
         pageSize: paginationState.pageSize,
       },
+    },
+    meta: {
+      columnTimeFormats: columnTimeFormats,
+      setColumnTimeFormats: setColumnTimeFormats,
     },
     enableGrouping: true,
     manualSorting: true,
@@ -300,7 +309,6 @@ export function AlertTableServerSide({
 
   let showSkeleton = isAsyncLoading;
   const isTableEmpty = table.getPageCount() === 0;
-  let showEmptyState = !alertsQuery.cel && isTableEmpty && !isAsyncLoading;
   const showFilterEmptyState = isTableEmpty && !!filterCel;
   const showSearchEmptyState =
     isTableEmpty && !!searchCel && !showFilterEmptyState;
@@ -462,7 +470,7 @@ export function AlertTableServerSide({
     // Add h-screen to make it full height and remove the default flex-col gap
     <div className="h-screen flex flex-col gap-4">
       {/* Add padding to account for any top nav/header */}
-      <div className="px-4 flex-none">
+      <div className="flex-none">
         <TitleAndFilters
           table={table}
           alerts={alerts}
@@ -475,7 +483,7 @@ export function AlertTableServerSide({
       </div>
 
       {/* Make actions/presets section fixed height */}
-      <div className="h-14 px-4 flex-none">
+      <div className="h-14 flex-none">
         {selectedRowIds.length ? (
           <AlertActions
             selectedRowIds={selectedRowIds}
@@ -496,9 +504,8 @@ export function AlertTableServerSide({
         )}
       </div>
 
-      {/* Main content area - uses flex-grow to fill remaining space */}
-      <div className="flex-grow px-4 pb-4">
-        <div className="h-full flex gap-6">
+      <div className="pb-4">
+        <div className="flex gap-6">
           {/* Facets sidebar */}
           <div className="w-33 min-w-[12rem] overflow-y-auto">
             <FacetsPanelServerSide
@@ -515,8 +522,8 @@ export function AlertTableServerSide({
           </div>
 
           {/* Table section */}
-          <div className="flex-1 flex flex-col min-w-0">
-            <Card className="h-full flex flex-col p-0 overflow-x-auto">
+          <div className="flex-1 flex flex-col min-w-0 gap-4">
+            <Card className="flex flex-col p-0 overflow-x-auto">
               <div className="flex-grow flex flex-col">
                 {!presetStatic && (
                   <div className="flex-none">
@@ -540,15 +547,15 @@ export function AlertTableServerSide({
                       table={table}
                       presetName={presetName}
                       a11yContainerRef={a11yContainerRef}
+                      columnTimeFormats={columnTimeFormats}
+                      setColumnTimeFormats={setColumnTimeFormats}
                     />
                     <AlertsTableBody
                       table={table}
                       showSkeleton={showSkeleton}
-                      showEmptyState={showEmptyState}
                       showFilterEmptyState={showFilterEmptyState}
                       showSearchEmptyState={showSearchEmptyState}
                       theme={theme}
-                      viewedAlerts={viewedAlerts}
                       lastViewedAlert={lastViewedAlert}
                       onRowClick={handleRowClick}
                       onClearFiltersClick={() => setClearFiltersToken(uuidV4())}
@@ -558,20 +565,19 @@ export function AlertTableServerSide({
                 </div>
               </div>
             </Card>
+            {/* Pagination footer - fixed height */}
+            <div className="h-16 flex-none">
+              <AlertPaginationServerSide
+                table={table}
+                isRefreshing={isAsyncLoading}
+                isRefreshAllowed={isRefreshAllowed}
+                onRefresh={() =>
+                  onReload && onReload(alertsQueryRef.current as AlertsQuery)
+                }
+              />
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Pagination footer - fixed height */}
-      <div className="h-16 px-4 flex-none pl-[14rem]">
-        <AlertPaginationServerSide
-          table={table}
-          isRefreshing={isAsyncLoading}
-          isRefreshAllowed={isRefreshAllowed}
-          onRefresh={() =>
-            onReload && onReload(alertsQueryRef.current as AlertsQuery)
-          }
-        />
       </div>
 
       <AlertSidebar

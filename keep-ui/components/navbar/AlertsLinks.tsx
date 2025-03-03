@@ -80,10 +80,10 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
       <Disclosure as="div" className="space-y-1" defaultOpen>
         {({ open }) => (
           <>
-            <Disclosure.Button className="w-full flex justify-between items-center p-2">
+            <Disclosure.Button className="w-full flex justify-between items-center px-2">
               <div className="flex items-center relative group">
                 <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
-                  ALERTS
+                  Alerts
                 </Subtitle>
                 <FiFilter
                   className={clsx(
@@ -108,10 +108,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               />
             </Disclosure.Button>
 
-            <Disclosure.Panel
-              as="ul"
-              className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4"
-            >
+            <Disclosure.Panel as="ul" className="space-y-2 overflow-auto px-2">
               {shouldShowFeed && (
                 <li>
                   <LinkWithIcon

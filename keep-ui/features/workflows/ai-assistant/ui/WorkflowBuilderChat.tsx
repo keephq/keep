@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Provider } from "@/shared/api/providers";
 import {
   DefinitionV2,
@@ -40,6 +40,7 @@ import {
 } from "@/features/workflows/ai-assistant/lib/utils";
 import { AddTriggerOrStepSkeleton } from "@/features/workflows/ai-assistant/ui/AddTriggerOrStepSkeleton";
 import { foreachTemplate, getTriggerTemplate } from "../../builder/lib/utils";
+import { capture } from "@/shared/lib/capture";
 import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
 export interface WorkflowBuilderChatProps {
@@ -1038,6 +1039,10 @@ Example: 'node_123__empty_true'`,
   //   },
   // });
 
+  const handleSubmitMessage = useCallback((_message: string) => {
+    capture("workflow_chat_message_submitted");
+  }, []);
+
   const [debugInfoVisible, setDebugInfoVisible] = useState(false);
   const chatInstructions =
     GENERAL_INSTRUCTIONS +
@@ -1045,8 +1050,9 @@ Example: 'node_123__empty_true'`,
       Then asked to create a complete workflow, you break down the workflow into steps, outline the steps, show them to user, and then iterate over the steps one by one, generate step definition, show it to user to decide if they want to add them to the workflow.`;
 
   return (
+    // using 'workflow-chat' class to apply styles only to that chat component
     <div
-      className="flex flex-col h-full max-h-screen grow-0 overflow-auto"
+      className="flex flex-col h-full max-h-screen grow-0 overflow-auto workflow-chat"
       style={
         {
           "--copilot-kit-primary-color":
@@ -1091,6 +1097,7 @@ Example: 'node_123__empty_true'`,
             "For example: For each alert about CPU > 80%, send a slack message to the channel #alerts",
         }}
         className="h-full flex-1"
+        onSubmitMessage={handleSubmitMessage}
       />
     </div>
   );

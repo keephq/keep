@@ -41,6 +41,11 @@ import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import { DropdownMenu } from "@/shared/ui";
 import { DEFAULT_COLS_VISIBILITY } from "./alert-table-utils";
+import {
+  isDateTimeColumn,
+  TimeFormatOption,
+  createTimeFormatMenuItems,
+} from "./alert-table-time-format";
 
 interface DraggableHeaderCellProps {
   header: Header<AlertDto, unknown>;
@@ -49,6 +54,8 @@ interface DraggableHeaderCellProps {
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
+  columnTimeFormats: Record<string, TimeFormatOption>;
+  setColumnTimeFormats: (formats: Record<string, TimeFormatOption>) => void;
 }
 
 const DraggableHeaderCell = ({
@@ -58,6 +65,8 @@ const DraggableHeaderCell = ({
   children,
   className,
   style,
+  columnTimeFormats,
+  setColumnTimeFormats,
 }: DraggableHeaderCellProps) => {
   const { column, getResizeHandler } = header;
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
@@ -107,8 +116,8 @@ const DraggableHeaderCell = ({
       column.id === "checkbox"
         ? "32px !important"
         : column.id === "source"
-        ? "40px !important"
-        : column.getSize(),
+          ? "40px !important"
+          : column.getSize(),
     opacity: isDragging ? 0.5 : 1,
     transform: CSS.Translate.toString(transform),
     transition,
@@ -116,8 +125,8 @@ const DraggableHeaderCell = ({
       column.getIsPinned() !== false
         ? "default"
         : isDragging
-        ? "grabbing"
-        : "grab",
+          ? "grabbing"
+          : "grab",
   };
 
   // Hide menu for checkbox, source, severity and alertMenu columns
@@ -194,9 +203,11 @@ const DraggableHeaderCell = ({
       ref={setNodeRef}
     >
       <div
+        data-testid={`header-cell-${column.id}`}
         className={`flex items-center ${
           column.id === "checkbox" ? "justify-center" : "justify-between"
         }`}
+        onClick={column.getToggleSortingHandler()}
       >
         <div className="flex items-center" {...listeners} {...attributes}>
           {children}
@@ -215,8 +226,8 @@ const DraggableHeaderCell = ({
                   column.getNextSortingOrder() === "asc"
                     ? "Sort ascending"
                     : column.getNextSortingOrder() === "desc"
-                    ? "Sort descending"
-                    : "Clear sort"
+                      ? "Sort descending"
+                      : "Clear sort"
                 }
               >
                 {column.getIsSorted() ? (
@@ -252,6 +263,13 @@ const DraggableHeaderCell = ({
                   label="Sort descending"
                   onClick={() => column.toggleSorting(true)}
                 />
+                {isDateTimeColumn(column.id) &&
+                  createTimeFormatMenuItems(
+                    column.id,
+                    columnTimeFormats,
+                    setColumnTimeFormats,
+                    DropdownMenu
+                  )}
                 {column.getCanGroup() !== false && (
                   <DropdownMenu.Item
                     icon={ArrowsUpDownIcon}
@@ -343,6 +361,8 @@ interface Props {
   table: Table<AlertDto>;
   presetName: string;
   a11yContainerRef: RefObject<HTMLDivElement>;
+  columnTimeFormats: Record<string, TimeFormatOption>;
+  setColumnTimeFormats: (formats: Record<string, TimeFormatOption>) => void;
 }
 
 export default function AlertsTableHeaders({
@@ -350,6 +370,8 @@ export default function AlertsTableHeaders({
   table,
   presetName,
   a11yContainerRef,
+  columnTimeFormats,
+  setColumnTimeFormats,
 }: Props) {
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
@@ -402,7 +424,10 @@ export default function AlertsTableHeaders({
             container: a11yContainerRef.current ?? undefined,
           }}
         >
-          <TableRow key={headerGroup.id}>
+          <TableRow
+            key={headerGroup.id}
+            className="border-b border-tremor-border dark:border-dark-tremor-border"
+          >
             <SortableContext
               items={headerGroup.headers}
               strategy={horizontalListSortingStrategy}
@@ -420,8 +445,10 @@ export default function AlertsTableHeaders({
                     header={header}
                     table={table}
                     presetName={presetName}
-                    className={className}
+                    className={clsx(className, "py-2")}
                     style={style}
+                    columnTimeFormats={columnTimeFormats}
+                    setColumnTimeFormats={setColumnTimeFormats}
                   >
                     {header.isPlaceholder ? null : (
                       <div>

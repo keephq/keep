@@ -1764,6 +1764,7 @@ def update_rule(
     require_approve,
     resolve_on,
     create_on,
+    incident_name_template,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -1786,6 +1787,7 @@ def update_rule(
             rule.update_time = datetime.utcnow()
             rule.resolve_on = resolve_on
             rule.create_on = create_on
+            rule.incident_name_template = incident_name_template
             session.commit()
             session.refresh(rule)
             return rule
@@ -3539,7 +3541,9 @@ def update_incident_from_dto_by_id(
                         setattr(incident, key, value)
 
         if "same_incident_in_the_past_id" in updated_data:
-            incident.same_incident_in_the_past_id = updated_data["same_incident_in_the_past_id"]
+            incident.same_incident_in_the_past_id = updated_data[
+                "same_incident_in_the_past_id"
+            ]
 
         if generated_by_ai:
             incident.generated_summary = updated_incident_dto.user_summary
@@ -5062,15 +5066,19 @@ def set_last_alert(
                     logger.info(
                         f"No such savepoint while updating lastalert for `{alert.fingerprint}`, retry #{attempt}"
                     )
+                    session.rollback()
                     if attempt >= max_retries:
                         raise ex
+                    continue
 
                 if "Deadlock found" in ex.args[0]:
                     logger.info(
                         f"Deadlock found while updating lastalert for `{alert.fingerprint}`, retry #{attempt}"
                     )
+                    session.rollback()
                     if attempt >= max_retries:
                         raise ex
+                    continue
             except NoActiveSqlTransaction:
                 logger.exception(
                     f"No active sql transaction while updating lastalert for `{alert.fingerprint}`, retry #{attempt}",
@@ -5080,6 +5088,7 @@ def set_last_alert(
                         "fingerprint": alert.fingerprint,
                     },
                 )
+                continue
             logger.debug(
                 f"Successfully updated lastalert for `{alert.fingerprint}`",
                 extra={

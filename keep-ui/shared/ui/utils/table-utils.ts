@@ -11,8 +11,6 @@ export const getCommonPinningStylesAndClassNames = (
   const isPinned = column.getIsPinned();
   const isLastLeftPinnedColumn =
     isPinned === "left" && column.getIsLastColumn("left");
-  const isFirstRightPinnedColumn =
-    isPinned === "right" && column.getIsFirstColumn("right");
 
   const zIndex = (() => {
     if (isPinned === "left") {
@@ -39,11 +37,7 @@ export const getCommonPinningStylesAndClassNames = (
     className: clsx(
       "bg-tremor-background",
       isPinned ? "sticky" : "relative",
-      isLastLeftPinnedColumn
-        ? "animate-scroll-shadow-left"
-        : isFirstRightPinnedColumn
-          ? "animate-scroll-shadow-right"
-          : undefined
+      isLastLeftPinnedColumn ? "animate-scroll-shadow-left" : undefined
     ),
   };
 };
