@@ -176,6 +176,7 @@ export function IncidentList({
           reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
       },
       ["Status"]: {
+        uncheckedByDefaultOptionValues: ["resolved", "deleted"],
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={getStatusIcon(facetOption.display_name)}
@@ -288,10 +289,6 @@ export function IncidentList({
     );
   }
 
-  const uncheckedFacetOptionsByDefault: Record<string, string[]> = {
-    Status: ["resolved", "deleted"],
-  };
-
   const renderDateTimePicker = () => {
     return (
       <div className="flex justify-end">
@@ -363,9 +360,6 @@ export function IncidentList({
                   usePropertyPathsSuggestions={true}
                   clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}
-                  uncheckedByDefaultOptionValues={
-                    uncheckedFacetOptionsByDefault
-                  }
                   onCelChange={(cel) => setFilterCel(cel)}
                   revalidationToken={filterRevalidationToken}
                 />

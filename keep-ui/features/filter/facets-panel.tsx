@@ -97,7 +97,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   facetOptions,
   areFacetOptionsLoading = false,
   clearFiltersToken,
-  uncheckedByDefaultOptionValues,
   facetsConfig,
   onCelChange = undefined,
   onAddFacet = undefined,
@@ -127,10 +126,13 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
           ((facetOption: FacetOptionDto) => (
             <span className="capitalize">{facetOption.display_name}</span>
           ));
+        const uncheckedByDefaultOptionValues =
+          facetConfig?.uncheckedByDefaultOptionValues;
         result[facet.id] = {
           sortCallback,
           renderOptionIcon,
           renderOptionLabel,
+          uncheckedByDefaultOptionValues,
         };
       });
     }
@@ -141,15 +143,14 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   function getFacetState(facetId: string): Set<string> {
     if (
       !defaultStateHandledForFacetIds.has(facetId) &&
-      uncheckedByDefaultOptionValues &&
-      Object.keys(uncheckedByDefaultOptionValues).length
+      facetsConfigIdBased[facetId]?.uncheckedByDefaultOptionValues
     ) {
       const facetState = new Set<string>(...(facetsState[facetId] || []));
       const facet = facets.find((f) => f.id === facetId);
 
       if (facet) {
-        uncheckedByDefaultOptionValues[facet?.name]?.forEach((optionValue) =>
-          facetState.add(optionValue)
+        facetsConfigIdBased[facetId]?.uncheckedByDefaultOptionValues.forEach(
+          (optionValue) => facetState.add(optionValue)
         );
         defaultStateHandledForFacetIds.add(facetId);
       }
