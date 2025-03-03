@@ -778,6 +778,7 @@ def install_provider_webhook(
 @router.get("/{provider_type}/webhook")
 def get_webhook_settings(
     provider_type: str,
+    provider_id: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:providers"])
     ),
@@ -787,6 +788,10 @@ def get_webhook_settings(
     logger.info("Getting webhook settings", extra={"provider_type": provider_type})
     api_url = config("KEEP_API_URL")
     keep_webhook_api_url = f"{api_url}/alerts/event/{provider_type}"
+
+    if provider_id:
+        keep_webhook_api_url = f"{keep_webhook_api_url}?provider_id={provider_id}"
+
     provider_class = ProvidersFactory.get_provider_class(provider_type)
     webhook_api_key = get_or_create_api_key(
         session=session,

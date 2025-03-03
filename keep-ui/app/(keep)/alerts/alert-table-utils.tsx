@@ -402,7 +402,10 @@ export const useAlertTableCols = (
       getGroupingValue: (row) => row.name,
       cell: (context) => (
         <div className="w-full">
-          <AlertName alert={context.row.original} className="flex-grow" />
+          <AlertName
+            alert={context.row.original}
+            className="flex-grow"
+          />
         </div>
       ),
       meta: {
