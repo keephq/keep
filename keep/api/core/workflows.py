@@ -7,7 +7,7 @@ This module contains the CRUD database functions for Keep.
 from datetime import datetime, timedelta, timezone
 from typing import Tuple
 
-from sqlalchemy import and_, asc, desc, func, literal_column, select, text
+from sqlalchemy import and_, asc, case, desc, func, literal_column, select, text
 from sqlmodel import Session
 
 from keep.api.core.cel_to_sql.properties_metadata import (
@@ -86,6 +86,8 @@ def __build_base_query(
     columns_to_select = []
 
     for key, value in alias_column_mapping.items():
+        if key == "filter_status":
+            continue
         columns_to_select.append(f"{value} AS {key}")
     latest_executions_subquery = (
         select(
@@ -114,6 +116,13 @@ def __build_base_query(
             Workflow.id.label("entity_id"),
             # here it creates aliases for table columns that will be used in filtering and faceting
             text(",".join(columns_to_select)),
+            case(
+                (
+                    literal_column("status").isnot(None),
+                    literal_column("status"),
+                ),
+                else_="__null__",
+            ).label("filter_status"),
         )
         .outerjoin(
             latest_executions_subquery,
