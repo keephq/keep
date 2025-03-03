@@ -59,12 +59,11 @@ export function AlertsTableBody({
               />
             </div>
           </div>
-          {modalOpen && (
-            <PushAlertToServerModal
-              handleClose={handleModalClose}
-              presetName={presetName}
-            />
-          )}
+          <PushAlertToServerModal
+            isOpen={modalOpen}
+            handleClose={handleModalClose}
+            presetName={presetName}
+          />
         </>
       );
     }

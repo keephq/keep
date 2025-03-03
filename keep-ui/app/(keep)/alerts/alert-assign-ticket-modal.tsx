@@ -179,6 +179,7 @@ const AlertAssignTicketModal = ({
                 control={control}
                 rules={{ required: "Provider is required" }}
                 render={({ field }) => (
+                  // FIX: Select prevent modal from closing on Escape key
                   <Select
                     {...field}
                     options={customOptions}
