@@ -14,6 +14,10 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 import { useProviders } from "@/utils/hooks/useProviders";
 import AlertMenu from "./alert-menu";
 import { useConfig } from "@/utils/hooks/useConfig";
+import AlertSidebarPopover, {
+  ALERT_SIDEBAR_DEFAULT_COLS,
+} from "./AlertSidebarPopover";
+import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -52,6 +56,28 @@ const AlertSidebar = ({
     console.log("Refresh button clicked");
     await mutate();
   };
+
+  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>(
+    `alert-sidebar-visible-${alert?.fingerprint}`,
+    ALERT_SIDEBAR_DEFAULT_COLS
+  );
+
+  function capitalizeFirstLetter(str: string) {
+    if (!str) return str; // Handle empty strings
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  function getProperty<T extends Record<string, any>>(
+    obj: T,
+    path: string
+  ): any {
+    return path
+      .split(".")
+      .reduce(
+        (acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined),
+        obj
+      );
+  }
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -99,13 +125,14 @@ const AlertSidebar = ({
                       severity={alert.severity as unknown as UISeverity}
                     />
                   )}
-                  {alert?.name ? alert.name : "Alert Details"}
+
+                  <div className="flex flex-row items-center justify-between w-full">
+                    {alert?.name ? alert.name : "Alert Details"}
+                    <div className="font-normal text-base">
+                      <AlertSidebarPopover alert={alert} />
+                    </div>
+                  </div>
                 </Dialog.Title>
-              </div>
-              <div>
-                <Button onClick={toggle} variant="light">
-                  <IoMdClose className="h-6 w-6 text-gray-500" />
-                </Button>
               </div>
             </div>
             {alert && (
@@ -126,41 +153,47 @@ const AlertSidebar = ({
                       alt={alert.source![0]}
                       width={24}
                       height={24}
-                      className="inline-block w-6 h-6"
+                      className="inline-block w-6 h-6 mr-1"
                     />
                     {providerName}
                   </p>
-                  <p>
-                    <FieldHeader>Description</FieldHeader>
-                    <pre className="whitespace-pre-wrap">{alert.description}</pre>
-                  </p>
-                  <p>
-                    <FieldHeader className="flex items-center gap-1">
-                      Fingerprint
-                      <Tooltip
-                        content={
-                          <>
-                            Fingerprints are unique identifiers associated with
-                            alert instances in Keep. Each provider declares the
-                            fields fingerprints are calculated based on.{" "}
-                            <Link
-                              href={`${
-                                config?.KEEP_DOCS_URL ||
-                                "https://docs.keephq.dev"
-                              }/overview/fingerprints`}
-                              className="text-white"
-                            >
-                              Read more about it here.
-                            </Link>
-                          </>
-                        }
-                        className="z-50"
-                      >
-                        <QuestionMarkCircleIcon className="w-4 h-4" />
-                      </Tooltip>
-                    </FieldHeader>
-                    {alert.fingerprint}
-                  </p>
+                  {columnOrder.map((column) => (
+                    <p key={column}>
+                      <FieldHeader>
+                        {capitalizeFirstLetter(column)}
+                        {column === "fingerprint" ? (
+                          <Tooltip
+                            content={
+                              <>
+                                Fingerprints are unique identifiers associated
+                                with alert instances in Keep. Each provider
+                                declares the fields fingerprints are calculated
+                                based on.{" "}
+                                <Link
+                                  href={`${
+                                    config?.KEEP_DOCS_URL ||
+                                    "https://docs.keephq.dev"
+                                  }/overview/fingerprints`}
+                                  className="text-white"
+                                >
+                                  Read more about it here.
+                                </Link>
+                              </>
+                            }
+                            className="z-50"
+                          >
+                            <QuestionMarkCircleIcon className="w-4 h-4" />
+                          </Tooltip>
+                        ) : (
+                          <></>
+                        )}
+                      </FieldHeader>
+                      <pre className="whitespace-pre-wrap">
+                        {getProperty<AlertDto>(alert, column)?.toString() ??
+                          "——"}
+                      </pre>
+                    </p>
+                  ))}
                 </div>
                 <AlertTimeline
                   key={auditData ? auditData.length : 1}
