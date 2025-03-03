@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import time
+from typing import List
 from urllib.parse import urlparse
 
 import boto3
@@ -322,7 +323,12 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         return self._client
 
     def _query(
-        self, log_group: str = None, query: str = None, hours: int = 24, **kwargs: dict
+        self,
+        log_group: str = None,
+        log_groups: List[str] | None = None,
+        query: str = None,
+        hours: int = 24,
+        **kwargs: dict,
     ) -> dict:
         # log_group = kwargs.get("log_group")
         # query = kwargs.get("query")
@@ -331,6 +337,7 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         try:
             start_query_response = logs_client.start_query(
                 logGroupName=log_group,
+                logGroupNames=log_groups,
                 queryString=query,
                 startTime=int(
                     (
