@@ -5126,7 +5126,7 @@ def set_last_alert(
                     continue
 
                 if "Deadlock found" in ex.args[0]:
-                    logger.infoi(
+                    logger.info(
                         f"Deadlock found while updating lastalert for `{alert.fingerprint}`, retry #{attempt}"
                     )
                     session.rollback()
