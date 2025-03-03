@@ -121,7 +121,7 @@ def __build_base_query(
                     literal_column("status").isnot(None),
                     literal_column("status"),
                 ),
-                else_="__null__",
+                else_="",
             ).label("filter_status"),
         )
         .outerjoin(
