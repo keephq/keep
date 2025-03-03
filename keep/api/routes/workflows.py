@@ -61,7 +61,7 @@ PLATFORM_URL = config("KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
 
 @router.post(
     "/facets/options",
-    description="Query alert facet options. Accepts dictionary where key is facet id and value is cel to query facet",
+    description="Query workflows facet options. Accepts dictionary where key is facet id and value is cel to query facet",
 )
 def fetch_facet_options(
     facet_options_query: FacetOptionsQueryDto,
@@ -124,7 +124,7 @@ def fetch_facets(
 
 @router.get(
     "/facets/fields",
-    description="Get potential fields for alert facets",
+    description="Get potential fields for workflow facets",
 )
 def fetch_facet_fields(
     authenticated_entity: AuthenticatedEntity = Depends(
