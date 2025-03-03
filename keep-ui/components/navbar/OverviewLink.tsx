@@ -10,13 +10,19 @@ import clsx from "clsx";
 import { useSupersetDashboards } from "@/utils/hooks/useSupersetDashboards";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
 import { KeepApiError } from "@/shared/api";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 type OverviewLinksProps = { session: Session | null };
 
 export const OverviewLinks = ({ session }: OverviewLinksProps) => {
   const isMounted = useMounted();
   const { dashboards, isLoading, error } = useSupersetDashboards();
+  const { data: config } = useConfig();
 
+  // if config and not KEEP_SUPERSET_URL, we don't render the menu
+  if (config && !config.KEEP_SUPERSET_URL) {
+    return null;
+  }
   // Don't render the menu at all if there's a KeepApiError
   // which means the backend doesn't work with dashboards
   if (error instanceof KeepApiError) {

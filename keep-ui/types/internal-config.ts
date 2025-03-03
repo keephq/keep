@@ -31,4 +31,7 @@ export interface InternalConfig {
 
   // Keep Contact Us
   KEEP_CONTACT_US_URL: string;
+
+  // Keep Superset URL
+  KEEP_SUPERSET_URL?: string;
 }
