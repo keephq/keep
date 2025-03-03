@@ -1,6 +1,6 @@
 import { AlertDto } from "@/entities/alerts/model"; // Adjust the import path as needed
 import Modal from "@/components/ui/Modal"; // Ensure this path matches your project structure
-import { Button, Switch, Text } from "@tremor/react";
+import { Button, Subtitle, Switch, Text } from "@tremor/react";
 import { toast } from "react-toastify";
 import "./ViewAlertModal.css";
 import React, { useState, useRef, useEffect } from "react";
@@ -160,12 +160,13 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
       className="overflow-visible max-w-[800px]"
     >
       <div className="flex justify-between items-center mb-4 min-w-full">
-        <h2 className="text-lg font-semibold">Alert Details</h2>
+        <div className="flex flex-col flex-1">
+          <Text className="text-sm text-gray-500">{alert?.name}</Text>
+          <h2 className="text-lg font-semibold">Alert Payload</h2>
+        </div>
         <div className="flex gap-x-2">
-          {" "}
-          {/* Adjust gap as needed */}
           <div className="placeholder-resizing min-w-48"></div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 pr-2">
             <Switch
               color="orange"
               id="showHighlightedOnly"

@@ -131,7 +131,13 @@ export default function AlertDismissModal({
   };
 
   return (
-    <Modal onClose={clearAndClose} isOpen={isOpen} className="overflow-visible">
+    <Modal
+      onClose={clearAndClose}
+      isOpen={isOpen}
+      className="overflow-visible"
+      beforeTitle={alerts?.[0]?.name}
+      title="Dismiss Alert"
+    >
       {alerts && alerts.length == 1 && alerts[0].dismissed ? (
         <>
           <Subtitle className="text-center">
@@ -148,6 +154,7 @@ export default function AlertDismissModal({
           <TabGroup
             index={selectedTab}
             onIndexChange={(index: number) => handleTabChange(index)}
+            className="mb-4"
           >
             <TabList>
               <Tab>Dismiss Forever</Tab>
@@ -192,13 +199,18 @@ export default function AlertDismissModal({
             </TabPanels>
           </TabGroup>
           <Title>Dismiss Comment</Title>
-          <ReactQuill
-            value={dismissComment}
-            onChange={(value: string) => setDismissComment(value)}
-            theme="snow"
-            placeholder="Add your dismiss comment here..."
-          />
-          <div className="mt-4 flex justify-end space-x-2">
+          <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+            <ReactQuill
+              value={dismissComment}
+              onChange={(value: string) => setDismissComment(value)}
+              theme="snow"
+              placeholder="Add your dismiss comment here..."
+            />
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="secondary" color="orange" onClick={clearAndClose}>
+              Cancel
+            </Button>
             <Button onClick={handleDismissChange} color="orange">
               Dismiss
             </Button>

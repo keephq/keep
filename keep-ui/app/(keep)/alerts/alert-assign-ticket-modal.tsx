@@ -157,9 +157,10 @@ const AlertAssignTicketModal = ({
       isOpen={isOpen}
       onClose={handleModalClose}
       title="Assign Ticket"
+      beforeTitle={alert?.name}
       className="w-[400px]"
     >
-      <div className="relative bg-white p-6 rounded-lg">
+      <div className="relative bg-white rounded-lg">
         {ticketingProviders.length > 0 ? (
           <form onSubmit={handleSubmit(onSubmit)} className="mt-4">
             <div className="mt-4">
@@ -220,16 +221,21 @@ const AlertAssignTicketModal = ({
                 )}
               />
             </div>
-            <div className="mt-6 flex gap-2">
-              <Button color="orange" type="submit" disabled={isSubmitting}>
-                <Text>Assign Ticket</Text>
-              </Button>
+            <div className="mt-6 flex gap-2 justify-end">
               <Button
                 onClick={handleModalClose}
                 variant="secondary"
-                className="border border-orange-500 text-orange-500"
+                color="orange"
               >
-                <Text>Cancel</Text>
+                Cancel
+              </Button>
+              <Button
+                color="orange"
+                variant="primary"
+                type="submit"
+                disabled={isSubmitting}
+              >
+                Assign Ticket
               </Button>
             </div>
           </form>
