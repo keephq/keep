@@ -21,7 +21,7 @@ class KubernetesProviderAuthConfig:
             "description": "The kubernetes api server url",
             "required": True,
             "sensitive": False,
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         },
     )
     token: str = dataclasses.field(
@@ -40,7 +40,7 @@ class KubernetesProviderAuthConfig:
             "description": "Skip TLS verification",
             "required": False,
             "sensitive": False,
-            "type": "switch"
+            "type": "switch",
         },
     )
 
@@ -112,31 +112,178 @@ class KubernetesProvider(BaseProvider):
 
         return scopes
 
-    def _notify(
-        self,
-        action: str,
-        kind: str,
-        object_name: str,
-        namespace: str,
-        labels: str,
-        **kwargs,
-    ):
-        if labels is None:
-            labels = []
+    def _query(self, command_type: str, **kwargs):
+        """
+        Query Kubernetes resources.
+        """
+        api_client = self.__create_k8s_client()
+
+        if command_type == "get_logs":
+            return self.__get_logs(api_client, **kwargs)
+        elif command_type == "get_events":
+            return self.__get_events(api_client, **kwargs)
+        elif command_type == "get_pods":
+            return self.__get_pods(api_client, **kwargs)
+        elif command_type == "get_node_pressure":
+            return self.__get_node_pressure(api_client, **kwargs)
+        elif command_type == "get_pvc":
+            return self.__get_pvc(api_client, **kwargs)
+        else:
+            raise NotImplementedError(f"Command type {command_type} is not implemented")
+
+    def _notify(self, action: str, **kwargs):
+        """
+        Perform actions on Kubernetes resources.
+        """
         if action == "rollout_restart":
-            self.__rollout_restart(
-                kind=kind, name=object_name, namespace=namespace, labels=labels
-            )
-        elif action == "list_pods":
-            self.__list_pods(namespace=namespace, labels=labels)
+            return self.__rollout_restart(**kwargs)
+        elif action == "restart_pod":
+            return self.__restart_pod(**kwargs)
         else:
             raise NotImplementedError(f"Action {action} is not implemented")
 
-    def __rollout_restart(self, kind, name, namespace, labels):
+    def __get_logs(
+        self,
+        api_client,
+        namespace,
+        pod_name,
+        container_name=None,
+        tail_lines=100,
+        **kwargs,
+    ):
+        """
+        Get logs from a pod.
+        """
+        self.logger.info(f"Getting logs for pod {pod_name} in namespace {namespace}")
+        core_v1 = client.CoreV1Api(api_client)
+
+        try:
+            logs = core_v1.read_namespaced_pod_log(
+                name=pod_name,
+                namespace=namespace,
+                container=container_name,
+                tail_lines=tail_lines,
+                pretty=True,
+            )
+            return logs.splitlines()
+        except ApiException as e:
+            self.logger.error(f"Error getting logs for pod {pod_name}: {e}")
+            raise Exception(f"Error getting logs for pod {pod_name}: {e}")
+
+    def __get_events(self, api_client, namespace, pod_name=None, **kwargs):
+        """
+        Get events for a namespace or specific pod.
+        """
+        self.logger.info(
+            f"Getting events in namespace {namespace}"
+            + (f" for pod {pod_name}" if pod_name else "")
+        )
+
+        core_v1 = client.CoreV1Api(api_client)
+
+        try:
+            if pod_name:
+                # Get the pod to find its UID
+                pod = core_v1.read_namespaced_pod(name=pod_name, namespace=namespace)
+                field_selector = f"involvedObject.kind=Pod,involvedObject.name={pod_name},involvedObject.uid={pod.metadata.uid}"
+            else:
+                field_selector = f"metadata.namespace={namespace}"
+
+            events = core_v1.list_namespaced_event(
+                namespace=namespace,
+                field_selector=field_selector,
+                sort_by="lastTimestamp",
+            )
+
+            # Convert events to dict
+            return [event.to_dict() for event in events.items]
+        except ApiException as e:
+            self.logger.error(f"Error getting events: {e}")
+            raise Exception(f"Error getting events: {e}")
+
+    def __get_pods(self, api_client, namespace=None, label_selector=None, **kwargs):
+        """
+        List pods in a namespace or across all namespaces.
+        """
+        core_v1 = client.CoreV1Api(api_client)
+
+        try:
+            if namespace:
+                self.logger.info(f"Listing pods in namespace {namespace}")
+                pods = core_v1.list_namespaced_pod(
+                    namespace=namespace, label_selector=label_selector
+                )
+            else:
+                self.logger.info("Listing pods across all namespaces")
+                pods = core_v1.list_pod_for_all_namespaces(
+                    label_selector=label_selector
+                )
+
+            return [pod.to_dict() for pod in pods.items]
+        except ApiException as e:
+            self.logger.error(f"Error listing pods: {e}")
+            raise Exception(f"Error listing pods: {e}")
+
+    def __get_node_pressure(self, api_client, **kwargs):
+        """
+        Get node pressure conditions (Memory, Disk, PID).
+        """
+        self.logger.info("Getting node pressure conditions")
+        core_v1 = client.CoreV1Api(api_client)
+
+        try:
+            nodes = core_v1.list_node(watch=False)
+            node_pressures = []
+
+            for node in nodes.items:
+                pressures = {
+                    "name": node.metadata.name,
+                    "conditions": [],
+                }
+                for condition in node.status.conditions:
+                    if condition.type in [
+                        "MemoryPressure",
+                        "DiskPressure",
+                        "PIDPressure",
+                    ]:
+                        pressures["conditions"].append(condition.to_dict())
+                node_pressures.append(pressures)
+
+            return node_pressures
+        except ApiException as e:
+            self.logger.error(f"Error getting node pressures: {e}")
+            raise Exception(f"Error getting node pressures: {e}")
+
+    def __get_pvc(self, api_client, namespace=None, **kwargs):
+        """
+        List persistent volume claims in a namespace or across all namespaces.
+        """
+        core_v1 = client.CoreV1Api(api_client)
+
+        try:
+            if namespace:
+                self.logger.info(f"Listing PVCs in namespace {namespace}")
+                pvcs = core_v1.list_namespaced_persistent_volume_claim(
+                    namespace=namespace
+                )
+            else:
+                self.logger.info("Listing PVCs across all namespaces")
+                pvcs = core_v1.list_persistent_volume_claim_for_all_namespaces()
+
+            return [pvc.to_dict() for pvc in pvcs.items]
+        except ApiException as e:
+            self.logger.error(f"Error listing PVCs: {e}")
+            raise Exception(f"Error listing PVCs: {e}")
+
+    def __rollout_restart(self, kind, name, namespace, labels=None, **kwargs):
+        """
+        Perform a rollout restart on a deployment, statefulset, or daemonset.
+        """
         api_client = self.__create_k8s_client()
         self.logger.info(
-            f"Performing rollout restart for {kind} {name} using kubernetes provider"
+            f"Performing rollout restart for {kind} {name} in namespace {namespace}"
         )
+
         now = datetime.datetime.now(datetime.timezone.utc)
         now = str(now.isoformat("T") + "Z")
         body = {
@@ -148,38 +295,42 @@ class KubernetesProvider(BaseProvider):
                 }
             }
         }
+
         apps_v1 = client.AppsV1Api(api_client)
         try:
-            if kind == "deployment":
-                deployment_list = apps_v1.list_namespaced_deployment(
-                    namespace=namespace, label_selector=labels
-                )
-                if not deployment_list.items:
-                    raise ValueError(
-                        f"Deployment with labels {labels} not found in namespace {namespace}"
+            if kind.lower() == "deployment":
+                if labels:
+                    deployment_list = apps_v1.list_namespaced_deployment(
+                        namespace=namespace, label_selector=labels
                     )
+                    if not deployment_list.items:
+                        raise ValueError(
+                            f"Deployment with labels {labels} not found in namespace {namespace}"
+                        )
                 apps_v1.patch_namespaced_deployment(
                     name=name, namespace=namespace, body=body
                 )
-            elif kind == "statefulset":
-                statefulset_list = apps_v1.list_namespaced_stateful_set(
-                    namespace=namespace, label_selector=labels
-                )
-                if not statefulset_list.items:
-                    raise ValueError(
-                        f"StatefulSet with labels {labels} not found in namespace {namespace}"
+            elif kind.lower() == "statefulset":
+                if labels:
+                    statefulset_list = apps_v1.list_namespaced_stateful_set(
+                        namespace=namespace, label_selector=labels
                     )
+                    if not statefulset_list.items:
+                        raise ValueError(
+                            f"StatefulSet with labels {labels} not found in namespace {namespace}"
+                        )
                 apps_v1.patch_namespaced_stateful_set(
                     name=name, namespace=namespace, body=body
                 )
-            elif kind == "daemonset":
-                daemonset_list = apps_v1.list_namespaced_daemon_set(
-                    namespace=namespace, label_selector=labels
-                )
-                if not daemonset_list.items:
-                    raise ValueError(
-                        f"DaemonSet with labels {labels} not found in namespace {namespace}"
+            elif kind.lower() == "daemonset":
+                if labels:
+                    daemonset_list = apps_v1.list_namespaced_daemon_set(
+                        namespace=namespace, label_selector=labels
                     )
+                    if not daemonset_list.items:
+                        raise ValueError(
+                            f"DaemonSet with labels {labels} not found in namespace {namespace}"
+                        )
                 apps_v1.patch_namespaced_daemon_set(
                     name=name, namespace=namespace, body=body
                 )
@@ -192,30 +343,61 @@ class KubernetesProvider(BaseProvider):
             raise Exception(f"Error performing rollout restart for {kind} {name}: {e}")
 
         self.logger.info(f"Successfully performed rollout restart for {kind} {name}")
+        return {
+            "status": "success",
+            "message": f"Successfully performed rollout restart for {kind} {name}",
+        }
 
-    def __list_pods(self, namespace, labels):
+    def __restart_pod(
+        self, namespace, pod_name, container_name=None, message=None, **kwargs
+    ):
+        """
+        Restart a pod by deleting it (it will be recreated by its controller).
+        This is useful for pods that are in a CrashLoopBackOff state.
+        """
         api_client = self.__create_k8s_client()
         core_v1 = client.CoreV1Api(api_client)
-        if namespace is None:
-            namespace = "default"
-        self.logger.info(f"Listing pods in namespace {namespace} with labels {labels}")
+
+        self.logger.info(f"Restarting pod {pod_name} in namespace {namespace}")
+
         try:
-            core_v1.list_namespaced_pod(namespace=namespace, label_selector=labels)
-        except ApiException as e:
-            self.logger.error(
-                f"Error listing pods in namespace {namespace} with labels {labels}: {e}"
-            )
-            raise Exception(
-                f"Error listing pods in namespace {namespace} with labels {labels}: {e}"
+            # Check if the pod exists
+            pod = core_v1.read_namespaced_pod(name=pod_name, namespace=namespace)
+
+            # If the pod is managed by a controller, it will be recreated
+            # For standalone pods, this will simply delete the pod
+            delete_options = client.V1DeleteOptions()
+            core_v1.delete_namespaced_pod(
+                name=pod_name, namespace=namespace, body=delete_options
             )
 
-        self.logger.info(
-            f"Successfully listed pods in namespace {namespace} with labels {labels}"
-        )
+            # Return success message
+            response_message = (
+                message
+                if message
+                else f"Pod {pod_name} in namespace {namespace} was restarted"
+            )
+            self.logger.info(response_message)
+
+            return {
+                "status": "success",
+                "message": response_message,
+                "pod_details": {
+                    "name": pod.metadata.name,
+                    "namespace": pod.metadata.namespace,
+                    "status": pod.status.phase,
+                    "containers": [container.name for container in pod.spec.containers],
+                },
+            }
+        except ApiException as e:
+            error_message = f"Error restarting pod {pod_name}: {e}"
+            self.logger.error(error_message)
+            raise Exception(error_message)
 
 
 if __name__ == "__main__":
     # Output debug messages
+    import json
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
@@ -226,10 +408,14 @@ if __name__ == "__main__":
     url = os.environ.get("KUBERNETES_URL")
     token = os.environ.get("KUBERNETES_TOKEN")
     insecure = os.environ.get("KUBERNETES_INSECURE", "false").lower() == "true"
+    namespace = os.environ.get("KUBERNETES_NAMESPACE", "default")
+    pod_name = os.environ.get("KUBERNETES_POD_NAME")
+
     context_manager = ContextManager(
         tenant_id="singletenant",
         workflow_id="test",
     )
+
     config = ProviderConfig(
         authentication={
             "api_server": url,
@@ -242,7 +428,29 @@ if __name__ == "__main__":
         context_manager, "kubernetes_keephq", config
     )
 
-    result = kubernetes_provider.notify(
-        "rollout_restart", "deployment", "nginx", "default", {"app": "nginx"}
-    )
-    print(result)
+    # Example queries
+    if pod_name:
+        print("Getting logs:")
+        logs = kubernetes_provider.query(
+            command_type="get_logs", namespace=namespace, pod_name=pod_name
+        )
+        print(logs[:10])  # Print first 10 lines
+
+        print("\nGetting events:")
+        events = kubernetes_provider.query(
+            command_type="get_events", namespace=namespace, pod_name=pod_name
+        )
+        print(json.dumps(events[:3], indent=2))  # Print first 3 events
+
+        print("\nRestarting pod:")
+        restart_result = kubernetes_provider.notify(
+            action="restart_pod",
+            namespace=namespace,
+            pod_name=pod_name,
+            message=f"Manually restarting pod {pod_name}",
+        )
+        print(json.dumps(restart_result, indent=2))
+    else:
+        print("Getting pods:")
+        pods = kubernetes_provider.query(command_type="get_pods", namespace=namespace)
+        print(f"Found {len(pods)} pods in namespace {namespace}")
