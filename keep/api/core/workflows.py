@@ -263,12 +263,6 @@ def get_workflows_with_last_executions_v2(
             fetch_last_executions=fetch_last_executions,
         )
 
-        strq = str(
-            workflows_query.compile(
-                dialect=session.bind.dialect, compile_kwargs={"literal_binds": True}
-            )
-        )
-
         query_result = session.execute(workflows_query).all()
         result = []
         for workflow, started, execution_time, status in query_result:

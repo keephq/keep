@@ -1,7 +1,6 @@
-import useSWR, { mutate } from "swr";
+import useSWR, { mutate, SWRConfiguration } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { Workflow } from "@/shared/api/workflows";
-import { useEffect, useState } from "react";
 
 export interface WorkflowsQuery {
   cel?: string;
@@ -11,7 +10,10 @@ export interface WorkflowsQuery {
   sortDir?: "asc" | "desc";
 }
 
-export function useWorkflowsV2(workflowsQuery: WorkflowsQuery | null) {
+export function useWorkflowsV2(
+  workflowsQuery: WorkflowsQuery | null,
+  swrConfig?: SWRConfiguration
+) {
   const api = useApi();
   const queryToPost: { [key: string]: any } = {};
 
@@ -37,29 +39,24 @@ export function useWorkflowsV2(workflowsQuery: WorkflowsQuery | null) {
 
   let requestUrl = "/workflows/query?is_v2=true";
 
-  const [isLoading, setIsLoading] = useState(true);
-  const {
-    data,
-    error,
-    isLoading: isLoadingSwr,
-  } = useSWR<any>(
+  const { data, error, isLoading } = useSWR<any>(
     api.isReady() && workflowsQuery
-      ? Object.entries(queryToPost)
-          .map(([key, value]) => `${key}=${value}`)
-          .join(";")
+      ? requestUrl + JSON.stringify(queryToPost)
       : null,
-    () => api.post(requestUrl, queryToPost)
+    () => api.post(requestUrl, queryToPost),
+    swrConfig
   );
-  useEffect(() => setIsLoading(isLoadingSwr), [isLoadingSwr]);
 
   const mutateWorkflows = () => {
-    return mutate(requestUrl);
+    return mutate(
+      (key) => typeof key === "string" && key.startsWith(requestUrl)
+    );
   };
 
   return {
     workflows: data?.results as Workflow[],
     totalCount: data?.count,
-    isLoading,
+    isLoading: isLoading || !data,
     error,
     mutateWorkflows,
   };

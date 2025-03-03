@@ -93,7 +93,6 @@ export default function WorkflowsPage({
 }: {
   initialFacetsData?: InitialFacetsData;
 }) {
-  const api = useApi();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [workflowDefinition, setWorkflowDefinition] = useState("");
@@ -120,24 +119,24 @@ export default function WorkflowsPage({
   }, [searchedValue]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (!paginationState) {
-        return;
-      }
+    // const timeoutId = setTimeout(() => {
+    if (!paginationState) {
+      return;
+    }
 
-      const celList = [searchCel, filterCel].filter((cel) => cel);
-      const cel = celList.join(" && ");
-      const query: WorkflowsQuery = {
-        cel,
-        limit: paginationState?.limit,
-        offset: paginationState?.offset,
-        sortBy: "createdAt",
-        sortDir: "desc",
-      };
+    const celList = [searchCel, filterCel].filter((cel) => cel);
+    const cel = celList.join(" && ");
+    const query: WorkflowsQuery = {
+      cel,
+      limit: paginationState?.limit,
+      offset: paginationState?.offset,
+      sortBy: "createdAt",
+      sortDir: "desc",
+    };
 
-      setWorkflowsQuery(query);
-    }, 100);
-    return () => clearTimeout(timeoutId);
+    setWorkflowsQuery(query);
+    // }, 100);
+    // return () => clearTimeout(timeoutId);
   }, [searchCel, filterCel, paginationState]);
 
   // Only fetch data when the user is authenticated
@@ -153,12 +152,16 @@ export default function WorkflowsPage({
           -> last_executions: Used for the workflow execution graph.
           ->last_execution_started: Used for showing the start time of execution in real-time.
   **/
+
   const {
     workflows: filteredWorkflows,
     totalCount: filteredWorkflowsCount,
     error,
     isLoading: isFilteredWorkflowsLoading,
-  } = useWorkflowsV2(workflowsQuery);
+  } = useWorkflowsV2(workflowsQuery, { keepPreviousData: true });
+
+  const isFirstLoading = isFilteredWorkflowsLoading && !filteredWorkflows;
+
   const { uploadWorkflowFiles } = useWorkflowActions();
 
   const isTableEmpty = filteredWorkflowsCount === 0;
@@ -386,21 +389,19 @@ export default function WorkflowsPage({
               />
 
               <div className="flex flex-col flex-1 relative">
-                {isFilteredWorkflowsLoading && (
+                {isFirstLoading && (
                   <div className="flex items-center justify-center h-96 w-full">
                     <KeepLoader includeMinHeight={false} />
                   </div>
                 )}
-                {!isFilteredWorkflowsLoading && (
+                {!isFirstLoading && (
                   <>
                     {showFilterEmptyState && renderFilterEmptyState()}
                     {showSearchEmptyState && renderSearchEmptyState()}
                     {!isTableEmpty && renderData()}
                   </>
                 )}
-                <div
-                  className={`mt-4 ${isFilteredWorkflowsLoading ? "hidden" : ""}`}
-                >
+                <div className={`mt-4 ${isFirstLoading ? "hidden" : ""}`}>
                   <Pagination
                     totalCount={filteredWorkflowsCount}
                     isRefreshAllowed={false}
