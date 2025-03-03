@@ -5,6 +5,7 @@ import {
   RowSelectionState,
   VisibilityState,
   createColumnHelper,
+  Cell,
 } from "@tanstack/react-table";
 import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
@@ -120,21 +121,31 @@ export const getRowClassName = (
   );
 };
 
-/**
- * Utility function to get consistent cell class names
- */
+type CustomCell = {
+  column: {
+    id: string;
+    columnDef: {
+      meta: {
+        tdClassName: string;
+      };
+    };
+  };
+};
+
 export const getCellClassName = (
-  cell: {
-    column: { id: string; columnDef: { meta: { tdClassName: string } } };
-  },
+  cell: Cell<any, unknown> | CustomCell,
   className: string,
   rowStyle: RowStyle,
   isLastViewed: boolean
 ) => {
   const isNameCell = cell.column.id === "name";
+  const tdClassName =
+    "getValue" in cell
+      ? cell.column.columnDef.meta?.tdClassName || ""
+      : cell.column.columnDef.meta.tdClassName;
 
   return clsx(
-    cell.column.columnDef.meta?.tdClassName,
+    tdClassName,
     className,
     isNameCell && "name-cell",
     // For dense rows, make sure name cells don't expand too much
