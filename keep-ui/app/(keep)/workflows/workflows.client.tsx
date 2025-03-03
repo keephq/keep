@@ -35,6 +35,7 @@ import {
   ExclamationCircleIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { useUser } from "@/entities/users/model/useUser";
 import { Pagination, SearchInput } from "@/features/filter";
@@ -187,22 +188,31 @@ export default function WorkflowsPage({
             case "failed": {
               return <XCircleIcon className="w-5 h-5 text-red-500" />;
             }
+            case "in_progress": {
+              return <ArrowPathIcon className="w-5 h-5 text-orange-500" />;
+            }
             default: {
               return (
-                <ExclamationCircleIcon className="w-5 h-5 text-orange-500" />
+                <ExclamationCircleIcon className="w-5 h-5 text-gray-500" />
               );
             }
           }
         },
         renderOptionLabel: (facetOption) => {
-          if (!facetOption.value) {
-            return "Not run yet";
+          switch (facetOption.value) {
+            case "success": {
+              return "Success";
+            }
+            case "failed": {
+              return "Failed";
+            }
+            case "in_progress": {
+              return "In progress";
+            }
+            default: {
+              return "Not run yet";
+            }
           }
-
-          return (
-            facetOption.display_name.charAt(0).toUpperCase() +
-            facetOption.display_name.slice(1)
-          );
         },
       },
       ["Created by"]: {
