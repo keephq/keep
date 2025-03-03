@@ -1,6 +1,6 @@
 "use client";
 
-import { Subtitle, Text } from "@tremor/react";
+import { Subtitle, Text, Badge } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
@@ -39,6 +39,9 @@ export const OverviewLinks = ({ session }: OverviewLinksProps) => {
                 <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
                   ANALYTICS
                 </Subtitle>
+                <Badge className="ml-2" color="orange" size="xs">
+                  BETA
+                </Badge>
               </div>
               <IoChevronUp
                 className={clsx("mr-2 text-slate-400", {
@@ -70,6 +73,9 @@ export const OverviewLinks = ({ session }: OverviewLinksProps) => {
               <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
                 ANALYTICS
               </Subtitle>
+              <Badge className="ml-2" color="orange" size="xs">
+                BETA
+              </Badge>
             </div>
             <IoChevronUp
               className={clsx("mr-2 text-slate-400", {

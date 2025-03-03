@@ -1,0 +1,16 @@
+workflow:
+  id: incident-alerts
+  name: incident-alerts
+  description: iterate over alerts and create incident
+  disabled: false
+  triggers:
+    - type: manual
+  actions:
+    - name: example
+      provider:
+        type: console
+        with:
+          message: |
+            {{#incident.alerts}}
+              {{.}}
+            {{/incident.alerts}}
