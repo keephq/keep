@@ -49,7 +49,6 @@ const AlertHistoryPanel = ({
   const alertTableColumns = useAlertTableCols({
     additionalColsToGenerate: additionalColsToGenerate,
     setNoteModalAlert: setNoteModalAlert,
-    noteReadOnly: true,
     presetName: alertsHistoryWithDate.at(0)?.fingerprint ?? "",
   });
 
