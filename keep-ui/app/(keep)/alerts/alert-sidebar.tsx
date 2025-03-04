@@ -90,7 +90,7 @@ const AlertSidebar = ({
                   )}
                   {alert?.name ? alert.name : "Alert Details"}
                 </Dialog.Title>
-                <Divider />
+                <Divider className="mb-0" />
                 <AlertMenu
                   alert={alert!}
                   presetName="feed"
