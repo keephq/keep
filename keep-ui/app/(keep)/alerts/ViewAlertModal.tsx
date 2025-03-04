@@ -71,7 +71,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
   // Initialize editor value when alert changes
   useEffect(() => {
     if (alert) {
-      const alertData = { ...alert };
+      const alertData: Record<string, any> = { ...alert };
 
       // Convert Date objects to string for proper JSON display
       Object.keys(alertData).forEach((key) => {
@@ -399,7 +399,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
           true
         );
 
-        matches.forEach((match) => {
+        matches.forEach((match: any) => {
           // Find the line number of the match
           const lineNumber = match.range.startLineNumber;
           // Get the whole line content
