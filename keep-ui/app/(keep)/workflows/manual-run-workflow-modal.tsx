@@ -93,7 +93,7 @@ export default function ManualRunWorkflowModal({
           <small>by {workflow.created_by}</small>
         </div>
         <Text>{workflow.description}</Text>
-        <div className="pt-2">
+        <div className="pt-2 flex gap-1">
           {workflow.triggers.map((trigger: Trigger) => (
             <WorkflowTriggerBadge
               key={trigger.type}
