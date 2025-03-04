@@ -1,4 +1,4 @@
-import { Badge, Button, Text, Title } from "@tremor/react";
+import { Button, Text, Title } from "@tremor/react";
 
 import Modal from "@/components/ui/Modal";
 import { useWorkflows } from "utils/hooks/useWorkflows";

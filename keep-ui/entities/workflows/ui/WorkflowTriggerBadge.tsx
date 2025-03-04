@@ -11,7 +11,7 @@ export function WorkflowTriggerBadge({
 }: {
   trigger: Trigger;
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
-  showTooltip: boolean;
+  showTooltip?: boolean;
 }) {
 
   let label = trigger.type;
