@@ -121,9 +121,10 @@ const AlertHistoryPanel = ({
 interface Props {
   alerts: AlertDto[];
   presetName: string;
+  onClose: () => void;
 }
 
-export function AlertHistory({ alerts, presetName }: Props) {
+export function AlertHistory({ alerts, presetName, onClose }: Props) {
   const router = useRouter();
 
   const searchParams = useSearchParams();
@@ -146,9 +147,7 @@ export function AlertHistory({ alerts, presetName }: Props) {
   return (
     <Modal
       isOpen={selectedAlert !== undefined}
-      onClose={() => {
-        router.replace(`/alerts/${presetName.toLowerCase()}`);
-      }}
+      onClose={onClose}
       className="w-full max-w-screen-2xl max-h-[710px] transform overflow-scroll ring-tremor bg-white
                     p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
     >
