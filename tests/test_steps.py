@@ -43,6 +43,12 @@ def sample_step():
     return step
 
 
+def test_simple_if_condition(sample_step):
+    sample_step.config["if"] = "True"
+    result = sample_step._run_single()
+    assert result is True
+
+
 def test_run_single(sample_step):
     # Simulate the result
     sample_step.provider.query = Mock(return_value="result")
@@ -74,28 +80,6 @@ def test_run_single_exception(sample_step):
 
     # _run_single should take around RETRY_COUNT*RETRT_INTERVAL time due to retries
     assert execution_time >= RETRY_COUNT * RETRY_INTERVAL
-
-
-def test_run_single_and_trigger_keep_function(sample_step):
-    import keep.functions as keep_functions
-
-    # Providing a sample array of dicts as a context variable
-    some_array_of_dicts = [{"key": "value"}]
-
-    # Triggering keep function and passing this dict as an argument
-    sample_step.config["if"] = "keep.len({{some_array_of_dicts}}) > 0"
-
-    sample_step.provider.query = Mock(return_value="result")
-
-    sample_step.io_handler.context_manager.get_full_context = Mock(
-        return_value={"some_array_of_dicts": some_array_of_dicts}
-    )
-
-    keep_functions.len = Mock(return_value=None)
-    sample_step._run_single()
-
-    # Making sure len method from keep's functions collection was triggered
-    assert keep_functions.len.call_count == 1
 
 
 def test_run_single_and_trigger_keep_function_new(sample_step, mocked_context_manager):
