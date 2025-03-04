@@ -9,6 +9,7 @@ import {
   AdjustmentsHorizontalIcon,
   BookOpenIcon,
   XCircleIcon,
+  EyeIcon,
 } from "@heroicons/react/24/outline";
 import {
   CheckCircleIcon,
@@ -354,7 +355,9 @@ export default function AlertMenu({
             );
           }}
           className={actionIconButtonClassName}
-          tooltip={`Workflow ${relevantWorkflowExecution.workflow_status} at ${format(
+          tooltip={`Workflow ${
+            relevantWorkflowExecution.workflow_status
+          } at ${format(
             new Date(relevantWorkflowExecution.workflow_started),
             "MMM d, yyyy HH:mm"
           )}`}
@@ -364,15 +367,15 @@ export default function AlertMenu({
                 relevantWorkflowExecution.workflow_status === "success"
                   ? CheckCircleIcon
                   : relevantWorkflowExecution.workflow_status === "error"
-                    ? XCircleIcon
-                    : ClockIcon
+                  ? XCircleIcon
+                  : ClockIcon
               }
               className={`w-4 h-4 ${
                 relevantWorkflowExecution.workflow_status === "success"
                   ? "text-green-500"
                   : relevantWorkflowExecution.workflow_status === "error"
-                    ? "text-red-500"
-                    : "text-gray-500"
+                  ? "text-red-500"
+                  : "text-gray-500"
               }`}
             />
           )}
@@ -477,6 +480,11 @@ export default function AlertMenu({
         onClick: () => callAssignEndpoint(),
         show: canAssign,
       },
+      {
+        icon: EyeIcon,
+        label: "View Alert",
+        onClick: openAlertPayloadModal,
+      },
       ...(provider?.methods?.map((method) => ({
         icon: (props: any) => (
           <DynamicImageProviderIcon
@@ -533,8 +541,7 @@ export default function AlertMenu({
   if (isInSidebar) {
     return (
       <Menu as="div" className="w-full">
-        <div className="flex space-x-2 w-full flex-wrap">
-          <div className="px-2">{quickActions}</div>
+        <div className="flex gap-2 w-full flex-wrap">
           {visibleMenuItems.map((item, index) => {
             const Icon = item.icon;
             return (
