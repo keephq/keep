@@ -13,7 +13,7 @@ import {
   ArrowUpOnSquareStackIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
-import { KeepLoader, PageTitle } from "@/shared/ui";
+import { EmptyStateCard, KeepLoader, PageTitle } from "@/shared/ui";
 import WorkflowsEmptyState from "./noworkflows";
 import WorkflowTile from "./workflow-tile";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
@@ -22,7 +22,7 @@ import Modal from "@/components/ui/Modal";
 import { WorkflowTemplates } from "./mockworkflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { Input, ErrorComponent } from "@/shared/ui";
-import { EmptyStateCard, Textarea } from "@/components/ui";
+import { Textarea } from "@/components/ui";
 import { useWorkflowsV2, WorkflowsQuery } from "utils/hooks/useWorkflowsV2";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { PageSubtitle } from "@/shared/ui/PageSubtitle";
@@ -242,12 +242,16 @@ export default function WorkflowsPage({
           <div className="flex flex-col justify-center items-center w-full p-4">
             <EmptyStateCard
               title="No workflows to display matching your filter"
-              buttonText="Reset filter"
-              renderIcon={() => (
-                <FunnelIcon className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
-              )}
-              onClick={() => setClearFiltersToken(uuidV4())}
-            />
+              icon={FunnelIcon}
+            >
+              <Button
+                color="orange"
+                variant="secondary"
+                onClick={() => setClearFiltersToken(uuidV4())}
+              >
+                Reset filter
+              </Button>
+            </EmptyStateCard>
           </div>
         </div>
       </>
@@ -261,12 +265,16 @@ export default function WorkflowsPage({
           <div className="flex flex-col justify-center items-center w-full p-4">
             <EmptyStateCard
               title="No workflows to display matching your search"
-              buttonText="Clear search"
-              renderIcon={() => (
-                <MagnifyingGlassIcon className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
-              )}
-              onClick={() => setSearchedValue(null)}
-            />
+              icon={MagnifyingGlassIcon}
+            >
+              <Button
+                color="orange"
+                variant="secondary"
+                onClick={() => setSearchedValue(null)}
+              >
+                Clear search
+              </Button>
+            </EmptyStateCard>
           </div>
         </div>
       </>
@@ -382,7 +390,7 @@ export default function WorkflowsPage({
             </div>
           </div>
           {isEmptyState ? (
-            <WorkflowsEmptyState isNewUI={true} />
+            <WorkflowsEmptyState />
           ) : (
             <div className="flex gap-4">
               <FacetsPanelServerSide

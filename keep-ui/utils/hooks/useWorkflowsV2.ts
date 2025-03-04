@@ -15,43 +15,51 @@ export function useWorkflowsV2(
   swrConfig?: SWRConfiguration
 ) {
   const api = useApi();
-  const queryToPost: { [key: string]: any } = {};
-
-  if (workflowsQuery?.cel) {
-    queryToPost.cel = workflowsQuery.cel;
-  }
-
-  if (workflowsQuery?.limit !== undefined) {
-    queryToPost.limit = workflowsQuery.limit;
-  }
-
-  if (workflowsQuery?.offset !== undefined) {
-    queryToPost.offset = workflowsQuery.offset;
-  }
-
-  if (workflowsQuery?.sortBy) {
-    queryToPost.sort_by = workflowsQuery.sortBy;
-  }
-
-  if (workflowsQuery?.sortDir) {
-    queryToPost.sort_dir = workflowsQuery.sortDir;
-  }
-
   let requestUrl = "/workflows/query?is_v2=true";
 
-  const { data, error, isLoading } = useSWR<any>(
-    api.isReady() && workflowsQuery
-      ? requestUrl + JSON.stringify(queryToPost)
-      : null,
-    () => api.post(requestUrl, queryToPost),
-    swrConfig
-  );
+  const queryToPost = workflowsQuery
+    ? {
+        ...(workflowsQuery.cel !== undefined && { cel: workflowsQuery.cel }),
+        ...(workflowsQuery.limit !== undefined && {
+          limit: workflowsQuery.limit,
+        }),
+        ...(workflowsQuery.offset !== undefined && {
+          offset: workflowsQuery.offset,
+        }),
+        ...(workflowsQuery.sortBy !== undefined && {
+          sort_by: workflowsQuery.sortBy,
+        }),
+        ...(workflowsQuery.sortDir !== undefined && {
+          sort_dir: workflowsQuery.sortDir,
+        }),
+      }
+    : {};
 
-  const mutateWorkflows = () => {
-    return mutate(
-      (key) => typeof key === "string" && key.startsWith(requestUrl)
+  const cacheKey =
+    api.isReady() && workflowsQuery
+      ? [
+          requestUrl,
+          queryToPost.cel,
+          queryToPost.limit,
+          queryToPost.offset,
+          queryToPost.sort_by,
+          queryToPost.sort_dir,
+        ]
+          .filter(Boolean)
+          .join("::")
+      : null;
+
+    const { data, error, isLoading } = useSWR<any>(
+      api.isReady() && workflowsQuery ? cacheKey : null,
+      () => api.post(requestUrl, queryToPost),
+      swrConfig
     );
-  };
+
+    const mutateWorkflows = () => {
+      return mutate(
+        (key) => typeof key === "string" && key.split("::")[0] === requestUrl
+      );
+    };
 
   return {
     workflows: data?.results as Workflow[],
