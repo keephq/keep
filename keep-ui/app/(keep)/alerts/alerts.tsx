@@ -159,9 +159,9 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
 
   const resetUrlAfterModal = useCallback(() => {
     const currentParams = new URLSearchParams(window.location.search);
-    Object.keys(currentParams)
+    Array.from(currentParams.keys())
       .filter((paramKey) => paramKey !== "cel")
-      .forEach((key) => currentParams.delete(key));
+      .forEach((paramKey) => currentParams.delete(paramKey));
     let url = `${window.location.pathname}`;
 
     if (currentParams.toString()) {
@@ -206,7 +206,11 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         onQueryChange={handleOnQueryChange}
         onLiveUpdateStateChange={setIsLiveUpdateEnabled}
       />
-      <AlertHistory alerts={alerts || []} presetName={selectedPreset.name} />
+      <AlertHistory
+        alerts={alerts || []}
+        presetName={selectedPreset.name}
+        onClose={resetUrlAfterModal}
+      />
       <AlertDismissModal
         alert={dismissModalAlert}
         preset={selectedPreset.name}
