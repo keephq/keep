@@ -6,7 +6,7 @@ from keep.api.alert_deduplicator.deduplication_rules_provisioning import (
     provision_deduplication_rules_from_env,
 )
 from keep.api.api import AUTH_TYPE
-from keep.api.core.config import config
+from keep.api.core.config import config as conf
 from keep.api.core.db_on_start import migrate_db, try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.tenant_configuration import TenantConfiguration
@@ -19,8 +19,8 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 
 PORT = int(os.environ.get("PORT", 8080))
 PROVISION_RESOURCES = os.environ.get("PROVISION_RESOURCES", "true") == "true"
-SUPERSET_DISABLED = config("KEEP_SUPERSET_DISABLED", default=False)
-PROVISION_SUPERSET = config("KEEP_PROVISION_SUPERSET", default=False)
+SUPERSET_DISABLED = conf("KEEP_SUPERSET_DISABLED", default=False)
+PROVISION_SUPERSET = conf("KEEP_PROVISION_SUPERSET", default=False)
 
 keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
