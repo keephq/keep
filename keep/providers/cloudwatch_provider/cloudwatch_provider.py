@@ -367,7 +367,7 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
             # Response in format List[{field: fieldName, value: fieldValue}]
             # We need to convert it to List[Dict[fieldName: fieldValue]]
             results = []
-            for result in response.get("results"):
+            for result in response.get("results", []):
                 results.append({field["field"]: field["value"] for field in result})
                 # Trying to parse JSON of each field["value"]
                 for field in results[-1]:
