@@ -1,24 +1,16 @@
-import { TableBody, TableRow, TableCell, Icon } from "@tremor/react";
+import { TableBody, TableRow, TableCell } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
 import { Table, flexRender } from "@tanstack/react-table";
 import React, { useState } from "react";
 import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
-import {
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  EyeIcon,
-} from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, FunnelIcon } from "@heroicons/react/24/outline";
 import { GroupedRow } from "./alert-grouped-row";
-import { ViewedAlert } from "./alert-table";
-import { useLocalStorage } from "utils/hooks/useLocalStorage";
-import { RowStyle } from "./RowStyleSelection";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
-import { format } from "date-fns";
 import { getRowClassName, getCellClassName } from "./alert-table-utils";
 import clsx from "clsx";
+import "react-loading-skeleton/dist/skeleton.css";
 
 interface Props {
   table: Table<AlertDto>;
@@ -44,10 +36,7 @@ export function AlertsTableBody({
   lastViewedAlert,
 }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
-  const [rowStyle] = useLocalStorage<RowStyle>(
-    "alert-table-row-style",
-    "default"
-  );
+  const [rowStyle] = useAlertRowStyle();
 
   const handleModalClose = () => setModalOpen(false);
   const handleModalOpen = () => setModalOpen(true);
@@ -70,12 +59,11 @@ export function AlertsTableBody({
               />
             </div>
           </div>
-          {modalOpen && (
-            <PushAlertToServerModal
-              handleClose={handleModalClose}
-              presetName={presetName}
-            />
-          )}
+          <PushAlertToServerModal
+            isOpen={modalOpen}
+            handleClose={handleModalClose}
+            presetName={presetName}
+          />
         </>
       );
     }
@@ -136,10 +124,31 @@ export function AlertsTableBody({
     return (
       <TableBody>
         {Array.from({ length: 20 }).map((_, index) => (
-          <TableRow key={index}>
-            {Array.from({ length: 5 }).map((_, cellIndex) => (
-              <TableCell key={cellIndex}>
-                <div className="h-4 bg-gray-200 rounded animate-pulse" />
+          <TableRow
+            key={index}
+            className={getRowClassName(
+              { id: index.toString(), original: {} as AlertDto },
+              theme,
+              lastViewedAlert,
+              rowStyle
+            )}
+          >
+            {Array.from({ length: 7 }).map((_, cellIndex) => (
+              <TableCell
+                key={cellIndex}
+                className={getCellClassName(
+                  {
+                    column: {
+                      id: cellIndex.toString(),
+                      columnDef: { meta: { tdClassName: "" } },
+                    },
+                  },
+                  "",
+                  rowStyle,
+                  false
+                )}
+              >
+                <div className="h-4 bg-gray-200 rounded animate-pulse mx-0.5" />
               </TableCell>
             ))}
           </TableRow>
@@ -195,7 +204,7 @@ export function AlertsTableBody({
                   style={{
                     ...style,
                     maxWidth:
-                      rowStyle === "dense" && cell.column.id === "name"
+                      rowStyle === "default" && cell.column.id === "name"
                         ? "600px"
                         : undefined,
                   }}

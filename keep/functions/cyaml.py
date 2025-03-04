@@ -7,10 +7,12 @@ __all__ = ['YAMLError', 'safe_load', 'dump', 'add_representer']
 class QuotedString(str):
     """A string that remembers if it was quoted in the original YAML."""
     quote_style: str | None = None
+    block_style: str | None = None
     
-    def __new__(cls, value, quote_style=None):
+    def __new__(cls, value, quote_style=None, block_style=None):
         instance = super().__new__(cls, value)
         instance.quote_style = quote_style
+        instance.block_style = block_style
         return instance
 
 class QuotePreservingLoader(yaml.CSafeLoader):
@@ -23,7 +25,10 @@ class QuotePreservingLoader(yaml.CSafeLoader):
         # If the node had quotes in the original YAML, mark it
         if node.style in ('"', "'"):
             # Use a custom class to remember that this string was quoted
-            return QuotedString(value, node.style)
+            return QuotedString(value, quote_style=node.style)
+        elif node.style == '|':
+            # Handle block scalar indicator
+            return QuotedString(value, block_style='|')
         
         return value
 
@@ -31,15 +36,19 @@ class QuotePreservingDumper(yaml.CDumper):
     """A YAML Dumper that preserves quotes for marked strings."""
     
     def represent_scalar(self, tag, value, style=None):
-        # If this is our special QuotedString, use its original quote style
-        if isinstance(value, QuotedString) and value.quote_style:
-            style = value.quote_style
+        # If this is our special QuotedString, use its original quote style or block style
+        if isinstance(value, QuotedString):
+            if value.block_style:
+                style = value.block_style
+            elif value.quote_style:
+                style = value.quote_style
             
         return super().represent_scalar(tag, value, style)
 
 # Register a proper representer for QuotedString
 def represent_quoted_string(dumper, data):
-    return dumper.represent_scalar('tag:yaml.org,2002:str', str(data), style=data.quote_style)
+    style = data.block_style or data.quote_style
+    return dumper.represent_scalar('tag:yaml.org,2002:str', str(data), style=style)
 
 QuotePreservingDumper.add_representer(QuotedString, represent_quoted_string)
 
