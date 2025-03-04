@@ -1,5 +1,5 @@
 "use client";
-import { Badge, Callout, Card } from "@tremor/react";
+import { Badge, Button, Callout, Card } from "@tremor/react";
 import { useMaintenanceRules } from "utils/hooks/useMaintenanceRules";
 import Loading from "@/app/(keep)/loading";
 import { MdWarning } from "react-icons/md";
@@ -8,6 +8,8 @@ import { MaintenanceRule } from "./model";
 import CreateOrUpdateMaintenanceRule from "./create-or-update-maintenance-rule";
 import MaintenanceRulesTable from "./maintenance-rules-table";
 import { useRouter } from "next/navigation";
+import { EmptyStateCard } from "@/shared/ui";
+import { FaVolumeMute } from "react-icons/fa";
 
 export default function Maintenance() {
   const { data: maintenanceRules, isLoading } = useMaintenanceRules();
@@ -36,14 +38,14 @@ export default function Maintenance() {
               }}
             />
           ) : (
-            <Callout
-              color="orange"
-              title="Maintenance rules do not exist"
-              icon={MdWarning}
-            >
-              No maintenance rules found. Configure new maintenance rule using
-              the maintenance rules wizard to the left.
-            </Callout>
+            <div className="flex justify-center items-center h-full">
+              <EmptyStateCard
+                noCard
+                icon={FaVolumeMute}
+                title="No maintenance rules yet"
+                description="Create a new maintenance rule using the maintenance rules wizard"
+              />
+            </div>
           )}
         </div>
       </div>
