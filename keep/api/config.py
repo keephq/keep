@@ -19,7 +19,8 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 
 PORT = int(os.environ.get("PORT", 8080))
 PROVISION_RESOURCES = os.environ.get("PROVISION_RESOURCES", "true") == "true"
-SUPERSET_DISABLED = config("SUPERSET_DISABLED", default=False)
+SUPERSET_DISABLED = config("KEEP_SUPERSET_DISABLED", default=False)
+PROVISION_SUPERSET = config("KEEP_PROVISION_SUPERSET", default=False)
 
 keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
@@ -47,6 +48,10 @@ def provision_resources():
 def provision_superset():
     if SUPERSET_DISABLED:
         logger.info("Superset is disabled")
+        return
+
+    if not PROVISION_SUPERSET:
+        logger.info("Provisioning superset dashboards is disabled")
         return
 
     try:
