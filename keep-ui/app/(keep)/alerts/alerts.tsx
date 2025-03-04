@@ -22,7 +22,6 @@ import { Preset } from "@/entities/presets/model/types";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
 import { FacetDto } from "@/features/filter";
-import { v4 as uuidV4 } from "uuid";
 
 const defaultPresets: Preset[] = [
   {
@@ -158,6 +157,20 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   const handleOnPoll = useCallback(() => setIsSilentLoading(true), []);
   const handleOnQueryChange = useCallback(() => setIsSilentLoading(false), []);
 
+  const resetUrlAfterModal = useCallback(() => {
+    const currentParams = new URLSearchParams(window.location.search);
+    Array.from(currentParams.keys())
+      .filter((paramKey) => paramKey !== "cel")
+      .forEach((paramKey) => currentParams.delete(paramKey));
+    let url = `${window.location.pathname}`;
+
+    if (currentParams.toString()) {
+      url += `?${currentParams.toString()}`;
+    }
+
+    router.replace(url);
+  }, [router]);
+
   // if we don't have presets data yet, just show loading
   if (!selectedPreset && isPresetsLoading) {
     return <Loading />;
@@ -193,7 +206,11 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         onQueryChange={handleOnQueryChange}
         onLiveUpdateStateChange={setIsLiveUpdateEnabled}
       />
-      <AlertHistory alerts={alerts || []} presetName={selectedPreset.name} />
+      <AlertHistory
+        alerts={alerts || []}
+        presetName={selectedPreset.name}
+        onClose={resetUrlAfterModal}
+      />
       <AlertDismissModal
         alert={dismissModalAlert}
         preset={selectedPreset.name}
@@ -223,7 +240,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
       />
       <ViewAlertModal
         alert={viewAlertModal}
-        handleClose={() => router.replace(`/alerts/${presetName}`)}
+        handleClose={() => resetUrlAfterModal()}
         mutate={mutateAlerts}
       />
       <EnrichAlertSidePanel
@@ -231,7 +248,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         isOpen={isEnrichSidebarOpen}
         handleClose={() => {
           setIsEnrichSidebarOpen(false);
-          router.replace(`/alerts/${presetName}`);
+          resetUrlAfterModal();
         }}
         mutate={mutateAlerts}
       />

@@ -1,16 +1,16 @@
 "use client";
-import { Callout, Card } from "@tremor/react";
+import { Card } from "@tremor/react";
 import CreateOrEditMapping from "./create-or-edit-mapping";
 import { useMappings } from "utils/hooks/useMappingRules";
 import RulesTable from "./rules-table";
-import { MdWarning } from "react-icons/md";
 import Loading from "@/app/(keep)/loading";
 import { MappingRule } from "./models";
 import React, { useEffect, useState } from "react";
 import { Button } from "@tremor/react";
 import SidePanel from "@/components/SidePanel";
-import { PageSubtitle, PageTitle } from "@/shared/ui";
+import { EmptyStateCard, PageSubtitle, PageTitle } from "@/shared/ui";
 import { PlusIcon } from "@heroicons/react/20/solid";
+import { Mapping as MappingIcon } from "components/icons";
 
 export default function Mapping() {
   const { data: mappings, isLoading } = useMappings();
@@ -81,14 +81,21 @@ export default function Mapping() {
               editCallback={handleSidePanelExit}
             />
           ) : (
-            <Callout
-              color="orange"
-              title="Mapping rules does not exist"
-              icon={MdWarning}
+            <EmptyStateCard
+              icon={() => <MappingIcon className="!size-8" />}
+              title="No mapping rules yet"
+              description="Create a new mapping rule using the mapping rules wizard"
             >
-              No mapping rules found. Configure new mapping rule using the
-              mapping rules wizard.
-            </Callout>
+              <Button
+                color="orange"
+                size="md"
+                type="submit"
+                onClick={() => setIsSidePanelOpen(true)}
+                icon={PlusIcon}
+              >
+                Create Mapping
+              </Button>
+            </EmptyStateCard>
           )}
         </div>
       </Card>

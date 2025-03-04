@@ -5,7 +5,7 @@ import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import { useState } from "react";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
-import { RowStyle } from "./RowStyleSelection";
+import { RowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 import { getRowClassName, getCellClassName } from "./alert-table-utils";
 
 interface GroupedRowProps {

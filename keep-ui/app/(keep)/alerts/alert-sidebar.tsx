@@ -79,17 +79,6 @@ const AlertSidebar = ({
           <Dialog.Panel className="fixed right-0 inset-y-0 w-2/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <div className="w-full">
-                <AlertMenu
-                  alert={alert!}
-                  presetName="feed"
-                  isInSidebar={true}
-                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-                  setDismissModalAlert={setDismissModalAlert}
-                  setChangeStatusAlert={setChangeStatusAlert}
-                  setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
-                  toggleSidebar={toggle}
-                />
-                <Divider />
                 <Dialog.Title
                   className="text-xl font-bold flex flex-col gap-2 items-start"
                   as={Title}
@@ -101,6 +90,17 @@ const AlertSidebar = ({
                   )}
                   {alert?.name ? alert.name : "Alert Details"}
                 </Dialog.Title>
+                <Divider className="mb-0" />
+                <AlertMenu
+                  alert={alert!}
+                  presetName="feed"
+                  isInSidebar={true}
+                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+                  setDismissModalAlert={setDismissModalAlert}
+                  setChangeStatusAlert={setChangeStatusAlert}
+                  setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
+                  toggleSidebar={toggle}
+                />
               </div>
               <div>
                 <Button onClick={toggle} variant="light">

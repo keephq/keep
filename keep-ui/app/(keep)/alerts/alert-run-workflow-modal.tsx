@@ -52,7 +52,13 @@ export default function AlertRunWorkflowModal({ alert, handleClose }: Props) {
   };
 
   return (
-    <Modal onClose={clearAndClose} isOpen={isOpen} className="overflow-visible">
+    <Modal
+      onClose={clearAndClose}
+      isOpen={isOpen}
+      className="overflow-visible"
+      beforeTitle={alert?.name}
+      title="Run Workflow"
+    >
       {workflows && (
         <Select
           value={selectedWorkflowId}
