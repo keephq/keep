@@ -335,20 +335,24 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         # hours = kwargs.get("hours", 24)
         logs_client = self.__generate_client("logs")
         try:
-            start_query_response = logs_client.start_query(
-                logGroupName=log_group,
-                logGroupNames=log_groups,
-                queryString=query,
-                startTime=int(
+            query_kwargs = {
+                "queryString": query,
+                "startTime": int(
                     (
                         datetime.datetime.today() - datetime.timedelta(hours=hours)
                     ).timestamp()
                 ),
-                endTime=int(datetime.datetime.now().timestamp()),
-            )
-        except Exception:
+                "endTime": int(datetime.datetime.now().timestamp()),
+            }
+            if log_group is not None:
+                query_kwargs["logGroupName"] = log_group
+            if log_groups is not None:
+                query_kwargs["logGroupNames"] = log_groups
+
+            start_query_response = logs_client.start_query(**query_kwargs)
+        except Exception as e:
             self.logger.exception(
-                "Error starting AWS cloudwatch query - add logs:StartQuery permissions",
+                f"Error starting AWS cloudwatch query - add logs:StartQuery permissions, {e}",
                 extra={"kwargs": kwargs},
             )
             raise
@@ -359,17 +363,19 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         while response is None or response["status"] == "Running":
             self.logger.debug("Waiting for AWS cloudwatch query to complete...")
             time.sleep(1)
-            try:
-                response = logs_client.get_query_results(queryId=query_id)
-            except Exception:
-                # probably no permissions
-                self.logger.exception(
-                    "Error getting AWS cloudwatch query results - add logs:GetQueryResults permissions",
-                    extra={"kwargs": kwargs},
-                )
-                raise
+            response = logs_client.get_query_results(queryId=query_id)
+            # Response in format List[{field: fieldName, value: fieldValue}]
+            # We need to convert it to List[Dict[fieldName: fieldValue]]
+            results = []
+            for result in response.get("results"):
+                results.append({field["field"]: field["value"] for field in result})
+                # Trying to parse JSON of each field["value"]
+                for field in results[-1]:
+                    try:
+                        results[-1][field] = json.loads(results[-1][field])
+                    except json.JSONDecodeError:
+                        pass
 
-        results = response.get("results")
         return results
 
     def _get_account_id(self):
