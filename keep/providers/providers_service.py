@@ -415,4 +415,8 @@ class ProvidersService:
     def get_provider_logs(
         tenant_id: str, provider_id: str
     ) -> List[ProviderExecutionLog]:
+        import os
+        if not os.environ.get("KEEP_STORE_PROVIDER_LOGS", "false").lower() == "true":
+            raise HTTPException(404, detail=f"Provider logs not enabled")
+
         return get_provider_logs(tenant_id, provider_id)
