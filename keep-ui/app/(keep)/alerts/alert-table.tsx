@@ -1,5 +1,5 @@
-import { useRef, useState, useMemo } from "react";
-import { Table, Card, TableRow } from "@tremor/react";
+import { useRef, useState } from "react";
+import { Table, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "@/entities/alerts/model";
 import {
@@ -33,7 +33,7 @@ import AlertSidebar from "./alert-sidebar";
 import { AlertFacets } from "./alert-table-alert-facets";
 import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
 import { useConfig } from "@/utils/hooks/useConfig";
-import { RowStyle } from "./RowStyleSelection";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 import clsx from "clsx";
 import { TimeFormatOption } from "./alert-table-time-format";
 
@@ -117,11 +117,6 @@ export function AlertTable({
     []
   );
   const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
-
-  const [rowStyle] = useLocalStorage<RowStyle>(
-    "alert-table-row-style",
-    "default"
-  );
 
   const handleFacetDelete = (facetKey: string) => {
     setDynamicFacets((prevFacets) =>
@@ -283,8 +278,6 @@ export function AlertTable({
 
   let showSkeleton =
     table.getFilteredRowModel().rows.length === 0 && isAsyncLoading;
-  let showEmptyState =
-    table.getFilteredRowModel().rows.length === 0 && !isAsyncLoading;
 
   const handleRowClick = (alert: AlertDto) => {
     // if presetName is alert-history, do not open sidebar
@@ -315,14 +308,6 @@ export function AlertTable({
   const handleSidebarClose = () => {
     setIsSidebarOpen(false);
   };
-
-  const tableRowClassName = useMemo(() => {
-    return clsx(
-      "hover:bg-gray-50 cursor-pointer group",
-      rowStyle === "dense" ? "h-8" : "h-12",
-      rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3"
-    );
-  }, [rowStyle]);
 
   return (
     // Add h-screen to make it full height and remove the default flex-col gap
@@ -357,7 +342,7 @@ export function AlertTable({
 
       {/* Main content area - uses flex-grow to fill remaining space */}
       <div className="flex-grow px-4 pb-4">
-        <div className="h-full flex gap-6">
+        <div className="h-full flex gap-4">
           {/* Facets sidebar */}
           <div className="w-32 min-w-[12rem] overflow-y-auto">
             <AlertFacets

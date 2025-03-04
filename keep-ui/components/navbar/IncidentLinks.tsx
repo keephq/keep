@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { Subtitle } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { Session } from "next-auth";

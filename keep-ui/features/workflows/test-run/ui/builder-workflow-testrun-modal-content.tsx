@@ -1,5 +1,4 @@
-import { XMarkIcon } from "@heroicons/react/24/outline";
-import { Button, Title } from "@tremor/react";
+import { Title } from "@tremor/react";
 import ReactLoading from "react-loading";
 import {
   isWorkflowExecution,

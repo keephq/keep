@@ -89,27 +89,25 @@ const AlertNoteModal = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose}>
-      {/* WYSIWYG editor */}
-      <ReactQuill
-        value={noteContent}
-        onChange={(value: string) => setNoteContent(value)}
-        theme="snow" // Use the Snow theme
-        placeholder="Add your note here..."
-        modules={readOnly ? { toolbar: [] } : modules}
-        readOnly={readOnly}
-        formats={formats} // Add formats
-      />
-      <div className="mt-4 flex justify-end">
-        {!readOnly && (
-          <Button // Use Tremor button for Save
-            onClick={saveNote}
-            color="orange"
-            className="mr-2"
-          >
-            Save
-          </Button>
-        )}
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      beforeTitle={alert?.name}
+      title="Add Note"
+    >
+      <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+        {/* WYSIWYG editor */}
+        <ReactQuill
+          value={noteContent}
+          onChange={(value: string) => setNoteContent(value)}
+          theme="snow" // Use the Snow theme
+          placeholder="Add your note here..."
+          modules={readOnly ? { toolbar: [] } : modules}
+          readOnly={readOnly}
+          formats={formats} // Add formats
+        />
+      </div>
+      <div className="mt-4 flex justify-end gap-2">
         <Button // Use Tremor button for Cancel
           onClick={handleNoteClose}
           variant="secondary"
@@ -117,6 +115,14 @@ const AlertNoteModal = ({
         >
           {readOnly ? "Close" : "Cancel"}
         </Button>
+        {!readOnly && (
+          <Button // Use Tremor button for Save
+            onClick={saveNote}
+            color="orange"
+          >
+            Save
+          </Button>
+        )}
       </div>
     </Modal>
   );

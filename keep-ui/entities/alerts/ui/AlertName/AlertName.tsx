@@ -1,16 +1,15 @@
 import React from "react";
 import { AlertDto } from "@/entities/alerts/model";
 import { clsx } from "clsx";
-import { useLocalStorage } from "utils/hooks/useLocalStorage";
-
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 interface Props {
   alert: AlertDto;
   className?: string;
 }
 
 export function AlertName({ alert, className }: Props) {
-  const [rowStyle] = useLocalStorage("alert-table-row-style", "default");
-  const isDense = rowStyle === "dense";
+  const [rowStyle] = useAlertRowStyle();
+  const isCompact = rowStyle === "default";
 
   return (
     <div
@@ -18,7 +17,7 @@ export function AlertName({ alert, className }: Props) {
     >
       <div
         className={clsx(
-          isDense
+          isCompact
             ? "truncate whitespace-nowrap"
             : "line-clamp-3 whitespace-pre-wrap",
           "flex-grow"
