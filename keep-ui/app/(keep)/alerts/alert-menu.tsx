@@ -185,22 +185,12 @@ export default function AlertMenu({
   }, [tooltipPosition]);
 
   const updateUrl = useCallback(
-    (params: {
-      newParams?: Record<string, any>;
-      deleteParams?: Record<string, string>;
-      scroll?: boolean;
-    }) => {
+    (params: { newParams?: Record<string, any>; scroll?: boolean }) => {
       const currentParams = new URLSearchParams(window.location.search);
 
       if (params.newParams) {
         Object.entries(params.newParams).forEach(([key, value]) =>
           currentParams.append(key, value)
-        );
-      }
-
-      if (params.deleteParams) {
-        Object.keys(params.deleteParams).forEach((key) =>
-          currentParams.delete(key)
         );
       }
 
@@ -452,14 +442,14 @@ export default function AlertMenu({
 
   const openMethodModal = useCallback(
     (method: ProviderMethod) => {
-      router.replace(
-        `/alerts/${presetName}?methodName=${method.name}&providerId=${
-          provider!.id
-        }&alertFingerprint=${alert.fingerprint}`,
-        {
-          scroll: false,
-        }
-      );
+      updateUrl({
+        newParams: {
+          methodName: method.name,
+          providerId: provider!.id,
+          alertFingerprint: alert.fingerprint,
+        },
+        scroll: false,
+      });
     },
     [alert, presetName, provider, router]
   );
@@ -489,10 +479,6 @@ export default function AlertMenu({
         label: "History",
         onClick: () =>
           updateUrl({ newParams: { fingerprint: alert.fingerprint } }),
-        // router.replace(
-        //   `/alerts/${presetName}?fingerprint=${alert.fingerprint}`,
-        //   { scroll: false }
-        // ),
       },
       {
         icon: AdjustmentsHorizontalIcon,
@@ -504,9 +490,6 @@ export default function AlertMenu({
               enrich: true,
             },
           }),
-        // router.replace(
-        //   `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}&enrich=true`
-        // ),
       },
       {
         icon: UserPlusIcon,
