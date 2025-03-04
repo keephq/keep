@@ -12,6 +12,7 @@ import { Select, showErrorToast } from "@/shared/ui";
 import { Trigger, Workflow } from "@/shared/api/workflows";
 import { components, OptionProps } from "react-select";
 import { FilterOptionOption } from "react-select/dist/declarations/src/filters";
+import { WorkflowTriggerBadge } from "@/entities/workflows/ui/WorkflowTriggerBadge";
 
 interface Props {
   alert?: AlertDto | null | undefined;
@@ -92,9 +93,16 @@ export default function ManualRunWorkflowModal({
           <small>by {workflow.created_by}</small>
         </div>
         <Text>{workflow.description}</Text>
-        <div>
+        <div className="pt-2">
           {workflow.triggers.map((trigger: Trigger) => (
-            <Badge key={trigger.type}>{trigger.type}</Badge>
+            <WorkflowTriggerBadge
+              key={trigger.type}
+              trigger={trigger}
+              showTooltip={false}
+              // Do nothing, but not undefined to allow click
+              // but just propagate it to parent elemennt
+              onClick={() => {}}
+            />
           ))}
         </div>
       </components.Option>
