@@ -1,0 +1,70 @@
+---
+title: "Linked Providers"
+description: "Understanding linked vs connected providers in Keep"
+---
+
+# Linked Providers
+
+In Keep, providers can be either "connected" or "linked". Understanding the difference is important for proper alert routing and management.
+
+<Frame>
+  <img src="/images/linked-providers.png" />
+</Frame>
+
+## Connected vs Linked Providers
+
+- **Connected Providers**: These are providers that have been explicitly configured in Keep through the UI or API. They have full provider configuration and authentication details.
+
+- **Linked Providers**: These are providers that send alerts to Keep without being explicitly connected. They appear automatically when Keep receives alerts from them through webhooks or push mechanisms.
+
+## How Linking Works
+
+When Keep receives alerts from an unconnected provider (like Prometheus pushing alerts), it automatically creates a "linked" provider entry. This allows you to:
+
+- Track which systems are sending alerts
+- See when the last alert was received
+- Apply deduplication rules specific to that provider
+
+## Attaching Alerts to Connected Providers
+
+If you have a connected provider and want incoming alerts to be associated with it instead of creating a linked provider, you can add the `provider_id` query parameter to the webhook URL.
+
+For example, with Prometheus AlertManager:
+
+```yaml
+alertmanager:
+config:
+receivers:
+name: "keep"
+webhook_configs:
+url: "https://api.keephq.dev/alerts/prometheus?provider_id=your_provider_id"
+```
+
+## Best Practices
+
+1. **For Production Systems**: It's recommended to use connected providers when possible, as they provide:
+
+   - Better authentication and security
+   - Access to provider-specific features
+   - Clearer audit trail
+
+2. **For Testing/Development**: Linked providers can be useful for:
+
+   - Quick prototyping
+   - Testing alert flows
+   - Temporary integrations
+
+3. **Converting Linked to Connected**: If you find yourself regularly receiving alerts from a linked provider, consider:
+   - Setting up a proper provider connection
+   - Using the provider_id parameter to attach alerts to the connected provider
+
+## Limitations
+
+Linked providers:
+
+- Cannot be used to pull alerts or data
+- Don't have authentication details
+- Cannot be used for provider-specific actions
+- May have limited deduplication capabilities
+
+For full functionality, consider converting linked providers to connected providers when they become part of your permanent alerting infrastructure.

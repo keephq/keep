@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Table, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
-import {
-  AlertDto,
-  reverseSeverityMapping,
-  Severity,
-  Status,
-} from "@/entities/alerts/model";
+import { AlertDto, reverseSeverityMapping } from "@/entities/alerts/model";
 import {
   getCoreRowModel,
   useReactTable,
@@ -64,6 +59,13 @@ interface PresetTab {
   filter: string;
   id?: string;
 }
+
+interface Tab {
+  name: string;
+  filter: (alert: AlertDto) => boolean;
+  id?: string;
+}
+
 interface Props {
   refreshToken: string | null;
   alerts: AlertDto[];
@@ -170,7 +172,7 @@ export function AlertTableServerSide({
     pageSize: 20,
   });
 
-  const [viewedAlerts, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
+  const [, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
     `viewed-alerts-${presetName}`,
     []
   );
@@ -231,14 +233,14 @@ export function AlertTableServerSide({
     onReload && onReload(alertsQueryRef.current as AlertsQuery);
   }, [alertsQuery, onReload]);
 
-  const [tabs, setTabs] = useState([
-    { name: "All", filter: (alert: AlertDto) => true },
+  const [tabs, setTabs] = useState<Tab[]>([
+    { name: "All", filter: () => true },
     ...presetTabs.map((tab) => ({
       name: tab.name,
       filter: (alert: AlertDto) => evalWithContext(alert, tab.filter),
       id: tab.id,
     })),
-    { name: "+", filter: (alert: AlertDto) => true }, // a special tab to add new tabs
+    { name: "+", filter: () => true },
   ]);
 
   const [selectedTab, setSelectedTab] = useState(0);
@@ -307,7 +309,6 @@ export function AlertTableServerSide({
 
   let showSkeleton = isAsyncLoading;
   const isTableEmpty = table.getPageCount() === 0;
-  let showEmptyState = !alertsQuery.cel && isTableEmpty && !isAsyncLoading;
   const showFilterEmptyState = isTableEmpty && !!filterCel;
   const showSearchEmptyState =
     isTableEmpty && !!searchCel && !showFilterEmptyState;
@@ -504,7 +505,7 @@ export function AlertTableServerSide({
       </div>
 
       <div className="pb-4">
-        <div className="flex gap-6">
+        <div className="flex gap-4">
           {/* Facets sidebar */}
           <div className="w-33 min-w-[12rem] overflow-y-auto">
             <FacetsPanelServerSide
@@ -552,11 +553,9 @@ export function AlertTableServerSide({
                     <AlertsTableBody
                       table={table}
                       showSkeleton={showSkeleton}
-                      showEmptyState={showEmptyState}
                       showFilterEmptyState={showFilterEmptyState}
                       showSearchEmptyState={showSearchEmptyState}
                       theme={theme}
-                      viewedAlerts={viewedAlerts}
                       lastViewedAlert={lastViewedAlert}
                       onRowClick={handleRowClick}
                       onClearFiltersClick={() => setClearFiltersToken(uuidV4())}

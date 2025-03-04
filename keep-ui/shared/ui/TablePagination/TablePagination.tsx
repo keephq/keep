@@ -41,7 +41,11 @@ export function TablePagination({ table }: Props) {
   return (
     <div className="flex justify-between items-center">
       <Text>
-        Showing {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
+        {pageCount ? (
+          <>
+            Showing {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
+          </>
+        ) : null}
       </Text>
       <div className="flex gap-1">
         <Select

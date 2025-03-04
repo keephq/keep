@@ -1,4 +1,4 @@
-import { Button, Select, SelectItem, Title } from "@tremor/react";
+import { Button, Select, SelectItem, Text } from "@tremor/react";
 
 import Modal from "@/components/ui/Modal";
 import { useWorkflows } from "utils/hooks/useWorkflows";
@@ -74,8 +74,14 @@ export default function ManualRunWorkflowModal({
   };
 
   return (
-    <Modal onClose={clearAndClose} isOpen={isOpen} className="overflow-visible">
-      <Title className="mb-1">Select workflow to run</Title>
+    <Modal
+      onClose={clearAndClose}
+      isOpen={isOpen}
+      className="overflow-visible"
+      beforeTitle={alert?.name}
+      title="Run Workflow"
+    >
+      <Text className="mb-1 mt-4">Select workflow to run</Text>
       {workflows ? (
         <Select
           value={selectedWorkflowId}

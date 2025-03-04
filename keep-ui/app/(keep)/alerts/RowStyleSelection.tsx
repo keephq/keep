@@ -1,18 +1,15 @@
 import React from "react";
-import { Button, Text } from "@tremor/react";
-import { useLocalStorage } from "utils/hooks/useLocalStorage";
-
+import { Text } from "@tremor/react";
+import {
+  RowStyle,
+  useAlertRowStyle,
+} from "@/entities/alerts/model/useAlertRowStyle";
 interface RowStyleSelectionProps {
   onClose?: () => void;
 }
 
-export type RowStyle = "default" | "dense";
-
 export function RowStyleSelection({ onClose }: RowStyleSelectionProps) {
-  const [rowStyle, setRowStyle] = useLocalStorage<RowStyle>(
-    "alert-table-row-style",
-    "default"
-  );
+  const [rowStyle, setRowStyle] = useAlertRowStyle();
 
   const handleStyleChange = (style: RowStyle) => {
     setRowStyle(style);
@@ -33,23 +30,23 @@ export function RowStyleSelection({ onClose }: RowStyleSelectionProps) {
                 : "hover:bg-gray-100"
             }`}
           >
-            <Text>Default</Text>
+            <Text>Compact</Text>
             <Text className="text-sm text-gray-500">
-              Standard row height with comfortable spacing
+              Compact rows to show more data
             </Text>
           </button>
           <button
             type="button"
-            onClick={() => handleStyleChange("dense")}
+            onClick={() => handleStyleChange("relaxed")}
             className={`w-full text-left p-3 rounded ${
-              rowStyle === "dense"
+              rowStyle === "relaxed"
                 ? "bg-orange-100 text-orange-700"
                 : "hover:bg-gray-100"
             }`}
           >
-            <Text>Dense</Text>
+            <Text>Relaxed</Text>
             <Text className="text-sm text-gray-500">
-              Compact rows to show more data
+              Standard row height with comfortable spacing
             </Text>
           </button>
         </div>

@@ -5,10 +5,11 @@ import {
   RowSelectionState,
   VisibilityState,
   createColumnHelper,
+  Cell,
 } from "@tanstack/react-table";
 import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
-import { AlertName, AlertImage } from "@/entities/alerts/ui";
+import { AlertName } from "@/entities/alerts/ui";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
@@ -19,7 +20,6 @@ import {
   MdOutlineNotificationsOff,
 } from "react-icons/md";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
-import TimeAgo from "react-timeago";
 import { useConfig } from "utils/hooks/useConfig";
 import {
   TableIndeterminateCheckbox,
@@ -28,7 +28,10 @@ import {
 } from "@/shared/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import clsx from "clsx";
-import { RowStyle } from "./RowStyleSelection";
+import {
+  RowStyle,
+  useAlertRowStyle,
+} from "@/entities/alerts/model/useAlertRowStyle";
 import {
   formatDateTime,
   TimeFormatOption,
@@ -97,41 +100,56 @@ export const isDateWithinRange: FilterFn<AlertDto> = (row, columnId, value) => {
  * Utility function to get consistent row class names across all table components
  */
 export const getRowClassName = (
-  row: any,
+  row: {
+    id: string;
+    original?: AlertDto;
+  },
   theme: Record<string, string>,
   lastViewedAlert: string | null,
   rowStyle: RowStyle
 ) => {
-  const severity = row.original.severity || "info";
+  const severity = row.original?.severity || "info";
   const rowBgColor = theme[severity] || "bg-white";
-  const isLastViewed = row.original.fingerprint === lastViewedAlert;
+  const isLastViewed = row.original?.fingerprint === lastViewedAlert;
 
   return clsx(
     "cursor-pointer group",
     isLastViewed ? "bg-orange-50" : rowBgColor,
-    rowStyle === "dense" ? "h-8" : "h-12",
-    rowStyle === "dense" ? "[&>td]:py-1" : "[&>td]:py-3",
+    rowStyle === "default" ? "h-8" : "h-12",
+    rowStyle === "default" ? "[&>td]:px-0.5 [&>td]:py-0" : "[&>td]:p-2",
     "hover:bg-orange-100"
   );
 };
 
-/**
- * Utility function to get consistent cell class names
- */
+type CustomCell = {
+  column: {
+    id: string;
+    columnDef: {
+      meta: {
+        tdClassName: string;
+      };
+    };
+  };
+};
+
 export const getCellClassName = (
-  cell: any,
+  cell: Cell<any, unknown> | CustomCell,
   className: string,
   rowStyle: RowStyle,
   isLastViewed: boolean
 ) => {
   const isNameCell = cell.column.id === "name";
+  const tdClassName =
+    "getValue" in cell
+      ? cell.column.columnDef.meta?.tdClassName || ""
+      : cell.column.columnDef.meta.tdClassName;
 
   return clsx(
-    cell.column.columnDef.meta?.tdClassName,
+    tdClassName,
     className,
     isNameCell && "name-cell",
     // For dense rows, make sure name cells don't expand too much
-    rowStyle === "dense" && isNameCell && "w-auto max-w-2xl",
+    rowStyle === "default" && isNameCell && "w-auto max-w-2xl",
     "group-hover:bg-orange-100", // Group hover styling
     isLastViewed && "bg-orange-50" // Override with highlight if this is the last viewed row
   );
@@ -167,7 +185,7 @@ export const useAlertTableCols = (
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
-  const [rowStyle] = useLocalStorage("alert-table-row-style", "default");
+  const [rowStyle] = useAlertRowStyle();
   const [columnTimeFormats] = useLocalStorage<Record<string, TimeFormatOption>>(
     `column-time-formats-${presetName}`,
     {}
@@ -258,7 +276,7 @@ export const useAlertTableCols = (
               <div
                 className={clsx(
                   "truncate whitespace-pre-wrap",
-                  rowStyle === "dense" ? "line-clamp-1" : "line-clamp-3"
+                  rowStyle === "default" ? "line-clamp-1" : "line-clamp-3"
                 )}
               >
                 {value.toString()}
@@ -293,10 +311,6 @@ export const useAlertTableCols = (
             id: "checkbox",
             maxSize: 16,
             minSize: 16,
-            meta: {
-              tdClassName: "w-6 !py-2 !pl-2 !pr-1",
-              thClassName: "w-6 !py-2 !pl-2 !pr-1 ",
-            },
             header: (context) => (
               <TableIndeterminateCheckbox
                 checked={context.table.getIsAllRowsSelected()}
@@ -377,7 +391,10 @@ export const useAlertTableCols = (
             }
             return (
               <DynamicImageProviderIcon
-                className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
+                className={clsx(
+                  "inline-block size-5 xl:size-6",
+                  index == 0 ? "" : "-ml-2"
+                )}
                 key={source}
                 alt={source}
                 height={24}
@@ -400,22 +417,15 @@ export const useAlertTableCols = (
       header: "Name",
       enableGrouping: true,
       enableResizing: true,
-      getGroupingValue: (row) => {
-        console.log("Grouping value for row:", row.name);
-        return row.name;
-      },
+      getGroupingValue: (row) => row.name,
       cell: (context) => (
         <div className="w-full">
-          <AlertName
-            alert={context.row.original}
-            setNoteModalAlert={setNoteModalAlert}
-            setTicketModalAlert={setTicketModalAlert}
-          />
+          <AlertName alert={context.row.original} className="flex-grow" />
         </div>
       ),
       meta: {
-        tdClassName: "!pl-0 w-full",
-        thClassName: "!pl-1 w-full", // Small padding for header text only
+        tdClassName: "w-full",
+        thClassName: "w-full",
       },
     }),
     columnHelper.accessor("description", {
@@ -428,7 +438,7 @@ export const useAlertTableCols = (
           <div
             className={clsx(
               "whitespace-pre-wrap",
-              rowStyle === "dense"
+              rowStyle === "default"
                 ? "truncate line-clamp-1"
                 : "truncate line-clamp-3"
             )}
@@ -446,14 +456,16 @@ export const useAlertTableCols = (
       maxSize: 50,
       size: 50,
       cell: (context) => (
-        <span className="flex items-center gap-1 capitalize">
+        <span className="flex items-center justify-center xl:justify-start gap-1">
           <Icon
             icon={getStatusIcon(context.getValue())}
             size="sm"
             color={getStatusColor(context.getValue())}
             className="!p-0"
           />
-          {context.getValue()}
+          <span className="truncate capitalize hidden xl:block">
+            {context.getValue()}
+          </span>
         </span>
       ),
     }),
@@ -515,22 +527,21 @@ export const useAlertTableCols = (
       ? [
           columnHelper.display({
             id: "alertMenu",
-            minSize: 40,
-            maxSize: 48,
+            minSize: 170,
             cell: (context) => (
-              <div className="flex justify-end">
-                <AlertMenu
-                  presetName={presetName.toLowerCase()}
-                  alert={context.row.original}
-                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-                  setDismissModalAlert={setDismissModalAlert}
-                  setChangeStatusAlert={setChangeStatusAlert}
-                />
-              </div>
+              <AlertMenu
+                presetName={presetName.toLowerCase()}
+                alert={context.row.original}
+                setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+                setDismissModalAlert={setDismissModalAlert}
+                setChangeStatusAlert={setChangeStatusAlert}
+                setTicketModalAlert={setTicketModalAlert}
+                setNoteModalAlert={setNoteModalAlert}
+              />
             ),
             meta: {
-              tdClassName: "p-1 md:p-2",
-              thClassName: "p-1 md:p-2",
+              tdClassName: "p-0 md:p-2",
+              thClassName: "p-0 md:p-2",
             },
           }),
         ]

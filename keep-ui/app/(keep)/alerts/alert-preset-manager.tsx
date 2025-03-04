@@ -10,7 +10,6 @@ import { Preset } from "@/entities/presets/model/types";
 import { usePresets } from "@/entities/presets/model/usePresets";
 import { CopilotKit } from "@copilotkit/react-core";
 import { Button } from "@tremor/react";
-import { PlusIcon } from "@heroicons/react/24/outline";
 import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { GrTest } from "react-icons/gr";
 
@@ -140,12 +139,11 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
       </Modal>
 
       {/* Add Alert Modal */}
-      {isAddAlertModalOpen && (
-        <PushAlertToServerModal
-          handleClose={handleAddAlertModalClose}
-          presetName={presetName}
-        />
-      )}
+      <PushAlertToServerModal
+        isOpen={isAddAlertModalOpen}
+        handleClose={handleAddAlertModalClose}
+        presetName={presetName}
+      />
     </>
   );
 }

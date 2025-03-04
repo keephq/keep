@@ -1,23 +1,48 @@
-
 import datetime
 import pytest
 
 from keep.api.core.cel_to_sql.ast_nodes import ComparisonNode, ConstantNode, LogicalNode, MethodAccessNode, ParenthesisNode, PropertyAccessNode, UnaryNode
 from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 
-@pytest.mark.parametrize("cel, operator, expected_constant_type, expected_constant_value", [
-    ("fakeProp == 'fake alert'", ComparisonNode.EQ, str, "fake alert"),
-    ("fakeProp == true", ComparisonNode.EQ, bool, True),
-    ("fakeProp == 12349983", ComparisonNode.EQ, int, 12349983),
-    ("fakeProp == 1234.9983", ComparisonNode.EQ, float, 1234.9983),
-    ("fakeProp == '2025-01-20'", ComparisonNode.EQ, datetime.datetime, datetime.datetime(2025, 1, 20)),
-    ("fakeProp == '2025-01-20T14:35:27.123456'", ComparisonNode.EQ, datetime.datetime, datetime.datetime(2025, 1, 20, 14, 35, 27, 123456)),
-    ("fakeProp != 'fake alert'", ComparisonNode.NE, str, "fake alert"),
-    ("fakeProp > 'fake alert'", ComparisonNode.GT, str, "fake alert"),
-    ("fakeProp >= 'fake alert'", ComparisonNode.GE, str, "fake alert"),
-    ("fakeProp < 'fake alert'", ComparisonNode.LT, str, "fake alert"),
-    ("fakeProp <= 'fake alert'", ComparisonNode.LE, str, "fake alert"),
-])
+
+@pytest.mark.parametrize(
+    "cel, operator, expected_constant_type, expected_constant_value",
+    [
+        ("fakeProp == 'fake alert'", ComparisonNode.EQ, str, "fake alert"),
+        (
+            "fakeProp == 'It\\'s value with escaped single-quote'",
+            ComparisonNode.EQ,
+            str,
+            "It's value with escaped single-quote",
+        ),
+        (
+            'fakeProp == "It\\"s value with escaped double-quote"',
+            ComparisonNode.EQ,
+            str,
+            'It"s value with escaped double-quote',
+        ),
+        ("fakeProp == true", ComparisonNode.EQ, bool, True),
+        ("fakeProp == 12349983", ComparisonNode.EQ, int, 12349983),
+        ("fakeProp == 1234.9983", ComparisonNode.EQ, float, 1234.9983),
+        (
+            "fakeProp == '2025-01-20'",
+            ComparisonNode.EQ,
+            datetime.datetime,
+            datetime.datetime(2025, 1, 20),
+        ),
+        (
+            "fakeProp == '2025-01-20T14:35:27.123456'",
+            ComparisonNode.EQ,
+            datetime.datetime,
+            datetime.datetime(2025, 1, 20, 14, 35, 27, 123456),
+        ),
+        ("fakeProp != 'fake alert'", ComparisonNode.NE, str, "fake alert"),
+        ("fakeProp > 'fake alert'", ComparisonNode.GT, str, "fake alert"),
+        ("fakeProp >= 'fake alert'", ComparisonNode.GE, str, "fake alert"),
+        ("fakeProp < 'fake alert'", ComparisonNode.LT, str, "fake alert"),
+        ("fakeProp <= 'fake alert'", ComparisonNode.LE, str, "fake alert"),
+    ],
+)
 def test_simple_comparison_node(cel, operator, expected_constant_type, expected_constant_value):
     actual = CelToAstConverter.convert_to_ast(cel)
 

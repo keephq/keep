@@ -1,57 +1,42 @@
-import { TableBody, TableRow, TableCell, Icon } from "@tremor/react";
+import { TableBody, TableRow, TableCell } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
 import { Table, flexRender } from "@tanstack/react-table";
 import React, { useState } from "react";
 import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
-import {
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  EyeIcon,
-} from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, FunnelIcon } from "@heroicons/react/24/outline";
 import { GroupedRow } from "./alert-grouped-row";
-import { ViewedAlert } from "./alert-table";
-import { useLocalStorage } from "utils/hooks/useLocalStorage";
-import { RowStyle } from "./RowStyleSelection";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
-import { format } from "date-fns";
 import { getRowClassName, getCellClassName } from "./alert-table-utils";
 import clsx from "clsx";
+import "react-loading-skeleton/dist/skeleton.css";
 
 interface Props {
   table: Table<AlertDto>;
   showSkeleton: boolean;
-  showEmptyState: boolean;
   showFilterEmptyState?: boolean;
   showSearchEmptyState?: boolean;
   theme: { [key: string]: string };
   onRowClick: (alert: AlertDto) => void;
   onClearFiltersClick?: () => void;
   presetName: string;
-  viewedAlerts: ViewedAlert[];
   lastViewedAlert: string | null;
 }
 
 export function AlertsTableBody({
   table,
   showSkeleton,
-  showEmptyState,
   theme,
   onRowClick,
   onClearFiltersClick,
   presetName,
   showFilterEmptyState,
   showSearchEmptyState,
-  viewedAlerts,
   lastViewedAlert,
 }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
-  const [rowStyle] = useLocalStorage<RowStyle>(
-    "alert-table-row-style",
-    "default"
-  );
+  const [rowStyle] = useAlertRowStyle();
 
   const handleModalClose = () => setModalOpen(false);
   const handleModalOpen = () => setModalOpen(true);
@@ -74,12 +59,11 @@ export function AlertsTableBody({
               />
             </div>
           </div>
-          {modalOpen && (
-            <PushAlertToServerModal
-              handleClose={handleModalClose}
-              presetName={presetName}
-            />
-          )}
+          <PushAlertToServerModal
+            isOpen={modalOpen}
+            handleClose={handleModalClose}
+            presetName={presetName}
+          />
         </>
       );
     }
@@ -140,10 +124,31 @@ export function AlertsTableBody({
     return (
       <TableBody>
         {Array.from({ length: 20 }).map((_, index) => (
-          <TableRow key={index}>
-            {Array.from({ length: 5 }).map((_, cellIndex) => (
-              <TableCell key={cellIndex}>
-                <div className="h-4 bg-gray-200 rounded animate-pulse" />
+          <TableRow
+            key={index}
+            className={getRowClassName(
+              { id: index.toString(), original: {} as AlertDto },
+              theme,
+              lastViewedAlert,
+              rowStyle
+            )}
+          >
+            {Array.from({ length: 7 }).map((_, cellIndex) => (
+              <TableCell
+                key={cellIndex}
+                className={getCellClassName(
+                  {
+                    column: {
+                      id: cellIndex.toString(),
+                      columnDef: { meta: { tdClassName: "" } },
+                    },
+                  },
+                  "",
+                  rowStyle,
+                  false
+                )}
+              >
+                <div className="h-4 bg-gray-200 rounded animate-pulse mx-0.5" />
               </TableCell>
             ))}
           </TableRow>
@@ -163,16 +168,12 @@ export function AlertsTableBody({
               table={table}
               theme={theme}
               onRowClick={handleRowClick}
-              viewedAlerts={viewedAlerts}
               lastViewedAlert={lastViewedAlert}
               rowStyle={rowStyle}
             />
           );
         }
 
-        const viewedAlert = viewedAlerts?.find(
-          (a) => a.fingerprint === row.original.fingerprint
-        );
         const isLastViewed = row.original.fingerprint === lastViewedAlert;
 
         return (
@@ -203,7 +204,7 @@ export function AlertsTableBody({
                   style={{
                     ...style,
                     maxWidth:
-                      rowStyle === "dense" && cell.column.id === "name"
+                      rowStyle === "default" && cell.column.id === "name"
                         ? "600px"
                         : undefined,
                   }}
@@ -211,23 +212,7 @@ export function AlertsTableBody({
                     cell.column.id === "name" ? row.original.name : undefined
                   }
                 >
-                  {viewedAlert && cell.column.id === "alertMenu" ? (
-                    <div className="flex justify-end items-center gap-2">
-                      <Icon
-                        icon={EyeIcon}
-                        tooltip={`Viewed ${format(
-                          new Date(viewedAlert.viewedAt),
-                          "MMM d, yyyy HH:mm"
-                        )}`}
-                      />
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </div>
-                  ) : (
-                    flexRender(cell.column.columnDef.cell, cell.getContext())
-                  )}
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               );
             })}

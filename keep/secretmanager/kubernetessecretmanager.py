@@ -62,11 +62,12 @@ class KubernetesSecretManager(BaseSecretManager):
                         extra={"secret_name": secret_name, "error": str(patch_error)},
                     )
                     raise patch_error
-            self.logger.error(
-                "Error writing secret",
-                extra={"secret_name": secret_name, "error": str(e)},
-            )
-            raise
+            else:
+                self.logger.error(
+                    "Error writing secret",
+                    extra={"secret_name": secret_name, "error": str(e)},
+                )
+                raise
 
     def read_secret(self, secret_name: str, is_json: bool = False) -> str | dict:
         # k8s requirements: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names

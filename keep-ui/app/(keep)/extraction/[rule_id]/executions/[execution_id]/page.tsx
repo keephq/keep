@@ -25,8 +25,11 @@ export default function ExtractionExecutionDetailsPage({
     return null;
   }
 
+  // alert_id in enrichmentevent (keep/api/models/db/enrichment_event.py#L34) refers not to alert.PK,
+  // but to `alert.event->>'id'`.
+  // So, we can't guarantee the format it is stored in. It could be any - dashed or non-dashed
   const alertFilterUrl = `/alerts/feed?cel=${encodeURIComponent(
-    `id=="${execution.enrichment_event.alert_id}"`
+    `id=="${execution.enrichment_event.alert_id}" || id=="${execution.enrichment_event.alert_id.replace("-", "")}"`
   )}`;
 
   return (
