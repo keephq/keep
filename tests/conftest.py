@@ -350,6 +350,7 @@ def mocked_context_manager():
         "foreach": {"value": None},
         "env": {},
     }
+    context_manager.tenant_id = SINGLE_TENANT_UUID
     return context_manager
 
 

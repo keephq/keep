@@ -124,6 +124,8 @@ def get_provider_logs(
     try:
         logs = ProvidersService.get_provider_logs(tenant_id, provider_id)
         return JSONResponse(content=jsonable_encoder(logs), status_code=200)
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logger.error(
             f"Error getting provider logs: {str(e)}",
@@ -214,6 +216,8 @@ def get_logs(
             context_manager, provider_id, provider_type, provider_config
         )
         return provider.get_logs(limit=limit)
+    except HTTPException as e:
+        raise e
     except ModuleNotFoundError:
         raise HTTPException(404, detail=f"Provider {provider_type} not found")
     except Exception:
