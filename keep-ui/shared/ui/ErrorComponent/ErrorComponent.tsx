@@ -17,9 +17,11 @@ import { useConfig } from "utils/hooks/useConfig";
 
 export function ErrorComponent({
   error: originalError,
+  description,
   reset,
 }: {
   error: Error | KeepApiError;
+  description?: string;
   reset?: () => void;
 }) {
   const signOut = useSignOut();
@@ -34,25 +36,39 @@ export function ErrorComponent({
   }, [originalError]);
 
   const error = isHealthy ? originalError : new KeepApiHealthError();
+  const subtitle =
+    error instanceof KeepApiError
+      ? error.proposedResolution || description
+      : (description ?? null);
 
   return (
     <div className="flex min-w-0 w-auto mx-auto shrink flex-col items-center justify-center h-full text-center gap-4">
       <KeepLogoError />
-      <div>
-        <Title>{error.message || "An error occurred"}</Title>
-        {error instanceof KeepApiError && error.proposedResolution && (
-          <Subtitle>{error.proposedResolution}</Subtitle>
-        )}
+      <div className="max-w-md">
+        <Title className="text-xl font-bold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+          {error.message || "An error occurred"}
+        </Title>
+        {subtitle && <Subtitle>{subtitle}</Subtitle>}
       </div>
-      <code className="text-gray-600 text-left bg-gray-100 p-2 rounded-md">
-        {error instanceof KeepApiError && (
-          <>
-            {error.statusCode && <p>Status Code: {error.statusCode}</p>}
-            {error.message && <p>Message: {error.message}</p>}
-            {error.url && <p>URL: {error.url}</p>}
-          </>
-        )}
-      </code>
+      {error && (
+        <code className="text-gray-600 text-left bg-gray-100 p-2 rounded-md">
+          {error instanceof KeepApiError && (
+            <>
+              {error.statusCode && <p>Status Code: {error.statusCode}</p>}
+              {error.message && <p>Message: {error.message}</p>}
+              {error.url && <p>URL: {error.url}</p>}
+            </>
+          )}
+          {error.stack && (
+            <details>
+              <summary>Stack</summary>
+              {error.stack.split("\n").map((line) => (
+                <div key={line}>{line}</div>
+              ))}
+            </details>
+          )}
+        </code>
+      )}
       <div className="flex gap-2">
         {error instanceof KeepApiError && error.statusCode === 401 ? (
           <Button onClick={signOut} color="orange" variant="secondary">

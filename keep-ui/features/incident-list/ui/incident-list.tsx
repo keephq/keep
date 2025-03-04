@@ -176,6 +176,7 @@ export function IncidentList({
           reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
       },
       ["Status"]: {
+        uncheckedByDefaultOptionValues: ["resolved", "deleted"],
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={getStatusIcon(facetOption.display_name)}
@@ -274,9 +275,7 @@ export function IncidentList({
 
     if (mainCelQuery && incidents?.items.length === 0) {
       return (
-        <Card className="flex-grow ">
-          <IncidentsNotFoundPlaceholder onClearFilters={handleClearFilters} />
-        </Card>
+        <IncidentsNotFoundPlaceholder onClearFilters={handleClearFilters} />
       );
     }
 
@@ -287,10 +286,6 @@ export function IncidentList({
       </Card>
     );
   }
-
-  const uncheckedFacetOptionsByDefault: Record<string, string[]> = {
-    Status: ["resolved", "deleted"],
-  };
 
   const renderDateTimePicker = () => {
     return (
@@ -363,9 +358,6 @@ export function IncidentList({
                   usePropertyPathsSuggestions={true}
                   clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}
-                  uncheckedByDefaultOptionValues={
-                    uncheckedFacetOptionsByDefault
-                  }
                   onCelChange={(cel) => setFilterCel(cel)}
                   revalidationToken={filterRevalidationToken}
                 />

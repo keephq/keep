@@ -166,3 +166,17 @@ def test_stream_output():
     assert stream_content is not None
     assert '"Test Stream"' in stream_content
     assert '"SELECT * FROM table;"' in stream_content 
+
+def test_multiline_strings():
+    """Test that multiline strings are preserved."""
+    yaml_str = """
+      query: |
+        SELECT Url, Status FROM "observability"."Urls"
+        WHERE ( Url LIKE '%te_tests%' ) AND Timestamp >= toStartOfMinute(date_add(toDateTime(NOW()), INTERVAL -1 MINUTE)) AND Status = 0;
+    """
+    data = cyaml.safe_load(yaml_str)
+    dumped_yaml = cyaml.dump(data)
+    
+    assert dumped_yaml is not None
+    assert 'query: |' in dumped_yaml
+    
