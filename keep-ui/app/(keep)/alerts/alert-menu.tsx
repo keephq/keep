@@ -184,6 +184,38 @@ export default function AlertMenu({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [tooltipPosition]);
 
+  const updateUrl = useCallback(
+    (params: {
+      newParams?: Record<string, any>;
+      deleteParams?: Record<string, string>;
+      scroll?: boolean;
+    }) => {
+      const currentParams = new URLSearchParams(window.location.search);
+
+      if (params.newParams) {
+        Object.entries(params.newParams).forEach(([key, value]) =>
+          currentParams.append(key, value)
+        );
+      }
+
+      if (params.deleteParams) {
+        Object.keys(params.deleteParams).forEach((key) =>
+          currentParams.delete(key)
+        );
+      }
+
+      let newPath = `${window.location.pathname}`;
+
+      if (currentParams.toString()) {
+        newPath += `?${currentParams.toString()}`;
+      }
+      router.replace(newPath, {
+        scroll: typeof params.scroll == "boolean" ? params.scroll : false,
+      });
+    },
+    [router]
+  );
+
   const openAlertPayloadModal = useCallback(() => {
     setViewedAlerts((prev) => {
       const newViewedAlerts = prev.filter(
@@ -197,13 +229,11 @@ export default function AlertMenu({
         },
       ];
     });
-    router.replace(
-      `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}`,
-      {
-        scroll: false,
-      }
-    );
-  }, [alert, presetName, router]);
+
+    updateUrl({
+      newParams: { alertPayloadFingerprint: alert.fingerprint },
+    });
+  }, [alert, updateUrl]);
 
   const actionIconButtonClassName = clsx(
     "text-gray-500 leading-none p-2 prevent-row-click hover:bg-slate-200 [&>[role='tooltip']]:z-50",
@@ -458,18 +488,25 @@ export default function AlertMenu({
         icon: ArchiveBoxIcon,
         label: "History",
         onClick: () =>
-          router.replace(
-            `/alerts/${presetName}?fingerprint=${alert.fingerprint}`,
-            { scroll: false }
-          ),
+          updateUrl({ newParams: { fingerprint: alert.fingerprint } }),
+        // router.replace(
+        //   `/alerts/${presetName}?fingerprint=${alert.fingerprint}`,
+        //   { scroll: false }
+        // ),
       },
       {
         icon: AdjustmentsHorizontalIcon,
         label: "Enrich",
         onClick: () =>
-          router.replace(
-            `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}&enrich=true`
-          ),
+          updateUrl({
+            newParams: {
+              alertPayloadFingerprint: alert.fingerprint,
+              enrich: true,
+            },
+          }),
+        // router.replace(
+        //   `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}&enrich=true`
+        // ),
       },
       {
         icon: UserPlusIcon,

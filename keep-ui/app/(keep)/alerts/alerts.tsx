@@ -157,6 +157,20 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   const handleOnPoll = useCallback(() => setIsSilentLoading(true), []);
   const handleOnQueryChange = useCallback(() => setIsSilentLoading(false), []);
 
+  const resetUrlAfterModal = useCallback(() => {
+    const currentParams = new URLSearchParams(window.location.search);
+    Object.keys(currentParams)
+      .filter((paramKey) => paramKey !== "cel")
+      .forEach((key) => currentParams.delete(key));
+    let url = `${window.location.pathname}`;
+
+    if (currentParams.toString()) {
+      url += `?${currentParams.toString()}`;
+    }
+
+    router.replace(url);
+  }, [router]);
+
   // if we don't have presets data yet, just show loading
   if (!selectedPreset && isPresetsLoading) {
     return <Loading />;
@@ -222,7 +236,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
       />
       <ViewAlertModal
         alert={viewAlertModal}
-        handleClose={() => router.replace(`/alerts/${presetName}`)}
+        handleClose={() => resetUrlAfterModal()}
         mutate={mutateAlerts}
       />
       <EnrichAlertSidePanel
@@ -230,7 +244,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         isOpen={isEnrichSidebarOpen}
         handleClose={() => {
           setIsEnrichSidebarOpen(false);
-          router.replace(`/alerts/${presetName}`);
+          resetUrlAfterModal();
         }}
         mutate={mutateAlerts}
       />
