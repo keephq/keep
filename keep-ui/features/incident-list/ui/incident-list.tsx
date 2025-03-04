@@ -274,9 +274,7 @@ export function IncidentList({
 
     if (mainCelQuery && incidents?.items.length === 0) {
       return (
-        <Card className="flex-grow ">
-          <IncidentsNotFoundPlaceholder onClearFilters={handleClearFilters} />
-        </Card>
+        <IncidentsNotFoundPlaceholder onClearFilters={handleClearFilters} />
       );
     }
 

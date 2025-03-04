@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { EmptyStateCard } from "@/components/ui";
 import ManualRunWorkflowModal from "@/app/(keep)/workflows/manual-run-workflow-modal";
 import type { IncidentDto } from "@/entities/incidents/model";
-
+import { EmptyStateCard } from "@/shared/ui";
+import { Button } from "@tremor/react";
+import { Workflows as WorkflowsIcon } from "components/icons";
 export function IncidentWorkflowsEmptyState({
   incident,
 }: {
@@ -18,16 +19,25 @@ export function IncidentWorkflowsEmptyState({
   return (
     <>
       <EmptyStateCard
+        icon={() => <WorkflowsIcon className="!size-8" />}
         title="No Workflows"
         description="No workflows have been executed for this incident yet."
-        buttonText="Run a workflow"
-        onClick={(e) => {
-          console.log("'Run a workflow' clicked");
-          e.preventDefault();
-          e.stopPropagation();
-          handleRunWorkflow();
-        }}
-      />
+      >
+        <Button
+          color="orange"
+          variant="primary"
+          size="md"
+          onClick={(e) => {
+            console.log("'Run a workflow' clicked");
+            e.preventDefault();
+            e.stopPropagation();
+            handleRunWorkflow();
+          }}
+        >
+          Run a workflow
+        </Button>
+      </EmptyStateCard>
+
       <ManualRunWorkflowModal
         incident={runWorkflowModalIncident}
         handleClose={() => setRunWorkflowModalIncident(null)}
