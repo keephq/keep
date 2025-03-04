@@ -148,11 +148,11 @@ class WorkflowStore:
     def get_all_workflows_with_last_execution(
         self,
         tenant_id: str,
-        cel: str,
-        limit: int,
-        offset: int,
-        sort_by: str,
-        sort_dir: str,
+        cel: str = None,
+        limit: int = None,
+        offset: int = None,
+        sort_by: str = None,
+        sort_dir: str = None,
         is_v2: bool = False,
     ) -> Tuple[list[dict], int]:
         # list all tenant's workflows
