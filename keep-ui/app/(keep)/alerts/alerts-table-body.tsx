@@ -1,13 +1,14 @@
-import { TableBody, TableRow, TableCell } from "@tremor/react";
+import { TableBody, TableRow, TableCell, Button } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
 import { Table, flexRender } from "@tanstack/react-table";
-import React, { useState } from "react";
-import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
-import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
+import React from "react";
 import { MagnifyingGlassIcon, FunnelIcon } from "@heroicons/react/24/outline";
 import { GroupedRow } from "./alert-grouped-row";
 import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
-import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
+import {
+  EmptyStateCard,
+  getCommonPinningStylesAndClassNames,
+} from "@/shared/ui";
 import { getRowClassName, getCellClassName } from "./alert-table-utils";
 import clsx from "clsx";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -35,52 +36,28 @@ export function AlertsTableBody({
   showSearchEmptyState,
   lastViewedAlert,
 }: Props) {
-  const [modalOpen, setModalOpen] = useState(false);
   const [rowStyle] = useAlertRowStyle();
 
-  const handleModalClose = () => setModalOpen(false);
-  const handleModalOpen = () => setModalOpen(true);
-
   if (!showSkeleton) {
-    if (
-      table.getPageCount() === 0 &&
-      !showFilterEmptyState &&
-      !showSearchEmptyState
-    ) {
-      return (
-        <>
-          <div className="flex items-center h-full w-full absolute -mt-20">
-            <div className="flex flex-col justify-center items-center w-full p-4">
-              <EmptyStateCard
-                title="No alerts to display"
-                description="It is because you have not connected any data source yet or there are no alerts matching the filter."
-                buttonText="Add Alert"
-                onClick={handleModalOpen}
-              />
-            </div>
-          </div>
-          <PushAlertToServerModal
-            isOpen={modalOpen}
-            handleClose={handleModalClose}
-            presetName={presetName}
-          />
-        </>
-      );
-    }
-
     if (showFilterEmptyState) {
       return (
         <>
           <div className="flex items-center h-full w-full absolute -mt-20">
             <div className="flex flex-col justify-center items-center w-full p-4">
               <EmptyStateCard
-                title="No alerts to display matching your filter"
-                buttonText="Reset filter"
-                renderIcon={() => (
-                  <FunnelIcon className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
-                )}
-                onClick={() => onClearFiltersClick!()}
-              />
+                noCard
+                title="No Alerts Matching Your Filter"
+                description="Reset filter to see all alerts"
+                icon={FunnelIcon}
+              >
+                <Button
+                  color="orange"
+                  variant="secondary"
+                  onClick={() => onClearFiltersClick!()}
+                >
+                  Reset filter
+                </Button>
+              </EmptyStateCard>
             </div>
           </div>
         </>
@@ -93,10 +70,10 @@ export function AlertsTableBody({
           <div className="flex items-center h-full w-full absolute -mt-20">
             <div className="flex flex-col justify-center items-center w-full p-4">
               <EmptyStateCard
-                title="No alerts to display matching your CEL query"
-                renderIcon={() => (
-                  <MagnifyingGlassIcon className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
-                )}
+                noCard
+                title="No Alerts Matching Your CEL Query"
+                description="Check your CEL query and try again"
+                icon={MagnifyingGlassIcon}
               />
             </div>
           </div>

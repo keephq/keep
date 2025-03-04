@@ -3,6 +3,7 @@ import { Button, Card, Subtitle, Title } from "@tremor/react";
 import { CorrelationSidebar } from "./CorrelationSidebar";
 import { PlaceholderSankey } from "./ui/PlaceholderSankey";
 import { PlusIcon } from "@heroicons/react/20/solid";
+import { EmptyStateCard } from "@/shared/ui";
 
 export const CorrelationPlaceholder = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -13,13 +14,12 @@ export const CorrelationPlaceholder = () => {
 
   return (
     <Fragment>
-      <div className="flex flex-col items-center justify-center gap-y-8 h-full bg-transparent">
-        <div className="text-center space-y-3">
-          <Title className="text-2xl">No Correlations Yet</Title>
-          <Subtitle className="text-gray-400">
-            Start building correlations to group alerts into incidents.
-          </Subtitle>
-        </div>
+      <EmptyStateCard
+        noCard
+        className="h-full"
+        title="No Correlations Yet"
+        description="Start building correlations to group alerts into incidents."
+      >
         <Button
           className="mb-10"
           color="orange"
@@ -31,7 +31,7 @@ export const CorrelationPlaceholder = () => {
           Create Correlation
         </Button>
         <PlaceholderSankey className="max-w-full" />
-      </div>
+      </EmptyStateCard>
       <CorrelationSidebar
         isOpen={isSidebarOpen}
         toggle={() => setIsSidebarOpen(!isSidebarOpen)}
