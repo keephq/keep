@@ -233,6 +233,7 @@
             "providers/documentation/teams-provider",
             "providers/documentation/telegram-provider",
             "providers/documentation/template",
+            "providers/documentation/thousandeyes-provider",
             "providers/documentation/trello-provider",
             "providers/documentation/twilio-provider",
             "providers/documentation/uptimekuma-provider",
