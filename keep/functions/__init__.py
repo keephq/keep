@@ -32,7 +32,7 @@ def diff(iterable: iter) -> bool:
     return not all(iterable)
 
 
-def len(iterable=[]) -> int:
+def len(iterable=[], **kwargs) -> int:
     return _len(iterable)
 
 
