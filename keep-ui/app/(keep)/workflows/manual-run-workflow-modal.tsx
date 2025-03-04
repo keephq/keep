@@ -135,9 +135,9 @@ export default function ManualRunWorkflowModal({
               return true;
             }
             return (
-              workflow.name.indexOf(query) > -1 ||
-              workflow.description.indexOf(query) > -1 ||
-              workflow.id.indexOf(query) > -1
+              workflow.name.toLowerCase().indexOf(query.toLowerCase()) > -1 ||
+              workflow.description.toLowerCase().indexOf(query.toLowerCase()) > -1 ||
+              workflow.id.toLowerCase().indexOf(query.toLowerCase()) > -1
             );
           }}
           components={{
