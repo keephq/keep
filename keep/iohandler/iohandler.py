@@ -57,16 +57,16 @@ class IOHandler:
         return val
 
     def quote(self, template):
-        """Quote {{ }} with ""
+        """Quote {{ }} with ''
 
         Args:
             template (str): string with {{ }} variables in it
 
         Returns:
-            str: string with {{ }} variables quoted with ""
+            str: string with {{ }} variables quoted with ''
         """
         pattern = r"(?<!')\{\{[\s]*([^\}]+)[\s]*\}\}(?!')"
-        replacement = r'"{{ \1 }}"'
+        replacement = r"'{{ \1 }}'"
         return re.sub(pattern, replacement, template)
 
     def extract_keep_functions(self, text):
