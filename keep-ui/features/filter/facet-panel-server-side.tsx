@@ -27,11 +27,6 @@ export interface FacetsPanelProps {
    * Filters will be cleared every clearFiltersToken value change.
    **/
   clearFiltersToken?: string | null;
-  /**
-   * Object with facets that should be unchecked by default.
-   * Key is the facet name, value is the list of option values to uncheck.
-   **/
-  uncheckedByDefaultOptionValues?: { [key: string]: string[] };
   facetsConfig?: FacetsConfig;
   /** Callback to handle the change of the CEL when options toggle */
   onCelChange?: (cel: string) => void;
@@ -46,7 +41,6 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   revalidationToken,
   clearFiltersToken,
   onCelChange = undefined,
-  uncheckedByDefaultOptionValues,
   facetsConfig,
 }) => {
   function buildFacetOptionsQuery() {
@@ -162,7 +156,6 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
         facetOptions={facetOptions as any}
         areFacetOptionsLoading={!isSilentLoading && isLoading}
         clearFiltersToken={clearFiltersToken}
-        uncheckedByDefaultOptionValues={uncheckedByDefaultOptionValues}
         facetsConfig={facetsConfig}
         onCelChange={(cel: string) => {
           onCelChange && onCelChange(cel);

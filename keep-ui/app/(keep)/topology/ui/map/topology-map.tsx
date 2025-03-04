@@ -29,7 +29,7 @@ import {
   ArrowUpRightIcon,
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
-  EllipsisVerticalIcon,
+  EllipsisHorizontalIcon,
 } from "@heroicons/react/24/outline";
 import {
   edgeLabelBgStyleNoHover,
@@ -39,7 +39,7 @@ import {
 } from "./styles";
 import "./topology.css";
 import Loading from "@/app/(keep)/loading";
-import { EmptyStateCard, Link } from "@/components/ui";
+import { Link } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useTopologySearchContext } from "../../TopologySearchContext";
 import { ApplicationNode } from "./application-node";
@@ -63,9 +63,10 @@ import { EdgeBase, Connection } from "@xyflow/system";
 import { AddEditNodeSidePanel } from "./AddEditNodeSidePanel";
 import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { DropdownMenu } from "@/shared/ui";
+import { DropdownMenu, EmptyStateCard, ErrorComponent } from "@/shared/ui";
 import { downloadFileFromString } from "@/shared/ui/YAMLCodeblock/ui/YAMLCodeblock";
 import { PlusIcon } from "@heroicons/react/20/solid";
+import { TbTopologyRing } from "react-icons/tb";
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
@@ -183,16 +184,20 @@ export function TopologyMap({
     }
   };
 
+  const handleImportTopology = () => {
+    const confirm = window.confirm(
+      "Current topology will be completely replaced. Do you want to continue?"
+    );
+    if (confirm) {
+      document.getElementById("fileInput")?.click();
+    }
+  };
+
   const menuItems: MenuItem[] = [
     {
       label: "Import",
       icon: ArrowUpTrayIcon,
-      onClick: () =>
-        window.confirm(
-          "Current topology will be completely replaced. Do you want to continue?"
-        )
-          ? document.getElementById("fileInput")?.click()
-          : null,
+      onClick: handleImportTopology,
     },
     {
       label: "Export",
@@ -538,14 +543,12 @@ export function TopologyMap({
   }
   if (error) {
     return (
-      <div className="flex flex-col justify-center">
-        <EmptyStateCard
-          className="mt-20"
-          title="Error Loading Topology Data"
-          description="Seems like we encountred some problem while trying to load your topology data, please contact us if this issue continues"
-          buttonText="Slack Us"
-          onClick={() => {
-            window.open("https://slack.keephq.dev/", "_blank");
+      <div className="mt-20 flex flex-col justify-center">
+        <ErrorComponent
+          error={error || new Error("Error Loading Topology Data")}
+          description="We encountered some problem while trying to load your topology data, please contact us if this issue continues"
+          reset={() => {
+            mutateTopologyData();
           }}
         />
       </div>
@@ -555,7 +558,7 @@ export function TopologyMap({
   return (
     <>
       <div className="flex flex-col gap-4 h-full">
-        <div className="flex justify-between  gap-4 items-center">
+        <div className="flex justify-between gap-4 items-center">
           <TopologySearchAutocomplete
             wrapperClassName="w-full flex-1"
             includeApplications={true}
@@ -580,20 +583,17 @@ export function TopologyMap({
               ))}
             </MultiSelect>
           </div>
-          <Button
-            onClick={() => setIsSidePanelOpen(true)}
-            variant="primary"
-            size="md"
-            icon={PlusIcon}
-          >
-            Add Node
-          </Button>
-          <div className="h-full">
-            <DropdownMenu.Menu
-              icon={EllipsisVerticalIcon}
-              label=""
-              className="!h-full"
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setIsSidePanelOpen(true)}
+              color="orange"
+              variant="primary"
+              size="md"
+              icon={PlusIcon}
             >
+              Add Node
+            </Button>
+            <DropdownMenu.Menu icon={EllipsisHorizontalIcon} label="">
               {menuItems.map((item, index) => (
                 <DropdownMenu.Item
                   key={item.label + index}
@@ -667,12 +667,32 @@ export function TopologyMap({
                 <div className="absolute top-0 right-0 h-full w-full p-4 md:p-10">
                   <div className="relative w-full h-full flex flex-col justify-center mb-20">
                     <EmptyStateCard
-                      className="mb-20"
-                      title="No Topology Available"
-                      description="Seems like no topology data is available, start by connecting providers that support topology."
-                      buttonText="Connect Providers"
-                      onClick={() => router.push("/providers?labels=topology")}
-                    />
+                      className="mb-20 max-w-3xl min-h-72"
+                      icon={TbTopologyRing}
+                      title="No Topology Yet"
+                      description="Start by connecting providers that support topology, import topology data or create a new topology manually"
+                    >
+                      <div className="flex gap-2">
+                        <Button
+                          color="orange"
+                          variant="secondary"
+                          size="md"
+                          onClick={handleImportTopology}
+                        >
+                          Import
+                        </Button>
+                        <Button
+                          color="orange"
+                          variant="primary"
+                          size="md"
+                          onClick={() =>
+                            router.push("/providers?labels=topology")
+                          }
+                        >
+                          Connect Providers
+                        </Button>
+                      </div>
+                    </EmptyStateCard>
                   </div>
                 </div>
               </>

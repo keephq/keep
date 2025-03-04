@@ -1,5 +1,5 @@
 import { Card } from "@tremor/react";
-import { CircleStackIcon } from "@heroicons/react/24/outline";
+import { RectangleStackIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 
 export function EmptyStateCard({
@@ -8,29 +8,39 @@ export function EmptyStateCard({
   description,
   className,
   children,
+  noCard,
 }: {
   icon?: React.ElementType;
   title: string;
-  description: string;
+  description?: string;
   className?: string;
   children?: React.ReactNode;
+  noCard?: boolean;
 }) {
-  const Icon = icon || CircleStackIcon;
+  const Icon = icon || RectangleStackIcon;
+  const Wrapper = noCard ? "div" : Card;
   return (
-    <Card className={clsx("sm:mx-auto w-full max-w-5xl", className)}>
-      <div className="text-center">
+    <Wrapper
+      className={clsx(
+        "sm:mx-auto w-full min-h-[400px] text-center flex flex-col items-center justify-center gap-4",
+        className
+      )}
+    >
+      <div className="flex flex-col items-center justify-center max-w-md">
         <Icon
-          className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle"
+          className="mx-auto size-8 text-tremor-content-strong/80"
           aria-hidden={true}
         />
-        <p className="mt-2 text-tremor-default font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+        <p className="mt-2 text-xl font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
           {title}
         </p>
-        <p className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
-          {description}
-        </p>
-        {children}
+        {description && (
+          <p className="text-md text-gray-700 dark:text-dark-tremor-content">
+            {description}
+          </p>
+        )}
       </div>
-    </Card>
+      {children}
+    </Wrapper>
   );
 }

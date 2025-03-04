@@ -21,6 +21,7 @@ from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
+from keep.api.core.config import config
 
 logger = logging.getLogger(__name__)
 
@@ -415,4 +416,7 @@ class ProvidersService:
     def get_provider_logs(
         tenant_id: str, provider_id: str
     ) -> List[ProviderExecutionLog]:
+        if not config("KEEP_STORE_PROVIDER_LOGS", cast=bool, default=False):
+            raise HTTPException(404, detail="Provider logs are not enabled")
+
         return get_provider_logs(tenant_id, provider_id)
