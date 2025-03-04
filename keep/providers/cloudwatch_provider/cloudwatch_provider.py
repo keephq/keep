@@ -326,6 +326,7 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         self,
         log_group: str = None,
         log_groups: List[str] | None = None,
+        remove_ptr_from_results=False,
         query: str = None,
         hours: int = 24,
         **kwargs: dict,
@@ -375,7 +376,8 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                         results[-1][field] = json.loads(results[-1][field])
                     except json.JSONDecodeError:
                         pass
-
+                if remove_ptr_from_results:
+                    results[-1].pop("@ptr", None)
         return results
 
     def _get_account_id(self):
