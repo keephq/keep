@@ -309,7 +309,7 @@ def get_workflow_facets_data(
 
     base_query = select(
         # here it creates aliases for table columns that will be used in filtering and faceting
-        text(",".join(["entity_id"] + [key for key in alias_column_mapping.keys()]))
+        text(",".join(["entity_id"] + alias_column_mapping.keys()))
     ).select_from(__build_base_query(tenant_id).cte("workflows_query"))
 
     return get_facet_options(
