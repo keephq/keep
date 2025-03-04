@@ -1,11 +1,10 @@
 "use client";
 
 import Loading from "@/app/(keep)/loading";
-import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { AuditEvent, useAlerts } from "@/utils/hooks/useAlerts";
 import { useIncidentAlerts } from "@/utils/hooks/useIncidents";
-import { Card } from "@tremor/react";
+import { Button, Card } from "@tremor/react";
 import AlertSeverity from "@/app/(keep)/alerts/alert-severity";
 import { AlertDto } from "@/entities/alerts/model";
 import {
@@ -13,11 +12,12 @@ import {
   parseISO,
   differenceInMinutes,
   differenceInHours,
-  differenceInDays,
 } from "date-fns";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { CiViewTimeline } from "react-icons/ci";
+import { EmptyStateCard } from "@/shared/ui";
 
 const severityColors = {
   critical: "bg-red-300",
@@ -250,11 +250,19 @@ const IncidentTimelineNoAlerts: React.FC = () => {
   return (
     <div className="h-80">
       <EmptyStateCard
-        title="Timeline not available"
+        icon={CiViewTimeline}
+        title="No Timeline Yet"
         description="No alerts found for this incident. Go to the alerts feed and assign alerts to view the timeline."
-        buttonText="Assign alerts to this incident"
-        onClick={() => router.push("/alerts/feed")}
-      />
+      >
+        <Button
+          color="orange"
+          variant="primary"
+          size="md"
+          onClick={() => router.push("/alerts/feed")}
+        >
+          Assign Alerts
+        </Button>
+      </EmptyStateCard>
     </div>
   );
 };

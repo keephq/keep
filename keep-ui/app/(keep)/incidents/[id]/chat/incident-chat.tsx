@@ -1,7 +1,6 @@
 import { CopilotChat, ResponseButtonProps } from "@copilotkit/react-ui";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
-import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
 import {
   useCopilotAction,
@@ -27,6 +26,8 @@ import { toast } from "react-toastify";
 import { capture } from "@/shared/lib/capture";
 import "@copilotkit/react-ui/styles.css";
 import "./incident-chat.css";
+import { EmptyStateCard } from "@/shared/ui";
+import { ChatBubbleOvalLeftIcon } from "@heroicons/react/24/outline";
 
 const INSTRUCTIONS = `You are an expert incident resolver who's capable of resolving incidents in a variety of ways. You can get traces from providers, search for traces, create incidents, update incident name and summary, and more. You can also ask the user for information if you need it.
 You should always answer short and concise answers, always trying to suggest the next best action to investigate or resolve the incident.
@@ -567,12 +568,12 @@ export function IncidentChat({
   if (!alerts?.items || alerts.items.length === 0)
     return (
       <EmptyStateCard
+        noCard
+        icon={ChatBubbleOvalLeftIcon}
         title="Chat not available"
         description="Incident assitant will become available as alerts are assigned to this incident."
-        onClick={() => router.push("/alerts/feed")}
       />
     );
-
   return (
     // using 'incident-chat' class to apply styles only to that chat component
     <Card className="h-full incident-chat">
