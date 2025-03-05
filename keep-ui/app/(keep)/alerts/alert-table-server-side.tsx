@@ -49,7 +49,7 @@ import { FacetsConfig } from "@/features/filter/models";
 import { ViewedAlert } from "./alert-table";
 import { TimeFormatOption } from "./alert-table-time-format";
 import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { GrTest } from "react-icons/gr";
 import { PlusIcon } from "@heroicons/react/20/solid";
 
@@ -306,11 +306,7 @@ export function AlertTableServerSide({
     onGroupingChange: setGrouping,
   });
 
-  const selectedRowIds = Object.entries(
-    table.getSelectedRowModel().rowsById
-  ).reduce<string[]>((acc, [alertId]) => {
-    return acc.concat(alertId);
-  }, []);
+  const selectedAlertsFingerprints = Object.keys(table.getState().rowSelection);
 
   let showSkeleton = isAsyncLoading;
   const isTableEmpty = table.getPageCount() === 0;
@@ -471,8 +467,56 @@ export function AlertTableServerSide({
     };
   }, []);
 
-  const [modalOpen, setModalOpen] = useState(false);
+  const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
+    useState<boolean>(false);
   const router = useRouter();
+  const pathname = usePathname();
+  // handle "create incident with AI from last 25 alerts" if ?createIncidentsFromLastAlerts=25
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (selectedAlertsFingerprints.length) {
+      return;
+    }
+
+    const lastAlertsCount = searchParams.get("createIncidentsFromLastAlerts");
+    const lastAlertsNumber = lastAlertsCount ? parseInt(lastAlertsCount) : 25;
+    if (!lastAlertsNumber) {
+      return;
+    }
+
+    const lastAlerts = table.getRowModel().rows.slice(-lastAlertsNumber);
+    const alertsFingerprints = lastAlerts.map(
+      (alert) => alert.original.fingerprint
+    );
+
+    table.setRowSelection(
+      alertsFingerprints.reduce(
+        (acc, fingerprint) => {
+          acc[fingerprint] = true;
+          return acc;
+        },
+        {} as Record<string, boolean>
+      )
+    );
+    const searchParamsWithoutCreateIncidentsFromLastAlerts =
+      new URLSearchParams(searchParams);
+    searchParamsWithoutCreateIncidentsFromLastAlerts.delete(
+      "createIncidentsFromLastAlerts"
+    );
+    setIsCreateIncidentWithAIOpen(true);
+    // todo: remove searchParams after reading
+    router.push(
+      pathname +
+        "?" +
+        searchParamsWithoutCreateIncidentsFromLastAlerts.toString()
+    );
+    // call create incident with AI from last 25 alerts
+    // api/incidents?createIncidentsFromLastAlerts=25
+  }, [searchParams, table]);
+
+  //
+
+  const [modalOpen, setModalOpen] = useState(false);
 
   const handleModalClose = () => setModalOpen(false);
   const handleModalOpen = () => setModalOpen(true);
@@ -564,16 +608,17 @@ export function AlertTableServerSide({
 
       {/* Make actions/presets section fixed height */}
       <div className="h-14 flex-none">
-        {selectedRowIds.length ? (
+        {selectedAlertsFingerprints.length ? (
           <AlertActions
-            selectedRowIds={selectedRowIds}
-            alerts={alerts}
+            selectedAlertsFingerprints={selectedAlertsFingerprints}
             table={table}
             clearRowSelection={table.resetRowSelection}
             setDismissModalAlert={setDismissedModalAlert}
             mutateAlerts={mutateAlerts}
             setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
             isIncidentSelectorOpen={isIncidentSelectorOpen}
+            setIsCreateIncidentWithAIOpen={setIsCreateIncidentWithAIOpen}
+            isCreateIncidentWithAIOpen={isCreateIncidentWithAIOpen}
           />
         ) : (
           <AlertPresetManager

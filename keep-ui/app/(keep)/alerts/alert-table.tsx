@@ -172,6 +172,8 @@ export function AlertTable({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
     useState<boolean>(false);
+  const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
+    useState<boolean>(false);
 
   const filteredAlerts = alerts.filter((alert) => {
     // First apply tab filter
@@ -271,11 +273,9 @@ export function AlertTable({
     enableSorting: true,
   });
 
-  const selectedRowIds = Object.entries(
+  const selectedAlertsFingerprints = Object.keys(
     table.getSelectedRowModel().rowsById
-  ).reduce<string[]>((acc, [alertId]) => {
-    return acc.concat(alertId);
-  }, []);
+  );
 
   let showSkeleton =
     table.getFilteredRowModel().rows.length === 0 && isAsyncLoading;
@@ -325,16 +325,17 @@ export function AlertTable({
 
       {/* Make actions/presets section fixed height */}
       <div className="h-14 px-4 flex-none">
-        {selectedRowIds.length ? (
+        {selectedAlertsFingerprints.length ? (
           <AlertActions
-            selectedRowIds={selectedRowIds}
-            alerts={alerts}
+            selectedAlertsFingerprints={selectedAlertsFingerprints}
             table={table}
             clearRowSelection={table.resetRowSelection}
             setDismissModalAlert={setDismissedModalAlert}
             mutateAlerts={mutateAlerts}
             setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
             isIncidentSelectorOpen={isIncidentSelectorOpen}
+            setIsCreateIncidentWithAIOpen={setIsCreateIncidentWithAIOpen}
+            isCreateIncidentWithAIOpen={isCreateIncidentWithAIOpen}
           />
         ) : (
           <AlertPresetManager table={table} presetName={presetName} />
