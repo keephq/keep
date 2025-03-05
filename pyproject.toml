@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.38.4"
+version = "0.38.5"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
