@@ -145,17 +145,16 @@ class SmtpProvider(BaseProvider):
         if from_name == "":
             msg["From"] = from_email
         msg["From"] = f"{from_name} <{from_email}>"
-        msg["To"] = to_email
+        if to_email is str:
+            msg["To"] = to_email
+        else:
+            msg["To"] = ", ".join(to_email)
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain"))
 
-        try:
-            smtp = self.generate_smtp_client()
-            smtp.sendmail(from_email, to_email, msg.as_string())
-            smtp.quit()
-
-        except Exception as e:
-            raise Exception(f"Failed to send email: {str(e)}")
+        smtp = self.generate_smtp_client()
+        smtp.sendmail(from_email, to_email, msg.as_string())
+        smtp.quit()
 
     def _notify(
         self, from_email: str, from_name: str, to_email: str, subject: str, body: str
