@@ -64,15 +64,10 @@ const AlertNoteModal = ({
     try {
       // build the formData
       const requestData = {
-        enrichments: {
-          note: noteContent,
-        },
+        note: noteContent,
         fingerprint: alert.fingerprint,
       };
-      const response = await api.post(
-        `/alerts/enrich?dispose_on_new_alert=true`,
-        requestData
-      );
+      await api.post(`/alerts/enrich/note`, requestData);
 
       handleNoteClose();
     } catch (error) {
