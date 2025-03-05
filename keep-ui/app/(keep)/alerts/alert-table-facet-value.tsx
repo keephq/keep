@@ -81,6 +81,9 @@ export const FacetValue: React.FC<FacetValueProps> = ({
             height={16}
             width={16}
             title={label}
+            providerType={
+              label.includes("@") ? "/icons/mailgun-icon.png" : label
+            }
             src={
               label.includes("@")
                 ? "/icons/mailgun-icon.png"

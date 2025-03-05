@@ -61,9 +61,8 @@ export function ProviderImageUploader({
         method: "POST",
         body: formData,
       });
-
+      await refresh();
       onClose();
-      refresh();
     } catch (error) {
       showErrorToast(error);
     } finally {

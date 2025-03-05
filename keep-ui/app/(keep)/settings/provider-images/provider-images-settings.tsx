@@ -6,15 +6,24 @@ import { ProviderImageUploader } from "./provider-image-uploader";
 import { ProviderImagesList } from "./provider-image-list";
 import { PageTitle, PageSubtitle } from "@/shared/ui";
 import { PhotoIcon } from "@heroicons/react/24/outline";
+import { useProviders } from "@/utils/hooks/useProviders";
 
 export default function ProviderImagesSettings() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const { useAllAlerts } = useAlerts();
   const { data: alerts = [] } = useAllAlerts("feed");
+  const { data: providers } = useProviders();
 
   // Get unique provider names from alerts
   const uniqueProviders = Array.from(
-    new Set(alerts.map((alert) => alert.source[0]))
+    new Set(
+      alerts
+        .map((alert) => alert.source[0])
+        .filter(
+          (provider) =>
+            !providers?.providers.map((p) => p.type).includes(provider)
+        )
+    )
   );
 
   return (
@@ -29,11 +38,7 @@ export default function ProviderImagesSettings() {
         </Button>
       </div>
 
-      <ProviderImagesList
-        onSelectProvider={(provider) => {
-          // Handle edit of existing image
-        }}
-      />
+      <ProviderImagesList />
 
       <ProviderImageUploader
         providers={uniqueProviders}
