@@ -66,3 +66,7 @@ class MappingRuleDtoIn(MappRuleDtoBase):
         if not rows and values.get("type") == "csv":
             raise ValueError("Mapping of type CSV cannot have empty rows")
         return rows
+
+
+class MappingRuleUpdateDtoIn(MappRuleDtoBase):
+    rows: Optional[list[dict]] = None

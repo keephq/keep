@@ -35,6 +35,7 @@ import { useTopology } from "@/app/(keep)/topology/model";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast, Input } from "@/shared/ui";
 import { PlusIcon, MinusIcon } from "@heroicons/react/20/solid";
+import Editor from "@monaco-editor/react";
 
 interface Props {
   editRule: MappingRule | null;
@@ -45,8 +46,10 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const api = useApi();
   const { mutate } = useMappings();
   const [tabIndex, setTabIndex] = useState<number>(0);
+  const [csvTabIndex, setCsvTabIndex] = useState<number>(0);
   const [mapName, setMapName] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
+  const [csvText, setCsvText] = useState<string>("");
   const [attributeGroups, setAttributeGroups] = useState<string[][]>([[]]);
   const [mappingType, setMappingType] = useState<"csv" | "topology">("csv");
   const [mapDescription, setMapDescription] = useState<string>("");
@@ -88,6 +91,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
     if (inputFile.current) {
       inputFile.current.value = "";
     }
+    setCsvText("");
   };
 
   const updateMappingType = (index: number) => {
@@ -110,15 +114,40 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
     reader.onload = (e) => {
       const text = e.target?.result;
       if (typeof text === "string") {
-        readString(text, {
-          header: true,
-          complete: (results) => {
-            if (results.data.length > 0) setParsedData(results.data);
-          },
-        });
+        parseCsvContent(text);
       }
     };
     if (file) reader.readAsText(file);
+  };
+
+  const parseCsvContent = (content: string) => {
+    readString(content, {
+      header: true,
+      complete: (results) => {
+        if (results.data.length > 0) {
+          setParsedData(results.data);
+          // If we're pasting CSV content, set a generic filename
+          if (csvTabIndex === 1 && !fileName) {
+            setFileName("manual-input.csv");
+          }
+        }
+      },
+      error: (error) => {
+        toast.error("Failed to parse CSV: " + error.message);
+      },
+    });
+  };
+
+  const handleCsvTextChange = (value: string | undefined) => {
+    if (value) {
+      setCsvText(value);
+    }
+  };
+
+  const processCsvText = () => {
+    if (csvText.trim()) {
+      parseCsvContent(csvText);
+    }
   };
 
   const clearForm = () => {
@@ -126,6 +155,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
     setMapDescription("");
     setParsedData(null);
     setAttributeGroups([[]]);
+    setCsvText("");
     handleFileReset();
   };
 
@@ -263,24 +293,75 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           <TabPanels>
             <TabPanel>
               {mappingType === "csv" && (
-                <Input
-                  type="file"
-                  accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-                  onChange={readFile}
-                  required={!editMode}
-                  ref={inputFile}
-                />
-              )}
-              {!parsedData && (
-                <Text className="text-xs text-red-500">
-                  {!editMode ? "* Upload a CSV file to begin" : ""}
-                </Text>
+                <TabGroup index={csvTabIndex} onIndexChange={setCsvTabIndex}>
+                  <TabList>
+                    <Tab>From File</Tab>
+                    <Tab>From Text</Tab>
+                  </TabList>
+                  <TabPanels>
+                    <TabPanel>
+                      <Input
+                        type="file"
+                        accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                        onChange={readFile}
+                        required={!editMode && csvTabIndex === 0}
+                        ref={inputFile}
+                      />
+                      {!parsedData && (
+                        <Text className="text-xs text-red-500">
+                          {!editMode ? "* Upload a CSV file to begin" : ""}
+                        </Text>
+                      )}
+                    </TabPanel>
+                    <TabPanel>
+                      <div className="flex flex-col gap-2">
+                        <Editor
+                          height="200px"
+                          defaultLanguage="csv"
+                          value={csvText}
+                          onChange={handleCsvTextChange}
+                          options={{
+                            minimap: { enabled: false },
+                            scrollBeyondLastLine: false,
+                            lineNumbers: "on",
+                          }}
+                        />
+                        <Button
+                          color="orange"
+                          size="xs"
+                          variant="secondary"
+                          onClick={processCsvText}
+                          disabled={!csvText.trim()}
+                        >
+                          Process CSV
+                        </Button>
+                        {!parsedData && (
+                          <Text className="text-xs text-red-500">
+                            {!editMode
+                              ? "* Enter and process CSV data to begin"
+                              : ""}
+                          </Text>
+                        )}
+                      </div>
+                    </TabPanel>
+                  </TabPanels>
+                </TabGroup>
               )}
             </TabPanel>
             <TabPanel></TabPanel>
           </TabPanels>
         </TabGroup>
       </div>
+
+      {parsedData && (
+        <div className="mt-4">
+          <Badge color="green">CSV Data Loaded Successfully</Badge>
+          <Text className="text-xs text-gray-500 mt-1">
+            {parsedData.length} rows and {attributes.length} columns found
+          </Text>
+        </div>
+      )}
+
       <Subtitle className="mt-2.5">Mapping Configuration</Subtitle>
       <div className="mt-2.5">
         If alert will match the atributes, it will be enriched with the rest of
