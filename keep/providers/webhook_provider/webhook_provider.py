@@ -26,7 +26,7 @@ class WebhookProviderAuthConfig:
         metadata={
             "required": True,
             "description": "Webhook URL",
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         }
     )
 
@@ -69,7 +69,7 @@ class WebhookProviderAuthConfig:
         },
     )
 
-    headers: typing.Optional[dict[str, str]] = dataclasses.field(
+    headers: typing.Optional[list[dict[str, str]]] = dataclasses.field(
         default=None,
         metadata={
             "description": "Headers",
@@ -177,6 +177,8 @@ class WebhookProvider(BaseProvider):
             headers = {}
         if isinstance(headers, str):
             headers = json.loads(headers)
+        if isinstance(headers, list):
+            headers = {header["key"]: header["value"] for header in headers}
         if body is None:
             body = {}
         if params is None:
