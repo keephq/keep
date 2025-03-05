@@ -15,6 +15,7 @@ import {
   getSortedRowModel,
   PaginationState,
 } from "@tanstack/react-table";
+import { ListFormatOption, formatList } from "./alert-table-list-format";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import {
@@ -163,6 +164,10 @@ export function AlertTableServerSide({
     `column-visibility-${presetName}`,
     DEFAULT_COLS_VISIBILITY
   );
+
+  const [columnListFormats, setColumnListFormats] = useLocalStorage<
+    Record<string, ListFormatOption>
+  >(`column-list-formats-${presetName}`, {});
 
   const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
     "table-sizes",
@@ -536,6 +541,8 @@ export function AlertTableServerSide({
           a11yContainerRef={a11yContainerRef}
           columnTimeFormats={columnTimeFormats}
           setColumnTimeFormats={setColumnTimeFormats}
+          columnListFormats={columnListFormats}
+          setColumnListFormats={setColumnListFormats}
         />
         <AlertsTableBody
           table={table}
