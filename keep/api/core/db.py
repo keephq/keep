@@ -23,7 +23,6 @@ from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from psycopg2.errors import NoActiveSqlTransaction
 from sqlalchemy import (
     String,
-    DATETIME,
     and_,
     case,
     cast,

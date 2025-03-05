@@ -4,7 +4,6 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from dateutil.parser import parse
 from fastapi import HTTPException
 from sqlalchemy import and_, desc, distinct, func
 
