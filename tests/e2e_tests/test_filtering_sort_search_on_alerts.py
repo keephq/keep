@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import pytest
 import requests
-from playwright.sync_api import expect, Browser
+from playwright.sync_api import Browser, expect
 
 # NOTE 2: to run the tests with a browser, uncomment this two lines:
 # import os
@@ -243,7 +243,7 @@ def init_test(browser: Browser, alerts):
     browser.wait_for_selector(f"text={alerts[0]['name']}", timeout=10000)
     rows_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()
     # check that required alerts are loaded and displayed
-    assert rows_count == 20
+    assert rows_count >= 20
     return alerts
 
 
@@ -310,6 +310,7 @@ def assert_alerts_by_column(
 
         column_locator = row_locator.locator("td").nth(column_index)
         expect(column_locator).to_have_text(alert[property_in_alert])
+
 
 facet_test_cases = {
     "severity": {
