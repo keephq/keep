@@ -721,7 +721,7 @@ def create_alert(db_session):
             event={
                 "name": random_name,
                 "fingerprint": fingerprint,
-                "lastReceived": timestamp.isoformat(),
+                "lastReceived": details.pop('lastReceived', timestamp.isoformat()),
                 "status": status.value,
                 **details,
             },
