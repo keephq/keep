@@ -9,7 +9,12 @@ from sqlmodel import Session
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import get_session
 from keep.api.models.db.enrichment_event import EnrichmentEventWithLogs
-from keep.api.models.db.mapping import MappingRule, MappingRuleDtoIn, MappingRuleDtoOut
+from keep.api.models.db.mapping import (
+    MappingRule,
+    MappingRuleDtoIn,
+    MappingRuleDtoOut,
+    MappingRuleUpdateDtoIn,
+)
 from keep.api.models.db.topology import TopologyService
 from keep.api.utils.pagination import EnrichmentEventPaginatedResultsDto
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -120,7 +125,7 @@ def delete_rule(
 @router.put("/{rule_id}", description="Update an existing rule")
 def update_rule(
     rule_id: int,
-    rule: MappingRuleDtoIn,
+    rule: MappingRuleUpdateDtoIn,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:rules"])
     ),

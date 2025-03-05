@@ -261,7 +261,8 @@ class MailgunProvider(BaseProvider):
 
         # now I want to add all attributes from raw_email to the alert dto, except the ones that are already set
         for key, value in event.items():
-            if not hasattr(alert, key):
+            # avoid "-" in keys cuz CEL will failed [stripped-text screw CEL]
+            if not hasattr(alert, key) and "-" not in key:
                 setattr(alert, key, value)
 
         logging.getLogger(__name__).info(
