@@ -68,7 +68,7 @@ export function ProviderImagesList() {
     return (
       <EmptyStateCard
         icon={PhotoIcon}
-        title="No custom provider images"
+        title="No custom provider icons"
         description="Upload custom images for your providers to make them more recognizable"
       />
     );

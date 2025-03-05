@@ -381,7 +381,7 @@ export default function SettingsPage() {
             icon={PhotoIcon}
             onClick={() => handleTabChange("provider-images")}
           >
-            Provider Images
+            Provider Icons
           </Tab>
         </TabList>
         <TabPanels className="flex-grow overflow-hidden p-px">

@@ -30,7 +30,7 @@ export default function ProviderImagesSettings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <PageTitle>Provider Images</PageTitle>
+          <PageTitle>Provider Icons</PageTitle>
           <PageSubtitle>Customize provider icons</PageSubtitle>
         </div>
         <Button icon={PhotoIcon} onClick={() => setIsUploadModalOpen(true)}>
