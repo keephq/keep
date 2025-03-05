@@ -1,8 +1,8 @@
 """Custom Images
 
-Revision ID: 1094c90ae154
+Revision ID: 0b80bda47ee2
 Revises: a82154690f35
-Create Date: 2025-03-05 10:00:44.070965
+Create Date: 2025-03-05 15:55:27.653706
 
 """
 
@@ -11,7 +11,7 @@ import sqlmodel
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "1094c90ae154"
+revision = "0b80bda47ee2"
 down_revision = "a82154690f35"
 branch_labels = None
 depends_on = None
@@ -25,6 +25,10 @@ def upgrade() -> None:
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("image_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("image_blob", sa.LargeBinary(), nullable=True),
+        sa.Column("last_updated", sa.DateTime(), nullable=False),
+        sa.Column(
+            "updated_by", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False
+        ),
         sa.ForeignKeyConstraint(
             ["tenant_id"],
             ["tenant.id"],

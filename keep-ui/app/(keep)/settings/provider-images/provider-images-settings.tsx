@@ -7,12 +7,16 @@ import { ProviderImagesList } from "./provider-image-list";
 import { PageTitle, PageSubtitle } from "@/shared/ui";
 import { PhotoIcon } from "@heroicons/react/24/outline";
 import { useProviders } from "@/utils/hooks/useProviders";
+import { useProviderImages } from "@/entities/provider-images/model/useProviderImages";
+import { useRouter } from "next/navigation";
 
 export default function ProviderImagesSettings() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const { useAllAlerts } = useAlerts();
   const { data: alerts = [] } = useAllAlerts("feed");
   const { data: providers } = useProviders();
+  const { customImages, refresh } = useProviderImages();
+  const router = useRouter();
 
   // Get unique provider names from alerts
   const uniqueProviders = Array.from(
@@ -25,6 +29,12 @@ export default function ProviderImagesSettings() {
         )
     )
   );
+
+  const handleUploadComplete = async () => {
+    await refresh();
+    setIsUploadModalOpen(false);
+    router.refresh();
+  };
 
   return (
     <div className="space-y-6">
@@ -44,7 +54,8 @@ export default function ProviderImagesSettings() {
         providers={uniqueProviders}
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        customImages={[]} // This will be populated from the ProviderImagesList component
+        onUploadComplete={handleUploadComplete}
+        customImages={customImages || []}
       />
     </div>
   );

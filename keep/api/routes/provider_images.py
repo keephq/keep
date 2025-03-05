@@ -55,6 +55,7 @@ async def upload_provider_image(
                 tenant_id=tenant_id,
                 image_name=full_image_name,
                 image_blob=image_data,
+                updated_by=authenticated_entity.email,
             )
             session.add(provider_image)
 
@@ -124,6 +125,8 @@ async def list_provider_images(
         {
             "provider_name": img.image_name.replace("-icon.png", ""),
             "id": img.id,
+            "updated_by": img.updated_by,
+            "last_updated": img.last_updated,
         }
         for img in provider_images
     ]

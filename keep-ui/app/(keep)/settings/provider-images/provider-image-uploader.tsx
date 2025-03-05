@@ -10,6 +10,7 @@ interface Props {
   providers: string[];
   isOpen: boolean;
   onClose: () => void;
+  onUploadComplete: () => Promise<void>;
   customImages: Array<{ provider_name: string }>;
 }
 
@@ -18,19 +19,14 @@ export function ProviderImageUploader({
   customImages,
   isOpen,
   onClose,
+  onUploadComplete,
 }: Props) {
   const api = useApi();
-  const { refresh } = useProviderImages();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
 
-  // Get providers that don't have custom images
-  const availableProviders = providers.filter(
-    (provider) => !customImages.some((img) => img.provider_name === provider)
-  );
-
-  const providerOptions = availableProviders.map((provider) => ({
+  const providerOptions = providers.map((provider) => ({
     value: provider,
     label: provider,
   }));
@@ -61,8 +57,8 @@ export function ProviderImageUploader({
         method: "POST",
         body: formData,
       });
-      await refresh();
-      onClose();
+
+      await onUploadComplete();
     } catch (error) {
       showErrorToast(error);
     } finally {
