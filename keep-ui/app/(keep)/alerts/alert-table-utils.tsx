@@ -19,6 +19,7 @@ import {
   isListColumn,
   formatList,
   ListFormatOption,
+  ListItem,
 } from "./alert-table-list-format";
 import {
   MdOutlineNotificationsActive,
@@ -284,7 +285,21 @@ export const useAlertTableCols = (
           let listFormatOption =
             columnListFormats[context.column.id] || "badges";
           if (isList) {
-            return formatList(value, listFormatOption);
+            // Type check and convert value to the expected type for formatList
+            if (typeof value === "string") {
+              return formatList(value, listFormatOption);
+            } else if (
+              Array.isArray(value) &&
+              value.every(
+                (item) =>
+                  typeof item === "object" && item !== null && "label" in item
+              )
+            ) {
+              return formatList(value as ListItem[], listFormatOption);
+            } else {
+              // Fallback for incompatible types
+              return String(value || "");
+            }
           }
 
           if (value) {
