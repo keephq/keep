@@ -131,7 +131,12 @@ class SmtpProvider(BaseProvider):
         return smtp
 
     def send_email(
-        self, from_email: str, from_name: str, to_email: str, subject: str, body: str
+        self,
+        from_email: str,
+        from_name: str,
+        to_email: str | list,
+        subject: str,
+        body: str,
     ):
         """
         Send an email using SMTP protocol.
