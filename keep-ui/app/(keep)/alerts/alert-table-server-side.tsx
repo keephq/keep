@@ -38,7 +38,12 @@ import { useUser } from "@/entities/users/model/useUser";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import { Icon } from "@tremor/react";
-import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
+import {
+  BellIcon,
+  BellSlashIcon,
+  FunnelIcon,
+  MagnifyingGlassIcon,
+} from "@heroicons/react/24/outline";
 import AlertPaginationServerSide from "./alert-pagination-server-side";
 import { FacetDto } from "@/features/filter";
 import { GroupingState, getGroupedRowModel } from "@tanstack/react-table";
@@ -474,12 +479,14 @@ export function AlertTableServerSide({
   // handle "create incident with AI from last 25 alerts" if ?createIncidentsFromLastAlerts=25
   const searchParams = useSearchParams();
   useEffect(() => {
-    if (selectedAlertsFingerprints.length) {
+    if (alerts.length === 0 && selectedAlertsFingerprints.length) {
       return;
     }
 
     const lastAlertsCount = searchParams.get("createIncidentsFromLastAlerts");
-    const lastAlertsNumber = lastAlertsCount ? parseInt(lastAlertsCount) : 25;
+    const lastAlertsNumber = lastAlertsCount
+      ? parseInt(lastAlertsCount)
+      : undefined;
     if (!lastAlertsNumber) {
       return;
     }
@@ -505,14 +512,14 @@ export function AlertTableServerSide({
     );
     setIsCreateIncidentWithAIOpen(true);
     // todo: remove searchParams after reading
-    router.push(
+    router.replace(
       pathname +
         "?" +
         searchParamsWithoutCreateIncidentsFromLastAlerts.toString()
     );
     // call create incident with AI from last 25 alerts
     // api/incidents?createIncidentsFromLastAlerts=25
-  }, [searchParams, table]);
+  }, [alerts.length, searchParams, table]);
 
   //
 
@@ -529,7 +536,7 @@ export function AlertTableServerSide({
     ) {
       return (
         <>
-          <div className="flex items-center h-[500px] w-full">
+          <div className="flex-1 flex items-center w-full">
             <div className="flex flex-col justify-center items-center w-full p-4">
               <EmptyStateCard
                 noCard
@@ -567,6 +574,49 @@ export function AlertTableServerSide({
         </>
       );
     }
+    if (!showSkeleton) {
+      if (showFilterEmptyState) {
+        return (
+          <>
+            <div className="flex-1 flex items-center h-full w-full">
+              <div className="flex flex-col justify-center items-center w-full p-4">
+                <EmptyStateCard
+                  noCard
+                  title="No Alerts Matching Your Filter"
+                  description="Reset filter to see all alerts"
+                  icon={FunnelIcon}
+                >
+                  <Button
+                    color="orange"
+                    variant="secondary"
+                    onClick={() => setClearFiltersToken(uuidV4())}
+                  >
+                    Reset filter
+                  </Button>
+                </EmptyStateCard>
+              </div>
+            </div>
+          </>
+        );
+      }
+
+      if (showSearchEmptyState) {
+        return (
+          <>
+            <div className="flex-1 flex items-center h-full w-full">
+              <div className="flex flex-col justify-center items-center w-full p-4">
+                <EmptyStateCard
+                  noCard
+                  title="No Alerts Matching Your CEL Query"
+                  description="Check your CEL query and try again"
+                  icon={MagnifyingGlassIcon}
+                />
+              </div>
+            </div>
+          </>
+        );
+      }
+    }
     return (
       <Table className="[&>table]:table-fixed [&>table]:w-full">
         <AlertsTableHeaders
@@ -580,13 +630,9 @@ export function AlertTableServerSide({
         <AlertsTableBody
           table={table}
           showSkeleton={showSkeleton}
-          showFilterEmptyState={showFilterEmptyState}
-          showSearchEmptyState={showSearchEmptyState}
           theme={theme}
           lastViewedAlert={lastViewedAlert}
           onRowClick={handleRowClick}
-          onClearFiltersClick={() => setClearFiltersToken(uuidV4())}
-          presetName={presetName}
         />
       </Table>
     );
@@ -648,8 +694,8 @@ export function AlertTableServerSide({
 
           {/* Table section */}
           <div className="flex-1 flex flex-col min-w-0 gap-4">
-            <Card className="flex-1 flex flex-col p-0 overflow-x-auto">
-              <div className="flex-grow flex flex-col">
+            <Card className="flex flex-col p-0 overflow-x-auto">
+              <div className="flex-1 flex flex-col">
                 {!presetStatic && (
                   <div className="flex-none">
                     <AlertTabs
@@ -665,7 +711,7 @@ export function AlertTableServerSide({
                 <div ref={a11yContainerRef} className="sr-only" />
 
                 {/* Make table wrapper scrollable */}
-                <div data-testid="alerts-table" className="flex-grow">
+                <div data-testid="alerts-table" className="flex-1">
                   {renderTable()}
                 </div>
               </div>

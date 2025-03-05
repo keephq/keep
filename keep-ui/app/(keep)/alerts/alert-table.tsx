@@ -33,8 +33,6 @@ import AlertSidebar from "./alert-sidebar";
 import { AlertFacets } from "./alert-table-alert-facets";
 import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
 import { useConfig } from "@/utils/hooks/useConfig";
-import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
-import clsx from "clsx";
 import { TimeFormatOption } from "./alert-table-time-format";
 
 interface PresetTab {
@@ -65,6 +63,7 @@ interface Props {
   setChangeStatusAlert?: (alert: AlertDto) => void;
 }
 
+// Deprecated: use AlertTableServerSide instead
 export function AlertTable({
   alerts,
   columns,
@@ -394,7 +393,6 @@ export function AlertTable({
                       showSkeleton={showSkeleton}
                       theme={theme}
                       onRowClick={handleRowClick}
-                      presetName={presetName}
                       lastViewedAlert={lastViewedAlert}
                     />
                   </Table>
