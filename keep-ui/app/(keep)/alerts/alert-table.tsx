@@ -28,7 +28,6 @@ import { AlertPresetManager } from "./alert-preset-manager";
 import { evalWithContext } from "./alerts-rules-builder";
 import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "@/entities/alerts/model";
-import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
 import { AlertFacets } from "./alert-table-alert-facets";
 import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
@@ -365,18 +364,6 @@ export function AlertTable({
           <div className="flex-1 flex flex-col min-w-0">
             <Card className="h-full flex flex-col p-0 overflow-x-auto">
               <div className="flex-grow flex flex-col">
-                {!presetStatic && (
-                  <div className="flex-none">
-                    <AlertTabs
-                      presetId={presetId}
-                      tabs={tabs}
-                      setTabs={setTabs}
-                      selectedTab={selectedTab}
-                      setSelectedTab={setSelectedTab}
-                    />
-                  </div>
-                )}
-
                 <div ref={a11yContainerRef} className="sr-only" />
 
                 {/* Make table wrapper scrollable */}
