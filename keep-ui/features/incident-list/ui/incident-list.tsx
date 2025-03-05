@@ -38,6 +38,7 @@ import EnhancedDateRangePicker, {
   TimeFrame,
 } from "@/components/ui/DateRangePicker";
 import { PlusIcon } from "@heroicons/react/20/solid";
+import { DynamicImageProviderIcon } from "@/components/ui/DynamicProviderIcon";
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
@@ -193,7 +194,7 @@ export function IncidentList({
           }
 
           return (
-            <Image
+            <DynamicImageProviderIcon
               className="inline-block"
               alt={facetOption.display_name}
               height={16}

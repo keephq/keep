@@ -52,6 +52,7 @@ import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { useRouter } from "next/navigation";
 import { GrTest } from "react-icons/gr";
 import { PlusIcon } from "@heroicons/react/20/solid";
+import { DynamicImageProviderIcon } from "@/components/ui/DynamicProviderIcon";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -424,7 +425,7 @@ export function AlertTableServerSide({
           }
 
           return (
-            <Image
+            <DynamicImageProviderIcon
               className="inline-block"
               alt={facetOption.display_name}
               height={16}
