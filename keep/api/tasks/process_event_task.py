@@ -247,6 +247,8 @@ def __save_to_db(
                 for enrichment in alert_enrichment.enrichments:
                     # set the enrichment
                     value = alert_enrichment.enrichments[enrichment]
+                    if isinstance(value, str):
+                        value = value.strip()
                     setattr(formatted_event, enrichment, value)
             enriched_formatted_events.append(formatted_event)
         session.commit()

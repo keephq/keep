@@ -1,3 +1,5 @@
+import clsx from "clsx";
+
 const Rules = () => (
   <svg
     className="tremor-Icon-icon shrink-0 h-5 w-5"
@@ -102,9 +104,9 @@ const Workflows = (props: any) => (
   </svg>
 );
 
-const Mapping = () => (
+const Mapping = ({ className }: { className?: string }) => (
   <svg
-    className="tremor-Icon-icon shrink-0 h-5 w-5"
+    className={clsx("tremor-Icon-icon shrink-0 h-5 w-5", className)}
     width="16"
     height="16"
     viewBox="0 0 16 16"

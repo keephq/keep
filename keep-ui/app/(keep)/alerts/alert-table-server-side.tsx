@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Table, Card } from "@tremor/react";
+import { Table, Card, Button } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto, reverseSeverityMapping } from "@/entities/alerts/model";
 import {
@@ -33,7 +33,7 @@ import AlertSidebar from "./alert-sidebar";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import Image from "next/image";
-import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
+import { EmptyStateCard, SeverityBorderIcon, UISeverity } from "@/shared/ui";
 import { useUser } from "@/entities/users/model/useUser";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
@@ -48,6 +48,14 @@ import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
 import { ViewedAlert } from "./alert-table";
 import { TimeFormatOption } from "./alert-table-time-format";
+import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
+import { useRouter } from "next/navigation";
+import { GrTest } from "react-icons/gr";
+import { PlusIcon } from "@heroicons/react/20/solid";
+import {
+  RowStyle,
+  useAlertRowStyle,
+} from "@/entities/alerts/model/useAlertRowStyle";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -125,6 +133,7 @@ export function AlertTableServerSide({
   const [dateRangeCel, setDateRangeCel] = useState<string>("");
   const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
+  const [rowStyle] = useAlertRowStyle();
   const [columnTimeFormats, setColumnTimeFormats] = useLocalStorage<
     Record<string, TimeFormatOption>
   >(`column-time-formats-${presetName}`, {});
@@ -169,7 +178,7 @@ export function AlertTableServerSide({
   );
   const [paginationState, setPaginationState] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 20,
+    pageSize: rowStyle == "relaxed" ? 20 : 50,
   });
 
   const [, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
@@ -280,7 +289,7 @@ export function AlertTableServerSide({
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     initialState: {
-      pagination: { pageSize: 20 },
+      pagination: { pageSize: rowStyle == "relaxed" ? 20 : 50 },
     },
     globalFilterFn: ({ original }, _id, value) => {
       return evalWithContext(original, value);
@@ -466,10 +475,85 @@ export function AlertTableServerSide({
     };
   }, []);
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const router = useRouter();
+
+  const handleModalClose = () => setModalOpen(false);
+  const handleModalOpen = () => setModalOpen(true);
+  function renderTable() {
+    if (
+      !showSkeleton &&
+      table.getPageCount() === 0 &&
+      !showFilterEmptyState &&
+      !showSearchEmptyState
+    ) {
+      return (
+        <>
+          <div className="flex items-center h-[500px] w-full">
+            <div className="flex flex-col justify-center items-center w-full p-4">
+              <EmptyStateCard
+                noCard
+                title="No Alerts to Display"
+                description="Connect a data source to start receiving alerts, or simulate an alert to test the platform"
+              >
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    color="orange"
+                    icon={GrTest}
+                    variant="secondary"
+                    onClick={handleModalOpen}
+                  >
+                    Simulate Alert
+                  </Button>
+                  <Button
+                    icon={PlusIcon}
+                    color="orange"
+                    variant="primary"
+                    onClick={() => {
+                      router.push("/providers?labels=alert");
+                    }}
+                  >
+                    Connect Data Source
+                  </Button>
+                </div>
+              </EmptyStateCard>
+            </div>
+          </div>
+          <PushAlertToServerModal
+            isOpen={modalOpen}
+            handleClose={handleModalClose}
+            presetName={presetName}
+          />
+        </>
+      );
+    }
+    return (
+      <Table className="[&>table]:table-fixed [&>table]:w-full">
+        <AlertsTableHeaders
+          columns={columns}
+          table={table}
+          presetName={presetName}
+          a11yContainerRef={a11yContainerRef}
+          columnTimeFormats={columnTimeFormats}
+          setColumnTimeFormats={setColumnTimeFormats}
+        />
+        <AlertsTableBody
+          table={table}
+          showSkeleton={showSkeleton}
+          showFilterEmptyState={showFilterEmptyState}
+          showSearchEmptyState={showSearchEmptyState}
+          theme={theme}
+          lastViewedAlert={lastViewedAlert}
+          onRowClick={handleRowClick}
+          onClearFiltersClick={() => setClearFiltersToken(uuidV4())}
+          presetName={presetName}
+        />
+      </Table>
+    );
+  }
+
   return (
-    // Add h-screen to make it full height and remove the default flex-col gap
-    <div className="h-screen flex flex-col gap-4">
-      {/* Add padding to account for any top nav/header */}
+    <div className="flex flex-col gap-4">
       <div className="flex-none">
         <TitleAndFilters
           table={table}
@@ -523,7 +607,7 @@ export function AlertTableServerSide({
 
           {/* Table section */}
           <div className="flex-1 flex flex-col min-w-0 gap-4">
-            <Card className="flex flex-col p-0 overflow-x-auto">
+            <Card className="flex-1 flex flex-col p-0 overflow-x-auto">
               <div className="flex-grow flex flex-col">
                 {!presetStatic && (
                   <div className="flex-none">
@@ -541,27 +625,7 @@ export function AlertTableServerSide({
 
                 {/* Make table wrapper scrollable */}
                 <div data-testid="alerts-table" className="flex-grow">
-                  <Table className="[&>table]:table-fixed [&>table]:w-full">
-                    <AlertsTableHeaders
-                      columns={columns}
-                      table={table}
-                      presetName={presetName}
-                      a11yContainerRef={a11yContainerRef}
-                      columnTimeFormats={columnTimeFormats}
-                      setColumnTimeFormats={setColumnTimeFormats}
-                    />
-                    <AlertsTableBody
-                      table={table}
-                      showSkeleton={showSkeleton}
-                      showFilterEmptyState={showFilterEmptyState}
-                      showSearchEmptyState={showSearchEmptyState}
-                      theme={theme}
-                      lastViewedAlert={lastViewedAlert}
-                      onRowClick={handleRowClick}
-                      onClearFiltersClick={() => setClearFiltersToken(uuidV4())}
-                      presetName={presetName}
-                    />
-                  </Table>
+                  {renderTable()}
                 </div>
               </div>
             </Card>

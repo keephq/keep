@@ -1,0 +1,40 @@
+workflow:
+  id: create-alerts-from-mysql
+  description: Create alerts from MySQL
+  triggers:
+    # run manually (debugging)
+    - type: manual
+    # run 5 minutes
+    - type: interval
+      value: 300
+  steps:
+    # get the customer details
+    - name: get-alerts-from-mysql
+      provider:
+        type: mysql
+        config: " {{ providers.mysql-prod }} "
+        with:
+          # run the query, and limit the results to the last run
+          query: "select * from monitoring_system.alerts where ts > '{{ last_workflow_run_time }}'"
+          as_dict: true
+  # create the alerts using Keep provider
+  actions:
+    # Create an alert in Keep based on the query results
+    - name: create-alert
+      provider:
+        type: keep
+        with:
+          # by default, the alert will be created in the "keep" source, this can be adjusted
+          override_source_with: "mysql"
+          # do not try to resolve alerts or smth like that - just sync from the database
+          read_only: true
+          # adjust if needed
+          fingerprint_fields:
+            - id
+          # build the alert payload from the query results
+          alert:
+            name: "{{ message }}"
+            status: "{{ state }}"
+            host: "{{ host }}"
+            service: "{{ service }}"
+            client: "{{ client }}"
