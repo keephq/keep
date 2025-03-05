@@ -68,6 +68,7 @@ from keep.api.models.db.maintenance_window import *  # pylint: disable=unused-wi
 from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.provider_image import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.system import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
@@ -1444,7 +1445,11 @@ def get_last_alerts(
 
 
 def get_alerts_by_fingerprint(
-    tenant_id: str, fingerprint: str, limit=1, status=None, with_alert_instance_enrichment=False,
+    tenant_id: str,
+    fingerprint: str,
+    limit=1,
+    status=None,
+    with_alert_instance_enrichment=False,
 ) -> List[Alert]:
     """
     Get all alerts for a given fingerprint.
