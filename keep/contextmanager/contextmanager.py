@@ -49,6 +49,7 @@ class ContextManager:
                 workflow_str = json5.dumps(workflow)
                 last_workflow_results_in_workflow = (
                     "last_workflow_results" in workflow_str
+                    or "last_workflow_run_time" in workflow_str
                 )
                 if last_workflow_results_in_workflow:
                     last_workflow_execution = (

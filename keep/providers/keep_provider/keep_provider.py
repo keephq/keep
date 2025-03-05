@@ -139,8 +139,11 @@ class KeepProvider(BaseProvider):
             fingerprint=kwargs.get("fingerprint"),
             annotations=kwargs.get("annotations"),
             workflowId=self.context_manager.workflow_id,
-            **alert_data,
         )
+        # to avoid multiple key word argument, add and key,val on alert data only if it doesn't exists:
+        for key, val in alert_data.items():
+            if not hasattr(alert, key):
+                setattr(alert, key, val)
         # if fingerprint_fields are not provided, use labels
         if not fingerprint_fields:
             fingerprint_fields = ["labels." + label for label in list(labels.keys())]
@@ -329,7 +332,7 @@ class KeepProvider(BaseProvider):
         return alerts_to_notify
 
     def _handle_stateless_alerts(
-        self, stateless_alerts: list[AlertDto]
+        self, stateless_alerts: list[AlertDto], read_only=False
     ) -> list[AlertDto]:
         """
         Handle alerts without PENDING state - just FIRING or RESOLVED.
@@ -343,13 +346,16 @@ class KeepProvider(BaseProvider):
             extra={"num_alerts": len(stateless_alerts)},
         )
         alerts_to_notify = []
-        search_engine = SearchEngine(tenant_id=self.context_manager.tenant_id)
-        curr_alerts = search_engine.search_alerts_by_cel(
-            cel_query=f"providerId == '{self.context_manager.workflow_id}'"
-        )
-        self.logger.debug(
-            "Found existing alerts", extra={"num_curr_alerts": len(curr_alerts)}
-        )
+        if not read_only:
+            search_engine = SearchEngine(tenant_id=self.context_manager.tenant_id)
+            curr_alerts = search_engine.search_alerts_by_cel(
+                cel_query=f"providerId == '{self.context_manager.workflow_id}'"
+            )
+            self.logger.debug(
+                "Found existing alerts", extra={"num_curr_alerts": len(curr_alerts)}
+            )
+        else:
+            curr_alerts = []
 
         # Create lookup by fingerprint for efficient comparison
         curr_alerts_map = {alert.fingerprint: alert for alert in curr_alerts}
@@ -495,6 +501,9 @@ class KeepProvider(BaseProvider):
             alert_dto = self._build_alert(
                 alert_results, fingerprint_fields, **rendered_alert_data
             )
+            if "override_source_with" in kwargs:
+                alert_dto.source = [kwargs["override_source_with"]]
+
             alert_dtos.append(alert_dto)
             self.logger.debug(
                 "Built alert DTO", extra={"fingerprint": alert_dto.fingerprint}
@@ -521,7 +530,8 @@ class KeepProvider(BaseProvider):
         # else, handle all alerts
         else:
             self.logger.info("Handling stateless alerts")
-            alerts = self._handle_stateless_alerts(alert_dtos)
+            read_only = kwargs.get("read_only", False)
+            alerts = self._handle_stateless_alerts(alert_dtos, read_only=read_only)
 
         # handle all alerts
         self.logger.info(

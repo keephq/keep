@@ -16,6 +16,7 @@ from typing import Any, Callable, Dict, List, Tuple, Type, Union
 from uuid import UUID, uuid4
 
 import validators
+from dateutil.parser import parse
 from dateutil.tz import tz
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
@@ -3882,8 +3883,10 @@ def add_alerts_to_incident(
                     session.flush()
             session.commit()
 
+            last_received_field = get_json_extract_field(session, Alert.event, "lastReceived")
+
             started_at, last_seen_at = session.exec(
-                select(func.min(Alert.timestamp), func.max(Alert.timestamp))
+                select(func.min(last_received_field), func.max(last_received_field))
                 .join(
                     LastAlertToIncident,
                     and_(
@@ -3897,6 +3900,12 @@ def add_alerts_to_incident(
                     LastAlertToIncident.incident_id == incident.id,
                 )
             ).one()
+
+            if isinstance(started_at, str):
+                started_at = parse(started_at)
+
+            if isinstance(last_seen_at, str):
+                last_seen_at = parse(last_seen_at)
 
             incident.start_time = started_at
             incident.last_seen_time = last_seen_at
@@ -4075,8 +4084,10 @@ def remove_alerts_to_incident_by_incident_id(
             if source not in sources_existed
         ]
 
+        last_received_field = get_json_extract_field(session, Alert.event, "lastReceived")
+
         started_at, last_seen_at = session.exec(
-            select(func.min(Alert.timestamp), func.max(Alert.timestamp))
+            select(func.min(last_received_field), func.max(last_received_field))
             .select_from(LastAlert)
             .join(
                 LastAlertToIncident,
@@ -4087,6 +4098,7 @@ def remove_alerts_to_incident_by_incident_id(
             )
             .join(Alert, LastAlert.alert_id == Alert.id)
             .where(
+                LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                 LastAlertToIncident.tenant_id == tenant_id,
                 LastAlertToIncident.incident_id == incident.id,
             )
@@ -4109,6 +4121,13 @@ def remove_alerts_to_incident_by_incident_id(
                 if updated_severities
                 else IncidentSeverity.LOW.order
             )
+
+        if isinstance(started_at, str):
+            started_at = parse(started_at)
+
+        if isinstance(last_seen_at, str):
+            last_seen_at = parse(last_seen_at)
+
         incident.start_time = started_at
         incident.last_seen_time = last_seen_at
 

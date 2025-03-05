@@ -15,6 +15,7 @@ import {
   getSortedRowModel,
   PaginationState,
 } from "@tanstack/react-table";
+import { ListFormatOption, formatList } from "./alert-table-list-format";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import {
@@ -52,6 +53,10 @@ import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { useRouter } from "next/navigation";
 import { GrTest } from "react-icons/gr";
 import { PlusIcon } from "@heroicons/react/20/solid";
+import {
+  RowStyle,
+  useAlertRowStyle,
+} from "@/entities/alerts/model/useAlertRowStyle";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -129,6 +134,7 @@ export function AlertTableServerSide({
   const [dateRangeCel, setDateRangeCel] = useState<string>("");
   const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
+  const [rowStyle] = useAlertRowStyle();
   const [columnTimeFormats, setColumnTimeFormats] = useLocalStorage<
     Record<string, TimeFormatOption>
   >(`column-time-formats-${presetName}`, {});
@@ -159,6 +165,10 @@ export function AlertTableServerSide({
     DEFAULT_COLS_VISIBILITY
   );
 
+  const [columnListFormats, setColumnListFormats] = useLocalStorage<
+    Record<string, ListFormatOption>
+  >(`column-list-formats-${presetName}`, {});
+
   const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
     "table-sizes",
     {}
@@ -173,7 +183,7 @@ export function AlertTableServerSide({
   );
   const [paginationState, setPaginationState] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 20,
+    pageSize: rowStyle == "relaxed" ? 20 : 50,
   });
 
   const [, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
@@ -284,7 +294,7 @@ export function AlertTableServerSide({
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     initialState: {
-      pagination: { pageSize: 20 },
+      pagination: { pageSize: rowStyle == "relaxed" ? 20 : 50 },
     },
     globalFilterFn: ({ original }, _id, value) => {
       return evalWithContext(original, value);
@@ -531,6 +541,8 @@ export function AlertTableServerSide({
           a11yContainerRef={a11yContainerRef}
           columnTimeFormats={columnTimeFormats}
           setColumnTimeFormats={setColumnTimeFormats}
+          columnListFormats={columnListFormats}
+          setColumnListFormats={setColumnListFormats}
         />
         <AlertsTableBody
           table={table}

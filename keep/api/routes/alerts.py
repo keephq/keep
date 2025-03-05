@@ -28,12 +28,13 @@ from keep.api.core.alerts import (
     query_last_alerts,
 )
 from keep.api.core.config import config
-from keep.api.core.db import enrich_alerts_with_incidents, get_last_alert_by_fingerprint
+from keep.api.core.db import enrich_alerts_with_incidents
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_metrics_by_provider,
     get_enrichment,
+    get_last_alert_by_fingerprint,
     get_last_alerts,
     get_session,
     is_all_alerts_resolved,
@@ -45,6 +46,7 @@ from keep.api.models.alert import (
     AlertDto,
     AlertStatus,
     DeleteRequestBody,
+    EnrichAlertNoteRequestBody,
     EnrichAlertRequestBody,
     IncidentStatus,
     UnEnrichAlertRequestBody,
@@ -272,7 +274,9 @@ def get_alert_history(
         limit=1000,
         with_alert_instance_enrichment=True,
     )
-    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts, with_alert_instance_enrichment=True)
+    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
+        db_alerts, with_alert_instance_enrichment=True
+    )
 
     logger.info(
         "Fetched alert history",
@@ -713,6 +717,25 @@ def get_alert(
         raise HTTPException(status_code=404, detail="Alert not found")
 
 
+@router.post("/enrich/note", description="Enrich an alert note")
+def enrich_alert_note(
+    enrich_data: EnrichAlertNoteRequestBody,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])  # also NOC
+    ),
+) -> dict[str, str]:
+    logger.info("Enriching alert note", extra={"fingerprint": enrich_data.fingerprint})
+    enriched_data = EnrichAlertRequestBody(
+        enrichments={"note": enrich_data.note},
+        fingerprint=enrich_data.fingerprint,
+    )
+    return _enrich_alert(
+        enriched_data,
+        authenticated_entity=authenticated_entity,
+        dispose_on_new_alert=True,
+    )
+
+
 @router.post(
     "/enrich",
     description="Enrich an alert",
@@ -816,14 +839,15 @@ def _enrich_alert(
             dispose_on_new_alert=dispose_on_new_alert,
         )
         last_alert = get_last_alert_by_fingerprint(
-            authenticated_entity.tenant_id,
-            enrich_data.fingerprint, session=session
+            authenticated_entity.tenant_id, enrich_data.fingerprint, session=session
         )
         if dispose_on_new_alert:
             # Create instance-wide enrichment for history
 
             # For better database-native UUID support
-            alert_id = UUIDType(binary=False).process_bind_param(last_alert.alert_id, session.bind.dialect)
+            alert_id = UUIDType(binary=False).process_bind_param(
+                last_alert.alert_id, session.bind.dialect
+            )
 
             enrichement_bl.enrich_entity(
                 fingerprint=alert_id,
@@ -831,7 +855,7 @@ def _enrich_alert(
                 action_type=action_type,
                 action_callee=authenticated_entity.email,
                 action_description=action_description,
-                audit_enabled=False
+                audit_enabled=False,
             )
 
         # get the alert with the new enrichment
