@@ -239,6 +239,7 @@ export function AlertTable({
     : ["severity", "checkbox"];
 
   const table = useReactTable({
+    getRowId: (row) => row.fingerprint,
     data: filteredAlerts,
     columns: columns,
     state: {

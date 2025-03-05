@@ -192,6 +192,7 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
   ] as DisplayColumnDef<ExtractionRule>[];
 
   const table = useReactTable({
+    getRowId: (row) => row.id.toString(),
     columns,
     data: extractions.sort((a, b) => b.priority - a.priority),
     state: { expanded },

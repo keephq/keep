@@ -180,6 +180,7 @@ export default function IncidentWorkflowTable({ incident }: Props) {
   ];
 
   const table = useReactTable({
+    getRowId: (row) => row.id,
     columns,
     data: workflows?.items ?? [],
     getCoreRowModel: getCoreRowModel(),
