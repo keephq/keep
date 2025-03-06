@@ -34,23 +34,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 # Fetch all history for checking file changes
-
-      - name: Check for frontend changes
-        id: check_frontend
-        run: |
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "keep-ui/"; then
-            echo "frontend_changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "frontend_changed=false" >> $GITHUB_OUTPUT
-          fi
 
       - uses: chartboost/ruff-action@v1
         with:
           src: "./keep"
 
-      # Python setup - only needed for running tests directly on the runner
+      # These Python-related steps are kept as they're used for running tests directly on the runner
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
@@ -62,17 +51,16 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - name: Cache Python dependencies
+      - name: Cache dependencies
         id: cache-deps
         uses: actions/cache@v4.2.0
         with:
           path: .venv
-          key: pydeps-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install dependencies using poetry
         run: poetry install --no-interaction --no-root --with dev
 
-      # Playwright cache setup
       - name: Get Playwright version from poetry.lock
         id: playwright-version
         run: |
@@ -84,7 +72,7 @@ jobs:
         uses: actions/cache@v4.2.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright and dependencies
         run: |
@@ -94,53 +82,45 @@ jobs:
             poetry run playwright install-deps
           fi
 
-      # Docker setup with caching
+      # Docker setup with proper layer caching
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-        with:
-          buildkitd-flags: --debug
 
-      # Cache npm packages for frontend build
-      - name: Cache npm dependencies
-        uses: actions/cache@v4.2.0
-        with:
-          path: keep-ui/node_modules
-          key: ${{ runner.os }}-npm-${{ hashFiles('keep-ui/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
-
-      # Cache Docker layers
+      # This is the most important cache for your workflow - Docker layer caching
       - name: Cache Docker layers
+        id: cache-docker
         uses: actions/cache@v4.2.0
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          key: ${{ runner.os }}-buildx-${{ hashFiles('keep/**', 'keep-ui/**', 'tests/**') }}
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      # Build Docker images with cache
-      - name: Build Docker images
+      # Build and start containers with BuildKit layer caching
+      - name: Build and start containers
+        env:
+          DOCKER_BUILDKIT: 1
         run: |
-          DOCKER_BUILDKIT=1 docker compose \
+          # Export BuildKit state to cache
+          docker buildx create --use --driver docker-container --driver-opt network=host
+
+          # Set cache mount options for Docker Compose
+          export COMPOSE_DOCKER_CLI_BUILD=1
+          export DOCKER_BUILDKIT=1
+
+          # Build with cache from and cache to
+          docker compose \
             --project-directory . \
             -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml \
             build \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --cache-from=type=local,src=/tmp/.buildx-cache \
-            --cache-to=type=local,dest=/tmp/.buildx-cache-new
+            --build-arg DOCKER_BUILDKIT=1
 
-      # Move cache to prevent cache explosion
-      - name: Move Docker cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
-      # Start containers
-      - name: Start Docker containers
-        run: |
-          DOCKER_BUILDKIT=1 docker compose \
+          # Start the containers
+          docker compose \
             --project-directory . \
-            -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml up -d
+            -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml \
+            up -d
 
       # Optimize wait times with exponential backoff
       - name: Wait for services to be ready with optimized polling
@@ -184,7 +164,7 @@ jobs:
           wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 10
           wait_for_service "Grafana" "curl --output /dev/null --silent --fail http://localhost:3002/api/health" 10
 
-      # Run E2E tests
+      # Run tests using the Python environment on the runner
       - name: Run e2e tests and report coverage
         run: |
           poetry run coverage run --branch -m pytest -s tests/e2e_tests/
@@ -199,7 +179,7 @@ jobs:
           files: coverage.json
           verbose: true
 
-      # Collect logs (same as original)
+      # Collect logs
       - name: Dump backend logs
         if: always()
         run: |
@@ -209,7 +189,7 @@ jobs:
           docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-frontend-db-auth > frontend_logs-${{ matrix.db_type }}-db-auth.txt
         continue-on-error: true
 
-      # Upload artifacts (same as original)
+      # Upload artifacts
       - name: Upload test artifacts on failure
         if: always()
         uses: actions/upload-artifact@v4.4.3
@@ -224,7 +204,7 @@ jobs:
             frontend_logs-${{ matrix.db_type }}-db-auth.txt
         continue-on-error: true
 
-      # Tear down environment (same as original)
+      # Tear down environment
       - name: Tear down environment
         run: |
           docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml down
