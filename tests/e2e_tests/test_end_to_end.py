@@ -27,7 +27,7 @@ import re
 from datetime import datetime
 from tests.e2e_tests.utils import trigger_alert
 
-from playwright.sync_api import expect
+from playwright.sync_api import expect, Page
 
 from tests.e2e_tests.utils import install_webhook_provider, delete_provider, assert_connected_provider_count, assert_scope_text_count
 
@@ -76,7 +76,7 @@ def save_failure_artifacts(page, log_entries):
         f.write(page.content())
 
     # Save console logs
-    with open(current_test_name + "_console.log", "w", encoding="utf-8") as f:
+    with open(current_test_name + "_console.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(log_entries))
 
 
@@ -393,18 +393,15 @@ def test_add_upload_workflow_with_alert_trigger(browser):
         raise
 
 
-def test_start_with_keep_db(browser):
+def test_start_with_keep_db(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
         browser.goto("http://localhost:3001/signin")
-        browser.wait_for_timeout(3000)
         browser.get_by_placeholder("Enter your username").fill("keep")
         browser.get_by_placeholder("Enter your password").fill("keep")
-        browser.wait_for_timeout(3000)
         browser.get_by_role("button", name="Sign in").click()
-        browser.wait_for_timeout(5000)
-        expect(browser).to_have_url("http://localhost:3001/incidents")
+        browser.wait_for_url("http://localhost:3001/incidents")
     except Exception:
         save_failure_artifacts(browser, log_entries)
         raise
