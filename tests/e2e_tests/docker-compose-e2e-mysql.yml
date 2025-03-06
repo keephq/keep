@@ -38,6 +38,8 @@ services:
       - FRIGADE_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
       - SQLALCHEMY_WARN_20=1
+    ports:
+      - "8080:8080"
     depends_on:
       keep-database:
         condition: service_healthy
