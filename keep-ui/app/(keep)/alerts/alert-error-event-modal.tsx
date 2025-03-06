@@ -133,8 +133,21 @@ const AlertErrorEventModal: React.FC<AlertErrorEventModalProps> = ({
               >
                 {errorAlerts.map((alert: ErrorAlert, index: number) => (
                   <SelectItem key={index} value={index.toString()}>
-                    {formatDate(alert.timestamp)} - Event from{" "}
-                    {alert.provider_type || "unknown provider"}
+                    <div className="flex items-center">
+                      <span className="mr-2">
+                        {formatDate(alert.timestamp)}
+                      </span>
+                      <div className="mx-2">
+                        <DynamicImageProviderIcon
+                          providerType={alert.provider_type || "keep"}
+                          width="16"
+                          height="16"
+                        />
+                      </div>
+                      <span>
+                        Event from {alert.provider_type || "unknown provider"}
+                      </span>
+                    </div>
                   </SelectItem>
                 ))}
               </Select>
