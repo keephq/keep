@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 from types import NoneType
 
 from sqlalchemy import Dialect, String
@@ -84,7 +84,7 @@ class BaseCelToSqlProvider:
 
     def __init__(self, dialect: Dialect, properties_metadata: PropertiesMetadata):
         super().__init__()
-        self.literal_proc = String("").literal_processor(dialect=dialect)
+        self.__literal_proc = String("").literal_processor(dialect=dialect)
         self.properties_mapper = PropertiesMapper(properties_metadata)
 
     def convert_to_sql_str(self, cel: str) -> str:
@@ -119,6 +119,12 @@ class BaseCelToSqlProvider:
             return sql_filter
         except NotImplementedError as e:
             raise CelToSqlException(f"Error while converting CEL expression tree to SQL: {str(e)}") from e
+
+    def literal_proc(self, value: Any) -> str:
+        if isinstance(value, str):
+            return self.__literal_proc(value)
+
+        return f"'{str(value)}'"
 
     def _get_default_value_for_type(self, type: type) -> str:
         if type is str or type is NoneType:

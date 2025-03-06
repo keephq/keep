@@ -172,6 +172,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
   ] as DisplayColumnDef<MappingRule>[];
 
   const table = useReactTable({
+    getRowId: (row) => row.id.toString(),
     columns,
     data: mappings.sort((a, b) => b.priority - a.priority),
     getCoreRowModel: getCoreRowModel(),

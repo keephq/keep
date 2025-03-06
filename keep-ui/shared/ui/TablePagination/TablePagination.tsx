@@ -12,6 +12,7 @@ import type { Table } from "@tanstack/react-table";
 import type { GroupBase, SingleValueProps } from "react-select";
 import { components } from "react-select";
 import { Select } from "@/shared/ui";
+import { INCIDENT_PAGINATION_OPTIONS } from "@/entities/incidents/model/models";
 
 type Props = {
   table: Table<any>;
@@ -57,12 +58,7 @@ export function TablePagination({ table }: Props) {
           onChange={(selectedOption) =>
             table.setPageSize(Number(selectedOption!.value))
           }
-          options={[
-            { value: "10", label: "10" },
-            { value: "20", label: "20" },
-            { value: "50", label: "50" },
-            { value: "100", label: "100" },
-          ]}
+          options={INCIDENT_PAGINATION_OPTIONS}
           menuPlacement="top"
         />
         <div className="flex">
