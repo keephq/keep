@@ -27,6 +27,7 @@ from keep.api.core.alerts import (
     get_alert_potential_facet_fields,
     query_last_alerts,
 )
+from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alerts_with_incidents
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
@@ -100,9 +101,18 @@ def fetch_alert_facet_options(
         },
     )
 
-    facet_options = get_alert_facets_data(
-        tenant_id=tenant_id, facet_options_query=facet_options_query
-    )
+    try:
+        facet_options = get_alert_facets_data(
+            tenant_id=tenant_id, facet_options_query=facet_options_query
+        )
+    except CelToSqlException as e:
+        logger.exception(
+            f'Error parsing CEL expression "{facet_options_query.cel}". {str(e)}'
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error parsing CEL expression: {facet_options_query.cel}",
+        ) from e
 
     logger.info(
         "Fetched alert facets from DB",
@@ -201,14 +211,22 @@ def query_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts, total_count = query_last_alerts(
-        tenant_id=tenant_id,
-        limit=query.limit,
-        offset=query.offset,
-        cel=query.cel,
-        sort_by=query.sort_by,
-        sort_dir=query.sort_dir,
-    )
+
+    try:
+        db_alerts, total_count = query_last_alerts(
+            tenant_id=tenant_id,
+            limit=query.limit,
+            offset=query.offset,
+            cel=query.cel,
+            sort_by=query.sort_by,
+            sort_dir=query.sort_dir,
+        )
+    except CelToSqlException as e:
+        logger.exception(f'Error parsing CEL expression "{query.cel}". {str(e)}')
+        raise HTTPException(
+            status_code=400, detail=f"Error parsing CEL expression: {query.cel}"
+        ) from e
+
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
         "Fetched alerts from DB",

@@ -54,6 +54,15 @@
     }
   },
   {
+    "input_cel": "alert.some_json_prop.contains(100500)",
+    "description": "Contains operator with arg not string",
+    "expected_sql_dialect_based": {
+      "sqlite": "(json_extract(alert_enrichments, '$.some_json_prop') IS NOT NULL AND json_extract(alert_enrichments, '$.some_json_prop') GLOB '*100500*' OR json_extract(alert_event, '$.some_json_prop') IS NOT NULL AND json_extract(alert_event, '$.some_json_prop') GLOB '*100500*')",
+      "mysql": "(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) LIKE '%100500%' OR JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) LIKE '%100500%')",
+      "postgresql": "((alert_enrichments) ->> 'some_json_prop' IS NOT NULL AND (alert_enrichments) ->> 'some_json_prop' LIKE '%100500%' OR (alert_event) ->> 'some_json_prop' IS NOT NULL AND (alert_event) ->> 'some_json_prop' LIKE '%100500%')"
+    }
+  },
+  {
     "input_cel": "created_at >= '2025-01-30T10:00:09.553Z'",
     "description": "Comparison operator with dates for a single column",
     "expected_sql_dialect_based": {
