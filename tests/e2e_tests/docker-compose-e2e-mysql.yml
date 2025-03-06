@@ -18,12 +18,8 @@ services:
 
   # Frontend Services
   keep-frontend:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-frontend-common
-    build:
-      context: ./keep-ui/
-      dockerfile: ../docker/Dockerfile.ui
+    # to be replaced in github actions
+    image: "%KEEPFRONTEND_IMAGE%"
     environment:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
@@ -33,12 +29,8 @@ services:
 
   # Backend Services
   keep-backend:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-backend-common
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.api
+    # to be replaced in github actions
+    image: "%KEEPBACKEND_IMAGE%"
     environment:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
@@ -50,9 +42,8 @@ services:
       keep-database:
         condition: service_healthy
 
-
   ## Keep Services with DB
-  # Database Service (5433) 
+  # Database Service (5433)
   keep-database-db-auth:
     image: mysql:latest
     environment:
@@ -70,9 +61,7 @@ services:
 
   # Frontend Services (3001)
   keep-frontend-db-auth:
-    build:
-      context: ./keep-ui/
-      dockerfile: ../docker/Dockerfile.ui
+    image: "%KEEPFRONTEND_IMAGE%"
     ports:
       - "3001:3000"
     environment:
@@ -88,9 +77,7 @@ services:
 
   # Backend Services (8081)
   keep-backend-db-auth:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.api
+    image: "%KEEPBACKEND_IMAGE%"
     ports:
       - "8081:8080"
     environment:
@@ -116,7 +103,6 @@ services:
     depends_on:
       keep-database-db-auth:
         condition: service_healthy
-
 
   # Other Services (Common)
   keep-websocket-server:

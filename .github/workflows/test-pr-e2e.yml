@@ -229,16 +229,11 @@ jobs:
         run: |
           cp tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml tests/e2e_tests/docker-compose-modified.yml
 
-          # Replace image references in the file
-          sed -i "s|build: \.\/keep-ui.*|image: ghcr.io\/${{ github.repository }}\/keep-frontend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
-          sed -i "s|build: \.\/keep.*|image: ghcr.io\/${{ github.repository }}\/keep-backend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
-
-          # Specific replacements for db-auth images
-          sed -i "s|build: \.\/keep-ui-db-auth.*|image: ghcr.io\/${{ github.repository }}\/keep-frontend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
-          sed -i "s|build: \.\/keep-db-auth.*|image: ghcr.io\/${{ github.repository }}\/keep-backend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
-
-          # Websocket server
-          sed -i "s|build: \.\/keep\/websocket.*|image: ghcr.io\/${{ github.repository }}\/keep-websocket-server:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+          # Replace image placeholders with actual image references
+          sed -i "s|%KEEPFRONTEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPBACKEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPFRONTEND_DB_AUTH_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-frontend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPBACKEND_DB_AUTH_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-backend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
 
           # Check the result
           cat tests/e2e_tests/docker-compose-modified.yml
