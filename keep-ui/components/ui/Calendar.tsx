@@ -1,5 +1,6 @@
 import * as React from "react";
 import { DayPicker, DateRange } from "react-day-picker";
+import "./Calendar.css";
 
 export function cn(...classes: (string | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -119,7 +120,7 @@ function Calendar({
     className: cn("p-3", className),
     classNames: {
       months: "flex flex-col space-y-4",
-      month: "space-y-4 w-full",
+      month: "space-y-4 w-full items-center",
       caption: "flex justify-center pt-1 relative items-center",
       caption_label: "text-sm font-medium",
       nav: "space-x-1 flex items-center",
@@ -127,6 +128,7 @@ function Calendar({
       nav_button_previous: "absolute left-1",
       nav_button_next: "absolute right-1",
       table: "w-full border-collapse space-y-1",
+
       head_row: "flex",
       head_cell:
         "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
@@ -141,7 +143,6 @@ function Calendar({
       ),
       day: cn(
         "h-9 w-9 p-0 font-normal relative",
-        "hover:bg-gray-100",
         "focus-visible:bg-accent focus-visible:text-accent-foreground",
         "[&.day-range-start]:bg-primary [&.day-range-start]:text-primary-foreground",
         "[&.day-range-end]:bg-primary [&.day-range-end]:text-primary-foreground",
@@ -150,6 +151,7 @@ function Calendar({
       ),
       day_range_start: "day-range-start",
       day_range_end: "day-range-end",
+      "rdp-month_grid": "w-full",
       day_selected:
         "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
       day_today: "bg-accent text-accent-foreground",
