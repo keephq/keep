@@ -11,6 +11,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useAlerts } from "./useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { v4 as uuidv4 } from "uuid";
+import {
+  DEFAULT_INCIDENTS_PAGE_SIZE,
+  DEFAULT_INCIDENTS_SORTING,
+} from "@/entities/incidents/model/models";
 
 interface IncidentUpdatePayload {
   incident_id: string | null;
@@ -27,9 +31,9 @@ export interface Filters {
 export const useIncidents = (
   confirmed: boolean | null = true,
   predicted: boolean | null = null,
-  limit: number = 25,
+  limit: number = DEFAULT_INCIDENTS_PAGE_SIZE,
   offset: number = 0,
-  sorting: { id: string; desc: boolean } = { id: "creation_time", desc: false },
+  sorting: { id: string; desc: boolean } = DEFAULT_INCIDENTS_SORTING,
   cel: string = "",
   options: SWRConfiguration = {
     revalidateOnFocus: false,
@@ -181,9 +185,14 @@ export const usePollIncidentAlerts = (incidentId: string) => {
   }, [bind, unbind, handleIncoming]);
 };
 
-export const usePollIncidents = (mutateIncidents: any, paused: boolean = false) => {
+export const usePollIncidents = (
+  mutateIncidents: any,
+  paused: boolean = false
+) => {
   const { bind, unbind } = useWebsocket();
-  const [incidentChangeToken, setIncidentChangeToken] = useState<string | null>(null);
+  const [incidentChangeToken, setIncidentChangeToken] = useState<string | null>(
+    null
+  );
   const handleIncoming = useCallback(
     (data: any) => {
       mutateIncidents();
@@ -204,8 +213,8 @@ export const usePollIncidents = (mutateIncidents: any, paused: boolean = false) 
   }, [bind, unbind, handleIncoming, paused]);
 
   return {
-    incidentChangeToken
-  }
+    incidentChangeToken,
+  };
 };
 
 export const useIncidentsMeta = (

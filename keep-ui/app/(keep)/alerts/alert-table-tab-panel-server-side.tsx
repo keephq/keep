@@ -93,8 +93,6 @@ export default function AlertTableTabPanelServerSide({
       setDismissedModalAlert={setDismissModalAlert}
       isAsyncLoading={isAsyncLoading}
       presetName={preset.name}
-      presetStatic={preset.name === "feed"}
-      presetId={preset.id}
       presetTabs={presetTabs}
       mutateAlerts={mutateAlerts}
       setRunWorkflowModalAlert={setRunWorkflowModalAlert}
