@@ -256,14 +256,14 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Restore the prepared environment from cache
+      # Restore the prepared test environment
       - name: Restore prepared test environment
         uses: actions/cache@v4.2.0
         with:
           path: |
             .venv
             ~/.cache/ms-playwright
-          key: test-env-${{ github.sha }}
+          key: test-env-v1-${{ hashFiles('**/poetry.lock') }}-${{ steps.playwright-version.outputs.version }}
           fail-on-cache-miss: true
 
       # Create a modified compose file with our built images
