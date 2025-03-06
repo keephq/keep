@@ -182,14 +182,18 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
+      # Use a more stable key for dependencies cache that doesn't depend on the commit
       - name: Cache dependencies
         id: cache-deps
         uses: actions/cache@v4.2.0
         with:
           path: .venv
-          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+          key: pydeps-v1-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            pydeps-v1-
 
       - name: Install dependencies using poetry
+        if: steps.cache-deps.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root --with dev
 
       - name: Get Playwright version from poetry.lock
@@ -198,29 +202,36 @@ jobs:
           PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
           echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
 
+      # Use a more stable key for Playwright cache that doesn't depend on the commit
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4.2.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ steps.playwright-version.outputs.version }}
+          key: playwright-v1-${{ steps.playwright-version.outputs.version }}
+          restore-keys: |
+            playwright-v1-
 
       - name: Install Playwright and dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: |
-          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
-            poetry run playwright install --with-deps
-          else
-            poetry run playwright install-deps
-          fi
+          poetry run playwright install --with-deps
 
-      # Cache the prepared environment for the test job
+      - name: Install Playwright dependencies only
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: |
+          poetry run playwright install-deps
+
+      # Use a more stable combined cache for the test job
       - name: Cache prepared test environment
         uses: actions/cache@v4.2.0
         with:
           path: |
             .venv
             ~/.cache/ms-playwright
-          key: test-env-${{ github.sha }}
+          key: test-env-v1-${{ hashFiles('**/poetry.lock') }}-${{ steps.playwright-version.outputs.version }}
+          restore-keys: |
+            test-env-v1-
 
   # Run tests
   run-tests:
@@ -290,7 +301,7 @@ jobs:
             local service_name=$1
             local check_command=$2
             local max_attempts=$3
-            local container_name=$4
+            local compose_service=$4  # Docker Compose service name
             local attempt=0
             local wait_time=1
 
@@ -299,9 +310,9 @@ jobs:
               if [ "$attempt" -ge "$max_attempts" ]; then
                 echo "Max attempts reached, exiting..."
                 # Show final logs before exiting
-                if [ ! -z "$container_name" ]; then
-                  echo "===== FINAL LOGS FOR $container_name ====="
-                  docker logs $(docker ps -qf "name=$container_name") 2>&1 | tail -n 50
+                if [ ! -z "$compose_service" ]; then
+                  echo "===== FINAL LOGS FOR $compose_service ====="
+                  docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 50
                   echo "=========================================="
                 fi
                 exit 1
@@ -309,10 +320,10 @@ jobs:
 
               echo "Waiting for $service_name... (Attempt: $((attempt+1)), waiting ${wait_time}s)"
 
-              # Print logs of the service container if specified
-              if [ ! -z "$container_name" ]; then
-                echo "===== RECENT LOGS FOR $container_name ====="
-                docker logs $(docker ps -qf "name=$container_name") 2>&1 | tail -n 20
+              # Print logs using docker-compose
+              if [ ! -z "$compose_service" ]; then
+                echo "===== RECENT LOGS FOR $compose_service ====="
+                docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 20
                 echo "=========================================="
               fi
 
@@ -326,19 +337,19 @@ jobs:
 
           # Database checks
           if [ "${{ matrix.db_type }}" == "mysql" ]; then
-            wait_for_service "MySQL Database" "docker exec \$(docker ps -qf \"name=keep-database-1\") mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-1"
-            wait_for_service "MySQL Database (DB AUTH)" "docker exec \$(docker ps -qf \"name=keep-database-db-auth-1\") mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth-1"
+            wait_for_service "MySQL Database" "docker exec \$(docker ps -qf \"name=keep-database\") mysqladmin ping -h \"localhost\" --silent" 10 "keep-database"
+            wait_for_service "MySQL Database (DB AUTH)" "docker exec \$(docker ps -qf \"name=keep-database-db-auth\") mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth"
           elif [ "${{ matrix.db_type }}" == "postgres" ]; then
-            wait_for_service "Postgres Database" "docker exec \$(docker ps -qf \"name=keep-database-1\") pg_isready -h localhost -U keepuser" 10 "keep-database-1"
-            wait_for_service "Postgres Database (DB AUTH)" "docker exec \$(docker ps -qf \"name=keep-database-db-auth-1\") pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth-1"
+            wait_for_service "Postgres Database" "docker exec \$(docker ps -qf \"name=keep-database\") pg_isready -h localhost -U keepuser" 10 "keep-database"
+            wait_for_service "Postgres Database (DB AUTH)" "docker exec \$(docker ps -qf \"name=keep-database-db-auth\") pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
           fi
 
           # Service checks with log visibility
-          wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 15 "keep-backend-db-auth-1"
-          wait_for_service "Keep backend" "curl --output /dev/null --silent --fail http://localhost:8080/healthcheck" 15 "keep-backend-1"
-          wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 15 "keep-frontend-1"
-          wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth-1"
-          wait_for_service "Grafana" "curl --output /dev/null --silent --fail http://localhost:3002/api/health" 10 "grafana-1"
+          wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 15 "keep-backend-db-auth"
+          wait_for_service "Keep backend" "curl --output /dev/null --silent --fail http://localhost:8080/healthcheck" 15 "keep-backend"
+          wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 15 "keep-frontend"
+          wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth"
+          wait_for_service "Grafana" "curl --output /dev/null --silent --fail http://localhost:3002/api/health" 10 "grafana"
 
       # Run tests
       - name: Run e2e tests and report coverage
