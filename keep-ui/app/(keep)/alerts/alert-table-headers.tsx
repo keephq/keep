@@ -145,8 +145,8 @@ const DraggableHeaderCell = ({
       column.id === "checkbox"
         ? "32px !important"
         : column.id === "source"
-        ? "40px !important"
-        : column.getSize(),
+          ? "40px !important"
+          : column.getSize(),
     opacity: isDragging ? 0.5 : 1,
     transform: CSS.Translate.toString(transform),
     transition,
@@ -154,8 +154,8 @@ const DraggableHeaderCell = ({
       column.getIsPinned() !== false
         ? "default"
         : isDragging
-        ? "grabbing"
-        : "grab",
+          ? "grabbing"
+          : "grab",
   };
 
   // Hide menu for checkbox, source, severity and alertMenu columns
@@ -242,14 +242,16 @@ const DraggableHeaderCell = ({
         <button
           className={clsx(
             "flex items-center flex-1 min-w-0",
-            rowStyle === "default" && "px-1 py-0",
-            rowStyle === "relaxed" && "px-2 py-1"
+            rowStyle === "default" && "px-0.5 py-0",
+            rowStyle === "relaxed" && "px-2 py-1",
+            column.id !== "checkbox" && "flex-1",
+            column.id === "checkbox" && "justify-center"
           )}
           {...listeners}
           onClick={handleColumnNameClick}
           {...attributes}
         >
-          <span className="truncate text-ellipsis [&>*]:truncate">
+          <span className="inline-block truncate text-ellipsis [&>*]:truncate">
             {children}
           </span>
 
@@ -261,8 +263,8 @@ const DraggableHeaderCell = ({
                   column.getNextSortingOrder() === "asc"
                     ? "Sort ascending"
                     : column.getNextSortingOrder() === "desc"
-                    ? "Sort descending"
-                    : "Clear sort"
+                      ? "Sort descending"
+                      : "Clear sort"
                 }
               >
                 {column.getIsSorted() === "asc" ? (
@@ -419,7 +421,6 @@ export default function AlertsTableHeaders({
   columnListFormats,
   setColumnListFormats,
 }: Props) {
-  const [rowStyle] = useAlertRowStyle();
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
     getColumnsIds(columns)

@@ -15,7 +15,7 @@ import {
   getSortedRowModel,
   PaginationState,
 } from "@tanstack/react-table";
-import { ListFormatOption, formatList } from "./alert-table-list-format";
+import { ListFormatOption } from "./alert-table-list-format";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import {
@@ -57,10 +57,7 @@ import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { GrTest } from "react-icons/gr";
 import { PlusIcon } from "@heroicons/react/20/solid";
-import {
-  RowStyle,
-  useAlertRowStyle,
-} from "@/entities/alerts/model/useAlertRowStyle";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -87,8 +84,6 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName: string;
-  presetStatic?: boolean;
-  presetId?: string;
   presetTabs?: PresetTab[];
   isRefreshAllowed?: boolean;
   isMenuColDisplayed?: boolean;
@@ -111,8 +106,6 @@ export function AlertTableServerSide({
   initialFacets,
   isAsyncLoading = false,
   presetName,
-  presetStatic = false,
-  presetId = "",
   presetTabs = [],
   isRefreshAllowed = true,
   setDismissedModalAlert,
