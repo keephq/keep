@@ -301,8 +301,15 @@ export default function IncidentAlerts({ incident }: Props) {
           >
             Add Alerts Manually
           </Button>
-          <Button color="orange" variant="primary" size="md" onClick={() => {}}>
-            Try AI Correlation on Last 50 Alerts
+          <Button
+            color="orange"
+            variant="primary"
+            size="md"
+            onClick={() => {
+              router.push(`/alerts/feed?createIncidentsFromLastAlerts=50`);
+            }}
+          >
+            Try AI Correlation
           </Button>
         </div>
       </EmptyStateCard>

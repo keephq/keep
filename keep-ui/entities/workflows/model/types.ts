@@ -191,6 +191,7 @@ export const V2StepForeachSchema = z.object({
   type: z.literal("foreach"),
   properties: z.object({
     value: z.string(),
+    if: z.string().optional(),
   }),
   // TODO: make a generic sequence type
   sequence: z.array(z.union([V2ActionOrStepSchema, V2StepConditionSchema])),

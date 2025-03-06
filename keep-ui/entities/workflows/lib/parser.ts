@@ -258,9 +258,11 @@ export function parseWorkflow(
   );
 }
 
-function getWithParams(s: V2ActionStep | V2StepStep): any {
+export function getWithParams(
+  s: V2ActionStep | V2StepStep
+): Record<string, string | number | boolean | object> {
   if (!s) {
-    return;
+    return {};
   }
   s.properties = s.properties || {};
   const withParams =
@@ -296,25 +298,23 @@ function getActionsFromCondition(
           type: "assert" as const,
           assert: condition.properties.assert,
         };
-  const steps = condition?.branches?.true || ([] as V2Step[]);
+  const steps: (V2StepStep | V2ActionStep)[] = condition?.branches?.true || [];
   const compiledActions = steps.map((a) => {
-    const withParams = getWithParams(a);
-    const providerType = a?.type?.replace("action-", "");
-    const providerName =
-      (a?.properties?.config as string)?.trim() || `default-${providerType}`;
-    const provider = {
-      type: a.type.replace("action-", ""),
-      config: `{{ providers.${providerName} }}`,
-      with: withParams,
-    };
-    // FIX: type
-    const compiledAction: YamlStepOrAction = {
-      name: a.name,
-      provider: provider,
-      condition: [compiledCondition],
-    };
-    if (foreach) compiledAction["foreach"] = foreach;
-    return compiledAction;
+    if (a.type.startsWith("step-")) {
+      const compiledAction = getYamlStepFromStep(a as V2StepStep);
+      if (foreach) {
+        compiledAction["foreach"] = foreach;
+        compiledAction["condition"] = [compiledCondition];
+      }
+      return compiledAction;
+    } else {
+      const compiledAction = getYamlActionFromAction(a as V2ActionStep);
+      if (foreach) {
+        compiledAction["foreach"] = foreach;
+        compiledAction["condition"] = [compiledCondition];
+      }
+      return compiledAction;
+    }
   });
   return compiledActions;
 }
@@ -329,8 +329,13 @@ export function getYamlStepFromStep(s: V2StepStep): YamlStepOrAction {
     config: `{{ providers.${providerName} }}`,
     with: withParams,
   };
+  const ifParam =
+    typeof s.properties.if === "string" && s.properties.if.trim() !== ""
+      ? s.properties.if
+      : undefined;
   const step: YamlStepOrAction = {
     name: s.name,
+    if: ifParam,
     provider: provider,
   };
   if (s.properties.vars) {
@@ -342,7 +347,6 @@ export function getYamlStepFromStep(s: V2StepStep): YamlStepOrAction {
 export function getYamlActionFromAction(s: V2ActionStep): YamlStepOrAction {
   const withParams = getWithParams(s);
   const providerType = s.type.replace("action-", "");
-  const ifParam = s.properties.if;
   const providerName =
     (s.properties.config as string)?.trim() || `default-${providerType}`;
   const provider = {
@@ -350,14 +354,15 @@ export function getYamlActionFromAction(s: V2ActionStep): YamlStepOrAction {
     config: `{{ providers.${providerName} }}`,
     with: withParams,
   };
+  const ifParam =
+    typeof s.properties.if === "string" && s.properties.if.trim() !== ""
+      ? s.properties.if
+      : undefined;
   const action: YamlStepOrAction = {
     name: s.name,
+    if: ifParam,
     provider: provider,
   };
-  // add 'if' only if it's not empty
-  if (ifParam) {
-    action.if = ifParam as string;
-  }
   if (s.properties.vars) {
     action.vars = s.properties.vars;
   }
