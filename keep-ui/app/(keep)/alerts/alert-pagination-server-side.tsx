@@ -17,6 +17,7 @@ import {
   RowStyle,
   useAlertRowStyle,
 } from "@/entities/alerts/model/useAlertRowStyle";
+import { useMounted } from "@/shared/lib/hooks/useMounted";
 
 interface Props {
   table: Table<AlertDto>;
@@ -104,6 +105,7 @@ export default function AlertPaginationServerSide({
     // Record that user has set their own preference
     setUserPageSizePreference(true);
   };
+  const isMounted = useMounted();
 
   return (
     <div className="flex justify-between items-center">
@@ -170,13 +172,15 @@ export default function AlertPaginationServerSide({
         </div>
         {isRefreshAllowed && (
           <Button
+            variant="primary"
             icon={ArrowPathIcon}
             color="orange"
             size="xs"
             disabled={isRefreshing}
-            loading={isRefreshing}
+            loading={isMounted && isRefreshing}
             onClick={async () => onRefresh()}
             title="Refresh"
+            className="flex-1"
           />
         )}
       </div>
