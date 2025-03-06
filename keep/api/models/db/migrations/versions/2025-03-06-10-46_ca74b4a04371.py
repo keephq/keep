@@ -30,9 +30,38 @@ def upgrade() -> None:
         # dismissed: bool = Field(default=False)
         # dismissed_at: datetime | None = Field(default=None)
         # dismissed_by: str | None = Field(default=None)
-        batch_op.add_column(
-            sa.Column("dismissed", sa.Boolean(), nullable=False, server_default="false")
-        )
+
+        # Get database connection to check dialect
+        conn = op.get_bind()
+        dialect_name = conn.dialect.name
+
+        # Handle different database dialects
+        if dialect_name == "mysql":
+            batch_op.add_column(
+                sa.Column(
+                    "dismissed",
+                    sa.Boolean(),
+                    nullable=False,
+                    server_default=sa.text("0"),
+                )
+            )
+        elif dialect_name == "postgresql":
+            batch_op.add_column(
+                sa.Column(
+                    "dismissed",
+                    sa.Boolean(),
+                    nullable=False,
+                    server_default=sa.text("false"),
+                )
+            )
+        else:
+            # SQLite and others
+            batch_op.add_column(
+                sa.Column(
+                    "dismissed", sa.Boolean(), nullable=False, server_default="false"
+                )
+            )
+
         batch_op.add_column(sa.Column("dismissed_at", sa.DateTime(), nullable=True))
         batch_op.add_column(sa.Column("dismissed_by", sa.String(), nullable=True))
         batch_op.create_index(
