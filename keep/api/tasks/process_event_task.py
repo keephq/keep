@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import time
+import traceback
 from typing import List
 
 # third-parties
@@ -693,8 +694,9 @@ def process_event(
             "Error processing event",
             extra={**extra_dict, "processing_time": time.time() - start_time},
         )
+        stacktrace = traceback.format_exc()
         # In case of exception, add the alerts to the defect table
-        __save_error_alerts(tenant_id, provider_type, raw_event)
+        __save_error_alerts(tenant_id, provider_type, raw_event, stacktrace)
         events_error_counter.inc()
         # Retrying only if context is present (running the job in arq worker)
         if bool(ctx):
@@ -704,7 +706,10 @@ def process_event(
 
 
 def __save_error_alerts(
-    tenant_id, provider_type, raw_events: dict | list[dict] | list[AlertDto] | None
+    tenant_id,
+    provider_type,
+    raw_events: dict | list[dict] | list[AlertDto] | None,
+    error_message: str,
 ):
     if not raw_events:
         logger.info("No raw events to save as errors")
@@ -749,7 +754,11 @@ def __save_error_alerts(
                 },
             )
             alert = AlertRaw(
-                tenant_id=tenant_id, raw_alert=raw_event, provider_type=provider_type
+                tenant_id=tenant_id,
+                raw_alert=raw_event,
+                provider_type=provider_type,
+                error=True,
+                error_message=error_message,
             )
             session.add(alert)
             logger.info("AlertRaw object created")

@@ -442,10 +442,20 @@ class AlertField(SQLModel, table=True):
 
 class AlertRaw(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    tenant_id: str = Field(foreign_key="tenant.id")
+    tenant_id: str = Field(foreign_key="tenant.id", index=True)
     raw_alert: dict = Field(sa_column=Column(JSON))
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     provider_type: str | None = Field(default=None)
+    error: bool = Field(default=False, index=True)
+    error_message: str | None = Field(default=None)
+    dismissed: bool = Field(default=False)
+    dismissed_at: datetime | None = Field(default=None)
+    dismissed_by: str | None = Field(default=None)
+
+    __table_args__ = (
+        Index("ix_alert_raw_tenant_id_error", "tenant_id", "error"),
+        Index("ix_alert_raw_tenant_id_timestamp", "tenant_id", "timestamp"),
+    )
 
     class Config:
         arbitrary_types_allowed = True

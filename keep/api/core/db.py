@@ -1444,7 +1444,11 @@ def get_last_alerts(
 
 
 def get_alerts_by_fingerprint(
-    tenant_id: str, fingerprint: str, limit=1, status=None, with_alert_instance_enrichment=False,
+    tenant_id: str,
+    fingerprint: str,
+    limit=1,
+    status=None,
+    with_alert_instance_enrichment=False,
 ) -> List[Alert]:
     """
     Get all alerts for a given fingerprint.
@@ -3937,7 +3941,9 @@ def add_alerts_to_incident(
                     session.flush()
             session.commit()
 
-            last_received_field = get_json_extract_field(session, Alert.event, "lastReceived")
+            last_received_field = get_json_extract_field(
+                session, Alert.event, "lastReceived"
+            )
 
             started_at, last_seen_at = session.exec(
                 select(func.min(last_received_field), func.max(last_received_field))
@@ -4138,7 +4144,9 @@ def remove_alerts_to_incident_by_incident_id(
             if source not in sources_existed
         ]
 
-        last_received_field = get_json_extract_field(session, Alert.event, "lastReceived")
+        last_received_field = get_json_extract_field(
+            session, Alert.event, "lastReceived"
+        )
 
         started_at, last_seen_at = session.exec(
             select(func.min(last_received_field), func.max(last_received_field))
@@ -5212,3 +5220,39 @@ def enrich_incidents_with_enrichments(
             incident._enrichments = enrichments_map.get(str(incident.id), {})
 
         return incidents
+
+
+def get_error_alerts(tenant_id: str, limit: int = 1000) -> int:
+    with Session(engine) as session:
+        return (
+            session.query(AlertRaw)
+            .filter(
+                AlertRaw.tenant_id == tenant_id,
+                AlertRaw.error == True,
+                AlertRaw.dismissed == False,
+            )
+            .all()
+        )
+
+
+def dismiss_error_alerts(tenant_id: str, alert_id=None, dismissed_by=None) -> None:
+    with Session(engine) as session:
+        stmt = (
+            update(AlertRaw)
+            .where(
+                AlertRaw.tenant_id == tenant_id,
+            )
+            .values(
+                dismissed=True,
+                dismissed_by=dismissed_by,
+                dismissed_at=datetime.now(tz=timezone.utc),
+            )
+        )
+        if alert_id:
+            if isinstance(alert_id, str):
+                alert_id_uuid = uuid.UUID(alert_id)
+                stmt = stmt.where(AlertRaw.id == alert_id_uuid)
+            else:
+                stmt = stmt.where(AlertRaw.id == alert_id)
+        session.exec(stmt)
+        session.commit()

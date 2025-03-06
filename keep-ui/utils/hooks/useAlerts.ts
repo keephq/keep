@@ -34,9 +34,9 @@ export const useAlerts = () => {
     return useSWR<AlertDto[]>(
       () =>
         api.isReady() && selectedAlert
-          ? `/alerts/${
-              selectedAlert.fingerprint
-            }/history?provider_id=${selectedAlert.providerId}&provider_type=${
+          ? `/alerts/${selectedAlert.fingerprint}/history?provider_id=${
+              selectedAlert.providerId
+            }&provider_type=${
               selectedAlert.source ? selectedAlert.source[0] : ""
             }`
           : null,
@@ -125,6 +125,41 @@ export const useAlerts = () => {
     );
   };
 
+  const useErrorAlerts = (
+    options: SWRConfiguration = { revalidateOnFocus: false }
+  ) => {
+    const { data, error, isLoading, mutate } = useSWR<any>(
+      () => (api.isReady() ? `/alerts/event/error` : null),
+      (url) => api.get(url),
+      options
+    );
+
+    // Consolidated function to dismiss error alerts
+    // If alertId is provided, dismisses that specific alert
+    // If no alertId is provided, dismisses all alerts
+    const dismissErrorAlerts = async (alertId?: string) => {
+      if (!api.isReady()) return false;
+
+      try {
+        const payload = alertId ? { alert_id: alertId } : {};
+        await api.post(`/alerts/event/error/dismiss`, payload);
+        await mutate(); // Refresh the data
+        return true;
+      } catch (error) {
+        console.error("Failed to dismiss error alert(s):", error);
+        return false;
+      }
+    };
+
+    return {
+      data,
+      error,
+      isLoading,
+      mutate,
+      dismissErrorAlerts,
+    };
+  };
+
   const useLastAlerts = (
     query: AlertsQuery | undefined,
     options: SWRConfiguration = { revalidateOnFocus: false }
@@ -184,6 +219,7 @@ export const useAlerts = () => {
     usePresetAlerts,
     useAlertAudit,
     useMultipleFingerprintsAlertAudit,
+    useErrorAlerts,
     useLastAlerts,
     alertsMutator,
   };
