@@ -301,6 +301,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
   );
 
   const table = useReactTable({
+    getRowId: (row) => row.id,
     data: deduplicationRules,
     state: {
       columnPinning: {

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import pytest
 import requests
-from playwright.sync_api import Browser, expect
+from playwright.sync_api import expect, Page
 
 # NOTE 2: to run the tests with a browser, uncomment this two lines:
 # import os
@@ -235,7 +235,7 @@ def upload_alerts():
     return query_allerts(limit=1000, offset=0)
 
 
-def init_test(browser: Browser, alerts):
+def init_test(browser: Page, alerts):
     url = f"{KEEP_UI_URL}/alerts/feed"
     browser.goto(url)
     browser.wait_for_url(url)
@@ -243,6 +243,7 @@ def init_test(browser: Browser, alerts):
     browser.wait_for_selector(f"text={alerts[0]['name']}", timeout=10000)
     rows_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()
     # check that required alerts are loaded and displayed
+    # other tests may also add alerts, so we need to check that the number of rows is greater than or equal to 20
     assert rows_count >= 20
     return alerts
 

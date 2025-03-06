@@ -15,7 +15,7 @@ import {
   getSortedRowModel,
   PaginationState,
 } from "@tanstack/react-table";
-import { ListFormatOption, formatList } from "./alert-table-list-format";
+import { ListFormatOption } from "./alert-table-list-format";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import {
@@ -38,7 +38,12 @@ import { useUser } from "@/entities/users/model/useUser";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import { Icon } from "@tremor/react";
-import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
+import {
+  BellIcon,
+  BellSlashIcon,
+  FunnelIcon,
+  MagnifyingGlassIcon,
+} from "@heroicons/react/24/outline";
 import AlertPaginationServerSide from "./alert-pagination-server-side";
 import { FacetDto } from "@/features/filter";
 import { GroupingState, getGroupedRowModel } from "@tanstack/react-table";
@@ -49,14 +54,11 @@ import { FacetsConfig } from "@/features/filter/models";
 import { ViewedAlert } from "./alert-table";
 import { TimeFormatOption } from "./alert-table-time-format";
 import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { GrTest } from "react-icons/gr";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { DynamicImageProviderIcon } from "@/components/ui";
-import {
-  RowStyle,
-  useAlertRowStyle,
-} from "@/entities/alerts/model/useAlertRowStyle";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -83,8 +85,6 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName: string;
-  presetStatic?: boolean;
-  presetId?: string;
   presetTabs?: PresetTab[];
   isRefreshAllowed?: boolean;
   isMenuColDisplayed?: boolean;
@@ -107,8 +107,6 @@ export function AlertTableServerSide({
   initialFacets,
   isAsyncLoading = false,
   presetName,
-  presetStatic = false,
-  presetId = "",
   presetTabs = [],
   isRefreshAllowed = true,
   setDismissedModalAlert,
@@ -268,6 +266,7 @@ export function AlertTableServerSide({
     : ["severity", "checkbox", "source", "name"];
 
   const table = useReactTable({
+    getRowId: (row) => row.fingerprint,
     data: alerts,
     columns: columns,
     state: {
@@ -315,11 +314,7 @@ export function AlertTableServerSide({
     onGroupingChange: setGrouping,
   });
 
-  const selectedRowIds = Object.entries(
-    table.getSelectedRowModel().rowsById
-  ).reduce<string[]>((acc, [alertId]) => {
-    return acc.concat(alertId);
-  }, []);
+  const selectedAlertsFingerprints = Object.keys(table.getState().rowSelection);
 
   let showSkeleton = isAsyncLoading;
   const isTableEmpty = table.getPageCount() === 0;
@@ -481,8 +476,58 @@ export function AlertTableServerSide({
     };
   }, []);
 
-  const [modalOpen, setModalOpen] = useState(false);
+  const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
+    useState<boolean>(false);
   const router = useRouter();
+  const pathname = usePathname();
+  // handle "create incident with AI from last 25 alerts" if ?createIncidentsFromLastAlerts=25
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (alerts.length === 0 && selectedAlertsFingerprints.length) {
+      return;
+    }
+
+    const lastAlertsCount = searchParams.get("createIncidentsFromLastAlerts");
+    const lastAlertsNumber = lastAlertsCount
+      ? parseInt(lastAlertsCount)
+      : undefined;
+    if (!lastAlertsNumber) {
+      return;
+    }
+
+    const lastAlerts = table.getRowModel().rows.slice(-lastAlertsNumber);
+    const alertsFingerprints = lastAlerts.map(
+      (alert) => alert.original.fingerprint
+    );
+
+    table.setRowSelection(
+      alertsFingerprints.reduce(
+        (acc, fingerprint) => {
+          acc[fingerprint] = true;
+          return acc;
+        },
+        {} as Record<string, boolean>
+      )
+    );
+    const searchParamsWithoutCreateIncidentsFromLastAlerts =
+      new URLSearchParams(searchParams);
+    searchParamsWithoutCreateIncidentsFromLastAlerts.delete(
+      "createIncidentsFromLastAlerts"
+    );
+    setIsCreateIncidentWithAIOpen(true);
+    // todo: remove searchParams after reading
+    router.replace(
+      pathname +
+        "?" +
+        searchParamsWithoutCreateIncidentsFromLastAlerts.toString()
+    );
+    // call create incident with AI from last 25 alerts
+    // api/incidents?createIncidentsFromLastAlerts=25
+  }, [alerts.length, searchParams, table]);
+
+  //
+
+  const [modalOpen, setModalOpen] = useState(false);
 
   const handleModalClose = () => setModalOpen(false);
   const handleModalOpen = () => setModalOpen(true);
@@ -495,7 +540,7 @@ export function AlertTableServerSide({
     ) {
       return (
         <>
-          <div className="flex items-center h-[500px] w-full">
+          <div className="flex-1 flex items-center w-full">
             <div className="flex flex-col justify-center items-center w-full p-4">
               <EmptyStateCard
                 noCard
@@ -533,6 +578,49 @@ export function AlertTableServerSide({
         </>
       );
     }
+    if (!showSkeleton) {
+      if (showFilterEmptyState) {
+        return (
+          <>
+            <div className="flex-1 flex items-center h-full w-full">
+              <div className="flex flex-col justify-center items-center w-full p-4">
+                <EmptyStateCard
+                  noCard
+                  title="No Alerts Matching Your Filter"
+                  description="Reset filter to see all alerts"
+                  icon={FunnelIcon}
+                >
+                  <Button
+                    color="orange"
+                    variant="secondary"
+                    onClick={() => setClearFiltersToken(uuidV4())}
+                  >
+                    Reset filter
+                  </Button>
+                </EmptyStateCard>
+              </div>
+            </div>
+          </>
+        );
+      }
+
+      if (showSearchEmptyState) {
+        return (
+          <>
+            <div className="flex-1 flex items-center h-full w-full">
+              <div className="flex flex-col justify-center items-center w-full p-4">
+                <EmptyStateCard
+                  noCard
+                  title="No Alerts Matching Your CEL Query"
+                  description="Check your CEL query and try again"
+                  icon={MagnifyingGlassIcon}
+                />
+              </div>
+            </div>
+          </>
+        );
+      }
+    }
     return (
       <Table className="[&>table]:table-fixed [&>table]:w-full">
         <AlertsTableHeaders
@@ -548,13 +636,9 @@ export function AlertTableServerSide({
         <AlertsTableBody
           table={table}
           showSkeleton={showSkeleton}
-          showFilterEmptyState={showFilterEmptyState}
-          showSearchEmptyState={showSearchEmptyState}
           theme={theme}
           lastViewedAlert={lastViewedAlert}
           onRowClick={handleRowClick}
-          onClearFiltersClick={() => setClearFiltersToken(uuidV4())}
-          presetName={presetName}
         />
       </Table>
     );
@@ -576,16 +660,17 @@ export function AlertTableServerSide({
 
       {/* Make actions/presets section fixed height */}
       <div className="h-14 flex-none">
-        {selectedRowIds.length ? (
+        {selectedAlertsFingerprints.length ? (
           <AlertActions
-            selectedRowIds={selectedRowIds}
-            alerts={alerts}
+            selectedAlertsFingerprints={selectedAlertsFingerprints}
             table={table}
             clearRowSelection={table.resetRowSelection}
             setDismissModalAlert={setDismissedModalAlert}
             mutateAlerts={mutateAlerts}
             setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
             isIncidentSelectorOpen={isIncidentSelectorOpen}
+            setIsCreateIncidentWithAIOpen={setIsCreateIncidentWithAIOpen}
+            isCreateIncidentWithAIOpen={isCreateIncidentWithAIOpen}
           />
         ) : (
           <AlertPresetManager
@@ -616,11 +701,11 @@ export function AlertTableServerSide({
           {/* Table section */}
           <div className="flex-1 flex flex-col min-w-0 gap-4">
             <Card className="flex-1 flex flex-col p-0 overflow-x-auto">
-              <div className="flex-grow flex flex-col">
+              <div className="flex-1 flex flex-col">
                 <div ref={a11yContainerRef} className="sr-only" />
 
                 {/* Make table wrapper scrollable */}
-                <div data-testid="alerts-table" className="flex-grow">
+                <div data-testid="alerts-table" className="flex-1">
                   {renderTable()}
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button, Textarea, Subtitle, Callout } from "@tremor/react";
+import { Button, Textarea, Callout } from "@tremor/react";
 import {
   useForm,
   Controller,
@@ -210,14 +210,10 @@ const PushAlertToServerModal = ({
         )}
 
         <div className="mt-6 flex gap-2 justify-end">
-          <Button
-            onClick={handleClose}
-            variant="secondary"
-            className="border border-orange-500 text-orange-500"
-          >
+          <Button color="orange" onClick={handleClose} variant="secondary">
             Cancel
           </Button>
-          <Button color="orange" type="submit">
+          <Button color="orange" variant="primary" type="submit">
             Submit
           </Button>
         </div>
