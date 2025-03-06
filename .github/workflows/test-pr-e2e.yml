@@ -86,15 +86,25 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      # This is the most important cache for your workflow - Docker layer caching
-      - name: Cache Docker layers
-        id: cache-docker
+      # Frontend Docker layer caching with verified paths
+      - name: Cache Docker layers for frontend
+        id: cache-docker-frontend
         uses: actions/cache@v4.2.0
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ hashFiles('keep/**', 'keep-ui/**', 'tests/**') }}
+          path: /tmp/.buildx-cache-frontend
+          key: ${{ runner.os }}-buildx-frontend-${{ hashFiles('keep-ui/package.json', 'keep-ui/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-buildx-
+            ${{ runner.os }}-buildx-frontend-
+
+      # Backend Docker layer caching with verified paths
+      - name: Cache Docker layers for backend
+        id: cache-docker-backend
+        uses: actions/cache@v4.2.0
+        with:
+          path: /tmp/.buildx-cache-backend
+          key: ${{ runner.os }}-buildx-backend-${{ hashFiles('poetry.lock', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-backend-
 
       # Build and start containers with BuildKit layer caching
       - name: Build and start containers
@@ -108,19 +118,48 @@ jobs:
           export COMPOSE_DOCKER_CLI_BUILD=1
           export DOCKER_BUILDKIT=1
 
-          # Build with cache from and cache to
+          # Build frontend with its specific cache
           docker compose \
             --project-directory . \
             -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml \
             build \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --build-arg DOCKER_BUILDKIT=1
+            keep-frontend keep-frontend-db-auth \
+            --cache-from=type=local,src=/tmp/.buildx-cache-frontend \
+            --cache-to=type=local,dest=/tmp/.buildx-cache-frontend-new
 
-          # Start the containers
+          # Build backend with its specific cache
+          docker compose \
+            --project-directory . \
+            -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml \
+            build \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            keep-backend keep-backend-db-auth keep-websocket-server \
+            --cache-from=type=local,src=/tmp/.buildx-cache-backend \
+            --cache-to=type=local,dest=/tmp/.buildx-cache-backend-new
+
+          # Build any other services
+          docker compose \
+            --project-directory . \
+            -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml \
+            build \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --no-cache prometheus-server-for-test-target grafana
+
+          # Start all containers
           docker compose \
             --project-directory . \
             -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml \
             up -d
+
+      # Move cache to prevent cache explosion
+      - name: Move Docker caches
+        run: |
+          rm -rf /tmp/.buildx-cache-frontend
+          mv /tmp/.buildx-cache-frontend-new /tmp/.buildx-cache-frontend
+
+          rm -rf /tmp/.buildx-cache-backend
+          mv /tmp/.buildx-cache-backend-new /tmp/.buildx-cache-backend
 
       # Optimize wait times with exponential backoff
       - name: Wait for services to be ready with optimized polling
