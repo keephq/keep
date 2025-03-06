@@ -7,7 +7,6 @@ Create Date: 2025-03-06 10:46:23.453102
 """
 
 import sqlalchemy as sa
-import sqlmodel
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -22,9 +21,7 @@ def upgrade() -> None:
     with op.batch_alter_table("alertraw", schema=None) as batch_op:
         batch_op.add_column(sa.Column("error", sa.Boolean(), nullable=False))
         batch_op.add_column(
-            sa.Column(
-                "error_message", sqlmodel.sql.sqltypes.AutoString(), nullable=True
-            )
+            sa.Column("error_message", sa.String(length=2048), nullable=True)
         )
         # add
         # dismissed: bool = Field(default=False)
@@ -63,7 +60,9 @@ def upgrade() -> None:
             )
 
         batch_op.add_column(sa.Column("dismissed_at", sa.DateTime(), nullable=True))
-        batch_op.add_column(sa.Column("dismissed_by", sa.String(), nullable=True))
+        batch_op.add_column(
+            sa.Column("dismissed_by", sa.String(length=255), nullable=True)
+        )
         batch_op.create_index(
             "ix_alert_raw_tenant_id_error", ["tenant_id", "error"], unique=False
         )
