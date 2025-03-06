@@ -337,11 +337,11 @@ jobs:
 
           # Database checks
           if [ "${{ matrix.db_type }}" == "mysql" ]; then
-            wait_for_service "MySQL Database" "docker exec \$(docker ps -qf \"name=keep-database\") mysqladmin ping -h \"localhost\" --silent" 10 "keep-database"
-            wait_for_service "MySQL Database (DB AUTH)" "docker exec \$(docker ps -qf \"name=keep-database-db-auth\") mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth"
+            wait_for_service "MySQL Database" "docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h \"localhost\" --silent" 10 "keep-database"
+            wait_for_service "MySQL Database (DB AUTH)" "docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth"
           elif [ "${{ matrix.db_type }}" == "postgres" ]; then
-            wait_for_service "Postgres Database" "docker exec \$(docker ps -qf \"name=keep-database\") pg_isready -h localhost -U keepuser" 10 "keep-database"
-            wait_for_service "Postgres Database (DB AUTH)" "docker exec \$(docker ps -qf \"name=keep-database-db-auth\") pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
+            wait_for_service "Postgres Database" "docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser" 10 "keep-database"
+            wait_for_service "Postgres Database (DB AUTH)" "docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
           fi
 
           # Service checks with log visibility
