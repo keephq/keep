@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from opentelemetry import trace
 from sqlmodel import Session
 
+from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.config import config
 from keep.api.core.db import (
     get_alert_by_event_id,
@@ -78,9 +79,18 @@ def fetch_facet_options(
         },
     )
 
-    facet_options = get_workflow_facets_data(
-        tenant_id=tenant_id, facet_options_query=facet_options_query
-    )
+    try:
+        facet_options = get_workflow_facets_data(
+            tenant_id=tenant_id, facet_options_query=facet_options_query
+        )
+    except CelToSqlException as e:
+        logger.exception(
+            f'Error parsing CEL expression "{facet_options_query.cel}". {str(e)}'
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error parsing CEL expression: {facet_options_query.cel}",
+        ) from e
 
     logger.info(
         "Fetched workflow facets from DB",
@@ -201,16 +211,24 @@ def query_workflows(
             installed_providers_by_type[installed_provider.type][
                 installed_provider.name
             ] = installed_provider
-    # get all workflows
-    workflows, count = workflowstore.get_all_workflows_with_last_execution(
-        tenant_id=tenant_id,
-        cel=query.cel,
-        limit=query.limit,
-        offset=query.offset,
-        sort_by=query.sort_by,
-        sort_dir=query.sort_dir,
-        is_v2=is_v2,
-    )
+
+    try:
+        # get all workflows
+        workflows, count = workflowstore.get_all_workflows_with_last_execution(
+            tenant_id=tenant_id,
+            cel=query.cel,
+            limit=query.limit,
+            offset=query.offset,
+            sort_by=query.sort_by,
+            sort_dir=query.sort_dir,
+            is_v2=is_v2,
+        )
+    except CelToSqlException as e:
+        logger.exception(f'Error parsing CEL expression "{query.cel}". {str(e)}')
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error parsing CEL expression: {query.cel}",
+        ) from e
 
     # Group last workflow executions by workflow
     if is_v2:
