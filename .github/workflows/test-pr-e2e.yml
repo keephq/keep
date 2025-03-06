@@ -160,23 +160,12 @@ jobs:
           rm -rf /tmp/.buildx-cache-backend
           mv /tmp/.buildx-cache-backend-new /tmp/.buildx-cache-backend
 
-  # Run tests
-  run-tests:
-    needs: [build-frontend, build-backend]
+  # Prepare test environment in parallel with the builds
+  prepare-test-environment:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        db_type: [mysql, postgres]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
 
       - uses: chartboost/ruff-action@v1
         with:
@@ -224,6 +213,48 @@ jobs:
             poetry run playwright install-deps
           fi
 
+      # Cache the prepared environment for the test job
+      - name: Cache prepared test environment
+        uses: actions/cache@v4.2.0
+        with:
+          path: |
+            .venv
+            ~/.cache/ms-playwright
+          key: test-env-${{ github.sha }}
+
+  # Run tests
+  run-tests:
+    needs: [build-frontend, build-backend, prepare-test-environment]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        db_type: [mysql, postgres]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # Restore the prepared environment from cache
+      - name: Restore prepared test environment
+        uses: actions/cache@v4.2.0
+        with:
+          path: |
+            .venv
+            ~/.cache/ms-playwright
+          key: test-env-${{ github.sha }}
+          fail-on-cache-miss: true
+
       # Create a modified compose file with our built images
       - name: Create modified docker-compose file with built images
         run: |
@@ -259,6 +290,7 @@ jobs:
             local service_name=$1
             local check_command=$2
             local max_attempts=$3
+            local container_name=$4
             local attempt=0
             local wait_time=1
 
@@ -266,9 +298,24 @@ jobs:
             until eval "$check_command"; do
               if [ "$attempt" -ge "$max_attempts" ]; then
                 echo "Max attempts reached, exiting..."
+                # Show final logs before exiting
+                if [ ! -z "$container_name" ]; then
+                  echo "===== FINAL LOGS FOR $container_name ====="
+                  docker logs $(docker ps -qf "name=$container_name") 2>&1 | tail -n 50
+                  echo "=========================================="
+                fi
                 exit 1
               fi
+
               echo "Waiting for $service_name... (Attempt: $((attempt+1)), waiting ${wait_time}s)"
+
+              # Print logs of the service container if specified
+              if [ ! -z "$container_name" ]; then
+                echo "===== RECENT LOGS FOR $container_name ====="
+                docker logs $(docker ps -qf "name=$container_name") 2>&1 | tail -n 20
+                echo "=========================================="
+              fi
+
               attempt=$((attempt+1))
               sleep $wait_time
               # Exponential backoff with max of 8 seconds
@@ -279,19 +326,19 @@ jobs:
 
           # Database checks
           if [ "${{ matrix.db_type }}" == "mysql" ]; then
-            wait_for_service "MySQL Database" "docker exec \$(docker ps -qf \"name=keep-database-1\") mysqladmin ping -h \"localhost\" --silent" 10
-            wait_for_service "MySQL Database (DB AUTH)" "docker exec \$(docker ps -qf \"name=keep-database-db-auth-1\") mysqladmin ping -h \"localhost\" --silent" 10
+            wait_for_service "MySQL Database" "docker exec \$(docker ps -qf \"name=keep-database-1\") mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-1"
+            wait_for_service "MySQL Database (DB AUTH)" "docker exec \$(docker ps -qf \"name=keep-database-db-auth-1\") mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth-1"
           elif [ "${{ matrix.db_type }}" == "postgres" ]; then
-            wait_for_service "Postgres Database" "docker exec \$(docker ps -qf \"name=keep-database-1\") pg_isready -h localhost -U keepuser" 10
-            wait_for_service "Postgres Database (DB AUTH)" "docker exec \$(docker ps -qf \"name=keep-database-db-auth-1\") pg_isready -h localhost -U keepuser" 10
+            wait_for_service "Postgres Database" "docker exec \$(docker ps -qf \"name=keep-database-1\") pg_isready -h localhost -U keepuser" 10 "keep-database-1"
+            wait_for_service "Postgres Database (DB AUTH)" "docker exec \$(docker ps -qf \"name=keep-database-db-auth-1\") pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth-1"
           fi
 
-          # Service checks
-          wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 10
-          wait_for_service "Keep backend" "curl --output /dev/null --silent --fail http://localhost:8080/healthcheck" 10
-          wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 10
-          wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 10
-          wait_for_service "Grafana" "curl --output /dev/null --silent --fail http://localhost:3002/api/health" 10
+          # Service checks with log visibility
+          wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 15 "keep-backend-db-auth-1"
+          wait_for_service "Keep backend" "curl --output /dev/null --silent --fail http://localhost:8080/healthcheck" 15 "keep-backend-1"
+          wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 15 "keep-frontend-1"
+          wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth-1"
+          wait_for_service "Grafana" "curl --output /dev/null --silent --fail http://localhost:3002/api/health" 10 "grafana-1"
 
       # Run tests
       - name: Run e2e tests and report coverage
