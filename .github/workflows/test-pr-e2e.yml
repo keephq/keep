@@ -59,7 +59,7 @@ jobs:
       - name: Build frontend image
         uses: docker/build-push-action@v4
         with:
-          context: .
+          context: keep-ui
           file: ./docker/Dockerfile.ui
           push: true
           tags: ghcr.io/${{ github.repository }}/keep-frontend:${{ github.sha }}
