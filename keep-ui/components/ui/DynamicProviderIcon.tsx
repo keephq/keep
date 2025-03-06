@@ -24,9 +24,11 @@ export const DynamicImageProviderIcon = (props: any) => {
         return;
       }
 
-      if (!providerType && !imageSrc) {
-        setImageSrc(src || fallbackIcon);
-        setImageLoaded(true);
+      if (!providerType) {
+        if (!imageSrc) {
+          setImageSrc(src || fallbackIcon);
+          setImageLoaded(true);
+        }
         return;
       }
 
@@ -52,14 +54,14 @@ export const DynamicImageProviderIcon = (props: any) => {
     loadImage();
   }, [providerType, providers]); // No need for cleanup since we're using the cache
 
-  if (!providers || !imageLoaded) {
+  if ((!providers || !imageLoaded) && providerType) {
     return null;
   }
 
   return (
     <Image
       {...rest}
-      alt={providerType || "unknƒwn provider icon"}
+      alt={providerType || "No provider icon found"}
       src={imageSrc}
       onError={() => setImageSrc(fallbackIcon)}
       unoptimized

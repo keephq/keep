@@ -10,7 +10,7 @@ interface Props {
   providers: string[];
   isOpen: boolean;
   onClose: () => void;
-  onUploadComplete: () => Promise<void>;
+  onUploadComplete: () => void;
   customImages: Array<{ provider_name: string }>;
 }
 
@@ -58,7 +58,7 @@ export function ProviderImageUploader({
         body: formData,
       });
 
-      await onUploadComplete();
+      onUploadComplete();
     } catch (error) {
       showErrorToast(error);
     } finally {

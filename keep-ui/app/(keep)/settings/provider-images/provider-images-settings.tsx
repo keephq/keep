@@ -30,8 +30,7 @@ export default function ProviderImagesSettings() {
     )
   );
 
-  const handleUploadComplete = async () => {
-    await refresh();
+  const handleUploadComplete = () => {
     setIsUploadModalOpen(false);
     router.refresh();
   };
