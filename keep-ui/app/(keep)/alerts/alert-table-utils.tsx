@@ -32,7 +32,7 @@ import {
   TableSeverityCell,
   UISeverity,
 } from "@/shared/ui";
-import { DynamicImageProviderIcon } from "@/components/ui";
+import { DynamicImageProviderIcon, Link } from "@/components/ui";
 import clsx from "clsx";
 import {
   RowStyle,
@@ -44,6 +44,7 @@ import {
   isDateTimeColumn,
 } from "./alert-table-time-format";
 import { format } from "path";
+import { useIncidents } from "@/utils/hooks/useIncidents";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -197,6 +198,7 @@ export const useAlertTableCols = (
     `column-time-formats-${presetName}`,
     {}
   );
+  const { data: incidents } = useIncidents();
   const [columnListFormats, setColumnListFormats] = useLocalStorage<
     Record<string, ListFormatOption>
   >(`column-list-formats-${presetName}`, {});
@@ -279,6 +281,24 @@ export const useAlertTableCols = (
                 {formatDateTime(date, formatOption)}
               </span>
             );
+          }
+
+          if (context.column.id === "incident") {
+            const incidentString = String(value || "");
+            const incidentSplit = incidentString.split(",");
+            return incidentSplit.map((incidentId, index) => {
+              const incidentName = incidents?.items.find(
+                (incident) => incident.id === incidentId
+              )?.user_generated_name;
+              return (
+                <>
+                  <Link href={`/incidents/${incidentId}`}>
+                    {incidentName || incidentId}
+                  </Link>
+                  {index < incidentSplit.length - 1 && ", "}
+                </>
+              );
+            });
           }
 
           let isList = isListColumn(context.column);
