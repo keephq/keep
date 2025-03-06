@@ -848,6 +848,7 @@ def change_incident_status(
                         fingerprint=alert.fingerprint,
                     ),
                     authenticated_entity=authenticated_entity,
+                    session=session,
                 )
 
         if change.status == IncidentStatus.RESOLVED:
