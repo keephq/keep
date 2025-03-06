@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
 import { PlusIcon, RocketIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SilencedDoorbellNotification } from "@/components/icons";
 import AlertAssociateIncidentModal from "./alert-associate-incident-modal";
 import CreateIncidentWithAIModal from "./alert-create-incident-ai-modal";
@@ -13,33 +13,38 @@ import { Table } from "@tanstack/react-table";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 interface Props {
-  selectedRowIds: string[];
-  alerts: AlertDto[];
+  selectedAlertsFingerprints: string[];
   table: Table<AlertDto>;
   clearRowSelection: () => void;
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
   mutateAlerts?: () => void;
   setIsIncidentSelectorOpen: (open: boolean) => void;
   isIncidentSelectorOpen: boolean;
+  setIsCreateIncidentWithAIOpen: (open: boolean) => void;
+  isCreateIncidentWithAIOpen: boolean;
 }
 
 export default function AlertActions({
-  selectedRowIds,
-  alerts,
+  selectedAlertsFingerprints,
   table,
   clearRowSelection,
   setDismissModalAlert,
   mutateAlerts,
   setIsIncidentSelectorOpen,
   isIncidentSelectorOpen,
+  setIsCreateIncidentWithAIOpen,
+  isCreateIncidentWithAIOpen,
 }: Props) {
   const router = useRouter();
   const api = useApi();
   const revalidateMultiple = useRevalidateMultiple();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
 
-  const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
-    useState<boolean>(false);
+  // TODO: refactor
+  const searchParams = useSearchParams();
+  const createIncidentsFromLastAlerts = searchParams.get(
+    "createIncidentsFromLastAlerts"
+  );
 
   const selectedAlerts = table
     .getSelectedRowModel()
@@ -117,7 +122,7 @@ export default function AlertActions({
           clearRowSelection();
         }}
       >
-        Dismiss {selectedRowIds.length} alert(s)
+        Dismiss {selectedAlertsFingerprints.length} alert(s)
       </Button>
       <Button
         icon={PlusIcon}

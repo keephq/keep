@@ -190,15 +190,18 @@ export const useAlerts = () => {
       }
     }
 
-    let requestUrl = `/alerts/query`;
+    const requestUrl = `/alerts/query`;
+    const swrKey = () =>
+      // adding "/alerts/query" so global revalidation works
+      api.isReady()
+        ? requestUrl +
+          Object.entries(queryToPost)
+            .map(([key, value]) => `${key}=${value}`)
+            .join("&")
+        : null;
 
     const swrValue = useSWR<any>(
-      () =>
-        api.isReady()
-          ? Object.entries(queryToPost)
-              .map(([key, value]) => `${key}=${value}`)
-              .join(";")
-          : null,
+      swrKey,
       () => api.post(requestUrl, queryToPost),
       options
     );
