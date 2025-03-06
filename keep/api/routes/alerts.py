@@ -15,7 +15,6 @@ from arq import ArqRedis
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pusher import Pusher
-from sqlalchemy_utils import UUIDType
 from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
@@ -42,7 +41,6 @@ from keep.api.core.db import (
     get_last_alert_by_fingerprint,
     get_last_alerts,
     get_session,
-    is_all_alerts_resolved,
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
@@ -61,6 +59,7 @@ from keep.api.models.alert import (
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.db.rule import ResolveOn
+from keep.api.models.db.alert import ActionType
 from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.query import QueryDto
 from keep.api.models.search_alert import SearchAlertsRequest
