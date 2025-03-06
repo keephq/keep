@@ -26,7 +26,128 @@ env:
   EE_ENABLED: true
 
 jobs:
-  tests-e2e:
+  # Build images in parallel
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Cache Docker layers for frontend
+        id: cache-docker-frontend
+        uses: actions/cache@v4.2.0
+        with:
+          path: /tmp/.buildx-cache-frontend
+          key: ${{ runner.os }}-buildx-frontend-${{ hashFiles('keep-ui/package.json', 'keep-ui/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-frontend-
+
+      - name: Log frontend cache status
+        run: |
+          if [ "${{ steps.cache-docker-frontend.outputs.cache-hit }}" == "true" ]; then
+            echo "FRONTEND CACHE HIT ✅"
+            echo "Cache key: ${{ runner.os }}-buildx-frontend-${{ hashFiles('keep-ui/package.json', 'keep-ui/package-lock.json') }}"
+          else
+            echo "FRONTEND CACHE MISS ❌"
+            echo "New cache will be created with key: ${{ runner.os }}-buildx-frontend-${{ hashFiles('keep-ui/package.json', 'keep-ui/package-lock.json') }}"
+          fi
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./keep-ui/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}/keep-frontend:${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache-frontend
+          cache-to: type=local,dest=/tmp/.buildx-cache-frontend-new
+
+      - name: Build frontend-db-auth image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./keep-ui/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}/keep-frontend-db-auth:${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache-frontend
+          cache-to: type=local,dest=/tmp/.buildx-cache-frontend-new,mode=max
+
+      - name: Move Docker cache
+        run: |
+          rm -rf /tmp/.buildx-cache-frontend
+          mv /tmp/.buildx-cache-frontend-new /tmp/.buildx-cache-frontend
+
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Cache Docker layers for backend
+        id: cache-docker-backend
+        uses: actions/cache@v4.2.0
+        with:
+          path: /tmp/.buildx-cache-backend
+          key: ${{ runner.os }}-buildx-backend-${{ hashFiles('poetry.lock', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-backend-
+
+      - name: Log backend cache status
+        run: |
+          if [ "${{ steps.cache-docker-backend.outputs.cache-hit }}" == "true" ]; then
+            echo "BACKEND CACHE HIT ✅"
+            echo "Cache key: ${{ runner.os }}-buildx-backend-${{ hashFiles('poetry.lock', 'pyproject.toml') }}"
+          else
+            echo "BACKEND CACHE MISS ❌"
+            echo "New cache will be created with key: ${{ runner.os }}-buildx-backend-${{ hashFiles('poetry.lock', 'pyproject.toml') }}"
+          fi
+
+      - name: Build backend image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./keep/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}/keep-backend:${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache-backend
+          cache-to: type=local,dest=/tmp/.buildx-cache-backend-new
+
+      - name: Build backend-db-auth image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./keep/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}/keep-backend-db-auth:${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache-backend
+          cache-to: type=local,dest=/tmp/.buildx-cache-backend-new,mode=max
+
+      - name: Build websocket server image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./keep/Dockerfile.websocket
+          push: true
+          tags: ghcr.io/${{ github.repository }}/keep-websocket-server:${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache-backend
+          cache-to: type=local,dest=/tmp/.buildx-cache-backend-new,mode=max
+
+      - name: Move Docker cache
+        run: |
+          rm -rf /tmp/.buildx-cache-backend
+          mv /tmp/.buildx-cache-backend-new /tmp/.buildx-cache-backend
+
+  # Run tests
+  run-tests:
+    needs: [build-frontend, build-backend]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -35,11 +156,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
       - uses: chartboost/ruff-action@v1
         with:
           src: "./keep"
 
-      # These Python-related steps are kept as they're used for running tests directly on the runner
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
@@ -82,84 +209,37 @@ jobs:
             poetry run playwright install-deps
           fi
 
-      # Docker setup with proper layer caching
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      # Frontend Docker layer caching with verified paths
-      - name: Cache Docker layers for frontend
-        id: cache-docker-frontend
-        uses: actions/cache@v4.2.0
-        with:
-          path: /tmp/.buildx-cache-frontend
-          key: ${{ runner.os }}-buildx-frontend-${{ hashFiles('keep-ui/package.json', 'keep-ui/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-frontend-
-
-      # Backend Docker layer caching with verified paths
-      - name: Cache Docker layers for backend
-        id: cache-docker-backend
-        uses: actions/cache@v4.2.0
-        with:
-          path: /tmp/.buildx-cache-backend
-          key: ${{ runner.os }}-buildx-backend-${{ hashFiles('poetry.lock', 'pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-backend-
-
-      # Build and start containers with BuildKit layer caching
-      - name: Build and start containers
-        env:
-          DOCKER_BUILDKIT: 1
+      # Create a modified compose file with our built images
+      - name: Create modified docker-compose file with built images
         run: |
-          # Export BuildKit state to cache
-          docker buildx create --use --driver docker-container --driver-opt network=host
+          cp tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml tests/e2e_tests/docker-compose-modified.yml
 
-          # Set cache mount options for Docker Compose
-          export COMPOSE_DOCKER_CLI_BUILD=1
-          export DOCKER_BUILDKIT=1
+          # Replace image references in the file
+          sed -i "s|build: \.\/keep-ui.*|image: ghcr.io\/${{ github.repository }}\/keep-frontend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|build: \.\/keep.*|image: ghcr.io\/${{ github.repository }}\/keep-backend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
 
-          # Build frontend with its specific cache
+          # Specific replacements for db-auth images
+          sed -i "s|build: \.\/keep-ui-db-auth.*|image: ghcr.io\/${{ github.repository }}\/keep-frontend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|build: \.\/keep-db-auth.*|image: ghcr.io\/${{ github.repository }}\/keep-backend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+
+          # Websocket server
+          sed -i "s|build: \.\/keep\/websocket.*|image: ghcr.io\/${{ github.repository }}\/keep-websocket-server:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+
+          # Check the result
+          cat tests/e2e_tests/docker-compose-modified.yml
+
+      # Start containers using the pre-built images
+      - name: Start Docker containers
+        run: |
           docker compose \
             --project-directory . \
-            -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml \
-            build \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            keep-frontend keep-frontend-db-auth \
-            --cache-from=type=local,src=/tmp/.buildx-cache-frontend \
-            --cache-to=type=local,dest=/tmp/.buildx-cache-frontend-new
+            -f tests/e2e_tests/docker-compose-modified.yml \
+            pull
 
-          # Build backend with its specific cache
           docker compose \
             --project-directory . \
-            -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml \
-            build \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            keep-backend keep-backend-db-auth keep-websocket-server \
-            --cache-from=type=local,src=/tmp/.buildx-cache-backend \
-            --cache-to=type=local,dest=/tmp/.buildx-cache-backend-new
-
-          # Build any other services
-          docker compose \
-            --project-directory . \
-            -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml \
-            build \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --no-cache prometheus-server-for-test-target grafana
-
-          # Start all containers
-          docker compose \
-            --project-directory . \
-            -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml \
+            -f tests/e2e_tests/docker-compose-modified.yml \
             up -d
-
-      # Move cache to prevent cache explosion
-      - name: Move Docker caches
-        run: |
-          rm -rf /tmp/.buildx-cache-frontend
-          mv /tmp/.buildx-cache-frontend-new /tmp/.buildx-cache-frontend
-
-          rm -rf /tmp/.buildx-cache-backend
-          mv /tmp/.buildx-cache-backend-new /tmp/.buildx-cache-backend
 
       # Optimize wait times with exponential backoff
       - name: Wait for services to be ready with optimized polling
@@ -203,7 +283,7 @@ jobs:
           wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 10
           wait_for_service "Grafana" "curl --output /dev/null --silent --fail http://localhost:3002/api/health" 10
 
-      # Run tests using the Python environment on the runner
+      # Run tests
       - name: Run e2e tests and report coverage
         run: |
           poetry run coverage run --branch -m pytest -s tests/e2e_tests/
@@ -222,10 +302,10 @@ jobs:
       - name: Dump backend logs
         if: always()
         run: |
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-backend > backend_logs-${{ matrix.db_type }}.txt
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-frontend > frontend_logs-${{ matrix.db_type }}.txt
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-backend-db-auth > backend_logs-${{ matrix.db_type }}-db-auth.txt
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-frontend-db-auth > frontend_logs-${{ matrix.db_type }}-db-auth.txt
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-backend > backend_logs-${{ matrix.db_type }}.txt
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-frontend > frontend_logs-${{ matrix.db_type }}.txt
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-backend-db-auth > backend_logs-${{ matrix.db_type }}-db-auth.txt
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-frontend-db-auth > frontend_logs-${{ matrix.db_type }}-db-auth.txt
         continue-on-error: true
 
       # Upload artifacts
@@ -246,4 +326,4 @@ jobs:
       # Tear down environment
       - name: Tear down environment
         run: |
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml down
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
