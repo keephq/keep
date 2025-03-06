@@ -451,11 +451,14 @@ def elastic_client(request):
     else:
         # this is so if any other module initialized Elasticsearch, it will be deleted
         ElasticClient._instance = None
-        os.environ["ELASTIC_ENABLED"] = "true"
-        os.environ["ELASTIC_USER"] = "elastic"
-        os.environ["ELASTIC_PASSWORD"] = "keeptests"
-        os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
-        os.environ["ELASTIC_INDEX_SUFFIX"] = "test"
+        env_vars = {}
+        env_vars["ELASTIC_ENABLED"] = "true"
+        env_vars["ELASTIC_USER"] = "elastic"
+        env_vars["ELASTIC_PASSWORD"] = "keeptests"
+        env_vars["ELASTIC_HOSTS"] = "http://localhost:9200"
+        env_vars["ELASTIC_INDEX_SUFFIX"] = "test"
+
+    with patch.dict(os.environ, env_vars):
         # request.getfixturevalue("elastic_container")
         elastic_client = ElasticClient(
             tenant_id=SINGLE_TENANT_UUID,
