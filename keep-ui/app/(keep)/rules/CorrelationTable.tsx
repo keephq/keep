@@ -156,6 +156,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
   );
 
   const table = useReactTable({
+    getRowId: (row) => row.id,
     data: rules,
     columns: CORRELATION_TABLE_COLS,
     getCoreRowModel: getCoreRowModel(),

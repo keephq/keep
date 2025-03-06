@@ -8,6 +8,11 @@ import { IoChevronUp } from "react-icons/io5";
 import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
 import { MdFlashOn } from "react-icons/md";
 import clsx from "clsx";
+import {
+  DEFAULT_INCIDENTS_PAGE_SIZE,
+  DEFAULT_INCIDENTS_CEL,
+  DEFAULT_INCIDENTS_SORTING,
+} from "@/entities/incidents/model/models";
 
 type IncidentsLinksProps = { session: Session | null };
 
@@ -16,10 +21,10 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
   const { data: incidents, mutate } = useIncidents(
     true,
     null,
-    25,
+    DEFAULT_INCIDENTS_PAGE_SIZE,
     0,
-    { id: "creation_time", desc: false },
-    "!(status in ['deleted', 'resolved'])",
+    DEFAULT_INCIDENTS_SORTING,
+    DEFAULT_INCIDENTS_CEL,
     {}
   );
   usePollIncidents(mutate);
