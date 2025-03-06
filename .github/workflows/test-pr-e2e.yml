@@ -351,6 +351,23 @@ jobs:
           wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth"
           wait_for_service "Grafana" "curl --output /dev/null --silent --fail http://localhost:3002/api/health" 10 "grafana"
 
+      # Cache
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      # Cache
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4.2.0
+        with:
+          path: .venv
+          key: pydeps-v1-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            pydeps-v1-
+
       # Run tests
       - name: Run e2e tests and report coverage
         run: |
