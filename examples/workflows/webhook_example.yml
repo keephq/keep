@@ -16,6 +16,7 @@ workflow:
     - name: webhook-test
       provider:
         type: webhook
-        config: "{{ providers.googletest }}"
+        config: "{{ providers.test }}"
         with:
-          body: { "message": "Hello world" }
+          body:
+            message: "Hello world"

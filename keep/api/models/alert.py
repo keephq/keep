@@ -404,6 +404,11 @@ class DismissRequestBody(BaseModel):
     restore: bool = False
 
 
+class EnrichAlertNoteRequestBody(BaseModel):
+    note: str
+    fingerprint: str
+
+
 class EnrichAlertRequestBody(BaseModel):
     enrichments: dict[str, str]
     fingerprint: str

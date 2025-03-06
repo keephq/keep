@@ -53,6 +53,11 @@ import {
   createTimeFormatMenuItems,
 } from "./alert-table-time-format";
 import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
+import {
+  isListColumn,
+  ListFormatOption,
+  createListFormatMenuItems,
+} from "./alert-table-list-format";
 
 interface DraggableHeaderCellProps {
   header: Header<AlertDto, unknown>;
@@ -63,6 +68,8 @@ interface DraggableHeaderCellProps {
   style?: CSSProperties;
   columnTimeFormats: Record<string, TimeFormatOption>;
   setColumnTimeFormats: (formats: Record<string, TimeFormatOption>) => void;
+  columnListFormats: Record<string, ListFormatOption>;
+  setColumnListFormats: (formats: Record<string, ListFormatOption>) => void;
 }
 
 const DraggableHeaderCell = ({
@@ -74,6 +81,8 @@ const DraggableHeaderCell = ({
   style,
   columnTimeFormats,
   setColumnTimeFormats,
+  columnListFormats,
+  setColumnListFormats,
 }: DraggableHeaderCellProps) => {
   const { column, getResizeHandler } = header;
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
@@ -136,8 +145,8 @@ const DraggableHeaderCell = ({
       column.id === "checkbox"
         ? "32px !important"
         : column.id === "source"
-          ? "40px !important"
-          : column.getSize(),
+        ? "40px !important"
+        : column.getSize(),
     opacity: isDragging ? 0.5 : 1,
     transform: CSS.Translate.toString(transform),
     transition,
@@ -145,8 +154,8 @@ const DraggableHeaderCell = ({
       column.getIsPinned() !== false
         ? "default"
         : isDragging
-          ? "grabbing"
-          : "grab",
+        ? "grabbing"
+        : "grab",
   };
 
   // Hide menu for checkbox, source, severity and alertMenu columns
@@ -252,8 +261,8 @@ const DraggableHeaderCell = ({
                   column.getNextSortingOrder() === "asc"
                     ? "Sort ascending"
                     : column.getNextSortingOrder() === "desc"
-                      ? "Sort descending"
-                      : "Clear sort"
+                    ? "Sort descending"
+                    : "Clear sort"
                 }
               >
                 {column.getIsSorted() === "asc" ? (
@@ -294,6 +303,13 @@ const DraggableHeaderCell = ({
                     column.id,
                     columnTimeFormats,
                     setColumnTimeFormats,
+                    DropdownMenu
+                  )}
+                {isListColumn(column) &&
+                  createListFormatMenuItems(
+                    column.id,
+                    columnListFormats,
+                    setColumnListFormats,
                     DropdownMenu
                   )}
                 {column.getCanGroup() !== false && (
@@ -389,6 +405,8 @@ interface Props {
   a11yContainerRef: RefObject<HTMLDivElement>;
   columnTimeFormats: Record<string, TimeFormatOption>;
   setColumnTimeFormats: (formats: Record<string, TimeFormatOption>) => void;
+  columnListFormats: Record<string, ListFormatOption>;
+  setColumnListFormats: (formats: Record<string, ListFormatOption>) => void;
 }
 
 export default function AlertsTableHeaders({
@@ -398,6 +416,8 @@ export default function AlertsTableHeaders({
   a11yContainerRef,
   columnTimeFormats,
   setColumnTimeFormats,
+  columnListFormats,
+  setColumnListFormats,
 }: Props) {
   const [rowStyle] = useAlertRowStyle();
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
@@ -482,6 +502,8 @@ export default function AlertsTableHeaders({
                     style={style}
                     columnTimeFormats={columnTimeFormats}
                     setColumnTimeFormats={setColumnTimeFormats}
+                    columnListFormats={columnListFormats}
+                    setColumnListFormats={setColumnListFormats}
                   >
                     {header.isPlaceholder ? null : (
                       <div>
