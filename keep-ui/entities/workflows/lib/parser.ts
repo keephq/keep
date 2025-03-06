@@ -258,9 +258,11 @@ export function parseWorkflow(
   );
 }
 
-function getWithParams(s: V2ActionStep | V2StepStep): any {
+export function getWithParams(
+  s: V2ActionStep | V2StepStep
+): Record<string, string | number | boolean | object> {
   if (!s) {
-    return;
+    return {};
   }
   s.properties = s.properties || {};
   const withParams =
