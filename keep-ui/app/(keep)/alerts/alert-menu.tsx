@@ -9,6 +9,7 @@ import {
   AdjustmentsHorizontalIcon,
   BookOpenIcon,
   XCircleIcon,
+  EyeIcon,
 } from "@heroicons/react/24/outline";
 import {
   CheckCircleIcon,
@@ -184,6 +185,28 @@ export default function AlertMenu({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [tooltipPosition]);
 
+  const updateUrl = useCallback(
+    (params: { newParams?: Record<string, any>; scroll?: boolean }) => {
+      const currentParams = new URLSearchParams(window.location.search);
+
+      if (params.newParams) {
+        Object.entries(params.newParams).forEach(([key, value]) =>
+          currentParams.append(key, value)
+        );
+      }
+
+      let newPath = `${window.location.pathname}`;
+
+      if (currentParams.toString()) {
+        newPath += `?${currentParams.toString()}`;
+      }
+      router.replace(newPath, {
+        scroll: typeof params.scroll == "boolean" ? params.scroll : false,
+      });
+    },
+    [router]
+  );
+
   const openAlertPayloadModal = useCallback(() => {
     setViewedAlerts((prev) => {
       const newViewedAlerts = prev.filter(
@@ -197,13 +220,11 @@ export default function AlertMenu({
         },
       ];
     });
-    router.replace(
-      `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}`,
-      {
-        scroll: false,
-      }
-    );
-  }, [alert, presetName, router]);
+
+    updateUrl({
+      newParams: { alertPayloadFingerprint: alert.fingerprint },
+    });
+  }, [alert, updateUrl]);
 
   const actionIconButtonClassName = clsx(
     "text-gray-500 leading-none p-2 prevent-row-click hover:bg-slate-200 [&>[role='tooltip']]:z-50",
@@ -354,7 +375,9 @@ export default function AlertMenu({
             );
           }}
           className={actionIconButtonClassName}
-          tooltip={`Workflow ${relevantWorkflowExecution.workflow_status} at ${format(
+          tooltip={`Workflow ${
+            relevantWorkflowExecution.workflow_status
+          } at ${format(
             new Date(relevantWorkflowExecution.workflow_started),
             "MMM d, yyyy HH:mm"
           )}`}
@@ -364,15 +387,15 @@ export default function AlertMenu({
                 relevantWorkflowExecution.workflow_status === "success"
                   ? CheckCircleIcon
                   : relevantWorkflowExecution.workflow_status === "error"
-                    ? XCircleIcon
-                    : ClockIcon
+                  ? XCircleIcon
+                  : ClockIcon
               }
               className={`w-4 h-4 ${
                 relevantWorkflowExecution.workflow_status === "success"
                   ? "text-green-500"
                   : relevantWorkflowExecution.workflow_status === "error"
-                    ? "text-red-500"
-                    : "text-gray-500"
+                  ? "text-red-500"
+                  : "text-gray-500"
               }`}
             />
           )}
@@ -422,14 +445,14 @@ export default function AlertMenu({
 
   const openMethodModal = useCallback(
     (method: ProviderMethod) => {
-      router.replace(
-        `/alerts/${presetName}?methodName=${method.name}&providerId=${
-          provider!.id
-        }&alertFingerprint=${alert.fingerprint}`,
-        {
-          scroll: false,
-        }
-      );
+      updateUrl({
+        newParams: {
+          methodName: method.name,
+          providerId: provider!.id,
+          alertFingerprint: alert.fingerprint,
+        },
+        scroll: false,
+      });
     },
     [alert, presetName, provider, router]
   );
@@ -458,24 +481,29 @@ export default function AlertMenu({
         icon: ArchiveBoxIcon,
         label: "History",
         onClick: () =>
-          router.replace(
-            `/alerts/${presetName}?fingerprint=${alert.fingerprint}`,
-            { scroll: false }
-          ),
+          updateUrl({ newParams: { fingerprint: alert.fingerprint } }),
       },
       {
         icon: AdjustmentsHorizontalIcon,
         label: "Enrich",
         onClick: () =>
-          router.replace(
-            `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}&enrich=true`
-          ),
+          updateUrl({
+            newParams: {
+              alertPayloadFingerprint: alert.fingerprint,
+              enrich: true,
+            },
+          }),
       },
       {
         icon: UserPlusIcon,
         label: "Self-Assign",
         onClick: () => callAssignEndpoint(),
         show: canAssign,
+      },
+      {
+        icon: EyeIcon,
+        label: "View Alert",
+        onClick: openAlertPayloadModal,
       },
       ...(provider?.methods?.map((method) => ({
         icon: (props: any) => (
@@ -533,8 +561,7 @@ export default function AlertMenu({
   if (isInSidebar) {
     return (
       <Menu as="div" className="w-full">
-        <div className="flex space-x-2 w-full flex-wrap">
-          <div className="px-2">{quickActions}</div>
+        <div className="flex gap-2 w-full flex-wrap">
           {visibleMenuItems.map((item, index) => {
             const Icon = item.icon;
             return (

@@ -201,7 +201,7 @@ def get_all_incidents(
         logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
         raise HTTPException(
             status_code=400, detail=f"Error parsing CEL expression: {cel}"
-        )
+        ) from e
 
 
 @router.post(

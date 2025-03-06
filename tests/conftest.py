@@ -350,6 +350,7 @@ def mocked_context_manager():
         "foreach": {"value": None},
         "env": {},
     }
+    context_manager.tenant_id = SINGLE_TENANT_UUID
     return context_manager
 
 
@@ -720,7 +721,7 @@ def create_alert(db_session):
             event={
                 "name": random_name,
                 "fingerprint": fingerprint,
-                "lastReceived": timestamp.isoformat(),
+                "lastReceived": details.pop('lastReceived', timestamp.isoformat()),
                 "status": status.value,
                 **details,
             },

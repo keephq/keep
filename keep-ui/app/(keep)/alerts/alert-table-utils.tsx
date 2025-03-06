@@ -16,6 +16,12 @@ import AlertMenu from "./alert-menu";
 import { isSameDay, isValid, isWithinInterval } from "date-fns";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import {
+  isListColumn,
+  formatList,
+  ListFormatOption,
+  ListItem,
+} from "./alert-table-list-format";
+import {
   MdOutlineNotificationsActive,
   MdOutlineNotificationsOff,
 } from "react-icons/md";
@@ -37,6 +43,7 @@ import {
   TimeFormatOption,
   isDateTimeColumn,
 } from "./alert-table-time-format";
+import { format } from "path";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -190,6 +197,9 @@ export const useAlertTableCols = (
     `column-time-formats-${presetName}`,
     {}
   );
+  const [columnListFormats, setColumnListFormats] = useLocalStorage<
+    Record<string, ListFormatOption>
+  >(`column-list-formats-${presetName}`, {});
   const { data: configData } = useConfig();
   // check if noisy alerts are enabled
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
@@ -269,6 +279,27 @@ export const useAlertTableCols = (
                 {formatDateTime(date, formatOption)}
               </span>
             );
+          }
+
+          let isList = isListColumn(context.column);
+          let listFormatOption =
+            columnListFormats[context.column.id] || "badges";
+          if (isList) {
+            // Type check and convert value to the expected type for formatList
+            if (typeof value === "string") {
+              return formatList(value, listFormatOption);
+            } else if (
+              Array.isArray(value) &&
+              value.every(
+                (item) =>
+                  typeof item === "object" && item !== null && "label" in item
+              )
+            ) {
+              return formatList(value as ListItem[], listFormatOption);
+            } else {
+              // Fallback for incompatible types
+              return String(value || "");
+            }
           }
 
           if (value) {
