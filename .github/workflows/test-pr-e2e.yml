@@ -67,7 +67,7 @@ jobs:
           context: keep-ui
           file: ./docker/Dockerfile.ui
           push: true
-          tags: ghcr.io/${{ github.repository }}/keep-frontend:${{ github.sha }}
+          tags: ghcr.io/${{ github.repository }}:keep-frontend:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache-frontend
           cache-to: type=local,dest=/tmp/.buildx-cache-frontend-new
 
@@ -77,7 +77,7 @@ jobs:
           context: .
           file: ./docker/Dockerfile.ui
           push: true
-          tags: ghcr.io/${{ github.repository }}/keep-frontend-db-auth:${{ github.sha }}
+          tags: ghcr.io/${{ github.repository }}:keep-frontend-db-auth:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache-frontend
           cache-to: type=local,dest=/tmp/.buildx-cache-frontend-new,mode=max
 
@@ -121,29 +121,9 @@ jobs:
           context: .
           file: ./docker/Dockerfile.api
           push: true
-          tags: ghcr.io/${{ github.repository }}/keep-backend:${{ github.sha }}
+          tags: ghcr.io/${{ github.repository }}:keep-backend:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache-backend
           cache-to: type=local,dest=/tmp/.buildx-cache-backend-new
-
-      - name: Build backend-db-auth image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./docker/Dockerfile.api
-          push: true
-          tags: ghcr.io/${{ github.repository }}/keep-backend-db-auth:${{ github.sha }}
-          cache-from: type=local,src=/tmp/.buildx-cache-backend
-          cache-to: type=local,dest=/tmp/.buildx-cache-backend-new,mode=max
-
-      - name: Build websocket server image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./keep/Dockerfile.websocket
-          push: true
-          tags: ghcr.io/${{ github.repository }}/keep-websocket-server:${{ github.sha }}
-          cache-from: type=local,src=/tmp/.buildx-cache-backend
-          cache-to: type=local,dest=/tmp/.buildx-cache-backend-new,mode=max
 
       - name: Move Docker cache
         run: |
