@@ -20,6 +20,8 @@ services:
   keep-frontend:
     # to be replaced in github actions
     image: "%KEEPFRONTEND_IMAGE%"
+    ports:
+      - "3000:3000"
     environment:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
