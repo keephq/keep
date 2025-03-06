@@ -67,19 +67,9 @@ jobs:
           context: keep-ui
           file: ./docker/Dockerfile.ui
           push: true
-          tags: ghcr.io/${{ github.repository }}:keep-frontend:${{ github.sha }}
+          tags: ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache-frontend
           cache-to: type=local,dest=/tmp/.buildx-cache-frontend-new
-
-      - name: Build frontend-db-auth image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./docker/Dockerfile.ui
-          push: true
-          tags: ghcr.io/${{ github.repository }}:keep-frontend-db-auth:${{ github.sha }}
-          cache-from: type=local,src=/tmp/.buildx-cache-frontend
-          cache-to: type=local,dest=/tmp/.buildx-cache-frontend-new,mode=max
 
       - name: Move Docker cache
         run: |
@@ -121,7 +111,7 @@ jobs:
           context: .
           file: ./docker/Dockerfile.api
           push: true
-          tags: ghcr.io/${{ github.repository }}:keep-backend:${{ github.sha }}
+          tags: ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache-backend
           cache-to: type=local,dest=/tmp/.buildx-cache-backend-new
 
