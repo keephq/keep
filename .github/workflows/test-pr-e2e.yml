@@ -60,7 +60,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./keep-ui/Dockerfile
+          file: ./docker/Dockerfile.ui
           push: true
           tags: ghcr.io/${{ github.repository }}/keep-frontend:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache-frontend
@@ -70,7 +70,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./keep-ui/Dockerfile
+          file: ./docker/Dockerfile.ui
           push: true
           tags: ghcr.io/${{ github.repository }}/keep-frontend-db-auth:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache-frontend
@@ -114,7 +114,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./keep/Dockerfile
+          file: ./docker/Dockerfile.api
           push: true
           tags: ghcr.io/${{ github.repository }}/keep-backend:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache-backend
@@ -124,7 +124,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./keep/Dockerfile
+          file: ./docker/Dockerfile.api
           push: true
           tags: ghcr.io/${{ github.repository }}/keep-backend-db-auth:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache-backend
