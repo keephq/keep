@@ -257,6 +257,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             width={48}
             height={48}
             alt={provider.type}
+            providerType={provider.type}
             className={`${
               provider.installed || provider.linked || provider.coming_soon
                 ? ""
