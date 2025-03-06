@@ -32,7 +32,6 @@ import {
   V2StepConditionAssert,
   V2StepConditionThreshold,
   V2StepForeach,
-  V2StepSchema,
   V2StepStep,
 } from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
@@ -403,14 +402,17 @@ function KeepStepEditor({
 function KeepThresholdConditionEditor({
   properties,
   updateProperty,
+  error,
 }: {
   properties: V2StepConditionThreshold["properties"];
   updateProperty: (key: string, value: any) => void;
+  error?: string | null;
 }) {
   const currentValueValue = properties.value ?? "";
   const currentCompareToValue = properties.compare_to ?? "";
   return (
     <>
+      {error && <Text className="text-red-500">{error}</Text>}
       <Text>Value</Text>
       <TextInput
         placeholder="Value"
@@ -432,9 +434,11 @@ function KeepThresholdConditionEditor({
 function KeepAssertConditionEditor({
   properties,
   updateProperty,
+  error,
 }: {
   properties: V2StepConditionAssert["properties"];
   updateProperty: (key: string, value: any) => void;
+  error?: string | null;
 }) {
   const currentAssertValue = properties.assert ?? "";
   return (
@@ -445,6 +449,8 @@ function KeepAssertConditionEditor({
         onChange={(e: any) => updateProperty("assert", e.target.value)}
         className="mb-2.5"
         value={currentAssertValue}
+        error={!!error}
+        errorMessage={error ?? undefined}
       />
     </>
   );
@@ -453,9 +459,11 @@ function KeepAssertConditionEditor({
 function KeepForeachEditor({
   properties,
   updateProperty,
+  error,
 }: {
   properties: V2StepForeach["properties"];
   updateProperty: (key: string, value: any) => void;
+  error?: string | null;
 }) {
   const currentValueValue = properties.value ?? "";
 
@@ -467,6 +475,8 @@ function KeepForeachEditor({
         onChange={(e: any) => updateProperty("value", e.target.value)}
         className="mb-2.5"
         value={currentValueValue}
+        error={!!error}
+        errorMessage={error ?? undefined}
       />
     </>
   );
@@ -581,7 +591,9 @@ function ConditionsAndMiscEditor({
   initialFormData: ConditionsAndMiscFormDataType;
 }) {
   const [formData, setFormData] = useState(initialFormData);
-  const { updateSelectedNodeData, setEditorSynced } = useWorkflowStore();
+  const { updateSelectedNodeData, setEditorSynced, validationErrors } =
+    useWorkflowStore();
+  const error = validationErrors?.[formData.name || ""];
   const saveFormDataToStoreDebounced = useCallback(
     debounce((formData: any) => {
       updateSelectedNodeData("name", formData.name);
@@ -607,16 +619,19 @@ function ConditionsAndMiscEditor({
         <KeepThresholdConditionEditor
           properties={formData.properties}
           updateProperty={handlePropertyChange}
+          error={error}
         />
       ) : formData.type === "foreach" ? (
         <KeepForeachEditor
           properties={formData.properties}
           updateProperty={handlePropertyChange}
+          error={error}
         />
       ) : formData.type === "condition-assert" ? (
         <KeepAssertConditionEditor
           properties={formData.properties}
           updateProperty={handlePropertyChange}
+          error={error}
         />
       ) : null}
     </EditorLayout>

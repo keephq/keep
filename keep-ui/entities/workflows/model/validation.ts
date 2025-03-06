@@ -137,19 +137,26 @@ export function validateStepPure(
     if (!step.name) {
       return "Condition name cannot be empty.";
     }
+    if (step.type === "condition-threshold") {
+      if (!step.properties.value) {
+        return "Condition value cannot be empty.";
+      }
+      if (!step.properties.compare_to) {
+        return "Condition compare to cannot be empty.";
+      }
+    }
+    if (step.type === "condition-assert") {
+      if (!step.properties.assert) {
+        return "Condition assert cannot be empty.";
+      }
+    }
     const branches = step.branches || {
       true: [],
       false: [],
     };
     const conditionHasActions = branches.true.length > 0;
     if (!conditionHasActions) {
-      return "Conditions true branch must contain at least one action.";
-    }
-    const onlyActions = branches.true.every((step: V2Step) =>
-      step.type.includes("action-")
-    );
-    if (!onlyActions) {
-      return "Conditions can only contain actions.";
+      return "Conditions true branch must contain at least one step or action.";
     }
     return null;
   }
@@ -176,6 +183,11 @@ export function validateStepPure(
       return "No parameters configured";
     }
     return null;
+  }
+  if (step.componentType === "container" && step.type === "foreach") {
+    if (!step.properties.value) {
+      return "Foreach value cannot be empty.";
+    }
   }
   return null;
 }
