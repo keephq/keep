@@ -160,9 +160,13 @@ jobs:
           rm -rf /tmp/.buildx-cache-backend
           mv /tmp/.buildx-cache-backend-new /tmp/.buildx-cache-backend
 
-  # Prepare test environment in parallel with the builds
-  prepare-test-environment:
+  # Run tests
+  run-tests:
+    needs: [build-frontend, build-backend]
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        db_type: [mysql, postgres]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -182,18 +186,14 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      # Use a more stable key for dependencies cache that doesn't depend on the commit
       - name: Cache dependencies
         id: cache-deps
         uses: actions/cache@v4.2.0
         with:
           path: .venv
-          key: pydeps-v1-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            pydeps-v1-
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install dependencies using poetry
-        if: steps.cache-deps.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root --with dev
 
       - name: Get Playwright version from poetry.lock
@@ -201,70 +201,20 @@ jobs:
         run: |
           PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
           echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
-
-      # Use a more stable key for Playwright cache that doesn't depend on the commit
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4.2.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-v1-${{ steps.playwright-version.outputs.version }}
-          restore-keys: |
-            playwright-v1-
+          key: playwright-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright and dependencies
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: |
-          poetry run playwright install --with-deps
-
-      - name: Install Playwright dependencies only
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: |
-          poetry run playwright install-deps
-
-      # Use a more stable combined cache for the test job
-      - name: Cache prepared test environment
-        uses: actions/cache@v4.2.0
-        with:
-          path: |
-            .venv
-            ~/.cache/ms-playwright
-          key: test-env-v1-${{ hashFiles('**/poetry.lock') }}-${{ steps.playwright-version.outputs.version }}
-          restore-keys: |
-            test-env-v1-
-
-  # Run tests
-  run-tests:
-    needs: [build-frontend, build-backend, prepare-test-environment]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        db_type: [mysql, postgres]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
-
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      # Restore the prepared test environment
-      - name: Restore prepared test environment
-        uses: actions/cache@v4.2.0
-        with:
-          path: |
-            .venv
-            ~/.cache/ms-playwright
-          key: test-env-v1-${{ hashFiles('**/poetry.lock') }}-${{ steps.playwright-version.outputs.version }}
-          fail-on-cache-miss: true
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            poetry run playwright install --with-deps
+          else
+            poetry run playwright install-deps
+          fi
 
       # Create a modified compose file with our built images
       - name: Create modified docker-compose file with built images
