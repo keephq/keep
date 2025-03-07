@@ -18,6 +18,8 @@ services:
   keep-frontend:
     # to be replaced in github actions
     image: "%KEEPFRONTEND_IMAGE%"
+    ports:
+      - "3000:3000"
     environment:
       - AUTH_TYPE=NO_AUTH
       - NEXTAUTH_SECRET=secret
@@ -30,6 +32,8 @@ services:
   keep-backend:
     # to be replaced in github actions
     image: "%KEEPBACKEND_IMAGE%"
+    ports:
+      - "8080:8080"
     environment:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=postgresql+psycopg2://keepuser:keeppassword@keep-database:5432/keepdb
@@ -64,7 +68,6 @@ services:
     environment:
       - NEXTAUTH_SECRET=secret
       - NEXTAUTH_URL=http://localhost:3001
-      - NEXT_PUBLIC_API_URL=http://localhost:8080
       - POSTHOG_DISABLED=true
       - AUTH_TYPE=DB
       - API_URL=http://keep-backend-db-auth:8080
