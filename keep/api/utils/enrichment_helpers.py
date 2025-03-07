@@ -6,7 +6,11 @@ from opentelemetry import trace
 from sqlmodel import Session
 
 from keep.api.core.db import existed_or_new_session
-from keep.api.models.alert import AlertDto, AlertStatus, AlertWithIncidentLinkMetadataDto
+from keep.api.models.alert import (
+    AlertDto,
+    AlertStatus,
+    AlertWithIncidentLinkMetadataDto,
+)
 from keep.api.models.db.alert import Alert, LastAlertToIncident
 
 tracer = trace.get_tracer(__name__)
@@ -117,10 +121,14 @@ def convert_db_alerts_to_dto_alerts(
 
                 if with_incidents:
                     if alert._incidents:
-                        alert.event["incident"] = ",".join(str(incident.id) for incident in alert._incidents)
+                        alert.event["incident"] = ",".join(
+                            str(incident.id) for incident in alert._incidents
+                        )
                 try:
                     if alert_to_incident is not None:
-                        alert_dto = AlertWithIncidentLinkMetadataDto.from_db_instance(alert, alert_to_incident)
+                        alert_dto = AlertWithIncidentLinkMetadataDto.from_db_instance(
+                            alert, alert_to_incident
+                        )
                     else:
                         alert_dto = AlertDto(**alert.event)
 

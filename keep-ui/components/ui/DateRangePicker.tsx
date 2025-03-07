@@ -429,10 +429,10 @@ export default function EnhancedDateRangePicker({
       return "All time";
     }
 
-    return `${format(
-      timeFrame.start,
+    return `${format(timeFrame.start, "MMM d, yyyy HH:mm")} - ${format(
+      timeFrame.end,
       "MMM d, yyyy HH:mm"
-    )} - ${format(timeFrame.end, "MMM d, yyyy HH:mm")}`;
+    )}`;
   };
 
   const getSelectedBadgeText = () => {
@@ -445,6 +445,32 @@ export default function EnhancedDateRangePicker({
     }
 
     return formatDuration(timeFrame.start, timeFrame.end);
+  };
+
+  const handleCalendarSelect = (date: DateRange | Date | undefined) => {
+    if (date && "from" in date) {
+      setCalendarRange(date);
+      if (date.from && date.to) {
+        setTimeFrame({
+          start: date.from,
+          end: date.to,
+          paused: true,
+          isFromCalendar: true,
+        });
+        if (date.from.getTime() !== date.to.getTime()) {
+          setIsPaused(true);
+          setIsOpen(false);
+          setShowCalendar(false);
+        }
+      } else if (date.from) {
+        setTimeFrame({
+          start: date.from,
+          end: null,
+          paused: true,
+          isFromCalendar: true,
+        });
+      }
+    }
   };
 
   return (
@@ -463,7 +489,9 @@ export default function EnhancedDateRangePicker({
             <div className="flex items-center w-full">
               <Badge
                 color={isPaused ? "gray" : "green"}
-                className={`mr-2 min-w-14 justify-center ${isPaused ? "" : "bg-green-700"}`}
+                className={`mr-2 min-w-14 justify-center ${
+                  isPaused ? "" : "bg-green-700"
+                }`}
               >
                 {getSelectedBadgeText()}
               </Badge>
@@ -568,22 +596,7 @@ export default function EnhancedDateRangePicker({
                 <Calendar
                   mode="range"
                   selected={calendarRange}
-                  onSelect={(date: DateRange | Date | undefined) => {
-                    if (date && "from" in date) {
-                      setCalendarRange(date);
-                      if (date.from && date.to) {
-                        setTimeFrame({
-                          start: date.from,
-                          end: date.to,
-                          paused: true,
-                          isFromCalendar: true,
-                        });
-                        setIsPaused(true);
-                        setIsOpen(false);
-                        setShowCalendar(false);
-                      }
-                    }
-                  }}
+                  onSelect={handleCalendarSelect}
                   numberOfMonths={1}
                   disabled={{ after: new Date() }}
                   className="w-full bg-white"

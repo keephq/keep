@@ -32,7 +32,6 @@ import {
   V2StepConditionAssert,
   V2StepConditionThreshold,
   V2StepForeach,
-  V2StepSchema,
   V2StepStep,
 } from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
@@ -281,8 +280,10 @@ function KeepStepEditor({
   updateProperty,
   type,
   parametersError,
+  variableError,
 }: KeepEditorProps & {
   parametersError?: string | null;
+  variableError?: string | null;
 }) {
   const stepParams =
     ((type?.includes("step-")
@@ -305,7 +306,20 @@ function KeepStepEditor({
         <div className="mb-2">
           <Text className="font-bold">Provider parameters</Text>
           {parametersError && (
-            <Text className="text-red-500">{parametersError}</Text>
+            <Callout
+              color="rose"
+              className="text-sm my-1"
+              title={parametersError}
+            />
+          )}
+          {variableError && (
+            <Callout
+              color="yellow"
+              className="text-sm my-1"
+              title={variableError.split("-")[0]}
+            >
+              {variableError.split("-")[1]}
+            </Callout>
           )}
         </div>
         <div>
@@ -403,14 +417,17 @@ function KeepStepEditor({
 function KeepThresholdConditionEditor({
   properties,
   updateProperty,
+  error,
 }: {
   properties: V2StepConditionThreshold["properties"];
   updateProperty: (key: string, value: any) => void;
+  error?: string | null;
 }) {
   const currentValueValue = properties.value ?? "";
   const currentCompareToValue = properties.compare_to ?? "";
   return (
     <>
+      {error && <Text className="text-red-500">{error}</Text>}
       <Text>Value</Text>
       <TextInput
         placeholder="Value"
@@ -432,9 +449,11 @@ function KeepThresholdConditionEditor({
 function KeepAssertConditionEditor({
   properties,
   updateProperty,
+  error,
 }: {
   properties: V2StepConditionAssert["properties"];
   updateProperty: (key: string, value: any) => void;
+  error?: string | null;
 }) {
   const currentAssertValue = properties.assert ?? "";
   return (
@@ -445,6 +464,8 @@ function KeepAssertConditionEditor({
         onChange={(e: any) => updateProperty("assert", e.target.value)}
         className="mb-2.5"
         value={currentAssertValue}
+        error={!!error}
+        errorMessage={error ?? undefined}
       />
     </>
   );
@@ -453,9 +474,11 @@ function KeepAssertConditionEditor({
 function KeepForeachEditor({
   properties,
   updateProperty,
+  error,
 }: {
   properties: V2StepForeach["properties"];
   updateProperty: (key: string, value: any) => void;
+  error?: string | null;
 }) {
   const currentValueValue = properties.value ?? "";
 
@@ -467,6 +490,8 @@ function KeepForeachEditor({
         onChange={(e: any) => updateProperty("value", e.target.value)}
         className="mb-2.5"
         value={currentValueValue}
+        error={!!error}
+        errorMessage={error ?? undefined}
       />
     </>
   );
@@ -581,7 +606,9 @@ function ConditionsAndMiscEditor({
   initialFormData: ConditionsAndMiscFormDataType;
 }) {
   const [formData, setFormData] = useState(initialFormData);
-  const { updateSelectedNodeData, setEditorSynced } = useWorkflowStore();
+  const { updateSelectedNodeData, setEditorSynced, validationErrors } =
+    useWorkflowStore();
+  const error = validationErrors?.[formData.name || ""];
   const saveFormDataToStoreDebounced = useCallback(
     debounce((formData: any) => {
       updateSelectedNodeData("name", formData.name);
@@ -607,16 +634,19 @@ function ConditionsAndMiscEditor({
         <KeepThresholdConditionEditor
           properties={formData.properties}
           updateProperty={handlePropertyChange}
+          error={error}
         />
       ) : formData.type === "foreach" ? (
         <KeepForeachEditor
           properties={formData.properties}
           updateProperty={handlePropertyChange}
+          error={error}
         />
       ) : formData.type === "condition-assert" ? (
         <KeepAssertConditionEditor
           properties={formData.properties}
           updateProperty={handlePropertyChange}
+          error={error}
         />
       ) : null}
     </EditorLayout>
@@ -686,12 +716,17 @@ function ActionOrStepEditor({
   const error = validationErrors?.[formData.name || ""];
   let parametersError = null;
   let providerError = null;
+  let variableError = null;
   if (error?.includes("parameters")) {
     parametersError = error;
   }
 
   if (error?.includes("provider")) {
     providerError = error;
+  }
+
+  if (error?.startsWith("Variable:")) {
+    variableError = error;
   }
 
   const { data: { installed_providers: installedProviders } = {} } =
@@ -762,7 +797,7 @@ function ActionOrStepEditor({
     >
       <div className="pt-2.5 px-4">
         <Subtitle className="font-medium capitalize">
-          {providerType} step
+          {providerType} {formData.type.split("-")[0]}
         </Subtitle>
         <Text className="mt-1">Unique Identifier</Text>
         <TextInput
@@ -822,6 +857,7 @@ function ActionOrStepEditor({
               {type && formData.properties ? (
                 <KeepStepEditor
                   parametersError={parametersError}
+                  variableError={variableError}
                   properties={formData.properties}
                   updateProperty={handlePropertyChange}
                   providerType={providerType}

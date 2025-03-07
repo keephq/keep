@@ -411,14 +411,16 @@ export const useWorkflowStore = create<WorkflowState>()(
         const error = validateStepPure(
           step,
           get().providers ?? [],
-          get().installedProviders ?? []
+          get().installedProviders ?? [],
+          definition
         );
         if (step.componentType === "switch") {
           [...step.branches.true, ...step.branches.false].forEach((branch) => {
             const error = validateStepPure(
               branch,
               get().providers ?? [],
-              get().installedProviders ?? []
+              get().installedProviders ?? [],
+              definition
             );
             if (error) {
               validationErrors[branch.name || branch.id] = error;
@@ -431,7 +433,8 @@ export const useWorkflowStore = create<WorkflowState>()(
             const error = validateStepPure(
               s,
               get().providers ?? [],
-              get().installedProviders ?? []
+              get().installedProviders ?? [],
+              definition
             );
             if (error) {
               validationErrors[s.name || s.id] = error;
@@ -445,10 +448,13 @@ export const useWorkflowStore = create<WorkflowState>()(
         }
       }
 
-      // We allow deployment even if there are provider errors, as the user can fix them later
+      // We allow deployment even if there are
+      // - provider errors, as the user can fix them later
+      // - variable errors, as the user can fix them later
       const canDeploy =
         Object.values(validationErrors).filter(
-          (error) => !error.includes("provider")
+          (error) =>
+            !error.includes("provider") && !error.startsWith("Variable:")
         ).length === 0;
 
       set({
