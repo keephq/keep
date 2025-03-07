@@ -210,7 +210,7 @@ class ArgocdProvider(BaseTopologyProvider):
                 source_provider_id=self.provider_id,
                 service=metadata["uid"],
                 display_name=metadata["name"],
-                repository=spec["source"].get("repoURL"),
+                repository=self.__get_repository_urls(spec),
             )
             applications = {}
             if applicationSets:
@@ -235,3 +235,18 @@ class ArgocdProvider(BaseTopologyProvider):
                     ] = "unknown"
 
         return list(service_topology.values()), {}
+
+    def __get_repository_urls(self, spec: dict) -> str:
+        """
+        Extract repository URLs from application spec, handling both single and multiple sources.
+        Returns a comma-separated string of repository URLs.
+        """
+        repos = []
+        if "sources" in spec:
+            # Handle multiple sources
+            repos.extend(source.get("repoURL") for source in spec["sources"] if source.get("repoURL"))
+        elif "source" in spec and spec["source"].get("repoURL"):
+            # Handle single source
+            repos.append(spec["source"]["repoURL"])
+        
+        return ", ".join(repos) if repos else None
