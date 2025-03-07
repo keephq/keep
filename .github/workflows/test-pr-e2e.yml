@@ -58,10 +58,6 @@ jobs:
           echo "Repository owner: ${{ github.repository_owner }}"
           echo "Repository name: ${{ github.event.repository.name }}"
 
-      - name: Check token permissions
-        run: |
-          echo "Token permissions: ${{ toJson(github.token_permissions) }}"
-
       - name: Debug cache key calculation
         run: |
           echo "Files used for hashing:"
@@ -69,63 +65,24 @@ jobs:
           echo "Content hash:"
           cat keep-ui/package.json keep-ui/package-lock.json | sha256sum
 
-      - name: Cache Docker layers for frontend
-        id: cache-docker-frontend
-        uses: actions/cache@v4.2.0
-        with:
-          path: /tmp/.buildx-cache-frontend
-          key: ${{ runner.os }}-buildx-frontend-${{ hashFiles('keep-ui/package.json', 'keep-ui/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-frontend-
-
-      - name: Log frontend cache status
-        run: |
-          if [ "${{ steps.cache-docker-frontend.outputs.cache-hit }}" == "true" ]; then
-            echo "FRONTEND CACHE HIT ✅"
-            echo "Cache key: ${{ runner.os }}-buildx-frontend-${{ hashFiles('keep-ui/package.json', 'keep-ui/package-lock.json') }}"
-          else
-            echo "FRONTEND CACHE MISS ❌"
-            echo "New cache will be created with key: ${{ runner.os }}-buildx-frontend-${{ hashFiles('keep-ui/package.json', 'keep-ui/package-lock.json') }}"
-          fi
-
-      - name: Inspect cache before build
-        run: |
-          echo "Cache directory size before build:"
-          du -sh /tmp/.buildx-cache-frontend
-          echo "Cache directory contents:"
-          find /tmp/.buildx-cache-frontend -type f | wc -l
-          echo "Number of cache layers:"
-          find /tmp/.buildx-cache-frontend -name "*.json" | wc -l
-
-      - name: Build frontend image
+      - name: Build and push frontend image with registry cache
         uses: docker/build-push-action@v4
         with:
           context: keep-ui
           file: ./docker/Dockerfile.ui
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}
-          cache-from: type=local,src=/tmp/.buildx-cache-frontend
-          cache-to: type=local,dest=/tmp/.buildx-cache-frontend-new
-          # Add these lines for better debugging
-          no-cache-filters: ""
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}
+          # Use registry-based caching
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache,mode=max
+          # Add build args for better caching
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-          # Add this for verbose buildx output
+          # Verbose output
           outputs: type=image,push=true
-
-      - name: Inspect cache after build
-        run: |
-          echo "Cache directory size after build:"
-          du -sh /tmp/.buildx-cache-frontend-new
-          echo "Cache directory contents:"
-          find /tmp/.buildx-cache-frontend-new -type f | wc -l
-          echo "Number of cache layers:"
-          find /tmp/.buildx-cache-frontend-new -name "*.json" | wc -l
-
-      - name: Move Docker cache
-        run: |
-          rm -rf /tmp/.buildx-cache-frontend
-          mv /tmp/.buildx-cache-frontend-new /tmp/.buildx-cache-frontend
 
   build-backend:
     runs-on: ubuntu-latest
@@ -153,43 +110,24 @@ jobs:
           echo "Repository owner: ${{ github.repository_owner }}"
           echo "Repository name: ${{ github.event.repository.name }}"
 
-      - name: Check token permissions
-        run: |
-          echo "Token permissions: ${{ toJson(github.token_permissions) }}"
-
-      - name: Cache Docker layers for backend
-        id: cache-docker-backend
-        uses: actions/cache@v4.2.0
-        with:
-          path: /tmp/.buildx-cache-backend
-          key: ${{ runner.os }}-buildx-backend-${{ hashFiles('poetry.lock', 'pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-backend-
-
-      - name: Log backend cache status
-        run: |
-          if [ "${{ steps.cache-docker-backend.outputs.cache-hit }}" == "true" ]; then
-            echo "BACKEND CACHE HIT ✅"
-            echo "Cache key: ${{ runner.os }}-buildx-backend-${{ hashFiles('poetry.lock', 'pyproject.toml') }}"
-          else
-            echo "BACKEND CACHE MISS ❌"
-            echo "New cache will be created with key: ${{ runner.os }}-buildx-backend-${{ hashFiles('poetry.lock', 'pyproject.toml') }}"
-          fi
-
-      - name: Build backend image
+      - name: Build and push backend image with registry cache
         uses: docker/build-push-action@v4
         with:
           context: .
           file: ./docker/Dockerfile.api
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}
-          cache-from: type=local,src=/tmp/.buildx-cache-backend
-          cache-to: type=local,dest=/tmp/.buildx-cache-backend-new
-
-      - name: Move Docker cache
-        run: |
-          rm -rf /tmp/.buildx-cache-backend
-          mv /tmp/.buildx-cache-backend-new /tmp/.buildx-cache-backend
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}
+          # Use registry-based caching
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache,mode=max
+          # Add build args for better caching
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          # Verbose output
+          outputs: type=image,push=true
 
   # Run tests
   run-tests:
@@ -242,6 +180,7 @@ jobs:
         run: |
           PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
           echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4.2.0
