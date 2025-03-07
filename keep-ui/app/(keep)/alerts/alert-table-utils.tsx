@@ -287,13 +287,15 @@ export const useAlertTableCols = (
             const incidentString = String(value || "");
             const incidentSplit = incidentString.split(",");
             return incidentSplit.map((incidentId, index) => {
-              const incidentName = incidents?.items.find(
+              const incident = incidents?.items.find(
                 (incident) => incident.id === incidentId
-              )?.user_generated_name;
+              );
               return (
                 <>
                   <Link href={`/incidents/${incidentId}`}>
-                    {incidentName || incidentId}
+                    {incident?.user_generated_name ||
+                      incident?.ai_generated_name ||
+                      incidentId}
                   </Link>
                   {index < incidentSplit.length - 1 && ", "}
                 </>
