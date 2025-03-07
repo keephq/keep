@@ -539,6 +539,9 @@ def test_alerts_stream(browser):
         time.sleep(1)
 
     try:
+        # refresh the page to get the new alerts
+        browser.reload()
+        browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
         expect(
             browser.locator("[data-testid='alerts-table'] table tbody tr")
         ).to_have_count(len(simulated_alerts))
