@@ -24,6 +24,8 @@ services:
       - "3000:3000"
     environment:
       - AUTH_TYPE=NO_AUTH
+      - NEXTAUTH_SECRET=secret
+      - NEXTAUTH_URL=http://localhost:3000
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
       - FRIGADE_DISABLED=true
