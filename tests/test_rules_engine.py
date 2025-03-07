@@ -370,7 +370,7 @@ def test_incident_no_auto_resolution(db_session, create_alert):
 
     incidents, total_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
         limit=10,
         offset=1,
     )
@@ -391,7 +391,7 @@ def test_incident_no_auto_resolution(db_session, create_alert):
 
     incidents, incidents_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
         limit=10,
         offset=0,
     )
@@ -419,7 +419,7 @@ def test_incident_no_auto_resolution(db_session, create_alert):
 
     incidents, incidents_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
         limit=10,
         offset=0,
     )
@@ -447,7 +447,7 @@ def test_incident_no_auto_resolution(db_session, create_alert):
 
     incidents, incidents_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
         limit=10,
         offset=0,
     )
