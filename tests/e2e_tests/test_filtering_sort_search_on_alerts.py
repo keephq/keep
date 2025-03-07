@@ -3,7 +3,12 @@ from datetime import datetime, timedelta
 
 import pytest
 import requests
-from playwright.sync_api import expect, Page
+from playwright.sync_api import Page, expect
+
+from tests.e2e_tests.test_end_to_end import (
+    save_failure_artifacts,
+    setup_console_listener,
+)
 
 # NOTE 2: to run the tests with a browser, uncomment this two lines:
 # import os
@@ -312,6 +317,7 @@ def assert_alerts_by_column(
         column_locator = row_locator.locator("td").nth(column_index)
         expect(column_locator).to_have_text(alert[property_in_alert])
 
+
 facet_test_cases = {
     "severity": {
         "alert_property_name": "severity",
@@ -510,6 +516,8 @@ def test_alerts_stream(browser):
     value = "prometheus"
     test_id = "test_alerts_stream"
     cel_to_filter_alerts = f"testId == '{test_id}'"
+    log_entries = []
+    setup_console_listener(browser, log_entries)
 
     browser.goto(f"{KEEP_UI_URL}/alerts/feed?cel={cel_to_filter_alerts}")
     expect(browser.locator("[data-testid='alerts-table']")).to_be_visible()
@@ -530,9 +538,13 @@ def test_alerts_stream(browser):
         ).raise_for_status()
         time.sleep(1)
 
-    expect(
-        browser.locator("[data-testid='alerts-table'] table tbody tr")
-    ).to_have_count(len(simulated_alerts))
+    try:
+        expect(
+            browser.locator("[data-testid='alerts-table'] table tbody tr")
+        ).to_have_count(len(simulated_alerts))
+    except Exception as e:
+        save_failure_artifacts(browser, log_entries=log_entries)
+        raise e
     query_result = query_allerts(cell_query=cel_to_filter_alerts, limit=1000)
     current_alerts = query_result["results"]
     assert_facet(browser, facet_name, current_alerts, alert_property_name)
