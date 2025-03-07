@@ -351,6 +351,121 @@ def test_incident_severity(db_session):
     assert results[0].severity.value == IncidentSeverity.INFO.value
 
 
+def test_incident_no_auto_resolution(db_session, create_alert):
+
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='(severity == "critical")',
+        created_by="test@keephq.dev",
+        require_approve=False,
+        resolve_on=ResolveOn.NEVER.value,
+    )
+
+    incidents, total_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_confirmed=True,
+        limit=10,
+        offset=1,
+    )
+    assert total_count == 0
+
+    create_alert(
+        "Something went wrong",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    create_alert(
+        "Something went wrong again",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    incidents, incidents_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_confirmed=True,
+        limit=10,
+        offset=0,
+    )
+
+    assert incidents_count == 1
+
+    incident = incidents[0]
+    assert incident.status == IncidentStatus.FIRING.value
+
+    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        limit=10,
+        offset=0,
+    )
+    assert alert_count == 2
+
+    # Same fingerprint
+    create_alert(
+        "Something went wrong",
+        AlertStatus.RESOLVED,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    incidents, incidents_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_confirmed=True,
+        limit=10,
+        offset=0,
+    )
+
+    assert incidents_count == 1
+
+    incident = incidents[0]
+
+    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        limit=10,
+        offset=0,
+    )
+    # Still 2 alerts, since 2 unique fingerprints
+    assert alert_count == 2
+    assert incident.status == IncidentStatus.FIRING.value
+
+    create_alert(
+        "Something went wrong again",
+        AlertStatus.RESOLVED,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    incidents, incidents_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_confirmed=True,
+        limit=10,
+        offset=0,
+    )
+
+    assert incidents_count == 1
+
+    incident = incidents[0]
+
+    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        limit=10,
+        offset=0,
+    )
+    assert alert_count == 2
+    assert incident.status == IncidentStatus.FIRING.value
+
+
 def test_incident_resolution_on_all(db_session, create_alert):
 
     create_rule_db(

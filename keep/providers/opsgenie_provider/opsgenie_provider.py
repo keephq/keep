@@ -1,9 +1,10 @@
 import dataclasses
 import typing
 
-import requests
+import json5
 import opsgenie_sdk
 import pydantic
+import requests
 from opsgenie_sdk.rest import ApiException
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -31,6 +32,7 @@ class OpsgenieProviderAuthConfig:
             "hint": "https://support.atlassian.com/opsgenie/docs/create-a-default-api-integration/",
         },
     )
+
 
 class OpsGenieRecipient(pydantic.BaseModel):
     # https://github.com/opsgenie/opsgenie-python-sdk/blob/master/docs/Recipient.md
@@ -102,7 +104,9 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
                     break
             else:
                 self.logger.error("Failed to find OpsGenie integration")
-                return {"opsgenie:create": f"Failed to find Integration name {self.authentication_config.integration_name}"}
+                return {
+                    "opsgenie:create": f"Failed to find Integration name {self.authentication_config.integration_name}"
+                }
 
             # Get the integration details and check if it has write access
             response = requests.get(
@@ -116,8 +120,10 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
             if response.json()["data"]["allowWriteAccess"]:
                 scopes["opsgenie:create"] = True
             else:
-                scopes["opsgenie:create"] = "OpsGenie integration does not have write access"
-            
+                scopes["opsgenie:create"] = (
+                    "OpsGenie integration does not have write access"
+                )
+
         except Exception as e:
             self.logger.exception("Failed to create OpsGenie alert")
             scopes["opsgenie:create"] = str(e)
@@ -160,6 +166,14 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
         Creates OpsGenie Alert.
 
         """
+        if isinstance(tags, str):
+            self.logger.debug("Parsing tags", extra={"tags": tags})
+            try:
+                tags = json5.loads(tags)
+                self.logger.debug("Parsed tags", extra={"tags": tags})
+            except Exception:
+                self.logger.exception("Failed to parse tags")
+
         api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))
         create_alert_payload = opsgenie_sdk.CreateAlertPayload(
             user=user,
