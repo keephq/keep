@@ -5103,7 +5103,12 @@ def set_last_alert(
                 ) < alert.timestamp.replace(tzinfo=tz.UTC):
 
                     logger.info(
-                        f"Update last alert for `{fingerprint}`: {last_alert.alert_id} -> {alert.id}"
+                        f"Update last alert for `{fingerprint}`: {last_alert.alert_id} -> {alert.id}",
+                        extra={
+                            "alert_id": alert.id,
+                            "tenant_id": tenant_id,
+                            "fingerprint": fingerprint,
+                        },
                     )
                     last_alert.timestamp = alert.timestamp
                     last_alert.alert_id = alert.id
