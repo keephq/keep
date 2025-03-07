@@ -52,18 +52,48 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Debug repository info
+      - name: Set cache key variables
+        id: cache-keys
+        run: |
+          # Create a safe branch name for cache key (replace / with - and remove special chars)
+          SAFE_BRANCH=$(echo "${{ github.head_ref || github.ref_name }}" | sed 's/\//-/g' | sed 's/[^a-zA-Z0-9._-]//g')
+          echo "SAFE_BRANCH_NAME=${SAFE_BRANCH}" >> $GITHUB_OUTPUT
+
+          # Create a hash of package.json for version-specific caching
+          DEPS_HASH=$(cat keep-ui/package.json keep-ui/package-lock.json | sha256sum | cut -d ' ' -f 1)
+          echo "DEPS_HASH=${DEPS_HASH:0:8}" >> $GITHUB_OUTPUT
+
+      - name: Debug repository and cache info
         run: |
           echo "Repository: ${{ github.repository }}"
           echo "Repository owner: ${{ github.repository_owner }}"
-          echo "Repository name: ${{ github.event.repository.name }}"
+          echo "Branch: ${{ github.head_ref || github.ref_name }}"
+          echo "Safe branch name: ${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          echo "Dependencies hash: ${{ steps.cache-keys.outputs.DEPS_HASH }}"
 
-      - name: Debug cache key calculation
+      # Pre-check if branch cache exists
+      - name: Check if branch cache exists
+        id: branch-cache-exists
+        continue-on-error: true
         run: |
-          echo "Files used for hashing:"
-          ls -la keep-ui/package.json keep-ui/package-lock.json
-          echo "Content hash:"
-          cat keep-ui/package.json keep-ui/package-lock.json | sha256sum
+          BRANCH_CACHE_TAG="ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          if docker buildx imagetools inspect "$BRANCH_CACHE_TAG" &>/dev/null; then
+            echo "Branch cache exists: $BRANCH_CACHE_TAG"
+            echo "cache_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Branch cache does not exist: $BRANCH_CACHE_TAG"
+            echo "cache_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Log frontend cache status
+        run: |
+          if [ "${{ steps.branch-cache-exists.outputs.cache_exists }}" == "true" ]; then
+            echo "FRONTEND CACHE HIT ✅"
+            echo "Cache tag: ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          else
+            echo "FRONTEND CACHE MISS ❌"
+            echo "Will attempt to use main branch cache and create a new branch cache"
+          fi
 
       - name: Build and push frontend image with registry cache
         uses: docker/build-push-action@v4
@@ -73,11 +103,12 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}
-          # Use registry-based caching
+          # Use registry-based caching with branch-specific tags
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-main
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
           # Add build args for better caching
           build-args: |
             BUILDKIT_INLINE_CACHE=1
@@ -104,11 +135,48 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Debug repository info
+      - name: Set cache key variables
+        id: cache-keys
+        run: |
+          # Create a safe branch name for cache key (replace / with - and remove special chars)
+          SAFE_BRANCH=$(echo "${{ github.head_ref || github.ref_name }}" | sed 's/\//-/g' | sed 's/[^a-zA-Z0-9._-]//g')
+          echo "SAFE_BRANCH_NAME=${SAFE_BRANCH}" >> $GITHUB_OUTPUT
+
+          # Create a hash of poetry files for version-specific caching
+          DEPS_HASH=$(cat poetry.lock pyproject.toml | sha256sum | cut -d ' ' -f 1)
+          echo "DEPS_HASH=${DEPS_HASH:0:8}" >> $GITHUB_OUTPUT
+
+      - name: Debug repository and cache info
         run: |
           echo "Repository: ${{ github.repository }}"
           echo "Repository owner: ${{ github.repository_owner }}"
-          echo "Repository name: ${{ github.event.repository.name }}"
+          echo "Branch: ${{ github.head_ref || github.ref_name }}"
+          echo "Safe branch name: ${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          echo "Dependencies hash: ${{ steps.cache-keys.outputs.DEPS_HASH }}"
+
+      # Pre-check if branch cache exists
+      - name: Check if branch cache exists
+        id: branch-cache-exists
+        continue-on-error: true
+        run: |
+          BRANCH_CACHE_TAG="ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          if docker buildx imagetools inspect "$BRANCH_CACHE_TAG" &>/dev/null; then
+            echo "Branch cache exists: $BRANCH_CACHE_TAG"
+            echo "cache_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Branch cache does not exist: $BRANCH_CACHE_TAG"
+            echo "cache_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Log backend cache status
+        run: |
+          if [ "${{ steps.branch-cache-exists.outputs.cache_exists }}" == "true" ]; then
+            echo "BACKEND CACHE HIT ✅"
+            echo "Cache tag: ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          else
+            echo "BACKEND CACHE MISS ❌"
+            echo "Will attempt to use main branch cache and create a new branch cache"
+          fi
 
       - name: Build and push backend image with registry cache
         uses: docker/build-push-action@v4
@@ -118,11 +186,12 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}
-          # Use registry-based caching
+          # Use registry-based caching with branch-specific tags
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-main
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
           # Add build args for better caching
           build-args: |
             BUILDKIT_INLINE_CACHE=1
