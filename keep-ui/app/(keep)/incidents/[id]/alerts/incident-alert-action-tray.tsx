@@ -6,14 +6,14 @@ interface Props {
   alert: AlertDto;
   onViewAlert: (alert: AlertDto) => void;
   onUnlink: (alert: AlertDto) => void;
-  isConfirmed: boolean;
+  isCandidate: boolean;
 }
 
 export function IncidentAlertActionTray({
   alert,
   onViewAlert,
   onUnlink,
-  isConfirmed,
+  isCandidate,
 }: Props) {
   return (
     <div className="flex items-center h-full border-l border-gray-200 bg-white pl-2">
@@ -28,7 +28,7 @@ export function IncidentAlertActionTray({
         >
           <Icon icon={EyeIcon} size="sm" className="text-gray-500" />
         </button>
-        {isConfirmed && (
+        {!isCandidate && (
           <button
             onClick={(e) => {
               e.stopPropagation();
