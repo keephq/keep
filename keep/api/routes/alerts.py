@@ -30,7 +30,7 @@ from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.config import config
 from keep.api.core.db import dismiss_error_alerts as dismiss_error_alerts_db
 from keep.api.core.db import enrich_alerts_with_incidents
-from keep.api.core.db import get_alert_audit as get_alert_audit_db
+from keep.api.core.db import get_alert_audit as get_alert_audit_db, enrich_alerts_with_incidents
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_by_ids,
