@@ -1,16 +1,24 @@
 import { Menu } from "@headlessui/react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import {
   ChevronDoubleRightIcon,
   ArchiveBoxIcon,
   PlusIcon,
   UserPlusIcon,
   PlayIcon,
-  EyeIcon,
   AdjustmentsHorizontalIcon,
+  BookOpenIcon,
+  XCircleIcon,
+  EyeIcon,
 } from "@heroicons/react/24/outline";
+import {
+  CheckCircleIcon,
+  ClockIcon,
+  LinkIcon,
+} from "@heroicons/react/20/solid";
 import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import { IoNotificationsOffOutline } from "react-icons/io5";
+import { Icon } from "@tremor/react";
 import { ProviderMethod } from "@/shared/api/providers";
 import { AlertDto } from "@/entities/alerts/model";
 import { useProviders } from "utils/hooks/useProviders";
@@ -19,10 +27,21 @@ import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { DropdownMenu } from "@/shared/ui";
 import { ElementType } from "react";
-import { DynamicImageProviderIcon } from "@/components/ui";
+import { Button, DynamicImageProviderIcon } from "@/components/ui";
+import { useLocalStorage } from "utils/hooks/useLocalStorage";
+import { clsx } from "clsx";
+import { useWorkflowExecutions } from "@/utils/hooks/useWorkflowExecutions";
+import { createPortal } from "react-dom";
+import { ViewedAlert } from "./alert-table";
+import { format } from "date-fns";
+import { TbCodeDots, TbTicket } from "react-icons/tb";
+import { RiStickyNoteAddLine, RiStickyNoteLine } from "react-icons/ri";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 
 interface Props {
   alert: AlertDto;
+  setNoteModalAlert?: (alert: AlertDto) => void;
+  setTicketModalAlert?: (alert: AlertDto) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[]) => void;
   setChangeStatusAlert?: (alert: AlertDto) => void;
@@ -40,8 +59,46 @@ interface MenuItem {
   show?: boolean;
 }
 
+// Add the tooltip type
+type TooltipPosition = { x: number; y: number } | null;
+
+// Add the ImagePreviewTooltip component
+const ImagePreviewTooltip = ({
+  imageUrl,
+  position,
+}: {
+  imageUrl: string;
+  position: TooltipPosition;
+}) => {
+  if (!position) return null;
+
+  return createPortal(
+    <div
+      className="absolute shadow-lg rounded border border-gray-100 z-50"
+      style={{
+        left: position.x,
+        top: position.y,
+        pointerEvents: "none",
+      }}
+    >
+      <div className="p-1 bg-gray-200">
+        {/* because we'll have to start managing every external static asset url (datadog/grafana/etc.) */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageUrl}
+          alt="Preview"
+          className="max-w-xs max-h-64 object-contain"
+        />
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 export default function AlertMenu({
   alert,
+  setNoteModalAlert,
+  setTicketModalAlert,
   setRunWorkflowModalAlert,
   setDismissModalAlert,
   setChangeStatusAlert,
@@ -52,6 +109,13 @@ export default function AlertMenu({
 }: Props) {
   const api = useApi();
   const router = useRouter();
+  const { data: executions } = useWorkflowExecutions();
+  const [rowStyle] = useAlertRowStyle();
+  const [viewedAlerts, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
+    `viewed-alerts-${presetName}`,
+    []
+  );
+  const [showActionsOnHover] = useLocalStorage("alert-action-tray-hover", true);
   const {
     data: { installed_providers: installedProviders } = {
       installed_providers: [],
@@ -59,6 +123,286 @@ export default function AlertMenu({
   } = useProviders({ revalidateOnFocus: false, revalidateOnMount: false });
 
   const { alertsMutator: mutate } = useAlerts();
+
+  const {
+    url,
+    generatorURL,
+    note,
+    ticket_url: ticketUrl,
+    ticket_status: ticketStatus,
+    playbook_url,
+    imageUrl,
+  } = alert;
+
+  const relevantWorkflowExecution = executions?.find(
+    (wf) => wf.event_id === alert.event_id
+  );
+
+  const viewedAlert = viewedAlerts?.find(
+    (a) => a.fingerprint === alert.fingerprint
+  );
+
+  // Add image-related state
+  const [imageError, setImageError] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>(null);
+  const imageContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Add image-related handlers
+  const handleImageClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (imageUrl) {
+      window.open(imageUrl, "_blank");
+    }
+  };
+
+  const handleMouseEnter = () => {
+    if (imageContainerRef.current && !imageError && imageUrl) {
+      const rect = imageContainerRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        x: rect.right - 150,
+        y: rect.top - 150,
+      });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setTooltipPosition(null);
+  };
+
+  // Add scroll handler
+  useEffect(() => {
+    const handleScroll = () => {
+      if (tooltipPosition && imageContainerRef.current) {
+        const rect = imageContainerRef.current.getBoundingClientRect();
+        setTooltipPosition({
+          x: rect.right + 10,
+          y: rect.top - 150,
+        });
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [tooltipPosition]);
+
+  const updateUrl = useCallback(
+    (params: { newParams?: Record<string, any>; scroll?: boolean }) => {
+      const currentParams = new URLSearchParams(window.location.search);
+
+      if (params.newParams) {
+        Object.entries(params.newParams).forEach(([key, value]) =>
+          currentParams.append(key, value)
+        );
+      }
+
+      let newPath = `${window.location.pathname}`;
+
+      if (currentParams.toString()) {
+        newPath += `?${currentParams.toString()}`;
+      }
+      router.replace(newPath, {
+        scroll: typeof params.scroll == "boolean" ? params.scroll : false,
+      });
+    },
+    [router]
+  );
+
+  const openAlertPayloadModal = useCallback(() => {
+    setViewedAlerts((prev) => {
+      const newViewedAlerts = prev.filter(
+        (a) => a.fingerprint !== alert.fingerprint
+      );
+      return [
+        ...newViewedAlerts,
+        {
+          fingerprint: alert.fingerprint,
+          viewedAt: new Date().toISOString(),
+        },
+      ];
+    });
+
+    updateUrl({
+      newParams: { alertPayloadFingerprint: alert.fingerprint },
+    });
+  }, [alert, updateUrl]);
+
+  const actionIconButtonClassName = clsx(
+    "text-gray-500 leading-none p-2 prevent-row-click hover:bg-slate-200 [&>[role='tooltip']]:z-50",
+    rowStyle === "relaxed" || isInSidebar
+      ? "rounded-tremor-default"
+      : "rounded-none"
+  );
+
+  // Quick actions that appear in the action tray
+  // @tb: Create a dynamic component like Druids ActionTray that accepts a list of actions and renders them in a grid
+  const quickActions = (
+    <div
+      className={clsx(
+        "flex items-center",
+        showActionsOnHover
+          ? [
+              "transition-opacity duration-100",
+              "opacity-0 bg-orange-100",
+              "group-hover:opacity-100",
+            ]
+          : "opacity-100"
+      )}
+    >
+      <Button
+        className={actionIconButtonClassName}
+        onClick={openAlertPayloadModal}
+        variant="light"
+        icon={() => (
+          <Icon
+            icon={TbCodeDots}
+            className={clsx(
+              "w-4 h-4 object-cover rounded text-gray-500",
+              viewedAlert ? "text-orange-400" : ""
+            )}
+          />
+        )}
+        tooltip={
+          viewedAlert
+            ? `Viewed ${format(
+                new Date(viewedAlert.viewedAt),
+                "MMM d, yyyy HH:mm"
+              )}`
+            : "View Alert Payload"
+        }
+      />
+
+      {imageUrl && !imageError && (
+        <div
+          ref={imageContainerRef}
+          className="DropdownMenuButton group text-gray-500"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onClick={handleImageClick}
+          title="View Image"
+        >
+          {/* because we'll have to start managing every external static asset url (datadog/grafana/etc.) */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl}
+            alt="Preview"
+            className="h-4 w-4 object-cover rounded prevent-row-click max-w-none"
+            onError={() => setImageError(true)}
+          />
+        </div>
+      )}
+      {(url ?? generatorURL) && (
+        <Button
+          variant="light"
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(url || generatorURL, "_blank");
+          }}
+          className={actionIconButtonClassName}
+          tooltip="Open Original Alert"
+          icon={() => (
+            <Icon icon={LinkIcon} className="w-4 h-4 text-gray-500" />
+          )}
+        />
+      )}
+      {setTicketModalAlert && (
+        <Button
+          variant="light"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!ticketUrl && setTicketModalAlert) {
+              setTicketModalAlert(alert);
+            } else {
+              window.open(ticketUrl, "_blank");
+            }
+          }}
+          className={actionIconButtonClassName}
+          tooltip={
+            ticketUrl
+              ? `Ticket Assigned ${
+                  ticketStatus ? `(status: ${ticketStatus})` : ""
+                }`
+              : "Assign Ticket"
+          }
+          icon={() => (
+            <Icon
+              icon={TbTicket}
+              className={`w-4 h-4 ${
+                ticketUrl ? "text-green-500" : "text-gray-500"
+              }`}
+            />
+          )}
+        />
+      )}
+      {playbook_url && (
+        <Button
+          variant="light"
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(playbook_url, "_blank");
+          }}
+          className={actionIconButtonClassName}
+          tooltip="View Playbook"
+          icon={() => (
+            <Icon icon={BookOpenIcon} className="w-4 h-4 text-gray-500" />
+          )}
+        />
+      )}
+      {setNoteModalAlert && (
+        <Button
+          variant="light"
+          onClick={(e) => {
+            e.stopPropagation();
+            setNoteModalAlert(alert);
+          }}
+          className={actionIconButtonClassName}
+          tooltip={note ? "Edit Note" : "Add Note"}
+          icon={() => (
+            <Icon
+              icon={note ? RiStickyNoteLine : RiStickyNoteAddLine}
+              className={`w-4 h-4 ${note ? "text-green-500" : "text-gray-500"}`}
+            />
+          )}
+        />
+      )}
+      {relevantWorkflowExecution && (
+        <Button
+          variant="light"
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(
+              `/workflows/${relevantWorkflowExecution.workflow_id}/runs/${relevantWorkflowExecution.workflow_execution_id}`,
+              "_blank"
+            );
+          }}
+          className={actionIconButtonClassName}
+          tooltip={`Workflow ${
+            relevantWorkflowExecution.workflow_status
+          } at ${format(
+            new Date(relevantWorkflowExecution.workflow_started),
+            "MMM d, yyyy HH:mm"
+          )}`}
+          icon={() => (
+            <Icon
+              icon={
+                relevantWorkflowExecution.workflow_status === "success"
+                  ? CheckCircleIcon
+                  : relevantWorkflowExecution.workflow_status === "error"
+                  ? XCircleIcon
+                  : ClockIcon
+              }
+              className={`w-4 h-4 ${
+                relevantWorkflowExecution.workflow_status === "success"
+                  ? "text-green-500"
+                  : relevantWorkflowExecution.workflow_status === "error"
+                  ? "text-red-500"
+                  : "text-gray-500"
+              }`}
+            />
+          )}
+        />
+      )}
+    </div>
+  );
 
   const fingerprint = alert.fingerprint;
 
@@ -101,26 +445,17 @@ export default function AlertMenu({
 
   const openMethodModal = useCallback(
     (method: ProviderMethod) => {
-      router.replace(
-        `/alerts/${presetName}?methodName=${method.name}&providerId=${
-          provider!.id
-        }&alertFingerprint=${alert.fingerprint}`,
-        {
-          scroll: false,
-        }
-      );
+      updateUrl({
+        newParams: {
+          methodName: method.name,
+          providerId: provider!.id,
+          alertFingerprint: alert.fingerprint,
+        },
+        scroll: false,
+      });
     },
     [alert, presetName, provider, router]
   );
-
-  const openAlertPayloadModal = useCallback(() => {
-    router.replace(
-      `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}`,
-      {
-        scroll: false,
-      }
-    );
-  }, [alert, presetName, router]);
 
   const canAssign = true; // TODO: keep track of assignments for auditing
 
@@ -146,18 +481,18 @@ export default function AlertMenu({
         icon: ArchiveBoxIcon,
         label: "History",
         onClick: () =>
-          router.replace(
-            `/alerts/${presetName}?fingerprint=${alert.fingerprint}`,
-            { scroll: false }
-          ),
+          updateUrl({ newParams: { fingerprint: alert.fingerprint } }),
       },
       {
         icon: AdjustmentsHorizontalIcon,
         label: "Enrich",
         onClick: () =>
-          router.replace(
-            `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}&enrich=true`
-          ),
+          updateUrl({
+            newParams: {
+              alertPayloadFingerprint: alert.fingerprint,
+              enrich: true,
+            },
+          }),
       },
       {
         icon: UserPlusIcon,
@@ -224,10 +559,9 @@ export default function AlertMenu({
   );
 
   if (isInSidebar) {
-    // For sidebar we want to show the menu items in a horizontal scrollable menu
     return (
       <Menu as="div" className="w-full">
-        <div className="flex space-x-2 w-full overflow-x-scroll">
+        <div className="flex gap-2 w-full flex-wrap">
           {visibleMenuItems.map((item, index) => {
             const Icon = item.icon;
             return (
@@ -238,7 +572,7 @@ export default function AlertMenu({
                   toggleSidebar?.();
                 }}
                 disabled={item.disabled}
-                className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 rounded-tremor-default"
               >
                 <Icon className="w-4 h-4" />
                 <span>{item.label}</span>
@@ -251,16 +585,26 @@ export default function AlertMenu({
   }
 
   return (
-    <DropdownMenu.Menu icon={EllipsisHorizontalIcon} label="">
-      {visibleMenuItems.map((item, index) => (
-        <DropdownMenu.Item
-          key={item.label + index}
-          icon={item.icon}
-          label={item.label}
-          onClick={item.onClick}
-          disabled={item.disabled}
-        />
-      ))}
-    </DropdownMenu.Menu>
+    <div className="flex items-center justify-end relative group">
+      {quickActions}
+      <DropdownMenu.Menu
+        icon={EllipsisHorizontalIcon}
+        iconClassName={rowStyle !== "relaxed" ? "!rounded-none" : undefined}
+        label=""
+      >
+        {visibleMenuItems.map((item, index) => (
+          <DropdownMenu.Item
+            key={item.label + index}
+            icon={item.icon}
+            label={item.label}
+            onClick={item.onClick}
+            disabled={item.disabled}
+          />
+        ))}
+      </DropdownMenu.Menu>
+      {tooltipPosition && imageUrl && !imageError && (
+        <ImagePreviewTooltip imageUrl={imageUrl} position={tooltipPosition} />
+      )}
+    </div>
   );
 }

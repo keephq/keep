@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import pytest
 import requests
-from playwright.sync_api import expect, Browser
+from playwright.sync_api import expect, Page
 
 # NOTE 2: to run the tests with a browser, uncomment this two lines:
 # import os
@@ -18,25 +18,24 @@ KEEP_API_URL = "http://localhost:8080"
 def query_allerts(cell_query: str = None, limit: int = None, offset: int = None):
     url = f"{KEEP_API_URL}/alerts/query"
 
-    query_params = {}
+    query = {}
 
     if cell_query:
-        query_params["cel"] = cell_query
+        query["cel"] = cell_query
 
     if limit is not None:
-        query_params["limit"] = limit
+        query["limit"] = limit
 
     if offset is not None:
-        query_params["offset"] = offset
+        query["offset"] = offset
 
-    if query_params:
-        url += "?" + "&".join([f"{k}={v}" for k, v in query_params.items()])
     result: dict = None
 
     for _ in range(5):
         try:
-            response = requests.get(
+            response = requests.post(
                 url,
+                json=query,
                 headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
                 timeout=5,
             )
@@ -236,13 +235,16 @@ def upload_alerts():
     return query_allerts(limit=1000, offset=0)
 
 
-def init_test(browser: Browser, alerts):
-    browser.goto(f"{KEEP_UI_URL}/alerts/feed", timeout=10000)
+def init_test(browser: Page, alerts):
+    url = f"{KEEP_UI_URL}/alerts/feed"
+    browser.goto(url)
+    browser.wait_for_url(url)
     browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
     browser.wait_for_selector(f"text={alerts[0]['name']}", timeout=10000)
     rows_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()
     # check that required alerts are loaded and displayed
-    assert rows_count == 20
+    # other tests may also add alerts, so we need to check that the number of rows is greater than or equal to 20
+    assert rows_count >= 20
     return alerts
 
 
@@ -454,10 +456,12 @@ def test_search_by_cel(browser, search_test_case, setup_test_data):
 sort_tescases = {
     "sort by lastReceived asc/dsc": {
         "column_name": "Last Received",
+        "column_id": "lastReceived",
         "sort_callback": lambda alert: alert["lastReceived"],
     },
     "sort by description asc/dsc": {
         "column_name": "description",
+        "column_id": "description",
         "sort_callback": lambda alert: alert["description"],
     },
 }
@@ -467,6 +471,7 @@ sort_tescases = {
 def test_sort_asc_dsc(browser, sort_test_case, setup_test_data):
     test_case = sort_tescases[sort_test_case]
     coumn_name = test_case["column_name"]
+    column_id = test_case["column_id"]
     sort_callback = test_case["sort_callback"]
     current_alerts = setup_test_data
     init_test(browser, current_alerts)
@@ -485,15 +490,11 @@ def test_sort_asc_dsc(browser, sort_test_case, setup_test_data):
             sorted_alerts = list(reversed(sorted_alerts))
 
         column_header_locator = browser.locator(
-            "[data-testid='alerts-table'] table thead th", has_text=coumn_name
+            f"[data-testid='alerts-table'] table thead th [data-testid='header-cell-{column_id}']",
+            has_text=coumn_name,
         )
         expect(column_header_locator).to_be_visible()
-        column_sort_indicator_locator = column_header_locator.locator(
-            f"[title='{sort_direction_title}'] svg"
-        )
-        expect(column_sort_indicator_locator).to_be_visible()
-
-        column_sort_indicator_locator.click()
+        column_header_locator.click()
         rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
 
         for index, alert in enumerate(sorted_alerts):
@@ -532,7 +533,8 @@ def test_alerts_stream(browser):
     expect(
         browser.locator("[data-testid='alerts-table'] table tbody tr")
     ).to_have_count(len(simulated_alerts))
-    current_alerts = query_allerts(cell_query=cel_to_filter_alerts)["results"]
+    query_result = query_allerts(cell_query=cel_to_filter_alerts, limit=1000)
+    current_alerts = query_result["results"]
     assert_facet(browser, facet_name, current_alerts, alert_property_name)
 
     assert_alerts_by_column(

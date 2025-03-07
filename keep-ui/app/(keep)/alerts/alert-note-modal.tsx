@@ -14,9 +14,14 @@ import { showErrorToast } from "@/shared/ui";
 interface AlertNoteModalProps {
   handleClose: () => void;
   alert: AlertDto | null;
+  readOnly?: boolean;
 }
 
-const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
+const AlertNoteModal = ({
+  handleClose,
+  alert,
+  readOnly = false,
+}: AlertNoteModalProps) => {
   const api = useApi();
   const [noteContent, setNoteContent] = useState<string>("");
 
@@ -59,12 +64,10 @@ const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
     try {
       // build the formData
       const requestData = {
-        enrichments: {
-          note: noteContent,
-        },
+        note: noteContent,
         fingerprint: alert.fingerprint,
       };
-      const response = await api.post(`/alerts/enrich`, requestData);
+      await api.post(`/alerts/enrich/note`, requestData);
 
       handleNoteClose();
     } catch (error) {
@@ -81,31 +84,40 @@ const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose}>
-      {/* WYSIWYG editor */}
-      <ReactQuill
-        value={noteContent}
-        onChange={(value: string) => setNoteContent(value)}
-        theme="snow" // Use the Snow theme
-        placeholder="Add your note here..."
-        modules={modules}
-        formats={formats} // Add formats
-      />
-      <div className="mt-4 flex justify-end">
-        <Button // Use Tremor button for Save
-          onClick={saveNote}
-          color="orange"
-          className="mr-2"
-        >
-          Save
-        </Button>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      beforeTitle={alert?.name}
+      title="Add Note"
+    >
+      <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+        {/* WYSIWYG editor */}
+        <ReactQuill
+          value={noteContent}
+          onChange={(value: string) => setNoteContent(value)}
+          theme="snow" // Use the Snow theme
+          placeholder="Add your note here..."
+          modules={readOnly ? { toolbar: [] } : modules}
+          readOnly={readOnly}
+          formats={formats} // Add formats
+        />
+      </div>
+      <div className="mt-4 flex justify-end gap-2">
         <Button // Use Tremor button for Cancel
           onClick={handleNoteClose}
           variant="secondary"
           color="orange"
         >
-          Cancel
+          {readOnly ? "Close" : "Cancel"}
         </Button>
+        {!readOnly && (
+          <Button // Use Tremor button for Save
+            onClick={saveNote}
+            color="orange"
+          >
+            Save
+          </Button>
+        )}
       </div>
     </Modal>
   );

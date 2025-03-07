@@ -268,9 +268,8 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
     def paren_expr(self, tree: lark.Tree) -> None:
         if not self.stack:
             raise ValueError("Cannot handle parenthesis expression without stack")
-            
-        self.stack.append(ParenthesisNode(expression = self.stack.pop()))
-        
+
+        self.stack.append(ParenthesisNode(expression=self.stack.pop()))
 
     def list_lit(self, tree: lark.Tree) -> None:
         if self.stack:
@@ -304,6 +303,9 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
 
             if not self.is_number(value) and self.is_date(value):
                 value = parse(value)
+            else:
+                # this code is to handle the case when string literal contains escaped single/double quotes
+                value = value.encode("utf-8").decode("unicode_escape")
         elif value == 'true' or value == 'false':
             value = value == 'true'
         elif '.' in value and self.is_float(value):
@@ -312,7 +314,7 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             value = int(value)
         else:
             raise ValueError(f"Unknown literal type: {value}")
-        
+
         return ConstantNode(value=value)
 
     def is_number(self, value: str) -> bool:
@@ -321,14 +323,14 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             return True
         except ValueError:
             return False
-        
+
     def is_float(self, value: str) -> bool:
         try:
             float(value)
             return True
         except ValueError:
             return False
-    
+
     def is_date(self, value: str) -> bool:
         try:
             parse(value)

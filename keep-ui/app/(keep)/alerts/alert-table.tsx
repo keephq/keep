@@ -28,11 +28,12 @@ import { AlertPresetManager } from "./alert-preset-manager";
 import { evalWithContext } from "./alerts-rules-builder";
 import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "@/entities/alerts/model";
-import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
 import { AlertFacets } from "./alert-table-alert-facets";
 import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { ListFormatOption } from "./alert-table-list-format";
+import { TimeFormatOption } from "./alert-table-time-format";
 
 interface PresetTab {
   name: string;
@@ -62,6 +63,7 @@ interface Props {
   setChangeStatusAlert?: (alert: AlertDto) => void;
 }
 
+// Deprecated: use AlertTableServerSide instead
 export function AlertTable({
   alerts,
   columns,
@@ -142,6 +144,13 @@ export function AlertTable({
     "table-sizes",
     {}
   );
+  const [columnTimeFormats, setColumnTimeFormats] = useLocalStorage<
+    Record<string, TimeFormatOption>
+  >(`column-time-formats-${presetName}`, {});
+
+  const [columnListFormats, setColumnListFormats] = useLocalStorage<
+    Record<string, ListFormatOption>
+  >(`column-list-formats-${presetName}`, {});
 
   const handleThemeChange = (newTheme: any) => {
     setTheme(newTheme);
@@ -165,6 +174,8 @@ export function AlertTable({
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
+    useState<boolean>(false);
+  const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
     useState<boolean>(false);
 
   const filteredAlerts = alerts.filter((alert) => {
@@ -233,6 +244,7 @@ export function AlertTable({
     : ["severity", "checkbox"];
 
   const table = useReactTable({
+    getRowId: (row) => row.fingerprint,
     data: filteredAlerts,
     columns: columns,
     state: {
@@ -264,16 +276,12 @@ export function AlertTable({
     enableSorting: true,
   });
 
-  const selectedRowIds = Object.entries(
+  const selectedAlertsFingerprints = Object.keys(
     table.getSelectedRowModel().rowsById
-  ).reduce<string[]>((acc, [alertId]) => {
-    return acc.concat(alertId);
-  }, []);
+  );
 
   let showSkeleton =
     table.getFilteredRowModel().rows.length === 0 && isAsyncLoading;
-  let showEmptyState =
-    table.getFilteredRowModel().rows.length === 0 && !isAsyncLoading;
 
   const handleRowClick = (alert: AlertDto) => {
     // if presetName is alert-history, do not open sidebar
@@ -320,16 +328,17 @@ export function AlertTable({
 
       {/* Make actions/presets section fixed height */}
       <div className="h-14 px-4 flex-none">
-        {selectedRowIds.length ? (
+        {selectedAlertsFingerprints.length ? (
           <AlertActions
-            selectedRowIds={selectedRowIds}
-            alerts={alerts}
+            selectedAlertsFingerprints={selectedAlertsFingerprints}
             table={table}
             clearRowSelection={table.resetRowSelection}
             setDismissModalAlert={setDismissedModalAlert}
             mutateAlerts={mutateAlerts}
             setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
             isIncidentSelectorOpen={isIncidentSelectorOpen}
+            setIsCreateIncidentWithAIOpen={setIsCreateIncidentWithAIOpen}
+            isCreateIncidentWithAIOpen={isCreateIncidentWithAIOpen}
           />
         ) : (
           <AlertPresetManager table={table} presetName={presetName} />
@@ -338,7 +347,7 @@ export function AlertTable({
 
       {/* Main content area - uses flex-grow to fill remaining space */}
       <div className="flex-grow px-4 pb-4">
-        <div className="h-full flex gap-6">
+        <div className="h-full flex gap-4">
           {/* Facets sidebar */}
           <div className="w-32 min-w-[12rem] overflow-y-auto">
             <AlertFacets
@@ -358,18 +367,6 @@ export function AlertTable({
           <div className="flex-1 flex flex-col min-w-0">
             <Card className="h-full flex flex-col p-0 overflow-x-auto">
               <div className="flex-grow flex flex-col">
-                {!presetStatic && (
-                  <div className="flex-none">
-                    <AlertTabs
-                      presetId={presetId}
-                      tabs={tabs}
-                      setTabs={setTabs}
-                      selectedTab={selectedTab}
-                      setSelectedTab={setSelectedTab}
-                    />
-                  </div>
-                )}
-
                 <div ref={a11yContainerRef} className="sr-only" />
 
                 {/* Make table wrapper scrollable */}
@@ -380,15 +377,16 @@ export function AlertTable({
                       table={table}
                       presetName={presetName}
                       a11yContainerRef={a11yContainerRef}
+                      columnTimeFormats={columnTimeFormats}
+                      setColumnTimeFormats={setColumnTimeFormats}
+                      columnListFormats={columnListFormats}
+                      setColumnListFormats={setColumnListFormats}
                     />
                     <AlertsTableBody
                       table={table}
                       showSkeleton={showSkeleton}
-                      showEmptyState={showEmptyState}
                       theme={theme}
                       onRowClick={handleRowClick}
-                      presetName={presetName}
-                      viewedAlerts={viewedAlerts}
                       lastViewedAlert={lastViewedAlert}
                     />
                   </Table>

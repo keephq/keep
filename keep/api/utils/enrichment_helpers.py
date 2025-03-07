@@ -6,7 +6,11 @@ from opentelemetry import trace
 from sqlmodel import Session
 
 from keep.api.core.db import existed_or_new_session
-from keep.api.models.alert import AlertDto, AlertStatus, AlertWithIncidentLinkMetadataDto
+from keep.api.models.alert import (
+    AlertDto,
+    AlertStatus,
+    AlertWithIncidentLinkMetadataDto,
+)
 from keep.api.models.db.alert import Alert, LastAlertToIncident
 
 tracer = trace.get_tracer(__name__)
@@ -82,6 +86,7 @@ def calculated_start_firing_time(
 def convert_db_alerts_to_dto_alerts(
     alerts: list[Alert | tuple[Alert, LastAlertToIncident]],
     with_incidents: bool = False,
+    with_alert_instance_enrichment: bool = False,
     session: Optional[Session] = None,
 ) -> list[AlertDto | AlertWithIncidentLinkMetadataDto]:
     """
@@ -106,20 +111,30 @@ def convert_db_alerts_to_dto_alerts(
                 else:
                     alert, alert_to_incident = _object
 
-                if alert.alert_enrichment:
-                    alert.event.update(alert.alert_enrichment.enrichments)
+                enrichments = {}
+                if with_alert_instance_enrichment and alert.alert_instance_enrichment:
+                    enrichments = alert.alert_instance_enrichment.enrichments
+                elif alert.alert_enrichment and not with_alert_instance_enrichment:
+                    enrichments = alert.alert_enrichment.enrichments
+
+                alert.event.update(enrichments)
+
                 if with_incidents:
                     if alert._incidents:
-                        alert.event["incident"] = ",".join(str(incident.id) for incident in alert._incidents)
+                        alert.event["incident"] = ",".join(
+                            str(incident.id) for incident in alert._incidents
+                        )
                 try:
                     if alert_to_incident is not None:
-                        alert_dto = AlertWithIncidentLinkMetadataDto.from_db_instance(alert, alert_to_incident)
+                        alert_dto = AlertWithIncidentLinkMetadataDto.from_db_instance(
+                            alert, alert_to_incident
+                        )
                     else:
                         alert_dto = AlertDto(**alert.event)
-                    if alert.alert_enrichment:
-                        parse_and_enrich_deleted_and_assignees(
-                            alert_dto, alert.alert_enrichment.enrichments
-                        )
+
+                    if enrichments:
+                        parse_and_enrich_deleted_and_assignees(alert_dto, enrichments)
+
                 except Exception:
                     # should never happen but just in case
                     logger.exception(

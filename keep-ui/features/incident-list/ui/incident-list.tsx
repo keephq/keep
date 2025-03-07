@@ -1,6 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -10,7 +10,6 @@ import IncidentsTable from "./incidents-table";
 import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
 import { IncidentListPlaceholder } from "./incident-list-placeholder";
 import Modal from "@/components/ui/Modal";
-import { PlusCircleIcon } from "@heroicons/react/24/outline";
 import PredictedIncidentsTable from "@/app/(keep)/incidents/predicted-incidents-table";
 import { SortingState } from "@tanstack/react-table";
 import { IncidentListError } from "@/features/incident-list/ui/incident-list-error";
@@ -18,7 +17,12 @@ import { InitialFacetsData } from "@/features/filter/api";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import Image from "next/image";
 import { Icon } from "@tremor/react";
-import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
+import {
+  PageSubtitle,
+  PageTitle,
+  SeverityBorderIcon,
+  UISeverity,
+} from "@/shared/ui";
 import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
@@ -27,14 +31,22 @@ import {
   reverseSeverityMapping,
   severityMapping,
 } from "@/entities/alerts/model";
-import { IncidentsNotFoundPlaceholder } from "./incidents-not-found";
+import {
+  IncidentsNotFoundForFiltersPlaceholder,
+  IncidentsNotFoundPlaceholder,
+} from "./incidents-not-found";
 import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
 import EnhancedDateRangePicker, {
   TimeFrame,
 } from "@/components/ui/DateRangePicker";
-import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
-import { AlertsQuery } from "@/utils/hooks/useAlerts";
+import { PlusIcon } from "@heroicons/react/20/solid";
+import {
+  DEFAULT_INCIDENTS_CEL,
+  DEFAULT_INCIDENTS_PAGE_SIZE,
+  DEFAULT_INCIDENTS_SORTING,
+  DEFAULT_INCIDENTS_UNCHECKED_OPTIONS,
+} from "@/entities/incidents/model/models";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -54,21 +66,49 @@ export function IncidentList({
   initialFacetsData?: InitialFacetsData;
 }) {
   const [incidentsPagination, setIncidentsPagination] = useState<Pagination>({
-    limit: 20,
+    limit: DEFAULT_INCIDENTS_PAGE_SIZE,
     offset: 0,
   });
 
   const [incidentsSorting, setIncidentsSorting] = useState<SortingState>([
-    { id: "creation_time", desc: true },
+    DEFAULT_INCIDENTS_SORTING,
   ]);
 
   const [filterCel, setFilterCel] = useState<string>("");
   const [dateRangeCel, setDateRangeCel] = useState<string>("");
 
+  const [dateRange, setDateRange] = useState<TimeFrame>({
+    start: null,
+    end: null,
+    paused: false,
+  });
+
   const mainCelQuery = useMemo(() => {
-    const filterArray = [dateRangeCel, filterCel];
+    const filterArray = ["is_confirmed == true", dateRangeCel];
     return filterArray.filter(Boolean).join(" && ");
-  }, [filterCel, dateRangeCel]);
+  }, [dateRangeCel]);
+
+  const incidentsCelQuery = useMemo(() => {
+    const filterArray = [mainCelQuery, filterCel];
+    return filterArray.filter(Boolean).join(" && ");
+  }, [filterCel, mainCelQuery]);
+
+  // This is used to decide if the "No active incidents found" state should be shown
+  const { data: defaultIncidents, mutate: refreshDefaultIncidents } =
+    useIncidents(
+      null,
+      null,
+      DEFAULT_INCIDENTS_PAGE_SIZE,
+      0,
+      DEFAULT_INCIDENTS_SORTING,
+      DEFAULT_INCIDENTS_CEL,
+      {
+        revalidateOnFocus: false,
+        revalidateOnMount: false,
+        fallbackData: initialData,
+      }
+    );
+  const isTrueEmptyState = defaultIncidents?.items.length === 0;
 
   const {
     data: incidents,
@@ -76,22 +116,28 @@ export function IncidentList({
     mutate: mutateIncidents,
     error: incidentsError,
   } = useIncidents(
-    true,
+    null,
     null,
     incidentsPagination.limit,
     incidentsPagination.offset,
     incidentsSorting[0],
-    mainCelQuery,
+    incidentsCelQuery,
     {
       revalidateOnFocus: false,
       revalidateOnMount: !initialData,
       fallbackData: initialData,
+      onSuccess: () => {
+        refreshDefaultIncidents();
+      },
     }
   );
 
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
     useIncidents(false, true);
-  const { incidentChangeToken } = usePollIncidents(mutateIncidents);
+  const { incidentChangeToken } = usePollIncidents(
+    mutateIncidents,
+    dateRange.paused
+  );
 
   const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
     null
@@ -108,12 +154,6 @@ export function IncidentList({
   useEffect(() => {
     setFilterRevalidationToken(incidentChangeToken);
   }, [incidentChangeToken]);
-
-  const [dateRange, setDateRange] = useState<TimeFrame>({
-    start: null,
-    end: null,
-    paused: true,
-  });
 
   useEffect(() => {
     const filterArray: string[] = [];
@@ -166,6 +206,7 @@ export function IncidentList({
           reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
       },
       ["Status"]: {
+        uncheckedByDefaultOptionValues: DEFAULT_INCIDENTS_UNCHECKED_OPTIONS,
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={getStatusIcon(facetOption.display_name)}
@@ -240,10 +281,10 @@ export function IncidentList({
     setDateRange({
       start: null,
       end: null,
-      paused: true,
+      paused: false,
     });
     setIncidentsPagination({
-      limit: 20,
+      limit: DEFAULT_INCIDENTS_PAGE_SIZE,
       offset: 0,
     });
     setClearFiltersToken(uuidV4());
@@ -262,11 +303,15 @@ export function IncidentList({
       );
     }
 
+    if (isTrueEmptyState) {
+      return <IncidentsNotFoundPlaceholder />;
+    }
+
     if (mainCelQuery && incidents?.items.length === 0) {
       return (
-        <Card className="flex-grow ">
-          <IncidentsNotFoundPlaceholder onClearFilters={handleClearFilters} />
-        </Card>
+        <IncidentsNotFoundForFiltersPlaceholder
+          onClearFilters={handleClearFilters}
+        />
       );
     }
 
@@ -278,19 +323,15 @@ export function IncidentList({
     );
   }
 
-  const uncheckedFacetOptionsByDefault: Record<string, string[]> = {
-    Status: ["resolved", "deleted"],
-  };
-
   const renderDateTimePicker = () => {
     return (
       <div className="flex justify-end">
         <EnhancedDateRangePicker
           timeFrame={dateRange}
           setTimeFrame={(timeFrame) => setDateRange(timeFrame)}
-          timeframeRefreshInterval={2000}
-          hasPlay={false}
-          pausedByDefault={true}
+          timeframeRefreshInterval={20000}
+          hasPlay={true}
+          pausedByDefault={false}
           hasRewind={false}
           hasForward={false}
           hasZoomOut={false}
@@ -322,15 +363,17 @@ export function IncidentList({
         <div className="h-full flex flex-col gap-5">
           <div className="flex justify-between items-center">
             <div>
-              <Title>Incidents</Title>
-              <Subtitle>Manage your incidents</Subtitle>
+              <PageTitle>Incidents</PageTitle>
+              <PageSubtitle>Group alerts into incidents</PageSubtitle>
             </div>
 
-            <div>
+            <div className="flex gap-2">
+              {renderDateTimePicker()}
               <Button
                 color="orange"
                 size="md"
-                icon={PlusCircleIcon}
+                icon={PlusIcon}
+                variant="primary"
                 onClick={() => setIsFormOpen(true)}
               >
                 Create Incident
@@ -347,18 +390,14 @@ export function IncidentList({
                   className="mt-14"
                   entityName={"incidents"}
                   facetsConfig={facetsConfig}
-                  facetOptionsCel={dateRangeCel}
+                  facetOptionsCel={mainCelQuery}
                   usePropertyPathsSuggestions={true}
                   clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}
-                  uncheckedByDefaultOptionValues={
-                    uncheckedFacetOptionsByDefault
-                  }
                   onCelChange={(cel) => setFilterCel(cel)}
                   revalidationToken={filterRevalidationToken}
                 />
                 <div className="flex flex-col gap-5 flex-1 min-w-0">
-                  {renderDateTimePicker()}
                   {renderIncidents()}
                 </div>
               </div>

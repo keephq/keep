@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, UTC
 from itertools import cycle
 from unittest.mock import patch
 from uuid import uuid4
@@ -1633,3 +1633,59 @@ def test_correlation_with_mapping(db_session, create_alert):
 
     assert total == 1
     assert incidents[0].alerts_count == 3
+
+
+@pytest.mark.asyncio
+async def test_incident_timestamps_based_on_alert_last_received(db_session, create_alert):
+    # Create alerts with past, current, and future timestamps
+
+    now = datetime.now(UTC)
+    past_date =  now - timedelta(days=1)
+    current_date = now
+    future_date = now + timedelta(days=1)
+
+    past_alert_data = {"lastReceived": past_date.isoformat()}
+    current_alert_data = {"lastReceived": current_date.isoformat()}
+    future_alert_data = {"lastReceived": future_date.isoformat()}
+
+    create_alert(
+        "past-alert",
+        AlertStatus.FIRING,
+        now,
+        past_alert_data,
+    )
+    create_alert(
+        "current-alert",
+        AlertStatus.FIRING,
+        now,
+        current_alert_data,
+    )
+    create_alert(
+        "future-alert",
+        AlertStatus.FIRING,
+        now,
+        future_alert_data,
+    )
+
+    # Link alerts to an incident
+    alerts = db_session.query(Alert).all()
+
+    assert alerts[0].event['lastReceived'] == past_date.isoformat(timespec='milliseconds').replace("+00:00", "Z")
+    assert alerts[1].event['lastReceived'] == current_date.isoformat(timespec='milliseconds').replace("+00:00", "Z")
+    assert alerts[2].event['lastReceived'] == future_date.isoformat(timespec='milliseconds').replace("+00:00", "Z")
+
+    incident = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {"user_generated_name": "Incident with varied timestamps", "user_summary": "Test incident"},
+    )
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident.id, [alert.fingerprint for alert in alerts]
+    )
+
+    # Refresh incident data
+    db_session.expire_all()
+    updated_incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
+
+    # Assert that timestamps match expectations
+    assert updated_incident.start_time.replace(microsecond=0) == past_date.replace(microsecond=0, tzinfo=None)
+    assert updated_incident.last_seen_time.replace(microsecond=0) == future_date.replace(microsecond=0, tzinfo=None)

@@ -1,0 +1,25 @@
+id: retrieve-cloudwatch-logs
+name: Retrieve CloudWatch Logs
+description: Retrieve CloudWatch Logs
+triggers:
+  - type: manual
+
+steps:
+  - name: cw-logs
+    provider:
+      config: "{{ providers.cloudwatch }}"
+      type: cloudwatch
+      with:
+        log_group: "meow_logs"
+        query: "fields @message | sort @timestamp desc | limit 20"
+        hours: 12
+        remove_ptr_from_results: true  # We need only @message, no need for @ptr
+
+actions:
+  - name: raise-alert
+    if: keep.len( {{ steps.cw-logs.results }} ) > 0
+    provider:
+      type: keep
+      with:
+        alert:
+          name: "CW logs found!"

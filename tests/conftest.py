@@ -350,6 +350,7 @@ def mocked_context_manager():
         "foreach": {"value": None},
         "env": {},
     }
+    context_manager.tenant_id = SINGLE_TENANT_UUID
     return context_manager
 
 
@@ -538,10 +539,13 @@ def browser():
     # Force headless mode if running in CI environment
     is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
     headless = is_ci or os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true"
-    
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
-        context = browser.new_context()
+        context = browser.new_context(
+            viewport={"width": 1920, "height": 1080},
+        )
+        context.grant_permissions(["clipboard-read", "clipboard-write"])
         page = context.new_page()
         page.set_default_timeout(5000)
         yield page
@@ -717,7 +721,7 @@ def create_alert(db_session):
             event={
                 "name": random_name,
                 "fingerprint": fingerprint,
-                "lastReceived": timestamp.isoformat(),
+                "lastReceived": details.pop('lastReceived', timestamp.isoformat()),
                 "status": status.value,
                 **details,
             },

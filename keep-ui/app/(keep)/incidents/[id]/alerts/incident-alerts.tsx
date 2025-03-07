@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-table";
 import type { RowSelectionState } from "@tanstack/react-table";
 import {
+  Button,
   Card,
   Icon,
   Table,
@@ -23,11 +24,13 @@ import {
   usePollIncidentAlerts,
 } from "utils/hooks/useIncidents";
 import { AlertName } from "@/entities/alerts/ui";
-import IncidentAlertMenu from "./incident-alert-menu";
 import React, { useEffect, useMemo, useState } from "react";
 import type { IncidentDto } from "@/entities/incidents/model";
-import { getCommonPinningStylesAndClassNames, UISeverity } from "@/shared/ui";
-import { EmptyStateCard } from "@/components/ui";
+import {
+  EmptyStateCard,
+  getCommonPinningStylesAndClassNames,
+  UISeverity,
+} from "@/shared/ui";
 import { useRouter } from "next/navigation";
 import {
   TableIndeterminateCheckbox,
@@ -43,6 +46,7 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 import { ViewAlertModal } from "@/app/(keep)/alerts/ViewAlertModal";
 import { IncidentAlertActionTray } from "./incident-alert-action-tray";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { BellAlertIcon } from "@heroicons/react/24/outline";
 interface Props {
   incident: IncidentDto;
 }
@@ -281,13 +285,34 @@ export default function IncidentAlerts({ incident }: Props) {
   if (!isLoading && (alerts?.items ?? []).length === 0) {
     return (
       <EmptyStateCard
+        className="w-full"
         title="No alerts yet"
         description="Alerts will show up here as they are correlated into this incident."
-        buttonText="Associate alerts manually"
-        onClick={() => {
-          router.push(`/alerts/feed`);
-        }}
-      />
+        icon={BellAlertIcon}
+      >
+        <div className="flex gap-2">
+          <Button
+            color="orange"
+            variant="secondary"
+            size="md"
+            onClick={() => {
+              router.push(`/alerts/feed`);
+            }}
+          >
+            Add Alerts Manually
+          </Button>
+          <Button
+            color="orange"
+            variant="primary"
+            size="md"
+            onClick={() => {
+              router.push(`/alerts/feed?createIncidentsFromLastAlerts=50`);
+            }}
+          >
+            Try AI Correlation
+          </Button>
+        </div>
+      </EmptyStateCard>
     );
   }
 

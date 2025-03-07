@@ -3,6 +3,7 @@ WebhookProvider is a class that provides a way to notify a 3rd party service usi
 """
 
 import base64
+import copy
 import dataclasses
 import json
 import typing
@@ -26,7 +27,7 @@ class WebhookProviderAuthConfig:
         metadata={
             "required": True,
             "description": "Webhook URL",
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         }
     )
 
@@ -69,7 +70,7 @@ class WebhookProviderAuthConfig:
         },
     )
 
-    headers: typing.Optional[dict[str, str]] = dataclasses.field(
+    headers: typing.Optional[list[dict[str, str]]] = dataclasses.field(
         default=None,
         metadata={
             "description": "Headers",
@@ -177,10 +178,15 @@ class WebhookProvider(BaseProvider):
             headers = {}
         if isinstance(headers, str):
             headers = json.loads(headers)
+        if isinstance(headers, list):
+            headers = {header["key"]: header["value"] for header in headers}
         if body is None:
             body = {}
         if params is None:
             params = {}
+
+        extra_args = copy.deepcopy(kwargs)
+        extra_args.pop("enrich_alert", None)
 
         if http_basic_authentication_username and http_basic_authentication_password:
             credentials = f"{http_basic_authentication_username}:{http_basic_authentication_password}"
@@ -201,13 +207,13 @@ class WebhookProvider(BaseProvider):
             },
         )
         if method == "GET":
-            response = requests.get(url, headers=headers, params=params, **kwargs)
+            response = requests.get(url, headers=headers, params=params, **extra_args)
         elif method == "POST":
-            response = requests.post(url, headers=headers, json=body, **kwargs)
+            response = requests.post(url, headers=headers, json=body, **extra_args)
         elif method == "PUT":
-            response = requests.put(url, headers=headers, json=body, **kwargs)
+            response = requests.put(url, headers=headers, json=body, **extra_args)
         elif method == "DELETE":
-            response = requests.delete(url, headers=headers, json=body, **kwargs)
+            response = requests.delete(url, headers=headers, json=body, **extra_args)
 
         self.logger.debug(
             f"Trigger a webhook with {method} on {url}",

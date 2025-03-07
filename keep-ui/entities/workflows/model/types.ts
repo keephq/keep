@@ -93,7 +93,15 @@ export const V2ActionSchema = z.object({
         enrich_alert: EnrichAlertSchema.optional(),
         enrich_incident: EnrichIncidentSchema.optional(),
       })
-      .catchall(z.union([z.string(), z.number(), z.boolean(), z.object({})]))
+      .catchall(
+        z.union([
+          z.string(),
+          z.number(),
+          z.boolean(),
+          z.object({}),
+          z.array(z.any()),
+        ])
+      )
       .optional(),
   }),
 });
@@ -115,7 +123,15 @@ export const V2StepStepSchema = z.object({
         enrich_alert: EnrichAlertSchema.optional(),
         enrich_incident: EnrichIncidentSchema.optional(),
       })
-      .catchall(z.union([z.string(), z.number(), z.boolean(), z.object({})]))
+      .catchall(
+        z.union([
+          z.string(),
+          z.number(),
+          z.boolean(),
+          z.object({}),
+          z.array(z.any()),
+        ])
+      )
       .optional(),
   }),
 });
@@ -175,6 +191,7 @@ export const V2StepForeachSchema = z.object({
   type: z.literal("foreach"),
   properties: z.object({
     value: z.string(),
+    if: z.string().optional(),
   }),
   // TODO: make a generic sequence type
   sequence: z.array(z.union([V2ActionOrStepSchema, V2StepConditionSchema])),

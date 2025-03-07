@@ -1,11 +1,6 @@
-import {
-  CopilotChat,
-  ResponseButtonProps,
-  // useCopilotChatSuggestions,
-} from "@copilotkit/react-ui";
+import { CopilotChat, ResponseButtonProps } from "@copilotkit/react-ui";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
-import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
 import {
   useCopilotAction,
@@ -24,12 +19,15 @@ import { Button, Card } from "@tremor/react";
 import { useIncidentActions } from "@/entities/incidents/model";
 import { TraceData, SimpleTraceViewer } from "@/shared/ui/TraceViewer";
 import { useProviders } from "@/utils/hooks/useProviders";
-import { useEffect, useMemo, useState } from "react";
-import "@copilotkit/react-ui/styles.css";
-import "./incident-chat.css";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { StopIcon, TrashIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
+import { capture } from "@/shared/lib/capture";
+import "@copilotkit/react-ui/styles.css";
+import "./incident-chat.css";
+import { EmptyStateCard } from "@/shared/ui";
+import { ChatBubbleOvalLeftIcon } from "@heroicons/react/24/outline";
 
 const INSTRUCTIONS = `You are an expert incident resolver who's capable of resolving incidents in a variety of ways. You can get traces from providers, search for traces, create incidents, update incident name and summary, and more. You can also ask the user for information if you need it.
 You should always answer short and concise answers, always trying to suggest the next best action to investigate or resolve the incident.
@@ -563,17 +561,22 @@ export function IncidentChat({
     await rcaTask.run(context, messageContent);
   };
 
+  const handleSubmitMessage = useCallback((_message: string) => {
+    capture("incident_chat_message_submitted");
+  }, []);
+
   if (!alerts?.items || alerts.items.length === 0)
     return (
       <EmptyStateCard
+        noCard
+        icon={ChatBubbleOvalLeftIcon}
         title="Chat not available"
         description="Incident assitant will become available as alerts are assigned to this incident."
-        onClick={() => router.push("/alerts/feed")}
       />
     );
-
   return (
-    <Card className="h-full">
+    // using 'incident-chat' class to apply styles only to that chat component
+    <Card className="h-full incident-chat">
       <div className="chat-container">
         <div className="chat-messages">
           <CopilotChat
@@ -586,6 +589,7 @@ export function IncidentChat({
               placeholder: "For example: Find the root cause of this incident",
             }}
             ResponseButton={CustomResponseButton}
+            onSubmitMessage={handleSubmitMessage}
           />
         </div>
       </div>

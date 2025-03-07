@@ -27,7 +27,7 @@ import re
 from datetime import datetime
 from tests.e2e_tests.utils import trigger_alert
 
-from playwright.sync_api import expect
+from playwright.sync_api import expect, Page
 
 from tests.e2e_tests.utils import install_webhook_provider, delete_provider, assert_connected_provider_count, assert_scope_text_count
 
@@ -76,11 +76,11 @@ def save_failure_artifacts(page, log_entries):
         f.write(page.content())
 
     # Save console logs
-    with open(current_test_name + "_console.log", "w", encoding="utf-8") as f:
+    with open(current_test_name + "_console.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(log_entries))
 
 
-def test_sanity(browser):  # browser is actually a page object
+def test_sanity(browser: Page):  # browser is actually a page object
     log_entries = []
     setup_console_listener(browser, log_entries)
 
@@ -93,7 +93,7 @@ def test_sanity(browser):  # browser is actually a page object
         raise
 
 
-def test_insert_new_alert(browser):  # browser is actually a page object
+def test_insert_new_alert(browser: Page):  # browser is actually a page object
     """
     Test to insert a new alert
     """
@@ -107,20 +107,20 @@ def test_insert_new_alert(browser):  # browser is actually a page object
         browser.wait_for_url("http://localhost:3000/providers")
 
         feed_badge = browser.get_by_test_id("menu-alerts-feed-badge")
-        feed_count_before = int(feed_badge.text_content())
+        feed_count_before = int(feed_badge.text_content() or "0")
 
         browser.get_by_role("button", name="KE Keep").click()
         browser.get_by_role("menuitem", name="Settings").click()
         browser.get_by_role("tab", name="Webhook").click()
         browser.get_by_role("button", name="Click to create an example").click()
         # just wait a bit
-        browser.wait_for_timeout(10000)
+        browser.wait_for_timeout(2000)
         # refresh the page
         browser.reload()
         # wait for badge counter to update
         browser.wait_for_timeout(500)
         feed_badge = browser.get_by_test_id("menu-alerts-feed-badge")
-        feed_count = int(feed_badge.text_content())
+        feed_count = int(feed_badge.text_content() or "0")
         assert feed_count > feed_count_before
 
         feed_link = browser.get_by_test_id("menu-alerts-feed-link")
@@ -131,7 +131,7 @@ def test_insert_new_alert(browser):  # browser is actually a page object
         raise
 
 
-def test_providers_page_is_accessible(browser):
+def test_providers_page_is_accessible(browser: Page):
     """
     Test to check if the providers page is accessible
 
@@ -167,7 +167,7 @@ def test_providers_page_is_accessible(browser):
         raise
 
 
-def test_provider_validation(browser):
+def test_provider_validation(browser: Page):
     """
     Test field validation for provider fields.
     """
@@ -286,7 +286,7 @@ def test_provider_validation(browser):
         raise
 
 
-def test_add_workflow(browser):
+def test_add_workflow(browser: Page):
     """
     Test to add a workflow node
     """
@@ -297,7 +297,7 @@ def test_add_workflow(browser):
     try:
         page.goto("http://localhost:3000/signin")
         page.get_by_role("link", name="Workflows").click()
-        page.get_by_role("button", name="Create a workflow").click()
+        page.get_by_role("button", name="Create Workflow").click()
         page.get_by_placeholder("Set the name").click()
         page.get_by_placeholder("Set the name").press("ControlOrMeta+a")
         page.get_by_placeholder("Set the name").fill("Example Console Workflow")
@@ -328,7 +328,44 @@ def test_add_workflow(browser):
         raise
 
 
-def test_add_upload_workflow_with_alert_trigger(browser):
+def test_paste_workflow_yaml_quotes_preserved(browser: Page):
+    # browser is actually a page object
+    page = browser
+    log_entries = []
+    setup_console_listener(page, log_entries)
+
+    def get_workflow_yaml(file_name):
+        file_path = os.path.join(os.path.dirname(__file__), file_name)
+        with open(file_path, "r") as file:
+            return file.read()
+        
+    workflow_yaml = get_workflow_yaml("workflow-quotes-sample.yaml")
+
+    try:
+        page.goto("http://localhost:3000/workflows")
+        page.get_by_role("button", name="Upload Workflows").click()
+        page.get_by_test_id("text-area").click()
+        page.get_by_test_id("text-area").fill(workflow_yaml)
+        page.get_by_role("button", name="Load").click()
+        page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        page.get_by_role("tab", name="YAML Definition").click()
+        yaml_editor_container = page.get_by_test_id("wf-detail-yaml-editor-container")
+        # Copy the YAML content to the clipboard
+        yaml_editor_container.get_by_test_id("copy-yaml-button").click()
+        # Get the clipboard content
+        clipboard_text = page.evaluate("""async () => {
+            return await navigator.clipboard.readText();
+        }""")
+        # Remove all whitespace characters from the YAML content for comparison
+        normalized_original = re.sub(r'\s', '', workflow_yaml)
+        normalized_clipboard = re.sub(r'\s', '', clipboard_text)
+        assert normalized_clipboard == normalized_original
+    except Exception:
+        save_failure_artifacts(page, log_entries)
+        raise
+
+
+def test_add_upload_workflow_with_alert_trigger(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
@@ -336,20 +373,19 @@ def test_add_upload_workflow_with_alert_trigger(browser):
         browser.get_by_role("link", name="Workflows").hover()
         browser.get_by_role("link", name="Workflows").click()
         browser.get_by_role("button", name="Upload Workflows").click()
-        browser.wait_for_timeout(5000)
         file_input = browser.locator("#workflowFile")
         file_input.set_input_files(
             "./tests/e2e_tests/workflow-sample.yaml"
         )
         browser.get_by_role("button", name="Upload")
-        browser.wait_for_timeout(10000)
+        browser.wait_for_timeout(500)
         trigger_alert("prometheus")
-        browser.wait_for_timeout(3000)
-        browser.reload()
-        browser.wait_for_timeout(3000)
+        browser.wait_for_timeout(2000)
+        # new behavior: is redirecting to the detail page of the workflow, so we need to go back to the list page
+        browser.goto("http://localhost:3000/workflows")
         workflow_card = browser.locator(
-            "[data-sentry-component='WorkflowTile']",
-            has_text="9b3664f4-b248-4eda-8cc7-e69bc5a8bd92",
+            "[data-testid^='workflow-tile-']", 
+            has_text="9b3664f4-b248-4eda-8cc7-e69bc5a8bd92"
         )
         expect(workflow_card).not_to_contain_text("No data available")
     except Exception:
@@ -357,23 +393,20 @@ def test_add_upload_workflow_with_alert_trigger(browser):
         raise
 
 
-def test_start_with_keep_db(browser):
+def test_start_with_keep_db(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
         browser.goto("http://localhost:3001/signin")
-        browser.wait_for_timeout(3000)
         browser.get_by_placeholder("Enter your username").fill("keep")
         browser.get_by_placeholder("Enter your password").fill("keep")
-        browser.wait_for_timeout(3000)
         browser.get_by_role("button", name="Sign in").click()
-        browser.wait_for_timeout(5000)
-        expect(browser).to_have_url("http://localhost:3001/incidents")
+        browser.wait_for_url("http://localhost:3001/incidents")
     except Exception:
         save_failure_artifacts(browser, log_entries)
         raise
 
-def test_provider_deletion(browser):
+def test_provider_deletion(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
@@ -383,16 +416,15 @@ def test_provider_deletion(browser):
         browser.goto("http://localhost:3000/signin")
         browser.get_by_role("link", name="Providers").hover()
         browser.get_by_role("link", name="Providers").click()
-        browser.wait_for_timeout(10000)
         install_webhook_provider(browser=browser, provider_name=provider_name, webhook_url="http://keep-backend:8080", webhook_action="GET")
-        browser.wait_for_timeout(2000)
+        browser.wait_for_timeout(500)
         assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=1)
         delete_provider(browser=browser, provider_type="Webhook", provider_name=provider_name)
         assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=0)
 
         # Checking deletion after Creation + Updation
         install_webhook_provider(browser=browser, provider_name=provider_name, webhook_url="http://keep-backend:8080", webhook_action="GET")
-        browser.wait_for_timeout(2000)
+        browser.wait_for_timeout(500)
         assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=1)
         # Updating provider
         browser.locator(
@@ -402,10 +434,10 @@ def test_provider_deletion(browser):
         browser.get_by_placeholder("Enter url").fill("https://this_is_UwU")
 
         browser.get_by_role("button", name="Update", exact=True).click()
-        browser.wait_for_timeout(3000)
+        browser.wait_for_timeout(500)
         # Refreshing the scope
         browser.get_by_role("button", name="Refresh", exact=True).click()
-        browser.wait_for_timeout(3000)
+        browser.wait_for_timeout(500)
         assert_scope_text_count(browser=browser, contains_text="HTTPSConnectionPool", count=1)
         browser.mouse.click(10, 10)
         delete_provider(browser=browser, provider_type="Webhook", provider_name=provider_name)

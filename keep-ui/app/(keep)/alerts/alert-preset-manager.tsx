@@ -9,6 +9,9 @@ import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresets } from "@/entities/presets/model/usePresets";
 import { CopilotKit } from "@copilotkit/react-core";
+import { Button } from "@tremor/react";
+import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
+import { GrTest } from "react-icons/gr";
 
 interface Props {
   presetName: string;
@@ -30,18 +33,30 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
   }, [dynamicPresets, presetName]);
   const [presetCEL, setPresetCEL] = useState("");
 
-  // modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // preset modal
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+
+  // add alert modal
+  const [isAddAlertModalOpen, setIsAddAlertModalOpen] = useState(false);
+
   const router = useRouter();
 
   const onCreateOrUpdatePreset = (preset: Preset) => {
-    setIsModalOpen(false);
+    setIsPresetModalOpen(false);
     const encodedPresetName = encodeURIComponent(preset.name.toLowerCase());
     router.push(`/alerts/${encodedPresetName}`);
   };
 
-  const handleModalClose = () => {
-    setIsModalOpen(false);
+  const handlePresetModalClose = () => {
+    setIsPresetModalOpen(false);
+  };
+
+  const handleAddAlertModalOpen = () => {
+    setIsAddAlertModalOpen(true);
+  };
+
+  const handleAddAlertModalClose = () => {
+    setIsAddAlertModalOpen(false);
   };
 
   const isDynamic =
@@ -83,19 +98,29 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
 
   return (
     <>
-      <div className="flex w-full items-start relative z-10">
+      <div className="flex w-full items-start relative z-10 justify-between">
         <AlertsRulesBuilder
           table={table}
           defaultQuery=""
           selectedPreset={selectedPreset}
-          setIsModalOpen={setIsModalOpen}
+          setIsModalOpen={setIsPresetModalOpen}
           setPresetCEL={setPresetCEL}
           onCelChanges={onCelChanges}
         />
+
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={GrTest}
+          onClick={handleAddAlertModalOpen}
+          className="ml-2"
+        ></Button>
       </div>
+
+      {/* Preset Modal */}
       <Modal
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
+        isOpen={isPresetModalOpen}
+        onClose={handlePresetModalClose}
         className="w-[40%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
       >
         <CopilotKit runtimeUrl="/api/copilotkit">
@@ -108,10 +133,17 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
             //groupableColumns={getGroupableColumns()}
             groupableColumns={[]}
             onCreateOrUpdate={onCreateOrUpdatePreset}
-            onCancel={handleModalClose}
+            onCancel={handlePresetModalClose}
           />
         </CopilotKit>
       </Modal>
+
+      {/* Add Alert Modal */}
+      <PushAlertToServerModal
+        isOpen={isAddAlertModalOpen}
+        handleClose={handleAddAlertModalClose}
+        presetName={presetName}
+      />
     </>
   );
 }

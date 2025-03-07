@@ -15,14 +15,14 @@ const Builder = dynamic(
 );
 
 interface Props {
-  fileContents: string | null;
+  loadedYamlFileContents: string | null;
   workflowRaw?: string;
   workflowId?: string;
   standalone?: boolean;
 }
 
 export function WorkflowBuilderCard({
-  fileContents,
+  loadedYamlFileContents,
   workflowRaw,
   workflowId,
   standalone = false,
@@ -34,9 +34,9 @@ export function WorkflowBuilderCard({
   } = useProviders();
 
   const cardClassName = clsx(
-    "mt-2 p-0 overflow-hidden",
+    "p-0 overflow-hidden",
     standalone
-      ? "h-[calc(100vh-150px)]"
+      ? "h-[calc(100vh-100px)]"
       : "h-full rounded-none border-t border-gray-200 shadow-none ring-0"
   );
 
@@ -62,7 +62,7 @@ export function WorkflowBuilderCard({
     );
   }
 
-  if (fileContents == "" && !workflowRaw) {
+  if (loadedYamlFileContents == "" && !workflowRaw) {
     return (
       <Card className={cardClassName}>
         <EmptyBuilderState />
@@ -78,7 +78,7 @@ export function WorkflowBuilderCard({
         <Builder
           providers={providers}
           installedProviders={installedProviders}
-          loadedAlertFile={fileContents}
+          loadedYamlFileContents={loadedYamlFileContents}
           workflowRaw={workflowRaw}
           workflowId={workflowId}
         />

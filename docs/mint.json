@@ -127,7 +127,7 @@
       "group": "Providers",
       "pages": [
         "providers/overview",
-        "providers/adding-a-new-provider",
+        "providers/linked-providers",
         "providers/provider-methods",
         {
           "group": "Supported Providers",
@@ -236,6 +236,7 @@
             "providers/documentation/trello-provider",
             "providers/documentation/twilio-provider",
             "providers/documentation/uptimekuma-provider",
+            "providers/documentation/victorialogs-provider",
             "providers/documentation/victoriametrics-provider",
             "providers/documentation/vllm-provider",
             "providers/documentation/wazuh-provider",
@@ -246,7 +247,8 @@
             "providers/documentation/zenduty-provider",
             "providers/documentation/zoom-provider"
           ]
-        }
+        },
+        "providers/adding-a-new-provider"
       ]
     },
     {

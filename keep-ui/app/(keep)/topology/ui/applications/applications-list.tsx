@@ -13,7 +13,8 @@ import {
   useTopologySearchContext,
 } from "../../TopologySearchContext";
 import { ApplicationModal } from "@/app/(keep)/topology/ui/applications/application-modal";
-import { showErrorToast } from "@/shared/ui";
+import { EmptyStateCard, showErrorToast } from "@/shared/ui";
+import { PlusIcon, RectangleGroupIcon } from "@heroicons/react/20/solid";
 
 type ModalState = {
   isOpen: boolean;
@@ -88,14 +89,11 @@ export function ApplicationsList({
   function renderEmptyState() {
     return (
       <>
-        <Card className="flex flex-col gap-4 items-start">
-          <div>
-            <Title>No applications yet</Title>
-            <Subtitle>
-              Group services that work together into applications for easier
-              management and monitoring
-            </Subtitle>
-          </div>
+        <EmptyStateCard
+          icon={RectangleGroupIcon}
+          title="No applications yet"
+          description="Group services that work together into applications for easier management and monitoring"
+        >
           <Button
             variant="primary"
             color="orange"
@@ -109,7 +107,7 @@ export function ApplicationsList({
           >
             Create Application
           </Button>
-        </Card>
+        </EmptyStateCard>
       </>
     );
   }
@@ -135,6 +133,7 @@ export function ApplicationsList({
                 onClick={() => {
                   setModalState({ ...initialModalState, isOpen: true });
                 }}
+                icon={PlusIcon}
               >
                 Add Application
               </Button>

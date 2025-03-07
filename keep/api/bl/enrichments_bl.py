@@ -424,6 +424,8 @@ class EnrichmentsBl:
                             if not is_matcher:
                                 # If the key has . (dot) in it, it'll be added as is while it needs to be nested.
                                 # @tb: fix when somebody will be complaining about this.
+                                if isinstance(value, str):
+                                    value = value.strip()
                                 enrichments[key.strip()] = value
                     break
 
@@ -432,6 +434,8 @@ class EnrichmentsBl:
             for key, value in enrichments.items():
                 # It's not relevant to enrich if the value if empty
                 if value is not None:
+                    if isinstance(value, str):
+                        value = value.strip()
                     setattr(alert, key.strip(), value)
 
             # Save the enrichments to the database

@@ -1,14 +1,20 @@
 "use client";
-import { Callout, Card, Title, Subtitle } from "@tremor/react";
+import { Card } from "@tremor/react";
 import CreateOrUpdateExtractionRule from "./create-or-update-extraction-rule";
 import ExtractionsTable from "./extractions-table";
 import { useExtractions } from "utils/hooks/useExtractionRules";
-import Loading from "@/app/(keep)/loading";
-import { MdWarning } from "react-icons/md";
+import {
+  KeepLoader,
+  PageTitle,
+  PageSubtitle,
+  EmptyStateCard,
+} from "@/shared/ui";
 import { ExtractionRule } from "./model";
 import React, { useEffect, useState } from "react";
 import { Button } from "@tremor/react";
 import SidePanel from "@/components/SidePanel";
+import { PlusIcon } from "@heroicons/react/20/solid";
+import { ExportIcon } from "@/components/icons";
 
 export default function Extraction() {
   const { data: extractions, isLoading } = useExtractions();
@@ -33,27 +39,28 @@ export default function Extraction() {
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
       <div className="flex flex-row items-center justify-between">
-        <div className="p-4 md:p-4">
-          <Title>Extractions</Title>
-          <Subtitle>
+        <div>
+          <PageTitle>Extractions</PageTitle>
+          <PageSubtitle>
             Easily extract more attributes from your alerts using Regex
-          </Subtitle>
+          </PageSubtitle>
         </div>
         <div>
           <Button
             color="orange"
-            size="xs"
+            size="md"
             type="submit"
             onClick={() => setIsSidePanelOpen(true)}
+            icon={PlusIcon}
           >
-            + Create Extraction
+            Create Extraction
           </Button>
         </div>
       </div>
 
-      <Card className="mt-5 p-4 md:p-10 mx-auto">
+      <Card className="p-0 overflow-hidden">
         <SidePanel
           isOpen={isSidePanelOpen}
           onClose={() => handleSidePanelExit(null)}
@@ -66,25 +73,28 @@ export default function Extraction() {
         <div>
           <div>
             {isLoading ? (
-              <Loading />
+              <KeepLoader />
             ) : extractions && extractions.length > 0 ? (
               <ExtractionsTable
                 extractions={extractions}
                 editCallback={handleSidePanelExit}
               />
             ) : (
-              <Callout
-                color="orange"
-                title="Extraction rules does not exist"
-                icon={MdWarning}
-              >
-                No extraction rules found. Configure new extraction rule using
-                the + Create Extraction
-              </Callout>
+              <EmptyStateCard icon={ExportIcon} title="No extraction rules yet">
+                <Button
+                  color="orange"
+                  size="md"
+                  type="submit"
+                  onClick={() => setIsSidePanelOpen(true)}
+                  icon={PlusIcon}
+                >
+                  Create Extraction Rule
+                </Button>
+              </EmptyStateCard>
             )}
           </div>
         </div>
       </Card>
-    </>
+    </div>
   );
 }

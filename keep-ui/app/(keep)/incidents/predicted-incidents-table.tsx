@@ -115,6 +115,7 @@ export default function PredictedIncidentsTable({
   ] as DisplayColumnDef<IncidentDto>[];
 
   const table = useReactTable({
+    getRowId: (row) => row.id,
     columns,
     data: incidents.items,
     state: { expanded },

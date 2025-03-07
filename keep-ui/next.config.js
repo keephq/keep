@@ -1,5 +1,7 @@
 const { withSentryConfig } = require("@sentry/nextjs");
 
+const isWithTurbo = process.env.NEXT_TURBO === "true";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
@@ -78,13 +80,23 @@ const nextConfig = {
       },
     ],
   },
-  compiler: {
-    removeConsole: process.env.NODE_ENV === "production",
-  },
+  // compiler is not supported in turbo mode
+  compiler: isWithTurbo
+    ? undefined
+    : {
+        removeConsole: process.env.NODE_ENV === "production",
+      },
   output: "standalone",
   productionBrowserSourceMaps:
     process.env.ENV === "development" || process.env.SENTRY_DISABLED !== "true",
   async redirects() {
+    const workflowRawYamlRedirects = [
+      {
+        source: "/workflows/:path*.yaml",
+        destination: "/raw/workflows/:path*.yaml",
+        permanent: false,
+      },
+    ];
     return process.env.DISABLE_REDIRECTS === "true"
       ? []
       : [
@@ -93,6 +105,7 @@ const nextConfig = {
             destination: "/incidents",
             permanent: process.env.ENV === "production",
           },
+          ...workflowRawYamlRedirects,
         ];
   },
   async headers() {

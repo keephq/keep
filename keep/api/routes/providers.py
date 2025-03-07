@@ -4,7 +4,7 @@ import logging
 import random
 import time
 import uuid
-from typing import Callable, Optional, Dict, Any
+from typing import Any, Callable, Dict, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
@@ -27,7 +27,10 @@ from keep.providers.base.provider_exceptions import (
     GetAlertException,
     ProviderMethodException,
 )
-from keep.providers.providers_factory import ProviderConfigurationException, ProvidersFactory
+from keep.providers.providers_factory import (
+    ProviderConfigurationException,
+    ProvidersFactory,
+)
 from keep.providers.providers_service import ProvidersService
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -121,6 +124,8 @@ def get_provider_logs(
     try:
         logs = ProvidersService.get_provider_logs(tenant_id, provider_id)
         return JSONResponse(content=jsonable_encoder(logs), status_code=200)
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logger.error(
             f"Error getting provider logs: {str(e)}",
@@ -211,6 +216,8 @@ def get_logs(
             context_manager, provider_id, provider_type, provider_config
         )
         return provider.get_logs(limit=limit)
+    except HTTPException as e:
+        raise e
     except ModuleNotFoundError:
         raise HTTPException(404, detail=f"Provider {provider_type} not found")
     except Exception:
@@ -503,10 +510,26 @@ async def install_provider(
             pulling_enabled=pulling_enabled,
         )
         return JSONResponse(status_code=200, content=result)
-    except HTTPException:
+    except HTTPException as e:
+        if e.status_code == 412:
+            logger.error(
+                "Failed to validate mandatory provider scopes, returning 412",
+                extra={
+                    "provider_id": provider_id,
+                    "provider_type": provider_type,
+                    "tenant_id": tenant_id,
+                },
+            )
         raise
     except Exception as e:
-        logger.exception("Failed to install provider")
+        logger.exception(
+            "Failed to install provider",
+            extra={
+                "provider_id": provider_id,
+                "provider_type": provider_type,
+                "tenant_id": tenant_id,
+            },
+        )
         return JSONResponse(status_code=400, content={"message": str(e)})
 
 
@@ -597,6 +620,7 @@ def _get_default_provider_config(provider_info: dict) -> tuple[str, str, dict]:
     }
     return provider_id, provider_type, provider_config
 
+
 @router.post(
     "/{provider_id}/invoke/{method}",
     description="Invoke provider special method",
@@ -616,11 +640,12 @@ def invoke_provider_method(
         "Invoking provider method", extra={"provider_id": provider_id, "method": method}
     )
     from sqlalchemy.exc import NoResultFound
+
     provider = None
-    
+
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    provider_info = body.pop("providerInfo")
+    provider_info = body.pop("providerInfo", None)
     method_params = body
 
     try:
@@ -638,7 +663,9 @@ def invoke_provider_method(
         if not provider_id.startswith("default-"):
             raise HTTPException(404, detail="Provider not found") from e
         else:
-            provider_id, provider_type, provider_config = _get_default_provider_config(provider_info)
+            provider_id, provider_type, provider_config = _get_default_provider_config(
+                provider_info
+            )
 
     try:
         provider_instance = ProvidersFactory.get_provider(
@@ -654,13 +681,21 @@ def invoke_provider_method(
         except ProviderMethodException as e:
             logger.exception(
                 "Failed to invoke method",
-                extra={"provider_id": provider_id, "provider_type": provider_type, "method": method},
+                extra={
+                    "provider_id": provider_id,
+                    "provider_type": provider_type,
+                    "method": method,
+                },
             )
             raise HTTPException(status_code=e.status_code, detail=e.message)
 
         logger.info(
             "Successfully invoked provider method",
-            extra={"provider_id": provider_id, "provider_type": provider_type, "method": method},
+            extra={
+                "provider_id": provider_id,
+                "provider_type": provider_type,
+                "method": method,
+            },
         )
         return response
     except ProviderConfigurationException as e:
@@ -670,10 +705,16 @@ def invoke_provider_method(
         )
         raise HTTPException(status_code=400, detail=str(e)) from e
     except (ValueError, TypeError) as e:
-        logger.exception("Invalid request", extra={"provider_id": provider_id, "provider_type": provider_type})
+        logger.exception(
+            "Invalid request",
+            extra={"provider_id": provider_id, "provider_type": provider_type},
+        )
         raise HTTPException(status_code=400, detail=f"Invalid request: {str(e)}") from e
     except Exception as e:
-        logger.exception("Unexpected error while invoking provider method", extra={"provider_id": provider_id, "provider_type": provider_type})
+        logger.exception(
+            "Unexpected error while invoking provider method",
+            extra={"provider_id": provider_id, "provider_type": provider_type},
+        )
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
@@ -741,6 +782,7 @@ def install_provider_webhook(
 @router.get("/{provider_type}/webhook")
 def get_webhook_settings(
     provider_type: str,
+    provider_id: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:providers"])
     ),
@@ -750,6 +792,10 @@ def get_webhook_settings(
     logger.info("Getting webhook settings", extra={"provider_type": provider_type})
     api_url = config("KEEP_API_URL")
     keep_webhook_api_url = f"{api_url}/alerts/event/{provider_type}"
+
+    if provider_id:
+        keep_webhook_api_url = f"{keep_webhook_api_url}?provider_id={provider_id}"
+
     provider_class = ProvidersFactory.get_provider_class(provider_type)
     webhook_api_key = get_or_create_api_key(
         session=session,
@@ -786,6 +832,7 @@ def get_webhook_settings(
         ),
         webhookMarkdown=webhookMarkdown,
     )
+
 
 @router.post("/healthcheck")
 async def healthcheck_provider(

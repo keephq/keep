@@ -7,6 +7,7 @@ import logging
 import os
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
+from copy import deepcopy
 from typing import List, Optional
 
 import celpy
@@ -14,6 +15,7 @@ from arq import ArqRedis
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pusher import Pusher
+from sqlalchemy_utils import UUIDType
 from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
@@ -25,6 +27,7 @@ from keep.api.core.alerts import (
     get_alert_potential_facet_fields,
     query_last_alerts,
 )
+from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alerts_with_incidents
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
@@ -32,6 +35,7 @@ from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_metrics_by_provider,
     get_enrichment,
+    get_last_alert_by_fingerprint,
     get_last_alerts,
     get_session,
     is_all_alerts_resolved,
@@ -43,6 +47,7 @@ from keep.api.models.alert import (
     AlertDto,
     AlertStatus,
     DeleteRequestBody,
+    EnrichAlertNoteRequestBody,
     EnrichAlertRequestBody,
     IncidentStatus,
     UnEnrichAlertRequestBody,
@@ -51,6 +56,7 @@ from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import ActionType
 from keep.api.models.db.rule import ResolveOn
 from keep.api.models.facet import FacetOptionsQueryDto
+from keep.api.models.query import QueryDto
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.routes.preset import pull_data_from_providers
@@ -95,9 +101,18 @@ def fetch_alert_facet_options(
         },
     )
 
-    facet_options = get_alert_facets_data(
-        tenant_id=tenant_id, facet_options_query=facet_options_query
-    )
+    try:
+        facet_options = get_alert_facets_data(
+            tenant_id=tenant_id, facet_options_query=facet_options_query
+        )
+    except CelToSqlException as e:
+        logger.exception(
+            f'Error parsing CEL expression "{facet_options_query.cel}". {str(e)}'
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error parsing CEL expression: {facet_options_query.cel}",
+        ) from e
 
     logger.info(
         "Fetched alert facets from DB",
@@ -168,21 +183,17 @@ def fetch_alert_facet_fields(
     return fields
 
 
-@router.get(
+@router.post(
     "/query",
     description="Get last alerts occurrence",
 )
 def query_alerts(
     request: Request,
+    query: QueryDto,
     bg_tasks: BackgroundTasks,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
-    cel=Query(None),
-    limit: int = Query(1000),
-    offset: int = Query(0),
-    sort_by=Query(None),
-    sort_dir=Query(None),
 ):
     # Gathering alerts may take a while and we don't care if it will finish before we return the response.
     # In the worst case, gathered alerts will be pulled in the next request.
@@ -200,15 +211,26 @@ def query_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts, total_count = query_last_alerts(
-        tenant_id=tenant_id,
-        limit=limit,
-        offset=offset,
-        cel=cel,
-        sort_by=sort_by,
-        sort_dir=sort_dir,
+
+    try:
+        db_alerts, total_count = query_last_alerts(
+            tenant_id=tenant_id,
+            limit=query.limit,
+            offset=query.offset,
+            cel=query.cel,
+            sort_by=query.sort_by,
+            sort_dir=query.sort_dir,
+        )
+    except CelToSqlException as e:
+        logger.exception(f'Error parsing CEL expression "{query.cel}". {str(e)}')
+        raise HTTPException(
+            status_code=400, detail=f"Error parsing CEL expression: {query.cel}"
+        ) from e
+
+    db_alerts = enrich_alerts_with_incidents(tenant_id, db_alerts)
+    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
+        db_alerts, with_incidents=True
     )
-    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
         "Fetched alerts from DB",
         extra={
@@ -217,8 +239,8 @@ def query_alerts(
     )
 
     return {
-        "limit": limit,
-        "offset": offset,
+        "limit": query.limit,
+        "offset": query.offset,
         "count": total_count,
         "results": enriched_alerts_dto,
     }
@@ -268,9 +290,14 @@ def get_alert_history(
         },
     )
     db_alerts = get_alerts_by_fingerprint(
-        tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint, limit=1000
+        tenant_id=authenticated_entity.tenant_id,
+        fingerprint=fingerprint,
+        limit=1000,
+        with_alert_instance_enrichment=True,
     )
-    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
+    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
+        db_alerts, with_alert_instance_enrichment=True
+    )
 
     logger.info(
         "Fetched alert history",
@@ -711,6 +738,25 @@ def get_alert(
         raise HTTPException(status_code=404, detail="Alert not found")
 
 
+@router.post("/enrich/note", description="Enrich an alert note")
+def enrich_alert_note(
+    enrich_data: EnrichAlertNoteRequestBody,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])  # also NOC
+    ),
+) -> dict[str, str]:
+    logger.info("Enriching alert note", extra={"fingerprint": enrich_data.fingerprint})
+    enriched_data = EnrichAlertRequestBody(
+        enrichments={"note": enrich_data.note},
+        fingerprint=enrich_data.fingerprint,
+    )
+    return _enrich_alert(
+        enriched_data,
+        authenticated_entity=authenticated_entity,
+        dispose_on_new_alert=True,
+    )
+
+
 @router.post(
     "/enrich",
     description="Enrich an alert",
@@ -803,14 +849,36 @@ def _enrich_alert(
         else:
             action_type = ActionType.GENERIC_ENRICH
             action_description = f"Alert enriched by {authenticated_entity.email} - {enrich_data.enrichments}"
+
+        enrichments = deepcopy(enrich_data.enrichments)
         enrichement_bl.enrich_entity(
             fingerprint=enrich_data.fingerprint,
-            enrichments=enrich_data.enrichments,
+            enrichments=enrichments,
             action_type=action_type,
             action_callee=authenticated_entity.email,
             action_description=action_description,
             dispose_on_new_alert=dispose_on_new_alert,
         )
+        last_alert = get_last_alert_by_fingerprint(
+            authenticated_entity.tenant_id, enrich_data.fingerprint, session=session
+        )
+        if dispose_on_new_alert:
+            # Create instance-wide enrichment for history
+
+            # For better database-native UUID support
+            alert_id = UUIDType(binary=False).process_bind_param(
+                last_alert.alert_id, session.bind.dialect
+            )
+
+            enrichement_bl.enrich_entity(
+                fingerprint=alert_id,
+                enrichments=enrich_data.enrichments,
+                action_type=action_type,
+                action_callee=authenticated_entity.email,
+                action_description=action_description,
+                audit_enabled=False,
+            )
+
         # get the alert with the new enrichment
         alert = get_alerts_by_fingerprint(
             authenticated_entity.tenant_id, enrich_data.fingerprint, limit=1

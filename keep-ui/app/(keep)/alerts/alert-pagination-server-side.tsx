@@ -11,6 +11,13 @@ import { SingleValueProps, components, GroupBase } from "react-select";
 import { AlertDto } from "@/entities/alerts/model";
 import { Table } from "@tanstack/react-table";
 import { Select } from "@/shared/ui";
+import { useEffect } from "react";
+import { useLocalStorage } from "utils/hooks/useLocalStorage";
+import {
+  RowStyle,
+  useAlertRowStyle,
+} from "@/entities/alerts/model/useAlertRowStyle";
+import { useMounted } from "@/shared/lib/hooks/useMounted";
 
 interface Props {
   table: Table<AlertDto>;
@@ -42,11 +49,72 @@ export default function AlertPaginationServerSide({
 }: Props) {
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
+  const [rowStyle] = useAlertRowStyle();
+
+  // Track if the user has manually changed the page size
+  const [userPageSizePreference, setUserPageSizePreference] =
+    useLocalStorage<boolean>("alert-table-user-page-size-set", false);
+
+  // Keep track of previous row style to detect changes
+  const [previousRowStyle, setPreviousRowStyle] =
+    useLocalStorage<RowStyle | null>("alert-table-previous-row-style", null);
+
+  // Listen for changes in rowStyle and adjust the page size accordingly
+  useEffect(() => {
+    // Skip adjustment if user has set their own preference
+    if (userPageSizePreference) return;
+
+    const currentPageSize = table.getState().pagination.pageSize;
+
+    // If this is the first time setting the row style, just record it and exit
+    if (!previousRowStyle) {
+      setPreviousRowStyle(rowStyle);
+      return;
+    }
+
+    // If switching from relaxed to dense, and current page size is the default (20)
+    if (rowStyle === "relaxed" && currentPageSize === 20) {
+      table.setPageSize(50);
+    }
+    // If switching from default (dense) to relaxed, and current page size is 50 (the dense default)
+    else if (
+      rowStyle === "relaxed" &&
+      previousRowStyle === "default" &&
+      currentPageSize === 50
+    ) {
+      table.setPageSize(20);
+    }
+
+    // Update the previous row style
+    setPreviousRowStyle(rowStyle);
+  }, [
+    rowStyle,
+    previousRowStyle,
+    table,
+    userPageSizePreference,
+    setPreviousRowStyle,
+  ]);
+
+  // Handler for when user manually changes page size
+  const handlePageSizeChange = (selectedOption: OptionType | null) => {
+    if (!selectedOption) return;
+
+    const newSize = Number(selectedOption.value);
+    table.setPageSize(newSize);
+
+    // Record that user has set their own preference
+    setUserPageSizePreference(true);
+  };
+  const isMounted = useMounted();
 
   return (
     <div className="flex justify-between items-center">
       <Text>
-        Showing {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
+        {pageCount ? (
+          <>
+            Showing {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
+          </>
+        ) : null}
       </Text>
       <div className="flex gap-1">
         <Select
@@ -55,9 +123,7 @@ export default function AlertPaginationServerSide({
             value: table.getState().pagination.pageSize.toString(),
             label: table.getState().pagination.pageSize.toString(),
           }}
-          onChange={(selectedOption) =>
-            table.setPageSize(Number(selectedOption!.value))
-          }
+          onChange={handlePageSizeChange}
           options={[
             { value: "10", label: "10" },
             { value: "20", label: "20" },
@@ -106,13 +172,15 @@ export default function AlertPaginationServerSide({
         </div>
         {isRefreshAllowed && (
           <Button
+            variant="primary"
             icon={ArrowPathIcon}
             color="orange"
             size="xs"
             disabled={isRefreshing}
-            loading={isRefreshing}
+            loading={isMounted && isRefreshing}
             onClick={async () => onRefresh()}
             title="Refresh"
+            className="flex-1"
           />
         )}
       </div>

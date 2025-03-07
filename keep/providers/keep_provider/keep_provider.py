@@ -139,8 +139,11 @@ class KeepProvider(BaseProvider):
             fingerprint=kwargs.get("fingerprint"),
             annotations=kwargs.get("annotations"),
             workflowId=self.context_manager.workflow_id,
-            **alert_data,
         )
+        # to avoid multiple key word argument, add and key,val on alert data only if it doesn't exists:
+        for key, val in alert_data.items():
+            if not hasattr(alert, key):
+                setattr(alert, key, val)
         # if fingerprint_fields are not provided, use labels
         if not fingerprint_fields:
             fingerprint_fields = ["labels." + label for label in list(labels.keys())]
@@ -329,7 +332,7 @@ class KeepProvider(BaseProvider):
         return alerts_to_notify
 
     def _handle_stateless_alerts(
-        self, stateless_alerts: list[AlertDto]
+        self, stateless_alerts: list[AlertDto], read_only=False
     ) -> list[AlertDto]:
         """
         Handle alerts without PENDING state - just FIRING or RESOLVED.
@@ -343,13 +346,16 @@ class KeepProvider(BaseProvider):
             extra={"num_alerts": len(stateless_alerts)},
         )
         alerts_to_notify = []
-        search_engine = SearchEngine(tenant_id=self.context_manager.tenant_id)
-        curr_alerts = search_engine.search_alerts_by_cel(
-            cel_query=f"providerId == '{self.context_manager.workflow_id}'"
-        )
-        self.logger.debug(
-            "Found existing alerts", extra={"num_curr_alerts": len(curr_alerts)}
-        )
+        if not read_only:
+            search_engine = SearchEngine(tenant_id=self.context_manager.tenant_id)
+            curr_alerts = search_engine.search_alerts_by_cel(
+                cel_query=f"providerId == '{self.context_manager.workflow_id}'"
+            )
+            self.logger.debug(
+                "Found existing alerts", extra={"num_curr_alerts": len(curr_alerts)}
+            )
+        else:
+            curr_alerts = []
 
         # Create lookup by fingerprint for efficient comparison
         curr_alerts_map = {alert.fingerprint: alert for alert in curr_alerts}
@@ -491,10 +497,13 @@ class KeepProvider(BaseProvider):
                 extra={"original": alert_data, "rendered": rendered_alert_data},
             )
             # render tenrary expressions
-            rendered_alert_data = self._handle_tenrary_exressions(rendered_alert_data)
+            rendered_alert_data = self._handle_ternary_exressions(rendered_alert_data)
             alert_dto = self._build_alert(
                 alert_results, fingerprint_fields, **rendered_alert_data
             )
+            if "override_source_with" in kwargs:
+                alert_dto.source = [kwargs["override_source_with"]]
+
             alert_dtos.append(alert_dto)
             self.logger.debug(
                 "Built alert DTO", extra={"fingerprint": alert_dto.fingerprint}
@@ -521,7 +530,8 @@ class KeepProvider(BaseProvider):
         # else, handle all alerts
         else:
             self.logger.info("Handling stateless alerts")
-            alerts = self._handle_stateless_alerts(alert_dtos)
+            read_only = kwargs.get("read_only", False)
+            alerts = self._handle_stateless_alerts(alert_dtos, read_only=read_only)
 
         # handle all alerts
         self.logger.info(
@@ -542,25 +552,41 @@ class KeepProvider(BaseProvider):
         )
         return alerts
 
-    def _delete_workflows(self):
+    def _delete_workflows(self, except_workflow_id=None):
         self.logger.info("Deleting all workflows")
         workflow_store = WorkflowStore()
         workflows = workflow_store.get_all_workflows(self.context_manager.tenant_id)
         for workflow in workflows:
-            self.logger.info(f"Deleting workflow {workflow.id}")
-            try:
-                workflow_store.delete_workflow(
-                    self.context_manager.tenant_id, workflow.id
+            if not (except_workflow_id and workflow.id == except_workflow_id):
+                self.logger.info(f"Deleting workflow {workflow.id}")
+                try:
+                    workflow_store.delete_workflow(
+                        self.context_manager.tenant_id, workflow.id
+                    )
+                    self.logger.info(f"Deleted workflow {workflow.id}")
+                except Exception as e:
+                    self.logger.exception(
+                        f"Failed to delete workflow {workflow.id}: {e}"
+                    )
+                    raise ProviderException(
+                        f"Failed to delete workflow {workflow.id}: {e}"
+                    )
+            else:
+                self.logger.info(
+                    f"Not deleting workflow {workflow.id} as it's current workflow"
                 )
-                self.logger.info(f"Deleted workflow {workflow.id}")
-            except Exception as e:
-                self.logger.exception(f"Failed to delete workflow {workflow.id}: {e}")
-                raise ProviderException(f"Failed to delete workflow {workflow.id}: {e}")
         self.logger.info("Deleted all workflows")
 
     def _notify(self, **kwargs):
-        if "workflow_full_sync" in kwargs:
-            self._delete_workflows()
+        if "workflow_full_sync" in kwargs or "delete_all_other_workflows" in kwargs:
+            # We need DB id, not user id for the workflow, so getting it from the wf execution.
+            workflow_store = WorkflowStore()
+            workflow_execution = workflow_store.get_workflow_execution(
+                self.context_manager.tenant_id,
+                self.context_manager.workflow_execution_id,
+            )
+            workflow_db_id = workflow_execution.workflow_id
+            self._delete_workflows(except_workflow_id=workflow_db_id)
         elif "workflow_to_update_yaml" in kwargs:
             workflow_to_update_yaml = kwargs["workflow_to_update_yaml"]
             self.logger.info(
@@ -640,7 +666,7 @@ class KeepProvider(BaseProvider):
             return False
         return evaluated_if_met
 
-    def _handle_tenrary_exressions(self, rendered_providers_parameters):
+    def _handle_ternary_exressions(self, rendered_providers_parameters):
         # SG: a hack to allow tenrary expressions
         #     e.g.'0.012899999999999995 > 0.9 ? "critical" : 0.012899999999999995 > 0.7 ? "warning" : "info"''
         #

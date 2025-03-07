@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Table, Card } from "@tremor/react";
+import { Table, Card, Button } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
-import {
-  AlertDto,
-  reverseSeverityMapping,
-  Severity,
-  Status,
-} from "@/entities/alerts/model";
+import { AlertDto, reverseSeverityMapping } from "@/entities/alerts/model";
 import {
   getCoreRowModel,
   useReactTable,
@@ -20,6 +15,7 @@ import {
   getSortedRowModel,
   PaginationState,
 } from "@tanstack/react-table";
+import { ListFormatOption } from "./alert-table-list-format";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import {
@@ -33,17 +29,21 @@ import { AlertPresetManager } from "./alert-preset-manager";
 import { evalWithContext } from "./alerts-rules-builder";
 import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "@/entities/alerts/model";
-import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import Image from "next/image";
-import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
+import { EmptyStateCard, SeverityBorderIcon, UISeverity } from "@/shared/ui";
 import { useUser } from "@/entities/users/model/useUser";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import { Icon } from "@tremor/react";
-import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
+import {
+  BellIcon,
+  BellSlashIcon,
+  FunnelIcon,
+  MagnifyingGlassIcon,
+} from "@heroicons/react/24/outline";
 import AlertPaginationServerSide from "./alert-pagination-server-side";
 import { FacetDto } from "@/features/filter";
 import { GroupingState, getGroupedRowModel } from "@tanstack/react-table";
@@ -52,6 +52,12 @@ import { AlertsQuery } from "@/utils/hooks/useAlerts";
 import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
 import { ViewedAlert } from "./alert-table";
+import { TimeFormatOption } from "./alert-table-time-format";
+import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { GrTest } from "react-icons/gr";
+import { PlusIcon } from "@heroicons/react/20/solid";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -63,6 +69,13 @@ interface PresetTab {
   filter: string;
   id?: string;
 }
+
+interface Tab {
+  name: string;
+  filter: (alert: AlertDto) => boolean;
+  id?: string;
+}
+
 interface Props {
   refreshToken: string | null;
   alerts: AlertDto[];
@@ -71,8 +84,6 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName: string;
-  presetStatic?: boolean;
-  presetId?: string;
   presetTabs?: PresetTab[];
   isRefreshAllowed?: boolean;
   isMenuColDisplayed?: boolean;
@@ -95,8 +106,6 @@ export function AlertTableServerSide({
   initialFacets,
   isAsyncLoading = false,
   presetName,
-  presetStatic = false,
-  presetId = "",
   presetTabs = [],
   isRefreshAllowed = true,
   setDismissedModalAlert,
@@ -122,7 +131,10 @@ export function AlertTableServerSide({
   const [dateRangeCel, setDateRangeCel] = useState<string>("");
   const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
-
+  const [rowStyle] = useAlertRowStyle();
+  const [columnTimeFormats, setColumnTimeFormats] = useLocalStorage<
+    Record<string, TimeFormatOption>
+  >(`column-time-formats-${presetName}`, {});
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
@@ -150,6 +162,10 @@ export function AlertTableServerSide({
     DEFAULT_COLS_VISIBILITY
   );
 
+  const [columnListFormats, setColumnListFormats] = useLocalStorage<
+    Record<string, ListFormatOption>
+  >(`column-list-formats-${presetName}`, {});
+
   const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
     "table-sizes",
     {}
@@ -164,10 +180,10 @@ export function AlertTableServerSide({
   );
   const [paginationState, setPaginationState] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 20,
+    pageSize: rowStyle == "relaxed" ? 20 : 50,
   });
 
-  const [viewedAlerts, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
+  const [, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
     `viewed-alerts-${presetName}`,
     []
   );
@@ -228,14 +244,14 @@ export function AlertTableServerSide({
     onReload && onReload(alertsQueryRef.current as AlertsQuery);
   }, [alertsQuery, onReload]);
 
-  const [tabs, setTabs] = useState([
-    { name: "All", filter: (alert: AlertDto) => true },
+  const [tabs, setTabs] = useState<Tab[]>([
+    { name: "All", filter: () => true },
     ...presetTabs.map((tab) => ({
       name: tab.name,
       filter: (alert: AlertDto) => evalWithContext(alert, tab.filter),
       id: tab.id,
     })),
-    { name: "+", filter: (alert: AlertDto) => true }, // a special tab to add new tabs
+    { name: "+", filter: () => true },
   ]);
 
   const [selectedTab, setSelectedTab] = useState(0);
@@ -249,6 +265,7 @@ export function AlertTableServerSide({
     : ["severity", "checkbox", "source", "name"];
 
   const table = useReactTable({
+    getRowId: (row) => row.fingerprint,
     data: alerts,
     columns: columns,
     state: {
@@ -266,12 +283,16 @@ export function AlertTableServerSide({
         pageSize: paginationState.pageSize,
       },
     },
+    meta: {
+      columnTimeFormats: columnTimeFormats,
+      setColumnTimeFormats: setColumnTimeFormats,
+    },
     enableGrouping: true,
     manualSorting: true,
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     initialState: {
-      pagination: { pageSize: 20 },
+      pagination: { pageSize: rowStyle == "relaxed" ? 20 : 50 },
     },
     globalFilterFn: ({ original }, _id, value) => {
       return evalWithContext(original, value);
@@ -292,15 +313,10 @@ export function AlertTableServerSide({
     onGroupingChange: setGrouping,
   });
 
-  const selectedRowIds = Object.entries(
-    table.getSelectedRowModel().rowsById
-  ).reduce<string[]>((acc, [alertId]) => {
-    return acc.concat(alertId);
-  }, []);
+  const selectedAlertsFingerprints = Object.keys(table.getState().rowSelection);
 
   let showSkeleton = isAsyncLoading;
   const isTableEmpty = table.getPageCount() === 0;
-  let showEmptyState = !alertsQuery.cel && isTableEmpty && !isAsyncLoading;
   const showFilterEmptyState = isTableEmpty && !!filterCel;
   const showSearchEmptyState =
     isTableEmpty && !!searchCel && !showFilterEmptyState;
@@ -458,11 +474,177 @@ export function AlertTableServerSide({
     };
   }, []);
 
+  const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
+    useState<boolean>(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  // handle "create incident with AI from last 25 alerts" if ?createIncidentsFromLastAlerts=25
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (alerts.length === 0 && selectedAlertsFingerprints.length) {
+      return;
+    }
+
+    const lastAlertsCount = searchParams.get("createIncidentsFromLastAlerts");
+    const lastAlertsNumber = lastAlertsCount
+      ? parseInt(lastAlertsCount)
+      : undefined;
+    if (!lastAlertsNumber) {
+      return;
+    }
+
+    const lastAlerts = table.getRowModel().rows.slice(-lastAlertsNumber);
+    const alertsFingerprints = lastAlerts.map(
+      (alert) => alert.original.fingerprint
+    );
+
+    table.setRowSelection(
+      alertsFingerprints.reduce(
+        (acc, fingerprint) => {
+          acc[fingerprint] = true;
+          return acc;
+        },
+        {} as Record<string, boolean>
+      )
+    );
+    const searchParamsWithoutCreateIncidentsFromLastAlerts =
+      new URLSearchParams(searchParams);
+    searchParamsWithoutCreateIncidentsFromLastAlerts.delete(
+      "createIncidentsFromLastAlerts"
+    );
+    setIsCreateIncidentWithAIOpen(true);
+    // todo: remove searchParams after reading
+    router.replace(
+      pathname +
+        "?" +
+        searchParamsWithoutCreateIncidentsFromLastAlerts.toString()
+    );
+    // call create incident with AI from last 25 alerts
+    // api/incidents?createIncidentsFromLastAlerts=25
+  }, [alerts.length, searchParams, table]);
+
+  //
+
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleModalClose = () => setModalOpen(false);
+  const handleModalOpen = () => setModalOpen(true);
+  function renderTable() {
+    if (
+      !showSkeleton &&
+      table.getPageCount() === 0 &&
+      !showFilterEmptyState &&
+      !showSearchEmptyState
+    ) {
+      return (
+        <>
+          <div className="flex-1 flex items-center w-full">
+            <div className="flex flex-col justify-center items-center w-full p-4">
+              <EmptyStateCard
+                noCard
+                title="No Alerts to Display"
+                description="Connect a data source to start receiving alerts, or simulate an alert to test the platform"
+              >
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    color="orange"
+                    icon={GrTest}
+                    variant="secondary"
+                    onClick={handleModalOpen}
+                  >
+                    Simulate Alert
+                  </Button>
+                  <Button
+                    icon={PlusIcon}
+                    color="orange"
+                    variant="primary"
+                    onClick={() => {
+                      router.push("/providers?labels=alert");
+                    }}
+                  >
+                    Connect Data Source
+                  </Button>
+                </div>
+              </EmptyStateCard>
+            </div>
+          </div>
+          <PushAlertToServerModal
+            isOpen={modalOpen}
+            handleClose={handleModalClose}
+            presetName={presetName}
+          />
+        </>
+      );
+    }
+    if (!showSkeleton) {
+      if (showFilterEmptyState) {
+        return (
+          <>
+            <div className="flex-1 flex items-center h-full w-full">
+              <div className="flex flex-col justify-center items-center w-full p-4">
+                <EmptyStateCard
+                  noCard
+                  title="No Alerts Matching Your Filter"
+                  description="Reset filter to see all alerts"
+                  icon={FunnelIcon}
+                >
+                  <Button
+                    color="orange"
+                    variant="secondary"
+                    onClick={() => setClearFiltersToken(uuidV4())}
+                  >
+                    Reset filter
+                  </Button>
+                </EmptyStateCard>
+              </div>
+            </div>
+          </>
+        );
+      }
+
+      if (showSearchEmptyState) {
+        return (
+          <>
+            <div className="flex-1 flex items-center h-full w-full">
+              <div className="flex flex-col justify-center items-center w-full p-4">
+                <EmptyStateCard
+                  noCard
+                  title="No Alerts Matching Your CEL Query"
+                  description="Check your CEL query and try again"
+                  icon={MagnifyingGlassIcon}
+                />
+              </div>
+            </div>
+          </>
+        );
+      }
+    }
+    return (
+      <Table className="[&>table]:table-fixed [&>table]:w-full">
+        <AlertsTableHeaders
+          columns={columns}
+          table={table}
+          presetName={presetName}
+          a11yContainerRef={a11yContainerRef}
+          columnTimeFormats={columnTimeFormats}
+          setColumnTimeFormats={setColumnTimeFormats}
+          columnListFormats={columnListFormats}
+          setColumnListFormats={setColumnListFormats}
+        />
+        <AlertsTableBody
+          table={table}
+          showSkeleton={showSkeleton}
+          theme={theme}
+          lastViewedAlert={lastViewedAlert}
+          onRowClick={handleRowClick}
+        />
+      </Table>
+    );
+  }
+
   return (
-    // Add h-screen to make it full height and remove the default flex-col gap
-    <div className="h-screen flex flex-col gap-4">
-      {/* Add padding to account for any top nav/header */}
-      <div className="px-4 flex-none">
+    <div className="flex flex-col gap-4">
+      <div className="flex-none">
         <TitleAndFilters
           table={table}
           alerts={alerts}
@@ -475,17 +657,18 @@ export function AlertTableServerSide({
       </div>
 
       {/* Make actions/presets section fixed height */}
-      <div className="h-14 px-4 flex-none">
-        {selectedRowIds.length ? (
+      <div className="h-14 flex-none">
+        {selectedAlertsFingerprints.length ? (
           <AlertActions
-            selectedRowIds={selectedRowIds}
-            alerts={alerts}
+            selectedAlertsFingerprints={selectedAlertsFingerprints}
             table={table}
             clearRowSelection={table.resetRowSelection}
             setDismissModalAlert={setDismissedModalAlert}
             mutateAlerts={mutateAlerts}
             setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
             isIncidentSelectorOpen={isIncidentSelectorOpen}
+            setIsCreateIncidentWithAIOpen={setIsCreateIncidentWithAIOpen}
+            isCreateIncidentWithAIOpen={isCreateIncidentWithAIOpen}
           />
         ) : (
           <AlertPresetManager
@@ -496,9 +679,8 @@ export function AlertTableServerSide({
         )}
       </div>
 
-      {/* Main content area - uses flex-grow to fill remaining space */}
-      <div className="flex-grow px-4 pb-4">
-        <div className="h-full flex gap-6">
+      <div className="pb-4">
+        <div className="flex gap-4">
           {/* Facets sidebar */}
           <div className="w-33 min-w-[12rem] overflow-y-auto">
             <FacetsPanelServerSide
@@ -515,63 +697,30 @@ export function AlertTableServerSide({
           </div>
 
           {/* Table section */}
-          <div className="flex-1 flex flex-col min-w-0">
-            <Card className="h-full flex flex-col p-0 overflow-x-auto">
-              <div className="flex-grow flex flex-col">
-                {!presetStatic && (
-                  <div className="flex-none">
-                    <AlertTabs
-                      presetId={presetId}
-                      tabs={tabs}
-                      setTabs={setTabs}
-                      selectedTab={selectedTab}
-                      setSelectedTab={setSelectedTab}
-                    />
-                  </div>
-                )}
-
+          <div className="flex-1 flex flex-col min-w-0 gap-4">
+            <Card className="flex-1 flex flex-col p-0 overflow-x-auto">
+              <div className="flex-1 flex flex-col">
                 <div ref={a11yContainerRef} className="sr-only" />
 
                 {/* Make table wrapper scrollable */}
-                <div data-testid="alerts-table" className="flex-grow">
-                  <Table className="[&>table]:table-fixed [&>table]:w-full">
-                    <AlertsTableHeaders
-                      columns={columns}
-                      table={table}
-                      presetName={presetName}
-                      a11yContainerRef={a11yContainerRef}
-                    />
-                    <AlertsTableBody
-                      table={table}
-                      showSkeleton={showSkeleton}
-                      showEmptyState={showEmptyState}
-                      showFilterEmptyState={showFilterEmptyState}
-                      showSearchEmptyState={showSearchEmptyState}
-                      theme={theme}
-                      viewedAlerts={viewedAlerts}
-                      lastViewedAlert={lastViewedAlert}
-                      onRowClick={handleRowClick}
-                      onClearFiltersClick={() => setClearFiltersToken(uuidV4())}
-                      presetName={presetName}
-                    />
-                  </Table>
+                <div data-testid="alerts-table" className="flex-1">
+                  {renderTable()}
                 </div>
               </div>
             </Card>
+            {/* Pagination footer - fixed height */}
+            <div className="h-16 flex-none">
+              <AlertPaginationServerSide
+                table={table}
+                isRefreshing={isAsyncLoading}
+                isRefreshAllowed={isRefreshAllowed}
+                onRefresh={() =>
+                  onReload && onReload(alertsQueryRef.current as AlertsQuery)
+                }
+              />
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Pagination footer - fixed height */}
-      <div className="h-16 px-4 flex-none pl-[14rem]">
-        <AlertPaginationServerSide
-          table={table}
-          isRefreshing={isAsyncLoading}
-          isRefreshAllowed={isRefreshAllowed}
-          onRefresh={() =>
-            onReload && onReload(alertsQueryRef.current as AlertsQuery)
-          }
-        />
       </div>
 
       <AlertSidebar

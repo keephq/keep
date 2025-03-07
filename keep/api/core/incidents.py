@@ -83,7 +83,7 @@ static_facets = [
     ),
     FacetDto(
         id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
-        property_path="alert.provider_type",
+        property_path="alert.providerType",
         name="Source",
         is_static=True,
         type=FacetType.str,
@@ -160,6 +160,80 @@ def __build_base_incident_query(tenant_id: str):
     )
 
     return incidents_alerts_cte
+
+
+def __build_last_incidents_total_count_query(
+    tenant_id: str,
+    timeframe: int = None,
+    upper_timestamp: datetime = None,
+    lower_timestamp: datetime = None,
+    is_confirmed: bool = False,
+    is_predicted: bool = None,
+    cel: str = None,
+    allowed_incident_ids: Optional[List[str]] = None,
+):
+    """
+    Builds a SQL query to retrieve the last incidents based on various filters and sorting options.
+
+    Args:
+        dialect (str): The SQL dialect to use.
+        tenant_id (str): The tenant ID to filter incidents.
+        limit (int, optional): The maximum number of incidents to return. Defaults to 25.
+        offset (int, optional): The number of incidents to skip before starting to return results. Defaults to 0.
+        timeframe (int, optional): The number of days to look back from the current date for incidents. Defaults to None.
+        upper_timestamp (datetime, optional): The upper bound timestamp for filtering incidents. Defaults to None.
+        lower_timestamp (datetime, optional): The lower bound timestamp for filtering incidents. Defaults to None.
+        is_confirmed (bool, optional): Filter for confirmed incidents. Defaults to False.
+        sorting (Optional[IncidentSorting], optional): The sorting criteria for the incidents. Defaults to IncidentSorting.creation_time.
+        is_predicted (bool, optional): Filter for predicted incidents. Defaults to None.
+        cel (str, optional): The CEL (Common Expression Language) string to convert to SQL. Defaults to None.
+        allowed_incident_ids (Optional[List[str]], optional): List of allowed incident IDs to filter. Defaults to None.
+
+    Returns:
+        sqlalchemy.sql.selectable.Select: The constructed SQL query.
+    """
+    incidents_alers_cte = __build_base_incident_query(tenant_id).cte(
+        "incidents_alers_cte"
+    )
+    base_query_cte = (
+        select(
+            func.count(func.distinct(incidents_alers_cte.c.incident_id)).label(
+                "total_count"
+            ),
+        )
+        .select_from(incidents_alers_cte)
+        .join(Incident, Incident.id == incidents_alers_cte.c.incident_id)
+        .filter(Incident.tenant_id == tenant_id)
+    )
+    query = base_query_cte.filter(Incident.is_confirmed == is_confirmed)
+
+    if allowed_incident_ids:
+        query = query.filter(Incident.id.in_(allowed_incident_ids))
+
+    if is_predicted is not None:
+        query = query.filter(Incident.is_predicted == is_predicted)
+
+    if timeframe:
+        query = query.filter(
+            Incident.start_time
+            >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
+        )
+
+    if upper_timestamp and lower_timestamp:
+        query = query.filter(
+            col(Incident.last_seen_time).between(lower_timestamp, upper_timestamp)
+        )
+    elif upper_timestamp:
+        query = query.filter(Incident.last_seen_time <= upper_timestamp)
+    elif lower_timestamp:
+        query = query.filter(Incident.last_seen_time >= lower_timestamp)
+
+    if cel:
+        instance = get_cel_to_sql_provider(properties_metadata)
+        sql_filter = instance.convert_to_sql_str(cel)
+        query = query.filter(text(sql_filter))
+
+    return query
 
 
 def __build_last_incidents_query(
@@ -280,6 +354,16 @@ def get_last_incidents_by_cel(
 
     with Session(engine) as session:
         try:
+            total_count_query = __build_last_incidents_total_count_query(
+                tenant_id=tenant_id,
+                timeframe=timeframe,
+                upper_timestamp=upper_timestamp,
+                lower_timestamp=lower_timestamp,
+                is_confirmed=is_confirmed,
+                is_predicted=is_predicted,
+                cel=cel,
+                allowed_incident_ids=allowed_incident_ids,
+            )
             sql_query = __build_last_incidents_query(
                 tenant_id=tenant_id,
                 limit=limit,
@@ -300,7 +384,7 @@ def get_last_incidents_by_cel(
                 return [], 0
             raise e
 
-        total_count = session.exec(select(func.count()).select_from(sql_query)).scalar()
+        total_count = session.exec(total_count_query).one()[0]
         all_records = session.exec(sql_query).all()
 
         incidents = [row._asdict().get('Incident') for row in all_records]
@@ -344,8 +428,12 @@ def get_incident_facets_data(
             Incident.id.label("entity_id"),
         )
         .select_from(Incident)
-        .outerjoin(
-            incidents_alerts_cte, Incident.id == incidents_alerts_cte.c.incident_id
+        .join(
+            incidents_alerts_cte,
+            and_(
+                Incident.id == incidents_alerts_cte.c.incident_id,
+                Incident.tenant_id == tenant_id,
+            ),
         )
         .filter(Incident.tenant_id == tenant_id)
     )

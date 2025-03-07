@@ -16,6 +16,7 @@ from typing import Any, Callable, Dict, List, Tuple, Type, Union
 from uuid import UUID, uuid4
 
 import validators
+from dateutil.parser import parse
 from dateutil.tz import tz
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
@@ -1047,31 +1048,18 @@ def enrich_entity(
     force=False,
     audit_enabled=True,
 ):
-    # else, the enrichment doesn't exist, create it
-    if not session:
-        with Session(engine) as session:
-            return _enrich_entity(
-                session,
-                tenant_id,
-                fingerprint,
-                enrichments,
-                action_type,
-                action_callee,
-                action_description,
-                force=force,
-                audit_enabled=audit_enabled,
-            )
-    return _enrich_entity(
-        session,
-        tenant_id,
-        fingerprint,
-        enrichments,
-        action_type,
-        action_callee,
-        action_description,
-        force=force,
-        audit_enabled=audit_enabled,
-    )
+    with existed_or_new_session(session) as session:
+        return _enrich_entity(
+            session,
+            tenant_id,
+            fingerprint,
+            enrichments,
+            action_type,
+            action_callee,
+            action_description,
+            force=force,
+            audit_enabled=audit_enabled,
+        )
 
 
 def count_alerts(
@@ -1456,7 +1444,7 @@ def get_last_alerts(
 
 
 def get_alerts_by_fingerprint(
-    tenant_id: str, fingerprint: str, limit=1, status=None
+    tenant_id: str, fingerprint: str, limit=1, status=None, with_alert_instance_enrichment=False,
 ) -> List[Alert]:
     """
     Get all alerts for a given fingerprint.
@@ -1474,6 +1462,9 @@ def get_alerts_by_fingerprint(
 
         # Apply subqueryload to force-load the alert_enrichment relationship
         query = query.options(subqueryload(Alert.alert_enrichment))
+
+        if with_alert_instance_enrichment:
+            query = query.options(subqueryload(Alert.alert_instance_enrichment))
 
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)
@@ -1764,6 +1755,7 @@ def update_rule(
     require_approve,
     resolve_on,
     create_on,
+    incident_name_template,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -1786,6 +1778,7 @@ def update_rule(
             rule.update_time = datetime.utcnow()
             rule.resolve_on = resolve_on
             rule.create_on = create_on
+            rule.incident_name_template = incident_name_template
             session.commit()
             session.refresh(rule)
             return rule
@@ -1893,7 +1886,7 @@ def create_incident_for_grouping_rule(
             user_generated_name=incident_name or f"{rule.name}",
             rule_id=rule.id,
             rule_fingerprint=rule_fingerprint,
-            is_predicted=False,
+            is_predicted=True,
             is_confirmed=rule.create_on == CreateIncidentOn.ANY.value
             and not rule.require_approve,
             incident_type=IncidentType.RULE.value,
@@ -3593,7 +3586,9 @@ def update_incident_from_dto_by_id(
                         setattr(incident, key, value)
 
         if "same_incident_in_the_past_id" in updated_data:
-            incident.same_incident_in_the_past_id = updated_data["same_incident_in_the_past_id"]
+            incident.same_incident_in_the_past_id = updated_data[
+                "same_incident_in_the_past_id"
+            ]
 
         if generated_by_ai:
             incident.generated_summary = updated_incident_dto.user_summary
@@ -3942,8 +3937,10 @@ def add_alerts_to_incident(
                     session.flush()
             session.commit()
 
+            last_received_field = get_json_extract_field(session, Alert.event, "lastReceived")
+
             started_at, last_seen_at = session.exec(
-                select(func.min(Alert.timestamp), func.max(Alert.timestamp))
+                select(func.min(last_received_field), func.max(last_received_field))
                 .join(
                     LastAlertToIncident,
                     and_(
@@ -3957,6 +3954,12 @@ def add_alerts_to_incident(
                     LastAlertToIncident.incident_id == incident.id,
                 )
             ).one()
+
+            if isinstance(started_at, str):
+                started_at = parse(started_at)
+
+            if isinstance(last_seen_at, str):
+                last_seen_at = parse(last_seen_at)
 
             incident.start_time = started_at
             incident.last_seen_time = last_seen_at
@@ -4135,8 +4138,10 @@ def remove_alerts_to_incident_by_incident_id(
             if source not in sources_existed
         ]
 
+        last_received_field = get_json_extract_field(session, Alert.event, "lastReceived")
+
         started_at, last_seen_at = session.exec(
-            select(func.min(Alert.timestamp), func.max(Alert.timestamp))
+            select(func.min(last_received_field), func.max(last_received_field))
             .select_from(LastAlert)
             .join(
                 LastAlertToIncident,
@@ -4147,6 +4152,7 @@ def remove_alerts_to_incident_by_incident_id(
             )
             .join(Alert, LastAlert.alert_id == Alert.id)
             .where(
+                LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                 LastAlertToIncident.tenant_id == tenant_id,
                 LastAlertToIncident.incident_id == incident.id,
             )
@@ -4169,6 +4175,13 @@ def remove_alerts_to_incident_by_incident_id(
                 if updated_severities
                 else IncidentSeverity.LOW.order
             )
+
+        if isinstance(started_at, str):
+            started_at = parse(started_at)
+
+        if isinstance(last_seen_at, str):
+            last_seen_at = parse(last_seen_at)
+
         incident.start_time = started_at
         incident.last_seen_time = last_seen_at
 
@@ -5116,15 +5129,19 @@ def set_last_alert(
                     logger.info(
                         f"No such savepoint while updating lastalert for `{alert.fingerprint}`, retry #{attempt}"
                     )
+                    session.rollback()
                     if attempt >= max_retries:
                         raise ex
+                    continue
 
                 if "Deadlock found" in ex.args[0]:
                     logger.info(
                         f"Deadlock found while updating lastalert for `{alert.fingerprint}`, retry #{attempt}"
                     )
+                    session.rollback()
                     if attempt >= max_retries:
                         raise ex
+                    continue
             except NoActiveSqlTransaction:
                 logger.exception(
                     f"No active sql transaction while updating lastalert for `{alert.fingerprint}`, retry #{attempt}",
@@ -5134,6 +5151,7 @@ def set_last_alert(
                         "fingerprint": alert.fingerprint,
                     },
                 )
+                continue
             logger.debug(
                 f"Successfully updated lastalert for `{alert.fingerprint}`",
                 extra={
