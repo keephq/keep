@@ -21,6 +21,7 @@ import { useFormContext } from "react-hook-form";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { CorrelationFormType } from "./types";
 import { TIMEFRAME_UNITS_TO_SECONDS } from "./timeframe-constants";
+import { useDeduplicationFields } from "@/utils/hooks/useDeduplicationRules";
 
 const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
   [
@@ -190,9 +191,19 @@ export const RuleFields = ({
     []
   );
 
-  const availableFields = DEFAULT_FIELDS.filter(
-    ({ name }) => selectedFields.includes(name) === false
-  );
+  const { data: deduplicationFields = {} } = useDeduplicationFields();
+
+  const uniqueDeduplicationFields = Object.values(deduplicationFields)
+    .flat()
+    .map((field) => ({
+      label: field,
+      name: field,
+      datatype: "text",
+    }));
+
+  const availableFields = DEFAULT_FIELDS.concat(
+    uniqueDeduplicationFields
+  ).filter(({ name }) => selectedFields.includes(name) === false);
 
   const onAddRuleFieldClick = () => {
     const nextAvailableField = availableFields.at(0);
