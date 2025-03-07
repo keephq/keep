@@ -58,7 +58,7 @@ class IncidentDto(IncidentDtoIn):
     services: list[str]
 
     is_predicted: bool
-    is_confirmed: bool
+    is_candidate: bool
 
     generated_summary: str | None
     ai_generated_name: str | None
@@ -162,7 +162,7 @@ class IncidentDto(IncidentDtoIn):
             user_summary=db_incident.user_summary,
             generated_summary=db_incident.generated_summary,
             is_predicted=db_incident.is_predicted,
-            is_confirmed=db_incident.is_confirmed,
+            is_candidate=db_incident.is_candidate,
             creation_time=db_incident.creation_time,
             start_time=db_incident.start_time,
             last_seen_time=db_incident.last_seen_time,

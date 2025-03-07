@@ -998,7 +998,7 @@ class PagerdutyProvider(
             alerts_count=event.get("alert_counts", {}).get("all", 0),
             services=[service],
             is_predicted=False,
-            is_confirmed=True,
+            is_candidate=False,
             # This is the reference to the incident in PagerDuty
             fingerprint=original_incident_id,
         )

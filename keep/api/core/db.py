@@ -1989,8 +1989,8 @@ def create_incident_for_grouping_rule(
             rule_id=rule.id,
             rule_fingerprint=rule_fingerprint,
             is_predicted=True,
-            is_confirmed=rule.create_on == CreateIncidentOn.ANY.value
-            and not rule.require_approve,
+            is_candidate=rule.require_approve,
+            is_visible=rule.create_on == CreateIncidentOn.ANY.value,
             incident_type=IncidentType.RULE.value,
             same_incident_in_the_past_id=past_incident.id if past_incident else None,
             resolve_on=rule.resolve_on,
@@ -2020,7 +2020,7 @@ def create_incident_for_topology(
         user_generated_name=f"Topology incident: Multiple alerts across {', '.join(service_names)}",
         severity=severity.value,
         status=IncidentStatus.FIRING.value,
-        is_confirmed=True,
+        is_visible=True,
         incident_type=IncidentType.TOPOLOGY.value,  # Set incident type for topology
         data={"services": list(services), "alert_count": len(alert_group)},
     )
@@ -3221,7 +3221,7 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                 .outerjoin(
                     affected_services_join, affected_services_join.c.value.isnot(None)
                 )
-                .filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == True)
+                .filter(Incident.tenant_id == tenant_id, Incident.is_visible == True)
             )
             results = session.exec(query).one_or_none()
 
@@ -3258,7 +3258,7 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                 .outerjoin(
                     affected_services_join, affected_services_join.c.value.isnot(None)
                 )
-                .filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == True)
+                .filter(Incident.tenant_id == tenant_id, Incident.is_visible == True)
             )
 
             results = session.exec(query).one_or_none()
@@ -3297,7 +3297,7 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                 .outerjoin(
                     affected_services_join, affected_services_join.c.value.isnot(None)
                 )
-                .filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == True)
+                .filter(Incident.tenant_id == tenant_id, Incident.is_visible == True)
             )
 
             results = session.exec(query).one_or_none()
@@ -3435,7 +3435,7 @@ def get_last_incidents(
     timeframe: int = None,
     upper_timestamp: datetime = None,
     lower_timestamp: datetime = None,
-    is_confirmed: bool = False,
+    is_candidate: bool = False,
     sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
     with_alerts: bool = False,
     is_predicted: bool = None,
@@ -3450,10 +3450,9 @@ def get_last_incidents(
         limit (int): Amount of objects to return
         offset (int): Current offset for
         timeframe (int|null): Return incidents only for the last <N> days
-        is_confirmed (bool): Return confirmed incidents or predictions
         upper_timestamp: datetime = None,
         lower_timestamp: datetime = None,
-        is_confirmed (bool): filter incident candidates or real incidents
+        is_candidate (bool): filter incident candidates or real incidents
         sorting: Optional[IncidentSorting]: how to sort the data
         with_alerts (bool): Pre-load alerts or not
         is_predicted (bool): filter only incidents predicted by KeepAI
@@ -3464,7 +3463,11 @@ def get_last_incidents(
     with Session(engine) as session:
         query = session.query(
             Incident,
-        ).filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed)
+        ).filter(
+            Incident.tenant_id == tenant_id,
+            Incident.is_candidate == is_candidate,
+            Incident.is_visible == True
+        )
 
         if allowed_incident_ids:
             query = query.filter(Incident.id.in_(allowed_incident_ids))
@@ -3565,7 +3568,8 @@ def create_incident_from_dto(
             "ai_generated_name": incident_dto.dict().get("name"),
             "assignee": incident_dto.assignee,
             "is_predicted": False,  # its not a prediction, but an AI generation
-            "is_confirmed": True,  # confirmed by the user :)
+            "is_candidate": False,  # confirmed by the user :)
+            "is_visible": True,  # confirmed by the user :)
             "incident_type": IncidentType.AI.value,
         }
 
@@ -3588,8 +3592,8 @@ def create_incident_from_dict(
     tenant_id: str, incident_data: dict
 ) -> Optional[Incident]:
     is_predicted = incident_data.get("is_predicted", False)
-    if "is_confirmed" not in incident_data:
-        incident_data["is_confirmed"] = not is_predicted
+    if "is_candidate" not in incident_data:
+        incident_data["is_candidate"] = is_predicted
     with Session(engine) as session:
         new_incident = Incident(**incident_data, tenant_id=tenant_id)
         session.add(new_incident)
@@ -4360,7 +4364,7 @@ def confirm_predicted_incident_by_id(
             .where(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
-                Incident.is_confirmed == expression.false(),
+                Incident.is_candidate == expression.true(),
             )
             .options(joinedload(Incident.alerts))
         ).first()
@@ -4371,10 +4375,10 @@ def confirm_predicted_incident_by_id(
         session.query(Incident).filter(
             Incident.tenant_id == tenant_id,
             Incident.id == incident_id,
-            Incident.is_confirmed == expression.false(),
+            Incident.is_candidate == expression.true(),
         ).update(
             {
-                "is_confirmed": True,
+                "is_visible": True,
             }
         )
 
