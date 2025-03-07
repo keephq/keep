@@ -117,6 +117,7 @@ def process_topology(
                 TopologyServiceDependency(
                     service_id=service_id,
                     depends_on_service_id=depends_on_service_id,
+                    tenant_id=tenant_id,
                     protocol=service.dependencies.get(dependency, "unknown"),
                 )
             )

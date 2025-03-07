@@ -240,7 +240,7 @@ class TopologiesService:
         # Create TopologyServiceApplication links
         new_links = [
             TopologyServiceApplication(
-                service_id=service.id, application_id=new_application.id
+                service_id=service.id, application_id=new_application.id, tenant_id=tenant_id
             )
             for service in services_to_add
             if service.id
@@ -298,7 +298,7 @@ class TopologiesService:
                 new_links.extend(
                     [
                         TopologyServiceApplication(
-                            service_id=service.id, application_id=new_application.id
+                            service_id=service.id, application_id=new_application.id, tenant_id=tenant_id
                         )
                         for service in application.services
                         if service.id
@@ -439,9 +439,11 @@ class TopologiesService:
         ).first()
 
     @staticmethod
-    def get_dependency_by_id(_id: int, session: Session) -> TopologyServiceDependency:
+    def get_dependency_by_id(_id: int, tenant_id: str, session: Session) -> TopologyServiceDependency:
         return session.exec(
-            select(TopologyServiceDependency).where(TopologyServiceDependency.id == _id)
+            select(TopologyServiceDependency)
+            .where(TopologyServiceDependency.id == _id)
+            .where(TopologyServiceDependency.tenant_id == tenant_id)
         ).first()
 
     @staticmethod
@@ -585,7 +587,7 @@ class TopologiesService:
             ):
                 raise ServiceNotManualException()
 
-            db_dependency = TopologyServiceDependency(**dependency.dict())
+            db_dependency = TopologyServiceDependency(tenant_id=tenant_id, **dependency.dict())
             session.add(db_dependency)
             session.commit()
             session.refresh(db_dependency)
@@ -621,7 +623,7 @@ class TopologiesService:
                 ):
                     raise ServiceNotManualException()
 
-                db_dependency = TopologyServiceDependency(**dependency.dict())
+                db_dependency = TopologyServiceDependency(tenant_id=tenant_id, **dependency.dict())
                 session.add(db_dependency)
                 db_dependencies.append(db_dependency)
 
@@ -651,7 +653,7 @@ class TopologiesService:
 
             db_dependency: TopologyServiceDependency = (
                 TopologiesService.get_dependency_by_id(
-                    _id=dependency.id, session=session
+                    _id=dependency.id, tenant_id=tenant_id, session=session
                 )
             )
             service_dict = dependency.dict()
@@ -679,7 +681,7 @@ class TopologiesService:
         try:
             db_dependency: TopologyServiceDependency = (
                 TopologiesService.get_dependency_by_id(
-                    _id=dependency_id, session=session
+                    _id=dependency_id, tenant_id=tenant_id, session=session
                 )
             )
             # Enforcing is_manual on the service_id and depends_on_service_id

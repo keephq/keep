@@ -3,31 +3,45 @@ from typing import List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
-from sqlalchemy import DateTime, ForeignKey
+from sqlalchemy import DateTime, ForeignKey, Integer, PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, func
 
 
 class TopologyServiceApplication(SQLModel, table=True):
-    service_id: int = Field(foreign_key="topologyservice.id", primary_key=True)
-    application_id: UUID = Field(foreign_key="topologyapplication.id", primary_key=True)
+    tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id"), primary_key=True))
+    service_id: int = Field(primary_key=True)
+    application_id: UUID = Field(primary_key=True)
 
     service: "TopologyService" = Relationship(
         sa_relationship_kwargs={
-            "primaryjoin": "TopologyService.id == TopologyServiceApplication.service_id",
+            "primaryjoin": "and_(TopologyService.id == TopologyServiceApplication.service_id,"
+                           "TopologyService.tenant_id == TopologyServiceApplication.tenant_id)",
             "viewonly": "True",
         },
     )
     application: "TopologyApplication" = Relationship(
         sa_relationship_kwargs={
-            "primaryjoin": "TopologyApplication.id == TopologyServiceApplication.application_id",
+            "primaryjoin": "and_(TopologyApplication.id == TopologyServiceApplication.application_id,"
+                           "TopologyService.tenant_id == TopologyServiceApplication.tenant_id)",
             "viewonly": "True",
         },
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ['service_id', 'tenant_id'],
+            ['topologyservice.id', 'topologyservice.tenant_id'],
+        ),
+        ForeignKeyConstraint(
+            ['application_id', 'tenant_id'],
+            ['topologyapplication.id', 'topologyapplication.tenant_id'],
+        ),
     )
 
 
 class TopologyApplication(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id")))
+    tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id"), primary_key=True))
     name: str
     description: str = Field(default_factory=str)
     repository: str = Field(default_factory=str)
@@ -37,7 +51,7 @@ class TopologyApplication(SQLModel, table=True):
 
 
 class TopologyService(SQLModel, table=True):
-    id: Optional[int] = Field(primary_key=True, default=None)
+    id: int
     tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id")))
     source_provider_id: str = "unknown"
     repository: Optional[str]
@@ -77,19 +91,20 @@ class TopologyService(SQLModel, table=True):
         back_populates="services", link_model=TopologyServiceApplication
     )
 
+    __table_args__ = (
+        PrimaryKeyConstraint("id", "tenant_id"),  # Composite PK
+    )
+
     class Config:
         orm_mode = True
-        unique_together = ["tenant_id", "service", "environment", "source_provider_id"]
+        unique_together = [["id", "tenant_id"], ["tenant_id", "service", "environment", "source_provider_id"]]
 
 
 class TopologyServiceDependency(SQLModel, table=True):
-    id: Optional[int] = Field(primary_key=True, default=None)
-    service_id: int = Field(
-        sa_column=Column(ForeignKey("topologyservice.id", ondelete="CASCADE"))
-    )
-    depends_on_service_id: int = Field(
-        sa_column=Column(ForeignKey("topologyservice.id", ondelete="CASCADE"))
-    )  # service_id calls deponds_on_service_id (A->B)
+    id: UUID = Field(default_factory=uuid4)
+    tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id")))
+    service_id: int
+    depends_on_service_id: int
     protocol: Optional[str] = "unknown"
     updated_at: Optional[datetime] = Field(
         sa_column=Column(
@@ -112,6 +127,19 @@ class TopologyServiceDependency(SQLModel, table=True):
         }
     )
 
+    __table_args__ = (
+        PrimaryKeyConstraint("id", "tenant_id"),  # Composite PK
+        ForeignKeyConstraint(
+            ['service_id', 'tenant_id'],
+            ['topologyservice.id', 'topologyservice.tenant_id'],
+            "topologyservicedependency_service_id_tenant_id_fkey"
+        ),
+        ForeignKeyConstraint(
+            ['depends_on_service_id', 'tenant_id'],
+            ['topologyservice.id', 'topologyservice.tenant_id'],
+            "topologyservicedependency_depends_on_service_id_tenant_id_fkey"
+        ),
+    )
 
 class TopologyServiceDtoBase(BaseModel, extra="ignore"):
     source_provider_id: Optional[str]
@@ -140,7 +168,7 @@ class TopologyServiceInDto(TopologyServiceDtoBase):
 
 
 class TopologyServiceDependencyDto(BaseModel, extra="ignore"):
-    id: Optional[str] = None
+    id: str | UUID
     serviceId: str
     serviceName: str
     protocol: Optional[str] = "unknown"
