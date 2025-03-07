@@ -462,11 +462,11 @@ def elastic_client(request):
 
         yield elastic_client
 
-    # remove all from elasticsearch
-    try:
-        elastic_client.drop_index()
-    except Exception:
-        pass
+        # remove all from elasticsearch
+        try:
+            elastic_client.drop_index()
+        except Exception:
+            pass
 
 
 @pytest.fixture(scope="session")
