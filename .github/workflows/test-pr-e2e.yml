@@ -164,6 +164,9 @@ jobs:
   run-tests:
     needs: [build-frontend, build-backend]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         db_type: [mysql, postgres]
