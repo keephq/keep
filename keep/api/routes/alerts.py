@@ -28,10 +28,13 @@ from keep.api.core.alerts import (
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.config import config
-from keep.api.core.db import dismiss_error_alerts as dismiss_error_alerts_db, get_last_alerts_by_fingerprints, \
-    get_alerts_by_ids
+from keep.api.core.db import get_alert_audit as get_alert_audit_db
+from keep.api.core.db import (
+    dismiss_error_alerts as dismiss_error_alerts_db,
+    get_last_alerts_by_fingerprints,
+    get_alerts_by_ids,
+)
 from keep.api.core.db import enrich_alerts_with_incidents
-from keep.api.core.db import get_alert_audit as get_alert_audit_db, enrich_alerts_with_incidents
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_metrics_by_provider,
@@ -821,7 +824,7 @@ def batch_enrich_alerts(
 
         if dispose_on_new_alert:
             # Create instance-wide enrichment for history
-            
+
             # For better database-native UUID support
             formatted_alert_ids = [UUIDType(binary=False).process_bind_param(
                 alert_id, session.bind.dialect
