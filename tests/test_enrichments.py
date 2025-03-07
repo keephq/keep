@@ -400,7 +400,7 @@ def test_check_matcher_with_or_condition(mock_session, mock_alert_dto):
     ],
     indirect=True,
 )
-def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts):
+def test_mapping_rule_with_elastic(mock_session, mock_alert_dto, setup_alerts):
     import os
 
     # first, use elastic
