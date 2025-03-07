@@ -1891,6 +1891,7 @@ def create_incident_for_grouping_rule(
             and not rule.require_approve,
             incident_type=IncidentType.RULE.value,
             same_incident_in_the_past_id=past_incident.id if past_incident else None,
+            resolve_on=rule.resolve_on,
         )
         session.add(incident)
         session.commit()
