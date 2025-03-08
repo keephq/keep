@@ -260,7 +260,7 @@ def __save_to_db(
         try:
             saved_alerts = enrich_alerts_with_incidents(
                 tenant_id, saved_alerts, session
-            )  # note: this only enriches incidents that were not yet deleted
+            )  # note: this only enriches incidents that were not yet ended
             for alert in saved_alerts:
                 if alert.status == AlertStatus.RESOLVED.value:
                     logger.debug(
