@@ -1,7 +1,109 @@
 import { Provider } from "@/shared/api/providers";
 import { Definition, V2Step } from "./types";
+import { getWithParams } from "../lib/parser";
 
 export type ValidationResult = [string, string];
+
+/**
+ * Extracts the trimmed value from mustache syntax by removing curly brackets.
+ *
+ * @param mustacheString - A string containing mustache syntax like "{{ variable }}"
+ * @returns The trimmed inner value without curly brackets
+ */
+function extractMustacheValue(mustacheString: string): string {
+  // Use regex to match content between {{ and }} and trim whitespace
+  const match = mustacheString.match(/\{\{\s*(.*?)\s*\}\}/);
+
+  // Return the captured group if found, otherwise return empty string
+  return match ? match[1] : "";
+}
+
+export const validateMustacheVariableName = (
+  variableName: string,
+  currentStep: V2Step,
+  definition: Definition
+) => {
+  const cleanedVariableName = extractMustacheValue(variableName);
+  const parts = cleanedVariableName.split(".");
+  if (!parts.every((part) => part.length > 0)) {
+    return `Variable: '${variableName}' - Parts cannot be empty.`;
+  }
+  if (parts[0] === "alert") {
+    // todo: validate alert properties
+    return null;
+  }
+  if (parts[0] === "incident") {
+    // todo: validate incident properties
+    return null;
+  }
+  if (parts[0] === "steps") {
+    const stepName = parts[1];
+    if (!stepName) {
+      return `Variable: '${variableName}' - To access the results of a step, you need to specify the step name.`;
+    }
+    // todo: check if
+    // - the step exists
+    // - it's not the current step (can't access own results, only enrich_alert and enrich_incident can access their own results)
+    // - it's above the current step
+    // - if it's a step it cannot access actions since they run after steps
+    const step = definition.sequence.find(
+      (step) => step.id === stepName || step.name === stepName
+    );
+    const stepIndex = definition.sequence.findIndex(
+      (step) => step.id === stepName || step.name === stepName
+    );
+    const currentStepIndex = definition.sequence.findIndex(
+      (step) => step.id === currentStep.id
+    );
+    if (!step) {
+      return `Variable: '${variableName}' - a '${stepName}' step that doesn't exist.`;
+    }
+    const isCurrentStep = step.id === currentStep.id;
+    if (isCurrentStep) {
+      return `Variable: '${variableName}' - You can't access the results of the current step.`;
+    }
+    if (stepIndex > currentStepIndex) {
+      return `Variable: '${variableName}' - You can't access the results of a step that appears after the current step.`;
+    }
+    if (
+      currentStep.type.startsWith("step-") &&
+      step.type.startsWith("action-")
+    ) {
+      return `Variable: '${variableName}' - You can't access the results of an action from a step.`;
+    }
+
+    if (!definition.sequence?.some((step) => step.name === stepName)) {
+      return `Variable: '${variableName}' - a '${stepName}' step that doesn't exist.`;
+    }
+    if (parts[2] === "results") {
+      // todo: validate results properties
+      return null;
+    } else {
+      return `Variable: '${variableName}' - To access the results of a step, use 'results' as suffix.`;
+    }
+  }
+  return null;
+};
+
+export const validateAllMustacheVariablesInString = (
+  string: string,
+  currentStep: V2Step,
+  definition: Definition
+) => {
+  const regex = /\{\{([^}]+)\}\}/g;
+  const matches = string.match(regex);
+  if (!matches) {
+    return null;
+  }
+  const errors: string[] = [];
+  matches.forEach((match) => {
+    const error = validateMustacheVariableName(match, currentStep, definition);
+    if (error) {
+      errors.push(error);
+    }
+  });
+  return errors;
+};
 
 export const checkProviderNeedsInstallation = (providerObject: Provider) => {
   return providerObject.config && Object.keys(providerObject.config).length > 0;
@@ -53,13 +155,11 @@ export function validateGlobalPure(definition: Definition): ValidationResult[] {
     errors.push(["alert", "Alert trigger should have at least one filter."]);
   }
 
-  const incidentActions = Object.values(
-    definition.properties.incident || {}
-  ).filter(Boolean);
+  const incidentEvents = definition.properties.incident?.events;
   if (
     definition?.properties &&
     definition.properties["incident"] &&
-    incidentActions.length == 0
+    incidentEvents?.length == 0
   ) {
     errors.push(["incident", "Workflow incident trigger cannot be empty."]);
   }
@@ -131,8 +231,23 @@ function validateProviderConfig(
 export function validateStepPure(
   step: V2Step,
   providers: Provider[],
-  installedProviders: Provider[]
+  installedProviders: Provider[],
+  definition: Definition
 ): string | null {
+  // todo: validate `enrich_alert` and `enrich_incident`
+  if (
+    (step.componentType === "task" || step.componentType === "container") &&
+    step.properties.if
+  ) {
+    const variableErrors = validateAllMustacheVariablesInString(
+      step.properties.if,
+      step,
+      definition
+    );
+    if (variableErrors) {
+      return variableErrors[0];
+    }
+  }
   if (step.componentType === "switch") {
     if (!step.name) {
       return "Condition name cannot be empty.";
@@ -141,13 +256,37 @@ export function validateStepPure(
       if (!step.properties.value) {
         return "Condition value cannot be empty.";
       }
+      const variableErrorsValue = validateAllMustacheVariablesInString(
+        step.properties.value,
+        step,
+        definition
+      );
+      if (variableErrorsValue) {
+        return variableErrorsValue[0];
+      }
       if (!step.properties.compare_to) {
         return "Condition compare to cannot be empty.";
+      }
+      const variableErrorsCompareTo = validateAllMustacheVariablesInString(
+        step.properties.compare_to,
+        step,
+        definition
+      );
+      if (variableErrorsCompareTo) {
+        return variableErrorsCompareTo[0];
       }
     }
     if (step.type === "condition-assert") {
       if (!step.properties.assert) {
         return "Condition assert cannot be empty.";
+      }
+      const variableErrors = validateAllMustacheVariablesInString(
+        step.properties.assert,
+        step,
+        definition
+      );
+      if (variableErrors) {
+        return variableErrors[0];
       }
     }
     const branches = step.branches || {
@@ -175,17 +314,37 @@ export function validateStepPure(
     if (providerError) {
       return providerError;
     }
-    if (
-      !Object.values(step?.properties?.with || {}).some(
-        (value) => String(value).length > 0
-      )
-    ) {
+    const withParams = getWithParams(step);
+    const isAnyParamConfigured = Object.values(withParams || {}).some(
+      (value) => String(value).length > 0
+    );
+    if (!isAnyParamConfigured) {
       return "No parameters configured";
+    }
+    for (const [key, value] of Object.entries(withParams)) {
+      if (typeof value === "string") {
+        const variableErrors = validateAllMustacheVariablesInString(
+          value,
+          step,
+          definition
+        );
+        if (variableErrors) {
+          return variableErrors[0];
+        }
+      }
     }
     return null;
   }
   if (step.componentType === "container" && step.type === "foreach") {
     if (!step.properties.value) {
+      const variableErrors = validateAllMustacheVariablesInString(
+        step.properties.value,
+        step,
+        definition
+      );
+      if (variableErrors) {
+        return variableErrors[0];
+      }
       return "Foreach value cannot be empty.";
     }
   }

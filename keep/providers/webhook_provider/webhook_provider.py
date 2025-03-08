@@ -3,6 +3,7 @@ WebhookProvider is a class that provides a way to notify a 3rd party service usi
 """
 
 import base64
+import copy
 import dataclasses
 import json
 import typing
@@ -184,6 +185,9 @@ class WebhookProvider(BaseProvider):
         if params is None:
             params = {}
 
+        extra_args = copy.deepcopy(kwargs)
+        extra_args.pop("enrich_alert", None)
+
         if http_basic_authentication_username and http_basic_authentication_password:
             credentials = f"{http_basic_authentication_username}:{http_basic_authentication_password}"
             encoded_credentials = base64.b64encode(credentials.encode("utf-8")).decode(
@@ -203,13 +207,21 @@ class WebhookProvider(BaseProvider):
             },
         )
         if method == "GET":
-            response = requests.get(url, headers=headers, params=params, **kwargs)
+            response = requests.get(
+                url, headers=headers, params=params, timeout=10, **extra_args
+            )
         elif method == "POST":
-            response = requests.post(url, headers=headers, json=body, **kwargs)
+            response = requests.post(
+                url, headers=headers, json=body, timeout=10, **extra_args
+            )
         elif method == "PUT":
-            response = requests.put(url, headers=headers, json=body, **kwargs)
+            response = requests.put(
+                url, headers=headers, json=body, timeout=10, **extra_args
+            )
         elif method == "DELETE":
-            response = requests.delete(url, headers=headers, json=body, **kwargs)
+            response = requests.delete(
+                url, headers=headers, json=body, timeout=10, **extra_args
+            )
 
         self.logger.debug(
             f"Trigger a webhook with {method} on {url}",

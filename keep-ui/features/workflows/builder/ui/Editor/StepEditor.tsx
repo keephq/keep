@@ -280,8 +280,10 @@ function KeepStepEditor({
   updateProperty,
   type,
   parametersError,
+  variableError,
 }: KeepEditorProps & {
   parametersError?: string | null;
+  variableError?: string | null;
 }) {
   const stepParams =
     ((type?.includes("step-")
@@ -304,7 +306,20 @@ function KeepStepEditor({
         <div className="mb-2">
           <Text className="font-bold">Provider parameters</Text>
           {parametersError && (
-            <Text className="text-red-500">{parametersError}</Text>
+            <Callout
+              color="rose"
+              className="text-sm my-1"
+              title={parametersError}
+            />
+          )}
+          {variableError && (
+            <Callout
+              color="yellow"
+              className="text-sm my-1"
+              title={variableError.split("-")[0]}
+            >
+              {variableError.split("-")[1]}
+            </Callout>
           )}
         </div>
         <div>
@@ -701,12 +716,17 @@ function ActionOrStepEditor({
   const error = validationErrors?.[formData.name || ""];
   let parametersError = null;
   let providerError = null;
+  let variableError = null;
   if (error?.includes("parameters")) {
     parametersError = error;
   }
 
   if (error?.includes("provider")) {
     providerError = error;
+  }
+
+  if (error?.startsWith("Variable:")) {
+    variableError = error;
   }
 
   const { data: { installed_providers: installedProviders } = {} } =
@@ -777,7 +797,7 @@ function ActionOrStepEditor({
     >
       <div className="pt-2.5 px-4">
         <Subtitle className="font-medium capitalize">
-          {providerType} step
+          {providerType} {formData.type.split("-")[0]}
         </Subtitle>
         <Text className="mt-1">Unique Identifier</Text>
         <TextInput
@@ -837,6 +857,7 @@ function ActionOrStepEditor({
               {type && formData.properties ? (
                 <KeepStepEditor
                   parametersError={parametersError}
+                  variableError={variableError}
                   properties={formData.properties}
                   updateProperty={handlePropertyChange}
                   providerType={providerType}
