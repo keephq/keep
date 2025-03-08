@@ -207,13 +207,21 @@ class WebhookProvider(BaseProvider):
             },
         )
         if method == "GET":
-            response = requests.get(url, headers=headers, params=params, **extra_args)
+            response = requests.get(
+                url, headers=headers, params=params, timeout=10, **extra_args
+            )
         elif method == "POST":
-            response = requests.post(url, headers=headers, json=body, **extra_args)
+            response = requests.post(
+                url, headers=headers, json=body, timeout=10, **extra_args
+            )
         elif method == "PUT":
-            response = requests.put(url, headers=headers, json=body, **extra_args)
+            response = requests.put(
+                url, headers=headers, json=body, timeout=10, **extra_args
+            )
         elif method == "DELETE":
-            response = requests.delete(url, headers=headers, json=body, **extra_args)
+            response = requests.delete(
+                url, headers=headers, json=body, timeout=10, **extra_args
+            )
 
         self.logger.debug(
             f"Trigger a webhook with {method} on {url}",
