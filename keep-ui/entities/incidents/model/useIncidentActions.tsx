@@ -4,8 +4,6 @@ import { useCallback } from "react";
 import { toast } from "react-toastify";
 import { useSWRConfig } from "swr";
 import { IncidentDto, Severity, Status } from "./models";
-import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui";
 
 
 type UseIncidentActionsValue = {
@@ -157,7 +155,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
   const mergeIncidents = useCallback(
     async (sourceIncidents: IncidentDto[], destinationIncident: IncidentDto) => {
       if (!sourceIncidents.length) {
-        showErrorToast(new Error("No incidents selected for merging. Please select at least one incident."));
+        showErrorToast(new Error("No incidents selected for merging."));
         return;
       }
   
@@ -166,28 +164,16 @@ export function useIncidentActions(): UseIncidentActionsValue {
         return;
       }
   
-      // Check if any source incident is empty (has no alerts)
-      const emptySourceIncidents = sourceIncidents.filter(incident => incident.alert_count === 0);
-  
-      if (emptySourceIncidents.length) {
-        const confirmMerge = window.confirm(
-          `You are merging ${emptySourceIncidents.length} incident(s) with no alerts. Do you want to continue?`
-        );
-        if (!confirmMerge) return;
-      }
-  
       try {
         const result = await api.post("/incidents/merge", {
-          source_incident_ids: sourceIncidents.map(incident => incident.id),
+          source_incident_ids: sourceIncidents.map((incident) => incident.id),
           destination_incident_id: destinationIncident.id,
         });
   
         if (result.merged_incident_ids?.length) {
           toast.success("Incidents merged successfully!");
-        } else if (result.skipped_incident_ids?.length) {
-          showErrorToast(new Error("Some incidents were skipped and not merged."));
         } else {
-          showErrorToast(new Error("No incidents were merged. Please check the selection and try again."));
+          showErrorToast(new Error("No incidents were merged."));
         }
   
         mutateIncidentsList();
@@ -197,6 +183,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
     },
     [api, mutateIncidentsList]
   );
+  
   
   
   

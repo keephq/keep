@@ -42,7 +42,6 @@ from keep.api.models.alert import (AlertDto, EnrichAlertRequestBody,
                                    MergeIncidentsResponseDto,
                                    SplitIncidentRequestDto,
                                    SplitIncidentResponseDto)
-
 from keep.api.models.db.alert import ActionType, AlertAudit
 from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.workflow import WorkflowExecutionDTO
@@ -415,7 +414,6 @@ def merge_incidents(
 ) -> MergeIncidentsResponseDto:
     tenant_id = authenticated_entity.tenant_id
 
-    # Validate input
     if not command.source_incident_ids:
         raise HTTPException(status_code=400, detail="No source incidents selected for merging.")
     if not command.destination_incident_id:
@@ -434,25 +432,20 @@ def merge_incidents(
             authenticated_entity.email,
         )
 
-        # Ensure the merge was at least partially successful
-        if not merged_ids and not skipped_ids:
-            raise HTTPException(status_code=400, detail="Merge failed: No incidents could be merged.")
-
-        # Construct response message
-        message_parts = []
-        if merged_ids:
-            message_parts.append(f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id}")
-        if skipped_ids:
-            message_parts.append(f"{pluralize(len(skipped_ids), 'incident')} were skipped")
-        if failed_ids:
-            message_parts.append(f"{pluralize(len(failed_ids), 'incident')} failed to merge")
+        # Allow merge even if source incidents are empty
+        message_parts = [
+            f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id}" if merged_ids else "Merge completed successfully",
+            f"{pluralize(len(skipped_ids), 'incident')} were skipped" if skipped_ids else "",
+            f"{pluralize(len(failed_ids), 'incident')} failed to merge" if failed_ids else "",
+        ]
+        message = ", ".join(filter(None, message_parts))
 
         return MergeIncidentsResponseDto(
             merged_incident_ids=merged_ids,
             skipped_incident_ids=skipped_ids,
             failed_incident_ids=failed_ids,
             destination_incident_id=command.destination_incident_id,
-            message=", ".join(message_parts),
+            message=message,
         )
     except DestinationIncidentNotFound as e:
         raise HTTPException(status_code=400, detail=str(e))
