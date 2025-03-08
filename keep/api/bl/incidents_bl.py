@@ -24,8 +24,10 @@ from keep.api.core.db import (
     update_incident_severity,
 )
 from keep.api.core.elastic import ElasticClient
-from keep.api.models.alert import IncidentDto, IncidentDtoIn, IncidentSeverity
-from keep.api.models.db.alert import ActionType, Incident
+from keep.api.models.action_type import ActionType
+from keep.api.models.db.alert import Incident
+from keep.api.models.db.incident import IncidentSeverity
+from keep.api.models.incident import IncidentDto, IncidentDtoIn
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.workflowmanager.workflowmanager import WorkflowManager
 

@@ -28,7 +28,8 @@ from keep.api.core.db import (
     get_workflow_by_name,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
-from keep.api.models.alert import AlertDto, IncidentDto
+from keep.api.models.alert import AlertDto
+from keep.api.models.incident import IncidentDto
 from keep.api.models.workflow import (
     WorkflowCreateOrUpdateDTO,
     WorkflowDTO,
