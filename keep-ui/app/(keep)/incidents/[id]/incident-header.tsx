@@ -68,7 +68,7 @@ export function IncidentHeader({
             <Subtitle className="text-sm">
               <Link href="/incidents">All Incidents</Link>{" "}
               <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
-              {incident.is_confirmed ? "" : "Possible "}
+              {incident.is_candidate ? "" : "Possible "}
               {getIncidentName(incident)}
               {pathNameCapitalized && (
                 <>
@@ -79,7 +79,7 @@ export function IncidentHeader({
             </Subtitle>
           </div>
 
-          {incident.is_confirmed && (
+          {!incident.is_candidate && (
             <div className="flex">
               <Button
                 color="orange"
@@ -135,7 +135,7 @@ export function IncidentHeader({
               </Badge>
             )}
           </div>
-          {!incident.is_confirmed && (
+          {incident.is_candidate && (
             <div className="space-x-1 flex flex-row items-center justify-center">
               <Button
                 color="orange"

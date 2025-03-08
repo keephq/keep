@@ -19,7 +19,7 @@ type IncidentsLinksProps = { session: Session | null };
 export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
   const isNOCRole = session?.userRole === "noc";
   const { data: incidents, mutate } = useIncidents(
-    true,
+    false,
     null,
     DEFAULT_INCIDENTS_PAGE_SIZE,
     0,
