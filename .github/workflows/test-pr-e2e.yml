@@ -31,6 +31,55 @@ env:
   EE_ENABLED: true
 
 jobs:
+  # Prepare test environment in parallel with Docker builds
+  prepare-test-environment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4.2.0
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies using poetry
+        run: poetry install --no-interaction --no-root --with dev
+
+      - name: Get Playwright version from poetry.lock
+        id: playwright-version
+        run: |
+          PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
+          echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright and dependencies
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            poetry run playwright install --with-deps
+          else
+            poetry run playwright install-deps
+          fi
+
   # Build images in parallel
   build-frontend:
     runs-on: ubuntu-latest
@@ -105,9 +154,11 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}
           # Use registry-based caching with branch-specific tags
           cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-main
           cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
           # Add build args for better caching
           build-args: |
@@ -188,9 +239,11 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}
           # Use registry-based caching with branch-specific tags
           cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-main
           cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
           # Add build args for better caching
           build-args: |
@@ -198,13 +251,10 @@ jobs:
           # Verbose output
           outputs: type=image,push=true
 
-  # Run tests
-  run-tests:
-    needs: [build-frontend, build-backend]
+  # Start external services early
+  start-external-services:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    needs: [] # No dependencies - start right away
     strategy:
       matrix:
         db_type: [mysql, postgres]
@@ -219,81 +269,32 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: chartboost/ruff-action@v1
-        with:
-          src: "./keep"
-
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Cache dependencies
-        id: cache-deps
-        uses: actions/cache@v4.2.0
-        with:
-          path: .venv
-          key: pydeps-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Install dependencies using poetry
-        run: poetry install --no-interaction --no-root --with dev
-
-      - name: Get Playwright version from poetry.lock
-        id: playwright-version
-        run: |
-          PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
-          echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4.2.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ steps.playwright-version.outputs.version }}
-
-      - name: Install Playwright and dependencies
-        run: |
-          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
-            poetry run playwright install --with-deps
-          else
-            poetry run playwright install-deps
-          fi
-
-      # Create a modified compose file with our built images
-      - name: Create modified docker-compose file with built images
+      # Create a modified compose file with our built images (we'll need this later)
+      - name: Create modified docker-compose file
         run: |
           cp tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml tests/e2e_tests/docker-compose-modified.yml
 
-          # Replace image placeholders with actual image references
+          # Replace image placeholders with actual image references that we'll build
           sed -i "s|%KEEPFRONTEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
           sed -i "s|%KEEPBACKEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
           sed -i "s|%KEEPFRONTEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-frontend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
           sed -i "s|%KEEPBACKEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-backend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
 
-          # Check the result
-          cat tests/e2e_tests/docker-compose-modified.yml
-
-      # Start containers using the pre-built images
-      - name: Start Docker containers
+      # Start only database and external services
+      - name: Start external services (database and other dependencies)
         run: |
+          echo "Starting external services for ${{ matrix.db_type }}..."
+
+          # Using docker compose to start only the external services, not our application containers
           docker compose \
             --project-directory . \
             -f tests/e2e_tests/docker-compose-modified.yml \
-            pull
+            up -d \
+            keep-database keep-database-db-auth grafana
 
-          docker compose \
-            --project-directory . \
-            -f tests/e2e_tests/docker-compose-modified.yml \
-            up -d
-
-      # Optimize wait times with exponential backoff
-      - name: Wait for services to be ready with optimized polling
+      # Wait for databases to be ready
+      - name: Wait for database services to be ready
+        id: wait-db
         run: |
           # Function for exponential backoff
           function wait_for_service() {
@@ -343,19 +344,164 @@ jobs:
             wait_for_service "Postgres Database (DB AUTH)" "docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
           fi
 
-          # Service checks with log visibility
+      # Optionally, upload compose file as artifact for debugging
+      - name: Upload compose file for debugging
+        uses: actions/upload-artifact@v4.4.3
+        with:
+          name: docker-compose-${{ matrix.db_type }}
+          path: tests/e2e_tests/docker-compose-modified.yml
+
+  # Run tests
+  run-tests:
+    needs:
+      [
+        build-frontend,
+        build-backend,
+        prepare-test-environment,
+        start-external-services,
+      ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        db_type: [mysql, postgres]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: chartboost/ruff-action@v1
+        with:
+          src: "./keep"
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Restore dependencies cache
+        id: cache-deps
+        uses: actions/cache@v4.2.0
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+      # Only install dependencies if cache miss
+      - name: Install dependencies using poetry
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root --with dev
+
+      - name: Get Playwright version from poetry.lock
+        id: playwright-version
+        run: |
+          PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
+          echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright and dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: |
+          poetry run playwright install --with-deps
+
+      # Start the application services (but not the external services as they're already running)
+      - name: Create modified docker-compose file with built images
+        run: |
+          cp tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml tests/e2e_tests/docker-compose-modified.yml
+
+          # Replace image placeholders with actual image references
+          sed -i "s|%KEEPFRONTEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPBACKEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPFRONTEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-frontend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPBACKEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-backend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+
+      # Start app containers using the pre-built images, but only the ones not already started
+      - name: Start application containers
+        run: |
+          # Pull the images we built
+          docker compose \
+            --project-directory . \
+            -f tests/e2e_tests/docker-compose-modified.yml \
+            pull keep-backend keep-frontend keep-backend-db-auth keep-frontend-db-auth
+
+          # Start the application containers
+          # The databases and other external services should already be running
+          docker compose \
+            --project-directory . \
+            -f tests/e2e_tests/docker-compose-modified.yml \
+            up -d keep-backend keep-frontend keep-backend-db-auth keep-frontend-db-auth
+
+      # Optimize wait times with exponential backoff - only wait for our application services
+      - name: Wait for application services to be ready
+        run: |
+          # Function for exponential backoff
+          function wait_for_service() {
+            local service_name=$1
+            local check_command=$2
+            local max_attempts=$3
+            local compose_service=$4  # Docker Compose service name
+            local attempt=0
+            local wait_time=1
+
+            echo "Waiting for $service_name to be ready..."
+            until eval "$check_command"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "Max attempts reached, exiting..."
+                # Show final logs before exiting
+                if [ ! -z "$compose_service" ]; then
+                  echo "===== FINAL LOGS FOR $compose_service ====="
+                  docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 50
+                  echo "=========================================="
+                fi
+                exit 1
+              fi
+
+              echo "Waiting for $service_name... (Attempt: $((attempt+1)), waiting ${wait_time}s)"
+
+              # Print logs using docker-compose
+              if [ ! -z "$compose_service" ]; then
+                echo "===== RECENT LOGS FOR $compose_service ====="
+                docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 20
+                echo "=========================================="
+              fi
+
+              attempt=$((attempt+1))
+              sleep $wait_time
+              # Exponential backoff with max of 8 seconds
+              wait_time=$((wait_time * 2 > 8 ? 8 : wait_time * 2))
+            done
+            echo "$service_name is ready!"
+          }
+
+          # Service checks with log visibility - only check application services
           wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 15 "keep-backend-db-auth"
           wait_for_service "Keep backend" "curl --output /dev/null --silent --fail http://localhost:8080/healthcheck" 15 "keep-backend"
           wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 15 "keep-frontend"
           wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth"
-          wait_for_service "Grafana" "curl --output /dev/null --silent --fail http://localhost:3002/api/health" 10 "grafana"
 
       # Run tests
       - name: Run e2e tests and report coverage
         run: |
-          # poetry run coverage run --branch -m pytest -s tests/e2e_tests/
-          # lets run the tests in parallel
-          poetry run coverage run --branch -m pytest -s tests/e2e_tests/ -v -n auto
+          poetry run coverage run --branch -m pytest -s tests/e2e_tests/
 
       - name: Convert coverage results to JSON (for CodeCov support)
         run: poetry run coverage json --omit="keep/providers/*"
@@ -368,7 +514,7 @@ jobs:
           verbose: true
 
       # Collect logs
-      - name: Dump backend logs
+      - name: Dump logs
         if: always()
         run: |
           docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-backend > backend_logs-${{ matrix.db_type }}.txt
@@ -394,5 +540,6 @@ jobs:
 
       # Tear down environment
       - name: Tear down environment
+        if: always()
         run: |
           docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
