@@ -290,7 +290,7 @@ jobs:
             --project-directory . \
             -f tests/e2e_tests/docker-compose-modified.yml \
             up -d \
-            keep-database keep-database-db-auth grafana
+            keep-database keep-database-db-auth grafana prometheus-server-for-test-target
 
       # Wait for databases to be ready
       - name: Wait for database services to be ready
