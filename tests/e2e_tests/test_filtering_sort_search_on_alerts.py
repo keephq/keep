@@ -1,3 +1,4 @@
+import re
 import time
 from datetime import datetime, timedelta
 
@@ -244,7 +245,8 @@ def upload_alerts():
 def init_test(browser: Page, alerts):
     init_e2e_test(browser, next_url="/alerts/feed")
     url = f"{KEEP_UI_URL}/alerts/feed"
-    browser.wait_for_url(url)
+    url_pattern = re.compile(f"{re.escape(url)}(\\?.*)?$")
+    browser.wait_for_url(url_pattern)
     browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
     browser.wait_for_selector(f"text={alerts[0]['name']}", timeout=10000)
     rows_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()

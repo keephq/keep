@@ -99,7 +99,10 @@ def test_sanity(browser: Page):  # browser is actually a page object
             init_e2e_test(browser, wait_time=1)
 
             # Now try the navigation with increased timeout
-            browser.wait_for_url("http://localhost:3000/incidents", timeout=15000)
+            # Ignore queryparams suchas tenantId
+            browser.wait_for_url(
+                re.compile(r"http://localhost:3000/incidents(\?.*)?"), timeout=15000
+            )
             assert "Keep" in browser.title()
 
             # If we get here, the test passed
@@ -128,7 +131,9 @@ def test_insert_new_alert(browser: Page):  # browser is actually a page object
             browser,
             next_url="/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders",
         )
-        browser.wait_for_url("http://localhost:3000/providers")
+        base_url = "http://localhost:3000/providers"
+        url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
+        browser.wait_for_url(url_pattern)
 
         feed_badge = browser.get_by_test_id("menu-alerts-feed-badge")
         feed_count_before = int(feed_badge.text_content() or "0")
@@ -167,7 +172,9 @@ def test_providers_page_is_accessible(browser: Page):
             browser,
             next_url="/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders",
         )
-        browser.wait_for_url("http://localhost:3000/providers")
+        base_url = "http://localhost:3000/providers"
+        url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
+        browser.wait_for_url(url_pattern)
         # get the GCP Monitoring provider
         browser.locator("button:has-text('GCP Monitoring'):has-text('alert')").click()
         browser.get_by_role("button", name="Cancel").click()

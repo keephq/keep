@@ -88,6 +88,6 @@ def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=
     if tenant_id:
         browser.goto(f"{KEEP_UI_URL}{next_url}?tenantId={tenant_id}")
     else:
-        browser.goto(f"{KEEP_UI_URL}{next_url}")
+        browser.goto(f"{KEEP_UI_URL}{next_url}?tenantId=keep")
 
     browser.wait_for_timeout(wait_time)
