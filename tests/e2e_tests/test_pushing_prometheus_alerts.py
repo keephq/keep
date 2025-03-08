@@ -42,6 +42,8 @@ def test_pulling_prometheus_alerts_to_provider(browser):
                 )
                 base_url = "http://localhost:3000/providers"
                 url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
+                resp = requests.get("http://localhost:3000/providers")
+                resp.raise_for_status()
                 browser.wait_for_url(url_pattern)
             except Exception as e:
                 if attempt < max_attemps - 1:
