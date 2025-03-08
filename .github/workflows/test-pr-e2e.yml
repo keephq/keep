@@ -353,7 +353,9 @@ jobs:
       # Run tests
       - name: Run e2e tests and report coverage
         run: |
-          poetry run coverage run --branch -m pytest -s tests/e2e_tests/
+          # poetry run coverage run --branch -m pytest -s tests/e2e_tests/
+          # lets run the tests in parallel
+          poetry run coverage run --branch -m pytest -s tests/e2e_tests/ -v -n auto
 
       - name: Convert coverage results to JSON (for CodeCov support)
         run: poetry run coverage json --omit="keep/providers/*"
