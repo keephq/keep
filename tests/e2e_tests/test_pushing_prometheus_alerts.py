@@ -40,10 +40,15 @@ def test_pulling_prometheus_alerts_to_provider(browser):
                     browser,
                     next_url="/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders",
                 )
+                # Give the page a moment to process redirects
+                browser.wait_for_timeout(500)
+
+                # Wait for navigation to complete to either signin or providers page
+                # (since we might get redirected automatically)
+                browser.wait_for_load_state("networkidle")
+
                 base_url = "http://localhost:3000/providers"
                 url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
-                resp = requests.get("http://localhost:3000/providers")
-                resp.raise_for_status()
                 browser.wait_for_url(url_pattern)
             except Exception as e:
                 if attempt < max_attemps - 1:
