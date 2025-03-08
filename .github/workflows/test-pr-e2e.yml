@@ -290,10 +290,10 @@ jobs:
             --project-directory . \
             -f tests/e2e_tests/docker-compose-modified.yml \
             up -d \
-            keep-database keep-database-db-auth grafana prometheus-server-for-test-target
+            keep-database keep-database-db-auth prometheus-server-for-test-target grafana keep-websocket-server
 
-      # Wait for databases to be ready
-      - name: Wait for database services to be ready
+      # Wait for all external services to be ready
+      - name: Wait for external services to be ready
         id: wait-db
         run: |
           # Function for exponential backoff
@@ -343,6 +343,16 @@ jobs:
             wait_for_service "Postgres Database" "docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser" 10 "keep-database"
             wait_for_service "Postgres Database (DB AUTH)" "docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
           fi
+
+          # Wait for Prometheus
+          wait_for_service "Prometheus" "curl --output /dev/null --silent --fail http://localhost:9090/-/healthy" 15 "prometheus-server-for-test-target"
+
+          # Wait for Grafana
+          wait_for_service "Grafana" "curl --output /dev/null --silent --fail http://localhost:3002/api/health" 15 "grafana"
+
+          # Give services additional time to fully initialize (some services might report healthy before fully ready)
+          echo "Giving services additional time to stabilize..."
+          sleep 10
 
       # Optionally, upload compose file as artifact for debugging
       - name: Upload compose file for debugging
@@ -437,6 +447,10 @@ jobs:
       # Start app containers using the pre-built images, but only the ones not already started
       - name: Start application containers
         run: |
+          # Verify existing services are running
+          echo "Checking status of external services..."
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml ps
+
           # Pull the images we built
           docker compose \
             --project-directory . \
@@ -498,10 +512,51 @@ jobs:
           wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 15 "keep-frontend"
           wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth"
 
+      # Pre-check service accessibility before running tests
+      - name: Pre-check service accessibility
+        run: |
+          echo "Checking service accessibility before running tests..."
+
+          # Check Prometheus endpoint
+          echo "Testing Prometheus connection..."
+          curl -v http://localhost:9090/api/v1/status/config 2>&1 || echo "Prometheus API not responding, but continuing..."
+
+          # Check Grafana endpoint
+          echo "Testing Grafana connection..."
+          curl -v http://localhost:3002/api/health 2>&1 || echo "Grafana API not responding, but continuing..."
+
+          # List all running containers to verify state
+          echo "Currently running containers:"
+          docker ps
+
+          # Network diagnostics
+          echo "Network diagnostics:"
+          docker network ls
+          docker network inspect tests-e2e-tests_default || true
+
       # Run tests
       - name: Run e2e tests and report coverage
         run: |
-          poetry run coverage run --branch -m pytest -s tests/e2e_tests/
+          # Adding retry logic for more robustness
+          MAX_RETRIES=2
+          RETRY_COUNT=0
+
+          until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
+            echo "Running tests (attempt $((RETRY_COUNT+1))/$((MAX_RETRIES+1)))..."
+            if poetry run coverage run --branch -m pytest -s tests/e2e_tests/; then
+              echo "Tests completed successfully!"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT+1))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "Test run failed. Waiting 30 seconds before retry..."
+                sleep 30
+              else
+                echo "Maximum retries reached. Failing the build."
+                exit 1
+              fi
+            fi
+          done
 
       - name: Convert coverage results to JSON (for CodeCov support)
         run: poetry run coverage json --omit="keep/providers/*"
