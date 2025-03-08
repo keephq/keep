@@ -29,6 +29,8 @@ env:
   POSTGRES_DB: keepdb
   # To test if imports are working properly
   EE_ENABLED: true
+  # Docker Compose project name
+  COMPOSE_PROJECT_NAME: keep
 
 jobs:
   # Prepare test environment in parallel with Docker builds
@@ -251,125 +253,9 @@ jobs:
           # Verbose output
           outputs: type=image,push=true
 
-  # Start external services early
-  start-external-services:
-    runs-on: ubuntu-latest
-    needs: [] # No dependencies - start right away
-    strategy:
-      matrix:
-        db_type: [mysql, postgres]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Create a modified compose file with our built images (we'll need this later)
-      - name: Create modified docker-compose file
-        run: |
-          cp tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml tests/e2e_tests/docker-compose-modified.yml
-
-          # Replace image placeholders with actual image references that we'll build
-          sed -i "s|%KEEPFRONTEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
-          sed -i "s|%KEEPBACKEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
-          sed -i "s|%KEEPFRONTEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-frontend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
-          sed -i "s|%KEEPBACKEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-backend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
-
-      # Start only database and external services
-      - name: Start external services (database and other dependencies)
-        run: |
-          echo "Starting external services for ${{ matrix.db_type }}..."
-
-          # Using docker compose to start only the external services, not our application containers
-          docker compose \
-            --project-directory . \
-            -f tests/e2e_tests/docker-compose-modified.yml \
-            up -d \
-            keep-database keep-database-db-auth prometheus-server-for-test-target grafana keep-websocket-server
-
-      # Wait for all external services to be ready
-      - name: Wait for external services to be ready
-        id: wait-db
-        run: |
-          # Function for exponential backoff
-          function wait_for_service() {
-            local service_name=$1
-            local check_command=$2
-            local max_attempts=$3
-            local compose_service=$4  # Docker Compose service name
-            local attempt=0
-            local wait_time=1
-
-            echo "Waiting for $service_name to be ready..."
-            until eval "$check_command"; do
-              if [ "$attempt" -ge "$max_attempts" ]; then
-                echo "Max attempts reached, exiting..."
-                # Show final logs before exiting
-                if [ ! -z "$compose_service" ]; then
-                  echo "===== FINAL LOGS FOR $compose_service ====="
-                  docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 50
-                  echo "=========================================="
-                fi
-                exit 1
-              fi
-
-              echo "Waiting for $service_name... (Attempt: $((attempt+1)), waiting ${wait_time}s)"
-
-              # Print logs using docker-compose
-              if [ ! -z "$compose_service" ]; then
-                echo "===== RECENT LOGS FOR $compose_service ====="
-                docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 20
-                echo "=========================================="
-              fi
-
-              attempt=$((attempt+1))
-              sleep $wait_time
-              # Exponential backoff with max of 8 seconds
-              wait_time=$((wait_time * 2 > 8 ? 8 : wait_time * 2))
-            done
-            echo "$service_name is ready!"
-          }
-
-          # Database checks
-          if [ "${{ matrix.db_type }}" == "mysql" ]; then
-            wait_for_service "MySQL Database" "docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h \"localhost\" --silent" 10 "keep-database"
-            wait_for_service "MySQL Database (DB AUTH)" "docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth"
-          elif [ "${{ matrix.db_type }}" == "postgres" ]; then
-            wait_for_service "Postgres Database" "docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser" 10 "keep-database"
-            wait_for_service "Postgres Database (DB AUTH)" "docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
-          fi
-
-          # Wait for Prometheus
-          wait_for_service "Prometheus" "curl --output /dev/null --silent --fail http://localhost:9090/-/healthy" 15 "prometheus-server-for-test-target"
-
-          # Wait for Grafana
-          wait_for_service "Grafana" "curl --output /dev/null --silent --fail http://localhost:3002/api/health" 15 "grafana"
-
-          # Give services additional time to fully initialize (some services might report healthy before fully ready)
-          echo "Giving services additional time to stabilize..."
-          sleep 10
-
-      # Optionally, upload compose file as artifact for debugging
-      - name: Upload compose file for debugging
-        uses: actions/upload-artifact@v4.4.3
-        with:
-          name: docker-compose-${{ matrix.db_type }}
-          path: tests/e2e_tests/docker-compose-modified.yml
-
-  # Run tests
+  # Run tests with all services in one job
   run-tests:
-    needs:
-      [
-        build-frontend,
-        build-backend,
-        prepare-test-environment,
-        start-external-services,
-      ]
+    needs: [build-frontend, build-backend, prepare-test-environment]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -433,7 +319,7 @@ jobs:
         run: |
           poetry run playwright install --with-deps
 
-      # Start the application services (but not the external services as they're already running)
+      # Create a modified compose file with our built images
       - name: Create modified docker-compose file with built images
         run: |
           cp tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml tests/e2e_tests/docker-compose-modified.yml
@@ -444,28 +330,22 @@ jobs:
           sed -i "s|%KEEPFRONTEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-frontend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
           sed -i "s|%KEEPBACKEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-backend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
 
-      # Start app containers using the pre-built images, but only the ones not already started
-      - name: Start application containers
+      # Start ALL services in one go
+      - name: Start ALL services
         run: |
-          # Verify existing services are running
-          echo "Checking status of external services..."
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml ps
+          echo "Starting ALL services for ${{ matrix.db_type }}..."
 
-          # Pull the images we built
-          docker compose \
-            --project-directory . \
-            -f tests/e2e_tests/docker-compose-modified.yml \
-            pull keep-backend keep-frontend keep-backend-db-auth keep-frontend-db-auth
+          # Pull the required images first
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
 
-          # Start the application containers
-          # The databases and other external services should already be running
-          docker compose \
-            --project-directory . \
-            -f tests/e2e_tests/docker-compose-modified.yml \
-            up -d keep-backend keep-frontend keep-backend-db-auth keep-frontend-db-auth
+          # Start all services together
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
 
-      # Optimize wait times with exponential backoff - only wait for our application services
-      - name: Wait for application services to be ready
+          # Show running containers
+          docker ps
+
+      # Wait for all services to be ready
+      - name: Wait for services to be ready
         run: |
           # Function for exponential backoff
           function wait_for_service() {
@@ -483,7 +363,7 @@ jobs:
                 # Show final logs before exiting
                 if [ ! -z "$compose_service" ]; then
                   echo "===== FINAL LOGS FOR $compose_service ====="
-                  docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 50
+                  docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 50
                   echo "=========================================="
                 fi
                 exit 1
@@ -491,10 +371,10 @@ jobs:
 
               echo "Waiting for $service_name... (Attempt: $((attempt+1)), waiting ${wait_time}s)"
 
-              # Print logs using docker-compose
+              # Print logs using docker compose
               if [ ! -z "$compose_service" ]; then
                 echo "===== RECENT LOGS FOR $compose_service ====="
-                docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 20
+                docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 20
                 echo "=========================================="
               fi
 
@@ -506,35 +386,77 @@ jobs:
             echo "$service_name is ready!"
           }
 
-          # Service checks with log visibility - only check application services
-          wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 15 "keep-backend-db-auth"
+          # Database checks
+          if [ "${{ matrix.db_type }}" == "mysql" ]; then
+            wait_for_service "MySQL Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h \"localhost\" --silent" 10 "keep-database"
+            wait_for_service "MySQL Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth"
+          elif [ "${{ matrix.db_type }}" == "postgres" ]; then
+            wait_for_service "Postgres Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser" 10 "keep-database"
+            wait_for_service "Postgres Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
+          fi
+
+          # Wait for services with health checks
           wait_for_service "Keep backend" "curl --output /dev/null --silent --fail http://localhost:8080/healthcheck" 15 "keep-backend"
+          wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 15 "keep-backend-db-auth"
           wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 15 "keep-frontend"
           wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth"
 
-      # Pre-check service accessibility before running tests
-      - name: Pre-check service accessibility
+          # Give Prometheus and Grafana extra time to initialize
+          # (using direct curl commands instead of container exec)
+          echo "Waiting for Prometheus to be ready..."
+          MAX_ATTEMPTS=15
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            if curl --output /dev/null --silent --fail http://localhost:9090/-/healthy; then
+              echo "Prometheus is ready!"
+              break
+            elif [ $i -eq $MAX_ATTEMPTS ]; then
+              echo "Prometheus did not become ready in time, but continuing..."
+              docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs prometheus-server-for-test-target --tail 50
+            else
+              echo "Waiting for Prometheus... Attempt $i/$MAX_ATTEMPTS"
+              sleep 5
+            fi
+          done
+
+          echo "Waiting for Grafana to be ready..."
+          MAX_ATTEMPTS=15
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            if curl --output /dev/null --silent --fail http://localhost:3002/api/health; then
+              echo "Grafana is ready!"
+              break
+            elif [ $i -eq $MAX_ATTEMPTS ]; then
+              echo "Grafana did not become ready in time, but continuing..."
+              docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs grafana --tail 50
+            else
+              echo "Waiting for Grafana... Attempt $i/$MAX_ATTEMPTS"
+              sleep 5
+            fi
+          done
+
+          # Give everything a bit more time to stabilize
+          echo "Giving services additional time to stabilize..."
+          sleep 10
+
+      # Debug the environment before running tests
+      - name: Debug environment
         run: |
-          echo "Checking service accessibility before running tests..."
+          echo "Checking all container status..."
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml ps
 
-          # Check Prometheus endpoint
-          echo "Testing Prometheus connection..."
-          curl -v http://localhost:9090/api/v1/status/config 2>&1 || echo "Prometheus API not responding, but continuing..."
-
-          # Check Grafana endpoint
-          echo "Testing Grafana connection..."
-          curl -v http://localhost:3002/api/health 2>&1 || echo "Grafana API not responding, but continuing..."
-
-          # List all running containers to verify state
-          echo "Currently running containers:"
-          docker ps
-
-          # Network diagnostics
-          echo "Network diagnostics:"
+          echo "Network information:"
           docker network ls
-          docker network inspect tests-e2e-tests_default || true
+          docker network inspect keep_default || true
 
-      # Run tests
+          echo "Testing Prometheus API..."
+          curl -v http://localhost:9090/api/v1/status/config || echo "Prometheus API not responding, but continuing..."
+
+          echo "Testing Grafana API..."
+          curl -v http://localhost:3002/api/health || echo "Grafana API not responding, but continuing..."
+
+          echo "Listing available ports:"
+          netstat -tuln | grep -E '3000|3001|3002|8080|8081|9090'
+
+      # Run tests with retry logic
       - name: Run e2e tests and report coverage
         run: |
           # Adding retry logic for more robustness
@@ -543,13 +465,15 @@ jobs:
 
           until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
             echo "Running tests (attempt $((RETRY_COUNT+1))/$((MAX_RETRIES+1)))..."
-            if poetry run coverage run --branch -m pytest -s tests/e2e_tests/; then
+            if poetry run coverage run --branch -m pytest -v tests/e2e_tests/; then
               echo "Tests completed successfully!"
               break
             else
               RETRY_COUNT=$((RETRY_COUNT+1))
               if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
                 echo "Test run failed. Waiting 30 seconds before retry..."
+                # Show running containers before retry
+                docker ps
                 sleep 30
               else
                 echo "Maximum retries reached. Failing the build."
@@ -572,10 +496,12 @@ jobs:
       - name: Dump logs
         if: always()
         run: |
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-backend > backend_logs-${{ matrix.db_type }}.txt
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-frontend > frontend_logs-${{ matrix.db_type }}.txt
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-backend-db-auth > backend_logs-${{ matrix.db_type }}-db-auth.txt
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-frontend-db-auth > frontend_logs-${{ matrix.db_type }}-db-auth.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-backend > backend_logs-${{ matrix.db_type }}.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-frontend > frontend_logs-${{ matrix.db_type }}.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-backend-db-auth > backend_logs-${{ matrix.db_type }}-db-auth.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-frontend-db-auth > frontend_logs-${{ matrix.db_type }}-db-auth.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs prometheus-server-for-test-target > prometheus_logs-${{ matrix.db_type }}.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs grafana > grafana_logs-${{ matrix.db_type }}.txt
         continue-on-error: true
 
       # Upload artifacts
@@ -591,10 +517,12 @@ jobs:
             frontend_logs-${{ matrix.db_type }}.txt
             backend_logs-${{ matrix.db_type }}-db-auth.txt
             frontend_logs-${{ matrix.db_type }}-db-auth.txt
+            prometheus_logs-${{ matrix.db_type }}.txt
+            grafana_logs-${{ matrix.db_type }}.txt
         continue-on-error: true
 
       # Tear down environment
       - name: Tear down environment
         if: always()
         run: |
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
