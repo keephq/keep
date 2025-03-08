@@ -456,33 +456,12 @@ jobs:
           echo "Listing available ports:"
           netstat -tuln | grep -E '3000|3001|3002|8080|8081|9090'
 
-      # Run tests with retry logic
+      # Run e2e tests
       - name: Run e2e tests and report coverage
         run: |
-          # Adding retry logic for more robustness
-          MAX_RETRIES=0
-          RETRY_COUNT=0
-          # RUN_COMMAND="poetry run coverage run --branch -m pytest -v tests/e2e_tests/"
-          RUN_COMMAND="poetry run coverage run --branch -m pytest -v tests/e2e_tests/ -n 4 --dist=loadfile"
-
-          until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
-            echo "Running tests (attempt $((RETRY_COUNT+1))/$((MAX_RETRIES+1)))..."
-            if $RUN_COMMAND; then
-              echo "Tests completed successfully!"
-              break
-            else
-              RETRY_COUNT=$((RETRY_COUNT+1))
-              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                echo "Test run failed. Waiting 30 seconds before retry..."
-                # Show running containers before retry
-                docker ps
-                sleep 30
-              else
-                echo "Maximum retries reached. Failing the build."
-                exit 1
-              fi
-            fi
-          done
+          echo "Running tests..."
+          poetry run coverage run --branch -m pytest -v tests/e2e_tests/ -n 4 --dist=loadfile
+          echo "Tests completed!"
 
       - name: Convert coverage results to JSON (for CodeCov support)
         run: poetry run coverage json --omit="keep/providers/*"
