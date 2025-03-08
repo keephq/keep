@@ -148,6 +148,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
               height={24}
               width={24}
               title={info.getValue()}
+              providerType={info.getValue()}
               src={`/icons/${info.getValue()}-icon.png`}
             />
           </div>

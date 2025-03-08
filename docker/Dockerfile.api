@@ -31,6 +31,7 @@ RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
 COPY keep keep
 COPY ee keep/ee
 COPY examples examples
+COPY keep-ui/public/icons/unknown-icon.png unknown-icon.png
 RUN /venv/bin/pip install --use-deprecated=legacy-resolver . && \
     rm -rf /root/.cache/pip && \
     find /venv -type d -name "__pycache__" -exec rm -r {} + && \
@@ -42,6 +43,7 @@ ENV VIRTUAL_ENV="/venv"
 ENV EE_PATH="ee"
 COPY --from=builder /venv /venv
 COPY --from=builder /app/examples /examples
+COPY --from=builder /app/unknown-icon.png unknown-icon.png
 # as per Openshift guidelines, https://docs.openshift.com/container-platform/4.11/openshift_images/create-images.html#use-uid_create-images
 RUN chgrp -R 0 /app && chmod -R g=u /app && \
     chown -R keep:keep /app && \

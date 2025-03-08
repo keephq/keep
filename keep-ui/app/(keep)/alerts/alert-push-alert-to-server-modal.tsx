@@ -140,6 +140,7 @@ const PushAlertToServerModal = ({
                     width={32}
                     height={32}
                     alt={source.type}
+                    providerType={source.type}
                     className=""
                     // Add a key prop to force re-render when source changes
                     key={source.type}

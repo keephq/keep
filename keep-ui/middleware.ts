@@ -106,7 +106,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - icons (providers' logos)
+     * - api/provider-images (provider icons)
      */
-    "/((?!keep_big\\.svg$|gnip\\.webp|api/aws-marketplace$|api/auth|monitoring|_next/static|_next/image|favicon\\.ico|icons|keep\\.svg).*)",
+    "/((?!keep_big\\.svg$|gnip\\.webp|api/aws-marketplace$|api/auth|monitoring|_next/static|_next/image|favicon\\.ico|icons|keep\\.svg|api/provider-images).*)",
   ],
 };

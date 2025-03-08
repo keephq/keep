@@ -124,6 +124,7 @@ const AlertSidebar = ({
                     <DynamicImageProviderIcon
                       src={`/icons/${alert.source![0]}-icon.png`}
                       alt={alert.source![0]}
+                      providerType={alert.source![0]}
                       width={24}
                       height={24}
                       className="inline-block w-6 h-6"
