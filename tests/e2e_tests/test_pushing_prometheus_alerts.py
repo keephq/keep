@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import time
 from datetime import datetime
@@ -33,7 +34,9 @@ def test_pulling_prometheus_alerts_to_provider(browser):
 
         # Create prometheus provider
         init_e2e_test(browser, next_url="/providers")
-        browser.wait_for_url("http://localhost:3000/providers")
+        base_url = "http://localhost:3000/providers"
+        url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
+        browser.wait_for_url(url_pattern)
         browser.get_by_placeholder("Filter providers...").click()
         browser.get_by_placeholder("Filter providers...").fill("prometheus")
         browser.get_by_placeholder("Filter providers...").press("Enter")

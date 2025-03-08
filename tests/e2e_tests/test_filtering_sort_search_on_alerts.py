@@ -251,7 +251,9 @@ def init_test(browser: Page, alerts):
     rows_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()
     # check that required alerts are loaded and displayed
     # other tests may also add alerts, so we need to check that the number of rows is greater than or equal to 20
-    assert rows_count >= 20
+
+    # Shahar: Now each test file is seperate
+    assert rows_count >= 10
     return alerts
 
 
