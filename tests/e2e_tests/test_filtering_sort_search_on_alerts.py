@@ -363,6 +363,12 @@ def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
             alert["status"] = "enriched status"
 
     init_test(browser, current_alerts)
+    # Give the page a moment to process redirects
+    browser.wait_for_timeout(500)
+
+    # Wait for navigation to complete to either signin or providers page
+    # (since we might get redirected automatically)
+    browser.wait_for_load_state("networkidle")
 
     assert_facet(browser, facet_name, current_alerts, alert_property_name)
 

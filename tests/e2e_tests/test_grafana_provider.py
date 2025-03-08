@@ -84,6 +84,7 @@ def test_grafana_provider(browser):
         # Wait for navigation to complete to either signin or providers page
         # (since we might get redirected automatically)
         browser.wait_for_load_state("networkidle")
+
         # init_e2e_test(browser=browser, next_url="/signin")
         base_url = "http://localhost:3000/providers"
         url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
