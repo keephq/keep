@@ -33,7 +33,10 @@ def test_pulling_prometheus_alerts_to_provider(browser):
             print(alerts)
 
         # Create prometheus provider
-        init_e2e_test(browser, next_url="/providers")
+        init_e2e_test(
+            browser,
+            next_url="/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders",
+        )
         base_url = "http://localhost:3000/providers"
         url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
         browser.wait_for_url(url_pattern)

@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from datetime import datetime
 
@@ -73,7 +74,14 @@ def test_grafana_provider(browser):
         provider_name_success = provider_name + "-success"
 
         # browser.goto(f"{KEEP_UI_URL}/signin")
-        init_e2e_test(browser=browser, next_url="/signin")
+        init_e2e_test(
+            browser,
+            next_url="/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders",
+        )
+        # init_e2e_test(browser=browser, next_url="/signin")
+        base_url = "http://localhost:3000/providers"
+        url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
+        browser.wait_for_url(url_pattern)
 
         browser.get_by_role("link", name="Providers").hover()
         browser.get_by_role("link", name="Providers").click()
