@@ -78,12 +78,22 @@ export default function SignInForm({
         providers.credentials &&
         providers.credentials.name == "NoAuth"
       ) {
+        const callbackUrl = (searchParams["callbackUrl"] as string) || "/";
+        const tenantId = searchParams["tenantId"];
+
+        // If tenantId is present in query params, add it to the callback URL
+        const callbackWithTenant = tenantId
+          ? `${callbackUrl}${
+              callbackUrl.includes("?") ? "&" : "?"
+            }tenantId=${tenantId}`
+          : callbackUrl;
+
         signIn("credentials", {
-          callbackUrl: (searchParams["callbackUrl"] as string) || "/",
+          callbackUrl: callbackWithTenant,
         });
       }
     }
-  }, [providers, params]);
+  }, [providers, params, searchParams]);
 
   const onSubmit = async (data: SignInFormInputs) => {
     try {
@@ -192,8 +202,8 @@ export default function SignInForm({
             {isSubmitting
               ? "Signing in..."
               : isRedirecting
-                ? "Redirecting..."
-                : "Sign in"}
+              ? "Redirecting..."
+              : "Sign in"}
           </Button>
         </form>
       </>

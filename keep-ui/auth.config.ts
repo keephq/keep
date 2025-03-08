@@ -143,13 +143,33 @@ const baseProviderConfigs = {
     Credentials({
       name: "NoAuth",
       credentials: {},
-      async authorize(): Promise<User> {
+      async authorize(credentials): Promise<User> {
+        // Extract tenantId from callbackUrl if present
+        let tenantId = NoAuthTenant;
+
+        if (
+          credentials &&
+          typeof credentials === "object" &&
+          "callbackUrl" in credentials
+        ) {
+          const callbackUrl = credentials.callbackUrl as string;
+          const url = new URL(callbackUrl, "http://localhost");
+          const urlTenantId = url.searchParams.get("tenantId");
+
+          if (urlTenantId) {
+            tenantId = urlTenantId;
+          }
+        }
+
         return {
           id: "keep-user-for-no-auth-purposes",
           name: "Keep",
           email: NoAuthUserEmail,
-          accessToken: "keep-token-for-no-auth-purposes",
-          tenantId: NoAuthTenant,
+          accessToken: JSON.stringify({
+            tenant_id: tenantId,
+            user_id: "keep-user-for-no-auth-purposes",
+          }),
+          tenantId: tenantId,
           role: "user",
         };
       },

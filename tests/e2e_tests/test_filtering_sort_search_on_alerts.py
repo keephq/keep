@@ -6,6 +6,7 @@ import requests
 from playwright.sync_api import Page, expect
 
 from tests.e2e_tests.test_end_to_end import (
+    init_e2e_test,
     save_failure_artifacts,
     setup_console_listener,
 )
@@ -241,8 +242,8 @@ def upload_alerts():
 
 
 def init_test(browser: Page, alerts):
+    init_e2e_test(browser, next_url="/alerts/feed")
     url = f"{KEEP_UI_URL}/alerts/feed"
-    browser.goto(url)
     browser.wait_for_url(url)
     browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
     browser.wait_for_selector(f"text={alerts[0]['name']}", timeout=10000)

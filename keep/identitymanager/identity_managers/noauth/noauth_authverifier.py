@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 
 from fastapi import Request
@@ -13,11 +14,21 @@ class NoAuthVerifier(AuthVerifierBase):
     """Handles authentication and authorization for single tenant mode"""
 
     def _verify_bearer_token(self, token: str) -> AuthenticatedEntity:
-        return AuthenticatedEntity(
-            tenant_id=SINGLE_TENANT_UUID,
-            email=SINGLE_TENANT_EMAIL,
-            role=AdminRole.get_name(),
-        )
+        try:
+            token_payload = json.loads(token)
+            tenant_id = token_payload["tenant_id"] or SINGLE_TENANT_UUID
+            email = token_payload["user_id"] or SINGLE_TENANT_EMAIL
+            return AuthenticatedEntity(
+                tenant_id=tenant_id,
+                email=email,
+                role=AdminRole.get_name(),
+            )
+        except Exception:
+            return AuthenticatedEntity(
+                tenant_id=SINGLE_TENANT_UUID,
+                email=SINGLE_TENANT_EMAIL,
+                role=AdminRole.get_name(),
+            )
 
     def _verify_api_key(
         self,

@@ -1,6 +1,9 @@
-from keep.providers.providers_factory import ProvidersFactory
 import requests
-from playwright.sync_api import expect
+from playwright.sync_api import Page, expect
+
+from keep.providers.providers_factory import ProvidersFactory
+
+KEEP_UI_URL = "http://localhost:3000"
 
 
 def trigger_alert(provider_name):
@@ -15,10 +18,12 @@ def trigger_alert(provider_name):
         json=provider.simulate_alert(),
     )
 
+
 def open_connected_provider(browser, provider_type, provider_name):
     browser.locator(
         f"button:has-text('{provider_type}'):has-text('Connected'):has-text('{provider_name}')"
     ).click()
+
 
 def install_webhook_provider(browser, provider_name, webhook_url, webhook_action):
     """
@@ -42,19 +47,23 @@ def install_webhook_provider(browser, provider_name, webhook_url, webhook_action
     browser.locator("li:has-text('GET')").click()
 
     browser.get_by_role("button", name="Connect", exact=True).click()
-    browser.mouse.wheel(0, 0) # Scrolling back to initial position
+    browser.mouse.wheel(0, 0)  # Scrolling back to initial position
 
 
 def delete_provider(browser, provider_type, provider_name):
     """
     Deletes a Connected provider
     """
-    open_connected_provider(browser=browser, provider_type=provider_type, provider_name=provider_name)
+    open_connected_provider(
+        browser=browser, provider_type=provider_type, provider_name=provider_name
+    )
     browser.once("dialog", lambda dialog: dialog.accept())
     browser.get_by_role("button", name="Delete").click()
 
 
-def assert_connected_provider_count(browser, provider_type, provider_name, provider_count):
+def assert_connected_provider_count(
+    browser, provider_type, provider_name, provider_count
+):
     """
     Asserts the number of **Connected** providers
     """
@@ -64,11 +73,20 @@ def assert_connected_provider_count(browser, provider_type, provider_name, provi
         )
     ).to_have_count(provider_count)
 
+
 def assert_scope_text_count(browser, contains_text, count):
     """
     Validates the count of scopes having text "contains text".
     To check for valid scopes, pass contains_text="Valid"
     """
     expect(
-            browser.locator(f"span.tremor-Badge-text:has-text('{contains_text}')")
-        ).to_have_count(count)
+        browser.locator(f"span.tremor-Badge-text:has-text('{contains_text}')")
+    ).to_have_count(count)
+
+
+def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=0):
+    if tenant_id is None:
+        tenant_id = "keep"
+
+    browser.goto(f"{KEEP_UI_URL}{next_url}?tenantId={tenant_id}")
+    browser.wait_for_timeout(wait_time)

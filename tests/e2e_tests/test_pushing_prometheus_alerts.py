@@ -1,11 +1,12 @@
 import os
-import re
 import sys
 import time
 from datetime import datetime
 
 import requests
 from playwright.sync_api import expect
+
+from tests.e2e_tests.utils import init_e2e_test
 
 # Dear developer, thank you for checking E2E tests!
 # For instructions, please check test_end_to_end.py.
@@ -31,7 +32,7 @@ def test_pulling_prometheus_alerts_to_provider(browser):
             print(alerts)
 
         # Create prometheus provider
-        browser.goto("http://localhost:3000/providers")
+        init_e2e_test(browser, next_url="/providers")
         browser.get_by_placeholder("Filter providers...").click()
         browser.get_by_placeholder("Filter providers...").fill("prometheus")
         browser.get_by_placeholder("Filter providers...").press("Enter")

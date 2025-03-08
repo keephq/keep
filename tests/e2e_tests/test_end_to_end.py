@@ -33,6 +33,7 @@ from tests.e2e_tests.utils import (
     assert_connected_provider_count,
     assert_scope_text_count,
     delete_provider,
+    init_e2e_test,
     install_webhook_provider,
     trigger_alert,
 )
@@ -95,10 +96,7 @@ def test_sanity(browser: Page):  # browser is actually a page object
     while attempt < max_attempts:
         try:
             # Verify server is up
-            browser.goto("http://localhost:3000/")
-
-            # Add a short wait to ensure the server has time to respond
-            time.sleep(1)
+            init_e2e_test(browser, wait_time=1)
 
             # Now try the navigation with increased timeout
             browser.wait_for_url("http://localhost:3000/incidents", timeout=15000)
@@ -126,8 +124,9 @@ def test_insert_new_alert(browser: Page):  # browser is actually a page object
     setup_console_listener(browser, log_entries)
 
     try:
-        browser.goto(
-            "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
+        init_e2e_test(
+            browser,
+            next_url="/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders",
         )
         browser.wait_for_url("http://localhost:3000/providers")
 
@@ -164,8 +163,9 @@ def test_providers_page_is_accessible(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
-        browser.goto(
-            "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
+        init_e2e_test(
+            browser,
+            next_url="/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders",
         )
         browser.wait_for_url("http://localhost:3000/providers")
         # get the GCP Monitoring provider
@@ -199,7 +199,7 @@ def test_provider_validation(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
-        browser.goto("http://localhost:3000/signin")
+        init_e2e_test(browser, next_url="/signin")
         # using Kibana Provider
         browser.get_by_role("link", name="Providers").click()
         browser.locator("button:has-text('Kibana'):has-text('alert')").click()
@@ -320,7 +320,7 @@ def test_add_workflow(browser: Page):
     log_entries = []
     setup_console_listener(page, log_entries)
     try:
-        page.goto("http://localhost:3000/signin")
+        init_e2e_test(browser, next_url="/signin")
         page.get_by_role("link", name="Workflows").click()
         page.get_by_role("button", name="Create Workflow").click()
         page.get_by_placeholder("Set the name").click()
@@ -367,7 +367,7 @@ def test_paste_workflow_yaml_quotes_preserved(browser: Page):
     workflow_yaml = get_workflow_yaml("workflow-quotes-sample.yaml")
 
     try:
-        page.goto("http://localhost:3000/workflows")
+        init_e2e_test(browser, next_url="/workflows")
         page.get_by_role("button", name="Upload Workflows").click()
         page.get_by_test_id("text-area").click()
         page.get_by_test_id("text-area").fill(workflow_yaml)
@@ -396,7 +396,7 @@ def test_add_upload_workflow_with_alert_trigger(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
-        browser.goto("http://localhost:3000/signin")
+        init_e2e_test(browser, next_url="/signin")
         browser.get_by_role("link", name="Workflows").hover()
         browser.get_by_role("link", name="Workflows").click()
         browser.get_by_role("button", name="Upload Workflows").click()
@@ -439,7 +439,7 @@ def test_provider_deletion(browser: Page):
     try:
 
         # Checking deletion after Creation
-        browser.goto("http://localhost:3000/signin")
+        init_e2e_test(browser, next_url="/signin")
         browser.get_by_role("link", name="Providers").hover()
         browser.get_by_role("link", name="Providers").click()
         install_webhook_provider(
