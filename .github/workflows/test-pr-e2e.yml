@@ -453,6 +453,12 @@ jobs:
           echo "Testing Grafana API..."
           curl -v http://localhost:3002/api/health || echo "Grafana API not responding, but continuing..."
 
+          echo "Test Keep Frontend..."
+          curl -v http://localhost:3000/ || echo "Keep Frontend not responding, but continuing..."
+
+          echo "Test Keep Frontend with DB Auth..."
+          curl -v http://localhost:3001/ || echo "Keep Frontend with DB Auth not responding, but continuing..."
+
           echo "Listing available ports:"
           netstat -tuln | grep -E '3000|3001|3002|8080|8081|9090'
 
