@@ -85,8 +85,9 @@ def assert_scope_text_count(browser, contains_text, count):
 
 
 def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=0):
-    if tenant_id is None:
-        tenant_id = "keep"
+    if tenant_id:
+        browser.goto(f"{KEEP_UI_URL}{next_url}?tenantId={tenant_id}")
+    else:
+        browser.goto(f"{KEEP_UI_URL}{next_url}")
 
-    browser.goto(f"{KEEP_UI_URL}{next_url}?tenantId={tenant_id}")
     browser.wait_for_timeout(wait_time)
