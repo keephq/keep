@@ -33,6 +33,7 @@ def test_pulling_prometheus_alerts_to_provider(browser):
 
         # Create prometheus provider
         init_e2e_test(browser, next_url="/providers")
+        browser.wait_for_url("http://localhost:3000/providers")
         browser.get_by_placeholder("Filter providers...").click()
         browser.get_by_placeholder("Filter providers...").fill("prometheus")
         browser.get_by_placeholder("Filter providers...").press("Enter")

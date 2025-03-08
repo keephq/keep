@@ -460,7 +460,7 @@ jobs:
       - name: Run e2e tests and report coverage
         run: |
           # Adding retry logic for more robustness
-          MAX_RETRIES=2
+          MAX_RETRIES=0
           RETRY_COUNT=0
           # RUN_COMMAND="poetry run coverage run --branch -m pytest -v tests/e2e_tests/"
           RUN_COMMAND="poetry run coverage run --branch -m pytest -v tests/e2e_tests/ -n 4 --dist=loadfile"
