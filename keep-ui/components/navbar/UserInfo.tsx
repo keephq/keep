@@ -46,7 +46,9 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
       <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300 group capitalize">
         <span className="space-x-3 flex items-center w-full">
           <UserAvatar image={image} name={name ?? email} />{" "}
+          <UserAvatar image={image} name={"Fu"} />{" "}
           <Subtitle className="truncate">{name ?? email}</Subtitle>
+          <Subtitle className="truncate">{"Fu"}</Subtitle>
         </span>
       </Menu.Button>
 

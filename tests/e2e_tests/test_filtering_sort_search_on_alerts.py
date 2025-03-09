@@ -10,6 +10,7 @@ from tests.e2e_tests.test_end_to_end import (
     save_failure_artifacts,
     setup_console_listener,
 )
+from tests.e2e_tests.utils import get_token
 
 # NOTE 2: to run the tests with a browser, uncomment this two lines:
 # import os
@@ -37,12 +38,13 @@ def query_allerts(cell_query: str = None, limit: int = None, offset: int = None)
 
     result: dict = None
 
+    token = get_token()
     for _ in range(5):
         try:
             response = requests.post(
                 url,
                 json=query,
-                headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+                headers={"Authorization": "Bearer " + token},
                 timeout=5,
             )
             response.raise_for_status()
@@ -190,13 +192,14 @@ def upload_alerts():
         if alert["alertName"] not in current_alerts["grouped_by_name"]:
             not_uploaded_alerts.append((provider_type, alert))
 
+    token = get_token()
     for provider_type, alert in not_uploaded_alerts:
         url = f"{KEEP_API_URL}/alerts/event/{provider_type}"
         requests.post(
             url,
             json=alert,
             timeout=5,
-            headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+            headers={"Authorization": "Bearer " + token},
         ).raise_for_status()
         time.sleep(
             1
@@ -226,6 +229,7 @@ def upload_alerts():
         alert for alert in current_alerts["results"] if "Enriched" in alert["name"]
     ]
 
+    token = get_token()
     for alert in alerts_to_enrich:
         url = f"{KEEP_API_URL}/alerts/enrich"
         requests.post(
@@ -235,7 +239,7 @@ def upload_alerts():
                 "fingerprint": alert["fingerprint"],
             },
             timeout=5,
-            headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+            headers={"Authorization": "Bearer " + token},
         ).raise_for_status()
 
     return query_allerts(limit=1000, offset=0)
@@ -566,13 +570,14 @@ def test_alerts_stream(browser):
         alert["testId"] = test_id
         simulated_alerts.append((provider_type, alert))
 
+    token = get_token()
     for provider_type, alert in simulated_alerts:
         url = f"{KEEP_API_URL}/alerts/event/{provider_type}"
         requests.post(
             url,
             json=alert,
             timeout=5,
-            headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+            headers={"Authorization": "Bearer " + token},
         ).raise_for_status()
         time.sleep(1)
 

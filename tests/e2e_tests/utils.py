@@ -1,3 +1,6 @@
+import json
+import os
+
 import requests
 from playwright.sync_api import Page, expect
 
@@ -90,7 +93,6 @@ def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=
         print("Going to URL: ", url)
         browser.goto(url)
     else:
-        import os
 
         pid = os.getpid()
         url = f"{KEEP_UI_URL}{next_url}?tenantId=keep" + str(pid)
@@ -99,3 +101,13 @@ def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=
 
     if wait_time:
         browser.wait_for_timeout(wait_time)
+
+
+def get_token():
+    pid = os.getpid()
+    return json.dumps(
+        {
+            "tenant_id": "keep" + str(pid),
+            "user_id": "keep-user-for-no-auth-purposes",
+        }
+    )
