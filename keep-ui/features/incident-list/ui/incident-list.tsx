@@ -31,13 +31,23 @@ import {
   reverseSeverityMapping,
   severityMapping,
 } from "@/entities/alerts/model";
-import { IncidentsNotFoundPlaceholder } from "./incidents-not-found";
+import {
+  IncidentsNotFoundForFiltersPlaceholder,
+  IncidentsNotFoundPlaceholder,
+} from "./incidents-not-found";
 import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
 import EnhancedDateRangePicker, {
   TimeFrame,
 } from "@/components/ui/DateRangePicker";
 import { PlusIcon } from "@heroicons/react/20/solid";
+import {
+  DEFAULT_INCIDENTS_CEL,
+  DEFAULT_INCIDENTS_PAGE_SIZE,
+  DEFAULT_INCIDENTS_SORTING,
+  DEFAULT_INCIDENTS_UNCHECKED_OPTIONS,
+} from "@/entities/incidents/model/models";
+
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
@@ -56,12 +66,12 @@ export function IncidentList({
   initialFacetsData?: InitialFacetsData;
 }) {
   const [incidentsPagination, setIncidentsPagination] = useState<Pagination>({
-    limit: 20,
+    limit: DEFAULT_INCIDENTS_PAGE_SIZE,
     offset: 0,
   });
 
   const [incidentsSorting, setIncidentsSorting] = useState<SortingState>([
-    { id: "creation_time", desc: true },
+    DEFAULT_INCIDENTS_SORTING,
   ]);
 
   const [filterCel, setFilterCel] = useState<string>("");
@@ -83,6 +93,23 @@ export function IncidentList({
     return filterArray.filter(Boolean).join(" && ");
   }, [filterCel, mainCelQuery]);
 
+  // This is used to decide if the "No active incidents found" state should be shown
+  const { data: defaultIncidents, mutate: refreshDefaultIncidents } =
+    useIncidents(
+      null,
+      null,
+      DEFAULT_INCIDENTS_PAGE_SIZE,
+      0,
+      DEFAULT_INCIDENTS_SORTING,
+      DEFAULT_INCIDENTS_CEL,
+      {
+        revalidateOnFocus: false,
+        revalidateOnMount: false,
+        fallbackData: initialData,
+      }
+    );
+  const isTrueEmptyState = defaultIncidents?.items.length === 0;
+
   const {
     data: incidents,
     isLoading,
@@ -99,6 +126,9 @@ export function IncidentList({
       revalidateOnFocus: false,
       revalidateOnMount: !initialData,
       fallbackData: initialData,
+      onSuccess: () => {
+        refreshDefaultIncidents();
+      },
     }
   );
 
@@ -176,7 +206,7 @@ export function IncidentList({
           reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
       },
       ["Status"]: {
-        uncheckedByDefaultOptionValues: ["resolved", "deleted"],
+        uncheckedByDefaultOptionValues: DEFAULT_INCIDENTS_UNCHECKED_OPTIONS,
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={getStatusIcon(facetOption.display_name)}
@@ -254,7 +284,7 @@ export function IncidentList({
       paused: false,
     });
     setIncidentsPagination({
-      limit: 20,
+      limit: DEFAULT_INCIDENTS_PAGE_SIZE,
       offset: 0,
     });
     setClearFiltersToken(uuidV4());
@@ -274,9 +304,15 @@ export function IncidentList({
       );
     }
 
+    if (isTrueEmptyState) {
+      return <IncidentsNotFoundPlaceholder />;
+    }
+
     if (mainCelQuery && incidents?.items.length === 0) {
       return (
-        <IncidentsNotFoundPlaceholder onClearFilters={handleClearFilters} />
+        <IncidentsNotFoundForFiltersPlaceholder
+          onClearFilters={handleClearFilters}
+        />
       );
     }
 
