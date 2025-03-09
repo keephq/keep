@@ -146,7 +146,9 @@ const baseProviderConfigs = {
       async authorize(credentials): Promise<User> {
         // Extract tenantId from callbackUrl if present
         let tenantId = NoAuthTenant;
-        let name = "Shitty";
+        let name = "Keep";
+        console.log("XXX");
+        console.log(credentials);
 
         if (
           credentials &&
