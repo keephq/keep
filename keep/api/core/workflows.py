@@ -89,7 +89,7 @@ def __build_base_query(
         if key == "filter_status":
             continue
         columns_to_select.append(f"{value} AS {key}")
-    latest_executions_subquery = (
+    latest_executions_subquery_cte = (
         select(
             WorkflowExecution.workflow_id,
             WorkflowExecution.started,
@@ -125,17 +125,20 @@ def __build_base_query(
             ).label("filter_status"),
         )
         .outerjoin(
-            latest_executions_subquery,
+            latest_executions_subquery_cte,
             and_(
-                Workflow.id == latest_executions_subquery.c.workflow_id,
-                latest_executions_subquery.c.row_num <= fetch_last_executions,
+                Workflow.id == latest_executions_subquery_cte.c.workflow_id,
+                latest_executions_subquery_cte.c.row_num <= fetch_last_executions,
             ),
         )
         .where(Workflow.tenant_id == tenant_id)
         .where(Workflow.is_deleted == False)
     )
 
-    return workflows_with_last_executions_query
+    return {
+        "workflows_with_last_executions_query": workflows_with_last_executions_query,
+        "latest_executions_subquery_cte": latest_executions_subquery_cte,
+    }
 
 
 def build_workflows_total_count_query(
@@ -145,7 +148,7 @@ def build_workflows_total_count_query(
 ):
     base_query = __build_base_query(
         tenant_id=tenant_id, fetch_last_executions=fetch_last_executions
-    ).cte("base_query")
+    )["workflows_with_last_executions_query"].cte("base_query")
 
     query = select(func.count(func.distinct(base_query.c.entity_id))).select_from(
         base_query
@@ -173,8 +176,9 @@ def build_workflows_query(
     limit = limit if limit is not None else 20
     offset = offset if offset is not None else 0
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-
-    base_query = __build_base_query(tenant_id, fetch_last_executions).cte("base_query")
+    queries = __build_base_query(tenant_id, fetch_last_executions)
+    base_query = queries["workflows_with_last_executions_query"].cte("base_query")
+    latest_executions_subquery_cte = queries["latest_executions_subquery_cte"]
 
     if not sort_by:
         sort_by = "started"
@@ -201,10 +205,17 @@ def build_workflows_query(
             literal_column("filter_status").label("status"),
         )
         .select_from(base_query)
-        .outerjoin(
+        .join(
             Workflow,
             and_(
                 Workflow.id == base_query.c.entity_id, Workflow.tenant_id == tenant_id
+            ),
+        )
+        .outerjoin(
+            latest_executions_subquery_cte,
+            and_(
+                Workflow.id == latest_executions_subquery_cte.c.workflow_id,
+                latest_executions_subquery_cte.c.row_num <= fetch_last_executions,
             ),
         )
     )
@@ -250,8 +261,8 @@ def get_workflows_with_last_executions_v2(
 
         count = session.exec(total_count_query).one()[0]
 
-        if count == 0:
-            return [], count
+        # if count == 0:
+        #     return [], count
 
         workflows_query = build_workflows_query(
             tenant_id=tenant_id,
@@ -261,6 +272,12 @@ def get_workflows_with_last_executions_v2(
             sort_by=sort_by,
             sort_dir=sort_dir,
             fetch_last_executions=fetch_last_executions,
+        )
+
+        strquery = str(
+            workflows_query.compile(
+                dialect=session.bind.dialect, compile_kwargs={"literal_binds": True}
+            )
         )
 
         query_result = session.execute(workflows_query).all()
@@ -307,10 +324,14 @@ def get_workflow_facets_data(
     else:
         facets = static_facets
 
+    queries = __build_base_query(tenant_id)
+
     base_query = select(
         # here it creates aliases for table columns that will be used in filtering and faceting
         text(",".join(["entity_id"] + [key for key in alias_column_mapping.keys()]))
-    ).select_from(__build_base_query(tenant_id).cte("workflows_query"))
+    ).select_from(
+        queries["workflows_with_last_executions_query"].cte("workflows_query")
+    )
 
     return get_facet_options(
         base_query=base_query,

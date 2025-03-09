@@ -185,6 +185,7 @@ export default function WorkflowsPage({
             case "success": {
               return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
             }
+            case "error":
             case "failed": {
               return <XCircleIcon className="w-5 h-5 text-red-500" />;
             }
