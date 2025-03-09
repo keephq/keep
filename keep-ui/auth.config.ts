@@ -160,6 +160,7 @@ const baseProviderConfigs = {
           if (urlTenantId) {
             tenantId = urlTenantId;
             name += ` (${tenantId})`;
+            console.log("Using tenantId from callbackUrl:", tenantId);
           }
         }
 

@@ -158,7 +158,6 @@ jobs:
           cache-from: |
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-main
           cache-to: |
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
@@ -243,7 +242,6 @@ jobs:
           cache-from: |
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-main
           cache-to: |
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
