@@ -29,15 +29,17 @@ def close_toasify_notification(browser):
             browser.wait_for_timeout(1000)
             pass
 
-        # 2. If still visible, try clicking the specific toast instance
-        toast = browser.locator("#1.Toastify__toast")
-        if toast.is_visible():
+        # 2. Try finding any visible toast and clicking its close button
+        toast_close_buttons = browser.locator(
+            ".Toastify__toast button.Toastify__close-button"
+        )
+        if toast_close_buttons.count() > 0:
             print("Closing Toastify notification with method 2...")
-            toast.locator("button.Toastify__close-button").click(force=True)
+            toast_close_buttons.first.click(force=True)
             browser.wait_for_timeout(1000)
             pass
 
-        # 3. If still visible, use JavaScript as a last resort
+        # 3. Use JavaScript as a last resort
         if browser.locator(".Toastify__toast-container").is_visible():
             print("Closing Toastify notification with method 3...")
             browser.evaluate(
@@ -54,8 +56,6 @@ def close_toasify_notification(browser):
 
     except Exception as e:
         print(f"Error closing Toastify notification: {e}")
-        # You could add a screenshot here to debug
-    browser.screenshot(path="toastify_error.png")
 
 
 def test_pulling_prometheus_alerts_to_provider(browser):

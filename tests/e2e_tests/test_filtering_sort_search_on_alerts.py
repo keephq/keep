@@ -308,9 +308,13 @@ def assert_facet(browser, facet_name, alerts, alert_property_name: str):
             "[data-testid='facet-value']", has_text=facet_value
         )
         expect(facet_value_locator).to_be_visible()
-        expect(
-            facet_value_locator.locator("[data-testid='facet-value-count']")
-        ).to_contain_text(str(count))
+        try:
+            expect(
+                facet_value_locator.locator("[data-testid='facet-value-count']")
+            ).to_contain_text(str(count))
+        except Exception as e:
+            save_failure_artifacts(browser, log_entries=[])
+            raise e
 
 
 def assert_alerts_by_column(
@@ -515,9 +519,13 @@ def test_sort_asc_dsc(browser, sort_test_case, setup_test_data):
         alert for alert in current_alerts if alert["providerType"] == "prometheus"
     ]
     select_one_facet_option(browser, "source", "prometheus")
-    expect(
-        browser.locator("[data-testid='alerts-table'] table tbody tr")
-    ).to_have_count(len(filtered_alerts))
+    try:
+        expect(
+            browser.locator("[data-testid='alerts-table'] table tbody tr")
+        ).to_have_count(len(filtered_alerts))
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
 
     for sort_direction_title in ["Sort ascending", "Sort descending"]:
         sorted_alerts = sorted(filtered_alerts, key=sort_callback)
