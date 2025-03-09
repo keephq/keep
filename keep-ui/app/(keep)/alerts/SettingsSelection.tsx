@@ -71,7 +71,7 @@ export default function SettingsSelection({
               style={{ maxHeight: "calc(80vh - 40px)" }}
             >
               <TabGroup className="flex flex-col flex-1">
-                <TabList color="orange" className="mb-4">
+                <TabList className="mb-4">
                   <Tab>Columns</Tab>
                   <Tab>Theme</Tab>
                   <Tab>Row Style</Tab>
