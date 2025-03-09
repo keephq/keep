@@ -254,7 +254,7 @@ if __name__ == "__main__":
     librenms_api_key = os.getenv("LIBRENMS_API_KEY")
 
     config = ProviderConfig(
-        description="Checkly Provider",
+        description="LibreNMS Provider",
         authentication={
             "host_url": "https://librenms.example.com",
             "api_key": librenms_api_key
