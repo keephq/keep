@@ -50,6 +50,13 @@ def close_toasify_notification(browser):
             browser.wait_for_timeout(1000)
             pass
 
+        # 4. Check if the notification is still visible
+        if browser.locator(".Toastify__toast-container").is_visible():
+            # last resort - wait the remaining time
+            print("Waiting for Toastify notification to close...")
+            # which is 10 seconds minus the time we already waited
+            browser.wait_for_timeout(10000 - 1000 * 3)
+
         # Check if we were successful
         if not browser.locator(".Toastify__toast-container").is_visible():
             print("Successfully closed the Toastify notification")

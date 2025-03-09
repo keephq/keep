@@ -146,6 +146,7 @@ const baseProviderConfigs = {
       async authorize(credentials): Promise<User> {
         // Extract tenantId from callbackUrl if present
         let tenantId = NoAuthTenant;
+        let name = "Keep";
 
         if (
           credentials &&
@@ -158,12 +159,13 @@ const baseProviderConfigs = {
 
           if (urlTenantId) {
             tenantId = urlTenantId;
+            name += ` (${tenantId})`;
           }
         }
 
         return {
           id: "keep-user-for-no-auth-purposes",
-          name: "Keep",
+          name: name,
           email: NoAuthUserEmail,
           accessToken: JSON.stringify({
             tenant_id: tenantId,
