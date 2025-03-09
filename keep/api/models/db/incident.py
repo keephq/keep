@@ -4,10 +4,11 @@ from typing import List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import PrivateAttr
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Index, event, text
 from sqlalchemy_utils import UUIDType
-from sqlmodel import JSON, TEXT, Column, Field, Relationship, SQLModel
+from sqlmodel import JSON, TEXT, Column, Field, Relationship, Session, SQLModel
 
+from keep.api.core.db_utils import get_next_running_number
 from keep.api.models.alert import SeverityBaseInterface
 from keep.api.models.db.rule import ResolveOn
 from keep.api.models.db.tenant import Tenant
@@ -51,6 +52,9 @@ class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     tenant: Tenant = Relationship()
+
+    # Auto-incrementing number per tenant
+    running_number: Optional[int] = Field(default=None)
 
     user_generated_name: str | None
     ai_generated_name: str | None
@@ -150,6 +154,21 @@ class Incident(SQLModel, table=True):
 
     class Config:
         arbitrary_types_allowed = True
+        # Remove the table constraint
+        # table_constraints = ["UNIQUE (tenant_id, running_number)"]
+
+    # Add a partial unique index instead
+    __table_args__ = (
+        Index(
+            "ix_incident_tenant_running_number",
+            "tenant_id",
+            "running_number",
+            unique=True,
+            postgresql_where=text("running_number IS NOT NULL"),  # For PostgreSQL
+            mysql_where=text("running_number IS NOT NULL"),  # For MySQL
+            sqlite_where=text("running_number IS NOT NULL"),  # For SQLite
+        ),
+    )
 
     @property
     def alerts(self):
@@ -158,3 +177,16 @@ class Incident(SQLModel, table=True):
     @property
     def enrichments(self):
         return getattr(self, "_enrichments", {})
+
+
+@event.listens_for(Incident, "before_insert")
+def set_running_number(mapper, connection, target):
+    if target.running_number is None:
+        # Create a temporary session to get the next running number
+        with Session(connection) as session:
+            try:
+                target.running_number = get_next_running_number(
+                    session, target.tenant_id
+                )
+            except Exception:
+                target.running_number = None
