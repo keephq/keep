@@ -6,9 +6,14 @@ import useSWRImmutable from "swr/immutable";
 export const useWorkflows = (options: SWRConfiguration = {}) => {
   const api = useApi();
 
-  return useSWRImmutable<Workflow[]>(
+  const swr = useSWRImmutable(
     api.isReady() ? "/workflows" : null,
     (url) => api.get(url),
     options
   );
+
+  return {
+    ...swr,
+    data: swr.data?.results as Workflow[],
+  };
 };

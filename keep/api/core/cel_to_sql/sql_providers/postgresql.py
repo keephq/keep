@@ -52,7 +52,7 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
 
         processed_literal = self.literal_proc(method_args[0].value)
         unquoted_literal = processed_literal[1:-1]
-        return f"{property_path} IS NOT NULL AND {property_path} LIKE '%{unquoted_literal}%'"
+        return f"{property_path} IS NOT NULL AND {property_path} ILIKE '%{unquoted_literal}%'"
 
     def _visit_starts_with_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
@@ -61,7 +61,7 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
             raise ValueError(f'{property_path}.startsWith accepts 1 argument but got {len(method_args)}')
         processed_literal = self.literal_proc(method_args[0].value)
         unquoted_literal = processed_literal[1:-1]
-        return f"{property_path} IS NOT NULL AND {property_path} LIKE '{unquoted_literal}%'"
+        return f"{property_path} IS NOT NULL AND {property_path} ILIKE '{unquoted_literal}%'"
 
     def _visit_ends_with_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
@@ -70,4 +70,4 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
             raise ValueError(f'{property_path}.endsWith accepts 1 argument but got {len(method_args)}')
         processed_literal = self.literal_proc(method_args[0].value)
         unquoted_literal = processed_literal[1:-1]
-        return f"{property_path} IS NOT NULL AND {property_path} LIKE '%{unquoted_literal}'"
+        return f"{property_path} IS NOT NULL AND {property_path} ILIKE '%{unquoted_literal}'"
