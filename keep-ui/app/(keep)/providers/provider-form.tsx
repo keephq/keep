@@ -190,7 +190,7 @@ const ProviderForm = ({
         },
       },
       {
-        position: toast.POSITION.TOP_LEFT,
+        position: "top-left",
       }
     );
   }
