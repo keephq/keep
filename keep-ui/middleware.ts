@@ -52,6 +52,7 @@ export const middleware = auth(async (request) => {
     !isAuthenticated &&
     !pathname.startsWith("/signin") &&
     !pathname.startsWith("/health") &&
+    !pathname.startsWith("/library") &&
     !pathname.startsWith("/error")
   ) {
     const redirectTo = request.nextUrl.href || "/incidents";

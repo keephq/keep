@@ -10,7 +10,7 @@ import "react-sliding-side-panel/lib/index.css";
 import { useSearchParams } from "next/navigation";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { Tooltip } from "@/shared/ui";
-import ProviderHealthResultsModal from "@/app/(health)/health/modal";
+import ProviderHealthResultsModal from "@/app/(public)/health/modal";
 
 const ProvidersTiles = ({
   providers,
