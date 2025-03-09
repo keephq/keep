@@ -45,6 +45,9 @@ class GrafanaIncidentProviderAuthConfig:
 
 
 class GrafanaIncidentProvider(BaseIncidentProvider):
+    """
+    GrafanaIncidentProvider is a class that allows to query all incidents from Grafana Incident.
+    """
     PROVIDER_DISPLAY_NAME = "Grafana Incident"
     PROVIDER_TAGS = ["alert"]
 
@@ -147,26 +150,28 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
         Get the incidents from Grafana Incident
         """
         self.logger.info("Getting incidents from Grafana Incident")
+
         cursor = None
         incidents = []
 
-        while True:
-            try:
-                payload = {
-                    "query": {
-                        "limit": 1,
-                        "orderDirection": "DESC",
-                        "orderField": "createdTime",
-                    },
-                }
+        payload = {
+            "query": {
+                "limit": 50,
+                "orderDirection": "DESC",
+                "orderField": "createdTime",
+            },
+        }
 
+        while True:
+            self.logger.info("Getting incidents from Grafana Incident")
+            try:
                 if cursor:
                     payload["cursor"] = cursor
 
                 response = requests.post(
                     urljoin(
                         self.authentication_config.host_url,
-                        "/api/plugins/grafana-incident-app/resources/api/v1/IncidentsService.QueryIncidentPreviews",
+                        "api/plugins/grafana-incident-app/resources/api/v1/IncidentsService.QueryIncidentPreviews",
                     ),
                     headers=self.__get_headers(),
                     json=payload,
@@ -184,55 +189,60 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
 
                 incidents.extend(data.get("incidentPreviews", []))
 
-                if data.get("cursor"):
-                    cursor = data.get("cursor")
+                cursor = data.get("cursor")
 
-                if not data.get("cursor"):
+                if cursor.get("hasMore") == False:
                     break
 
             except Exception as e:
-                self.logger.Exception(
+                self.logger.exception(
                     "Failed to get incidents from Grafana Incident")
                 raise Exception(
                     f"Failed to get incidents from Grafana Incident: {e}")
+            
+        self.logger.info(f"Total incidents: {len(incidents)}")
 
         alertDtos = []
 
+        def parse_grafana_timestamp(timestamp):
+            try:
+                # Try parsing with milliseconds
+                return datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
+            except ValueError:
+                # Fallback if milliseconds are not present
+                return datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
+
         for incident in incidents:
-            id = self._get_incident_id(incident.get("id"))
+            id = self._get_incident_id(incident.get("incidentID"))
 
             start_time = None
             end_time = None
             created_time = None
 
             if incident.get("incidentStart") != "":
-                start_time = datetime.strptime(
-                    incident.get("incidentStart"), "%Y-%m-%dT%H:%M:%SZ"
-                )
+                start_time = parse_grafana_timestamp(incident.get("incidentStart"))
 
             if incident.get("incidentEnd") != "":
-                end_time = datetime.strptime(
-                    incident.get("incidentEnd"), "%Y-%m-%dT%H:%M:%SZ"
-                )
+                end_time = parse_grafana_timestamp(incident.get("incidentEnd"))
 
             if incident.get("createdTime") != "":
-                created_time = datetime.strptime(
-                    incident.get("createdTime"), "%Y-%m-%dT%H:%M:%S.%fZ"
-                )
+                created_time = parse_grafana_timestamp(incident.get("createdTime"))
 
             severity_label = GrafanaIncidentProvider.SEVERITIES_MAP.get(
-                incident.get("severity"), IncidentSeverity.INFO
+                incident.get("severityLabel"), IncidentSeverity.INFO
             )
 
             status = GrafanaIncidentProvider.STATUS_MAP.get(
                 incident.get("status"), IncidentStatus.FIRING
             )
 
+            alerts_count = len(incidents)
+
             alertDto = IncidentDto(
                 id=id,
                 incident_id=incident.get("id"),
                 severity_id=incident.get("severityID"),
-                severity_label=severity_label,
+                severity=severity_label,
                 incident_type=incident.get("incidentType"),
                 labels=incident.get("labels", []),
                 is_drill=incident.get("isDrill"),
@@ -259,6 +269,7 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
                 is_confirmed=True,
                 services=["incidentPreviews"],
                 alert_sources=["grafana_incident"],
+                alerts_count=alerts_count
             )
             alertDtos.append(alertDto)
 
