@@ -7,7 +7,7 @@ from pympler.asizeof import asizeof
 from typing import Union, Dict
 
 from keep.api.core.config import config
-from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session, get_workflow_id
+from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session
 from keep.api.models.alert import AlertDto
 
 class ContextManager:
