@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 entity_name_to_entity_type = {
     "incidents": "incident",
     "alerts": "alert",
+    "workflows": "workflow",
 }
 
 @router.post(
