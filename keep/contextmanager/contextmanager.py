@@ -4,11 +4,11 @@ import logging
 import click
 import json5
 from pympler.asizeof import asizeof
+from typing import Union, Dict
 
 from keep.api.core.config import config
-from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session
+from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session, get_workflow_id
 from keep.api.models.alert import AlertDto
-
 
 class ContextManager:
     def __init__(
@@ -34,7 +34,7 @@ class ContextManager:
         self.consts_context = {}
         self.current_step_vars = {}
         self.current_step_aliases = {}
-        self.secrets_context = {}
+        self.secret_context = {}
         # cli context
         try:
             self.click_context = click.get_current_context()
@@ -113,8 +113,20 @@ class ContextManager:
     def set_consts_context(self, consts):
         self.consts_context = consts
 
-    def get_workflow_id(self):
-        return self.workflow_id
+    def set_secret_context(self, secret=None):
+        """
+        Set the secret context for the workflow.
+        If no secret is provided, attempt to load it from the secret manager.
+        """
+        from keep.workflowmanager.workflowmanager import WorkflowManager
+        workflow_manager = WorkflowManager.get_instance()
+        workflow_id = workflow_manager.get_workflow_id()
+        secret = self.read_workflow_secret(
+            workflow_id= workflow_id,
+            tenant_id=self.tenant_id,
+            is_json=True
+        )
+        self.secret_context = secret or {}
 
     def get_full_context(self, exclude_providers=False, exclude_env=False):
         """
@@ -144,7 +156,7 @@ class ContextManager:
             "consts": self.consts_context,
             "vars": self.current_step_vars,
             "aliases": self.current_step_aliases,
-            "secrets": self.secrets_context,
+            "secrets": self.secret_context,
         }
 
         if not exclude_providers:
@@ -244,6 +256,7 @@ class ContextManager:
         self.current_step_aliases = _aliases
         self.steps_context[step_id]["vars"] = _vars
         self.steps_context[step_id]["aliases"] = _aliases
+        self.secret_context = {**self.secret_context, **_vars}
 
     def get_last_workflow_run(self, workflow_id):
         return get_last_workflow_execution_by_workflow_id(self.tenant_id, workflow_id)
@@ -271,3 +284,22 @@ class ContextManager:
         #     },
         # )
         pass
+
+    def read_workflow_secret(
+        self,
+        workflow_id: str,
+        tenant_id: str,
+        is_json: bool = True,
+    ) -> Union[Dict, str]:
+        """
+        Read a secret value for a workflow. Optionally parse as JSON if is_json is True.
+        """
+        from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
+        context_manager = ContextManager(tenant_id=tenant_id)
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+        
+        secret_key = f"{tenant_id}_{workflow_id}_secrets"
+        return secret_manager.read_secret(
+            secret_name=secret_key,
+            is_json=is_json
+        )

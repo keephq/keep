@@ -17,9 +17,7 @@ export function useSecrets(workflowId: string) {
 
   const fetchSecrets = async () => {
     try {
-      const resp = await api.get(`/workflows/${workflowId}/secrets`, {
-        params: { is_json: true },
-      });
+      const resp = await api.get(`/workflows/${workflowId}/secrets`);
       setSecrets(resp || {});
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch secrets");

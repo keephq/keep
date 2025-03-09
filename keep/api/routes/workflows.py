@@ -203,6 +203,7 @@ def run_workflow(
         workflow_id = getattr(get_workflow_by_name(tenant_id, workflow_id), "id", None)
 
     workflowmanager = WorkflowManager.get_instance()
+    workflowmanager.set_workflow_id(workflow_id=workflow_id)
 
     try:
         # Handle replay from query parameters
@@ -918,7 +919,7 @@ def write_workflow_secret(
         secret_name=secret_key,
         secret_value=json.dumps(existing_secrets),
     )
-
+    context_manager.secret_context[secret_key] = existing_secrets
     return {"status": "success", "message": "Secrets updated successfully"}
 
 
@@ -939,7 +940,6 @@ def read_workflow_secret(
     tenant_id = authenticated_entity.tenant_id
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    
     secret_key = f"{tenant_id}_{workflow_id}_secrets"
     return secret_manager.read_secret(
         secret_name=secret_key,
