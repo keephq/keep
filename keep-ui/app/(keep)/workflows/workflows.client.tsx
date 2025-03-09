@@ -210,8 +210,13 @@ export default function WorkflowsPage({
             case "in_progress": {
               return "In progress";
             }
-            default: {
+            case "":
+            case null:
+            case undefined: {
               return "Not run yet";
+            }
+            default: {
+              return facetOption.value;
             }
           }
         },

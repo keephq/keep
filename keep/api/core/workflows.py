@@ -79,10 +79,7 @@ static_facets = [
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
 
-def __build_base_query(
-    tenant_id: str,
-    fetch_last_executions: int = 15,
-):
+def __build_base_query(tenant_id: str):
     columns_to_select = []
 
     for key, value in alias_column_mapping.items():
@@ -128,7 +125,7 @@ def __build_base_query(
             latest_executions_subquery_cte,
             and_(
                 Workflow.id == latest_executions_subquery_cte.c.workflow_id,
-                latest_executions_subquery_cte.c.row_num <= fetch_last_executions,
+                latest_executions_subquery_cte.c.row_num <= 1,
             ),
         )
         .where(Workflow.tenant_id == tenant_id)
@@ -146,9 +143,9 @@ def build_workflows_total_count_query(
     cel: str,
     fetch_last_executions: int = 15,
 ):
-    base_query = __build_base_query(
-        tenant_id=tenant_id, fetch_last_executions=fetch_last_executions
-    )["workflows_with_last_executions_query"].cte("base_query")
+    base_query = __build_base_query(tenant_id=tenant_id)[
+        "workflows_with_last_executions_query"
+    ].cte("base_query")
 
     query = select(func.count(func.distinct(base_query.c.entity_id))).select_from(
         base_query
@@ -176,7 +173,7 @@ def build_workflows_query(
     limit = limit if limit is not None else 20
     offset = offset if offset is not None else 0
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-    queries = __build_base_query(tenant_id, fetch_last_executions)
+    queries = __build_base_query(tenant_id)
     base_query = queries["workflows_with_last_executions_query"].cte("base_query")
     latest_executions_subquery_cte = queries["latest_executions_subquery_cte"]
 
@@ -274,17 +271,11 @@ def get_workflows_with_last_executions_v2(
             fetch_last_executions=fetch_last_executions,
         )
 
-        strquery = str(
-            workflows_query.compile(
-                dialect=session.bind.dialect, compile_kwargs={"literal_binds": True}
-            )
-        )
-
-        query_result = session.execute(workflows_query).all()
+        query_result = session.exec(workflows_query).all()
         result = []
         for workflow, started, execution_time, status in query_result:
             # workaround for filter. In query status is empty string if it is NULL in DB
-            status = workflow if workflow == "" else None
+            status = None if status == "" else status
             result.append(tuple([workflow, started, execution_time, status]))
 
     return result, count
