@@ -16,6 +16,48 @@ from tests.e2e_tests.utils import init_e2e_test
 # os.environ["PLAYWRIGHT_HEADLESS"] = "false"
 
 
+def close_toasify_notification(browser):
+    # Try to close the notification by clicking the X button
+    try:
+        # 1. Try with specific selector and force click
+        close_button = browser.locator(
+            "button.Toastify__close-button.Toastify__close-button--light"
+        )
+        if close_button.is_visible():
+            print("Closing Toastify notification with method 1...")
+            close_button.click(force=True)
+            browser.wait_for_timeout(1000)
+            pass
+
+        # 2. If still visible, try clicking the specific toast instance
+        toast = browser.locator("#1.Toastify__toast")
+        if toast.is_visible():
+            print("Closing Toastify notification with method 2...")
+            toast.locator("button.Toastify__close-button").click(force=True)
+            browser.wait_for_timeout(1000)
+            pass
+
+        # 3. If still visible, use JavaScript as a last resort
+        if browser.locator(".Toastify__toast-container").is_visible():
+            print("Closing Toastify notification with method 3...")
+            browser.evaluate(
+                """
+                document.querySelectorAll('.Toastify__close-button').forEach(button => button.click());
+            """
+            )
+            browser.wait_for_timeout(1000)
+            pass
+
+        # Check if we were successful
+        if not browser.locator(".Toastify__toast-container").is_visible():
+            print("Successfully closed the Toastify notification")
+
+    except Exception as e:
+        print(f"Error closing Toastify notification: {e}")
+        # You could add a screenshot here to debug
+    browser.screenshot(path="toastify_error.png")
+
+
 def test_pulling_prometheus_alerts_to_provider(browser):
     try:
         provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
@@ -59,20 +101,7 @@ def test_pulling_prometheus_alerts_to_provider(browser):
                 else:
                     raise e
 
-        # Try to close the notification by clicking the X button in the top-right corner
-        try:
-            # Looking at the screenshot, there's an X button in the top-right of the banner
-            close_button = browser.locator(
-                "button.Toastify__close-button, .notification-close-btn, button.close"
-            )
-            if close_button.is_visible():
-                print("Closing notification banner by clicking X button...")
-                close_button.click()
-                # Wait a moment for the notification to disappear
-                browser.wait_for_timeout(500)
-        except Exception as e:
-            print(f"Error closing notification: {e}")
-
+        close_toasify_notification(browser)
         browser.get_by_placeholder("Filter providers...").click()
         browser.get_by_placeholder("Filter providers...").fill("prometheus")
         browser.get_by_placeholder("Filter providers...").press("Enter")

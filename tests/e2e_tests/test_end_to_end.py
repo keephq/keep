@@ -23,6 +23,7 @@ import os
 import random
 import re
 import string
+import sys
 import time
 from datetime import datetime
 
@@ -63,36 +64,28 @@ def setup_console_listener(page, log_entries):
     )
 
 
-def save_failure_artifacts(browser, log_entries=None):
-    # Get the current test name from pytest
-    current_test_name = None
-    try:
-        # https://docs.pytest.org/en/latest/example/simple.html#pytest-current-test-environment-variable
-        current_test_name = (
-            os.environ.get("PYTEST_CURRENT_TEST").split(":")[-1].split(" ")[0]
-        )
-    except (AttributeError, IndexError, KeyError):
-        # Fallback method if pytest environment variable isn't available
-        current_test_name = "unknown_test"
+def save_failure_artifacts(page, log_entries):
+    """Save screenshots, HTML content, and console logs on test failure."""
+    # Generate unique name for the dump files
+    current_test_name = "playwright_dump_" + os.path.basename(__file__)[:-3] + "_"
 
-    # Create the screenshot filename
-    screenshot_filename = f"playwright_dump_{current_test_name}_{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
+    # try to get test_name from PYTEST_CURRENT_TEST
+    test_name = os.getenv("PYTEST_CURRENT_TEST")
+    if test_name:
+        current_test_name += test_name
+    else:
+        current_test_name += sys._getframe().f_code.co_name
 
-    try:
-        browser.screenshot(path=screenshot_filename)
-        print(f"Screenshot saved: {screenshot_filename}")
-    except Exception as e:
-        print(f"Failed to save screenshot: {e}")
+    # Save screenshot
+    page.screenshot(path=current_test_name + ".png")
 
-    # Save logs if provided
-    if log_entries:
-        logs_filename = f"console_logs_{current_test_name}_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt"
-        try:
-            with open(logs_filename, "w") as f:
-                f.write("\n".join(str(log) for log in log_entries))
-            print(f"Console logs saved: {logs_filename}")
-        except Exception as e:
-            print(f"Failed to save console logs: {e}")
+    # Save HTML content
+    with open(current_test_name + ".html", "w", encoding="utf-8") as f:
+        f.write(page.content())
+
+    # Save console logs
+    with open(current_test_name + "_console.txt", "w", encoding="utf-8") as f:
+        f.write("\n".join(log_entries))
 
 
 def test_sanity(browser: Page):  # browser is actually a page object
