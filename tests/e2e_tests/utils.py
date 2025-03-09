@@ -97,7 +97,7 @@ def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=
         pid = os.getpid()
         url = f"{KEEP_UI_URL}{next_url}?tenantId=keep" + str(pid)
         print("Going to URL: ", url)
-        browser.goto(url)
+        browser.goto(url, timeout=15000)
 
     if wait_time:
         browser.wait_for_timeout(wait_time)
