@@ -5,7 +5,6 @@ Grafana Incident Provider is a class that allows to query all incidents from Gra
 import dataclasses
 from datetime import datetime
 import hashlib
-import typing
 from urllib.parse import urljoin
 import uuid
 
@@ -14,7 +13,7 @@ import requests
 
 from keep.api.models.alert import IncidentDto, IncidentStatus, IncidentSeverity
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider, BaseIncidentProvider
+from keep.providers.base.base_provider import BaseIncidentProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
