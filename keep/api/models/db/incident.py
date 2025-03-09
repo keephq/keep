@@ -6,9 +6,18 @@ from uuid import UUID, uuid4
 from pydantic import PrivateAttr
 from sqlalchemy import ForeignKey, Index, event, text
 from sqlalchemy_utils import UUIDType
-from sqlmodel import JSON, TEXT, Column, Field, Relationship, Session, SQLModel
+from sqlmodel import (
+    JSON,
+    TEXT,
+    Column,
+    Field,
+    Relationship,
+    Session,
+    SQLModel,
+    func,
+    select,
+)
 
-from keep.api.core.db_utils import get_next_running_number
 from keep.api.models.alert import SeverityBaseInterface
 from keep.api.models.db.rule import ResolveOn
 from keep.api.models.db.tenant import Tenant
@@ -165,8 +174,9 @@ class Incident(SQLModel, table=True):
             "running_number",
             unique=True,
             postgresql_where=text("running_number IS NOT NULL"),  # For PostgreSQL
-            mysql_where=text("running_number IS NOT NULL"),  # For MySQL
             sqlite_where=text("running_number IS NOT NULL"),  # For SQLite
+            mysql_prefix="CREATE UNIQUE INDEX",  # For MySQL
+            mysql_length={"tenant_id": 255},  # For MySQL varchar length
         ),
     )
 
@@ -177,6 +187,16 @@ class Incident(SQLModel, table=True):
     @property
     def enrichments(self):
         return getattr(self, "_enrichments", {})
+
+
+def get_next_running_number(session: Session, tenant_id: str) -> int:
+    result: int = session.exec(
+        select(func.max(Incident.running_number)).filter(
+            Incident.tenant_id == tenant_id
+        )
+    ).first()
+
+    return (result or 0) + 1
 
 
 @event.listens_for(Incident, "before_insert")
