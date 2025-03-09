@@ -4,7 +4,7 @@ from typing import List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import PrivateAttr
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Index, event, text
 from sqlalchemy_utils import UUIDType
 from sqlmodel import (
     JSON,
@@ -18,6 +18,7 @@ from sqlmodel import (
     select,
 )
 
+from keep.api.core.db_utils import get_next_running_number
 from keep.api.models.alert import SeverityBaseInterface
 from keep.api.models.db.rule import ResolveOn
 from keep.api.models.db.tenant import Tenant
