@@ -346,7 +346,7 @@ def test_paste_workflow_yaml_quotes_preserved(browser: Page):
         page.get_by_role("button", name="Upload Workflows").click()
         page.get_by_test_id("text-area").click()
         page.get_by_test_id("text-area").fill(workflow_yaml)
-        page.get_by_role("button", name="Load").click()
+        page.get_by_role("button", name="Load", exact=True).click()
         page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
         page.get_by_role("tab", name="YAML Definition").click()
         yaml_editor_container = page.get_by_test_id("wf-detail-yaml-editor-container")

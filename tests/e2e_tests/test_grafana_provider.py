@@ -104,7 +104,7 @@ def test_grafana_provider(browser):
         browser.get_by_placeholder("Enter host").fill(GRAFANA_HOST)
         browser.get_by_role("button", name="Connect", exact=True).click()
         open_connected_provider(browser=browser, provider_type="Grafana", provider_name=provider_name_success)
-        toast_div = browser.locator("div.Toastify")
+        toast_div = browser.locator(".Toastify")
         browser.get_by_role("button", name="Install/Update Webhook", exact=True).click()
         expect(toast_div).to_contain_text("grafana webhook installed", timeout=10000)
         assert_scope_text_count(browser=browser, contains_text="Valid", count=3)
