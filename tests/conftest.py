@@ -536,6 +536,15 @@ def keycloak_token(request):
 def browser():
     from playwright.sync_api import sync_playwright
 
+    from keep.api.core.db_on_start import try_create_single_tenant
+
+    try:
+        tenant_id = f"keep{os.getpid()}"
+        print("Creating tenant - ", tenant_id)
+        try_create_single_tenant(tenant_id)
+        print("Tenant created")
+    except Exception:
+        pass
     # Force headless mode if running in CI environment
     is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
     headless = is_ci or os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true"
