@@ -91,6 +91,8 @@ def test_grafana_provider(browser):
                 base_url = "http://localhost:3000/providers"
                 url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
                 browser.wait_for_url(url_pattern)
+                print("Providers page loaded successfully. [try: %d]" % (attempt + 1))
+                break
             except Exception as e:
                 if attempt < max_attemps - 1:
                     print("Failed to load providers page. Retrying...")

@@ -252,7 +252,9 @@ def init_test(browser: Page, alerts, max_retries=1):
             # Wait for navigation to complete to either signin or providers page
             # (since we might get redirected automatically)
             browser.wait_for_load_state("networkidle")
-            browser.wait_for_url(lambda url: url.startswith(base_url))
+            browser.wait_for_url(lambda url: url.startswith(base_url), timeout=10000)
+            print("Page loaded successfully. [try: %d]" % (i + 1))
+            break
         except Exception as e:
             if i < max_retries - 1:
                 print("Failed to load alerts page. Retrying...")
@@ -376,7 +378,7 @@ def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
             # but facets work correctly
             alert["status"] = "enriched status"
 
-    init_test(browser, current_alerts)
+    init_test(browser, current_alerts, max_retries=3)
     # Give the page a moment to process redirects
     browser.wait_for_timeout(500)
 
