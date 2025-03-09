@@ -4,7 +4,6 @@ import { Providers, Provider } from "@/shared/api/providers";
 import { useEffect, useState } from "react";
 import ProviderForm from "./provider-form";
 import ProviderTile from "./provider-tile";
-import "react-sliding-side-panel/lib/index.css";
 import { useSearchParams } from "next/navigation";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { Tooltip } from "@/shared/ui";

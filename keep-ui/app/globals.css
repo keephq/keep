@@ -66,11 +66,6 @@ html.workaround-dark {
   }
 }
 
-.sliding-panel-container.active {
-  /* original value is ridiculous 15.000, overflowing toasts*/
-  @apply z-[1000] !important;
-}
-
 @keyframes scroll-shadow-left {
   0% {
     filter: none;
