@@ -27,6 +27,74 @@ The Grafana Incident provider requires the following authentication parameters:
 5. Copy the generated token.
 6. This will be used as the `service_account_token` parameter in the provider configuration.
 
+## Creating and updating Grafana Incidents
+
+Grafana Incident provider supports creating and updating incidents through workflows.
+
+- `operationType` - The operation type can be `create` or `update`.
+- `updateType` - The update type is used to update the various fields of the incident.
+
+### Create Incident
+
+- `operationType` - `create`
+- `title` - The title of the incident.
+- `severity` - The severity of the incident.
+- `labels` - The labels of the incident.
+- `roomPrefix` - The room prefix of the incident.
+- `isDrill` - The drill status of the incident.
+- `status` - The status of the incident.
+- `attachCaption` - The attachment caption of the incident.
+- `attachURL` - The attachment URL of the incident.
+
+### Update Incident
+
+- `operationType` - `update`
+- `updateType` - The updatable fields are removeLabel, unassignLabel, unassignLabelByUUID, unassignRole, updateIncidentEventTime, updateIncidentIsDrill, updateIncidentSeverity, updateIncidentStatus, updateIncidentTitle.
+
+#### Remove Label
+- `incident_id` (str) - The incident ID.
+- `label` (str) - The label to remove.
+
+#### Unassign Label
+- `incident_id` (str) - The incident ID.
+- `label` (str) - The label to unassign.
+- `key` (str) - The key of the label to unassign.
+
+#### Unassign Label By UUID
+- `incident_id` (str) - The incident ID.
+- `key_uuid` (str) - The key UUID of the label to unassign.
+- `value_uuid` (str) - The value UUID of the label to unassign.
+
+#### Unassign Role
+- `incident_id` (str) - The incident ID.
+- `role` (str) - The role to unassign.
+- `user_id` (str) - The user ID to unassign.
+
+#### Update Incident Event Time
+- `incident_id` (str) - The incident ID.
+- `event_time` (str) - The event time to update.
+- `event_name` (str) - The event name to update.
+
+#### Update Incident Is Drill
+- `incident_id` (str) - The incident ID.
+- `isDrill` (bool) - The drill status to update.
+
+#### Update Incident Severity
+- `incident_id` (str) - The incident ID.
+- `severity` (str) - The severity to update.
+
+#### Update Incident Status
+- `incident_id` (str) - The incident ID.
+- `status` (str) - The status to update.
+
+#### Update Incident Title
+- `incident_id` (str) - The incident ID.
+- `title` (str) - The title to update.
+
+Below are the examples of workflows that create and update incidents in Grafana Incident.
+- [Create Incident](https://github.com/keephq/keep/blob/main/examples/workflows/create-new-incident-grafana-incident.yaml)
+- [Update Incident](https://github.com/keephq/keep/blob/main/examples/workflows/update-incident-grafana-incident.yaml)
+
 ## Usefull Links
 
 - [Grafana Incident](https://grafana.com/docs/grafana-cloud/alerting-and-irm/incident/)
