@@ -5125,9 +5125,7 @@ def set_last_alert(
                     session.add(last_alert)
 
                 elif not last_alert:
-                    logger.info(
-                        f"No last alert for `{fingerprint}`, creating new"
-                    )
+                    logger.info(f"No last alert for `{fingerprint}`, creating new")
                     last_alert = LastAlert(
                         tenant_id=tenant_id,
                         fingerprint=alert.fingerprint,
@@ -5263,3 +5261,31 @@ def dismiss_error_alerts(tenant_id: str, alert_id=None, dismissed_by=None) -> No
                 stmt = stmt.where(AlertRaw.id == alert_id)
         session.exec(stmt)
         session.commit()
+
+
+def create_single_tenant_for_e2e(tenant_id: str) -> None:
+    """
+    Creates the single tenant and the default user if they don't exist.
+    """
+    with Session(engine) as session:
+        try:
+            # check if the tenant exist:
+            logger.info("Checking if single tenant exists")
+            tenant = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
+            if not tenant:
+                # Do everything related with single tenant creation in here
+                logger.info("Creating single tenant")
+                session.add(Tenant(id=tenant_id, name="Single Tenant"))
+            else:
+                logger.info("Single tenant already exists")
+
+            # commit the changes
+            session.commit()
+            logger.info("Single tenant created")
+        except IntegrityError:
+            # Tenant already exists
+            logger.exception("Failed to provision single tenant")
+            raise
+        except Exception:
+            logger.exception("Failed to create single tenant")
+            pass

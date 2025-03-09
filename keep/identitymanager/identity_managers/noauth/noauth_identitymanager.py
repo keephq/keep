@@ -1,4 +1,4 @@
-from keep.api.core.db_on_start import try_create_single_tenant
+from keep.api.core.db import create_single_tenant_for_e2e
 from keep.api.models.user import User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authverifierbase import AuthVerifierBase
@@ -22,7 +22,7 @@ class NoAuthIdentityManager(BaseIdentityManager):
         @app.post("/tenant")
         def tenant(body: dict):
             tenant_id = body.get("tenant_id")
-            try_create_single_tenant(tenant_id)
+            create_single_tenant_for_e2e(tenant_id)
             return {"message": "Tenant created"}
 
         self.logger.info("Added tenant endpoint")
