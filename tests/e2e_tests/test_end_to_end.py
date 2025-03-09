@@ -164,7 +164,8 @@ def test_insert_new_alert(browser: Page):  # browser is actually a page object
         feed_badge = browser.get_by_test_id("menu-alerts-feed-badge")
         feed_count_before = int(feed_badge.text_content() or "0")
 
-        browser.get_by_role("button", name="KE Keep").click()
+        # now Keep avatar will look like "K) Keep (Keep12345)"
+        browser.get_by_role("button", name="K) Keep").click()
         browser.get_by_role("menuitem", name="Settings").click()
         browser.get_by_role("tab", name="Webhook").click()
         browser.get_by_role("button", name="Click to create an example").click()
