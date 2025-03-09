@@ -41,7 +41,7 @@ export default function SettingsSelection({
   });
 
   return (
-    <Popover as={Fragment}>
+    <Popover>
       {({ close }) => (
         <>
           <Popover.Button

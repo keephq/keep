@@ -5,7 +5,17 @@ import { toast } from "react-toastify";
 import Loading from "@/app/(keep)/loading";
 import { AlertDto } from "@/entities/alerts/model";
 import { IncidentCandidateDto } from "@/entities/incidents/model";
-import { DragDropContext } from "react-beautiful-dnd";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+  closestCenter,
+  DragOverlay,
+  MeasuringStrategy,
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { createPortal } from "react-dom";
 import IncidentCard from "./alert-create-incident-ai-card";
 import { useIncidents } from "utils/hooks/useIncidents";
 import { useRouter } from "next/navigation";
@@ -56,6 +66,10 @@ const CreateIncidentWithAIModal = ({
     { id: "creation_time", desc: true },
     "",
     {}
+  );
+  const [activeAlert, setActiveAlert] = useState<AlertDto | null>(null);
+  const [activeIncidentIndex, setActiveIncidentIndex] = useState<number | null>(
+    null
   );
 
   const handleCloseAIModal = () => {
@@ -138,49 +152,103 @@ const CreateIncidentWithAIModal = ({
     }
   };
 
-  const onDragEnd = (result: any) => {
-    if (!result.destination) return;
+  const onDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    if (!active?.data?.current) return;
 
-    const sourceIncidentIndex = parseInt(result.source.droppableId);
-    const destIncidentIndex = parseInt(result.destination.droppableId);
+    const sourceIncidentIndex = parseInt(active.data.current.incidentIndex);
+    const alertIndex = active.data.current.alertIndex;
 
-    const newIncidentCandidates = incidentCandidates.map((incident) => ({
-      ...incident,
-      alerts: [...incident.alerts],
-    }));
-    const [movedAlert] = newIncidentCandidates[
-      sourceIncidentIndex
-    ].alerts.splice(result.source.index, 1);
-    newIncidentCandidates[destIncidentIndex].alerts.splice(
-      result.destination.index,
-      0,
-      movedAlert
-    );
+    if (isNaN(sourceIncidentIndex) || !incidentCandidates[sourceIncidentIndex])
+      return;
 
-    setIncidentCandidates(newIncidentCandidates);
+    setActiveIncidentIndex(sourceIncidentIndex);
+    setActiveAlert(incidentCandidates[sourceIncidentIndex].alerts[alertIndex]);
+  };
+
+  const onDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over || !active?.data?.current || !over?.data?.current) return;
+
+    const sourceIncidentIndex = parseInt(active.data.current.incidentIndex);
+    const destIncidentIndex = parseInt(over.data.current.incidentIndex);
+
+    if (
+      isNaN(sourceIncidentIndex) ||
+      isNaN(destIncidentIndex) ||
+      sourceIncidentIndex === destIncidentIndex
+    )
+      return;
+
+    setIncidentCandidates((prev) => {
+      if (!prev[sourceIncidentIndex] || !prev[destIncidentIndex]) return prev;
+
+      const newIncidents = [...prev];
+      const sourceIncident = { ...newIncidents[sourceIncidentIndex] };
+      const destIncident = { ...newIncidents[destIncidentIndex] };
+
+      const alertIndex = active.data.current?.alertIndex;
+      if (typeof alertIndex !== "number") return prev;
+
+      const [movedAlert] = sourceIncident.alerts.splice(alertIndex, 1);
+      const overIndex =
+        over.data.current?.alertIndex ?? destIncident.alerts.length;
+      destIncident.alerts.splice(overIndex, 0, movedAlert);
+
+      newIncidents[sourceIncidentIndex] = sourceIncident;
+      newIncidents[destIncidentIndex] = destIncident;
+
+      return newIncidents;
+    });
+  };
+
+  const onDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || !active?.data?.current || !over?.data?.current) {
+      setActiveAlert(null);
+      setActiveIncidentIndex(null);
+      return;
+    }
+
+    const sourceIncidentIndex = parseInt(active.data.current.incidentIndex);
+    const destIncidentIndex = parseInt(over.data.current.incidentIndex);
+
+    if (
+      isNaN(sourceIncidentIndex) ||
+      isNaN(destIncidentIndex) ||
+      !incidentCandidates[sourceIncidentIndex] ||
+      !incidentCandidates[destIncidentIndex]
+    ) {
+      setActiveAlert(null);
+      setActiveIncidentIndex(null);
+      return;
+    }
 
     // Track changes for the alerts field
     setChanges((prevChanges) => {
-      const sourceId = newIncidentCandidates[sourceIncidentIndex].id;
-      const destId = newIncidentCandidates[destIncidentIndex].id;
+      const sourceId = incidentCandidates[sourceIncidentIndex].id;
+      const destId = incidentCandidates[destIncidentIndex].id;
       return {
         ...prevChanges,
         [sourceId]: {
           ...prevChanges[sourceId],
           alerts: {
             from: incidentCandidates[sourceIncidentIndex].alerts,
-            to: newIncidentCandidates[sourceIncidentIndex].alerts,
+            to: incidentCandidates[sourceIncidentIndex].alerts,
           },
         },
         [destId]: {
           ...prevChanges[destId],
           alerts: {
             from: incidentCandidates[destIncidentIndex].alerts,
-            to: newIncidentCandidates[destIncidentIndex].alerts,
+            to: incidentCandidates[destIncidentIndex].alerts,
           },
         },
       };
     });
+
+    setActiveAlert(null);
+    setActiveIncidentIndex(null);
   };
 
   const handleIncidentChange = (updatedIncident: IncidentCandidateDto) => {
@@ -273,7 +341,18 @@ const CreateIncidentWithAIModal = ({
             <Loading loadingText="This is taking a bit longer then usual, please wait..." />
           </div>
         ) : incidentCandidates.length > 0 ? (
-          <DragDropContext onDragEnd={onDragEnd}>
+          <DndContext
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDragEnd={onDragEnd}
+            collisionDetection={closestCenter}
+            measuring={{
+              droppable: {
+                strategy: MeasuringStrategy.Always,
+              },
+            }}
+            modifiers={[restrictToVerticalAxis]}
+          >
             <div className="space-y-6">
               <Callout
                 title="Help the AI out by adjusting the incident groupings"
@@ -309,7 +388,30 @@ const CreateIncidentWithAIModal = ({
                 Create Incidents
               </Button>
             </div>
-          </DragDropContext>
+            {createPortal(
+              <DragOverlay dropAnimation={null}>
+                {activeAlert && activeIncidentIndex !== null && (
+                  <div className="bg-white shadow-lg rounded p-2 border border-gray-200 min-w-[800px] flex items-center gap-4">
+                    <div className="w-1/6 break-words font-medium">
+                      {activeAlert.name || "Unnamed Alert"}
+                    </div>
+                    <div className="w-2/3 break-words whitespace-normal text-gray-600">
+                      {activeAlert.description || "No description"}
+                    </div>
+                    <div className="w-1/12 break-words">
+                      <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-sm">
+                        {activeAlert.severity || "N/A"}
+                      </span>
+                    </div>
+                    <div className="w-1/12 break-words text-gray-600">
+                      {activeAlert.status || "N/A"}
+                    </div>
+                  </div>
+                )}
+              </DragOverlay>,
+              document.body
+            )}
+          </DndContext>
         ) : (
           <Card className="flex flex-col items-center h-[400px] p-8">
             <Title className="text-2xl">Create New Incident with AI</Title>

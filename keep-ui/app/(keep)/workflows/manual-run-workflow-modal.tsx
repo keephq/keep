@@ -13,6 +13,7 @@ import { Trigger, Workflow } from "@/shared/api/workflows";
 import { components, OptionProps } from "react-select";
 import { FilterOptionOption } from "react-select/dist/declarations/src/filters";
 import { WorkflowTriggerBadge } from "@/entities/workflows/ui/WorkflowTriggerBadge";
+import Link from "next/link";
 
 interface Props {
   alert?: AlertDto | null | undefined;
@@ -58,16 +59,15 @@ export default function ManualRunWorkflowModal({
       toast.success(
         <div>
           Workflow started successfully.{" "}
-          <a
+          <Link
             href={executionUrl}
             className="text-orange-500 hover:text-orange-600 underline"
             onClick={(e) => {
-              e.preventDefault();
-              router.push(executionUrl);
+              e.stopPropagation();
             }}
           >
             View execution
-          </a>
+          </Link>
         </div>,
         { position: "top-right" }
       );
