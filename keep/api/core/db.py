@@ -1891,6 +1891,7 @@ def create_incident_for_grouping_rule(
             and not rule.require_approve,
             incident_type=IncidentType.RULE.value,
             same_incident_in_the_past_id=past_incident.id if past_incident else None,
+            resolve_on=rule.resolve_on,
         )
         session.add(incident)
         session.commit()
@@ -3087,60 +3088,6 @@ def get_alert_audit(
 
         # Execute the query and fetch all results
         result = session.execute(query).scalars().all()
-
-    return result
-
-
-def get_workflows_with_last_executions_v2(
-    tenant_id: str, fetch_last_executions: int = 15
-) -> list[dict]:
-    if fetch_last_executions is not None and fetch_last_executions > 20:
-        fetch_last_executions = 20
-
-    # List first 1000 worflows and thier last executions in the last 7 days which are active)
-    with Session(engine) as session:
-        latest_executions_subquery = (
-            select(
-                WorkflowExecution.workflow_id,
-                WorkflowExecution.started,
-                WorkflowExecution.execution_time,
-                WorkflowExecution.status,
-                func.row_number()
-                .over(
-                    partition_by=WorkflowExecution.workflow_id,
-                    order_by=desc(WorkflowExecution.started),
-                )
-                .label("row_num"),
-            )
-            .where(WorkflowExecution.tenant_id == tenant_id)
-            .where(
-                WorkflowExecution.started
-                >= datetime.now(tz=timezone.utc) - timedelta(days=7)
-            )
-            .cte("latest_executions_subquery")
-        )
-
-        workflows_with_last_executions_query = (
-            select(
-                Workflow,
-                latest_executions_subquery.c.started,
-                latest_executions_subquery.c.execution_time,
-                latest_executions_subquery.c.status,
-            )
-            .outerjoin(
-                latest_executions_subquery,
-                and_(
-                    Workflow.id == latest_executions_subquery.c.workflow_id,
-                    latest_executions_subquery.c.row_num <= fetch_last_executions,
-                ),
-            )
-            .where(Workflow.tenant_id == tenant_id)
-            .where(Workflow.is_deleted == False)
-            .order_by(Workflow.id, desc(latest_executions_subquery.c.started))
-            .limit(15000)
-        ).distinct()
-
-        result = session.execute(workflows_with_last_executions_query).all()
 
     return result
 
@@ -5078,20 +5025,21 @@ def get_last_alert_by_fingerprint(
 def set_last_alert(
     tenant_id: str, alert: Alert, session: Optional[Session] = None, max_retries=3
 ) -> None:
-    logger.info(f"Seting last alert for `{alert.fingerprint}`")
+    fingerprint = alert.fingerprint
+    logger.info(f"Setting last alert for `{fingerprint}`")
     with existed_or_new_session(session) as session:
         for attempt in range(max_retries):
-            logger.debug(
-                f"Attempt {attempt} to set last alert for `{alert.fingerprint}`",
+            logger.info(
+                f"Attempt {attempt} to set last alert for `{fingerprint}`",
                 extra={
                     "alert_id": alert.id,
                     "tenant_id": tenant_id,
-                    "fingerprint": alert.fingerprint,
+                    "fingerprint": fingerprint,
                 },
             )
             try:
                 last_alert = get_last_alert_by_fingerprint(
-                    tenant_id, alert.fingerprint, session, for_update=True
+                    tenant_id, fingerprint, session, for_update=True
                 )
 
                 # To prevent rare, but possible race condition
@@ -5102,7 +5050,12 @@ def set_last_alert(
                 ) < alert.timestamp.replace(tzinfo=tz.UTC):
 
                     logger.info(
-                        f"Update last alert for `{alert.fingerprint}`: {last_alert.alert_id} -> {alert.id}"
+                        f"Update last alert for `{fingerprint}`: {last_alert.alert_id} -> {alert.id}",
+                        extra={
+                            "alert_id": alert.id,
+                            "tenant_id": tenant_id,
+                            "fingerprint": fingerprint,
+                        },
                     )
                     last_alert.timestamp = alert.timestamp
                     last_alert.alert_id = alert.id
@@ -5111,7 +5064,7 @@ def set_last_alert(
 
                 elif not last_alert:
                     logger.info(
-                        f"No last alert for `{alert.fingerprint}`, creating new"
+                        f"No last alert for `{fingerprint}`, creating new"
                     )
                     last_alert = LastAlert(
                         tenant_id=tenant_id,
@@ -5127,7 +5080,7 @@ def set_last_alert(
             except OperationalError as ex:
                 if "no such savepoint" in ex.args[0]:
                     logger.info(
-                        f"No such savepoint while updating lastalert for `{alert.fingerprint}`, retry #{attempt}"
+                        f"No such savepoint while updating lastalert for `{fingerprint}`, retry #{attempt}"
                     )
                     session.rollback()
                     if attempt >= max_retries:
@@ -5136,7 +5089,7 @@ def set_last_alert(
 
                 if "Deadlock found" in ex.args[0]:
                     logger.info(
-                        f"Deadlock found while updating lastalert for `{alert.fingerprint}`, retry #{attempt}"
+                        f"Deadlock found while updating lastalert for `{fingerprint}`, retry #{attempt}"
                     )
                     session.rollback()
                     if attempt >= max_retries:
@@ -5144,20 +5097,20 @@ def set_last_alert(
                     continue
             except NoActiveSqlTransaction:
                 logger.exception(
-                    f"No active sql transaction while updating lastalert for `{alert.fingerprint}`, retry #{attempt}",
+                    f"No active sql transaction while updating lastalert for `{fingerprint}`, retry #{attempt}",
                     extra={
                         "alert_id": alert.id,
                         "tenant_id": tenant_id,
-                        "fingerprint": alert.fingerprint,
+                        "fingerprint": fingerprint,
                     },
                 )
                 continue
             logger.debug(
-                f"Successfully updated lastalert for `{alert.fingerprint}`",
+                f"Successfully updated lastalert for `{fingerprint}`",
                 extra={
                     "alert_id": alert.id,
                     "tenant_id": tenant_id,
-                    "fingerprint": alert.fingerprint,
+                    "fingerprint": fingerprint,
                 },
             )
             # break the retry loop
