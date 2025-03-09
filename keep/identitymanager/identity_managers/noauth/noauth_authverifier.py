@@ -48,6 +48,7 @@ class NoAuthVerifier(AuthVerifierBase):
             )
 
         # for e2e tests where multiple tenants are supported (per tenant api key)
+        self.logger.info(f"Using tenant_id: {tenant_api_key.tenant_id}")
         return AuthenticatedEntity(
             tenant_id=tenant_api_key.tenant_id,
             email=SINGLE_TENANT_EMAIL,
