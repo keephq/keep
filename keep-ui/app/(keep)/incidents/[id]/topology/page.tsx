@@ -12,9 +12,7 @@ type PageProps = {
 export default async function IncidentTopologyPage(props: PageProps) {
   const params = await props.params;
 
-  const {
-    id
-  } = params;
+  const { id } = params;
 
   const api = await createServerApiClient();
   const incident = await getIncidentWithErrorHandling(id);

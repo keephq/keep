@@ -9,9 +9,7 @@ type PageProps = {
 export default async function IncidentTimelinePage(props: PageProps) {
   const params = await props.params;
 
-  const {
-    id
-  } = params;
+  const { id } = params;
 
   const incident = await getIncidentWithErrorHandling(id);
   return <IncidentTimeline incident={incident} />;

@@ -102,7 +102,9 @@ export function SplitIncidentAlertsModal({
             instanceId="split-incident-alerts-destination-incident-select"
             options={incidentOptions}
             value={selectValue}
-            onChange={(option) => setDestinationIncidentId(option!.value)}
+            onChange={(option) =>
+              option && setDestinationIncidentId(option.value)
+            }
             placeholder="Select destination incident"
           />
         </div>

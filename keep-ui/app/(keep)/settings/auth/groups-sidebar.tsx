@@ -205,7 +205,7 @@ const GroupsSidebar = ({
                         {...field}
                         onValueChange={(value) => field.onChange(value)}
                         value={field.value as string[]}
-                        className="custom-multiselect"
+                        className="custom-multiselect !max-w-none"
                       >
                         {roles.map((role) => (
                           <MultiSelectItem key={role.id} value={role.name}>

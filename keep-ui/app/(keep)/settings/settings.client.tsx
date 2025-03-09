@@ -363,13 +363,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <TabGroup
-        index={tabIndex}
-        className="flex-grow flex flex-col"
-        onIndexChange={(index) => {
-          console.log("index", index);
-        }}
-      >
+      <TabGroup index={tabIndex} className="flex-grow flex flex-col">
         <TabList>
           <Tab icon={UserGroupIcon} onClick={() => handleTabChange("users")}>
             Users and Access

@@ -79,7 +79,7 @@ export const useFetchProviders = () => {
         installed: provider.installed ?? false,
       }));
 
-      const fetchedLinkedProviders = data.linked_providers?.map(
+      const fetchedLinkedProviders = (data.linked_providers ?? []).map(
         (provider, i) => ({
           ...defaultProvider,
           ...provider,
@@ -109,7 +109,7 @@ export const useFetchProviders = () => {
 export default function ProvidersPage({
   searchParams,
 }: {
-  searchParams?: { [key: string]: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }) {
   const {
     providers,
@@ -127,7 +127,7 @@ export default function ProvidersPage({
 
   useEffect(() => {
     if (searchParams?.oauth === "failure") {
-      const reason = JSON.parse(searchParams.reason);
+      const reason = JSON.parse(searchParams.reason as string);
       showErrorToast(new Error(`Failed to install provider: ${reason.detail}`));
     } else if (searchParams?.oauth === "success") {
       toast.success("Successfully installed provider", {

@@ -2,17 +2,13 @@ import { getWorkflowWithRedirectSafe } from "@/shared/api/workflows";
 import { WorkflowBreadcrumbs } from "./workflow-breadcrumbs";
 import WorkflowDetailHeader from "./workflow-detail-header";
 
-export default async function Layout(
-  props: {
-    children: React.ReactNode;
-    params: Promise<{ workflow_id: string }>;
-  }
-) {
+export default async function Layout(props: {
+  children: React.ReactNode;
+  params: Promise<{ workflow_id: string }>;
+}) {
   const params = await props.params;
 
-  const {
-    children
-  } = props;
+  const { children } = props;
 
   const workflow = await getWorkflowWithRedirectSafe(params.workflow_id);
   return (

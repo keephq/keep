@@ -9,9 +9,7 @@ type PageProps = {
 export default async function IncidentWorkflowsPage(props: PageProps) {
   const params = await props.params;
 
-  const {
-    id
-  } = params;
+  const { id } = params;
 
   const incident = await getIncidentWithErrorHandling(id);
   return <IncidentWorkflowTable incident={incident} />;

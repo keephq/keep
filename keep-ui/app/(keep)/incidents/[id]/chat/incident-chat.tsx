@@ -42,7 +42,6 @@ export function IncidentChat({
   incident: IncidentDto;
   mutateIncident: () => void;
 }) {
-  const router = useRouter();
   const { data: session } = useSession();
   const { data: alerts, isLoading: alertsLoading } = useIncidentAlerts(
     incident.id

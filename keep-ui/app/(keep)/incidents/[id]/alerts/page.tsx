@@ -9,9 +9,7 @@ type PageProps = {
 export default async function IncidentAlertsPage(props: PageProps) {
   const params = await props.params;
 
-  const {
-    id
-  } = params;
+  const { id } = params;
 
   const incident = await getIncidentWithErrorHandling(id);
   return <IncidentAlerts incident={incident} />;
