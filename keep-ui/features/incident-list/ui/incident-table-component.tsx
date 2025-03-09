@@ -85,7 +85,7 @@ export const IncidentTableComponent = (props: Props) => {
   const { table } = props;
 
   return (
-    <Table>
+    <Table data-testid="incidents-table">
       <TableHead>
         {table.getHeaderGroups().map((headerGroup, index) => (
           <TableRow

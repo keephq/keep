@@ -242,6 +242,132 @@ def upload_alert(provider_type, alert):
     ).raise_for_status()
 
 
+def query_incidents(cell_query: str = None, limit: int = None, offset: int = None):
+    url = f"{KEEP_API_URL}/incidents"
+
+    query = {}
+
+    if cell_query:
+        query["cel"] = cell_query
+
+    if limit is not None:
+        query["limit"] = limit
+
+    if offset is not None:
+        query["offset"] = offset
+
+    if query:
+        url += "?"
+        url += "&".join([f"{key}={value}" for key, value in query.items()])
+
+    result: dict = None
+
+    for _ in range(5):
+        try:
+            response = requests.get(
+                url,
+                json=query,
+                headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+                timeout=5,
+            )
+            response.raise_for_status()
+            result = response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to query incidents: {e}")
+            time.sleep(1)
+            continue
+
+    if result is None:
+        raise Exception(f"Failed to query incidents after {5} attempts")
+
+    grouped_alerts_by_name = {}
+
+    for incident in result["items"]:
+        grouped_alerts_by_name.setdefault(incident["user_generated_name"], []).append(
+            incident
+        )
+
+    return {
+        "results": result["items"],
+        "count": result["count"],
+        "grouped_by_name": grouped_alerts_by_name,
+    }
+
+
+def create_fake_incident(index: int):
+    return {
+        "assignee": "",
+        "resolve_on": "all",
+        "user_generated_name": f"Incident name {index}",
+        "user_summary": f"Incident summary {index}",
+    }
+
+
+def upload_incidents():
+    current_incidents = query_incidents(limit=1000, offset=0)
+    simulated_incidents = []
+
+    for incident_index in range(20):
+        incident = create_fake_incident(incident_index)
+        simulated_incidents.append(incident)
+
+    not_uploaded_incidents = []
+
+    for incident in simulated_incidents:
+        if incident["user_generated_name"] not in current_incidents["grouped_by_name"]:
+            not_uploaded_incidents.append(incident)
+
+    for incident in not_uploaded_incidents:
+        url = f"{KEEP_API_URL}/incidents"
+        requests.post(
+            url,
+            json=incident,
+            timeout=5,
+            headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+        ).raise_for_status()
+        time.sleep(1)
+
+    if not not_uploaded_incidents:
+        return current_incidents
+
+    attempt = 0
+    while True:
+        time.sleep(1)
+        current_incidents = query_incidents(limit=1000, offset=0)
+        attempt += 1
+
+        if all(
+            simluated_incident["user_generated_name"]
+            in current_incidents["grouped_by_name"]
+            for simluated_incident in simulated_incidents
+        ):
+            break
+
+        if attempt >= 10:
+            raise Exception(
+                f"Not all incidents were uploaded. Not uploaded incidents: {not_uploaded_incidents}"
+            )
+
+    # for index, item in enumerate(current_incidents["results"]):
+    #     if
+
+    return query_incidents(limit=1000, offset=0)
+
+
+def associate_alerts_with_incident(incident_id: str, alert_ids: list[str]):
+    url = f"{KEEP_API_URL}/incidents/{incident_id}/alerts"
+    requests.post(
+        url,
+        json={"alertIds": alert_ids},
+        timeout=5,
+        headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+    ).raise_for_status()
+
+
 def setup_incidents_alerts():
     alerts_query_result = upload_alerts()
-    return {"alerts": alerts_query_result["results"]}
+    incidents_query_result = upload_incidents()
+    return {
+        "alerts": alerts_query_result["results"],
+        "incidents": incidents_query_result["results"],
+    }
