@@ -262,7 +262,7 @@ def __save_to_db(
                 tenant_id, saved_alerts, session
             )  # note: this only enriches incidents that were not yet ended
             for alert in saved_alerts:
-                if alert.status == AlertStatus.RESOLVED.value:
+                if alert.event.get("status") == AlertStatus.RESOLVED.value:
                     logger.debug(
                         "Checking for alert with status resolved",
                         extra={"alert_id": alert.id, "tenant_id": tenant_id},
