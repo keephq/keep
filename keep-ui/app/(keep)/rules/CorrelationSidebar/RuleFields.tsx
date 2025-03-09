@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   SearchSelect,
@@ -21,6 +21,7 @@ import { useFormContext } from "react-hook-form";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { CorrelationFormType } from "./types";
 import { TIMEFRAME_UNITS_TO_SECONDS } from "./timeframe-constants";
+import { useDeduplicationFields } from "@/utils/hooks/useDeduplicationRules";
 
 const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
   [
@@ -66,6 +67,10 @@ const Field = ({
 
   const [searchValue, setSearchValue] = useState("");
   const [isValueEnabled, setIsValueEnabled] = useState(true);
+
+  useEffect(() => {
+    setFields(avaliableFields);
+  }, [avaliableFields]);
 
   const onValueChange = (selectedValue: string) => {
     if (searchValue.length) {
@@ -190,9 +195,24 @@ export const RuleFields = ({
     []
   );
 
-  const availableFields = DEFAULT_FIELDS.filter(
-    ({ name }) => selectedFields.includes(name) === false
-  );
+  const { data: deduplicationFields = {} } = useDeduplicationFields();
+
+  const uniqueDeduplicationFields = Object.values(deduplicationFields)
+    .flat()
+    .filter(
+      (field) => DEFAULT_FIELDS.find((f) => f.name === field) === undefined
+    ) // remove duplicates
+    .map((field) => ({
+      label: field,
+      name: field,
+      datatype: "text",
+    }));
+
+  const availableFields = DEFAULT_FIELDS.concat(
+    uniqueDeduplicationFields
+  ).filter(({ name }) => selectedFields.includes(name) === false);
+
+  console.log(availableFields);
 
   const onAddRuleFieldClick = () => {
     const nextAvailableField = availableFields.at(0);
