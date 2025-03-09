@@ -48,15 +48,22 @@ export default function SignInForm({
   } = useForm<SignInFormInputs>();
 
   useEffect(() => {
+    console.log("Fetching providers");
     async function fetchProviders() {
+      console.log("Fetching providers2");
       const response = await getProviders();
       setProviders(response as Providers);
     }
+    console.log("Fetching providers3");
     fetchProviders();
+    console.log("Fetching providers4");
   }, []);
 
   useEffect(() => {
+    console.log("Checking providers");
+    console.log("Search params:", searchParams);
     if (providers) {
+      console.log("Providers:", providers);
       if (providers.auth0) {
         console.log("Signing in with auth0 provider");
         if (params?.amt) {
@@ -78,8 +85,20 @@ export default function SignInForm({
         providers.credentials &&
         providers.credentials.name == "NoAuth"
       ) {
-        const callbackUrl = (searchParams["callbackUrl"] as string) || "/";
-        const tenantId = searchParams["tenantId"];
+        console.log("Signing in with no auth provider");
+        console.log("URL:", window.location.href);
+        console.log("Raw search params:", window.location.search);
+
+        // Parse the query params manually
+        // Shahar: I'm not sure why this is needed, but I'm keeping it for now
+        const urlParams = new URLSearchParams(window.location.search);
+        const callbackUrl = urlParams.get("callbackUrl") || "";
+        const tenantId = new URLSearchParams(
+          callbackUrl?.split("?")[1] || ""
+        ).get("tenantId");
+
+        console.log("Manual parsing - callbackUrl:", callbackUrl);
+        console.log("Manual parsing - tenantId:", tenantId);
 
         // If tenantId is present in query params, add it to the callback URL
         const callbackWithTenant = tenantId
@@ -91,6 +110,8 @@ export default function SignInForm({
         signIn("credentials", {
           callbackUrl: callbackWithTenant,
         });
+      } else {
+        console.log("No providers found");
       }
     }
   }, [providers, params, searchParams]);
@@ -126,6 +147,7 @@ export default function SignInForm({
 
   // Show loading state during redirect
   if (isRedirecting) {
+    console.log("Redirecting...");
     return (
       <Text className="text-tremor-title h-full flex items-center justify-center font-bold text-tremor-content-strong">
         Authentication successful, redirecting...
@@ -134,6 +156,7 @@ export default function SignInForm({
   }
 
   if (providers?.credentials) {
+    console.log("Rendering form");
     return (
       <>
         <Text className="text-tremor-title font-bold text-tremor-content-strong">
