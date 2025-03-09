@@ -273,7 +273,7 @@ def get_workflows_with_last_executions_v2(
 
         query_result = session.exec(workflows_query).all()
         result = []
-        for workflow, last_executions, started, execution_time, status in query_result:
+        for workflow, started, execution_time, status in query_result:
             # workaround for filter. In query status is empty string if it is NULL in DB
             status = None if status == "" else status
             result.append(tuple([workflow, started, execution_time, status]))
