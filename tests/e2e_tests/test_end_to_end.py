@@ -71,7 +71,31 @@ def save_failure_artifacts(page, log_entries):
 
     # try to get test_name from PYTEST_CURRENT_TEST
     test_name = os.getenv("PYTEST_CURRENT_TEST")
+    with open("PYTEST_CURRENT_TEST.txt", "w") as f:
+        f.write(test_name)
+
     if test_name:
+        # Replace invalid filename characters with underscores
+        invalid_chars = [
+            ":",
+            "/",
+            "\\",
+            "?",
+            "*",
+            '"',
+            "<",
+            ">",
+            "|",
+            " ",
+            "[",
+            "]",
+            "(",
+            ")",
+            "'",
+        ]
+        for char in invalid_chars:
+            test_name = test_name.replace(char, "_")
+        print(f"test_name: {test_name}")
         current_test_name += test_name
     else:
         current_test_name += sys._getframe().f_code.co_name
