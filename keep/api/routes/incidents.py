@@ -4,9 +4,9 @@ from typing import List, Optional
 
 from arq import ArqRedis
 from fastapi import (
-    Body,
     APIRouter,
     BackgroundTasks,
+    Body,
     Depends,
     HTTPException,
     Query,
@@ -44,27 +44,29 @@ from keep.api.core.incidents import (
     get_incident_potential_facet_fields,
     get_last_incidents_by_cel,
 )
+from keep.api.models.action_type import ActionType
 from keep.api.models.alert import (
     AlertDto,
     EnrichAlertRequestBody,
     EnrichIncidentRequestBody,
+)
+from keep.api.models.db.alert import AlertAudit
+from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
+from keep.api.models.facet import FacetOptionsQueryDto
+from keep.api.models.incident import (
     IncidentCommit,
     IncidentDto,
     IncidentDtoIn,
     IncidentListFilterParamsDto,
     IncidentsClusteringSuggestion,
-    IncidentSeverity,
     IncidentSeverityChangeDto,
     IncidentSorting,
-    IncidentStatus,
     IncidentStatusChangeDto,
     MergeIncidentsRequestDto,
     MergeIncidentsResponseDto,
     SplitIncidentRequestDto,
     SplitIncidentResponseDto,
 )
-from keep.api.models.db.alert import ActionType, AlertAudit
-from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.workflow import WorkflowExecutionDTO
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
@@ -386,6 +388,7 @@ def update_incident(
         incident_id, updated_incident_dto, generated_by_ai
     )
     return new_incident_dto
+
 
 @router.delete(
     "/bulk",

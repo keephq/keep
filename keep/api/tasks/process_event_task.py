@@ -35,8 +35,10 @@ from keep.api.core.metrics import (
     events_out_counter,
     processing_time_summary,
 )
-from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
-from keep.api.models.db.alert import ActionType, Alert, AlertAudit, AlertRaw
+from keep.api.models.action_type import ActionType
+from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.db.alert import Alert, AlertAudit, AlertRaw
+from keep.api.models.incident import IncidentDto
 from keep.api.tasks.notification_cache import get_notification_cache
 from keep.api.utils.enrichment_helpers import (
     calculated_start_firing_time,

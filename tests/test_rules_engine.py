@@ -14,14 +14,9 @@ from keep.api.core.db import (
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import set_last_alert
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import (
-    AlertDto,
-    AlertSeverity,
-    AlertStatus,
-    IncidentSeverity,
-    IncidentStatus,
-)
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import Alert, Incident
+from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
 from keep.api.models.db.rule import CreateIncidentOn, ResolveOn
 from keep.rulesengine.rulesengine import RulesEngine
 from tests.fixtures.client import client, test_app  # noqa
@@ -1584,7 +1579,7 @@ def test_incident_created_only_for_firing_alerts(db_session):
             status=AlertStatus.RESOLVED,  # Non-firing status
             severity=AlertSeverity.CRITICAL,
             lastReceived=datetime.datetime.now().isoformat(),
-            fingerprint="Non-firing alert"
+            fingerprint="Non-firing alert",
         ),
         AlertDto(
             id="grafana-2",
@@ -1593,7 +1588,7 @@ def test_incident_created_only_for_firing_alerts(db_session):
             status=AlertStatus.FIRING,  # Firing status
             severity=AlertSeverity.CRITICAL,
             lastReceived=datetime.datetime.now().isoformat(),
-            fingerprint="Firing alert"
+            fingerprint="Firing alert",
         ),
     ]
 
@@ -1684,7 +1679,7 @@ def test_same_incident_in_the_past_id_set(db_session, client, test_app):
     # Ensure the first incident is created
     assert incident1.user_generated_name == "test-rule"
     assert incident1.same_incident_in_the_past_id is None
-    
+
     # Set the status of the first incident to resolved
     response_resolved = client.post(
         "/incidents/{}/status".format(incident1.id),
@@ -1698,7 +1693,6 @@ def test_same_incident_in_the_past_id_set(db_session, client, test_app):
     data = response_resolved.json()
     assert data["id"] == str(incident1.id)
     assert data["status"] == IncidentStatus.RESOLVED.value
-
 
     # Second alert with the same rule creates a new incident after timeframe expiration
     sleep(1)
@@ -1785,7 +1779,6 @@ def test_correlation_to_incident_candidate(db_session):
     assert incident.user_generated_name == "test-rule"
     assert incident.same_incident_in_the_past_id is None
     assert incident.is_confirmed is False
-
 
 
 # Next steps:

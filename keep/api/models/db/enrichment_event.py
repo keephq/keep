@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy_utils import UUIDType
 from sqlmodel import JSON, TEXT, Column, Field, ForeignKey, Index, SQLModel
 
-from keep.api.models.db.alert import datetime_column_type
+from keep.api.models.db.alert import DATETIME_COLUMN_TYPE
 
 
 class EnrichmentType(str, enum.Enum):
@@ -24,7 +24,7 @@ class EnrichmentEvent(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id", index=True)
     timestamp: datetime = Field(
-        sa_column=Column(datetime_column_type, nullable=False),
+        sa_column=Column(DATETIME_COLUMN_TYPE, nullable=False),
         default_factory=lambda: datetime.now(tz=timezone.utc),
     )
     enriched_fields: dict = Field(sa_column=Column(JSON), default_factory=dict)
@@ -39,7 +39,7 @@ class EnrichmentEvent(SQLModel, table=True):
     )
     enriched_fields: dict = Field(sa_column=Column(JSON), default_factory=dict)
     date_hour: datetime = Field(
-        sa_column=Column(datetime_column_type),
+        sa_column=Column(DATETIME_COLUMN_TYPE),
         default_factory=lambda: datetime.now(tz=timezone.utc).replace(
             minute=0, second=0, microsecond=0
         ),
@@ -81,7 +81,7 @@ class EnrichmentLog(SQLModel, table=True):
         default_factory=lambda: uuid4(),
     )
     timestamp: datetime = Field(
-        sa_column=Column(datetime_column_type, nullable=False),
+        sa_column=Column(DATETIME_COLUMN_TYPE, nullable=False),
         default_factory=lambda: datetime.now(tz=timezone.utc),
     )
     message: str = Field(sa_column=Column(TEXT))

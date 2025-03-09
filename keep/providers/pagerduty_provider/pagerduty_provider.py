@@ -10,21 +10,17 @@ import uuid
 import pydantic
 import requests
 
-from keep.api.models.alert import (
-    AlertDto,
-    AlertSeverity,
-    AlertStatus,
-    IncidentDto,
-    IncidentSeverity,
-    IncidentStatus,
-)
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
 from keep.api.models.db.topology import TopologyServiceInDto
+from keep.api.models.incident import IncidentDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import (
     BaseIncidentProvider,
     BaseProvider,
-    BaseTopologyProvider, ProviderHealthMixin,
+    BaseTopologyProvider,
+    ProviderHealthMixin,
 )
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
@@ -69,7 +65,9 @@ class PagerdutyProviderAuthConfig:
     )
 
 
-class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider, ProviderHealthMixin):
+class PagerdutyProvider(
+    BaseTopologyProvider, BaseIncidentProvider, ProviderHealthMixin
+):
     """Pull alerts and query incidents from PagerDuty."""
 
     PROVIDER_SCOPES = [

@@ -11,15 +11,15 @@ from sqlmodel import Session
 
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.core.db import get_session_sync
-from keep.api.models.alert import (
-    AlertDto,
+from keep.api.models.alert import AlertDto
+from keep.api.models.db.ai_suggestion import AIFeedback, AISuggestion, AISuggestionType
+from keep.api.models.db.topology import TopologyServiceDtoOut
+from keep.api.models.incident import (
     IncidentCandidate,
     IncidentClustering,
     IncidentDto,
     IncidentsClusteringSuggestion,
 )
-from keep.api.models.db.ai_suggestion import AIFeedback, AISuggestion, AISuggestionType
-from keep.api.models.db.topology import TopologyServiceDtoOut
 
 
 class AISuggestionBl:

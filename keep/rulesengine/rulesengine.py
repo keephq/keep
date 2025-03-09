@@ -26,15 +26,11 @@ from keep.api.core.db import (
     is_last_incident_alert_resolved,
 )
 from keep.api.core.dependencies import get_pusher_client
-from keep.api.models.alert import (
-    AlertDto,
-    AlertSeverity,
-    AlertStatus,
-    IncidentDto,
-    IncidentStatus,
-)
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import Incident
+from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.db.rule import ResolveOn, Rule
+from keep.api.models.incident import IncidentDto
 from keep.api.utils.cel_utils import preprocess_cel_expression
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
@@ -155,8 +151,10 @@ class RulesEngine:
                                     )
                                     incident.is_confirmed = True
                                 elif rule.create_on == "all":
-                                    incident = self._process_event_for_history_based_rule(
-                                        incident, rule, session
+                                    incident = (
+                                        self._process_event_for_history_based_rule(
+                                            incident, rule, session
+                                        )
                                     )
 
                             send_created_event = incident.is_confirmed

@@ -6,8 +6,9 @@ import celpy
 from sqlmodel import Session
 
 from keep.api.core.db import get_session_sync
+from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, AlertStatus
-from keep.api.models.db.alert import ActionType, AlertAudit
+from keep.api.models.db.alert import AlertAudit
 from keep.api.models.db.maintenance_window import MaintenanceWindowRule
 from keep.api.utils.cel_utils import preprocess_cel_expression
 
