@@ -130,7 +130,7 @@ export default function WorkflowsPage({
       cel,
       limit: paginationState?.limit,
       offset: paginationState?.offset,
-      sortBy: "createdAt",
+      sortBy: "created_at",
       sortDir: "desc",
     };
 
@@ -179,12 +179,13 @@ export default function WorkflowsPage({
 
   const facetsConfig: FacetsConfig = useMemo(() => {
     return {
-      ["Status"]: {
+      ["Last execution status"]: {
         renderOptionIcon: (facetOption) => {
           switch (facetOption.value) {
             case "success": {
               return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
             }
+            case "error":
             case "failed": {
               return <XCircleIcon className="w-5 h-5 text-red-500" />;
             }
@@ -209,8 +210,13 @@ export default function WorkflowsPage({
             case "in_progress": {
               return "In progress";
             }
-            default: {
+            case "":
+            case null:
+            case undefined: {
               return "Not run yet";
+            }
+            default: {
+              return facetOption.value;
             }
           }
         },
