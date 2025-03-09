@@ -326,24 +326,37 @@ def assert_alerts_by_column(
 ):
     filtered_alerts = [alert for alert in alerts if predicate(alert)]
     matched_rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
+
     try:
-        expect(matched_rows).to_have_count(len(filtered_alerts))
+        # Get the actual count of rows
+        actual_count = matched_rows.count()
+
+        # Shahar: since now tests in parallel, we can't expect the exact number of rows
+
+        # Check if the actual count is at least the expected count
+        if actual_count < len(filtered_alerts):
+            # If fewer than expected, use the standard expect for a detailed error
+            expect(matched_rows).to_have_count(len(filtered_alerts))
+        else:
+            print(
+                f"Found {actual_count} rows, which is at least the {len(filtered_alerts)} expected"
+            )
+
+        # check that only alerts with selected status are displayed
+        for alert in filtered_alerts:
+            row_locator = browser.locator(
+                "[data-testid='alerts-table'] table tbody tr", has_text=alert["name"]
+            )
+            expect(row_locator).to_be_visible()
+
+            if column_index is None:
+                return
+
+            column_locator = row_locator.locator("td").nth(column_index)
+            expect(column_locator).to_have_text(alert[property_in_alert])
     except Exception as e:
         save_failure_artifacts(browser, log_entries=[])
         raise e
-
-    # check that only alerts with selected status are displayed
-    for alert in filtered_alerts:
-        row_locator = browser.locator(
-            "[data-testid='alerts-table'] table tbody tr", has_text=alert["name"]
-        )
-        expect(row_locator).to_be_visible()
-
-        if column_index is None:
-            return
-
-        column_locator = row_locator.locator("td").nth(column_index)
-        expect(column_locator).to_have_text(alert[property_in_alert])
 
 
 facet_test_cases = {
@@ -519,13 +532,19 @@ def test_sort_asc_dsc(browser, sort_test_case, setup_test_data):
         alert for alert in current_alerts if alert["providerType"] == "prometheus"
     ]
     select_one_facet_option(browser, "source", "prometheus")
+    # Check if we have at least the expected number of elements
     try:
-        expect(
-            browser.locator("[data-testid='alerts-table'] table tbody tr")
-        ).to_have_count(len(filtered_alerts))
-    except Exception:
+        # Get the actual count of elements
+        actual_count = browser.locator(
+            "[data-testid='alerts-table'] table tbody tr"
+        ).count()
+        # its at least since webhook can add more alerts
+        assert actual_count >= len(
+            filtered_alerts
+        ), f"Expected at least {len(filtered_alerts)} elements, but found {actual_count}"
+    except AssertionError as e:
         save_failure_artifacts(browser, log_entries=[])
-        raise
+        raise e
 
     for sort_direction_title in ["Sort ascending", "Sort descending"]:
         sorted_alerts = sorted(filtered_alerts, key=sort_callback)
