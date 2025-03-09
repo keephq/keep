@@ -1,0 +1,141 @@
+---
+title: 'LibreNMS'
+sidebarTitle: 'LibreNMS Provider'
+description: 'LibreNMS allows you to receive alerts from LibreNMS using API endpoints as well as webhooks'
+---
+
+## Authentication Parameters
+
+The LibreNMS provider offers two ways to authenticate:
+
+- `LibreNMS Host URL` - This is the URL of your LibreNMS instance.
+- `LibreNMS API Key` - This is the API key created in the User Settings of your LibreNMS account and is used to authenticate requests to the LibreNMS API.
+
+## Connecting LibreNMS to Keep
+
+1. Open LibreNMS dashboard and click on settings in the top right corner.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/librenms-provider_4.png" />
+</Frame>
+
+2. Click on `Create API access token` to generate a new API key.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/librenms-provider_5.png" />
+</Frame>
+
+3. Give a description to the API key and click on `Create API Token`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/librenms-provider_6.png" />
+</Frame>
+
+## Webhooks Integration
+
+1. Open LibreNMS dashboard and open `Alerts` tab in the navigation bar and click on `Alert Transports`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/librenms-provider_1.png" />
+</Frame>
+
+2. Click on `Create add transport` and select `Transport type` as `API`. Select the `API Method` as `POST`.
+
+3. Fill the `API URL` with [https://api.keephq.dev/alerts/event/libre_nms](https://api.keephq.dev/alerts/event/libre_nms).
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/librenms-provider_2.png" />
+</Frame>
+
+4. Copy the below JSON and paste it in `body` field.
+
+```json
+{
+  "title": "{{ $title }}",
+  "hostname": "{{ $hostname }}",
+  "device_id": "{{ $device_id }}",
+  "sysDescr": "{{ $sysDescr }}",
+  "sysName": "{{ $sysName }}",
+  "sysContact": "{{ $sysContact }}",
+  "os": "{{ $os }}",
+  "type": "{{ $type }}",
+  "ip": "{{ $ip }}",
+  "display": "{{ $display }}",
+  "version": "{{ $version }}",
+  "hardware": "{{ $hardware }}",
+  "features": "{{ $features }}",
+  "serial": "{{ $serial }}",
+  "status": "{{ $status }}",
+  "status_reason": "{{ $status_reason }}",
+  "location": "{{ $location }}",
+  "description": "{{ $description }}",
+  "notes": "{{ $notes }}",
+  "uptime": "{{ $uptime }}",
+  "uptime_short": "{{ $uptime_short }}",
+  "uptime_long": "{{ $uptime_long }}",
+  "elapsed": "{{ $elapsed }}",
+  "alerted": "{{ $alerted }}",
+  "alert_id": "{{ $alert_id }}",
+  "alert_notes": "{{ $alert_notes }}",
+  "proc": "{{ $proc }}",
+  "rule_id": "{{ $rule_id }}",
+  "id": "{{ $id }}",
+  "faults": "{{ $faults }}",
+  "uid": "{{ $uid }}",
+  "severity": "{{ $severity }}",
+  "rule": "{{ $rule }}",
+  "name": "{{ $name }}",
+  "string": "{{ $string }}",
+  "timestamp": "{{ $timestamp }}",
+  "contacts": "{{ $contacts }}",
+  "state": "{{ $state }}",
+  "msg": "{{ $msg }}",
+  "builder": "{{ $builder }}"
+}
+```
+
+5. Follow the below steps to create a new API key in Keep.
+
+6. Go to Keep dashboard and click on the profile icon in the botton left corner and click `Settings`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-1.png" />
+</Frame>
+
+7. Select `Users and Access` tab and then select `API Keys` tab and create a new API key.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-2.png" />
+</Frame>
+
+8. Give name and select the role as `webhook` and click on `Create API Key`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-3.png" />
+</Frame>
+
+9. Copy the API key.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-4.png" />
+</Frame>
+
+10. Add a new header with key as `X-API-KEY` and create a new API key in Keep and paste it as the value and save the webhook.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/librenms-provider_2.png" />
+</Frame>
+
+11. Save the webhook.
+
+12. You can add devices from the Devices tab in the LibreNMS dashboard and select the alert transport that you have created.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/librenms-provider_3.png" />
+</Frame>
+
+13. Now, you will receive the alerts in Keep.
+
+## Useful Links
+
+- [LibreNMS](https://www.librenms.org/)
