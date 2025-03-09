@@ -68,7 +68,6 @@
     "monaco-editor": "^0.52.2",
     "next": "15.2.1",
     "next-auth": "^5.0.0-beta.25",
-    "npm": "^11.2.0",
     "openai": "^4.86.2",
     "postcss": "^8.5.3",
     "postcss-import": "^15.1.0",

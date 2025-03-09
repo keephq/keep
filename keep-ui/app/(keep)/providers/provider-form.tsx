@@ -36,7 +36,6 @@ import {
   ArrowLongLeftIcon,
   ArrowTopRightOnSquareIcon,
   GlobeAltIcon,
-  DocumentTextIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
@@ -736,21 +735,25 @@ const ProviderForm = ({
         {installedProvidersMode && provider.id && (
           <Subtitle>Id: {provider.id}</Subtitle>
         )}
-        <Subtitle>Need help? Check out the{" "}
-            <Link
-              className="text-orange-600 underline"
-              href={`${
+        <Subtitle>
+          Need help? Check out the{" "}
+          <Link
+            className="text-orange-600 underline"
+            href={`${
               config?.KEEP_DOCS_URL || "http://docs.keephq.dev"
-              }/providers/documentation/${provider.type}-provider`}
-              target="_blank"
-            >
-              {`Provider Documentation`}
-            </Link>, or ask{" "}
+            }/providers/documentation/${provider.type}-provider`}
+            target="_blank"
+          >
+            {`Provider Documentation`}
+          </Link>
+          , or ask{" "}
           <Link
             className="text-orange-600 underline"
             href={`https://getkeep.slack.com/join/shared_invite/zt-2leydxr6s-XmuQtBttgxZ0GOv8MJu6rQ#/shared-invite/email`}
             target="_blank"
-          >Slack Community</Link>
+          >
+            Slack Community
+          </Link>
         </Subtitle>
         {installedProvidersMode && provider.last_pull_time && (
           <Subtitle>
