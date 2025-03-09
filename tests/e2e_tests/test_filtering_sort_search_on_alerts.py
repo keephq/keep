@@ -241,11 +241,25 @@ def upload_alerts():
     return query_allerts(limit=1000, offset=0)
 
 
-def init_test(browser: Page, alerts):
-    init_e2e_test(browser, next_url="/alerts/feed")
-    base_url = f"{KEEP_UI_URL}/alerts/feed"
-    # we don't care about query params
-    browser.wait_for_url(lambda url: url.startswith(base_url))
+def init_test(browser: Page, alerts, max_retries=1):
+    for i in range(max_retries):
+        try:
+            init_e2e_test(browser, next_url="/alerts/feed")
+            base_url = f"{KEEP_UI_URL}/alerts/feed"
+            # we don't care about query params
+            # Give the page a moment to process redirects
+            browser.wait_for_timeout(500)
+            # Wait for navigation to complete to either signin or providers page
+            # (since we might get redirected automatically)
+            browser.wait_for_load_state("networkidle")
+            browser.wait_for_url(lambda url: url.startswith(base_url))
+        except Exception as e:
+            if i < max_retries - 1:
+                print("Failed to load alerts page. Retrying...")
+                continue
+            else:
+                raise e
+
     browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
     browser.wait_for_selector(f"text={alerts[0]['name']}", timeout=10000)
     rows_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()

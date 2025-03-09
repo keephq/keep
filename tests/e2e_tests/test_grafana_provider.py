@@ -74,21 +74,29 @@ def test_grafana_provider(browser):
         provider_name_success = provider_name + "-success"
 
         # browser.goto(f"{KEEP_UI_URL}/signin")
-        init_e2e_test(
-            browser,
-            next_url="/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders",
-        )
-        # Give the page a moment to process redirects
-        browser.wait_for_timeout(500)
+        max_attemps = 3
+        for attempt in range(max_attemps):
+            try:
+                init_e2e_test(
+                    browser,
+                    next_url="/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders",
+                )
+                # Give the page a moment to process redirects
+                browser.wait_for_timeout(500)
+                # Wait for navigation to complete to either signin or providers page
+                # (since we might get redirected automatically)
+                browser.wait_for_load_state("networkidle")
 
-        # Wait for navigation to complete to either signin or providers page
-        # (since we might get redirected automatically)
-        browser.wait_for_load_state("networkidle")
-
-        # init_e2e_test(browser=browser, next_url="/signin")
-        base_url = "http://localhost:3000/providers"
-        url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
-        browser.wait_for_url(url_pattern)
+                # init_e2e_test(browser=browser, next_url="/signin")
+                base_url = "http://localhost:3000/providers"
+                url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
+                browser.wait_for_url(url_pattern)
+            except Exception as e:
+                if attempt < max_attemps - 1:
+                    print("Failed to load providers page. Retrying...")
+                    continue
+                else:
+                    raise e
 
         browser.get_by_role("link", name="Providers").hover()
         browser.get_by_role("link", name="Providers").click()
