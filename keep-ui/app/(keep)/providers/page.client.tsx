@@ -80,12 +80,15 @@ export const useFetchProviders = () => {
         installed: provider.installed ?? false,
       }));
 
-      const fetchedLinkedProviders = data.linked_providers?.map((provider) => ({
-        ...defaultProvider,
-        ...provider,
-        linked: true,
-        validatedScopes: provider.validatedScopes ?? {},
-      }));
+      const fetchedLinkedProviders = data.linked_providers?.map(
+        (provider, i) => ({
+          ...defaultProvider,
+          ...provider,
+          id: provider.type + "-linked-" + i,
+          linked: true,
+          validatedScopes: provider.validatedScopes ?? {},
+        })
+      );
 
       setInstalledProviders(fetchedInstalledProviders);
       setProviders(fetchedProviders);

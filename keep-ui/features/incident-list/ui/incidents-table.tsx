@@ -41,12 +41,6 @@ import {
 } from "@/shared/ui";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
-import { TitleAndFilters } from "@/app/(keep)/alerts/TitleAndFilters";
-import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
-import { severityMapping } from "@/entities/alerts/model";
-import EnhancedDateRangePicker, {
-  TimeFrame,
-} from "@/components/ui/DateRangePicker";
 
 function SelectedRowActions({
   selectedRowIds,

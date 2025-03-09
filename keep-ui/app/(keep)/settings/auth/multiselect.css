@@ -12,11 +12,6 @@
   overflow-y: visible !important; /* Allow vertical overflow to be visible */
 }
 
-.custom-multiselect .max-w-[300px],
-.custom-multiselect .lg:max-w-[300px] {
-  max-width: none !important;
-}
-
 .custom-multiselect .flex-nowrap > div {
   max-width: 240px !important; /* Adjust max-width */
   margin: 3.2px 0 !important; /* Adjust margin */

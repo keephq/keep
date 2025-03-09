@@ -1,4 +1,5 @@
-"use client";
+"use client";;
+import { use } from "react";
 
 import { Card, Title, Badge, Icon, Subtitle } from "@tremor/react";
 import { LogViewer } from "@/components/LogViewer";
@@ -8,11 +9,12 @@ import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { useMappings } from "@/utils/hooks/useMappingRules";
 
-export default function MappingExecutionDetailsPage({
-  params,
-}: {
-  params: { rule_id: string; execution_id: string };
-}) {
+export default function MappingExecutionDetailsPage(
+  props: {
+    params: Promise<{ rule_id: string; execution_id: string }>;
+  }
+) {
+  const params = use(props.params);
   const { execution, isLoading } = useEnrichmentEvent({
     ruleId: params.rule_id,
     executionId: params.execution_id,

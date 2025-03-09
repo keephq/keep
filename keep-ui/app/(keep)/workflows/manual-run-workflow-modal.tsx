@@ -31,7 +31,7 @@ export default function ManualRunWorkflowModal({
   const [selectedWorkflow, setSelectedWorkflow] = useState<
     Workflow | undefined
   >(undefined);
-  const { data: workflows } = useWorkflows({});
+  const { data: workflows } = useWorkflows();
   const api = useApi();
   const router = useRouter();
 
@@ -136,7 +136,8 @@ export default function ManualRunWorkflowModal({
             }
             return (
               workflow.name.toLowerCase().indexOf(query.toLowerCase()) > -1 ||
-              workflow.description.toLowerCase().indexOf(query.toLowerCase()) > -1 ||
+              workflow.description.toLowerCase().indexOf(query.toLowerCase()) >
+                -1 ||
               workflow.id.toLowerCase().indexOf(query.toLowerCase()) > -1
             );
           }}
