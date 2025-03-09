@@ -231,7 +231,7 @@ def build_workflows_query(
 
     query = query.limit(limit).offset(offset)
 
-    query = query.distinct(text(order_by_field), Workflow.id)
+    # query = query.distinct(text(order_by_field), Workflow.id)
 
     if cel:
         sql_filter_str = cel_to_sql_instance.convert_to_sql_str(cel)
