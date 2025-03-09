@@ -4,7 +4,7 @@ from typing import List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import PrivateAttr
-from sqlalchemy import ForeignKey, Index, event, text
+from sqlalchemy import ForeignKey
 from sqlalchemy_utils import UUIDType
 from sqlmodel import (
     JSON,
