@@ -39,7 +39,17 @@ class WorkflowManager:
         self.scheduler = WorkflowScheduler(self)
         self.workflow_store = WorkflowStore()
         self.started = False
+        self.current_workflow_id = None
 
+    def set_workflow_id(self, workflow_id: str):
+        """Store workflow_id for later use"""
+        self.current_workflow_id = workflow_id
+        self.logger.info(f"Stored workflow_id: {workflow_id}")
+
+    def get_workflow_id(self) -> str:
+        """Retrieve stored workflow_id"""
+        return self.current_workflow_id
+    
     async def start(self):
         """Runs the workflow manager in server mode"""
         if self.started:
