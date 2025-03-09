@@ -7,11 +7,62 @@ from datetime import datetime
 import requests
 from playwright.sync_api import expect
 
+from tests.e2e_tests.utils import init_e2e_test
+
 # Dear developer, thank you for checking E2E tests!
 # For instructions, please check test_end_to_end.py.
 
 # NOTE 2: to run the tests with a browser, uncomment this:
 # os.environ["PLAYWRIGHT_HEADLESS"] = "false"
+
+
+def close_toasify_notification(browser):
+    # Try to close the notification by clicking the X button
+    try:
+        # 1. Try with specific selector and force click
+        close_button = browser.locator(
+            "button.Toastify__close-button.Toastify__close-button--light"
+        )
+        if close_button.is_visible():
+            print("Closing Toastify notification with method 1...")
+            close_button.click(force=True)
+            browser.wait_for_timeout(1000)
+            pass
+
+        # 2. Try finding any visible toast and clicking its close button
+        toast_close_buttons = browser.locator(
+            ".Toastify__toast button.Toastify__close-button"
+        )
+        if toast_close_buttons.count() > 0:
+            print("Closing Toastify notification with method 2...")
+            toast_close_buttons.first.click(force=True)
+            browser.wait_for_timeout(1000)
+            pass
+
+        # 3. Use JavaScript as a last resort
+        if browser.locator(".Toastify__toast-container").is_visible():
+            print("Closing Toastify notification with method 3...")
+            browser.evaluate(
+                """
+                document.querySelectorAll('.Toastify__close-button').forEach(button => button.click());
+            """
+            )
+            browser.wait_for_timeout(1000)
+            pass
+
+        # 4. Check if the notification is still visible
+        if browser.locator(".Toastify__toast-container").is_visible():
+            # last resort - wait the remaining time
+            print("Waiting for Toastify notification to close...")
+            # which is 10 seconds minus the time we already waited
+            browser.wait_for_timeout(10000 - 1000 * 3)
+
+        # Check if we were successful
+        if not browser.locator(".Toastify__toast-container").is_visible():
+            print("Successfully closed the Toastify notification")
+
+    except Exception as e:
+        print(f"Error closing Toastify notification: {e}")
 
 
 def test_pulling_prometheus_alerts_to_provider(browser):
@@ -31,7 +82,33 @@ def test_pulling_prometheus_alerts_to_provider(browser):
             print(alerts)
 
         # Create prometheus provider
-        browser.goto("http://localhost:3000/providers")
+        max_attemps = 3
+        for attempt in range(max_attemps):
+            try:
+                init_e2e_test(
+                    browser,
+                    next_url="/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders",
+                )
+                # Give the page a moment to process redirects
+                browser.wait_for_timeout(500)
+
+                # Wait for navigation to complete to either signin or providers page
+                # (since we might get redirected automatically)
+                browser.wait_for_load_state("networkidle")
+
+                base_url = "http://localhost:3000/providers"
+                url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
+                browser.wait_for_url(url_pattern)
+                print("Providers page loaded successfully. [try: %d]" % (attempt + 1))
+                break
+            except Exception as e:
+                if attempt < max_attemps - 1:
+                    print("Failed to load providers page. Retrying...")
+                    continue
+                else:
+                    raise e
+
+        close_toasify_notification(browser)
         browser.get_by_placeholder("Filter providers...").click()
         browser.get_by_placeholder("Filter providers...").fill("prometheus")
         browser.get_by_placeholder("Filter providers...").press("Enter")

@@ -1,24 +1,33 @@
-from keep.providers.providers_factory import ProvidersFactory
+import json
+import os
+
 import requests
-from playwright.sync_api import expect
+from playwright.sync_api import Page, expect
+
+from keep.providers.providers_factory import ProvidersFactory
+
+KEEP_UI_URL = "http://localhost:3000"
 
 
 def trigger_alert(provider_name):
     provider = ProvidersFactory.get_provider_class(provider_name)
+    token = get_token()
     requests.post(
         f"http://localhost:8080/alerts/event/{provider_name}",
         headers={
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "X-API-KEY": "really_random_secret",
+            "Authorization": "Bearer " + token,
         },
         json=provider.simulate_alert(),
     )
+
 
 def open_connected_provider(browser, provider_type, provider_name):
     browser.locator(
         f"button:has-text('{provider_type}'):has-text('Connected'):has-text('{provider_name}')"
     ).click()
+
 
 def install_webhook_provider(browser, provider_name, webhook_url, webhook_action):
     """
@@ -42,19 +51,23 @@ def install_webhook_provider(browser, provider_name, webhook_url, webhook_action
     browser.locator("li:has-text('GET')").click()
 
     browser.get_by_role("button", name="Connect", exact=True).click()
-    browser.mouse.wheel(0, 0) # Scrolling back to initial position
+    browser.mouse.wheel(0, 0)  # Scrolling back to initial position
 
 
 def delete_provider(browser, provider_type, provider_name):
     """
     Deletes a Connected provider
     """
-    open_connected_provider(browser=browser, provider_type=provider_type, provider_name=provider_name)
+    open_connected_provider(
+        browser=browser, provider_type=provider_type, provider_name=provider_name
+    )
     browser.once("dialog", lambda dialog: dialog.accept())
     browser.get_by_role("button", name="Delete").click()
 
 
-def assert_connected_provider_count(browser, provider_type, provider_name, provider_count):
+def assert_connected_provider_count(
+    browser, provider_type, provider_name, provider_count
+):
     """
     Asserts the number of **Connected** providers
     """
@@ -64,11 +77,75 @@ def assert_connected_provider_count(browser, provider_type, provider_name, provi
         )
     ).to_have_count(provider_count)
 
+
 def assert_scope_text_count(browser, contains_text, count):
     """
     Validates the count of scopes having text "contains text".
     To check for valid scopes, pass contains_text="Valid"
     """
     expect(
-            browser.locator(f"span.tremor-Badge-text:has-text('{contains_text}')")
-        ).to_have_count(count)
+        browser.locator(f"span.tremor-Badge-text:has-text('{contains_text}')")
+    ).to_have_count(count)
+
+
+def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=0):
+    if tenant_id:
+        url = f"{KEEP_UI_URL}{next_url}?tenantId={tenant_id}"
+        print("Going to URL: ", url)
+        browser.goto(url)
+    else:
+
+        pid = os.getpid()
+        url = f"{KEEP_UI_URL}{next_url}?tenantId=keep" + str(pid)
+        print("Going to URL: ", url)
+        browser.goto(url, timeout=15000)
+
+    if wait_time:
+        browser.wait_for_timeout(wait_time)
+
+    # take a screenshot because why not
+    take_screenshot(browser)
+
+
+def take_screenshot(page):
+    """Save screenshots, HTML content, and console logs on test failure."""
+    # Generate unique name for the dump files
+    current_test_name = "screenshot_"
+
+    # try to get test_name from PYTEST_CURRENT_TEST
+    test_name = os.getenv("PYTEST_CURRENT_TEST") or "screenshot"
+    # Replace invalid filename characters with underscores
+    invalid_chars = [
+        ":",
+        "/",
+        "\\",
+        "?",
+        "*",
+        '"',
+        "<",
+        ">",
+        "|",
+        " ",
+        "[",
+        "]",
+        "(",
+        ")",
+        "'",
+    ]
+    for char in invalid_chars:
+        test_name = test_name.replace(char, "_")
+
+    current_test_name += test_name
+
+    # Save screenshot
+    page.screenshot(path=current_test_name + ".png")
+
+
+def get_token():
+    pid = os.getpid()
+    return json.dumps(
+        {
+            "tenant_id": "keep" + str(pid),
+            "user_id": "keep-user-for-no-auth-purposes",
+        }
+    )

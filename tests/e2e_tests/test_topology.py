@@ -3,6 +3,8 @@ import sys
 
 from playwright.sync_api import expect
 
+from tests.e2e_tests.utils import init_e2e_test
+
 # Importing utilities for test assertions and setup
 
 # Setting Playwright to run in non-headless mode for debugging purposes
@@ -15,7 +17,8 @@ KEEP_UI_URL = "http://localhost:3000"
 def test_topology_manual(browser):
     try:
         # Navigate to sign-in page
-        browser.goto(f"{KEEP_UI_URL}/signin")
+        # browser.goto(f"{KEEP_UI_URL}/signin")
+        init_e2e_test(browser, next_url="/signin")
         browser.wait_for_timeout(3000)
 
         # Open the Service Topology page
