@@ -183,6 +183,12 @@ To send alerts from LibreNMS to Keep, Use the following webhook url to configure
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto | list[AlertDto]:
+        
+        if event.get("description") == "":
+            description = event.get("title", "Could not fetch description")
+        else:
+            description = event.get("description", "Could not fetch description")
+
         alert = AlertDto(
             id=event.get("id"),
             name=event.get("name", "Could not fetch rule name"),
@@ -209,8 +215,7 @@ To send alerts from LibreNMS to Keep, Use the following webhook url to configure
             status_reason=event.get(
                 "status_reason", "Could not fetch status_reason"),
             location=event.get("location", "Could not fetch location"),
-            description=event.get(
-                "description", "Could not fetch description"),
+            description=description,
             notes=event.get("notes", "Could not fetch notes"),
             uptime=event.get("uptime", "Could not fetch uptime"),
             uptime_sort=event.get(
