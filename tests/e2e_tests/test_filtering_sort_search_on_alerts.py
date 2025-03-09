@@ -322,7 +322,11 @@ def assert_alerts_by_column(
 ):
     filtered_alerts = [alert for alert in alerts if predicate(alert)]
     matched_rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
-    expect(matched_rows).to_have_count(len(filtered_alerts))
+    try:
+        expect(matched_rows).to_have_count(len(filtered_alerts))
+    except Exception as e:
+        save_failure_artifacts(browser, log_entries=[])
+        raise e
 
     # check that only alerts with selected status are displayed
     for alert in filtered_alerts:
