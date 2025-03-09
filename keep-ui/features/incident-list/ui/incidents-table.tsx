@@ -41,47 +41,60 @@ import {
 } from "@/shared/ui";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
-import { TitleAndFilters } from "@/app/(keep)/alerts/TitleAndFilters";
-import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
-import { severityMapping } from "@/entities/alerts/model";
-import EnhancedDateRangePicker, {
-  TimeFrame,
-} from "@/components/ui/DateRangePicker";
+import { GenerateReportModal } from "./incidents-report";
+import { DocumentChartBarIcon } from "@heroicons/react/24/outline";
 
 function SelectedRowActions({
   selectedRowIds,
   onMergeInitiated,
   onDelete,
+  onGenerateReport,
 }: {
   selectedRowIds: string[];
   onMergeInitiated: () => void;
   onDelete: () => void;
+  onGenerateReport: () => void;
 }) {
   return (
-    <div className="flex gap-2 items-center justify-end">
-      {selectedRowIds.length ? (
-        <span className="accent-dark-tremor-content text-sm px-2">
-          {selectedRowIds.length} selected
-        </span>
-      ) : null}
-      <Button
-        color="orange"
-        variant="primary"
-        size="md"
-        disabled={selectedRowIds.length < 2}
-        onClick={onMergeInitiated}
-      >
-        Merge
-      </Button>
-      <Button
-        color="red"
-        variant="primary"
-        size="md"
-        disabled={!selectedRowIds.length}
-        onClick={onDelete}
-      >
-        Delete
-      </Button>
+    <div className="w-full flex justify-between">
+      <div>
+        <Button
+          color="orange"
+          variant="primary"
+          icon={DocumentChartBarIcon}
+          tooltip="Generate report for currently visible incidents"
+          size="md"
+          onClick={onGenerateReport}
+        >
+          Generate report
+        </Button>
+      </div>
+
+      <div className="flex gap-2 items-center">
+        {selectedRowIds.length ? (
+          <span className="accent-dark-tremor-content text-sm px-2">
+            {selectedRowIds.length} selected
+          </span>
+        ) : null}
+        <Button
+          color="orange"
+          variant="primary"
+          size="md"
+          disabled={selectedRowIds.length < 2}
+          onClick={onMergeInitiated}
+        >
+          Merge
+        </Button>
+        <Button
+          color="red"
+          variant="primary"
+          size="md"
+          disabled={!selectedRowIds.length}
+          onClick={onDelete}
+        >
+          Delete
+        </Button>
+      </div>
     </div>
   );
 }
@@ -89,6 +102,7 @@ function SelectedRowActions({
 const columnHelper = createColumnHelper<IncidentDto>();
 
 interface Props {
+  filterCel: string;
   incidents: PaginatedIncidentsDto;
   sorting: SortingState;
   setSorting: Dispatch<SetStateAction<any>>;
@@ -98,6 +112,7 @@ interface Props {
 
 export default function IncidentsTable({
   incidents: incidents,
+  filterCel,
   setPagination,
   sorting,
   setSorting,
@@ -109,6 +124,8 @@ export default function IncidentsTable({
     pageIndex: Math.ceil(incidents.offset / incidents.limit),
     pageSize: incidents.limit,
   });
+  const [isGenerateReportModalOpen, setIsGenerateReportModalOpen] =
+    useState(false);
   const [runWorkflowModalIncident, setRunWorkflowModalIncident] =
     useState<IncidentDto | null>();
 
@@ -342,12 +359,18 @@ export default function IncidentsTable({
     bulkDeleteIncidents(selectedRowIds, true);
   }, [bulkDeleteIncidents, selectedRowIds]);
 
+  const generateReport = useCallback(
+    () => setIsGenerateReportModalOpen(true),
+    [setIsGenerateReportModalOpen]
+  );
+
   return (
     <>
       <SelectedRowActions
         selectedRowIds={selectedRowIds}
         onMergeInitiated={handleMergeInitiated}
         onDelete={handleDeleteMultiple}
+        onGenerateReport={generateReport}
       />
       {incidents.items.length > 0 ? (
         <Card className="p-0 overflow-hidden">
@@ -377,6 +400,12 @@ export default function IncidentsTable({
           incidents={mergeOptions.incidents}
           handleClose={() => setMergeOptions(null)}
           onSuccess={() => table.resetRowSelection()}
+        />
+      )}
+      {isGenerateReportModalOpen && (
+        <GenerateReportModal
+          filterCel={filterCel}
+          onClose={() => setIsGenerateReportModalOpen(false)}
         />
       )}
     </>

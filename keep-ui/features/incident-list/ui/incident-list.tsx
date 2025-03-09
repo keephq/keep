@@ -294,6 +294,7 @@ export function IncidentList({
     if (incidents && incidents.items.length > 0) {
       return (
         <IncidentsTable
+          filterCel={mainCelQuery}
           incidents={incidents}
           setPagination={setIncidentsPagination}
           sorting={incidentsSorting}
