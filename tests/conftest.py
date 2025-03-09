@@ -539,6 +539,7 @@ def browser():
     # Force headless mode if running in CI environment
     is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
     headless = is_ci or os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true"
+    # headless = False
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
@@ -721,7 +722,7 @@ def create_alert(db_session):
             event={
                 "name": random_name,
                 "fingerprint": fingerprint,
-                "lastReceived": details.pop('lastReceived', timestamp.isoformat()),
+                "lastReceived": details.pop("lastReceived", timestamp.isoformat()),
                 "status": status.value,
                 **details,
             },
