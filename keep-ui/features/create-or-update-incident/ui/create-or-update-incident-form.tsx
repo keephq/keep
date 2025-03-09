@@ -15,11 +15,11 @@ import { useUsers } from "@/entities/users/model/useUsers";
 import { useIncidentActions } from "@/entities/incidents/model";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
-import "react-quill/dist/quill.snow.css";
+import "react-quill-new/dist/quill.snow.css";
 import "./react-quill-override.css";
+import dynamic from "next/dynamic";
 
-const ReactQuill =
-  typeof window === "object" ? require("react-quill") : () => false;
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
 interface Props {
   incidentToEdit: IncidentDto | null;
@@ -155,8 +155,6 @@ export function CreateOrUpdateIncidentForm({
           formats={formats} // Add formats
           placeholder="What happened?"
           className="border border-tremor-border rounded-tremor-default shadow-tremor-input"
-          required={false}
-          onValueChange={setIncidentUserSummary}
         />
       </div>
 

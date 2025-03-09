@@ -26,7 +26,12 @@ export function SplitIncidentAlertsModal({
 }: Props) {
   const { data: sourceIncident, isLoading: isSourceIncidentLoading } =
     useIncident(sourceIncidentId);
-  const { data: incidents, isLoading, mutate, error } = useIncidents(true, null, 100);
+  const {
+    data: incidents,
+    isLoading,
+    mutate,
+    error,
+  } = useIncidents(true, null, 100);
   usePollIncidents(mutate);
 
   const [destinationIncidentId, setDestinationIncidentId] = useState<string>();
@@ -94,6 +99,7 @@ export function SplitIncidentAlertsModal({
             <span className="font-bold">Destination Incident</span>
           </div>
           <Select
+            instanceId="split-incident-alerts-destination-incident-select"
             options={incidentOptions}
             value={selectValue}
             onChange={(option) => setDestinationIncidentId(option!.value)}

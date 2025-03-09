@@ -33,7 +33,7 @@ const ALERT_QUALITY_FILTERS = [
   },
 ];
 
-export const FilterTabs = ({
+const FilterTabs = ({
   tabs,
   setTab,
   tab,

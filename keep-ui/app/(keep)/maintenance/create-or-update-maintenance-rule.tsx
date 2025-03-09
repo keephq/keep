@@ -196,7 +196,6 @@ export default function CreateOrUpdateMaintenanceRule({
         </Text>
         <div className="flex gap-2">
           <NumberInput
-            defaultValue={5}
             value={endInterval}
             onValueChange={setEndInterval}
             min={1}

@@ -46,7 +46,7 @@ export const useFetchProviders = () => {
     if (isLocalhost && !toastShown) {
       toast(<ToastMessage />, {
         type: "info",
-        position: toast.POSITION.TOP_CENTER,
+        position: "top-center",
         autoClose: 10000,
         onClick: () =>
           window.open(
@@ -57,7 +57,6 @@ export const useFetchProviders = () => {
           width: "250%", // Set width
           marginLeft: "-75%", // Adjust starting position to left
         },
-        progressStyle: { backgroundColor: "orange" },
       });
       localStorage.setItem(toastShownKey, "true");
     }
@@ -80,12 +79,15 @@ export const useFetchProviders = () => {
         installed: provider.installed ?? false,
       }));
 
-      const fetchedLinkedProviders = data.linked_providers?.map((provider) => ({
-        ...defaultProvider,
-        ...provider,
-        linked: true,
-        validatedScopes: provider.validatedScopes ?? {},
-      }));
+      const fetchedLinkedProviders = data.linked_providers?.map(
+        (provider, i) => ({
+          ...defaultProvider,
+          ...provider,
+          id: provider.type + "-linked-" + i,
+          linked: true,
+          validatedScopes: provider.validatedScopes ?? {},
+        })
+      );
 
       setInstalledProviders(fetchedInstalledProviders);
       setProviders(fetchedProviders);
@@ -129,7 +131,7 @@ export default function ProvidersPage({
       showErrorToast(new Error(`Failed to install provider: ${reason.detail}`));
     } else if (searchParams?.oauth === "success") {
       toast.success("Successfully installed provider", {
-        position: toast.POSITION.TOP_LEFT,
+        position: "top-left",
       });
     }
   }, [searchParams]);

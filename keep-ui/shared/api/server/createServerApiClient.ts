@@ -47,7 +47,7 @@ export async function createServerApiClient(): Promise<ApiClient> {
 
     if (process.env.AUTH_TYPE === AuthType.OAUTH2PROXY) {
       console.log("Using OAuth2Proxy headers");
-      const headersList = headers();
+      const headersList = await headers();
       const oauth2Headers: Record<string, string> = {};
       const headerConfig = getOAuth2HeaderConfig();
       console.log("OAuth2Proxy header config:", headerConfig);

@@ -1,11 +1,6 @@
 import DashboardPage from "./dashboard";
 
-type PageProps = {
-  params: { id: string };
-  searchParams: { [key: string]: string | string[] | undefined };
-};
-
-export default function Page({ params }: PageProps) {
+export default function Page() {
   return <DashboardPage />;
 }
 

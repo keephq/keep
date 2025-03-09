@@ -132,9 +132,9 @@ export default function Ai() {
                   </p>
                   <div className="flex flex-row">
                     <div className="my-4 p-2 border-y border-gray-200 flex flex-col gap-4">
-                      {algorithm_config.settings.map((setting: any) => (
+                      {algorithm_config.settings.map((setting) => (
                         <div
-                          key={setting}
+                          key={setting.name}
                           className="flex flex-row items-start gap-2"
                         >
                           {setting.type === "bool" ? (

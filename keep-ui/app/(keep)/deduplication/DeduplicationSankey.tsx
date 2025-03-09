@@ -89,79 +89,79 @@ export const DeduplicationSankey = (props: SVGProps<SVGSVGElement>) => (
     <path
       d="M410 68C281.793 68 279.559 96 148 96"
       stroke="#632CA6"
-      stroke-opacity="0.5"
-      stroke-width="8"
+      strokeOpacity="0.5"
+      strokeWidth="8"
     />
     <path
       d="M725 60C575.752 60 573.15 60.0001 420 60.0001"
       stroke="#632CA6"
-      stroke-opacity="0.7"
-      stroke-width="14"
-      stroke-miterlimit="16"
+      strokeOpacity="0.7"
+      strokeWidth="14"
+      strokeMiterlimit="16"
     />
     <path
       d="M410 60C282.283 60 280.057 56 149 56"
       stroke="#632CA6"
-      stroke-opacity="0.5"
-      stroke-width="8"
+      strokeOpacity="0.5"
+      strokeWidth="8"
     />
     <path
       d="M410 52C281.793 52 279.559 15 148 15"
       stroke="#632CA6"
-      stroke-opacity="0.5"
-      stroke-width="8"
+      strokeOpacity="0.5"
+      strokeWidth="8"
     />
     <rect x="410" y="152" width="10" height="101" fill="#FDB819" />
     <path
       d="M410 207C281.793 207 279.559 235 148 235"
       stroke="#FDB819"
-      stroke-opacity="0.4"
-      stroke-width="8"
+      strokeOpacity="0.4"
+      strokeWidth="8"
     />
     <path
       d="M725 200C575.752 200 573.15 200 420 200"
       stroke="#FDB819"
-      stroke-opacity="0.4"
-      stroke-width="14"
-      stroke-miterlimit="16"
+      strokeOpacity="0.4"
+      strokeWidth="14"
+      strokeMiterlimit="16"
     />
     <path
       d="M410 199C282.283 199 280.056 197 149 197"
       stroke="#FDB819"
-      stroke-opacity="0.4"
-      stroke-width="8"
+      strokeOpacity="0.4"
+      strokeWidth="8"
     />
     <path
       d="M410 191C281.793 191 279.559 154 148 154"
       stroke="#FDB819"
-      stroke-opacity="0.4"
-      stroke-width="8"
+      strokeOpacity="0.4"
+      strokeWidth="8"
     />
     <rect x="410" y="290" width="10" height="101" fill="#E6522C" />
     <path
       d="M410 344C281.793 344 279.559 373 148 373"
       stroke="#E6522C"
-      stroke-opacity="0.5"
-      stroke-width="8"
+      strokeOpacity="0.5"
+      strokeWidth="8"
     />
     <path
       d="M725 336C575.752 336 573.15 336 420 336"
       stroke="#E6522C"
-      stroke-opacity="0.75"
-      stroke-width="14"
-      stroke-miterlimit="16"
+      strokeOpacity="0.75"
+      strokeWidth="14"
+      strokeMiterlimit="16"
     />
     <path
       d="M414 336C282.857 336 280.571 335 146 335"
       stroke="#E6522C"
-      stroke-opacity="0.5"
-      stroke-width="8"
+      strokeOpacity="0.5"
+      strokeWidth="8"
     />
     <path
       d="M410 328C281.793 328 279.559 292 148 292"
       stroke="#E6522C"
-      stroke-opacity="0.5"
-      stroke-width="8"
+      strokeOpacity="0.5"
+      strokeWidth="8"
     />
     <rect
       x="122"
