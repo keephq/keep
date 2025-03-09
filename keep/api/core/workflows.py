@@ -30,13 +30,13 @@ workflow_field_configurations = [
     FieldMappingConfiguration("name", "filter_workflow_name"),
     FieldMappingConfiguration("description", "filter_workflow_description"),
     FieldMappingConfiguration("started", "filter_started"),
-    FieldMappingConfiguration("status", "filter_status"),
-    FieldMappingConfiguration("executionTime", "filter_execution_time"),
-    FieldMappingConfiguration("isDisabled", "filter_workflow_is_disabled"),
-    FieldMappingConfiguration("lastUpdated", "filter_workflow_last_updated"),
-    FieldMappingConfiguration("createdAt", "filter_workflow_creation_time"),
-    FieldMappingConfiguration("createdBy", "filter_workflow_created_by"),
-    FieldMappingConfiguration("updatedBy", "filter_workflow_updated_by"),
+    FieldMappingConfiguration("last_execution_status", "filter_last_execution_status"),
+    FieldMappingConfiguration("last_execution_time", "filter_last_execution_time"),
+    FieldMappingConfiguration("disabled", "filter_workflow_is_disabled"),
+    FieldMappingConfiguration("last_updated", "filter_workflow_last_updated"),
+    FieldMappingConfiguration("created_at", "filter_workflow_creation_time"),
+    FieldMappingConfiguration("created_by", "filter_workflow_created_by"),
+    FieldMappingConfiguration("updated_by", "filter_workflow_updated_by"),
 ]
 alias_column_mapping = {
     "filter_workflow_name": "workflow.name",
@@ -46,8 +46,8 @@ alias_column_mapping = {
     "filter_workflow_creation_time": "workflow.creation_time",
     "filter_workflow_updated_by": "workflow.updated_by",
     "filter_started": "started",
-    "filter_status": "status",
-    "filter_execution_time": "execution_time",
+    "filter_last_execution_status": "status",
+    "filter_last_execution_time": "execution_time",
     "filter_workflow_created_by": "workflow.created_by",
 }
 
@@ -56,21 +56,21 @@ properties_metadata = PropertiesMetadata(workflow_field_configurations)
 static_facets = [
     FacetDto(
         id="558a5844-55a1-45ad-b190-8848a389007d",
-        property_path="status",
-        name="Status",
+        property_path="last_execution_status",
+        name="Last execution status",
         is_static=True,
         type=FacetType.str,
     ),
     FacetDto(
         id="6672d434-36d6-4e48-b5ec-3123a7b38cf8",
-        property_path="isDisabled",
+        property_path="disabled",
         name="Enabling status",
         is_static=True,
         type=FacetType.str,
     ),
     FacetDto(
         id="77325333-7710-4904-bf06-6c3d58aa5787",
-        property_path="createdBy",
+        property_path="created_by",
         name="Created by",
         is_static=True,
         type=FacetType.str,
@@ -83,7 +83,7 @@ def __build_base_query(tenant_id: str):
     columns_to_select = []
 
     for key, value in alias_column_mapping.items():
-        if key == "filter_status":
+        if key == "filter_last_execution_status":
             continue
         columns_to_select.append(f"{value} AS {key}")
     latest_executions_subquery_cte = (
@@ -119,7 +119,7 @@ def __build_base_query(tenant_id: str):
                     literal_column("status"),
                 ),
                 else_="",
-            ).label("filter_status"),
+            ).label("filter_last_execution_status"),
         )
         .outerjoin(
             latest_executions_subquery_cte,
@@ -198,8 +198,8 @@ def build_workflows_query(
         select(
             Workflow,
             literal_column("filter_started").label("started"),
-            literal_column("filter_execution_time").label("execution_time"),
-            literal_column("filter_status").label("status"),
+            literal_column("filter_last_execution_time").label("execution_time"),
+            literal_column("filter_last_execution_status").label("status"),
         )
         .select_from(base_query)
         .join(
@@ -273,7 +273,7 @@ def get_workflows_with_last_executions_v2(
 
         query_result = session.exec(workflows_query).all()
         result = []
-        for workflow, started, execution_time, status in query_result:
+        for workflow, last_executions, started, execution_time, status in query_result:
             # workaround for filter. In query status is empty string if it is NULL in DB
             status = None if status == "" else status
             result.append(tuple([workflow, started, execution_time, status]))

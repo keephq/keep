@@ -130,7 +130,7 @@ export default function WorkflowsPage({
       cel,
       limit: paginationState?.limit,
       offset: paginationState?.offset,
-      sortBy: "createdAt",
+      sortBy: "created_at",
       sortDir: "desc",
     };
 
@@ -179,7 +179,7 @@ export default function WorkflowsPage({
 
   const facetsConfig: FacetsConfig = useMemo(() => {
     return {
-      ["Status"]: {
+      ["Last execution status"]: {
         renderOptionIcon: (facetOption) => {
           switch (facetOption.value) {
             case "success": {
