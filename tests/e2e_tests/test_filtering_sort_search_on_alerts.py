@@ -245,7 +245,7 @@ def upload_alerts():
     return query_allerts(limit=1000, offset=0)
 
 
-def init_test(browser: Page, alerts, max_retries=1):
+def init_test(browser: Page, alerts, max_retries=3):
     for i in range(max_retries):
         try:
             init_e2e_test(browser, next_url="/alerts/feed")
