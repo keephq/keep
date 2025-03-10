@@ -17,52 +17,114 @@ from tests.e2e_tests.utils import init_e2e_test
 
 
 def close_toasify_notification(browser):
-    # Try to close the notification by clicking the X button
+    """
+    Forcefully close or remove Toastify notifications using multiple strategies.
+    Handles cases where notifications intercept pointer events.
+    """
     try:
-        # 1. Try with specific selector and force click
-        close_button = browser.locator(
-            "button.Toastify__close-button.Toastify__close-button--light"
-        )
-        if close_button.is_visible():
-            print("Closing Toastify notification with method 1...")
-            close_button.click(force=True)
-            browser.wait_for_timeout(1000)
-            pass
+        # Check if notification exists
+        toast_container = browser.locator(".Toastify__toast-container")
+        if not toast_container.is_visible():
+            print("No Toastify notification visible")
+            return
 
-        # 2. Try finding any visible toast and clicking its close button
-        toast_close_buttons = browser.locator(
-            ".Toastify__toast button.Toastify__close-button"
-        )
-        if toast_close_buttons.count() > 0:
-            print("Closing Toastify notification with method 2...")
-            toast_close_buttons.first.click(force=True)
-            browser.wait_for_timeout(1000)
-            pass
+        print("Toastify notification detected, attempting to close...")
 
-        # 3. Use JavaScript as a last resort
-        if browser.locator(".Toastify__toast-container").is_visible():
-            print("Closing Toastify notification with method 3...")
-            browser.evaluate(
-                """
-                document.querySelectorAll('.Toastify__close-button').forEach(button => button.click());
+        # Strategy 1: Try clicking the close button directly with force
+        close_button = browser.locator("button.Toastify__close-button")
+        if close_button.count() > 0 and close_button.first.is_visible():
+            print("Strategy 1: Clicking close button with force")
+            close_button.first.click(force=True)
+            browser.wait_for_timeout(1000)
+
+        # Check if notification was closed
+        if not toast_container.is_visible():
+            print("Successfully closed notification with Strategy 1")
+            return
+
+        # Strategy 2: Use JavaScript to programmatically click all close buttons
+        print("Strategy 2: Using JavaScript to click close buttons")
+        browser.evaluate(
             """
-            )
-            browser.wait_for_timeout(1000)
-            pass
+            document.querySelectorAll('.Toastify__close-button').forEach(button => {
+                button.click();
+            });
+        """
+        )
+        browser.wait_for_timeout(1000)
 
-        # 4. Check if the notification is still visible
+        # Check if notification was closed
+        if not toast_container.is_visible():
+            print("Successfully closed notification with Strategy 2")
+            return
+
+        # Strategy 3: Use JavaScript to forcefully remove the toast from DOM
+        print("Strategy 3: Forcefully removing toast container from DOM")
+        browser.evaluate(
+            """
+            const containers = document.querySelectorAll('.Toastify__toast-container');
+            containers.forEach(container => {
+                if (container.parentNode) {
+                    container.parentNode.removeChild(container);
+                }
+            });
+
+            // Also try to remove the entire Toastify div if needed
+            const toastify = document.querySelector('.Toastify');
+            if (toastify) {
+                const clone = toastify.cloneNode(false); // shallow clone without children
+                if (toastify.parentNode) {
+                    toastify.parentNode.replaceChild(clone, toastify);
+                }
+            }
+        """
+        )
+        browser.wait_for_timeout(1000)
+
+        # Strategy 4: Set toast container CSS to not intercept pointer events
+        print("Strategy 4: Modifying CSS to prevent event interception")
+        browser.evaluate(
+            """
+            const style = document.createElement('style');
+            style.innerHTML = `
+                .Toastify, .Toastify__toast-container {
+                    pointer-events: none !important;
+                    visibility: hidden !important;
+                    opacity: 0 !important;
+                    z-index: -9999 !important;
+                    position: absolute !important;
+                    top: -9999px !important;
+                }
+            `;
+            document.head.appendChild(style);
+        """
+        )
+        browser.wait_for_timeout(500)
+
+        # Final check
         if browser.locator(".Toastify__toast-container").is_visible():
-            # last resort - wait the remaining time
-            print("Waiting for Toastify notification to close...")
-            # which is 10 seconds minus the time we already waited
-            browser.wait_for_timeout(10000 - 1000 * 3)
-
-        # Check if we were successful
-        if not browser.locator(".Toastify__toast-container").is_visible():
-            print("Successfully closed the Toastify notification")
+            print(
+                "Warning: Toastify notification might still be visible, but CSS should prevent it from interfering"
+            )
+        else:
+            print("Successfully handled Toastify notification")
 
     except Exception as e:
-        print(f"Error closing Toastify notification: {e}")
+        print(f"Error handling Toastify notification: {e}")
+        # Even if an error occurs, try to apply the CSS fix as a last resort
+        try:
+            browser.evaluate(
+                """
+                document.querySelectorAll('.Toastify, .Toastify__toast-container').forEach(el => {
+                    el.style.pointerEvents = 'none';
+                    el.style.visibility = 'hidden';
+                    el.style.zIndex = '-9999';
+                });
+            """
+            )
+        except Exception as e:
+            print(e)
+            pass
 
 
 def test_pulling_prometheus_alerts_to_provider(browser):
