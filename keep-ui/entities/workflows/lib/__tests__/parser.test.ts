@@ -328,6 +328,29 @@ workflow:
               false: [],
             },
           },
+          {
+            id: "foreach-1",
+            name: "Foreach",
+            type: "foreach",
+            componentType: "container" as const,
+            properties: {
+              value: "{{ steps.clickhouse-step.results.items }}",
+            },
+            sequence: [
+              {
+                id: "console-step",
+                name: "Console",
+                type: "step-console",
+                componentType: "task" as const,
+                properties: {
+                  with: {
+                    message: "{{ item }}",
+                  },
+                  stepParams: ["message"],
+                },
+              },
+            ],
+          },
         ],
         properties: {
           id: "test-workflow",
@@ -345,12 +368,16 @@ workflow:
 
       expect(result.id).toBe("test-workflow");
       expect(result.name).toBe("Test Workflow");
-      expect(result.steps).toHaveLength(1);
+      expect(result.steps).toHaveLength(2);
       expect(result.actions).toHaveLength(1);
       expect(result.steps[0].name).toBe("clickhouse-step");
       expect(result.actions![0].name).toBe("ntfy-action");
       expect(result.actions![0].condition).toHaveLength(1);
       expect(result.actions![0].condition![0].type).toBe("threshold");
+      expect(result.steps[1].name).toBe("Console");
+      expect(result.steps[1].foreach).toBe(
+        "{{ steps.clickhouse-step.results.items }}"
+      );
     });
 
     it("should handle workflow with conditions and foreach", () => {
