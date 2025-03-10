@@ -23,11 +23,12 @@ from tests.fixtures.client import setup_api_key, client, test_app  # noqa: F401
 VALID_API_KEY = "valid_api_key"
 
 
-def create_service(db_session, tenant_id, id):
+def create_service(db_session, tenant_id, service_id):
     service = TopologyService(
+        id=service_id,
         tenant_id=tenant_id,
-        service="test_service_" + id,
-        display_name=id,
+        service="test_service_" + service_id,
+        display_name=service_id,
         repository="test_repository",
         tags=["test_tag"],
         description="test_description",
@@ -50,6 +51,7 @@ def test_get_all_topology_data(db_session):
     assert len(result) == 0
 
     dependency = TopologyServiceDependency(
+        tenant_id=SINGLE_TENANT_UUID,
         service_id=service_1.id,
         depends_on_service_id=service_2.id,
         updated_at=datetime.now(),
@@ -307,6 +309,7 @@ def test_clean_before_import(db_session):
     dependency = TopologyServiceDependency(
         service_id=service_1.id,
         depends_on_service_id=service_2.id,
+        tenant_id=tenant_id,
         updated_at=datetime.now(),
     )
     db_session.add(dependency)
@@ -315,7 +318,7 @@ def test_clean_before_import(db_session):
     # Assert data exists before cleaning
     assert db_session.exec(select(TopologyService).where(TopologyService.tenant_id == tenant_id)).all()
     assert db_session.exec(select(TopologyApplication).where(TopologyApplication.tenant_id == tenant_id)).all()
-    assert db_session.exec(select(TopologyServiceDependency)).all()
+    assert db_session.exec(select(TopologyServiceDependency).where(TopologyApplication.tenant_id == tenant_id)).all()
 
     # Act: Call the clean_before_import function
     TopologiesService.clean_before_import(tenant_id, db_session)
@@ -323,7 +326,7 @@ def test_clean_before_import(db_session):
     # Assert: Ensure all data is deleted for this tenant
     assert not db_session.exec(select(TopologyService).where(TopologyService.tenant_id == tenant_id)).all()
     assert not db_session.exec(select(TopologyApplication).where(TopologyApplication.tenant_id == tenant_id)).all()
-    assert not db_session.exec(select(TopologyServiceDependency)).all()
+    assert not db_session.exec(select(TopologyServiceDependency).where(TopologyApplication.tenant_id == tenant_id)).all()
 
 
 def test_import_to_db(db_session):
