@@ -312,6 +312,7 @@ def test_add_upload_workflow_with_alert_trigger(browser: Page, setup_page_loggin
 
 
 def test_start_with_keep_db(browser: Page, setup_page_logging, failure_artifacts):
+    browser.context.clear_cookies()
     browser.goto("http://localhost:3001/signin")
     browser.get_by_placeholder("Enter your username").fill("keep")
     browser.get_by_placeholder("Enter your password").fill("keep")
