@@ -929,7 +929,7 @@ def _enrich_alert(
         # @tb add "and session" cuz I saw AttributeError: 'NoneType' object has no attribute 'add'"
         if should_check_incidents_resolution and session:
             enrich_alerts_with_incidents(tenant_id=tenant_id, alerts=alert)
-            for incident in alert[0]._incidents:
+            for incident in alert[0].incidents:
                 if (
                     incident.resolve_on == ResolveOn.ALL.value
                     and is_all_alerts_resolved(incident=incident, session=session)

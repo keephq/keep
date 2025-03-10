@@ -120,9 +120,9 @@ def convert_db_alerts_to_dto_alerts(
                 alert.event.update(enrichments)
 
                 if with_incidents:
-                    if alert._incidents:
+                    if alert.incidents:
                         alert.event["incident"] = ",".join(
-                            str(incident.id) for incident in alert._incidents
+                            str(incident.id) for incident in alert.incidents
                         )
                 try:
                     if alert_to_incident is not None:

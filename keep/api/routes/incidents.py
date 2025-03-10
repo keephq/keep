@@ -841,7 +841,7 @@ def change_incident_status(
     # We need to do something only if status really changed
     if change.status != incident.status:
         if change.status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:
-            for alert in incident._alerts:
+            for alert in incident.alerts:
                 _enrich_alert(
                     EnrichAlertRequestBody(
                         enrichments={"status": change.status.value},

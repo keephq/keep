@@ -9,6 +9,7 @@ from sqlalchemy import ForeignKey, ForeignKeyConstraint, UniqueConstraint
 from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.engine.url import make_url
+from sqlalchemy.orm import object_session
 from sqlalchemy_utils import UUIDType
 from sqlmodel import JSON, TEXT, Column, DateTime, Field, Index, Relationship, SQLModel
 
@@ -243,12 +244,17 @@ class Incident(SQLModel, table=True):
 
     _alerts: List["Alert"] = PrivateAttr(default_factory=list)
     _enrichments: dict = PrivateAttr(default={})
+    _alerts_cached: bool = PrivateAttr(default=False)
 
     class Config:
         arbitrary_types_allowed = True
 
     @property
     def alerts(self):
+        if not getattr(self, "_alerts_cached", False):
+            from keep.api.core.db import enrich_incidents_with_alerts
+            enrich_incidents_with_alerts(self.tenant_id, [self], session=object_session(self))
+            self._alerts_cached = True
         return self._alerts
 
     @property
@@ -297,6 +303,7 @@ class Alert(SQLModel, table=True):
     )
 
     _incidents: List[Incident] = PrivateAttr(default_factory=list)
+    _incidents_cached: bool = PrivateAttr(default=False)
 
     __table_args__ = (
         Index(
@@ -323,6 +330,16 @@ class Alert(SQLModel, table=True):
             "provider_id",
         ),
     )
+
+    @property
+    def incidents(self):
+        if not getattr(self, "_incidents_cached", False):
+            from keep.api.core.db import enrich_alerts_with_incidents
+            enrich_alerts_with_incidents(self.tenant_id, [self], session=object_session(self))
+            self._incidents_cached = True
+        return self._incidents
+
+
 
     class Config:
         arbitrary_types_allowed = True
