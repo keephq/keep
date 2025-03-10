@@ -454,6 +454,7 @@ export const useAlertTableCols = (
                 height={24}
                 width={24}
                 title={source}
+                providerType={source}
                 src={imagePath}
               />
             );
