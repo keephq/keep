@@ -832,20 +832,47 @@ def failure_artifacts(browser, console_logs, request):
             + request.node.name
         )
         
-        # Save screenshot
-        browser.screenshot(path=test_name + ".png")
-        
-        # Save HTML content
-        with open(test_name + ".html", "w", encoding="utf-8") as f:
-            f.write(browser.content())
+        # Save each artifact type independently
+        artifacts_saved = []
+        artifacts_failed = []
+
+        # Try to save screenshot
+        try:
+            browser.screenshot(path=test_name + ".png")
+            artifacts_saved.append("screenshot")
+        except Exception as e:
+            artifacts_failed.append(f"screenshot: {str(e)}")
             
-        # Save console logs
-        with open(test_name + "_console.txt", "w", encoding="utf-8") as f:
-            f.write("\n".join(console_logs))
+        # Try to save HTML content
+        try:
+            with open(test_name + ".html", "w", encoding="utf-8") as f:
+                f.write(browser.content())
+            artifacts_saved.append("html")
+        except Exception as e:
+            artifacts_failed.append(f"html: {str(e)}")
             
-        # Save cookies
-        with open(test_name + "_cookies.json", "w", encoding="utf-8") as f:
-            f.write(json.dumps(browser.context.cookies(), indent=2))
+        # Try to save console logs
+        try:
+            with open(test_name + "_console.txt", "w", encoding="utf-8") as f:
+                f.write("\n".join(console_logs))
+            artifacts_saved.append("console logs")
+        except Exception as e:
+            artifacts_failed.append(f"console logs: {str(e)}")
+            
+        # Try to save cookies
+        try:
+            with open(test_name + "_cookies.json", "w", encoding="utf-8") as f:
+                f.write(json.dumps(browser.context.cookies(), indent=2))
+            artifacts_saved.append("cookies")
+        except Exception as e:
+            artifacts_failed.append(f"cookies: {str(e)}")
+
+        # Log summary of what was saved and what failed
+        print(f"\nFailure artifacts for {test_name}:")
+        if artifacts_saved:
+            print(f"Successfully saved: {', '.join(artifacts_saved)}")
+        if artifacts_failed:
+            print(f"Failed to save: {', '.join(artifacts_failed)}")
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call) -> Generator[None, Any, Any]:
