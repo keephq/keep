@@ -63,7 +63,7 @@ export function ErrorComponent({
             <details>
               <summary>Stack</summary>
               {error.stack.split("\n").map((line, i) => (
-                <div key={line + i}>{line}</div>
+                <div key={`${i}-${line.trim()}`}>{line}</div>
               ))}
             </details>
           )}
