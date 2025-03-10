@@ -31,6 +31,6 @@ export interface IncidentData {
   incident_durations: IncidentDurations;
   mean_time_to_detect_seconds: number;
   mean_time_to_resolve_seconds: number;
-  most_incident_reasons: Record<string, string[]>;
+  most_frequent_reasons: Record<string, string[]>;
   recurring_incidents: ReoccurringIncident[];
 }

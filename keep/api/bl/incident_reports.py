@@ -6,8 +6,10 @@ from pydantic import BaseModel
 from keep.api.bl.incidents_bl import IncidentBl
 from typing import Optional
 import logging
-from keep.api.models.alert import IncidentDto, IncidentStatus
 import math
+
+from keep.api.models.db.incident import IncidentStatus
+from keep.api.models.incident import IncidentDto
 
 class IncidentMetrics(BaseModel):
     total_incidents: Optional[int] = None
@@ -38,7 +40,7 @@ class IncidentReport(BaseModel):
     incident_durations: Optional[IncidentDurations] = None
     mean_time_to_detect_seconds: Optional[int] = None
     mean_time_to_resolve_seconds: Optional[int] = None
-    most_incident_reasons: Optional[dict[str, list[str]]] = None
+    most_frequent_reasons: Optional[dict[str, list[str]]] = None
     recurring_incidents: Optional[list[ReoccuringIncidentReportDto]] = None
 
 system_prompt = """
@@ -59,14 +61,12 @@ Generate an incident report based on the provided incidents dataset and response
    - Skip incident_durations
 
 5. **Top Services Affected**
-   - Compute `top_services_affected` as a ranked list of the most frequently affected services.
-   - Do not inculde "null" values
-   - Output as a dictionary with service names as keys and the number of incidents as values.
+   - Skip services_affected_metrics
 
 6. **Most Frequent Incident Reasons**
-   - Identify the most common root causes by analyzing `name` and `description`.
+   - Identify the most common root causes by analyzing the following fields: user_generated_name, ai_generated_name, user_summary, generated_summary.
    - Group similar reasons to avoid duplicates.
-   - Output `most_frequent_reasons` as a dictionary with reason as key and list of incident ids as values whose reason it is.
+   - Output `most_frequent_reasons` as a dictionary with reason as key and list of incident ids as value whose reason it is.
 """
 
 logger = logging.getLogger(__name__)

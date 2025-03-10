@@ -68,7 +68,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
         <PieChart
           formatCount={formatIncidentsCount}
           data={Object.entries(
-            incidentsReportData?.most_incident_reasons || {}
+            incidentsReportData?.most_frequent_reasons || {}
           ).map(([reason, incidentIds]) => ({
             name: reason,
             value: incidentIds.length,
@@ -150,7 +150,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
       )}
       {incidentsReportData?.services_affected_metrics &&
         renderAffectedServices()}
-      {incidentsReportData?.most_incident_reasons && renderMainReasons()}
+      {incidentsReportData?.most_frequent_reasons && renderMainReasons()}
       {incidentsReportData?.recurring_incidents && renderRecurringIncidents()}
     </div>
   );
