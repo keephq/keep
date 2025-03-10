@@ -286,21 +286,22 @@ export const useAlertTableCols = (
           if (context.column.id === "incident") {
             const incidentString = String(value || "");
             const incidentSplit = incidentString.split(",");
-            return incidentSplit.map((incidentId, index) => {
-              const incident = incidents?.items.find(
-                (incident) => incident.id === incidentId
-              );
-              return (
-                <>
-                  <Link href={`/incidents/${incidentId}`}>
-                    {incident?.user_generated_name ||
-                      incident?.ai_generated_name ||
-                      incidentId}
-                  </Link>
-                  {index < incidentSplit.length - 1 && ", "}
-                </>
-              );
-            });
+            return (
+              <div className="flex flex-wrap gap-1">
+                {incidentSplit.map((incidentId, index) => {
+                  const incident = incidents?.items.find(
+                    (incident) => incident.id === incidentId
+                  );
+                  return (
+                    <Link key={incidentId} href={`/incidents/${incidentId}`}>
+                      {incident?.user_generated_name ||
+                        incident?.ai_generated_name ||
+                        incidentId}
+                    </Link>
+                  );
+                })}
+              </div>
+            );
           }
 
           let isList = isListColumn(context.column);
@@ -453,6 +454,7 @@ export const useAlertTableCols = (
                 height={24}
                 width={24}
                 title={source}
+                providerType={source}
                 src={imagePath}
               />
             );

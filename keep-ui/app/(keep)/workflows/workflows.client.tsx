@@ -130,7 +130,7 @@ export default function WorkflowsPage({
       cel,
       limit: paginationState?.limit,
       offset: paginationState?.offset,
-      sortBy: "createdAt",
+      sortBy: "created_at",
       sortDir: "desc",
     };
 
@@ -179,12 +179,13 @@ export default function WorkflowsPage({
 
   const facetsConfig: FacetsConfig = useMemo(() => {
     return {
-      ["Status"]: {
+      ["Last execution status"]: {
         renderOptionIcon: (facetOption) => {
           switch (facetOption.value) {
             case "success": {
               return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
             }
+            case "error":
             case "failed": {
               return <XCircleIcon className="w-5 h-5 text-red-500" />;
             }
@@ -203,14 +204,19 @@ export default function WorkflowsPage({
             case "success": {
               return "Success";
             }
-            case "failed": {
-              return "Failed";
+            case "error": {
+              return "Error";
             }
             case "in_progress": {
               return "In progress";
             }
-            default: {
+            case "":
+            case null:
+            case undefined: {
               return "Not run yet";
+            }
+            default: {
+              return facetOption.value;
             }
           }
         },
@@ -228,7 +234,7 @@ export default function WorkflowsPage({
       },
       ["Enabling status"]: {
         renderOptionLabel: (facetOption) =>
-          facetOption.display_name.toLocaleLowerCase() === "true"
+          ["true", "1"].includes(facetOption.display_name.toLocaleLowerCase())
             ? "Disabled"
             : "Enabled",
       },
