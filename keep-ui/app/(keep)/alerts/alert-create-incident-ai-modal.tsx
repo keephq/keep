@@ -38,6 +38,10 @@ interface IncidentSuggestion {
   suggestion_id: string;
 }
 
+function deepCopy<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
+}
+
 const CreateIncidentWithAIModal = ({
   isOpen,
   handleClose,
@@ -48,9 +52,6 @@ const CreateIncidentWithAIModal = ({
   const [incidentCandidates, setIncidentCandidates] = useState<
     IncidentCandidateDto[]
   >([]);
-  const [changes, setChanges] = useState<
-    Record<string, Record<string, IncidentChange>>
-  >({});
   const [selectedIncidents, setSelectedIncidents] = useState<string[]>([]);
   const [originalSuggestions, setOriginalSuggestions] = useState<
     IncidentCandidateDto[]
@@ -86,7 +87,8 @@ const CreateIncidentWithAIModal = ({
 
     function handleSuccess(data: IncidentSuggestion) {
       setIncidentCandidates(data.incident_suggestion);
-      setOriginalSuggestions(data.incident_suggestion);
+      // Deep copy the incident suggestions to avoid mutating the original suggestions, we later compare the original suggestions with the current state
+      setOriginalSuggestions(deepCopy(data.incident_suggestion));
       setSuggestionId(data.suggestion_id);
 
       setSelectedIncidents(
@@ -224,29 +226,6 @@ const CreateIncidentWithAIModal = ({
       return;
     }
 
-    // Track changes for the alerts field
-    setChanges((prevChanges) => {
-      const sourceId = incidentCandidates[sourceIncidentIndex].id;
-      const destId = incidentCandidates[destIncidentIndex].id;
-      return {
-        ...prevChanges,
-        [sourceId]: {
-          ...prevChanges[sourceId],
-          alerts: {
-            from: incidentCandidates[sourceIncidentIndex].alerts,
-            to: incidentCandidates[sourceIncidentIndex].alerts,
-          },
-        },
-        [destId]: {
-          ...prevChanges[destId],
-          alerts: {
-            from: incidentCandidates[destIncidentIndex].alerts,
-            to: incidentCandidates[destIncidentIndex].alerts,
-          },
-        },
-      };
-    });
-
     setActiveAlert(null);
     setActiveIncidentIndex(null);
   };
@@ -257,48 +236,43 @@ const CreateIncidentWithAIModal = ({
         incident.id === updatedIncident.id ? updatedIncident : incident
       )
     );
-
-    // Track changes for the fields that have actually changed
-    setChanges((prevChanges) => {
-      const existingChanges = prevChanges[updatedIncident.id] || {};
-      const newChanges: Record<string, IncidentChange> = {};
-
-      Object.keys(updatedIncident).forEach((key) => {
-        const originalIncident = incidentCandidates.find(
-          (inc) => inc.id === updatedIncident.id
-        );
-        if (
-          originalIncident &&
-          updatedIncident[key as keyof IncidentCandidateDto] !==
-            originalIncident[key as keyof IncidentCandidateDto]
-        ) {
-          newChanges[key] = {
-            from: originalIncident[key as keyof IncidentCandidateDto],
-            to: updatedIncident[key as keyof IncidentCandidateDto],
-          };
-        }
-      });
-
-      return {
-        ...prevChanges,
-        [updatedIncident.id]: {
-          ...existingChanges,
-          ...newChanges,
-        },
-      };
-    });
   };
 
   const handleCreateIncidents = async () => {
     try {
-      const incidentsWithFeedback = incidentCandidates.map((incident) => ({
-        incident: incident,
-        accepted: selectedIncidents.includes(incident.id),
-        changes: changes[incident.id] || {},
-        original_suggestion: originalSuggestions.find(
+      const incidentsWithFeedback = incidentCandidates.map((incident) => {
+        const originalIncident = originalSuggestions.find(
           (inc) => inc.id === incident.id
-        ),
-      }));
+        );
+
+        // Calculate changes by comparing current state with original state
+        const changes: Record<string, IncidentChange> = {};
+
+        if (originalIncident) {
+          // Compare each field and track changes
+          Object.keys(incident).forEach((key) => {
+            const currentValue = incident[key as keyof IncidentCandidateDto];
+            const originalValue =
+              originalIncident[key as keyof IncidentCandidateDto];
+
+            if (
+              JSON.stringify(currentValue) !== JSON.stringify(originalValue)
+            ) {
+              changes[key] = {
+                from: originalValue,
+                to: currentValue,
+              };
+            }
+          });
+        }
+
+        return {
+          incident: incident,
+          accepted: selectedIncidents.includes(incident.id),
+          changes: changes,
+          original_suggestion: originalIncident,
+        };
+      });
 
       const response = await api.post(
         `/incidents/ai/${suggestionId}/commit`,
