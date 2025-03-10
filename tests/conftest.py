@@ -853,17 +853,27 @@ def failure_artifacts(browser, console_logs, request):
             
         # Try to save console logs
         try:
-            with open(test_name + "_console.txt", "w", encoding="utf-8") as f:
-                f.write("\n".join(console_logs))
-            artifacts_saved.append("console logs")
+            # Add debug info about console logs
+            print(f"\nNumber of console logs captured: {len(console_logs)}")
+            if console_logs:
+                with open(test_name + "_console.txt", "w", encoding="utf-8") as f:
+                    f.write("\n".join(console_logs))
+                artifacts_saved.append("console logs")
+            else:
+                artifacts_failed.append("console logs: No logs were captured")
         except Exception as e:
             artifacts_failed.append(f"console logs: {str(e)}")
             
         # Try to save cookies
         try:
-            with open(test_name + "_cookies.json", "w", encoding="utf-8") as f:
-                f.write(json.dumps(browser.context.cookies(), indent=2))
-            artifacts_saved.append("cookies")
+            cookies = browser.context.cookies()
+            print(f"\nNumber of cookies found: {len(cookies)}")
+            if cookies:
+                with open(test_name + "_cookies.json", "w", encoding="utf-8") as f:
+                    json.dump(cookies, f, indent=2)
+                artifacts_saved.append("cookies")
+            else:
+                artifacts_failed.append("cookies: No cookies were present")
         except Exception as e:
             artifacts_failed.append(f"cookies: {str(e)}")
 
@@ -872,7 +882,7 @@ def failure_artifacts(browser, console_logs, request):
         if artifacts_saved:
             print(f"Successfully saved: {', '.join(artifacts_saved)}")
         if artifacts_failed:
-            print(f"Failed to save: {', '.join(artifacts_failed)}")
+            print(f"Failed to save or empty: {', '.join(artifacts_failed)}")
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call) -> Generator[None, Any, Any]:
