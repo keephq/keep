@@ -1,13 +1,18 @@
 "use client";
 
-import { Card, Title, Subtitle } from "@tremor/react";
-import { useAIStats, UseAIActions } from "utils/hooks/useAI";
-import { toast } from "react-toastify";
+import { Card, Title } from "@tremor/react";
+import { useAIStats, useAIActions } from "utils/hooks/useAI";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import debounce from "lodash.debounce";
-import { KeepLoader, PageSubtitle } from "@/shared/ui";
+import {
+  KeepLoader,
+  PageSubtitle,
+  showErrorToast,
+  showSuccessToast,
+} from "@/shared/ui";
 import { PageTitle } from "@/shared/ui";
+import { AIConfig } from "./model";
 
 function RangeInputWithLabel({
   setting,
@@ -54,18 +59,28 @@ function RangeInputWithLabel({
   );
 }
 
-export default function Ai() {
-  const { data: aistats, isLoading, mutate: refetchAIStats } = useAIStats();
-  const { updateAISettings } = UseAIActions();
+export function AIPlugins() {
+  const {
+    data: aistats,
+    isLoading,
+    mutate: refetchAIStats,
+  } = useAIStats({
+    refreshInterval: 5000,
+  });
+  const { updateAISettings } = useAIActions();
 
-  // TODO: use pollingInterval instead
-  useEffect(() => {
-    const interval = setInterval(() => {
+  const handleUpdateAISettings = async (
+    algorithm_id: string,
+    algorithm_config: AIConfig
+  ) => {
+    try {
+      await updateAISettings(algorithm_id, algorithm_config);
+      showSuccessToast("Settings updated successfully!");
       refetchAIStats();
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [refetchAIStats]);
+    } catch (error) {
+      showErrorToast(error);
+    }
+  };
 
   return (
     <main className="flex flex-col gap-6">
@@ -146,14 +161,10 @@ export default function Ai() {
                               onChange={(e) => {
                                 const newValue = e.target.checked;
                                 setting.value = newValue;
-                                algorithm_config.settings_proposed_by_algorithm =
-                                  null;
-                                updateAISettings(
+                                handleUpdateAISettings(
                                   algorithm_config.algorithm_id,
                                   algorithm_config
                                 );
-                                toast.success("Settings updated successfully!");
-                                refetchAIStats();
                               }}
                               className="mt-2 bg-orange-500 accent-orange-200"
                             />
@@ -173,16 +184,10 @@ export default function Ai() {
                                 setting={setting}
                                 onChange={(newValue) => {
                                   setting.value = newValue;
-                                  algorithm_config.settings_proposed_by_algorithm =
-                                    null;
-                                  updateAISettings(
+                                  handleUpdateAISettings(
                                     algorithm_config.algorithm_id,
                                     algorithm_config
                                   );
-                                  toast.success(
-                                    "Settings updated successfully!"
-                                  );
-                                  refetchAIStats();
                                 }}
                               />
                             </div>
@@ -194,16 +199,10 @@ export default function Ai() {
                                 setting={setting}
                                 onChange={(newValue) => {
                                   setting.value = newValue;
-                                  algorithm_config.settings_proposed_by_algorithm =
-                                    null;
-                                  updateAISettings(
+                                  handleUpdateAISettings(
                                     algorithm_config.algorithm_id,
                                     algorithm_config
                                   );
-                                  toast.success(
-                                    "Settings updated successfully!"
-                                  );
-                                  refetchAIStats();
                                 }}
                               />
                             </div>
@@ -242,14 +241,10 @@ export default function Ai() {
                             onClick={() => {
                               algorithm_config.settings =
                                 algorithm_config.settings_proposed_by_algorithm;
-                              algorithm_config.settings_proposed_by_algorithm =
-                                null;
-                              updateAISettings(
+                              handleUpdateAISettings(
                                 algorithm_config.algorithm_id,
                                 algorithm_config
                               );
-                              refetchAIStats();
-                              toast.success("Settings updated successfully!");
                             }}
                           >
                             Apply proposed settings

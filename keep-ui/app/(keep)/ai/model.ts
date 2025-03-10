@@ -1,12 +1,36 @@
+interface FloatOrIntSetting {
+  max?: number;
+  min?: number;
+  type: "float" | "int";
+  value: number;
+}
+
+interface BoolSetting {
+  type: "bool";
+  value: boolean;
+}
+
+interface BaseSetting {
+  name: string;
+  description: string;
+}
+
+export type AlgorithmSetting = BaseSetting & (FloatOrIntSetting | BoolSetting);
+
+export interface Algorithm {
+  name: string;
+  description: string;
+  last_time_reminded?: string;
+}
+
 export interface AIConfig {
+  id: string;
   algorithm_id: string;
-  settings: any[];
-  settings_proposed_by_algorithm: any;
+  tenant_id: string;
+  settings: AlgorithmSetting[];
+  settings_proposed_by_algorithm: AlgorithmSetting[];
   feedback_logs: string;
-  algorithm: {
-    name: string;
-    description: string;
-  };
+  algorithm: Algorithm;
 }
 
 export interface AIStats {
@@ -14,8 +38,6 @@ export interface AIStats {
   incidents_count: number;
   first_alert_datetime?: Date;
   algorithm_configs: AIConfig[];
-  is_mining_enabled: boolean;
-  algorithm_verbose_name: string;
 }
 
 export interface AILogs {
