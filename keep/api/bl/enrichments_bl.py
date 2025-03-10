@@ -23,8 +23,9 @@ from keep.api.core.db import (
     get_topology_data_by_dynamic_matcher,
 )
 from keep.api.core.elastic import ElasticClient
+from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto
-from keep.api.models.db.alert import ActionType, Alert
+from keep.api.models.db.alert import Alert
 from keep.api.models.db.enrichment_event import (
     EnrichmentEvent,
     EnrichmentLog,
