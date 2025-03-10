@@ -536,9 +536,21 @@ def keycloak_token(request):
 def browser():
     from playwright.sync_api import sync_playwright
 
+    try:
+        tenant_id = f"keep{os.getpid()}"
+        print("Creating tenant - ", tenant_id)
+        resp = requests.post(
+            "http://localhost:8080/tenant",
+            json={"tenant_id": tenant_id},
+        )
+        resp.raise_for_status()
+        print("Tenant created")
+    except Exception as exc:
+        print(exc)
     # Force headless mode if running in CI environment
     is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
     headless = is_ci or os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true"
+    # headless = False
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
@@ -721,7 +733,7 @@ def create_alert(db_session):
             event={
                 "name": random_name,
                 "fingerprint": fingerprint,
-                "lastReceived": details.pop('lastReceived', timestamp.isoformat()),
+                "lastReceived": details.pop("lastReceived", timestamp.isoformat()),
                 "status": status.value,
                 **details,
             },

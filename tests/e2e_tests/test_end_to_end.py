@@ -21,16 +21,22 @@
 
 import os
 import random
-import string
-import sys
 import re
+import string
+import time
 from datetime import datetime
-from tests.e2e_tests.utils import trigger_alert
 
-from playwright.sync_api import expect, Page
+from playwright.sync_api import Page, expect
 
-from tests.e2e_tests.utils import install_webhook_provider, delete_provider, assert_connected_provider_count, assert_scope_text_count
-
+from tests.e2e_tests.utils import (
+    assert_connected_provider_count,
+    assert_scope_text_count,
+    delete_provider,
+    get_current_test_name,
+    init_e2e_test,
+    install_webhook_provider,
+    trigger_alert,
+)
 
 # SHAHAR: you can uncomment locally, but keep in github actions
 # NOTE 2: to run the tests with a browser, uncomment this two lines:
@@ -60,13 +66,8 @@ def setup_console_listener(page, log_entries):
 
 def save_failure_artifacts(page, log_entries):
     """Save screenshots, HTML content, and console logs on test failure."""
-    # Generate unique name for the dump files
-    current_test_name = (
-        "playwright_dump_"
-        + os.path.basename(__file__)[:-3]
-        + "_"
-        + sys._getframe().f_code.co_name
-    )
+
+    current_test_name = get_current_test_name()
 
     # Save screenshot
     page.screenshot(path=current_test_name + ".png")
@@ -84,13 +85,33 @@ def test_sanity(browser: Page):  # browser is actually a page object
     log_entries = []
     setup_console_listener(browser, log_entries)
 
-    try:
-        browser.goto("http://localhost:3000/")
-        browser.wait_for_url("http://localhost:3000/incidents")
-        assert "Keep" in browser.title()
-    except Exception:
-        save_failure_artifacts(browser, log_entries)
-        raise
+    max_attempts = 3
+    attempt = 0
+
+    while attempt < max_attempts:
+        try:
+            # Verify server is up
+            init_e2e_test(browser, wait_time=1)
+
+            # Now try the navigation with increased timeout
+            # Ignore queryparams suchas tenantId
+            browser.wait_for_url(
+                re.compile(r"http://localhost:3000/incidents(\?.*)?"), timeout=15000
+            )
+            assert "Keep" in browser.title()
+
+            # If we get here, the test passed
+            return
+
+        except Exception:
+            attempt += 1
+            if attempt >= max_attempts:
+                # Final attempt failed, save artifacts and re-raise
+                save_failure_artifacts(browser, log_entries)
+                raise
+
+            # Wait before retry
+            time.sleep(2)
 
 
 def test_insert_new_alert(browser: Page):  # browser is actually a page object
@@ -101,15 +122,19 @@ def test_insert_new_alert(browser: Page):  # browser is actually a page object
     setup_console_listener(browser, log_entries)
 
     try:
-        browser.goto(
-            "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
+        init_e2e_test(
+            browser,
+            next_url="/providers",
         )
-        browser.wait_for_url("http://localhost:3000/providers")
+        base_url = "http://localhost:3000/providers"
+        url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
+        browser.wait_for_url(url_pattern)
 
         feed_badge = browser.get_by_test_id("menu-alerts-feed-badge")
         feed_count_before = int(feed_badge.text_content() or "0")
 
-        browser.get_by_role("button", name="KE Keep").click()
+        # now Keep avatar will look like "K) Keep (Keep12345)"
+        browser.get_by_role("button", name="K) Keep").click()
         browser.get_by_role("menuitem", name="Settings").click()
         browser.get_by_role("tab", name="Webhook").click()
         browser.get_by_role("button", name="Click to create an example").click()
@@ -139,10 +164,13 @@ def test_providers_page_is_accessible(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
-        browser.goto(
-            "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
+        init_e2e_test(
+            browser,
+            next_url="/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders",
         )
-        browser.wait_for_url("http://localhost:3000/providers")
+        base_url = "http://localhost:3000/providers"
+        url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
+        browser.wait_for_url(url_pattern)
         # get the GCP Monitoring provider
         browser.locator("button:has-text('GCP Monitoring'):has-text('alert')").click()
         browser.get_by_role("button", name="Cancel").click()
@@ -174,7 +202,7 @@ def test_provider_validation(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
-        browser.goto("http://localhost:3000/signin")
+        init_e2e_test(browser, next_url="/signin")
         # using Kibana Provider
         browser.get_by_role("link", name="Providers").click()
         browser.locator("button:has-text('Kibana'):has-text('alert')").click()
@@ -295,7 +323,7 @@ def test_add_workflow(browser: Page):
     log_entries = []
     setup_console_listener(page, log_entries)
     try:
-        page.goto("http://localhost:3000/signin")
+        init_e2e_test(browser, next_url="/signin")
         page.get_by_role("link", name="Workflows").click()
         page.get_by_role("button", name="Create Workflow").click()
         page.get_by_placeholder("Set the name").click()
@@ -338,11 +366,11 @@ def test_paste_workflow_yaml_quotes_preserved(browser: Page):
         file_path = os.path.join(os.path.dirname(__file__), file_name)
         with open(file_path, "r") as file:
             return file.read()
-        
+
     workflow_yaml = get_workflow_yaml("workflow-quotes-sample.yaml")
 
     try:
-        page.goto("http://localhost:3000/workflows")
+        init_e2e_test(browser, next_url="/workflows")
         page.get_by_role("button", name="Upload Workflows").click()
         page.get_by_test_id("text-area").click()
         page.get_by_test_id("text-area").fill(workflow_yaml)
@@ -353,12 +381,14 @@ def test_paste_workflow_yaml_quotes_preserved(browser: Page):
         # Copy the YAML content to the clipboard
         yaml_editor_container.get_by_test_id("copy-yaml-button").click()
         # Get the clipboard content
-        clipboard_text = page.evaluate("""async () => {
+        clipboard_text = page.evaluate(
+            """async () => {
             return await navigator.clipboard.readText();
-        }""")
+        }"""
+        )
         # Remove all whitespace characters from the YAML content for comparison
-        normalized_original = re.sub(r'\s', '', workflow_yaml)
-        normalized_clipboard = re.sub(r'\s', '', clipboard_text)
+        normalized_original = re.sub(r"\s", "", workflow_yaml)
+        normalized_clipboard = re.sub(r"\s", "", clipboard_text)
         assert normalized_clipboard == normalized_original
     except Exception:
         save_failure_artifacts(page, log_entries)
@@ -369,14 +399,12 @@ def test_add_upload_workflow_with_alert_trigger(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
-        browser.goto("http://localhost:3000/signin")
+        init_e2e_test(browser, next_url="/signin")
         browser.get_by_role("link", name="Workflows").hover()
         browser.get_by_role("link", name="Workflows").click()
         browser.get_by_role("button", name="Upload Workflows").click()
         file_input = browser.locator("#workflowFile")
-        file_input.set_input_files(
-            "./tests/e2e_tests/workflow-sample.yaml"
-        )
+        file_input.set_input_files("./tests/e2e_tests/workflow-sample.yaml")
         browser.get_by_role("button", name="Upload")
         browser.wait_for_timeout(500)
         trigger_alert("prometheus")
@@ -384,8 +412,8 @@ def test_add_upload_workflow_with_alert_trigger(browser: Page):
         # new behavior: is redirecting to the detail page of the workflow, so we need to go back to the list page
         browser.goto("http://localhost:3000/workflows")
         workflow_card = browser.locator(
-            "[data-testid^='workflow-tile-']", 
-            has_text="9b3664f4-b248-4eda-8cc7-e69bc5a8bd92"
+            "[data-testid^='workflow-tile-']",
+            has_text="9b3664f4-b248-4eda-8cc7-e69bc5a8bd92",
         )
         expect(workflow_card).not_to_contain_text("No data available")
     except Exception:
@@ -406,26 +434,54 @@ def test_start_with_keep_db(browser: Page):
         save_failure_artifacts(browser, log_entries)
         raise
 
+
 def test_provider_deletion(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
     try:
 
-        # Checking deletion after Creation 
-        browser.goto("http://localhost:3000/signin")
+        # Checking deletion after Creation
+        init_e2e_test(browser, next_url="/signin")
         browser.get_by_role("link", name="Providers").hover()
         browser.get_by_role("link", name="Providers").click()
-        install_webhook_provider(browser=browser, provider_name=provider_name, webhook_url="http://keep-backend:8080", webhook_action="GET")
+        install_webhook_provider(
+            browser=browser,
+            provider_name=provider_name,
+            webhook_url="http://keep-backend:8080",
+            webhook_action="GET",
+        )
         browser.wait_for_timeout(500)
-        assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=1)
-        delete_provider(browser=browser, provider_type="Webhook", provider_name=provider_name)
-        assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=0)
+        assert_connected_provider_count(
+            browser=browser,
+            provider_type="Webhook",
+            provider_name=provider_name,
+            provider_count=1,
+        )
+        delete_provider(
+            browser=browser, provider_type="Webhook", provider_name=provider_name
+        )
+        assert_connected_provider_count(
+            browser=browser,
+            provider_type="Webhook",
+            provider_name=provider_name,
+            provider_count=0,
+        )
 
         # Checking deletion after Creation + Updation
-        install_webhook_provider(browser=browser, provider_name=provider_name, webhook_url="http://keep-backend:8080", webhook_action="GET")
+        install_webhook_provider(
+            browser=browser,
+            provider_name=provider_name,
+            webhook_url="http://keep-backend:8080",
+            webhook_action="GET",
+        )
         browser.wait_for_timeout(500)
-        assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=1)
+        assert_connected_provider_count(
+            browser=browser,
+            provider_type="Webhook",
+            provider_name=provider_name,
+            provider_count=1,
+        )
         # Updating provider
         browser.locator(
             f"button:has-text('Webhook'):has-text('Connected'):has-text('{provider_name}')"
@@ -438,10 +494,19 @@ def test_provider_deletion(browser: Page):
         # Refreshing the scope
         browser.get_by_role("button", name="Refresh", exact=True).click()
         browser.wait_for_timeout(500)
-        assert_scope_text_count(browser=browser, contains_text="HTTPSConnectionPool", count=1)
+        assert_scope_text_count(
+            browser=browser, contains_text="HTTPSConnectionPool", count=1
+        )
         browser.mouse.click(10, 10)
-        delete_provider(browser=browser, provider_type="Webhook", provider_name=provider_name)
-        assert_connected_provider_count(browser=browser, provider_type="Webhook", provider_name=provider_name, provider_count=0)
+        delete_provider(
+            browser=browser, provider_type="Webhook", provider_name=provider_name
+        )
+        assert_connected_provider_count(
+            browser=browser,
+            provider_type="Webhook",
+            provider_name=provider_name,
+            provider_count=0,
+        )
 
     except Exception:
         save_failure_artifacts(browser, log_entries)

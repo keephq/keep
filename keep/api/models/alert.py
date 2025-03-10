@@ -53,6 +53,18 @@ class AlertStatus(Enum):
     PENDING = "pending"
 
 
+class DismissAlertRequest(BaseModel):
+    alert_id: Optional[str] = None
+
+
+class AlertErrorDto(BaseModel):
+    id: str
+    provider_type: str
+    event: dict
+    error_message: Optional[str] = None
+    timestamp: datetime.datetime
+
+
 class AlertDto(BaseModel):
     id: str | None
     name: str
