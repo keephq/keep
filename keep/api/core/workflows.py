@@ -199,9 +199,9 @@ def build_workflows_query(
         order_by_field = group_by_exp[0]
 
     if sort_dir == "desc":
-        base_query = base_query.order_by(desc(text(order_by_field)), Workflow.id)
+        base_query = base_query.order_by(desc(text(order_by_field)))
     else:
-        base_query = base_query.order_by(asc(text(order_by_field)), Workflow.id)
+        base_query = base_query.order_by(asc(text(order_by_field)))
 
     base_query = base_query.limit(limit).offset(offset)
 
