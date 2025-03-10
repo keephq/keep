@@ -84,7 +84,7 @@ export function IncidentList({
   });
 
   const mainCelQuery = useMemo(() => {
-    const filterArray = ["is_confirmed == true", dateRangeCel];
+    const filterArray = ["is_candidate == false", dateRangeCel];
     return filterArray.filter(Boolean).join(" && ");
   }, [dateRangeCel]);
 
@@ -133,7 +133,7 @@ export function IncidentList({
   );
 
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
-    useIncidents(false, true);
+    useIncidents(true, true);
   const { incidentChangeToken } = usePollIncidents(
     mutateIncidents,
     dateRange.paused

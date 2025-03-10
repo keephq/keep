@@ -28,7 +28,7 @@ export const DefaultIncidentFilters: object = {
 
 // on initial page load, we have to display only active incidents
 export const DEFAULT_INCIDENTS_CEL =
-  "is_confirmed == true && !(status in ['resolved', 'deleted', 'merged'])";
+  "is_candidate == false && !(status in ['resolved', 'deleted', 'merged'])";
 export const DEFAULT_INCIDENTS_UNCHECKED_OPTIONS = [
   "resolved",
   "deleted",
@@ -59,7 +59,7 @@ export interface IncidentDto {
   last_seen_time?: Date;
   end_time?: Date;
   creation_time: Date;
-  is_confirmed: boolean;
+  is_candidate: boolean;
   rule_fingerprint: string;
   same_incident_in_the_past_id: string;
   following_incidents_ids: string[];

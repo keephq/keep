@@ -45,7 +45,8 @@ incident_field_configurations = [
     FieldMappingConfiguration("end_time", "end_time"),
     FieldMappingConfiguration("last_seen_time", "last_seen_time"),
     FieldMappingConfiguration("is_predicted", "is_predicted"),
-    FieldMappingConfiguration("is_confirmed", "is_confirmed"),
+    FieldMappingConfiguration("is_candidate", "is_candidate"),
+    FieldMappingConfiguration("is_visible", "is_visible"),
     FieldMappingConfiguration("alerts_count", "alerts_count"),
     FieldMappingConfiguration("merged_at", "merged_at"),
     FieldMappingConfiguration("merged_by", "merged_by"),
@@ -167,7 +168,7 @@ def __build_last_incidents_total_count_query(
     timeframe: int = None,
     upper_timestamp: datetime = None,
     lower_timestamp: datetime = None,
-    is_confirmed: bool = False,
+    is_candidate: bool = False,
     is_predicted: bool = None,
     cel: str = None,
     allowed_incident_ids: Optional[List[str]] = None,
@@ -183,7 +184,7 @@ def __build_last_incidents_total_count_query(
         timeframe (int, optional): The number of days to look back from the current date for incidents. Defaults to None.
         upper_timestamp (datetime, optional): The upper bound timestamp for filtering incidents. Defaults to None.
         lower_timestamp (datetime, optional): The lower bound timestamp for filtering incidents. Defaults to None.
-        is_confirmed (bool, optional): Filter for confirmed incidents. Defaults to False.
+        is_candidate (bool, optional): Filter for confirmed incidents. Defaults to False.
         sorting (Optional[IncidentSorting], optional): The sorting criteria for the incidents. Defaults to IncidentSorting.creation_time.
         is_predicted (bool, optional): Filter for predicted incidents. Defaults to None.
         cel (str, optional): The CEL (Common Expression Language) string to convert to SQL. Defaults to None.
@@ -204,8 +205,9 @@ def __build_last_incidents_total_count_query(
         .select_from(incidents_alers_cte)
         .join(Incident, Incident.id == incidents_alers_cte.c.incident_id)
         .filter(Incident.tenant_id == tenant_id)
+        .filter(Incident.is_visible == True)
     )
-    query = base_query_cte.filter(Incident.is_confirmed == is_confirmed)
+    query = base_query_cte.filter(Incident.is_candidate == is_candidate)
 
     if allowed_incident_ids:
         query = query.filter(Incident.id.in_(allowed_incident_ids))
@@ -243,7 +245,7 @@ def __build_last_incidents_query(
     timeframe: int = None,
     upper_timestamp: datetime = None,
     lower_timestamp: datetime = None,
-    is_confirmed: bool = False,
+    is_candidate: bool = False,
     sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
     is_predicted: bool = None,
     cel: str = None,
@@ -260,7 +262,7 @@ def __build_last_incidents_query(
         timeframe (int, optional): The number of days to look back from the current date for incidents. Defaults to None.
         upper_timestamp (datetime, optional): The upper bound timestamp for filtering incidents. Defaults to None.
         lower_timestamp (datetime, optional): The lower bound timestamp for filtering incidents. Defaults to None.
-        is_confirmed (bool, optional): Filter for confirmed incidents. Defaults to False.
+        is_candidate (bool, optional): Filter for confirmed incidents. Defaults to False.
         sorting (Optional[IncidentSorting], optional): The sorting criteria for the incidents. Defaults to IncidentSorting.creation_time.
         is_predicted (bool, optional): Filter for predicted incidents. Defaults to None.
         cel (str, optional): The CEL (Common Expression Language) string to convert to SQL. Defaults to None.
@@ -277,8 +279,9 @@ def __build_last_incidents_query(
         .select_from(incidents_alers_cte)
         .join(Incident, Incident.id == incidents_alers_cte.c.incident_id)
         .filter(Incident.tenant_id == tenant_id)
+        .filter(Incident.is_visible == True)
     )
-    query = base_query_cte.filter(Incident.is_confirmed == is_confirmed)
+    query = base_query_cte.filter(Incident.is_candidate == is_candidate)
 
     if allowed_incident_ids:
         query = query.filter(Incident.id.in_(allowed_incident_ids))
@@ -326,7 +329,7 @@ def get_last_incidents_by_cel(
     timeframe: int = None,
     upper_timestamp: datetime = None,
     lower_timestamp: datetime = None,
-    is_confirmed: bool = False,
+    is_candidate: bool = False,
     sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
     with_alerts: bool = False,
     is_predicted: bool = None,
@@ -342,7 +345,7 @@ def get_last_incidents_by_cel(
         timeframe (int, optional): The timeframe in which to look for incidents. Defaults to None.
         upper_timestamp (datetime, optional): The upper bound timestamp for filtering incidents. Defaults to None.
         lower_timestamp (datetime, optional): The lower bound timestamp for filtering incidents. Defaults to None.
-        is_confirmed (bool, optional): Filter for confirmed incidents. Defaults to False.
+        is_candidate (bool, optional): Filter for confirmed incidents. Defaults to False.
         sorting (Optional[IncidentSorting], optional): The sorting criteria for the incidents. Defaults to IncidentSorting.creation_time.
         with_alerts (bool, optional): Whether to include alerts in the incidents. Defaults to False.
         is_predicted (bool, optional): Filter for predicted incidents. Defaults to None.
@@ -359,7 +362,7 @@ def get_last_incidents_by_cel(
                 timeframe=timeframe,
                 upper_timestamp=upper_timestamp,
                 lower_timestamp=lower_timestamp,
-                is_confirmed=is_confirmed,
+                is_candidate=is_candidate,
                 is_predicted=is_predicted,
                 cel=cel,
                 allowed_incident_ids=allowed_incident_ids,
@@ -371,7 +374,7 @@ def get_last_incidents_by_cel(
                 timeframe=timeframe,
                 upper_timestamp=upper_timestamp,
                 lower_timestamp=lower_timestamp,
-                is_confirmed=is_confirmed,
+                is_candidate=is_candidate,
                 sorting=sorting,
                 is_predicted=is_predicted,
                 cel=cel,

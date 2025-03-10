@@ -103,7 +103,7 @@ def get_metrics(
     incidents, incidents_total = get_last_incidents(
         tenant_id=tenant_id,
         limit=1000,
-        is_confirmed=True,
+        is_candidate=False,
     )
 
     last_alerts_for_incidents = get_last_alerts_for_incidents(

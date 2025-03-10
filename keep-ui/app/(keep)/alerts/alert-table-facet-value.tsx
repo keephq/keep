@@ -27,7 +27,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
   facetFilters,
 }) => {
   const { data: incidents } = useIncidents(
-    true,
+    false,
     null,
     100,
     undefined,
