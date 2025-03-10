@@ -1,0 +1,22 @@
+workflow:
+  id: update-incident-grafana-incident
+  name: Update incident
+  description: Update incident on Grafana Incident
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: grafana_incident-action
+      provider:
+        type: grafana_incident
+        config: "{{ providers.incide }}"
+        with:
+          # Checkout https://docs.keephq.dev/providers/documentation/grafana_incident-provider for other available fields
+          operationType: update
+          updateType: updateIncidentTitle
+          title: Updated title from Keep
+          incident_id: "19"
