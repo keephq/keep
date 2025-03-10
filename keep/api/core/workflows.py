@@ -213,12 +213,6 @@ def build_workflows_query(
 
     latest_executions_subquery_cte = queries["latest_executions_subquery_cte"]
 
-    
-
-    base_query = base_query.cte("base_query")
-
-    latest_executions_subquery_cte = queries["latest_executions_subquery_cte"]
-
     query = (
         select(
             Workflow,
