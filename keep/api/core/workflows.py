@@ -213,23 +213,7 @@ def build_workflows_query(
 
     latest_executions_subquery_cte = queries["latest_executions_subquery_cte"]
 
-    if len(group_by_exp) > 1:
-        order_by_field = cel_to_sql_instance.coalesce(
-            [cel_to_sql_instance.cast(item, str) for item in group_by_exp]
-        )
-    else:
-        order_by_field = group_by_exp[0]
-
-    if sort_dir == "desc":
-        base_query = base_query.order_by(desc(text(order_by_field)), Workflow.id)
-    else:
-        base_query = base_query.order_by(asc(text(order_by_field)), Workflow.id)
-
-    base_query = base_query.limit(limit).offset(offset)
-
-    if cel:
-        sql_filter_str = cel_to_sql_instance.convert_to_sql_str(cel)
-        base_query = base_query.filter(text(sql_filter_str))
+    
 
     base_query = base_query.cte("base_query")
 
