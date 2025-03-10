@@ -10,7 +10,7 @@ from keep.api.core.db import (
     update_incident_from_dto_by_id,
 )
 from keep.api.core.dependencies import get_pusher_client
-from keep.api.models.alert import IncidentDto
+from keep.api.models.incident import IncidentDto
 from keep.api.tasks.process_event_task import process_event
 
 TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failure

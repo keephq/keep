@@ -17,9 +17,11 @@ from sqlmodel import Session
 # internals
 from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.bl.enrichments_bl import EnrichmentsBl
+from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
 from keep.api.core.db import (
     bulk_upsert_alert_fields,
+    enrich_alerts_with_incidents,
     get_alerts_by_fingerprint,
     get_all_presets_dtos,
     get_enrichment_with_session,
@@ -35,8 +37,10 @@ from keep.api.core.metrics import (
     events_out_counter,
     processing_time_summary,
 )
-from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
-from keep.api.models.db.alert import ActionType, Alert, AlertAudit, AlertRaw
+from keep.api.models.action_type import ActionType
+from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.db.alert import Alert, AlertAudit, AlertRaw
+from keep.api.models.incident import IncidentDto
 from keep.api.tasks.notification_cache import get_notification_cache
 from keep.api.utils.enrichment_helpers import (
     calculated_start_firing_time,
@@ -138,6 +142,7 @@ def __save_to_db(
                 session.add(audit)
 
         enriched_formatted_events = []
+        saved_alerts = []
 
         for formatted_event in formatted_events:
             formatted_event.pushed = True
@@ -211,6 +216,7 @@ def __save_to_db(
             alert = Alert(**alert_args)
             session.add(alert)
             session.flush()
+            saved_alerts.append(alert)
             alert_id = alert.id
             formatted_event.event_id = str(alert_id)
 
@@ -251,6 +257,29 @@ def __save_to_db(
                         value = value.strip()
                     setattr(formatted_event, enrichment, value)
             enriched_formatted_events.append(formatted_event)
+
+        logger.info("Checking for incidents to resolve", extra={"tenant_id": tenant_id})
+        try:
+            saved_alerts = enrich_alerts_with_incidents(
+                tenant_id, saved_alerts, session
+            )  # note: this only enriches incidents that were not yet ended
+            for alert in saved_alerts:
+                if alert.event.get("status") == AlertStatus.RESOLVED.value:
+                    logger.debug(
+                        "Checking for alert with status resolved",
+                        extra={"alert_id": alert.id, "tenant_id": tenant_id},
+                    )
+                    for incident in alert._incidents:
+                        IncidentBl.resolve_incident_if_require(incident, session)
+            logger.info(
+                "Completed checking for incidents to resolve",
+                extra={"tenant_id": tenant_id},
+            )
+        except Exception:
+            logger.exception(
+                "Failed to check for incidents to resolve",
+                extra={"tenant_id": tenant_id},
+            )
         session.commit()
 
         logger.info(
