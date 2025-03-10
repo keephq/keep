@@ -21,9 +21,10 @@ from keep.api.core.db import (
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import is_all_alerts_in_status
 from keep.api.core.dependencies import get_pusher_client
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import Incident
 from keep.api.models.db.rule import Rule
+from keep.api.models.incident import IncidentDto
 from keep.api.utils.cel_utils import preprocess_cel_expression
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
