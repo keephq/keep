@@ -395,7 +395,7 @@ class WorkflowScheduler:
             )
         return workflow_execution_id
 
-    def _get_unique_execution_number(self, fingerprint=None):
+    def _get_unique_execution_number(self, fingerprint=None, workflow_id=None):
         """
         Translates the fingerprint to a unique execution number
 
@@ -403,9 +403,11 @@ class WorkflowScheduler:
             int: an int represents unique execution number
         """
         # if fingerprint supplied
-        if fingerprint:
-            payload = str(fingerprint).encode()
+        if fingerprint and workflow_id:
+            payload = f"{str(fingerprint)}:{str(workflow_id)}".encode()
         # else, just return random
+        elif fingerprint:
+            payload = str(fingerprint).encode()
         else:
             payload = str(uuid.uuid4()).encode()
         return int(hashlib.sha256(payload).hexdigest(), 16) % (
@@ -546,7 +548,7 @@ class WorkflowScheduler:
                     # else, we want to enforce that no workflow already run with the same fingerprint
                     else:
                         workflow_execution_number = self._get_unique_execution_number(
-                            fingerprint
+                            fingerprint, workflow_id
                         )
                     workflow_execution_id = create_workflow_execution(
                         workflow_id=workflow_id,
