@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from itertools import cycle
 from unittest.mock import patch
 from uuid import uuid4
@@ -22,23 +22,18 @@ from keep.api.core.db import (
 )
 from keep.api.core.db_utils import get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_EMAIL, SINGLE_TENANT_UUID
-from keep.api.models.alert import (
-    AlertSeverity,
-    AlertStatus,
-    IncidentDto,
-    IncidentDtoIn,
-    IncidentSeverity,
-    IncidentStatus,
-)
+from keep.api.models.alert import AlertSeverity, AlertStatus
 from keep.api.models.db.alert import (
     NULL_FOR_DELETED_AT,
     Alert,
     Incident,
     LastAlertToIncident,
 )
+from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.rule import CreateIncidentOn, ResolveOn, Rule
 from keep.api.models.db.tenant import Tenant
+from keep.api.models.incident import IncidentDto, IncidentDtoIn
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.rbac import Admin
@@ -1636,11 +1631,13 @@ def test_correlation_with_mapping(db_session, create_alert):
 
 
 @pytest.mark.asyncio
-async def test_incident_timestamps_based_on_alert_last_received(db_session, create_alert):
+async def test_incident_timestamps_based_on_alert_last_received(
+    db_session, create_alert
+):
     # Create alerts with past, current, and future timestamps
 
     now = datetime.now(UTC)
-    past_date =  now - timedelta(days=1)
+    past_date = now - timedelta(days=1)
     current_date = now
     future_date = now + timedelta(days=1)
 
@@ -1670,13 +1667,22 @@ async def test_incident_timestamps_based_on_alert_last_received(db_session, crea
     # Link alerts to an incident
     alerts = db_session.query(Alert).all()
 
-    assert alerts[0].event['lastReceived'] == past_date.isoformat(timespec='milliseconds').replace("+00:00", "Z")
-    assert alerts[1].event['lastReceived'] == current_date.isoformat(timespec='milliseconds').replace("+00:00", "Z")
-    assert alerts[2].event['lastReceived'] == future_date.isoformat(timespec='milliseconds').replace("+00:00", "Z")
+    assert alerts[0].event["lastReceived"] == past_date.isoformat(
+        timespec="milliseconds"
+    ).replace("+00:00", "Z")
+    assert alerts[1].event["lastReceived"] == current_date.isoformat(
+        timespec="milliseconds"
+    ).replace("+00:00", "Z")
+    assert alerts[2].event["lastReceived"] == future_date.isoformat(
+        timespec="milliseconds"
+    ).replace("+00:00", "Z")
 
     incident = create_incident_from_dict(
         SINGLE_TENANT_UUID,
-        {"user_generated_name": "Incident with varied timestamps", "user_summary": "Test incident"},
+        {
+            "user_generated_name": "Incident with varied timestamps",
+            "user_summary": "Test incident",
+        },
     )
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident.id, [alert.fingerprint for alert in alerts]
@@ -1687,5 +1693,9 @@ async def test_incident_timestamps_based_on_alert_last_received(db_session, crea
     updated_incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
     # Assert that timestamps match expectations
-    assert updated_incident.start_time.replace(microsecond=0) == past_date.replace(microsecond=0, tzinfo=None)
-    assert updated_incident.last_seen_time.replace(microsecond=0) == future_date.replace(microsecond=0, tzinfo=None)
+    assert updated_incident.start_time.replace(microsecond=0) == past_date.replace(
+        microsecond=0, tzinfo=None
+    )
+    assert updated_incident.last_seen_time.replace(
+        microsecond=0
+    ) == future_date.replace(microsecond=0, tzinfo=None)
