@@ -312,23 +312,13 @@ def test_add_upload_workflow_with_alert_trigger(browser: Page, setup_page_loggin
 
 
 def test_start_with_keep_db(browser: Page, setup_page_logging, failure_artifacts):    
-    # Add console log listener for network errors
-    browser.on("console", lambda msg: print(f"Browser console: {msg.type}: {msg.text}"))
-    browser.on("pageerror", lambda err: print(f"Page error: {err}"))
-    
     # Navigate to signin page
     browser.goto("http://localhost:3001/signin")
-    print("Navigated to signin page")
-    
     # Fill in credentials
     browser.get_by_placeholder("Enter your username").fill("keep")
     browser.get_by_placeholder("Enter your password").fill("keep")
-    print("Filled in credentials")
-    
     # Click sign in and wait for navigation
-    browser.get_by_role("button", name="Sign in").click()
-    print("Clicked sign in button")
-    
+    browser.get_by_role("button", name="Sign in").click()    
     browser.wait_for_url("http://localhost:3001/incidents", timeout=5000)
 
 def test_provider_deletion(browser: Page, setup_page_logging, failure_artifacts):
