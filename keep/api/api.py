@@ -45,12 +45,14 @@ from keep.api.routes import (
     dashboard,
     deduplications,
     extraction,
+    facets,
     healthcheck,
     incidents,
     maintenance,
     mapping,
     metrics,
     preset,
+    provider_images,
     providers,
     pusher,
     rules,
@@ -60,7 +62,6 @@ from keep.api.routes import (
     topology,
     whoami,
     workflows,
-    facets
 )
 from keep.api.routes.auth import groups as auth_groups
 from keep.api.routes.auth import permissions, roles, users
@@ -313,6 +314,9 @@ def get_app(
         deduplications.router, prefix="/deduplications", tags=["deduplications"]
     )
     app.include_router(facets.router, prefix="/{entity_name}/facets", tags=["facets"])
+    app.include_router(
+        provider_images.router, prefix="/provider-images", tags=["provider-images"]
+    )
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
     # If we run Keep with SINGLE_TENANT auth type, we want to add the signin endpoint
