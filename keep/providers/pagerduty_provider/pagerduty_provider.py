@@ -944,7 +944,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider, ProviderHeal
                 PagerdutyProvider._format_alert(alert, None, force_new_format=True)
                 for alert in incident_alerts
             ]
-            incident_dto._alerts = incident_alerts
+            incident_dto.set_alerts(incident_alerts)
             incidents.append(incident_dto)
         return incidents
 

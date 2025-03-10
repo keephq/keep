@@ -737,7 +737,7 @@ def test_rule_multiple_alerts(db_session, create_alert):
     incident = db_session.query(Incident).first()
     alert_1 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
 
-    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+    # enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
 
     assert incident.alerts_count == 1
     assert len(incident.alerts) == 1

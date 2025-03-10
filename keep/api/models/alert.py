@@ -497,6 +497,9 @@ class IncidentDto(IncidentDtoIn):
         model_dict = self.dict()
         return json.dumps(model_dict, indent=4, default=str)
 
+    def set_alerts(self, alerts: List[AlertDto]):
+        self._alerts = alerts
+
     class Config:
         extra = Extra.allow
         schema_extra = IncidentDtoIn.Config.schema_extra
