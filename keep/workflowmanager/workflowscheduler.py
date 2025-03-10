@@ -28,7 +28,8 @@ from keep.api.core.metrics import (
     workflow_queue_size,
     workflows_running,
 )
-from keep.api.models.alert import AlertDto, IncidentDto
+from keep.api.models.alert import AlertDto
+from keep.api.models.incident import IncidentDto
 from keep.api.utils.email_utils import KEEP_EMAILS_ENABLED, EmailTemplates, send_email
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
