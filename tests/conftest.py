@@ -5,6 +5,7 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
+from typing import Generator, Any
 
 import mysql.connector
 import pytest
@@ -16,6 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 from starlette_context import context, request_cycle_context
+import json
 
 # This import is required to create the tables
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -795,3 +797,61 @@ def pytest_collection_modifyitems(items):
             and "db" in item.callspec.params["db_session"]
         ):
             item.add_marker("integration")
+
+
+@pytest.fixture
+def console_logs():
+    """Fixture to collect console logs during test execution."""
+    logs = []
+    return logs
+
+@pytest.fixture
+def setup_page_logging(browser, console_logs):
+    """Fixture to set up console logging for a page."""
+    browser.on(
+        "console",
+        lambda msg: (
+            console_logs.append(
+                f"{datetime.now()}: {msg.text}, location: {msg.location}"
+            )
+        ),
+    )
+    return browser
+
+@pytest.fixture
+def failure_artifacts(browser, console_logs, request):
+    """Fixture to automatically save failure artifacts on test failure."""
+    yield
+    
+    # Only save artifacts if the test failed
+    if request.node.rep_call.failed:
+        test_name = (
+            "playwright_dump_"
+            + os.path.basename(request.node.fspath)[:-3]
+            + "_"
+            + request.node.name
+        )
+        
+        # Save screenshot
+        browser.screenshot(path=test_name + ".png")
+        
+        # Save HTML content
+        with open(test_name + ".html", "w", encoding="utf-8") as f:
+            f.write(browser.content())
+            
+        # Save console logs
+        with open(test_name + "_console.txt", "w", encoding="utf-8") as f:
+            f.write("\n".join(console_logs))
+            
+        # Save cookies
+        with open(test_name + "_cookies.json", "w", encoding="utf-8") as f:
+            f.write(json.dumps(browser.context.cookies(), indent=2))
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call) -> Generator[None, Any, Any]:
+    """Hook to store test results for use in fixtures."""
+    outcome = yield
+    rep = outcome.get_result()
+    
+    # Set report for each phase (setup, call, teardown)
+    setattr(item, f"rep_{rep.when}", rep)
