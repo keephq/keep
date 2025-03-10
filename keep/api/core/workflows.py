@@ -138,11 +138,7 @@ def __build_base_query(tenant_id: str):
     }
 
 
-def build_workflows_total_count_query(
-    tenant_id: str,
-    cel: str,
-    fetch_last_executions: int = 15,
-):
+def build_workflows_total_count_query(tenant_id: str, cel: str):
     base_query = __build_base_query(tenant_id=tenant_id)[
         "workflows_with_last_executions_query"
     ].cte("base_query")
@@ -255,9 +251,7 @@ def get_workflows_with_last_executions_v2(
 ) -> Tuple[list[dict], int]:
     with Session(engine) as session:
         total_count_query = build_workflows_total_count_query(
-            tenant_id=tenant_id,
-            cel=cel,
-            fetch_last_executions=fetch_last_executions,
+            tenant_id=tenant_id, cel=cel
         )
 
         count = session.exec(total_count_query).one()[0]
