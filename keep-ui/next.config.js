@@ -84,11 +84,10 @@ const nextConfig = {
   compiler: isWithTurbo
     ? undefined
     : {
-        removeConsole: process.env.NODE_ENV === "production",
+        removeConsole: false,
       },
   output: "standalone",
-  productionBrowserSourceMaps:
-    process.env.ENV === "development" || process.env.SENTRY_DISABLED !== "true",
+  productionBrowserSourceMaps: true,
   async redirects() {
     const workflowRawYamlRedirects = [
       {

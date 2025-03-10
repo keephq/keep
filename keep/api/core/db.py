@@ -48,22 +48,19 @@ from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
 # This import is required to create the tables
+from keep.api.models.action_type import ActionType
 from keep.api.models.ai_external import (
     ExternalAIConfigAndMetadata,
     ExternalAIConfigAndMetadataDto,
 )
-from keep.api.models.alert import (
-    AlertStatus,
-    IncidentDto,
-    IncidentDtoIn,
-    IncidentSorting,
-)
+from keep.api.models.alert import AlertStatus
 from keep.api.models.db.action import Action
 from keep.api.models.db.ai_external import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.enrichment_event import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.extraction import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.incident import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.maintenance_window import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
@@ -73,6 +70,7 @@ from keep.api.models.db.system import *  # pylint: disable=unused-wildcard-impor
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.incident import IncidentDto, IncidentDtoIn, IncidentSorting
 from keep.api.models.time_stamp import TimeStampFilter
 
 logger = logging.getLogger(__name__)

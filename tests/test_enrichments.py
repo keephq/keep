@@ -7,8 +7,8 @@ from sqlalchemy import text
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto
-from keep.api.models.db.alert import ActionType
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.topology import TopologyService
@@ -740,7 +740,12 @@ def test_disposable_enrichment_and_alert_history(
     )
     assert response.status_code == 202
 
-    while client.get(f"/alerts/{mock_alert_dto.fingerprint}", headers={"x-api-key": "some-key"}).status_code != 200:
+    while (
+        client.get(
+            f"/alerts/{mock_alert_dto.fingerprint}", headers={"x-api-key": "some-key"}
+        ).status_code
+        != 200
+    ):
         time.sleep(0.1)
 
     # STEP 3: Send a disposable enrichment to the alert
@@ -776,7 +781,9 @@ def test_disposable_enrichment_and_alert_history(
     assert response.status_code == 202
 
     # 1 enrichment for fingerprint + 1 for alert.id
-    assert db_session.execute(text("SELECT count(1) from alertenrichment")).scalar() == 2
+    assert (
+        db_session.execute(text("SELECT count(1) from alertenrichment")).scalar() == 2
+    )
 
     # Verify the disposable enrichment is reset
     response = client.get(

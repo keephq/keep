@@ -47,6 +47,7 @@ from keep.api.core.db import (
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
+from keep.api.models.action_type import ActionType
 from keep.api.models.alert import (
     AlertDto,
     AlertErrorDto,
@@ -55,11 +56,10 @@ from keep.api.models.alert import (
     DismissAlertRequest,
     EnrichAlertNoteRequestBody,
     EnrichAlertRequestBody,
-    IncidentStatus,
     UnEnrichAlertRequestBody,
 )
 from keep.api.models.alert_audit import AlertAuditDto
-from keep.api.models.db.alert import ActionType
+from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.db.rule import ResolveOn
 from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.query import QueryDto
