@@ -1,6 +1,7 @@
 import { Card, Subtitle, Title } from "@tremor/react";
-import { DeduplicationSankey } from "./DeduplicationSankey";
 import Link from "next/link";
+import Image from "next/image";
+import deduplicationPlaceholder from "./deduplication-placeholder.svg";
 
 export const DeduplicationPlaceholder = () => {
   return (
@@ -20,7 +21,13 @@ export const DeduplicationPlaceholder = () => {
             This page will become active once the first alerts are registered.
           </Subtitle>
         </div>
-        <DeduplicationSankey className="max-w-full" />
+        <Image
+          src={deduplicationPlaceholder}
+          alt="Deduplication"
+          className="max-w-full"
+          width={871}
+          height={391}
+        />
       </Card>
     </>
   );
