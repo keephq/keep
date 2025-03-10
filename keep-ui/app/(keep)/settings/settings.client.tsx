@@ -40,10 +40,11 @@ import ProviderImagesSettings from "./provider-images/provider-images-settings";
 export default function SettingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams()!;
+  const searchParams = useSearchParams();
   const pathname = usePathname();
   const { data: configData } = useConfig();
 
+  // TODO: refactor, we don't need to have so many states, we can just use the searchParams and derive the tabIndex and userSubTabIndex from it
   const [selectedTab, setSelectedTab] = useState<string>(
     searchParams?.get("selectedTab") || "users"
   );
@@ -367,7 +368,7 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col h-full">
       <TabGroup index={tabIndex} className="flex-grow flex flex-col">
-        <TabList color="orange">
+        <TabList>
           <Tab icon={UserGroupIcon} onClick={() => handleTabChange("users")}>
             Users and Access
           </Tab>
@@ -390,7 +391,7 @@ export default function SettingsPage() {
               index={userSubTabIndex}
               className="h-full flex flex-col gap-4"
             >
-              <TabList color="orange">
+              <TabList>
                 <Tab
                   icon={UsersIcon}
                   onClick={() => handleUserSubTabChange("users")}

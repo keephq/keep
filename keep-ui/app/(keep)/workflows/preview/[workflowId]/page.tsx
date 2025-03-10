@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { KeepLoader } from "@/shared/ui";
 import { WorkflowBuilderWidget } from "@/widgets/workflow-builder";
 import { Subtitle } from "@tremor/react";
@@ -7,11 +7,12 @@ import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { Icon } from "@tremor/react";
 import { Link } from "@/components/ui";
 
-export default function PageWithId({
-  params,
-}: {
-  params: { workflowId: string };
-}) {
+export default function PageWithId(
+  props: {
+    params: Promise<{ workflowId: string }>;
+  }
+) {
+  const params = use(props.params);
   const [workflowPreviewData, setWorkflowPreviewData] = useState<any>(null);
   const key = params?.workflowId;
 

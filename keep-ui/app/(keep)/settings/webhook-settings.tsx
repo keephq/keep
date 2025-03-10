@@ -206,7 +206,7 @@ req.end();
           >
             <div className="flex justify-between items-center">
               {/* ml-6 to match the editor left padding */}
-              <TabList variant="solid" color="orange" className="ml-6">
+              <TabList variant="solid" className="ml-6">
                 {languages.map(({ title }) => (
                   <Tab key={title}>{title}</Tab>
                 ))}

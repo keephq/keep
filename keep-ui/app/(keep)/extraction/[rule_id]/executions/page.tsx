@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, use } from "react";
 import {
   Card,
   Title,
@@ -31,11 +31,12 @@ interface Pagination {
   offset: number;
 }
 
-export default function ExtractionExecutionsPage({
-  params,
-}: {
-  params: { rule_id: string };
-}) {
+export default function ExtractionExecutionsPage(
+  props: {
+    params: Promise<{ rule_id: string }>;
+  }
+) {
+  const params = use(props.params);
   const [pagination, setPagination] = useState<Pagination>({
     limit: 20,
     offset: 0,

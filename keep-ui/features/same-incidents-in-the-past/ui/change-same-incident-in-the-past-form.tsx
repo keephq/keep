@@ -87,8 +87,9 @@ export function ChangeSameIncidentInThePastForm({
     );
 
     return (
-      <form className="h-full justify-center">
+      <form className="h-full">
         <Select
+          instanceId="change-same-incident-in-the-past-select"
           className="my-2.5"
           placeholder="Select incident"
           value={

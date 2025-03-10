@@ -189,24 +189,22 @@ export default function CreateOrUpdateExtractionRule({
         <Switch checked={isPreFormatting} onChange={setIsPreFormatting} />
       </div>
       <Divider />
-      <Subtitle className="mt-2.5">
-        <div className="flex items-center">
-          Extraction Definition{" "}
-          <a
-            href={`${
-              config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
-            }/overview/enrichment/extraction`}
-            target="_blank"
-          >
-            <Icon
-              icon={InformationCircleIcon}
-              variant="simple"
-              color="gray"
-              size="sm"
-              tooltip="See extractions documentation for more information"
-            />
-          </a>
-        </div>
+      <Subtitle className="mt-2.5 flex items-center">
+        Extraction Definition{" "}
+        <a
+          href={`${
+            config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+          }/overview/enrichment/extraction`}
+          target="_blank"
+        >
+          <Icon
+            icon={InformationCircleIcon}
+            variant="simple"
+            color="gray"
+            size="sm"
+            tooltip="See extractions documentation for more information"
+          />
+        </a>
       </Subtitle>
       <div className="mt-2.5">
         <Text>

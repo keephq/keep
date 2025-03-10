@@ -2,15 +2,13 @@
 import { Title } from "@tremor/react";
 import { Providers, Provider } from "@/shared/api/providers";
 import { useEffect, useState } from "react";
-// TODO: replace with custom component, package is not updated for last 4 years
-import SlidingPanel from "react-sliding-side-panel";
 import ProviderForm from "./provider-form";
 import ProviderTile from "./provider-tile";
-import "react-sliding-side-panel/lib/index.css";
 import { useSearchParams } from "next/navigation";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { Tooltip } from "@/shared/ui";
 import ProviderHealthResultsModal from "@/app/(health)/health/modal";
+import { Drawer } from "@/shared/ui/Drawer";
 
 const ProvidersTiles = ({
   providers,
@@ -140,14 +138,10 @@ const ProvidersTiles = ({
         ))}
       </div>
 
-      <SlidingPanel
-        type={"right"}
+      <Drawer
+        title={`Connect to ${selectedProvider?.display_name}`}
         isOpen={openPanel}
-        size={
-          window.innerWidth < 640 ? 100 : window.innerWidth < 1024 ? 80 : 40
-        }
-        backdropClicked={handleCloseModal}
-        panelContainerClassName="bg-white z-[100]"
+        onClose={handleCloseModal}
       >
         {selectedProvider && (
           <ProviderForm
@@ -161,7 +155,7 @@ const ProvidersTiles = ({
             mutate={mutate}
           />
         )}
-      </SlidingPanel>
+      </Drawer>
 
       <ProviderHealthResultsModal
         handleClose={handleCloseHealthModal}

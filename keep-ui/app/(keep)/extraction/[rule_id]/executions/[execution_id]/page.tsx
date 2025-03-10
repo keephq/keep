@@ -1,5 +1,7 @@
 "use client";
 
+import { use } from "react";
+
 import { Card, Title, Badge, Icon, Subtitle } from "@tremor/react";
 import { LogViewer } from "@/components/LogViewer";
 import { getIcon } from "@/app/(keep)/workflows/[workflow_id]/workflow-execution-table";
@@ -8,11 +10,10 @@ import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { useExtractions } from "@/utils/hooks/useExtractionRules";
 
-export default function ExtractionExecutionDetailsPage({
-  params,
-}: {
-  params: { rule_id: string; execution_id: string };
+export default function ExtractionExecutionDetailsPage(props: {
+  params: Promise<{ rule_id: string; execution_id: string }>;
 }) {
+  const params = use(props.params);
   const { execution, isLoading } = useEnrichmentEvent({
     ruleId: params.rule_id,
     executionId: params.execution_id,

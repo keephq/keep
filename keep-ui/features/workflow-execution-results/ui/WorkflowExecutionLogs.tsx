@@ -15,9 +15,7 @@ import {
   XCircleIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
-import parseISO from "date-fns/parseISO";
-import formatDistance from "date-fns/formatDistance";
-import { differenceInSeconds } from "date-fns";
+import { parseISO, differenceInSeconds, formatDistance } from "date-fns";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import Editor from "@monaco-editor/react";

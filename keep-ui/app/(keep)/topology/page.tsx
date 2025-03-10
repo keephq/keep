@@ -11,14 +11,15 @@ export const metadata = {
 };
 
 type PageProps = {
-  searchParams: {
+  searchParams: Promise<{
     providerIds?: string[];
     services?: string[];
     environment?: string;
-  };
+  }>;
 };
 
-export default async function Page({ searchParams }: PageProps) {
+export default async function Page(props: PageProps) {
+  const searchParams = await props.searchParams;
   const api = await createServerApiClient();
 
   let applications: TopologyApplication[] | undefined;

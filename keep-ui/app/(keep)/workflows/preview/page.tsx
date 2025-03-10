@@ -1,15 +1,17 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { KeepLoader } from "@/shared/ui";
 import { WorkflowBuilderWidget } from "@/widgets/workflow-builder";
 import Link from "next/link";
 
 type PageProps = {
-  params: { workflowId: string };
-  searchParams: { [key: string]: string | undefined };
+  params: Promise<{ workflowId: string }>;
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 };
 
-export default function Page({ params, searchParams }: PageProps) {
+export default function Page(props: PageProps) {
+  const searchParams = use(props.searchParams);
+  const params = use(props.params);
   const [workflowPreviewData, setWorkflowPreviewData] = useState<any>(null);
   const key = params.workflowId || searchParams.workflowId;
 

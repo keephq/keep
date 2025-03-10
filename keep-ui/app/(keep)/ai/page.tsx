@@ -1,7 +1,7 @@
-import AI from "./ai";
+import { AIPlugins } from "./ai-plugins";
 
 export default function Page() {
-  return <AI />;
+  return <AIPlugins />;
 }
 
 export const metadata = {

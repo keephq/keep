@@ -178,7 +178,7 @@ const PermissionSidebar = ({
                         {...field}
                         onValueChange={(value) => field.onChange(value)}
                         value={field.value as string[]}
-                        className="custom-multiselect"
+                        className="custom-multiselect !max-w-none"
                         disabled={isDisabled}
                       >
                         {getAllEntityOptions().map((option) => (

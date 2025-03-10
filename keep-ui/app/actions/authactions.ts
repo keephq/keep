@@ -39,7 +39,7 @@ export async function authenticate(username: string, password: string) {
         default:
           return {
             success: false,
-            error: "An unexpected error occurred",
+            error: "An unexpected authentication error",
           };
       }
     }

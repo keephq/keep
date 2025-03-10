@@ -93,6 +93,7 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
         color="yellow"
       >
         It can be saved, but to run it, fix errors
+        {/* TODO: fix In HTML, <summary> cannot be a descendant of <p>. */}
         <ErrorList
           validationErrors={validationErrors}
           onErrorClick={handleErrorClick}

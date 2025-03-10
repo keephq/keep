@@ -231,6 +231,8 @@ jobs:
           path: |
             playwright_dump_*.html
             playwright_dump_*.png
+            playwright_dump_*.txt
+            playwright_dump_*.json
             backend_logs-${{ matrix.db_type }}.txt
             frontend_logs-${{ matrix.db_type }}.txt
             backend_logs-${{ matrix.db_type }}-db-auth.txt

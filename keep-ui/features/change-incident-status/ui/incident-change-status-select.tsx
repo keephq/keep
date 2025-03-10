@@ -48,15 +48,17 @@ export function IncidentChangeStatusSelect({
   const { changeStatus } = useIncidentActions();
   const statusOptions = useMemo(
     () =>
-      Object.values(Status).filter((status) => status != Status.Deleted || value == Status.Deleted).map((status) => ({
-        value: status,
-        label: (
-          <div className="flex items-center">
-            {STATUS_ICONS[status]}
-            <span>{capitalize(status)}</span>
-          </div>
-        ),
-      })),
+      Object.values(Status)
+        .filter((status) => status != Status.Deleted || value == Status.Deleted)
+        .map((status) => ({
+          value: status,
+          label: (
+            <div className="flex items-center">
+              {STATUS_ICONS[status]}
+              <span>{capitalize(status)}</span>
+            </div>
+          ),
+        })),
     [value]
   );
 
@@ -78,6 +80,7 @@ export function IncidentChangeStatusSelect({
 
   return (
     <Select
+      instanceId={`incident-status-select-${incidentId}`}
       className={className}
       isSearchable={false}
       options={statusOptions}

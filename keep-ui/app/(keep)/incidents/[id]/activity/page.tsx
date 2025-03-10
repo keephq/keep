@@ -4,11 +4,13 @@ import { getIncidentWithErrorHandling } from "../getIncidentWithErrorHandling";
 import { IncidentActivity } from "./incident-activity";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 
-export default async function IncidentActivityPage({
-  params: { id },
-}: {
-  params: { id: string };
+export default async function IncidentActivityPage(props: {
+  params: Promise<{ id: string }>;
 }) {
+  const params = await props.params;
+
+  const { id } = params;
+
   const incident = await getIncidentWithErrorHandling(id);
   return (
     <Card>
@@ -17,11 +19,10 @@ export default async function IncidentActivityPage({
   );
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { id: string };
+export async function generateMetadata(props: {
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
+  const params = await props.params;
   const incident = await getIncidentWithErrorHandling(params.id);
   const incidentName = getIncidentName(incident);
   return {

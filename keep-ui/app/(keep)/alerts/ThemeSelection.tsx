@@ -73,7 +73,7 @@ export const ThemeSelection = ({
         <span className="text-gray-400 text-sm mb-2">Set theme colors</span>
         <div className="flex-1 overflow-y-auto">
           <TabGroup onChange={handleThemeChange}>
-            <TabList color="orange">
+            <TabList>
               <Tab>Transparent</Tab>
               <Tab>Keep</Tab>
               <Tab>Basic</Tab>

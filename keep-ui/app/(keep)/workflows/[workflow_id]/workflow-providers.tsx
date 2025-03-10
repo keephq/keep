@@ -5,10 +5,10 @@ import { useState } from "react";
 import { Workflow, Provider } from "@/shared/api/workflows";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { DynamicImageProviderIcon } from "@/components/ui";
-import SlidingPanel from "react-sliding-side-panel";
 import { useFetchProviders } from "../../providers/page.client";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { checkProviderNeedsInstallation } from "@/entities/workflows/model/validation";
+import { Drawer } from "@/shared/ui/Drawer";
 
 export const ProvidersCarousel = ({
   providers,
@@ -124,14 +124,10 @@ export function WorkflowProviders({ workflow }: { workflow: Workflow }) {
         providers={uniqueProviders}
         onConnectClick={handleConnectProvider}
       />
-      <SlidingPanel
-        type={"right"}
+      <Drawer
+        title={`Connect to ${selectedProvider?.display_name}`}
         isOpen={openPanel}
-        size={
-          window.innerWidth < 640 ? 100 : window.innerWidth < 1024 ? 80 : 40
-        }
-        backdropClicked={handleCloseModal}
-        panelContainerClassName="bg-white z-[2000]"
+        onClose={handleCloseModal}
       >
         {selectedProvider && (
           <ProviderForm
@@ -143,7 +139,7 @@ export function WorkflowProviders({ workflow }: { workflow: Workflow }) {
             mutate={mutate}
           />
         )}
-      </SlidingPanel>
+      </Drawer>
     </>
   );
 }
