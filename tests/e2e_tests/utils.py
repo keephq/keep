@@ -187,6 +187,11 @@ def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=
         current_test_name = get_current_test_name()
         with open(f"requests_{current_test_name}.log", "w") as f:
             f.write(json.dumps(requests_log, indent=2))
+    finally:
+        # Remove event listeners
+        page.remove_listener("request", log_request)
+        page.remove_listener("response", log_response)
+        page.remove_listener("requestfailed", log_request_failed)
 
     # take a screenshot because why not
     try:
