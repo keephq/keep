@@ -299,18 +299,33 @@ workflow:
             },
           },
           {
-            id: "action-1",
-            name: "ntfy-action",
-            type: "action-ntfy",
-            componentType: "task" as const,
+            type: "condition-threshold",
+            componentType: "switch",
+            id: "a819c748-06ff-42cb-b3bc-e63732ae6b40",
             properties: {
-              config: "ntfy",
-              with: {
-                message: "Test message",
-                topic: "test",
-              },
-              stepParams: [],
-              actionParams: ["message", "topic"],
+              value: "{{ steps.db-no-space.results }}",
+              compare_to: "90%",
+            },
+            name: "threshold-condition",
+            branches: {
+              true: [
+                {
+                  id: "action-1",
+                  name: "ntfy-action",
+                  type: "action-ntfy",
+                  componentType: "task" as const,
+                  properties: {
+                    config: "ntfy",
+                    with: {
+                      message: "Test message",
+                      topic: "test",
+                    },
+                    stepParams: [],
+                    actionParams: ["message", "topic"],
+                  },
+                },
+              ],
+              false: [],
             },
           },
         ],
@@ -334,6 +349,8 @@ workflow:
       expect(result.actions).toHaveLength(1);
       expect(result.steps[0].name).toBe("clickhouse-step");
       expect(result.actions![0].name).toBe("ntfy-action");
+      expect(result.actions![0].condition).toHaveLength(1);
+      expect(result.actions![0].condition![0].type).toBe("threshold");
     });
 
     it("should handle workflow with conditions and foreach", () => {
