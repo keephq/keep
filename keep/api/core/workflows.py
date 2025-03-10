@@ -189,7 +189,7 @@ def build_workflows_query(
                 )
             )
         elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-            group_by_exp.append(alias_column_mapping[item.map_to])
+            group_by_exp.append(item.map_to)
 
     if len(group_by_exp) > 1:
         order_by_field = cel_to_sql_instance.coalesce(
