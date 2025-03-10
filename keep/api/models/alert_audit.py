@@ -2,7 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from keep.api.models.db.alert import ActionType, AlertAudit
+from keep.api.models.action_type import ActionType
+from keep.api.models.db.alert import AlertAudit
 
 
 class AlertAuditDto(BaseModel):

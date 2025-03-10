@@ -19,22 +19,12 @@ from keep.api.core.db import (
     get_incident_for_grouping_rule,
 )
 from keep.api.core.db import get_rules as get_rules_db
-from keep.api.core.db import (
-    is_all_alerts_in_status,
-    is_all_alerts_resolved,
-    is_first_incident_alert_resolved,
-    is_last_incident_alert_resolved,
-)
+from keep.api.core.db import is_all_alerts_in_status
 from keep.api.core.dependencies import get_pusher_client
-from keep.api.models.alert import (
-    AlertDto,
-    AlertSeverity,
-    AlertStatus,
-    IncidentDto,
-    IncidentStatus,
-)
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import Incident
-from keep.api.models.db.rule import ResolveOn, Rule
+from keep.api.models.db.rule import Rule
+from keep.api.models.incident import IncidentDto
 from keep.api.utils.cel_utils import preprocess_cel_expression
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
@@ -155,13 +145,17 @@ class RulesEngine:
                                     )
                                     incident.is_confirmed = True
                                 elif rule.create_on == "all":
-                                    incident = self._process_event_for_history_based_rule(
-                                        incident, rule, session
+                                    incident = (
+                                        self._process_event_for_history_based_rule(
+                                            incident, rule, session
+                                        )
                                     )
 
                             send_created_event = incident.is_confirmed
 
-                        incident = self._resolve_incident_if_require(incident, session)
+                        incident = IncidentBl.resolve_incident_if_require(
+                            incident, session
+                        )
                         session.add(incident)
                         session.commit()
 
@@ -333,33 +327,6 @@ class RulesEngine:
             )
             if all_alerts_firing:
                 incident.is_confirmed = True
-
-        return incident
-
-    @staticmethod
-    def _resolve_incident_if_require(incident: Incident, session: Session) -> Incident:
-
-        should_resolve = False
-
-        if incident.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
-            incident=incident, session=session
-        ):
-            should_resolve = True
-
-        elif (
-            incident.resolve_on == ResolveOn.FIRST.value
-            and is_first_incident_alert_resolved(incident, session=session)
-        ):
-            should_resolve = True
-
-        elif (
-            incident.resolve_on == ResolveOn.LAST.value
-            and is_last_incident_alert_resolved(incident, session=session)
-        ):
-            should_resolve = True
-
-        if should_resolve:
-            incident.status = IncidentStatus.RESOLVED.value
 
         return incident
 

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
@@ -7,20 +8,15 @@ from sqlmodel import Session, col, text
 from keep.api.core.alerts import get_alert_potential_facet_fields
 from keep.api.core.cel_to_sql.properties_mapper import PropertiesMappingException
 from keep.api.core.cel_to_sql.properties_metadata import (
-    PropertiesMetadata,
     FieldMappingConfiguration,
+    PropertiesMetadata,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
 )
-
-from keep.api.core.facets import get_facet_options, get_facets
-from keep.api.models.alert import (
-    IncidentSorting,
-)
-
 from keep.api.core.db import engine, enrich_incidents_with_alerts
+from keep.api.core.facets import get_facet_options, get_facets
 from keep.api.models.db.alert import (
     Alert,
     AlertEnrichment,
@@ -30,7 +26,7 @@ from keep.api.models.db.alert import (
 )
 from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
-import logging
+from keep.api.models.incident import IncidentSorting
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +100,7 @@ static_facets = [
     ),
 ]
 static_facets_dict = {facet.id: facet for facet in static_facets}
+
 
 def __build_base_incident_query(tenant_id: str):
     """
@@ -269,7 +266,9 @@ def __build_last_incidents_query(
     Returns:
         sqlalchemy.sql.selectable.Select: The constructed SQL query.
     """
-    incidents_alers_cte = __build_base_incident_query(tenant_id).cte("incidents_alers_cte")
+    incidents_alers_cte = __build_base_incident_query(tenant_id).cte(
+        "incidents_alers_cte"
+    )
     base_query_cte = (
         select(
             Incident,
@@ -387,7 +386,7 @@ def get_last_incidents_by_cel(
         total_count = session.exec(total_count_query).one()[0]
         all_records = session.exec(sql_query).all()
 
-        incidents = [row._asdict().get('Incident') for row in all_records]
+        incidents = [row._asdict().get("Incident") for row in all_records]
 
         if with_alerts:
             enrich_incidents_with_alerts(tenant_id, incidents, session)
@@ -411,7 +410,9 @@ def get_incident_facets_data(
         dict[str, list[FacetOptionDto]]: A dictionary where the keys are facet ids and the values are lists of FacetOptionDto objects.
     """
     if facet_options_query and facet_options_query.facet_queries:
-        facets = get_incident_facets(tenant_id, facet_options_query.facet_queries.keys())
+        facets = get_incident_facets(
+            tenant_id, facet_options_query.facet_queries.keys()
+        )
     else:
         facets = static_facets
 
@@ -449,7 +450,9 @@ def get_incident_facets_data(
     )
 
 
-def get_incident_facets(tenant_id: str, facet_ids_to_load: list[str] = None) -> list[FacetDto]:
+def get_incident_facets(
+    tenant_id: str, facet_ids_to_load: list[str] = None
+) -> list[FacetDto]:
     """
     Retrieve incident facets for a given tenant.
 
@@ -485,9 +488,16 @@ def get_incident_facets(tenant_id: str, facet_ids_to_load: list[str] = None) -> 
 
     return facets
 
+
 def get_incident_potential_facet_fields(tenant_id: str) -> list[str]:
-    alert_fields = [f"alert.{item}" for item in get_alert_potential_facet_fields(tenant_id)]
-    incident_fields = [item.map_from_pattern for item in incident_field_configurations if not item.map_from_pattern.startswith("alert.*")]
+    alert_fields = [
+        f"alert.{item}" for item in get_alert_potential_facet_fields(tenant_id)
+    ]
+    incident_fields = [
+        item.map_from_pattern
+        for item in incident_field_configurations
+        if not item.map_from_pattern.startswith("alert.*")
+    ]
     seen = set()
     result = []
     for item in incident_fields + alert_fields:
