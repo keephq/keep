@@ -1252,7 +1252,7 @@ def dismiss_error_alerts(
         )
 
         logger.info(
-            "Successfully dismissed error alert",
+            "Successfully dismissed an error alert",
             extra={
                 "tenant_id": tenant_id,
                 "alert_id": alert_id,
