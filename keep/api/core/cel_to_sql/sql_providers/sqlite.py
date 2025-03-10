@@ -59,20 +59,18 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.contains accepts 1 argument but got {len(method_args)}')
 
-        processed_literal = self.literal_proc(f"*{method_args[0].value}*")
-        return (
-            f"{property_path} IS NOT NULL AND {property_path} GLOB {processed_literal}"
-        )
+        processed_literal = self.literal_proc(method_args[0].value)
+        unquoted_literal = processed_literal[1:-1]
+        return f"{property_path} IS NOT NULL AND {property_path} LIKE '%{unquoted_literal}%'"
 
     def _visit_starts_with_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.startsWith accepts 1 argument but got {len(method_args)}')
-        processed_literal = self.literal_proc(f"{method_args[0].value}*")
-        return (
-            f"{property_path} IS NOT NULL AND {property_path} GLOB {processed_literal}"
-        )
+        processed_literal = self.literal_proc(method_args[0].value)
+        unquoted_literal = processed_literal[1:-1]
+        return f"{property_path} IS NOT NULL AND {property_path} LIKE '{unquoted_literal}%'"
 
     def _visit_ends_with_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
@@ -80,7 +78,6 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.endsWith accepts 1 argument but got {len(method_args)}')
 
-        processed_literal = self.literal_proc(f"*{method_args[0].value}")
-        return (
-            f"{property_path} IS NOT NULL AND {property_path} GLOB {processed_literal}"
-        )
+        processed_literal = self.literal_proc(method_args[0].value)
+        unquoted_literal = processed_literal[1:-1]
+        return f"{property_path} IS NOT NULL AND {property_path} LIKE '%{unquoted_literal}'"

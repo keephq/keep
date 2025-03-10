@@ -3092,60 +3092,6 @@ def get_alert_audit(
     return result
 
 
-def get_workflows_with_last_executions_v2(
-    tenant_id: str, fetch_last_executions: int = 15
-) -> list[dict]:
-    if fetch_last_executions is not None and fetch_last_executions > 20:
-        fetch_last_executions = 20
-
-    # List first 1000 worflows and thier last executions in the last 7 days which are active)
-    with Session(engine) as session:
-        latest_executions_subquery = (
-            select(
-                WorkflowExecution.workflow_id,
-                WorkflowExecution.started,
-                WorkflowExecution.execution_time,
-                WorkflowExecution.status,
-                func.row_number()
-                .over(
-                    partition_by=WorkflowExecution.workflow_id,
-                    order_by=desc(WorkflowExecution.started),
-                )
-                .label("row_num"),
-            )
-            .where(WorkflowExecution.tenant_id == tenant_id)
-            .where(
-                WorkflowExecution.started
-                >= datetime.now(tz=timezone.utc) - timedelta(days=7)
-            )
-            .cte("latest_executions_subquery")
-        )
-
-        workflows_with_last_executions_query = (
-            select(
-                Workflow,
-                latest_executions_subquery.c.started,
-                latest_executions_subquery.c.execution_time,
-                latest_executions_subquery.c.status,
-            )
-            .outerjoin(
-                latest_executions_subquery,
-                and_(
-                    Workflow.id == latest_executions_subquery.c.workflow_id,
-                    latest_executions_subquery.c.row_num <= fetch_last_executions,
-                ),
-            )
-            .where(Workflow.tenant_id == tenant_id)
-            .where(Workflow.is_deleted == False)
-            .order_by(Workflow.id, desc(latest_executions_subquery.c.started))
-            .limit(15000)
-        ).distinct()
-
-        result = session.execute(workflows_with_last_executions_query).all()
-
-    return result
-
-
 def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
     with Session(engine) as session:
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   SearchSelect,
@@ -67,6 +67,10 @@ const Field = ({
 
   const [searchValue, setSearchValue] = useState("");
   const [isValueEnabled, setIsValueEnabled] = useState(true);
+
+  useEffect(() => {
+    setFields(avaliableFields);
+  }, [avaliableFields]);
 
   const onValueChange = (selectedValue: string) => {
     if (searchValue.length) {
@@ -195,6 +199,9 @@ export const RuleFields = ({
 
   const uniqueDeduplicationFields = Object.values(deduplicationFields)
     .flat()
+    .filter(
+      (field) => DEFAULT_FIELDS.find((f) => f.name === field) === undefined
+    ) // remove duplicates
     .map((field) => ({
       label: field,
       name: field,
@@ -204,6 +211,8 @@ export const RuleFields = ({
   const availableFields = DEFAULT_FIELDS.concat(
     uniqueDeduplicationFields
   ).filter(({ name }) => selectedFields.includes(name) === false);
+
+  console.log(availableFields);
 
   const onAddRuleFieldClick = () => {
     const nextAvailableField = availableFields.at(0);
