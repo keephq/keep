@@ -293,7 +293,7 @@ export const useAlertTableCols = (
                     (incident) => incident.id === incidentId
                   );
                   return (
-                    <Link href={`/incidents/${incidentId}`}>
+                    <Link key={incidentId} href={`/incidents/${incidentId}`}>
                       {incident?.user_generated_name ||
                         incident?.ai_generated_name ||
                         incidentId}
