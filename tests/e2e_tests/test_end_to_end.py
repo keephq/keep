@@ -317,7 +317,7 @@ def test_start_with_keep_db(browser: Page, setup_page_logging, failure_artifacts
     browser.on("pageerror", lambda err: print(f"Page error: {err}"))
     
     # Navigate to signin page
-    browser.goto("http://localhost:3000/signin")
+    browser.goto("http://localhost:3001/signin")
     print("Navigated to signin page")
     
     # Fill in credentials
@@ -329,7 +329,7 @@ def test_start_with_keep_db(browser: Page, setup_page_logging, failure_artifacts
     browser.get_by_role("button", name="Sign in").click()
     print("Clicked sign in button")
     
-    browser.wait_for_url("http://localhost:3000/incidents", timeout=5000)
+    browser.wait_for_url("http://localhost:3001/incidents", timeout=5000)
 
 def test_provider_deletion(browser: Page, setup_page_logging, failure_artifacts):
     provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
