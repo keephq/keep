@@ -284,20 +284,18 @@ export function getWithParams(
 function getYamlConditionFromStep(
   condition: V2StepConditionThreshold | V2StepConditionAssert
 ): YamlThresholdCondition | YamlAssertCondition {
-  const compiledCondition =
-    condition.type === "condition-threshold"
-      ? {
-          name: condition.name,
-          type: "threshold" as const,
-          value: condition.properties.value,
-          compare_to: condition.properties.compare_to,
-        }
-      : {
-          name: condition.name,
-          type: "assert" as const,
-          assert: condition.properties.assert,
-        };
-  return compiledCondition;
+  return condition.type === "condition-threshold"
+    ? {
+        name: condition.name,
+        type: "threshold" as const,
+        value: condition.properties.value,
+        compare_to: condition.properties.compare_to,
+      }
+    : {
+        name: condition.name,
+        type: "assert" as const,
+        assert: condition.properties.assert,
+      };
 }
 
 function getActionsFromCondition(
@@ -426,11 +424,12 @@ export function getYamlWorkflowDefinition(
   alert.sequence
     .filter((step): step is V2StepForeach => step.type === "foreach")
     .forEach((forEach: V2StepForeach) => {
-      const forEachValue = forEach?.properties?.value as string;
-      // FIX: type
-      const condition = forEach?.sequence?.find((c) =>
-        c.type.startsWith("condition-")
-      ) as unknown as V2StepConditionAssert | V2StepConditionThreshold;
+      const forEachValue = forEach.properties.value as string;
+      const condition = forEach.sequence.find(
+        (step): step is V2StepConditionThreshold | V2StepConditionAssert =>
+          step.type === "condition-assert" ||
+          step.type === "condition-threshold"
+      );
       if (condition) {
         const { actions: conditionActions, steps: conditionSteps } =
           getActionsFromCondition(condition, forEachValue);

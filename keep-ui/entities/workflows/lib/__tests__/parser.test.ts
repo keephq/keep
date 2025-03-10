@@ -303,7 +303,7 @@ workflow:
             componentType: "switch",
             id: "a819c748-06ff-42cb-b3bc-e63732ae6b40",
             properties: {
-              value: "{{ steps.db-no-space.results }}",
+              value: "{{ steps.clickhouse-step.results }}",
               compare_to: "90%",
             },
             name: "threshold-condition",
