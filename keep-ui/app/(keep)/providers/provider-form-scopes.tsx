@@ -51,7 +51,7 @@ const ProviderFormScopes = ({
           </Button>
         )}
         {provider.installed && invalidScopesPresent && <Callout
-          title="Missing scopes"
+          title="Installed With Missing Scopes"
           className="mt-5"
           color="gray"
         >
