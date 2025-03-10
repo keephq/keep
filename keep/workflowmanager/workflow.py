@@ -7,7 +7,6 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.iohandler.iohandler import IOHandler
 from keep.step.step import Step, StepError
 
-
 class WorkflowStrategy(enum.Enum):
     # if a workflow run on the same fingerprint, skip the workflow
     NONPARALLEL = "nonparallel"
@@ -53,6 +52,7 @@ class Workflow:
         self.on_failure = on_failure
         self.context_manager = context_manager
         self.context_manager.set_consts_context(workflow_consts)
+        self.context_manager.set_secret_context()
         self.io_nandler = IOHandler(context_manager)
         self.logger = logging.getLogger(__name__)
         self.workflow_debug = workflow_debug
