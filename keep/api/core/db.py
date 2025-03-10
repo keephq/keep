@@ -5219,14 +5219,14 @@ def create_single_tenant_for_e2e(tenant_id: str) -> None:
             tenant = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
             if not tenant:
                 # Do everything related with single tenant creation in here
-                logger.info("Creating single tenant")
+                logger.info("Creating single tenant", extra={"tenant_id": tenant_id})
                 session.add(Tenant(id=tenant_id, name="Single Tenant"))
             else:
                 logger.info("Single tenant already exists")
 
             # commit the changes
             session.commit()
-            logger.info("Single tenant created")
+            logger.info("Single tenant created", extra={"tenant_id": tenant_id})
         except IntegrityError:
             # Tenant already exists
             logger.exception("Failed to provision single tenant")
