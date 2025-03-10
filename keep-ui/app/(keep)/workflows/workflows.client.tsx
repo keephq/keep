@@ -234,7 +234,7 @@ export default function WorkflowsPage({
       },
       ["Enabling status"]: {
         renderOptionLabel: (facetOption) =>
-          facetOption.display_name.toLocaleLowerCase() === "true"
+          ["true", "1"].includes(facetOption.display_name.toLocaleLowerCase())
             ? "Disabled"
             : "Enabled",
       },
