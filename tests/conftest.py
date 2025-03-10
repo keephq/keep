@@ -808,6 +808,7 @@ def console_logs():
 @pytest.fixture
 def setup_page_logging(browser, console_logs):
     """Fixture to set up console logging for a page."""
+    # Console logging
     browser.on(
         "console",
         lambda msg: (
@@ -816,6 +817,36 @@ def setup_page_logging(browser, console_logs):
             )
         ),
     )
+
+    # Request logging
+    browser.on(
+        "request",
+        lambda request: (
+            console_logs.append(
+                f"{datetime.now()}: REQUEST: {request.method} {request.url}"
+            )
+        ),
+    )
+
+    # Response logging
+    browser.on(
+        "response",
+        lambda response: (
+            console_logs.append(
+                f"{datetime.now()}: RESPONSE: {response.status} {response.url}"
+            )
+        ),
+    )
+
+    browser.on(
+        "requestfailed",
+        lambda request: (
+            console_logs.append(
+                f"{datetime.now()}: REQUEST FAILED: {request.method} {request.url}"
+            )
+        ),
+    )
+    
     return browser
 
 @pytest.fixture
