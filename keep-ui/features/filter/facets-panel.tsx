@@ -160,18 +160,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     return facetsState[facetId] || new Set<string>();
   }
 
-  useEffect(() => {
-    const newFacetsState: FacetState = {};
-
-    facets.forEach((facet) => {
-      newFacetsState[facet.id] = getFacetState(facet.id);
-    });
-
-    setFacetsState(newFacetsState);
-    // we need to run this effect only once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const isOptionSelected = (facet_id: string, option_id: string) => {
     return !facetsState[facet_id] || !facetsState[facet_id].has(option_id);
   };
