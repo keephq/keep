@@ -261,7 +261,7 @@ def init_test(browser: Page, alerts, max_retries=3):
             break
         except Exception as e:
             if i < max_retries - 1:
-                print("Failed to load alerts page. Retrying...")
+                print("Failed to load alerts page. Retrying... - ", e)
                 continue
             else:
                 raise e
