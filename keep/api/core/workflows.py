@@ -174,8 +174,9 @@ def build_workflows_query(
     offset = offset if offset is not None else 0
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     queries = __build_base_query(tenant_id)
-    base_query = queries["workflows_with_last_executions_query"].cte("base_query")
-    latest_executions_subquery_cte = queries["latest_executions_subquery_cte"]
+    base_query = select(text("*")).select_from(
+        queries["workflows_with_last_executions_query"]
+    )
 
     if not sort_by:
         sort_by = "started"
@@ -194,6 +195,28 @@ def build_workflows_query(
         elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
             group_by_exp.append(alias_column_mapping[item.map_to])
 
+    if len(group_by_exp) > 1:
+        order_by_field = cel_to_sql_instance.coalesce(
+            [cel_to_sql_instance.cast(item, str) for item in group_by_exp]
+        )
+    else:
+        order_by_field = group_by_exp[0]
+
+    if sort_dir == "desc":
+        base_query = base_query.order_by(desc(text(order_by_field)), Workflow.id)
+    else:
+        base_query = base_query.order_by(asc(text(order_by_field)), Workflow.id)
+
+    base_query = base_query.limit(limit).offset(offset)
+
+    if cel:
+        sql_filter_str = cel_to_sql_instance.convert_to_sql_str(cel)
+        base_query = base_query.filter(text(sql_filter_str))
+
+    base_query = base_query.cte("base_query")
+
+    latest_executions_subquery_cte = queries["latest_executions_subquery_cte"]
+
     query = (
         select(
             Workflow,
@@ -205,7 +228,8 @@ def build_workflows_query(
         .join(
             Workflow,
             and_(
-                Workflow.id == base_query.c.entity_id, Workflow.tenant_id == tenant_id
+                Workflow.id == literal_column("entity_id"),
+                Workflow.tenant_id == tenant_id,
             ),
         )
         .outerjoin(
@@ -216,24 +240,6 @@ def build_workflows_query(
             ),
         )
     )
-
-    if len(group_by_exp) > 1:
-        order_by_field = cel_to_sql_instance.coalesce(
-            [cel_to_sql_instance.cast(item, str) for item in group_by_exp]
-        )
-    else:
-        order_by_field = group_by_exp[0]
-
-    if sort_dir == "desc":
-        query = query.order_by(desc(text(order_by_field)), Workflow.id)
-    else:
-        query = query.order_by(asc(text(order_by_field)), Workflow.id)
-
-    query = query.limit(limit).offset(offset)
-
-    if cel:
-        sql_filter_str = cel_to_sql_instance.convert_to_sql_str(cel)
-        query = query.filter(text(sql_filter_str))
 
     return query
 
