@@ -11,6 +11,7 @@ import requests
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
+from keep.functions import utcnowtimestamp
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -215,6 +216,7 @@ class SlackProvider(BaseProvider):
                 raise ProviderException(
                     f"{self.__class__.__name__} failed to notify alert message to Slack: {response.text}"
                 )
+            notify_data = {"slack_timestamp": utcnowtimestamp()}
         elif self.authentication_config.access_token:
             if not channel:
                 raise ProviderException("Channel is required (E.g. C12345)")

@@ -41,6 +41,12 @@ alert_field_configurations = [
     FieldMappingConfiguration("lastReceived", "filter_last_received"),
     FieldMappingConfiguration("startedAt", "startedAt"),
     FieldMappingConfiguration(
+        map_from_pattern="incident.id",
+        map_to=[
+            "filter_incident_id",
+        ],
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="incident.name",
         map_to=[
             "filter_incident_user_generated_name",
@@ -81,6 +87,7 @@ alias_column_mapping = {
     "filter_last_received": "alert.timestamp",
     "filter_provider_id": "alert.provider_id",
     "filter_provider_type": "alert.provider_type",
+    "filter_incident_id": "incident.id",
     "filter_incident_user_generated_name": "incident.user_generated_name",
     "filter_incident_ai_generated_name": "incident.ai_generated_name",
     "filter_alert_enrichment_json": "alertenrichment.enrichments",
