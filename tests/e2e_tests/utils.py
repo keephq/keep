@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 
 import requests
 from playwright.sync_api import Page, expect
@@ -89,22 +90,110 @@ def assert_scope_text_count(browser, contains_text, count):
 
 
 def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=0):
-    if tenant_id:
-        url = f"{KEEP_UI_URL}{next_url}?tenantId={tenant_id}"
-        print("Going to URL: ", url)
-        browser.goto(url)
-    else:
+    # Store all requests for debugging
+    page = browser if hasattr(browser, "goto") else browser.page
+    requests_log = []
 
-        pid = os.getpid()
-        url = f"{KEEP_UI_URL}{next_url}?tenantId=keep" + str(pid)
-        print("Going to URL: ", url)
-        browser.goto(url, timeout=30000)
+    def log_request(request):
+        requests_log.append(
+            {
+                "url": request.url,
+                "method": request.method,
+                "time": request.timing,
+                "status": None,  # Will be updated in response handler
+                "pending": True,
+            }
+        )
 
-    if wait_time:
-        browser.wait_for_timeout(wait_time)
+    def log_response(response):
+        # Find the matching request and update it
+        request_url = response.request.url
+        for req in requests_log:
+            if req["url"] == request_url and req["pending"]:
+                req["status"] = response.status
+                req["pending"] = False
+                break
+
+    def log_request_failed(request):
+        # Mark the request as failed
+        for req in requests_log:
+            if req["url"] == request.url and req["pending"]:
+                req["status"] = "FAILED"
+                req["pending"] = False
+                break
+
+    # Add event listeners to track requests
+    page.on("request", log_request)
+    page.on("response", log_response)
+    page.on("requestfailed", log_request_failed)
+
+    if not tenant_id:
+        tenant_id = "keep" + str(os.getpid())
+
+    url = f"{KEEP_UI_URL}{next_url}?tenantId={tenant_id}"
+    print("Going to URL: ", url)
+    try:
+        page.goto(url, timeout=15000)
+        if wait_time:
+            page.wait_for_timeout(wait_time)
+
+    except Exception as e:
+        print(f"Navigation failed: {e}")
+
+        # Print all requests that are still pending
+        pending_requests = [req for req in requests_log if req["pending"]]
+        if pending_requests:
+            print(f"\n==== PENDING REQUESTS ({len(pending_requests)}) ====")
+            for req in pending_requests:
+                print(f"  {req['method']} {req['url']}")
+
+        # Print all requests, sorted by time to complete or status
+        print(f"\n==== ALL REQUESTS ({len(requests_log)}) ====")
+        # Sort by URL for better readability
+        for req in sorted(requests_log, key=lambda r: r["url"]):
+            status = req["status"] or "PENDING"
+            print(f"  {req['method']} {status} {req['url']}")
+
+        # Check for slow requests (taking more than 5 seconds)
+        slow_requests = []
+        for req in requests_log:
+            if (
+                not req["pending"]
+                and req["time"]
+                and req["time"].get("responseEnd", 0)
+                - req["time"].get("requestStart", 0)
+                > 5000
+            ):
+                slow_requests.append(req)
+
+        if slow_requests:
+            print(f"\n==== SLOW REQUESTS ({len(slow_requests)}) ====")
+            for req in sorted(
+                slow_requests,
+                key=lambda r: (
+                    r["time"].get("responseEnd", 0) - r["time"].get("requestStart", 0)
+                ),
+                reverse=True,
+            ):
+                duration = (
+                    req["time"].get("responseEnd", 0)
+                    - req["time"].get("requestStart", 0)
+                ) / 1000
+                print(
+                    f"  {req['method']} {req['status']} {req['url']} - {duration:.2f}s"
+                )
+
+        # dump to file
+        current_test_name = get_current_test_name()
+        with open(f"requests_{current_test_name}.log", "w") as f:
+            f.write(json.dumps(requests_log, indent=2))
 
     # take a screenshot because why not
-    take_screenshot(browser)
+    try:
+        take_screenshot(browser)
+    except Exception as e:
+        print("Error taking screenshot: ", e)
+        pass
 
 
 def take_screenshot(page):
@@ -149,3 +238,40 @@ def get_token():
             "user_id": "keep-user-for-no-auth-purposes",
         }
     )
+
+
+# Generate unique name for the dump files
+def get_current_test_name():
+    current_test_name = "playwright_dump_" + os.path.basename(__file__)[:-3] + "_"
+
+    # try to get test_name from PYTEST_CURRENT_TEST
+    test_name = os.getenv("PYTEST_CURRENT_TEST")
+
+    if test_name:
+        # Replace invalid filename characters with underscores
+        invalid_chars = [
+            ":",
+            "/",
+            "\\",
+            "?",
+            "*",
+            '"',
+            "<",
+            ">",
+            "|",
+            " ",
+            "[",
+            "]",
+            "(",
+            ")",
+            "'",
+        ]
+        for char in invalid_chars:
+            test_name = test_name.replace(char, "_")
+        print(f"test_name: {test_name}")
+        current_test_name += test_name
+    else:
+        # this should never happen
+        print("THIS SHOULD NEVER HAPPEN")
+        current_test_name += sys._getframe().f_code.co_name
+    return current_test_name

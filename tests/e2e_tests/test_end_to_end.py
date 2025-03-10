@@ -23,7 +23,6 @@ import os
 import random
 import re
 import string
-import sys
 import time
 from datetime import datetime
 
@@ -33,6 +32,7 @@ from tests.e2e_tests.utils import (
     assert_connected_provider_count,
     assert_scope_text_count,
     delete_provider,
+    get_current_test_name,
     init_e2e_test,
     install_webhook_provider,
     trigger_alert,
@@ -66,39 +66,8 @@ def setup_console_listener(page, log_entries):
 
 def save_failure_artifacts(page, log_entries):
     """Save screenshots, HTML content, and console logs on test failure."""
-    # Generate unique name for the dump files
-    current_test_name = "playwright_dump_" + os.path.basename(__file__)[:-3] + "_"
 
-    # try to get test_name from PYTEST_CURRENT_TEST
-    test_name = os.getenv("PYTEST_CURRENT_TEST")
-    with open("PYTEST_CURRENT_TEST.txt", "w") as f:
-        f.write(test_name)
-
-    if test_name:
-        # Replace invalid filename characters with underscores
-        invalid_chars = [
-            ":",
-            "/",
-            "\\",
-            "?",
-            "*",
-            '"',
-            "<",
-            ">",
-            "|",
-            " ",
-            "[",
-            "]",
-            "(",
-            ")",
-            "'",
-        ]
-        for char in invalid_chars:
-            test_name = test_name.replace(char, "_")
-        print(f"test_name: {test_name}")
-        current_test_name += test_name
-    else:
-        current_test_name += sys._getframe().f_code.co_name
+    current_test_name = get_current_test_name()
 
     # Save screenshot
     page.screenshot(path=current_test_name + ".png")

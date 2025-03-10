@@ -110,8 +110,9 @@ jobs:
           SAFE_BRANCH=$(echo "${{ github.head_ref || github.ref_name }}" | sed 's/\//-/g' | sed 's/[^a-zA-Z0-9._-]//g')
           echo "SAFE_BRANCH_NAME=${SAFE_BRANCH}" >> $GITHUB_OUTPUT
 
-          # Create a hash of package.json for version-specific caching
-          DEPS_HASH=$(cat keep-ui/package.json keep-ui/package-lock.json | sha256sum | cut -d ' ' -f 1)
+          # Create a hash ONLY of the dependencies section of package.json and package-lock.json
+          # This ensures the hash only changes when dependencies change
+          DEPS_HASH=$(jq '.dependencies' keep-ui/package.json | sha256sum | cut -d ' ' -f 1)
           echo "DEPS_HASH=${DEPS_HASH:0:8}" >> $GITHUB_OUTPUT
 
       - name: Debug repository and cache info
@@ -156,11 +157,12 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}
           # Use registry-based caching with branch-specific tags
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-main
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
           # Add build args for better caching
           build-args: |
             BUILDKIT_INLINE_CACHE=1
