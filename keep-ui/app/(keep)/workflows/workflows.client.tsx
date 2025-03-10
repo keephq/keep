@@ -204,8 +204,8 @@ export default function WorkflowsPage({
             case "success": {
               return "Success";
             }
-            case "failed": {
-              return "Failed";
+            case "error": {
+              return "Error";
             }
             case "in_progress": {
               return "In progress";
