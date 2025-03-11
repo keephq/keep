@@ -29,7 +29,7 @@ import "./incident-chat.css";
 import { EmptyStateCard } from "@/shared/ui";
 import { ChatBubbleOvalLeftIcon } from "@heroicons/react/24/outline";
 
-const INSTRUCTIONS = `You are an expert incident resolver who's capable of resolving incidents in a variety of ways. You can get traces from providers, search for traces, create incidents, update incident name and summary, and more. You can also ask the user for information if you need it.
+const INSTRUCTIONS = `DO NOT, NO MATTER WHAT, MAKE UP ANY INFORMATION OR DATA. If you dont know - just say you don't know. Its ok. You are an expert incident resolver who's capable of resolving incidents in a variety of ways. You can get traces from providers, search for traces, create incidents, update incident name and summary, and more. You can also ask the user for information if you need it.
 You should always answer short and concise answers, always trying to suggest the next best action to investigate or resolve the incident.
 Any time you're not sure about something, ask the user for clarification.
 If you used some provider's method to get data, present the icon of the provider you used.
@@ -137,8 +137,9 @@ export function IncidentChat({
   const providersWithGetTrace = useMemo(
     () =>
       providers?.installed_providers
-        .filter((provider) =>
-          provider.methods?.some((method) => method.func_name === "get_trace")
+        .filter(
+          (provider) =>
+            provider.methods?.some((method) => method.func_name === "get_trace")
         )
         .map((provider) => provider.id),
     [providers]
