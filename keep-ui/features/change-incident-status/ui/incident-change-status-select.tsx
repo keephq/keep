@@ -3,7 +3,7 @@ import { Status } from "@/entities/incidents/model";
 import { STATUS_ICONS } from "@/entities/incidents/ui";
 import Select, { ClassNamesConfig } from "react-select";
 import { useIncidentActions } from "@/entities/incidents/model";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { capitalize } from "@/utils/helpers";
 
 const customClassNames: ClassNamesConfig<any, false, any> = {
@@ -41,6 +41,7 @@ export function IncidentChangeStatusSelect({
 }: Props) {
   // Use a portal to render the menu outside the table container with overflow: hidden
   const menuPortalTarget = useRef<HTMLElement | null>(null);
+  const [isDisabled, setIsDisabled] = useState(false);
   useEffect(() => {
     menuPortalTarget.current = document.body;
   }, []);
@@ -65,8 +66,10 @@ export function IncidentChangeStatusSelect({
   const handleChange = useCallback(
     (option: any) => {
       const _asyncUpdate = async (option: any) => {
+        setIsDisabled(true);
         await changeStatus(incidentId, option?.value || null);
         onChange?.(option?.value || null);
+        setIsDisabled(false);
       };
       _asyncUpdate(option);
     },
@@ -86,6 +89,7 @@ export function IncidentChangeStatusSelect({
       options={statusOptions}
       value={selectedOption}
       onChange={handleChange}
+      isDisabled={isDisabled}
       placeholder="Status"
       classNames={customClassNames}
       menuPortalTarget={menuPortalTarget.current}

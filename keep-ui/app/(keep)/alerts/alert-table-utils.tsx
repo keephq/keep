@@ -43,7 +43,6 @@ import {
   TimeFormatOption,
   isDateTimeColumn,
 } from "./alert-table-time-format";
-import { format } from "path";
 import { useIncidents } from "@/utils/hooks/useIncidents";
 
 export const DEFAULT_COLS = [
@@ -292,10 +291,11 @@ export const useAlertTableCols = (
                   const incident = incidents?.items.find(
                     (incident) => incident.id === incidentId
                   );
+                  if (!incident) return <></>;
                   return (
                     <Link key={incidentId} href={`/incidents/${incidentId}`}>
-                      {incident?.user_generated_name ||
-                        incident?.ai_generated_name ||
+                      {incident.user_generated_name ||
+                        incident.ai_generated_name ||
                         incidentId}
                     </Link>
                   );

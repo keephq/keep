@@ -13,6 +13,7 @@ from sqlalchemy import func
 from sqlmodel import Session, select
 
 from keep.api.core.config import config
+from keep.api.core.db import batch_enrich
 from keep.api.core.db import enrich_entity as enrich_alert_db
 from keep.api.core.db import (
     get_alert_by_event_id,
@@ -34,6 +35,7 @@ from keep.api.models.db.enrichment_event import (
 )
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 
 
 def is_valid_uuid(uuid_str):
@@ -520,6 +522,102 @@ class EnrichmentsBl:
             )
             return False
 
+    def get_enrichment_metadata(
+        self, enrichments: dict, authenticated_entity: AuthenticatedEntity
+    ) -> tuple[str, str, bool]:
+        """
+        Get the metadata for the enrichment
+
+        Args:
+            enrichments (dict): The enrichments to get the metadata for
+            authenticated_entity (AuthenticatedEntity): The authenticated entity that performed the enrichment
+
+        Returns:
+            tuple[str, str, bool, bool]: action_type, action_description, should_run_workflow, should_check_incidents_resolution
+        """
+        should_run_workflow = False
+        should_check_incidents_resolution = False
+        action_type = ActionType.GENERIC_ENRICH
+        action_description = (
+            f"Alert enriched by {authenticated_entity.email} - {enrichments}"
+        )
+        # Shahar: TODO, change to the specific action type, good enough for now
+        if "status" in enrichments and authenticated_entity.api_key_name is None:
+            action_type = (
+                ActionType.MANUAL_RESOLVE
+                if enrichments["status"] == "resolved"
+                else ActionType.MANUAL_STATUS_CHANGE
+            )
+            action_description = f"Alert status was changed to {enrichments['status']} by {authenticated_entity.email}"
+            should_run_workflow = True
+            if enrichments["status"] == "resolved":
+                should_check_incidents_resolution = True
+        elif "status" in enrichments and authenticated_entity.api_key_name:
+            action_type = (
+                ActionType.API_AUTOMATIC_RESOLVE
+                if enrichments["status"] == "resolved"
+                else ActionType.API_STATUS_CHANGE
+            )
+            action_description = f"Alert status was changed to {enrichments['status']} by API `{authenticated_entity.api_key_name}`"
+            should_run_workflow = True
+            if enrichments["status"] == "resolved":
+                should_check_incidents_resolution = True
+        elif "note" in enrichments and enrichments["note"]:
+            action_type = ActionType.COMMENT
+            action_description = (
+                f"Comment added by {authenticated_entity.email} - {enrichments['note']}"
+            )
+        elif "ticket_url" in enrichments:
+            action_type = ActionType.TICKET_ASSIGNED
+            action_description = f"Ticket assigned by {authenticated_entity.email} - {enrichments['ticket_url']}"
+        return (
+            action_type,
+            action_description,
+            should_run_workflow,
+            should_check_incidents_resolution,
+        )
+
+    def batch_enrich(
+        self,
+        fingerprints: list[str],
+        enrichments: dict,
+        action_type: ActionType,
+        action_callee: str,
+        action_description: str,
+        dispose_on_new_alert=False,
+        audit_enabled=True,
+    ):
+        self.logger.debug(
+            "enriching multiple fingerprints",
+            extra={"fingerprints": fingerprints, "tenant_id": self.tenant_id},
+        )
+        # if these enrichments are disposable, manipulate them with a timestamp
+        #   so they can be disposed of later
+        if dispose_on_new_alert:
+            self.logger.info(
+                "Enriching disposable enrichments",
+                extra={"fingerprints": fingerprints, "tenant_id": self.tenant_id},
+            )
+            # for every key, add a disposable key with the value and a timestamp
+            disposable_enrichments = {}
+            for key, value in enrichments.items():
+                disposable_enrichments[f"disposable_{key}"] = {
+                    "value": value,
+                    "timestamp": datetime.datetime.now(
+                        tz=datetime.timezone.utc
+                    ).timestamp(),  # timestamp for disposal [for future use]
+                }
+            enrichments.update(disposable_enrichments)
+        batch_enrich(
+            self.tenant_id,
+            fingerprints,
+            enrichments,
+            action_type,
+            action_callee,
+            action_description,
+            audit_enabled=audit_enabled,
+        )
+
     def enrich_entity(
         self,
         fingerprint: str,
@@ -555,7 +653,9 @@ class EnrichmentsBl:
             for key, value in enrichments.items():
                 disposable_enrichments[f"disposable_{key}"] = {
                     "value": value,
-                    "timestamp": datetime.datetime.utcnow().timestamp(),  # timestamp for disposal [for future use]
+                    "timestamp": datetime.datetime.now(
+                        tz=datetime.timezone.utc
+                    ).timestamp(),  # timestamp for disposal [for future use]
                 }
             enrichments.update(disposable_enrichments)
 
