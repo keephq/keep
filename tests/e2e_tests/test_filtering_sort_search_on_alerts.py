@@ -89,6 +89,7 @@ def assert_alerts_by_column(
         column_locator = row_locator.locator("td").nth(column_index)
         expect(column_locator).to_have_text(alert[property_in_alert])
 
+
 facet_test_cases = {
     "severity": {
         "alert_property_name": "severity",
