@@ -14,6 +14,7 @@ import {
   YamlStepOrAction,
   YamlWorkflowDefinition,
 } from "@/entities/workflows/model/yaml.types";
+import { getOrderedWorkflowYamlStringFromJSON } from "../yaml-utils";
 
 const mockProviders: Provider[] = [
   {
@@ -464,6 +465,19 @@ workflow:
       const condition = action.condition!;
       expect(condition).toBeDefined();
       expect(condition[0].type).toBe("threshold");
+    });
+  });
+
+  describe("round trip should not change the workflow", () => {
+    it("should not change the workflow", () => {
+      const workflowYaml = workflowWithConditionsAndAliases;
+      const result = parseWorkflow(workflowYaml, mockProviders);
+      const resultYamlObject = {
+        workflow: getYamlWorkflowDefinition(result),
+      };
+      const resultYamlString =
+        getOrderedWorkflowYamlStringFromJSON(resultYamlObject);
+      expect(resultYamlString.trim()).toEqual(workflowYaml.trim());
     });
   });
 });
