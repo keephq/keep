@@ -13,6 +13,7 @@ import { Trigger, Workflow } from "@/shared/api/workflows";
 import { components, OptionProps } from "react-select";
 import { FilterOptionOption } from "react-select/dist/declarations/src/filters";
 import { WorkflowTriggerBadge } from "@/entities/workflows/ui/WorkflowTriggerBadge";
+import { useWorkflowsV2 } from "@/utils/hooks/useWorkflowsV2";
 
 interface Props {
   alert?: AlertDto | null | undefined;
@@ -31,7 +32,7 @@ export default function ManualRunWorkflowModal({
   const [selectedWorkflow, setSelectedWorkflow] = useState<
     Workflow | undefined
   >(undefined);
-  const { data: workflows } = useWorkflows({});
+  const { workflows } = useWorkflowsV2(null);
   const api = useApi();
   const router = useRouter();
 
@@ -136,7 +137,8 @@ export default function ManualRunWorkflowModal({
             }
             return (
               workflow.name.toLowerCase().indexOf(query.toLowerCase()) > -1 ||
-              workflow.description.toLowerCase().indexOf(query.toLowerCase()) > -1 ||
+              workflow.description.toLowerCase().indexOf(query.toLowerCase()) >
+                -1 ||
               workflow.id.toLowerCase().indexOf(query.toLowerCase()) > -1
             );
           }}
