@@ -93,7 +93,7 @@ export const validateAllMustacheVariablesInString = (
   const regex = /\{\{([^}]+)\}\}/g;
   const matches = string.match(regex);
   if (!matches) {
-    return null;
+    return [];
   }
   const errors: string[] = [];
   matches.forEach((match) => {
@@ -244,7 +244,7 @@ export function validateStepPure(
       step,
       definition
     );
-    if (variableErrors) {
+    if (variableErrors.length > 0) {
       return variableErrors[0];
     }
   }
@@ -261,7 +261,7 @@ export function validateStepPure(
         step,
         definition
       );
-      if (variableErrorsValue) {
+      if (variableErrorsValue.length > 0) {
         return variableErrorsValue[0];
       }
       if (!step.properties.compare_to) {
@@ -272,7 +272,7 @@ export function validateStepPure(
         step,
         definition
       );
-      if (variableErrorsCompareTo) {
+      if (variableErrorsCompareTo.length > 0) {
         return variableErrorsCompareTo[0];
       }
     }
@@ -285,7 +285,7 @@ export function validateStepPure(
         step,
         definition
       );
-      if (variableErrors) {
+      if (variableErrors.length > 0) {
         return variableErrors[0];
       }
     }
@@ -328,7 +328,7 @@ export function validateStepPure(
           step,
           definition
         );
-        if (variableErrors) {
+        if (variableErrors.length > 0) {
           return variableErrors[0];
         }
       }
@@ -342,7 +342,7 @@ export function validateStepPure(
         step,
         definition
       );
-      if (variableErrors) {
+      if (variableErrors.length > 0) {
         return variableErrors[0];
       }
       return "Foreach value cannot be empty.";
