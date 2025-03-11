@@ -294,6 +294,44 @@ def query_incidents(cell_query: str = None, limit: int = None, offset: int = Non
     }
 
 
+# def get_incident_alerts(incident_id: str):
+#     url = f"{KEEP_API_URL}/incidents/{incident_id}/alerts"
+
+#     result: dict = None
+
+#     for _ in range(5):
+#         try:
+#             response = requests.get(
+#                 url,
+#                 headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+#                 timeout=5,
+#             )
+#             response.raise_for_status()
+#             result = response.json()
+#         except requests.exceptions.RequestException as e:
+#             print(f"Failed to query alert for incident {incident_id}: {e}")
+#             time.sleep(1)
+#             continue
+
+#     if result is None:
+#         raise Exception(
+#             f"Failed to query alerts for incident {incident_id} after {5} attempts"
+#         )
+
+#     grouped_alerts_by_name = {}
+
+#     for incident in result["items"]:
+#         grouped_alerts_by_name.setdefault(incident["user_generated_name"], []).append(
+#             incident
+#         )
+
+#     return {
+#         "results": result["items"],
+#         "count": result["count"],
+#         "grouped_by_name": grouped_alerts_by_name,
+#     }
+
+
 def create_fake_incident(index: int):
     return {
         "assignee": "",
@@ -358,7 +396,7 @@ def associate_alerts_with_incident(incident_id: str, alert_ids: list[str]):
     url = f"{KEEP_API_URL}/incidents/{incident_id}/alerts"
     requests.post(
         url,
-        json={"alertIds": alert_ids},
+        json=alert_ids,
         timeout=5,
         headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
     ).raise_for_status()
@@ -367,6 +405,14 @@ def associate_alerts_with_incident(incident_id: str, alert_ids: list[str]):
 def setup_incidents_alerts():
     alerts_query_result = upload_alerts()
     incidents_query_result = upload_incidents()
+
+    for index, incident in enumerate(incidents_query_result["results"]):
+        incident_id = incident["id"]
+        incident_alerts = alerts_query_result["results"][index * 2 : index * 2 + 2]
+        associate_alerts_with_incident(
+            incident_id, [alert["id"] for alert in incident_alerts]
+        )
+
     return {
         "alerts": alerts_query_result["results"],
         "incidents": incidents_query_result["results"],

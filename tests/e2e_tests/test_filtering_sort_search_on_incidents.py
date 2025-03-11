@@ -168,40 +168,40 @@ def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
     )
 
 
-# def test_adding_custom_facet(browser, setup_test_data):
-#     facet_property_path = "custom_tags.env"
-#     facet_name = "Custom Env"
-#     alert_property_name = facet_property_path
-#     value = "environment:staging"
-#     current_alerts = setup_test_data
-#     init_test(browser, current_alerts)
-#     browser.locator("button", has_text="Add Facet").click()
+def test_adding_custom_facet_for_alert_field(browser, setup_test_data):
+    facet_property_path = "alert.custom_tags.env"
+    facet_name = "Custom Env"
+    alert_property_name = facet_property_path
+    value = "environment:staging"
+    current_incidents = setup_test_data
+    init_test(browser, current_incidents)
+    browser.locator("button", has_text="Add Facet").click()
 
-#     browser.locator("input[placeholder='Enter facet name']").fill(facet_name)
-#     browser.locator("input[placeholder*='Search columns']").fill(facet_property_path)
-#     browser.locator("button", has_text=facet_property_path).click()
-#     browser.locator("button", has_text="Create").click()
+    browser.locator("input[placeholder='Enter facet name']").fill(facet_name)
+    browser.locator("input[placeholder*='Search columns']").fill(facet_property_path)
+    browser.locator("button", has_text=facet_property_path).click()
+    browser.locator("button", has_text="Create").click()
 
-#     assert_facet(browser, facet_name, current_alerts, alert_property_name)
+    assert_facet(browser, facet_name, current_incidents, alert_property_name)
 
-#     option = browser.locator("[data-testid='facet-value']", has_text=value)
-#     option.hover()
-#     option.locator("button", has_text="Only").click()
+    option = browser.locator("[data-testid='facet-value']", has_text=value)
+    option.hover()
+    option.locator("button", has_text="Only").click()
 
-#     assert_incidents_by_column(
-#         browser,
-#         current_alerts[:20],
-#         lambda alert: alert.get("custom_tags", {}).get("env") == value,
-#         alert_property_name,
-#         None,
-#     )
-#     browser.on("dialog", lambda dialog: dialog.accept())
-#     browser.locator("[data-testid='facet']", has_text=facet_name).locator(
-#         '[data-testid="delete-facet"]'
-#     ).click()
-#     expect(
-#         browser.locator("[data-testid='facet']", has_text=facet_name)
-#     ).not_to_be_visible()
+    assert_incidents_by_column(
+        browser,
+        current_incidents[:20],
+        lambda alert: alert.get("custom_tags", {}).get("env") == value,
+        alert_property_name,
+        None,
+    )
+    browser.on("dialog", lambda dialog: dialog.accept())
+    browser.locator("[data-testid='facet']", has_text=facet_name).locator(
+        '[data-testid="delete-facet"]'
+    ).click()
+    expect(
+        browser.locator("[data-testid='facet']", has_text=facet_name)
+    ).not_to_be_visible()
 
 
 # search_by_cel_tescases = {
