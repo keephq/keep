@@ -305,24 +305,37 @@ function getActionsFromCondition(
   const compiledSteps: YamlStepOrAction[] = [];
   let isConditionInsertedStep = false;
   let isConditionInsertedAction = false;
+  const alias =
+    condition.alias || (steps.length > 1 ? condition.name : undefined);
+  const conditionWithAlias = alias ? { ...condition, alias } : condition;
   steps.forEach((a) => {
     if (a.type.startsWith("step-")) {
+      const ifParam =
+        alias && isConditionInsertedStep ? `{{ ${alias} }}` : a.properties.if;
       const shouldInsertCondition =
-        !condition.alias || (!!condition.alias && !isConditionInsertedStep);
-      const compiledAction = getYamlStepFromStep(a as V2StepStep, {
-        condition: shouldInsertCondition ? condition : undefined,
-        foreach,
-      });
+        !alias || (!!alias && !isConditionInsertedStep);
+      const compiledAction = getYamlStepFromStep(
+        { ...a, properties: { ...a.properties, if: ifParam } } as V2StepStep,
+        {
+          condition: shouldInsertCondition ? conditionWithAlias : undefined,
+          foreach,
+        }
+      );
       compiledSteps.push(compiledAction);
       isConditionInsertedStep =
         isConditionInsertedStep || shouldInsertCondition;
     } else {
+      const ifParam =
+        alias && isConditionInsertedAction ? `{{ ${alias} }}` : a.properties.if;
       const shouldInsertCondition =
-        !condition.alias || (!!condition.alias && !isConditionInsertedAction);
-      const compiledAction = getYamlActionFromAction(a as V2ActionStep, {
-        condition: shouldInsertCondition ? condition : undefined,
-        foreach,
-      });
+        !alias || (!!alias && !isConditionInsertedAction);
+      const compiledAction = getYamlActionFromAction(
+        { ...a, properties: { ...a.properties, if: ifParam } } as V2ActionStep,
+        {
+          condition: shouldInsertCondition ? conditionWithAlias : undefined,
+          foreach,
+        }
+      );
       compiledActions.push(compiledAction);
       isConditionInsertedAction =
         isConditionInsertedAction || shouldInsertCondition;

@@ -3,7 +3,7 @@ import { Definition, V2Step } from "./types";
 import { getWithParams } from "../lib/parser";
 
 export type ValidationResult = [string, string];
-
+export type ValidationError = [string, "error" | "warning"];
 /**
  * Extracts the trimmed value from mustache syntax by removing curly brackets.
  *
@@ -233,7 +233,8 @@ export function validateStepPure(
   providers: Provider[],
   installedProviders: Provider[],
   definition: Definition
-): string | null {
+): ValidationError[] {
+  const validationErrors: ValidationError[] = [];
   // todo: validate `enrich_alert` and `enrich_incident`
   if (
     (step.componentType === "task" || step.componentType === "container") &&
@@ -244,50 +245,53 @@ export function validateStepPure(
       step,
       definition
     );
-    if (variableErrors.length > 0) {
-      return variableErrors[0];
-    }
+    variableErrors.forEach((error) => {
+      validationErrors.push([error, "warning"]);
+    });
   }
   if (step.componentType === "switch") {
     if (!step.name) {
-      return "Condition name cannot be empty.";
+      validationErrors.push(["Condition name cannot be empty.", "error"]);
     }
     if (step.type === "condition-threshold") {
       if (!step.properties.value) {
-        return "Condition value cannot be empty.";
+        validationErrors.push(["Condition value cannot be empty.", "error"]);
       }
       const variableErrorsValue = validateAllMustacheVariablesInString(
         step.properties.value,
         step,
         definition
       );
-      if (variableErrorsValue.length > 0) {
-        return variableErrorsValue[0];
-      }
+      variableErrorsValue.forEach((error) => {
+        validationErrors.push([error, "warning"]);
+      });
       if (!step.properties.compare_to) {
-        return "Condition compare to cannot be empty.";
+        validationErrors.push([
+          "Condition compare to cannot be empty.",
+          "error",
+        ]);
       }
       const variableErrorsCompareTo = validateAllMustacheVariablesInString(
         step.properties.compare_to,
         step,
         definition
       );
-      if (variableErrorsCompareTo.length > 0) {
-        return variableErrorsCompareTo[0];
-      }
+      variableErrorsCompareTo.forEach((error) => {
+        validationErrors.push([error, "warning"]);
+      });
     }
     if (step.type === "condition-assert") {
       if (!step.properties.assert) {
-        return "Condition assert cannot be empty.";
+        validationErrors.push(["Condition assert cannot be empty.", "error"]);
       }
       const variableErrors = validateAllMustacheVariablesInString(
         step.properties.assert,
         step,
         definition
       );
-      if (variableErrors.length > 0) {
-        return variableErrors[0];
-      }
+      variableErrors.forEach((error) => {
+        validationErrors.push([error, "warning"]);
+      });
     }
     const branches = step.branches || {
       true: [],
@@ -295,13 +299,15 @@ export function validateStepPure(
     };
     const conditionHasActions = branches.true.length > 0;
     if (!conditionHasActions) {
-      return "Conditions true branch must contain at least one step or action.";
+      validationErrors.push([
+        "Conditions true branch must contain at least one step or action.",
+        "error",
+      ]);
     }
-    return null;
   }
   if (step.componentType === "task") {
     if (!step.name) {
-      return "Step name cannot be empty.";
+      validationErrors.push(["Step name cannot be empty.", "error"]);
     }
     const providerType = step.type.split("-")[1];
     const providerConfig = (step.properties.config || "").trim();
@@ -312,14 +318,14 @@ export function validateStepPure(
       installedProviders
     );
     if (providerError) {
-      return providerError;
+      validationErrors.push([providerError, "warning"]);
     }
     const withParams = getWithParams(step);
     const isAnyParamConfigured = Object.values(withParams || {}).some(
       (value) => String(value).length > 0
     );
     if (!isAnyParamConfigured) {
-      return "No parameters configured";
+      validationErrors.push(["No parameters configured", "error"]);
     }
     for (const [key, value] of Object.entries(withParams)) {
       if (typeof value === "string") {
@@ -328,25 +334,24 @@ export function validateStepPure(
           step,
           definition
         );
-        if (variableErrors.length > 0) {
-          return variableErrors[0];
-        }
+        variableErrors.forEach((error) => {
+          validationErrors.push([error, "warning"]);
+        });
       }
     }
-    return null;
   }
   if (step.componentType === "container" && step.type === "foreach") {
     if (!step.properties.value) {
-      const variableErrors = validateAllMustacheVariablesInString(
-        step.properties.value,
-        step,
-        definition
-      );
-      if (variableErrors.length > 0) {
-        return variableErrors[0];
-      }
-      return "Foreach value cannot be empty.";
+      validationErrors.push(["Foreach value cannot be empty.", "error"]);
     }
+    const variableErrors = validateAllMustacheVariablesInString(
+      step.properties.value,
+      step,
+      definition
+    );
+    variableErrors.forEach((error) => {
+      validationErrors.push([error, "warning"]);
+    });
   }
-  return null;
+  return validationErrors;
 }

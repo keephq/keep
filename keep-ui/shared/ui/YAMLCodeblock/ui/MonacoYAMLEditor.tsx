@@ -8,6 +8,12 @@ import { getStepStatus } from "@/shared/lib/logs-utils";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 import "./MonacoYAMLEditor.css";
+import {
+  StepValidationError,
+  useGetYamlValidationErrors,
+  YAMLSchemaValidationErrors,
+  YAMLValidationErrors,
+} from "./YAMLValidationErrors";
 
 interface Props {
   workflowRaw: string;
@@ -72,19 +78,85 @@ const MonacoYAMLEditor = ({
   const [isCopied, setIsCopied] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
+  const [currentContent, setCurrentContent] = useState("");
+  const validateYaml = useGetYamlValidationErrors();
+  const [validationErrors, setValidationErrors] = useState<
+    StepValidationError[]
+  >([]);
 
   const getStatus = useCallback(
     (name: string, isAction: boolean = false) => {
-      if (!executionLogs || !executionStatus) {
-        return "pending";
-      }
-      if (executionStatus === "in_progress") {
-        return "in_progress";
-      }
-      return getStepStatus(name, isAction, executionLogs);
+      return validationErrors.find((error) => error[0] === name)?.[1] ?? "";
     },
-    [executionLogs, executionStatus]
+    [validationErrors]
   );
+
+  // const getStatus = useCallback(
+  //   (name: string, isAction: boolean = false) => {
+  //     if (!executionLogs || !executionStatus) {
+  //       return "pending";
+  //     }
+  //     if (executionStatus === "in_progress") {
+  //       return "in_progress";
+  //     }
+  //     return getStepStatus(name, isAction, executionLogs);
+  //   },
+  //   [executionLogs, executionStatus]
+  // );
+
+  const updateValidationDecorations = ({
+    validationErrors,
+    monacoInstance,
+  }: {
+    validationErrors: StepValidationError[];
+    monacoInstance: typeof import("monaco-editor");
+  }) => {
+    if (!editorRef.current) return;
+
+    const model = editorRef.current.getModel();
+    if (!model) return;
+
+    const content = model.getValue();
+    const lines = content.split("\n");
+    const decorations: editor.IModelDeltaDecoration[] = [];
+
+    const errorredSteps = Array.from(
+      new Set(
+        validationErrors
+          .filter((error) => error[2] === "error")
+          .map((error) => error[0])
+      )
+    );
+    const warnedSteps = Array.from(
+      new Set(
+        validationErrors
+          .filter((error) => error[2] === "warning")
+          .map((error) => error[0])
+      )
+    );
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+
+      const isError = errorredSteps.some((step) => trimmedLine.includes(step));
+      const isWarning = warnedSteps.some((step) => trimmedLine.includes(step));
+
+      if (isError) {
+        decorations.push({
+          range: new monacoInstance.Range(i + 1, 1, i + 1, 1),
+          options: { isWholeLine: true, className: "bg-red-100" },
+        });
+      } else if (isWarning) {
+        decorations.push({
+          range: new monacoInstance.Range(i + 1, 1, i + 1, 1),
+          options: { isWholeLine: true, className: "bg-yellow-100" },
+        });
+      }
+    }
+
+    editorRef.current.deltaDecorations(stepDecorationsRef.current, decorations);
+  };
 
   const handleEditorDidMount = (
     editor: editor.IStandaloneCodeEditor,
@@ -270,9 +342,22 @@ const MonacoYAMLEditor = ({
     };
 
     if (!readOnly) {
+      // Enable the glyph margin for status indicators
+      editor.updateOptions({
+        glyphMargin: true,
+      });
+
       editor.onDidChangeModelContent(() => {
         const currentContent = editor.getValue();
         setHasChanges(currentContent !== originalContent);
+        setCurrentContent(currentContent);
+        // const { isValid, canDeploy, validationErrors } =
+        //   validateYaml(currentContent);
+        // setValidationErrors(validationErrors);
+        // updateValidationDecorations({
+        //   validationErrors,
+        //   monacoInstance,
+        // });
       });
     }
 

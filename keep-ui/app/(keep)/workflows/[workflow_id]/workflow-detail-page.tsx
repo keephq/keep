@@ -24,6 +24,8 @@ import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import Skeleton from "react-loading-skeleton";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useWorkflowDetail } from "@/utils/hooks/useWorkflowDetail";
+import { WorkflowStatus } from "@/features/workflows/builder/ui/workflow-status";
+import MonacoEditorWithValidation from "@/shared/ui/YAMLCodeblock/ui/MonacoEditorWithValidation";
 
 export default function WorkflowDetailPage({
   params,
@@ -122,13 +124,14 @@ export default function WorkflowDetailPage({
               <Skeleton className="w-full h-full" />
             ) : (
               <Card className="h-[calc(100vh-12rem)] p-0 overflow-hidden">
-                <MonacoYAMLEditor
+                {/* <MonacoYAMLEditor
                   key={workflow.workflow_raw!}
                   workflowRaw={workflow.workflow_raw!}
                   filename={workflow.id ?? "workflow"}
                   workflowId={workflow.id}
                   data-testid="wf-detail-yaml-editor"
-                />
+                /> */}
+                <MonacoEditorWithValidation value={workflow.workflow_raw!} />
               </Card>
             )}
           </TabPanel>
