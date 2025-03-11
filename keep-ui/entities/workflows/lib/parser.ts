@@ -298,6 +298,8 @@ function getActionsFromCondition(
   condition: V2StepConditionThreshold | V2StepConditionAssert,
   foreach?: string
 ): { actions: YamlStepOrAction[]; steps: YamlStepOrAction[] } {
+  // TODO: refactor this to be more readable
+  // TODO: should we create alias if it doesn't exist? and if so, should we restrict user from setting 'if' if action is in condition already?
   const steps: (V2StepStep | V2ActionStep)[] = condition?.branches?.true || [];
   const compiledActions: YamlStepOrAction[] = [];
   const compiledSteps: YamlStepOrAction[] = [];
