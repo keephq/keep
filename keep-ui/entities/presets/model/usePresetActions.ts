@@ -1,7 +1,8 @@
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast, showSuccessToast } from "@/shared/ui";
 import { useCallback } from "react";
-import { formatQuery, parseCEL } from "react-querybuilder";
+import { formatQuery } from "react-querybuilder";
+import { parseCEL } from "react-querybuilder/parseCEL";
 import { Preset, PresetCreateUpdateDto } from "./types";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
