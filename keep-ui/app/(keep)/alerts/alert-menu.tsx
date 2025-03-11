@@ -478,6 +478,7 @@ export default function AlertMenu({
         icon: (props: any) => (
           <DynamicImageProviderIcon
             providerType={provider.type}
+            src={`/icons/${provider.type}-icon.png`}
             {...props}
             height="16"
             width="16"
