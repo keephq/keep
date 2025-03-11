@@ -283,19 +283,21 @@ export function getWithParams(
 
 export function getYamlConditionFromStep(
   condition: V2StepConditionThreshold | V2StepConditionAssert
-): YamlThresholdCondition | YamlAssertCondition {
+) {
   return condition.type === "condition-threshold"
-    ? {
+    ? ({
         name: condition.name,
         type: "threshold" as const,
+        alias: condition.alias,
         value: condition.properties.value,
         compare_to: condition.properties.compare_to,
-      }
-    : {
+      } as YamlThresholdCondition)
+    : ({
         name: condition.name,
         type: "assert" as const,
+        alias: condition.alias,
         assert: condition.properties.assert,
-      };
+      } as YamlAssertCondition);
 }
 
 function getActionsFromCondition(
@@ -305,19 +307,29 @@ function getActionsFromCondition(
   const steps: (V2StepStep | V2ActionStep)[] = condition?.branches?.true || [];
   const compiledActions: YamlStepOrAction[] = [];
   const compiledSteps: YamlStepOrAction[] = [];
+  let isConditionInsertedStep = false;
+  let isConditionInsertedAction = false;
   steps.forEach((a) => {
     if (a.type.startsWith("step-")) {
+      const shouldInsertCondition =
+        !!condition.alias && !isConditionInsertedStep;
       const compiledAction = getYamlStepFromStep(a as V2StepStep, {
-        condition,
+        condition: shouldInsertCondition ? condition : undefined,
         foreach,
       });
       compiledSteps.push(compiledAction);
+      isConditionInsertedStep =
+        isConditionInsertedStep || shouldInsertCondition;
     } else {
+      const shouldInsertCondition =
+        !!condition.alias && !isConditionInsertedAction;
       const compiledAction = getYamlActionFromAction(a as V2ActionStep, {
-        condition,
+        condition: shouldInsertCondition ? condition : undefined,
         foreach,
       });
       compiledActions.push(compiledAction);
+      isConditionInsertedAction =
+        isConditionInsertedAction || shouldInsertCondition;
     }
   });
   return {
