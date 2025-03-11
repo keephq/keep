@@ -80,23 +80,34 @@ def downgrade() -> None:
             ON DELETE CASCADE ON UPDATE CASCADE;
         """
         )
+        op.create_unique_constraint(
+            "alert_fingerprint", "alertenrichment", ["alert_fingerprint"]
+        )
 
     elif dialect == "postgresql":
         op.drop_constraint(
             "uq_alertenrichment_tenant_fingerprint", "alertenrichment", type_="unique"
         )
+        op.create_unique_constraint(
+            "alert_fingerprint", "alertenrichment", ["alert_fingerprint"]
+        )
 
     elif dialect == "sqlite":
-        op.execute(
-            """
-            CREATE TABLE alertenrichment_new (
-                id CHAR(32) PRIMARY KEY,
-                tenant_id VARCHAR NOT NULL,
-                alert_fingerprint VARCHAR NOT NULL,
-                timestamp DATETIME NOT NULL,
-                enrichments JSON
-            );
-        """
+        op.create_table(
+            "alertenrichment_new",
+            sa.Column("enrichments", sa.JSON(), nullable=True),
+            sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
+            sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column("timestamp", sa.DateTime(), nullable=False),
+            sa.Column(
+                "alert_fingerprint", sqlmodel.sql.sqltypes.AutoString(), nullable=False
+            ),
+            sa.ForeignKeyConstraint(
+                ["tenant_id"],
+                ["tenant.id"],
+            ),
+            sa.PrimaryKeyConstraint("id"),
+            sa.UniqueConstraint("alert_fingerprint"),
         )
 
         # Copy existing data
@@ -112,7 +123,5 @@ def downgrade() -> None:
         op.execute("ALTER TABLE alertenrichment_new RENAME TO alertenrichment;")
 
     # Step 2: Restore the old unique constraint on alert_fingerprint
-    op.create_unique_constraint(
-        "alert_fingerprint", "alertenrichment", ["alert_fingerprint"]
-    )
+
     # ### end Alembic commands ###
