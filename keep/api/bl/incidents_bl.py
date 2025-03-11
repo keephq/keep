@@ -8,6 +8,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from pusher import Pusher
+from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
@@ -405,29 +406,40 @@ class IncidentBl:
             limit=limit, offset=offset, count=total_count, items=incidents_dto
         )
 
-    @staticmethod
-    def resolve_incident_if_require(incident: Incident, session: Session) -> Incident:
+    def resolve_incident_if_require(self, incident: Incident, max_retries=3) -> Incident:
 
         should_resolve = False
 
         if incident.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
-            incident=incident, session=session
+            incident=incident, session=self.session
         ):
             should_resolve = True
 
         elif (
             incident.resolve_on == ResolveOn.FIRST.value
-            and is_first_incident_alert_resolved(incident, session=session)
+            and is_first_incident_alert_resolved(incident, session=self.session)
         ):
             should_resolve = True
 
         elif (
             incident.resolve_on == ResolveOn.LAST.value
-            and is_last_incident_alert_resolved(incident, session=session)
+            and is_last_incident_alert_resolved(incident, session=self.session)
         ):
             should_resolve = True
 
-        if should_resolve:
-            incident.status = IncidentStatus.RESOLVED.value
+        incident_id = incident.id
+        for attempt in range(max_retries):
+            try:
+                if should_resolve:
+                    incident.status = IncidentStatus.RESOLVED.value
+                self.session.add(incident)
+                self.session.commit()
+            except StaleDataError as ex:
+                if "expected to update" in ex.args[0]:
+                    self.logger.info(
+                        f"Phantom read detected while updating incident `{incident_id}`, retry #{attempt}"
+                    )
+                    self.session.rollback()
+                    continue
 
         return incident
