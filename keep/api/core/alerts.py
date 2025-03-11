@@ -39,6 +39,7 @@ alert_field_configurations = [
     FieldMappingConfiguration("providerId", "filter_provider_id"),
     FieldMappingConfiguration("providerType", "filter_provider_type"),
     FieldMappingConfiguration("lastReceived", "filter_last_received"),
+    FieldMappingConfiguration("fingerprint", "filter_fingerprint"),
     FieldMappingConfiguration("startedAt", "startedAt"),
     FieldMappingConfiguration(
         map_from_pattern="incident.name",
@@ -85,6 +86,7 @@ alias_column_mapping = {
     "filter_incident_ai_generated_name": "incident.ai_generated_name",
     "filter_alert_enrichment_json": "alertenrichment.enrichments",
     "filter_alert_event_json": "alert.event",
+    "filter_fingerprint": "lastalert.fingerprint",
 }
 
 properties_metadata = PropertiesMetadata(alert_field_configurations)
@@ -141,6 +143,7 @@ def __build_query_for_filtering(tenant_id: str):
             LastAlert.tenant_id.label("last_alert_tenant_id"),
             LastAlert.first_timestamp.label("startedAt"),
             LastAlert.alert_id.label("entity_id"),
+            LastAlert.fingerprint.label("alert_fingerprint"),
             # here it creates aliases for table columns that will be used in filtering and faceting
             text(",".join(columns_to_select)),
         )
@@ -248,18 +251,18 @@ def build_alerts_query(
             literal_column("filter_alert_enrichment_json"),
         )
         .select_from(base)
+        .outerjoin(
+            AlertEnrichment,
+            and_(
+                base.c.last_alert_tenant_id == AlertEnrichment.tenant_id,
+                base.c.alert_fingerprint == AlertEnrichment.alert_fingerprint,
+            ),
+        )
         .join(
             Alert,
             and_(
                 base.c.last_alert_tenant_id == Alert.tenant_id,
                 base.c.alert_id == Alert.id,
-            ),
-        )
-        .outerjoin(
-            AlertEnrichment,
-            and_(
-                AlertEnrichment.tenant_id == Alert.tenant_id,
-                AlertEnrichment.alert_fingerprint == Alert.fingerprint,
             ),
         )
     ).where(Alert.tenant_id == tenant_id)
