@@ -26,6 +26,7 @@ import { useDeduplicationFields } from "@/utils/hooks/useDeduplicationRules";
 const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
   [
     "=",
+    "!=",
     "contains",
     "beginsWith",
     "endsWith",
