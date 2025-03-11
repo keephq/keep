@@ -281,7 +281,7 @@ export function getWithParams(
   return withParams;
 }
 
-function getYamlConditionFromStep(
+export function getYamlConditionFromStep(
   condition: V2StepConditionThreshold | V2StepConditionAssert
 ): YamlThresholdCondition | YamlAssertCondition {
   return condition.type === "condition-threshold"
