@@ -136,7 +136,8 @@ export default function ManualRunWorkflowModal({
             }
             return (
               workflow.name.toLowerCase().indexOf(query.toLowerCase()) > -1 ||
-              workflow.description.toLowerCase().indexOf(query.toLowerCase()) > -1 ||
+              workflow.description.toLowerCase().indexOf(query.toLowerCase()) >
+                -1 ||
               workflow.id.toLowerCase().indexOf(query.toLowerCase()) > -1
             );
           }}
