@@ -147,6 +147,7 @@ export const V2StepConditionAssertSchema = z.object({
   name: z.string(),
   componentType: z.literal("switch"),
   type: z.literal("condition-assert"),
+  alias: z.string().optional(),
   properties: z.object({
     assert: z.string(),
   }),
@@ -163,6 +164,7 @@ export const V2StepConditionThresholdSchema = z.object({
   name: z.string(),
   componentType: z.literal("switch"),
   type: z.literal("condition-threshold"),
+  alias: z.string().optional(),
   properties: z.object({
     value: z.string(),
     compare_to: z.string(),
