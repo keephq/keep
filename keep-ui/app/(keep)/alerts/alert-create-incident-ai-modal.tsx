@@ -192,9 +192,11 @@ const CreateIncidentWithAIModal = ({
       const alertIndex = active.data.current?.alertIndex;
       if (typeof alertIndex !== "number") return prev;
 
+      sourceIncident.alerts = [...sourceIncident.alerts];
       const [movedAlert] = sourceIncident.alerts.splice(alertIndex, 1);
       const overIndex =
         over.data.current?.alertIndex ?? destIncident.alerts.length;
+      destIncident.alerts = [...destIncident.alerts];
       destIncident.alerts.splice(overIndex, 0, movedAlert);
 
       newIncidents[sourceIncidentIndex] = sourceIncident;
