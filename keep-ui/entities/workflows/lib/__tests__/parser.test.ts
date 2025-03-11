@@ -82,6 +82,55 @@ const mockProviders: Provider[] = [
   },
 ];
 
+const workflowWithConditionsAndAliases = `
+workflow:
+  id: query-victoriametrics
+  name: victoriametrics
+  description: victoriametrics
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps:
+    - name: victoriametrics-step
+      provider:
+        type: victoriametrics
+        config: "{{ providers.victoriametrics }}"
+        with:
+          query: avg(rate(process_cpu_seconds_total))
+          queryType: query
+  actions:
+    - name: trigger-slack1
+      condition:
+        - name: threshold-condition
+          type: threshold
+          alias: A
+          value: "{{ steps.victoriametrics-step.results.data.result.0.value.1 }}"
+          compare_to: 0.005
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+        with:
+          message: "Result: {{ steps.victoriametrics-step.results.data.result.0.value.1 }} is greater than 0.0040! 🚨"
+    - name: trigger-slack2
+      if: "{{ A }}"
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+        with:
+          message: "Result: {{ steps.victoriametrics-step.results.data.result.0.value.1 }} is greater than 0.0040! 🚨"
+    - name: trigger-ntfy
+      if: "{{ A }}"
+      provider:
+        type: ntfy
+        config: "{{ providers.ntfy }}"
+        with:
+          message: "Result: {{ steps.victoriametrics-step.results.data.result.0.value.1 }} is greater than 0.0040! 🚨"
+          topic: ezhil
+`;
+
 describe("Workflow Parser", () => {
   describe("getYamlStepFromStep", () => {
     it("should convert a V2StepStep to a YamlStepOrAction", () => {
