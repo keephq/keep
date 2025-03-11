@@ -3,6 +3,7 @@ import os
 from typing import Tuple
 
 from sqlalchemy import and_, asc, desc, func, literal_column, select
+from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, text
 
 from keep.api.core.cel_to_sql.properties_metadata import (
@@ -307,25 +308,28 @@ def query_last_alerts(
         if cel == "1 == 1":
             logger.warning("Failed to build query for alerts")
             cel = ""
+        try:
+            total_count_query = build_total_alerts_query(
+                tenant_id=tenant_id, cel=cel, limit=alerts_hard_limit
+            )
+            total_count = session.exec(total_count_query).one()[0]
 
-        total_count_query = build_total_alerts_query(
-            tenant_id=tenant_id, cel=cel, limit=alerts_hard_limit
-        )
-        total_count = session.exec(total_count_query).one()[0]
+            if not limit:
+                return [], total_count
 
-        if not limit:
-            return [], total_count
+            if offset >= alerts_hard_limit:
+                return [], total_count
 
-        if offset >= alerts_hard_limit:
-            return [], total_count
+            if offset + limit > alerts_hard_limit:
+                limit = alerts_hard_limit - offset
 
-        if offset + limit > alerts_hard_limit:
-            limit = alerts_hard_limit - offset
-
-        data_query = build_alerts_query(
-            tenant_id, cel, sort_by, sort_dir, limit, offset
-        )
-        alerts_with_start = session.execute(data_query).all()
+            data_query = build_alerts_query(
+                tenant_id, cel, sort_by, sort_dir, limit, offset
+            )
+            alerts_with_start = session.execute(data_query).all()
+        except OperationalError as e:
+            logger.warning(f"Failed to query alerts for CEL '{cel}': {e}")
+            return [], 0
 
         # Process results based on dialect
         alerts = []
