@@ -292,11 +292,15 @@ export const useAlertTableCols = (
                     (incident) => incident.id === incidentId
                   );
                   if (!incident) return <></>;
+                  const title =
+                    incident.user_generated_name || incident.ai_generated_name;
                   return (
-                    <Link key={incidentId} href={`/incidents/${incidentId}`}>
-                      {incident.user_generated_name ||
-                        incident.ai_generated_name ||
-                        incidentId}
+                    <Link
+                      key={incidentId}
+                      href={`/incidents/${incidentId}`}
+                      title={title}
+                    >
+                      {title}
                     </Link>
                   );
                 })}
