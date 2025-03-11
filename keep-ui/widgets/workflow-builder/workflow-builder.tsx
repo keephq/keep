@@ -12,7 +12,7 @@ import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowAction
 import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import Skeleton from "react-loading-skeleton";
 import {
-  generateWorkflow,
+  getWorkflowDefinition,
   getYamlWorkflowDefinition,
   parseWorkflow,
   wrapDefinitionV2,
@@ -97,7 +97,7 @@ export function WorkflowBuilder({
           if (alertName && alertSource) {
             triggers = { alert: { source: alertSource, name: alertName } };
           }
-          const definition = generateWorkflow(
+          const definition = getWorkflowDefinition(
             alertUuid,
             "",
             "",
