@@ -1,0 +1,37 @@
+---
+title: "AI Correlation"
+---
+
+<Tip>
+Keep Cloud: ✅ <br/>
+Keep Enterprise On-Premises: ✅ <br/>
+Keep Open Source: ⛔️
+</Tip>
+
+Keep's AI correlation engine provides a distinctive approach to fully AI-driven alert correlation. 
+By using historical alert data as its training dataset, the system intelligently classifies new alerts and assigns them to appropriate incidents.
+
+The AI correlator runs on cycles, each iteration cycle completes in 5-15 minutes:
+1) Model trained based on historical data.
+2) Model is evaluated.
+3) All unassigned alerts are clustered and added to incidents when their confidence score exceeds the threshold. 
+
+Configuration UI:
+<Frame width="100" height="200">
+  <img height="10" src="/images/ai-correlation-1.png" />
+</Frame>
+
+Incident with alerts correlated by AI:
+<Frame width="100" height="200">
+  <img height="10" src="/images/ai-correlation-2.png" />
+</Frame>
+
+Check the demo on a playground: https://playground.keephq.dev/ai
+
+To activate the feature for your on-premises tenant, please [talk to us](https://www.keephq.dev/meet-keep).
+
+## Frequent questions:
+
+**Model used:** proprietary model developed and hosted by Keep.<br/>
+**Training dataset:** tenant's alerts and incidents.<br/>
+**Privacy:** tenant's data is used only for training of the model for the same tenant. Data is not mixed between tenants for training.

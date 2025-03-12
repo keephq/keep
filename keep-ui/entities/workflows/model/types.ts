@@ -35,6 +35,7 @@ export const V2StepAlertTriggerSchema = z.object({
   type: z.literal("alert"),
   properties: z.object({
     alert: AlertTriggerValueSchema,
+    source: z.string().optional(),
   }),
 });
 

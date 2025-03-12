@@ -2,11 +2,12 @@
 import ErrorClient from "./error-client";
 import { getAuthTypeEnvVars } from "./authEnvUtils";
 
-export default function ErrorPage({
-  searchParams,
-}: {
-  searchParams: { error?: string; status?: string };
-}) {
+export default async function ErrorPage(
+  props: {
+    searchParams: Promise<{ error?: string; status?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const authType = process.env.AUTH_TYPE;
   const authEnvVars = getAuthTypeEnvVars(authType);
 

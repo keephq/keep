@@ -1,7 +1,8 @@
 import datetime
+import json
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import validators
 from fastapi import (
@@ -11,6 +12,7 @@ from fastapi import (
     HTTPException,
     Query,
     Request,
+    Response,
     UploadFile,
     status,
 )
@@ -29,14 +31,14 @@ from keep.api.core.db import (
     get_workflow_by_name,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
-from keep.api.models.alert import AlertDto
-from keep.api.models.incident import IncidentDto
 from keep.api.core.workflows import (
     get_workflow_facets,
     get_workflow_facets_data,
     get_workflow_potential_facet_fields,
 )
+from keep.api.models.alert import AlertDto
 from keep.api.models.facet import FacetOptionsQueryDto
+from keep.api.models.incident import IncidentDto
 from keep.api.models.query import QueryDto
 from keep.api.models.workflow import (
     WorkflowCreateOrUpdateDTO,
@@ -47,10 +49,12 @@ from keep.api.models.workflow import (
 )
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import WorkflowExecutionsPaginatedResultsDto
+from keep.contextmanager.contextmanager import ContextManager
 from keep.functions import cyaml
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.parser.parser import Parser
+from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -1022,3 +1026,114 @@ def toggle_workflow_state(
         "status": "success",
         "is_disabled": workflow.is_disabled,
     }
+
+
+@router.post(
+    "/{workflow_id}/secrets",
+    description="Write a new secret or update existing secret for a workflow",
+)
+def write_workflow_secret(
+    workflow_id: str,
+    secret_data: Dict[str, str],
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:secrets"])
+    ),
+) -> dict:
+    """
+    Write or update multiple secrets for a workflow in a single entry.
+    If a secret already exists, it updates only the changed keys.
+    """
+    tenant_id = authenticated_entity.tenant_id
+
+    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    if not workflow:
+        raise HTTPException(404, "Workflow not found")
+
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+
+    secret_key = f"{tenant_id}_{workflow_id}_secrets"
+
+    try:
+        existing_secrets = secret_manager.read_secret(secret_key, is_json=True)
+        if not isinstance(existing_secrets, dict):
+            existing_secrets = {}
+    except Exception:
+        existing_secrets = {}
+
+    existing_secrets.update(secret_data)
+
+    # Write back the updated secret object
+    secret_manager.write_secret(
+        secret_name=secret_key,
+        secret_value=json.dumps(existing_secrets),
+    )
+    return Response(status_code=201)
+
+
+@router.get(
+    "/{workflow_id}/secrets",
+    description="Read a workflow secret",
+)
+def read_workflow_secret(
+    workflow_id: str,
+    is_json: bool = True,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:secrets"])
+    ),
+) -> Union[Dict, str]:
+    """
+    Read a secret value for a workflow. Optionally parse as JSON if is_json is True.
+    """
+    tenant_id = authenticated_entity.tenant_id
+
+    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    if not workflow:
+        raise HTTPException(404, "Workflow not found")
+
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    secret_key = f"{tenant_id}_{workflow_id}_secrets"
+    try:
+        return secret_manager.read_secret(secret_name=secret_key, is_json=is_json)
+    except Exception:
+        return {}
+
+
+@router.delete(
+    "/{workflow_id}/secrets/{secret_name}",
+    description="Delete a specific secret key for a workflow",
+)
+def delete_workflow_secret(
+    workflow_id: str,
+    secret_name: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:secrets"])
+    ),
+) -> dict:
+    """
+    Delete a specific secret key inside the workflow's secrets entry.
+    If the key exists, it is removed, but other secrets remain.
+    """
+    tenant_id = authenticated_entity.tenant_id
+
+    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    if not workflow:
+        raise HTTPException(404, "Workflow not found")
+
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+
+    secret_key = f"{tenant_id}_{workflow_id}_secrets"
+
+    secrets = secret_manager.read_secret(secret_key, is_json=True)
+
+    if secret_name not in secrets:
+        raise HTTPException(404, f"Secret '{secret_name}' not found")
+
+    del secrets[secret_name]  # Remove only the specific key
+    secret_manager.write_secret(
+        secret_name=secret_key,
+        secret_value=json.dumps(secrets),
+    )
+    return Response(status_code=201)

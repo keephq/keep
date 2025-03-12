@@ -58,10 +58,16 @@ class GithubProvider(BaseProvider):
 
     def get_last_commits(self, repository: str, n: int = 10):
         self.logger.info(f"Getting last {n} commits from {repository}")
+        # get only the name so if the repo is
+        # https://github.com/keephq/keep -> keephq/keep
+        if repository.startswith("https://github.com"):
+            repository = repository.split("https://github.com/")[1]
+
         repo = self.client.get_repo(repository)
         commits = repo.get_commits()
         self.logger.info(f"Found {commits.totalCount} commits")
-        return [commit.raw_data for commit in commits[:n]]
+        commits = [commit.raw_data for commit in commits[:n]]
+        return commits
 
     def get_last_releases(self, repository: str, n: int = 10):
         self.logger.info(f"Getting last {n} releases from {repository}")

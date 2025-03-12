@@ -30,6 +30,7 @@ class RuleCreateDto(BaseModel):
     resolveOn: str = ResolveOn.NEVER.value
     createOn: str = CreateIncidentOn.ANY.value
     incidentNameTemplate: str = None
+    incidentPrefix: str = None
 
 
 @router.get(
@@ -82,6 +83,7 @@ async def create_rule(
     sql = rule_create_request.sqlQuery.get("sql")
     params = rule_create_request.sqlQuery.get("params")
     incident_name_template = rule_create_request.incidentNameTemplate
+    incident_prefix = rule_create_request.incidentPrefix
 
     if not sql:
         raise HTTPException(status_code=400, detail="SQL is required")
@@ -125,6 +127,7 @@ async def create_rule(
         resolve_on=resolve_on,
         create_on=create_on,
         incident_name_template=incident_name_template,
+        incident_prefix=incident_prefix,
     )
     logger.info("Rule created")
     return rule
@@ -177,6 +180,7 @@ async def update_rule(
         grouping_criteria = body.get("groupingCriteria", [])
         require_approve = body.get("requireApprove", [])
         incident_template_name = body.get("incidentNameTemplate", None)
+        incident_prefix = body.get("incidentPrefix", None)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -226,6 +230,7 @@ async def update_rule(
         resolve_on=resolve_on,
         create_on=create_on,
         incident_name_template=incident_template_name,
+        incident_prefix=incident_prefix,
     )
 
     if rule:
