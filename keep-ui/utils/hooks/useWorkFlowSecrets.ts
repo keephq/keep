@@ -1,36 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
-
-interface Secrets {
-  [key: string]: string; // Store secrets as key-value pairs inside an object
-}
+import useSWR from "swr";
 
 export function useSecrets(workflowId: string) {
   const api = useApi();
-  const [secrets, setSecrets] = useState<Secrets>({});
   const [error, setError] = useState<string>("");
 
-  // Fetch secrets on mount
-  useEffect(() => {
-    fetchSecrets();
-  }, [workflowId]);
+  const getSecrets = useSWR<{ [key: string]: string }>(
+    api.isReady() ? `/workflows/${workflowId}/secrets` : null,
+    (url: string) => api.get(url)
+  );
 
-  const fetchSecrets = async () => {
+  const addOrUpdateSecret = async (
+    secrets: { [key: string]: string },
+    newSecretKey: string,
+    newSecretValue: string
+  ) => {
     try {
-      const resp = await api.get(`/workflows/${workflowId}/secrets`);
-      setSecrets(resp || {});
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch secrets");
-    }
-  };
-
-  const addOrUpdateSecret = async (name: string, value: string) => {
-    try {
-      const updatedSecrets = { ...secrets, [name]: value };
+      const updatedSecrets = { ...secrets, [newSecretKey]: newSecretValue };
       await api.post(`/workflows/${workflowId}/secrets`, {
-        [name]: value,
+        [newSecretKey]: newSecretValue,
       });
-      setSecrets(updatedSecrets);
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to write secret");
@@ -40,13 +30,10 @@ export function useSecrets(workflowId: string) {
   const deleteSecret = async (name: string) => {
     try {
       await api.delete(`/workflows/${workflowId}/secrets/${name}`);
-      const updatedSecrets = { ...secrets };
-      delete updatedSecrets[name];
-      setSecrets(updatedSecrets);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete secret");
     }
   };
 
-  return { secrets, error, addOrUpdateSecret, deleteSecret };
+  return { getSecrets, error, addOrUpdateSecret, deleteSecret };
 }

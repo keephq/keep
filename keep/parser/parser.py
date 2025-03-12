@@ -111,6 +111,7 @@ class Parser:
                 workflow_providers,
                 actions_file,
                 workflow_actions,
+                workflow_db_id=workflow_db_id,
             )
             workflows = [workflow]
         return workflows
@@ -143,7 +144,9 @@ class Parser:
         workflow_db_id: str = None,
     ) -> Workflow:
         self.logger.debug("Parsing workflow")
-        workflow_id = self._get_workflow_id(tenant_id, workflow)
+        # @tb: we need to remove this id in workflow yaml, it has no real use.
+        # or at least, align it with the id in the DB.
+        workflow_id = workflow_db_id or self._get_workflow_id(tenant_id, workflow)
         context_manager = ContextManager(
             tenant_id=tenant_id, workflow_id=workflow_id, workflow=workflow
         )

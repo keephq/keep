@@ -348,7 +348,6 @@ def run_workflow(
         workflow_id = getattr(get_workflow_by_name(tenant_id, workflow_id), "id", None)
 
     workflowmanager = WorkflowManager.get_instance()
-    workflowmanager.set_workflow_id(workflow_id=workflow_id)
 
     try:
         # Handle replay from query parameters
@@ -1095,7 +1094,10 @@ def read_workflow_secret(
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     secret_key = f"{tenant_id}_{workflow_id}_secrets"
-    return secret_manager.read_secret(secret_name=secret_key, is_json=is_json)
+    try:
+        return secret_manager.read_secret(secret_name=secret_key, is_json=is_json)
+    except Exception:
+        return {}
 
 
 @router.delete(
