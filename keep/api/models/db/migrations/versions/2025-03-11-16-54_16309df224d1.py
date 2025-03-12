@@ -92,9 +92,9 @@ def upgrade() -> None:
         # Copy existing data
         op.execute(
             """
-            INSERT INTO alertenrichment_new (id, tenant_id, alert_fingerprint, timestamp, enrichments)
-            SELECT id, tenant_id, alert_fingerprint, timestamp, enrichments FROM alertenrichment;
-        """
+                INSERT INTO alertenrichment_new (id, tenant_id, alert_fingerprint, timestamp, enrichments)
+                SELECT id, tenant_id, alert_fingerprint, timestamp, enrichments FROM alertenrichment;
+            """
         )
         op.execute(
             """
