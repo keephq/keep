@@ -95,13 +95,14 @@ function Summary({
   };
 
   const formatedSummary = (
-    <Markdown
-      remarkPlugins={[remarkGfm, remarkRehype]}
-      rehypePlugins={[rehypeRaw]}
-      className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1"
-    >
-      {summary ?? generatedSummary}
-    </Markdown>
+    <div className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1">
+      <Markdown
+        remarkPlugins={[remarkGfm, remarkRehype]}
+        rehypePlugins={[rehypeRaw]}
+      >
+        {summary ?? generatedSummary}
+      </Markdown>
+    </div>
   );
 
   if (collapsable) {
