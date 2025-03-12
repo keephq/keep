@@ -674,6 +674,7 @@ class EnrichmentsBl:
             action_callee,
             action_description,
             audit_enabled=audit_enabled,
+            session=self.db_session
         )
 
     def disposable_enrich_entity(
