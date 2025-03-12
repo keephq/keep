@@ -293,7 +293,7 @@ class IncidentReportsBl:
     ) -> list[IncidentDto]:
         query_result = self.incidents_bl.query_incidents(
             tenant_id=self.tenant_id,
-            cel=incidents_query_cel,
+            cel=f"status != 'deleted' && {incidents_query_cel}",
             limit=100,
             offset=0,
             allowed_incident_ids=allowed_incident_ids,
