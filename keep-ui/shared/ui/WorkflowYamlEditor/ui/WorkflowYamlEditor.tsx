@@ -2,7 +2,7 @@ import { getYamlWorkflowDefinitionSchema } from "@/entities/workflows/model/yaml
 import * as monaco from "monaco-editor";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { configureMonacoYaml } from "monaco-yaml";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Provider } from "@/shared/api/providers";
 import { getOrCreateModel, Monaco } from "../lib/monaco-utils";
 import clsx from "clsx";
@@ -36,7 +36,7 @@ export function WorkflowYamlEditor({
   theme = "light",
   wrapperProps,
 }: {
-  providers: Provider[];
+  providers: Provider[] | undefined;
   defaultValue: string;
   onMount?: (
     editor: monaco.editor.IStandaloneCodeEditor,
@@ -54,8 +54,9 @@ export function WorkflowYamlEditor({
       (editor: monaco.editor.IStandaloneCodeEditor, monaco: Monaco) => void
     >(onMount);
 
-  useEffect(() => {
-    const globalSchema = zodToJsonSchema(
+  const globalSchema = useMemo(() => {
+    if (!providers) return undefined;
+    return zodToJsonSchema(
       // todo: is it efficient to generate the schema for each provider?
       getYamlWorkflowDefinitionSchema(providers),
       {
@@ -63,6 +64,10 @@ export function WorkflowYamlEditor({
         $refStrategy: "none",
       }
     );
+  }, [providers]);
+
+  useEffect(() => {
+    if (!globalSchema) return;
 
     configureMonacoYaml(monaco, {
       enableSchemaRequest: false,

@@ -7,7 +7,6 @@ import { getStepStatus } from "@/shared/lib/logs-utils";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 import { useProviders } from "@/utils/hooks/useProviders";
-import Skeleton from "react-loading-skeleton";
 import dynamic from "next/dynamic";
 import "./MonacoYAMLEditor.css";
 import { KeepSchemaPath } from "../../WorkflowYamlEditor/lib/constants";
@@ -511,27 +510,17 @@ const MonacoYAMLEditor = ({
             <Download className="h-4 w-4" />
           </Button>
         </div>
-        {!providers || isLoadingProviders ? (
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-24" />
-          </div>
-        ) : (
-          <WorkflowYamlEditor
-            height="100%"
-            wrapperProps={{ "data-testid": dataTestId }}
-            defaultValue={getOrderedWorkflowYamlString(workflowRaw)}
-            onMount={handleEditorDidMount}
-            options={editorOptions}
-            providers={providers}
-            theme="light"
-            defaultPath={KeepSchemaPath}
-            defaultLanguage="yaml"
-          />
-        )}
+        <WorkflowYamlEditor
+          height="100%"
+          wrapperProps={{ "data-testid": dataTestId }}
+          defaultValue={getOrderedWorkflowYamlString(workflowRaw)}
+          onMount={handleEditorDidMount}
+          options={editorOptions}
+          providers={providers}
+          theme="light"
+          defaultPath={KeepSchemaPath}
+          defaultLanguage="yaml"
+        />
       </div>
       <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200">
         <span className="text-sm text-gray-500">{filename}.yaml</span>
