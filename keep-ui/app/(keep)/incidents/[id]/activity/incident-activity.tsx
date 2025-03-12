@@ -28,6 +28,19 @@ interface IncidentActivity {
   initiator?: string | AlertDto;
 }
 
+const ACTION_TYPES = [
+  "alert was triggered",
+  "alert acknowledged",
+  "alert automatically resolved",
+  "alert manually resolved",
+  "alert status manually changed",
+  "alert status changed by API",
+  "alert automatically resolved by API",
+  "A comment was added to the incident",
+  "Incident status changed",
+  "Incident assigned",
+];
+
 function Item({
   icon,
   children,
@@ -41,7 +54,7 @@ function Item({
         {/* vertical line */}
         <div className="absolute mx-auto right-0 left-0 top-0 bottom-0 h-full bg-gray-200 w-px" />
         {/* wrapping icon to avoid vertical line visible behind transparent background */}
-        <div className="relative z-[1] bg-tremor-background rounded-full border border-2 border-tremor-background">
+        <div className="relative z-[1] bg-tremor-background rounded-full border-2 border-tremor-background">
           {icon}
         </div>
       </div>
@@ -94,6 +107,7 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
     return (
       auditEvents
         .concat(incidentEvents)
+        .filter((auditEvent) => ACTION_TYPES.includes(auditEvent.action))
         .sort(
           (a, b) =>
             new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()

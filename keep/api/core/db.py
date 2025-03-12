@@ -1036,6 +1036,104 @@ def _enrich_entity(
         return alert_enrichment
 
 
+def batch_enrich(
+    tenant_id,
+    fingerprints,
+    enrichments,
+    action_type: ActionType,
+    action_callee: str,
+    action_description: str,
+    session=None,
+    audit_enabled=True,
+):
+    """
+    Batch enrich multiple alerts with the same enrichments in a single transaction.
+
+    Args:
+        tenant_id (str): The tenant ID to filter the alert enrichments by.
+        fingerprints (List[str]): List of alert fingerprints to enrich.
+        enrichments (dict): The enrichments to add to all alerts.
+        action_type (ActionType): The type of action being performed.
+        action_callee (str): The ID of the user performing the action.
+        action_description (str): Description of the action.
+        session (Session, optional): Database session to use.
+        force (bool, optional): Whether to override existing enrichments. Defaults to False.
+        audit_enabled (bool, optional): Whether to create audit entries. Defaults to True.
+
+    Returns:
+        List[AlertEnrichment]: List of enriched alert objects.
+    """
+    with existed_or_new_session(session) as session:
+        # Get all existing enrichments in one query
+        existing_enrichments = {
+            e.alert_fingerprint: e
+            for e in session.exec(
+                select(AlertEnrichment)
+                .where(AlertEnrichment.tenant_id == tenant_id)
+                .where(AlertEnrichment.alert_fingerprint.in_(fingerprints))
+            ).all()
+        }
+
+        # Prepare bulk update for existing enrichments
+        to_update = []
+        to_create = []
+        audit_entries = []
+
+        for fingerprint in fingerprints:
+            existing = existing_enrichments.get(fingerprint)
+
+            if existing:
+                to_update.append(existing.id)
+            else:
+                # For new entries
+                to_create.append(
+                    AlertEnrichment(
+                        tenant_id=tenant_id,
+                        alert_fingerprint=fingerprint,
+                        enrichments=enrichments,
+                    )
+                )
+
+            if audit_enabled:
+                audit_entries.append(
+                    AlertAudit(
+                        tenant_id=tenant_id,
+                        fingerprint=fingerprint,
+                        user_id=action_callee,
+                        action=action_type.value,
+                        description=action_description,
+                    )
+                )
+
+        # Bulk update in a single query
+        if to_update:
+            stmt = (
+                update(AlertEnrichment)
+                .where(AlertEnrichment.id.in_(to_update))
+                .values(enrichments=enrichments)
+            )
+            session.execute(stmt)
+
+        # Bulk insert new enrichments
+        if to_create:
+            session.add_all(to_create)
+
+        # Bulk insert audit entries
+        if audit_entries:
+            session.add_all(audit_entries)
+
+        session.commit()
+
+        # Get all updated/created enrichments
+        result = session.exec(
+            select(AlertEnrichment)
+            .where(AlertEnrichment.tenant_id == tenant_id)
+            .where(AlertEnrichment.alert_fingerprint.in_(fingerprints))
+        ).all()
+
+        return result
+
+
 def enrich_entity(
     tenant_id,
     fingerprint,
@@ -1857,6 +1955,7 @@ def get_incident_for_grouping_rule(
         is_incident_expired = False
         if incident and incident.status in [
             IncidentStatus.RESOLVED.value,
+            IncidentStatus.MERGED.value,
             IncidentStatus.DELETED.value,
         ]:
             is_incident_expired = True

@@ -54,6 +54,7 @@ export function RootCauseAnalysis({
                     <div className="mt-1 shrink-0">
                       <DynamicImageProviderIcon
                         providerType={point.providerType ?? "keep"}
+                        src={`/icons/${point.providerType}-icon.png`}
                         width="16"
                         height="16"
                       />
