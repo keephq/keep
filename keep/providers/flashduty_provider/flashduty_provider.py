@@ -63,7 +63,7 @@ class FlashdutyProvider(BaseProvider):
             labels (dict): The labels of the incident
         """
 
-        self.logger.debug("Notifying incident to Flashduty")
+        self.logger.info("Notifying incident to Flashduty")
         if not title:
             raise ProviderException("Title is required")
         if not event_status:
@@ -84,14 +84,14 @@ class FlashdutyProvider(BaseProvider):
             url=f"https://api.flashcat.cloud/event/push/alert/standard?integration_key={self.authentication_config.integration_key}", json=body, headers=headers
         )
         assert resp.status_code == 200
-        self.logger.debug("Alert message notified to Flashduty")
+        self.logger.info("Alert message notified to Flashduty")
 
 
 if __name__ == "__main__":
     # Output test messages
     import logging
 
-    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler()])
     context_manager = ContextManager(
         tenant_id="singletenant",
         workflow_id="test",
