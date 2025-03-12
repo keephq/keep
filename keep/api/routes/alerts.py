@@ -66,9 +66,6 @@ from keep.api.models.alert import (
     UnEnrichAlertRequestBody,
 )
 from keep.api.models.alert_audit import AlertAuditDto
-from keep.api.models.db.incident import IncidentStatus
-from keep.api.models.db.rule import ResolveOn
-from keep.api.models.db.alert import ActionType
 from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.query import QueryDto
 from keep.api.models.search_alert import SearchAlertsRequest
