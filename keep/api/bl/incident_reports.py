@@ -62,13 +62,12 @@ Generate an incident report based on the provided incidents dataset and response
    - Return a JSON object, which is a dictionary.
    - Each key in this dictionary must be an incident reason (a string describing the reason for the incident).
    - The value for each key must be a list of incident IDs (strings) that correspond to that reason.
-   - The structure should follow this exact format:
-            "most_frequent_reasons": {
+   - The structure of object in most_frequent_reasons property should follow this exact format:
+            {
                 "Reason 1": ["incident_id_1", "incident_id_2"],
                 "Reason 2": ["incident_id_3"],
                 "Reason 3": ["incident_id_4", "incident_id_5", "incident_id_6"]
             }
-}
 """
 
 logger = logging.getLogger(__name__)
