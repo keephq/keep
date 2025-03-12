@@ -1,4 +1,7 @@
-import { validateWorkflowYaml } from "../validate-yaml";
+import { validateYamlString } from "../validate-yaml";
+import { YamlWorkflowDefinitionSchema } from "@/entities/workflows/model/yaml.schema";
+
+const defaultWorkflowSchema = YamlWorkflowDefinitionSchema;
 
 describe("validateWorkflowYaml", () => {
   it("should validate a correct workflow YAML", () => {
@@ -7,6 +10,8 @@ describe("validateWorkflowYaml", () => {
   name: Test Workflow
   description: A test workflow
   disabled: false
+  triggers:
+    - type: manual
   steps:
     - name: test-step
       provider:
@@ -16,7 +21,7 @@ describe("validateWorkflowYaml", () => {
           query: SELECT 1
           single_row: true`;
 
-    const result = validateWorkflowYaml(validYaml);
+    const result = validateYamlString(validYaml, defaultWorkflowSchema);
     expect(result.valid).toBe(true);
     expect(result.data).toBeDefined();
     expect(result.errors).toBeUndefined();
@@ -26,6 +31,8 @@ describe("validateWorkflowYaml", () => {
     const validYaml = `workflow:
   id: test-workflow
   name: Test Workflow
+  triggers:
+    - type: manual
   description: A test workflow
   disabled: false
   owners: ["owner1", "owner2"]
@@ -50,7 +57,7 @@ describe("validateWorkflowYaml", () => {
           message: test
           topic: alerts`;
 
-    const result = validateWorkflowYaml(validYaml);
+    const result = validateYamlString(validYaml, defaultWorkflowSchema);
     expect(result.valid).toBe(true);
     expect(result.data).toBeDefined();
     expect(result.errors).toBeUndefined();
@@ -67,18 +74,28 @@ describe("validateWorkflowYaml", () => {
         with:
           query: SELECT 1`;
 
-    const result = validateWorkflowYaml(invalidYaml);
+    const result = validateYamlString(invalidYaml, defaultWorkflowSchema);
     expect(result.valid).toBe(false);
     expect(result.errors).toBeDefined();
     expect(result.errors).toEqual(
       expect.arrayContaining([
         {
+          col: 3,
+          line: 2,
+          message: "'id' field is required in 'workflow'",
           path: ["workflow", "id"],
-          message: "Required",
         },
         {
+          col: 7,
+          line: 5,
+          message: "'name' field is required in 'steps entries'",
           path: ["workflow", "steps", 0, "name"],
-          message: "Required",
+        },
+        {
+          col: 3,
+          line: 2,
+          message: "'triggers' field is required in 'workflow'",
+          path: ["workflow", "triggers"],
         },
       ])
     );
@@ -88,6 +105,8 @@ describe("validateWorkflowYaml", () => {
     const yamlWithConditions = `workflow:
   id: test-workflow
   name: Test Workflow
+  triggers:
+    - type: manual
   steps:
     - name: test-step
       provider:
@@ -104,7 +123,10 @@ describe("validateWorkflowYaml", () => {
           type: assert
           assert: "{{ steps.test-step.results > 0 }}"`;
 
-    const result = validateWorkflowYaml(yamlWithConditions);
+    const result = validateYamlString(
+      yamlWithConditions,
+      defaultWorkflowSchema
+    );
     expect(result.valid).toBe(true);
     expect(result.data).toBeDefined();
     expect(result.errors).toBeUndefined();
@@ -114,6 +136,8 @@ describe("validateWorkflowYaml", () => {
     const invalidYaml = `workflow:
   id: test-workflow
   name: Test Workflow
+  triggers:
+    - type: manual
   steps:
     - name: test-step
       provider:
@@ -126,7 +150,7 @@ describe("validateWorkflowYaml", () => {
           type: invalid
           value: test`;
 
-    const result = validateWorkflowYaml(invalidYaml);
+    const result = validateYamlString(invalidYaml, defaultWorkflowSchema);
     expect(result.valid).toBe(false);
     expect(result.errors).toBeDefined();
     expect(result.errors).toEqual(
@@ -134,7 +158,7 @@ describe("validateWorkflowYaml", () => {
         {
           path: ["workflow", "steps", 0, "condition", 0],
           message: "Invalid input",
-          line: 12,
+          line: 14,
           col: 11,
         },
       ])
@@ -145,6 +169,8 @@ describe("validateWorkflowYaml", () => {
     const yamlWithForeach = `workflow:
   id: test-workflow
   name: Test Workflow
+  triggers:
+    - type: manual
   steps:
     - name: test-step
       provider:
@@ -154,7 +180,7 @@ describe("validateWorkflowYaml", () => {
           query: SELECT 1
       foreach: "{{ steps.previous-step.results.items }}"`;
 
-    const result = validateWorkflowYaml(yamlWithForeach);
+    const result = validateYamlString(yamlWithForeach, defaultWorkflowSchema);
     expect(result.valid).toBe(true);
     expect(result.data).toBeDefined();
     expect(result.errors).toBeUndefined();
@@ -164,6 +190,8 @@ describe("validateWorkflowYaml", () => {
     const yamlWithVars = `workflow:
   id: test-workflow
   name: Test Workflow
+  triggers:
+    - type: manual
   steps:
     - name: test-step
       provider:
@@ -175,7 +203,7 @@ describe("validateWorkflowYaml", () => {
         var1: "{{ steps.previous-step.results }}"
         var2: "static-value"`;
 
-    const result = validateWorkflowYaml(yamlWithVars);
+    const result = validateYamlString(yamlWithVars, defaultWorkflowSchema);
     expect(result.valid).toBe(true);
     expect(result.data).toBeDefined();
     expect(result.errors).toBeUndefined();
@@ -185,6 +213,8 @@ describe("validateWorkflowYaml", () => {
     const invalidYaml = `workflow:
   id: test-workflow
   name: Test Workflow
+  triggers:
+    - type: manual
   steps:
     - name: test-step
       provider:
@@ -192,16 +222,16 @@ describe("validateWorkflowYaml", () => {
         with:
           query: SELECT 1`;
 
-    const result = validateWorkflowYaml(invalidYaml);
+    const result = validateYamlString(invalidYaml, defaultWorkflowSchema);
     expect(result.valid).toBe(false);
     expect(result.errors).toBeDefined();
     expect(result.errors).toEqual(
       expect.arrayContaining([
         {
-          path: ["workflow", "steps", 0, "provider"],
-          message: "Invalid input",
-          line: 6,
-          col: 16,
+          col: 9,
+          line: 9,
+          message: "'type' field is required in 'provider'",
+          path: ["workflow", "steps", 0, "provider", "type"],
         },
       ])
     );

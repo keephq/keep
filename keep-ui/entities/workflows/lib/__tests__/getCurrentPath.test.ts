@@ -1,5 +1,5 @@
 import { parseDocument } from "yaml";
-import { getCurrentPath } from "../MonacoEditorWithValidation";
+import { getCurrentPath } from "../yaml-utils";
 
 const yaml = `
 workflow:
