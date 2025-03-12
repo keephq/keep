@@ -50,7 +50,7 @@ def upgrade() -> None:
     # Step 3: Add the new composite unique constraint
     with op.batch_alter_table("alertenrichment") as batch_op:
         batch_op.create_unique_constraint(
-            "uс_alertenrichment_tenant_fingerprint",
+            "uc_alertenrichment_tenant_fingerprint",
             ["tenant_id", "alert_fingerprint"],
         )
     # ### end Alembic commands ###
@@ -69,7 +69,7 @@ def downgrade() -> None:
         )
 
         op.drop_constraint(
-            "uс_alertenrichment_tenant_fingerprint", "alertenrichment", type_="unique"
+            "uc_alertenrichment_tenant_fingerprint", "alertenrichment", type_="unique"
         )
         op.execute(
             """
@@ -86,7 +86,7 @@ def downgrade() -> None:
 
     elif dialect == "postgresql":
         op.drop_constraint(
-            "uс_alertenrichment_tenant_fingerprint", "alertenrichment", type_="unique"
+            "uc_alertenrichment_tenant_fingerprint", "alertenrichment", type_="unique"
         )
         op.create_unique_constraint(
             "alert_fingerprint", "alertenrichment", ["alert_fingerprint"]
