@@ -239,6 +239,7 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
 
             alertDto = IncidentDto(
                 id=id,
+                original_incident_id=incident.get("incidentID"),
                 incident_id=incident.get("id"),
                 severity_id=incident.get("severityID"),
                 severity=severity_label,
