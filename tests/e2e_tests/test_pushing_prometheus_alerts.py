@@ -152,7 +152,6 @@ def test_pulling_prometheus_alerts_to_provider(
 
         providers_link = browser.get_by_role("link", name="Providers")
         providers_link.wait_for(state="visible")
-        providers_link.wait_for(state="enabled")
         providers_link.click(timeout=10000, force=True)  # Use force if needed
 
     except Exception as e:
