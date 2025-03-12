@@ -8,6 +8,7 @@ import { getOrCreateModel, Monaco } from "../lib/monaco-utils";
 import clsx from "clsx";
 
 // todo: setup with dispose like in monaco-editor/react lib
+// NOTE: turbopack does not support new Worker() yet, run npx next dev (with webpack)
 self.MonacoEnvironment = {
   getWorker(moduleId, label) {
     console.log("monaco-yaml: Loading worker for:", label);
