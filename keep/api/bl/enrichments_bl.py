@@ -28,7 +28,7 @@ from keep.api.core.db import (
 )
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.action_type import ActionType
-from keep.api.models.alert import AlertDto, IncidentStatus
+from keep.api.models.alert import AlertDto
 from keep.api.models.db.alert import Alert
 from keep.api.models.db.enrichment_event import (
     EnrichmentEvent,
@@ -37,6 +37,7 @@ from keep.api.models.db.enrichment_event import (
     EnrichmentType,
 )
 from keep.api.models.db.extraction import ExtractionRule
+from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.db.mapping import MappingRule
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.api.models.db.rule import ResolveOn
