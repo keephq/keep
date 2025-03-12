@@ -14,6 +14,7 @@ export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationFormType = {
   resolveOn: "never",
   createOn: "any",
   incidentNameTemplate: "",
+  incidentPrefix: "",
   query: {
     combinator: "or",
     rules: [

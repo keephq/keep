@@ -175,7 +175,7 @@ export function AlertMethodModal({
         alertsMutator();
       }
       toast.success(`Successfully called "${method.name}"`, {
-        position: toast.POSITION.TOP_LEFT,
+        position: "top-left",
       });
       if (method.type === "view") {
         setMethodResult(responseObject);

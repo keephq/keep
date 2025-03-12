@@ -28,6 +28,19 @@ html.workaround-dark {
   }
 }
 
+/* --- Radix UI / Tremor Hotfixes --- */
+/* Radix backdrop prevents clicks on elements behind it, so we need to override it.
+   HeadlessUI portal root, should be above all other elements, as Select dropdowns are rendered there
+*/
+#headlessui-portal-root {
+  pointer-events: auto;
+  z-index: 55;
+}
+.Toastify {
+  pointer-events: auto;
+}
+/* --- End of Radix UI / Tremor Hotfixes */
+
 .rules-tooltip [role="tooltip"] {
   @apply w-72; /* This sets the width to 16rem. Adjust the number as needed. */
   @apply break-words; /* This will wrap long words if needed. */
@@ -64,11 +77,6 @@ html.workaround-dark {
   100% {
     transform: rotate(360deg);
   }
-}
-
-.sliding-panel-container.active {
-  /* original value is ridiculous 15.000, overflowing toasts*/
-  @apply z-[1000] !important;
 }
 
 @keyframes scroll-shadow-left {

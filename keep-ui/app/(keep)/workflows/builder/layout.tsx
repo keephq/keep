@@ -3,13 +3,7 @@ import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { Icon, Subtitle } from "@tremor/react";
 
-export default function Layout({
-  children,
-  params,
-}: {
-  children: any;
-  params: { workflow_id: string };
-}) {
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col h-full gap-4">
       <Subtitle className="text-sm">
