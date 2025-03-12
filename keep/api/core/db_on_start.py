@@ -19,6 +19,7 @@ import os
 
 import alembic.command
 import alembic.config
+from alembic.runtime.migration import MigrationContext
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
@@ -185,5 +186,38 @@ def migrate_db():
         "script_location",
         os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations",
     )
-    alembic.command.upgrade(config, "head")
+
+    try:
+        alembic.command.upgrade(config, "head")
+    except Exception:
+        logger.exception("Failed to run migrations")
+
+        # Log all migration file names for debugging
+        script_directory = alembic.script.ScriptDirectory.from_config(config)
+
+        # Get current revision
+        try:
+            with engine.begin() as connection:
+                context = MigrationContext.configure(connection)
+                current_rev = context.get_current_revision()
+                logger.error(f"Current revision: {current_rev}")
+        except Exception:
+            logger.exception("Failed to get current revision")
+            current_rev = None
+
+        # List all available migrations
+        logger.error("Available migrations:")
+        try:
+            for script in script_directory.walk_revisions():
+                status = (
+                    "PENDING"
+                    if current_rev and script.revision > current_rev
+                    else "APPLIED"
+                )
+                logger.error(f"  - {script.revision}: {script.doc} ({status})")
+        except Exception:
+            logger.exception("Failed to list migrations")
+
+        raise
+
     logger.info("Finished migrations")
