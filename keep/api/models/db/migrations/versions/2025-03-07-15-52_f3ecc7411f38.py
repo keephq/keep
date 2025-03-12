@@ -1,7 +1,7 @@
 """Add is_candidate and is_visible flags to Incident to replace is_confirmed
 
 Revision ID: f3ecc7411f38
-Revises: a82154690f35
+Revises: 0b80bda47ee2
 Create Date: 2025-03-07 15:52:10.729973
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "f3ecc7411f38"
-down_revision = "a82154690f35"
+down_revision = "0b80bda47ee2"
 branch_labels = None
 depends_on = None
 
