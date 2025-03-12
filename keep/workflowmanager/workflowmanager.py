@@ -12,7 +12,8 @@ from keep.api.core.db import (
     save_workflow_results,
 )
 from keep.api.core.metrics import workflow_execution_duration
-from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto
+from keep.api.models.alert import AlertDto, AlertSeverity
+from keep.api.models.incident import IncidentDto
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
@@ -146,6 +147,11 @@ class WorkflowManager:
                     "workflow does not contain trigger %s, skipping", trigger
                 )
                 continue
+
+            incident_enrichment = get_enrichment(tenant_id, str(incident.id))
+            if incident_enrichment:
+                for k, v in incident_enrichment.enrichments.items():
+                    setattr(incident, k, v)
 
             self.logger.info("Adding workflow to run")
             with self.scheduler.lock:

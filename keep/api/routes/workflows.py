@@ -30,12 +30,13 @@ from keep.api.core.db import (
     get_workflow_by_name,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
+from keep.api.models.alert import AlertDto
+from keep.api.models.incident import IncidentDto
 from keep.api.core.workflows import (
     get_workflow_facets,
     get_workflow_facets_data,
     get_workflow_potential_facet_fields,
 )
-from keep.api.models.alert import AlertDto, IncidentDto
 from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.query import QueryDto
 from keep.api.models.workflow import (

@@ -43,17 +43,17 @@ from keep.api.core.db import (
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
+from keep.api.models.action_type import ActionType
 from keep.api.models.alert import (
     AlertDto,
     AlertStatus,
     DeleteRequestBody,
     EnrichAlertNoteRequestBody,
     EnrichAlertRequestBody,
-    IncidentStatus,
     UnEnrichAlertRequestBody,
 )
 from keep.api.models.alert_audit import AlertAuditDto
-from keep.api.models.db.alert import ActionType
+from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.db.rule import ResolveOn
 from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.query import QueryDto
@@ -816,39 +816,14 @@ def _enrich_alert(
 
     try:
         enrichement_bl = EnrichmentsBl(tenant_id, db=session)
-        # Shahar: TODO, change to the specific action type, good enough for now
-        if (
-            "status" in enrich_data.enrichments
-            and authenticated_entity.api_key_name is None
-        ):
-            action_type = (
-                ActionType.MANUAL_RESOLVE
-                if enrich_data.enrichments["status"] == "resolved"
-                else ActionType.MANUAL_STATUS_CHANGE
-            )
-            action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by {authenticated_entity.email}"
-            should_run_workflow = True
-            if enrich_data.enrichments["status"] == "resolved":
-                should_check_incidents_resolution = True
-        elif "status" in enrich_data.enrichments and authenticated_entity.api_key_name:
-            action_type = (
-                ActionType.API_AUTOMATIC_RESOLVE
-                if enrich_data.enrichments["status"] == "resolved"
-                else ActionType.API_STATUS_CHANGE
-            )
-            action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by API `{authenticated_entity.api_key_name}`"
-            should_run_workflow = True
-            if enrich_data.enrichments["status"] == "resolved":
-                should_check_incidents_resolution = True
-        elif "note" in enrich_data.enrichments and enrich_data.enrichments["note"]:
-            action_type = ActionType.COMMENT
-            action_description = f"Comment added by {authenticated_entity.email} - {enrich_data.enrichments['note']}"
-        elif "ticket_url" in enrich_data.enrichments:
-            action_type = ActionType.TICKET_ASSIGNED
-            action_description = f"Ticket assigned by {authenticated_entity.email} - {enrich_data.enrichments['ticket_url']}"
-        else:
-            action_type = ActionType.GENERIC_ENRICH
-            action_description = f"Alert enriched by {authenticated_entity.email} - {enrich_data.enrichments}"
+        (
+            action_type,
+            action_description,
+            should_run_workflow,
+            should_check_incidents_resolution,
+        ) = enrichement_bl.get_enrichment_metadata(
+            enrich_data.enrichments, authenticated_entity
+        )
 
         enrichments = deepcopy(enrich_data.enrichments)
         enrichement_bl.enrich_entity(

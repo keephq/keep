@@ -43,7 +43,6 @@ import {
   TimeFormatOption,
   isDateTimeColumn,
 } from "./alert-table-time-format";
-import { format } from "path";
 import { useIncidents } from "@/utils/hooks/useIncidents";
 
 export const DEFAULT_COLS = [
@@ -286,21 +285,27 @@ export const useAlertTableCols = (
           if (context.column.id === "incident") {
             const incidentString = String(value || "");
             const incidentSplit = incidentString.split(",");
-            return incidentSplit.map((incidentId, index) => {
-              const incident = incidents?.items.find(
-                (incident) => incident.id === incidentId
-              );
-              return (
-                <>
-                  <Link href={`/incidents/${incidentId}`}>
-                    {incident?.user_generated_name ||
-                      incident?.ai_generated_name ||
-                      incidentId}
-                  </Link>
-                  {index < incidentSplit.length - 1 && ", "}
-                </>
-              );
-            });
+            return (
+              <div className="flex flex-wrap gap-1 w-full overflow-hidden">
+                {incidentSplit.map((incidentId, index) => {
+                  const incident = incidents?.items.find(
+                    (incident) => incident.id === incidentId
+                  );
+                  if (!incident) return <></>;
+                  const title =
+                    incident.user_generated_name || incident.ai_generated_name;
+                  return (
+                    <Link
+                      key={incidentId}
+                      href={`/incidents/${incidentId}`}
+                      title={title}
+                    >
+                      {title}
+                    </Link>
+                  );
+                })}
+              </div>
+            );
           }
 
           let isList = isListColumn(context.column);
@@ -453,6 +458,7 @@ export const useAlertTableCols = (
                 height={24}
                 width={24}
                 title={source}
+                providerType={source}
                 src={imagePath}
               />
             );

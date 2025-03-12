@@ -30,13 +30,13 @@ workflow_field_configurations = [
     FieldMappingConfiguration("name", "filter_workflow_name"),
     FieldMappingConfiguration("description", "filter_workflow_description"),
     FieldMappingConfiguration("started", "filter_started"),
-    FieldMappingConfiguration("status", "filter_status"),
-    FieldMappingConfiguration("executionTime", "filter_execution_time"),
-    FieldMappingConfiguration("isDisabled", "filter_workflow_is_disabled"),
-    FieldMappingConfiguration("lastUpdated", "filter_workflow_last_updated"),
-    FieldMappingConfiguration("createdAt", "filter_workflow_creation_time"),
-    FieldMappingConfiguration("createdBy", "filter_workflow_created_by"),
-    FieldMappingConfiguration("updatedBy", "filter_workflow_updated_by"),
+    FieldMappingConfiguration("last_execution_status", "filter_last_execution_status"),
+    FieldMappingConfiguration("last_execution_time", "filter_last_execution_time"),
+    FieldMappingConfiguration("disabled", "filter_workflow_is_disabled"),
+    FieldMappingConfiguration("last_updated", "filter_workflow_last_updated"),
+    FieldMappingConfiguration("created_at", "filter_workflow_creation_time"),
+    FieldMappingConfiguration("created_by", "filter_workflow_created_by"),
+    FieldMappingConfiguration("updated_by", "filter_workflow_updated_by"),
 ]
 alias_column_mapping = {
     "filter_workflow_name": "workflow.name",
@@ -46,8 +46,8 @@ alias_column_mapping = {
     "filter_workflow_creation_time": "workflow.creation_time",
     "filter_workflow_updated_by": "workflow.updated_by",
     "filter_started": "started",
-    "filter_status": "status",
-    "filter_execution_time": "execution_time",
+    "filter_last_execution_status": "status",
+    "filter_last_execution_time": "execution_time",
     "filter_workflow_created_by": "workflow.created_by",
 }
 
@@ -56,21 +56,21 @@ properties_metadata = PropertiesMetadata(workflow_field_configurations)
 static_facets = [
     FacetDto(
         id="558a5844-55a1-45ad-b190-8848a389007d",
-        property_path="status",
-        name="Status",
+        property_path="last_execution_status",
+        name="Last execution status",
         is_static=True,
         type=FacetType.str,
     ),
     FacetDto(
         id="6672d434-36d6-4e48-b5ec-3123a7b38cf8",
-        property_path="isDisabled",
+        property_path="disabled",
         name="Enabling status",
         is_static=True,
         type=FacetType.str,
     ),
     FacetDto(
         id="77325333-7710-4904-bf06-6c3d58aa5787",
-        property_path="createdBy",
+        property_path="created_by",
         name="Created by",
         is_static=True,
         type=FacetType.str,
@@ -79,17 +79,14 @@ static_facets = [
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
 
-def __build_base_query(
-    tenant_id: str,
-    fetch_last_executions: int = 15,
-):
+def __build_base_query(tenant_id: str):
     columns_to_select = []
 
     for key, value in alias_column_mapping.items():
-        if key == "filter_status":
+        if key == "filter_last_execution_status":
             continue
         columns_to_select.append(f"{value} AS {key}")
-    latest_executions_subquery = (
+    latest_executions_subquery_cte = (
         select(
             WorkflowExecution.workflow_id,
             WorkflowExecution.started,
@@ -122,30 +119,29 @@ def __build_base_query(
                     literal_column("status"),
                 ),
                 else_="",
-            ).label("filter_status"),
+            ).label("filter_last_execution_status"),
         )
         .outerjoin(
-            latest_executions_subquery,
+            latest_executions_subquery_cte,
             and_(
-                Workflow.id == latest_executions_subquery.c.workflow_id,
-                latest_executions_subquery.c.row_num <= fetch_last_executions,
+                Workflow.id == latest_executions_subquery_cte.c.workflow_id,
+                latest_executions_subquery_cte.c.row_num <= 1,
             ),
         )
         .where(Workflow.tenant_id == tenant_id)
         .where(Workflow.is_deleted == False)
     )
 
-    return workflows_with_last_executions_query
+    return {
+        "workflows_with_last_executions_query": workflows_with_last_executions_query,
+        "latest_executions_subquery_cte": latest_executions_subquery_cte,
+    }
 
 
-def build_workflows_total_count_query(
-    tenant_id: str,
-    cel: str,
-    fetch_last_executions: int = 15,
-):
-    base_query = __build_base_query(
-        tenant_id=tenant_id, fetch_last_executions=fetch_last_executions
-    ).cte("base_query")
+def build_workflows_total_count_query(tenant_id: str, cel: str):
+    base_query = __build_base_query(tenant_id=tenant_id)[
+        "workflows_with_last_executions_query"
+    ].cte("base_query")
 
     query = select(func.count(func.distinct(base_query.c.entity_id))).select_from(
         base_query
@@ -173,8 +169,10 @@ def build_workflows_query(
     limit = limit if limit is not None else 20
     offset = offset if offset is not None else 0
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-
-    base_query = __build_base_query(tenant_id, fetch_last_executions).cte("base_query")
+    queries = __build_base_query(tenant_id)
+    base_query = select(text("*")).select_from(
+        queries["workflows_with_last_executions_query"]
+    )
 
     if not sort_by:
         sort_by = "started"
@@ -191,23 +189,7 @@ def build_workflows_query(
                 )
             )
         elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-            group_by_exp.append(alias_column_mapping[item.map_to])
-
-    query = (
-        select(
-            Workflow,
-            literal_column("filter_started").label("started"),
-            literal_column("filter_execution_time").label("execution_time"),
-            literal_column("filter_status").label("status"),
-        )
-        .select_from(base_query)
-        .outerjoin(
-            Workflow,
-            and_(
-                Workflow.id == base_query.c.entity_id, Workflow.tenant_id == tenant_id
-            ),
-        )
-    )
+            group_by_exp.append(item.map_to)
 
     if len(group_by_exp) > 1:
         order_by_field = cel_to_sql_instance.coalesce(
@@ -217,17 +199,43 @@ def build_workflows_query(
         order_by_field = group_by_exp[0]
 
     if sort_dir == "desc":
-        query = query.order_by(desc(text(order_by_field)), Workflow.id)
+        base_query = base_query.order_by(desc(text(order_by_field)))
     else:
-        query = query.order_by(asc(text(order_by_field)), Workflow.id)
+        base_query = base_query.order_by(asc(text(order_by_field)))
 
-    query = query.limit(limit).offset(offset)
-
-    query = query.distinct(text(order_by_field), Workflow.id)
+    base_query = base_query.limit(limit).offset(offset)
 
     if cel:
         sql_filter_str = cel_to_sql_instance.convert_to_sql_str(cel)
-        query = query.filter(text(sql_filter_str))
+        base_query = base_query.filter(text(sql_filter_str))
+
+    base_query = base_query.cte("base_query")
+
+    latest_executions_subquery_cte = queries["latest_executions_subquery_cte"]
+
+    query = (
+        select(
+            Workflow,
+            literal_column("filter_started").label("started"),
+            literal_column("filter_last_execution_time").label("execution_time"),
+            literal_column("filter_last_execution_status").label("status"),
+        )
+        .select_from(base_query)
+        .join(
+            Workflow,
+            and_(
+                Workflow.id == literal_column("entity_id"),
+                Workflow.tenant_id == tenant_id,
+            ),
+        )
+        .outerjoin(
+            latest_executions_subquery_cte,
+            and_(
+                Workflow.id == latest_executions_subquery_cte.c.workflow_id,
+                latest_executions_subquery_cte.c.row_num <= fetch_last_executions,
+            ),
+        )
+    )
 
     return query
 
@@ -243,9 +251,7 @@ def get_workflows_with_last_executions_v2(
 ) -> Tuple[list[dict], int]:
     with Session(engine) as session:
         total_count_query = build_workflows_total_count_query(
-            tenant_id=tenant_id,
-            cel=cel,
-            fetch_last_executions=fetch_last_executions,
+            tenant_id=tenant_id, cel=cel
         )
 
         count = session.exec(total_count_query).one()[0]
@@ -263,11 +269,11 @@ def get_workflows_with_last_executions_v2(
             fetch_last_executions=fetch_last_executions,
         )
 
-        query_result = session.execute(workflows_query).all()
+        query_result = session.exec(workflows_query).all()
         result = []
         for workflow, started, execution_time, status in query_result:
             # workaround for filter. In query status is empty string if it is NULL in DB
-            status = workflow if workflow == "" else None
+            status = None if status == "" else status
             result.append(tuple([workflow, started, execution_time, status]))
 
     return result, count
@@ -307,10 +313,14 @@ def get_workflow_facets_data(
     else:
         facets = static_facets
 
+    queries = __build_base_query(tenant_id)
+
     base_query = select(
         # here it creates aliases for table columns that will be used in filtering and faceting
         text(",".join(["entity_id"] + [key for key in alias_column_mapping.keys()]))
-    ).select_from(__build_base_query(tenant_id).cte("workflows_query"))
+    ).select_from(
+        queries["workflows_with_last_executions_query"].cte("workflows_query")
+    )
 
     return get_facet_options(
         base_query=base_query,

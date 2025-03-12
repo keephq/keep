@@ -73,12 +73,12 @@ services:
       - NEXTAUTH_SECRET=secret
       - NEXTAUTH_URL=http://localhost:3001
       - NEXT_PUBLIC_API_URL=http://localhost:8080
-      - POSTHOG_DISABLED=true
       - AUTH_TYPE=DB
       - API_URL=http://keep-backend-db-auth:8080
       - POSTHOG_DISABLED=true
       - FRIGADE_DISABLED=true
       - SENTRY_DISABLED=true
+      - AUTH_DEBUG=true
 
   # Backend Services (8081)
   keep-backend-db-auth:

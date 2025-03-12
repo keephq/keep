@@ -1,5 +1,9 @@
 import { Button } from "@tremor/react";
-import { RuleGroupProps as QueryRuleGroupProps } from "react-querybuilder";
+import {
+  RuleGroupProps as QueryRuleGroupProps,
+  RuleGroupType,
+  RuleType,
+} from "react-querybuilder";
 import { RuleFields } from "./RuleFields";
 
 export const RuleGroup = ({ actions, ruleGroup }: QueryRuleGroupProps) => {
@@ -24,7 +28,12 @@ export const RuleGroup = ({ actions, ruleGroup }: QueryRuleGroupProps) => {
           <div key={groupIndex}>
             <div className="mb-2">{groupIndex > 0 ? "OR" : ""}</div>
             <RuleFields
-              rule={rule}
+              rule={
+                rule as RuleGroupType<
+                  RuleType<string, string, any, string>,
+                  string
+                >
+              }
               key={rule.id}
               groupIndex={groupIndex}
               onRuleAdd={onRuleAdd}

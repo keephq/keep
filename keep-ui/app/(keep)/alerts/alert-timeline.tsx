@@ -52,6 +52,7 @@ const AlertTimeline: React.FC<AlertTimelineProps> = ({
           alt="Keep Logo"
           width={40}
           height={40}
+          providerType="keep"
           className="rounded-full flex-shrink-0"
         />
       ) : (

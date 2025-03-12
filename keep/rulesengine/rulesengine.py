@@ -21,9 +21,10 @@ from keep.api.core.db import (
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import is_all_alerts_in_status
 from keep.api.core.dependencies import get_pusher_client
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import Incident
 from keep.api.models.db.rule import Rule
+from keep.api.models.incident import IncidentDto
 from keep.api.utils.cel_utils import preprocess_cel_expression
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
@@ -152,11 +153,9 @@ class RulesEngine:
 
                             send_created_event = incident.is_confirmed
 
-                        incident = IncidentBl.resolve_incident_if_require(
-                            incident, session
+                        incident = IncidentBl(self.tenant_id, session).resolve_incident_if_require(
+                            incident
                         )
-                        session.add(incident)
-                        session.commit()
 
                         incident_dto = IncidentDto.from_db_incident(incident)
                         if send_created_event:
@@ -253,15 +252,16 @@ class RulesEngine:
                 # note that it will be commited later, when the incident is commited
                 incident_name = re.sub(pattern, var_to_replace, incident_name)
             # we are done
-            existed_incident.user_generated_name = incident_name
-            self.logger.info(
-                "Incident name updated",
-                extra={
-                    "incident_id": existed_incident.id,
-                    "old_incident_name": current_name,
-                    "new_incident_name": existed_incident.user_generated_name,
-                },
-            )
+            if existed_incident.user_generated_name != incident_name:
+                existed_incident.user_generated_name = incident_name
+                self.logger.info(
+                    "Incident name updated",
+                    extra={
+                        "incident_id": existed_incident.id,
+                        "old_incident_name": current_name,
+                        "new_incident_name": existed_incident.user_generated_name,
+                    },
+                )
             return existed_incident, False
 
         # else, this is the first time
