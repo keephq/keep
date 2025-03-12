@@ -48,15 +48,11 @@ export default function SignInForm({
   } = useForm<SignInFormInputs>();
 
   useEffect(() => {
-    console.log("Fetching providers");
     async function fetchProviders() {
-      console.log("Fetching providers2");
       const response = await getProviders();
       setProviders(response as Providers);
     }
-    console.log("Fetching providers3");
     fetchProviders();
-    console.log("Fetching providers4");
   }, []);
 
   useEffect(() => {
@@ -118,7 +114,15 @@ export default function SignInForm({
 
   const onSubmit = async (data: SignInFormInputs) => {
     try {
+      console.log("Authenticating with credentials provider");
       const result = await authenticate(data.username, data.password);
+
+      if (!result) {
+        setError("root", {
+          message: "An unexpected error occurred",
+        });
+        return;
+      }
 
       if (!result.success) {
         setError("root", {

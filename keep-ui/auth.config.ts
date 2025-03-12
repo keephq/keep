@@ -147,8 +147,6 @@ const baseProviderConfigs = {
         // Extract tenantId from callbackUrl if present
         let tenantId = NoAuthTenant;
         let name = "Keep";
-        console.log("XXX");
-        console.log(credentials);
 
         if (
           credentials &&
