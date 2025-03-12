@@ -565,7 +565,11 @@ def test_sort_asc_dsc(
             row_locator = rows.nth(index)
             # 3 is index of "name" column
             column_locator = row_locator.locator("td").nth(3)
-            expect(column_locator).to_have_text(alert["name"])
+            try:
+                expect(column_locator).to_have_text(alert["name"])
+            except Exception as e:
+                save_failure_artifacts(browser, log_entries=[])
+                raise e
 
 
 def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
