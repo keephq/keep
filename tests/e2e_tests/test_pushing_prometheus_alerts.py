@@ -71,7 +71,6 @@ def test_pulling_prometheus_alerts_to_provider(
     # Wait for the button to be clickable
     connect_button = browser.get_by_role("button", name="Connect", exact=True)
     connect_button.wait_for(state="visible")
-    connect_button.wait_for(state="enabled")
     connect_button.click()
 
     # Validate provider is created - increase timeout for validation
