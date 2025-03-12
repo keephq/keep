@@ -105,7 +105,6 @@ def test_pulling_prometheus_alerts_to_provider(
             # Try to get to the Feed page
             feed_link = browser.get_by_role("link", name="Feed")
             feed_link.wait_for(state="visible")
-            feed_link.wait_for(state="enabled")
             feed_link.click(timeout=10000)  # Increase timeout to 10 seconds
 
             # Wait for alerts to load with increased timeout
