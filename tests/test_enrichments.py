@@ -601,6 +601,7 @@ def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
                 {
                     "source_provider_id": "unknown",
                     "service": "test-service",
+                    "external_id": 1,
                     "environment": "unknown",
                     "display_name": "Test Service",
                     "is_manual": False,
