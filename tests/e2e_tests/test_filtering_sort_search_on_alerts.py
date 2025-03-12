@@ -5,12 +5,8 @@ import pytest
 import requests
 from playwright.sync_api import Page, expect
 
-from tests.e2e_tests.test_end_to_end import (
-    init_e2e_test,
-    save_failure_artifacts,
-    setup_console_listener,
-)
-from tests.e2e_tests.utils import get_token
+from tests.e2e_tests.test_end_to_end import init_e2e_test, setup_console_listener
+from tests.e2e_tests.utils import get_token, save_failure_artifacts
 
 # NOTE 2: to run the tests with a browser, uncomment this two lines:
 # import os

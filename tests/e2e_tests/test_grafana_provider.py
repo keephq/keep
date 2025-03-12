@@ -1,6 +1,4 @@
-import os
 import re
-import sys
 from datetime import datetime
 
 import requests
@@ -12,6 +10,7 @@ from tests.e2e_tests.utils import (
     delete_provider,
     init_e2e_test,
     open_connected_provider,
+    save_failure_artifacts,
     trigger_alert,
 )
 
@@ -201,15 +200,4 @@ def test_grafana_provider(browser: Page, setup_page_logging, failure_artifacts):
 
     except Exception:
         # Current file + test name for unique html and png dump.
-        current_test_name = (
-            "playwright_dump_"
-            + os.path.basename(__file__)[:-3]
-            + "_"
-            + sys._getframe().f_code.co_name
-        )
-
-        browser.screenshot(path=current_test_name + ".png")
-        with open(current_test_name + ".html", "w") as f:
-            f.write(browser.content())
-
-        raise
+        save_failure_artifacts(browser)

@@ -245,6 +245,23 @@ def get_token():
     )
 
 
+def save_failure_artifacts(page, log_entries=[]):
+    """Save screenshots, HTML content, and console logs on test failure."""
+
+    current_test_name = get_current_test_name()
+
+    # Save screenshot
+    page.screenshot(path=current_test_name + ".png")
+
+    # Save HTML content
+    with open(current_test_name + ".html", "w", encoding="utf-8") as f:
+        f.write(page.content())
+
+    # Save console logs
+    with open(current_test_name + "_console.txt", "w", encoding="utf-8") as f:
+        f.write("\n".join(log_entries))
+
+
 # Generate unique name for the dump files
 def get_current_test_name():
     current_test_name = "playwright_dump_" + os.path.basename(__file__)[:-3] + "_"

@@ -32,9 +32,9 @@ from tests.e2e_tests.utils import (
     assert_connected_provider_count,
     assert_scope_text_count,
     delete_provider,
-    get_current_test_name,
     init_e2e_test,
     install_webhook_provider,
+    save_failure_artifacts,
     trigger_alert,
 )
 
@@ -62,23 +62,6 @@ def setup_console_listener(page, log_entries):
             )
         ),
     )
-
-
-def save_failure_artifacts(page, log_entries):
-    """Save screenshots, HTML content, and console logs on test failure."""
-
-    current_test_name = get_current_test_name()
-
-    # Save screenshot
-    page.screenshot(path=current_test_name + ".png")
-
-    # Save HTML content
-    with open(current_test_name + ".html", "w", encoding="utf-8") as f:
-        f.write(page.content())
-
-    # Save console logs
-    with open(current_test_name + "_console.txt", "w", encoding="utf-8") as f:
-        f.write("\n".join(log_entries))
 
 
 def test_sanity(browser: Page):  # browser is actually a page object
@@ -359,6 +342,7 @@ def test_add_workflow(browser: Page, setup_page_logging, failure_artifacts):
 def test_paste_workflow_yaml_quotes_preserved(browser: Page):
     # browser is actually a page object
     page = browser
+
     log_entries = []
     setup_console_listener(page, log_entries)
 
@@ -374,7 +358,7 @@ def test_paste_workflow_yaml_quotes_preserved(browser: Page):
         page.get_by_role("button", name="Upload Workflows").click()
         page.get_by_test_id("text-area").click()
         page.get_by_test_id("text-area").fill(workflow_yaml)
-        page.get_by_role("button", name="Load").click()
+        page.get_by_role("button", name="Load", exact=True).click()
         page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
         page.get_by_role("tab", name="YAML Definition").click()
         yaml_editor_container = page.get_by_test_id("wf-detail-yaml-editor-container")
