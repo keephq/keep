@@ -31,27 +31,26 @@ def upgrade() -> None:
             # ignore because this constraint may not exist in prod
             pass
 
+        op.execute(
+            """
+                WITH duplicates AS (
+                    SELECT id,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY tenant_id, alert_fingerprint 
+                            ORDER BY timestamp DESC
+                        ) AS rn
+                    FROM alertenrichment
+                )
+                DELETE FROM alertenrichment
+                WHERE id IN (SELECT id FROM duplicates WHERE rn > 1);
+            """
+        )
+
         with op.batch_alter_table("alertenrichment") as batch_op:
             batch_op.create_unique_constraint(
                 "uc_alertenrichment_tenant_fingerprint",
                 ["tenant_id", "alert_fingerprint"],
             )
-
-        op.execute(
-            """
-            WITH duplicates AS (
-                SELECT id,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY tenant_id, alert_fingerprint 
-                        ORDER BY timestamp DESC
-                    ) AS rn
-                FROM alertenrichment
-            )
-            DELETE FROM alertenrichment
-            WHERE id IN (SELECT id FROM duplicates WHERE rn > 1);
-        """
-        )
-
     elif dialect == "postgresql":
         with op.batch_alter_table("alertenrichment") as batch_op:
             batch_op.drop_constraint("alert_fingerprint", type_="unique")
@@ -137,12 +136,12 @@ def downgrade() -> None:
         )
         op.execute(
             """
-            ALTER TABLE alertenrichment
-            ADD CONSTRAINT alertenrichment_ibfk_1
-            FOREIGN KEY (tenant_id) 
-            REFERENCES tenant(id)
-            ON DELETE CASCADE ON UPDATE CASCADE;
-        """
+                ALTER TABLE alertenrichment
+                ADD CONSTRAINT alertenrichment_ibfk_1
+                FOREIGN KEY (tenant_id) 
+                REFERENCES tenant(id)
+                ON DELETE CASCADE ON UPDATE CASCADE;
+            """
         )
         op.create_unique_constraint(
             "alert_fingerprint", "alertenrichment", ["alert_fingerprint"]
