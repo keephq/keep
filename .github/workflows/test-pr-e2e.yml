@@ -380,7 +380,7 @@ jobs:
               # Print logs using docker compose
               if [ ! -z "$compose_service" ]; then
                 echo "===== RECENT LOGS FOR $compose_service ====="
-                docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 20
+                docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
                 echo "=========================================="
               fi
 
