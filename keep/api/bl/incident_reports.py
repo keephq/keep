@@ -180,9 +180,6 @@ class IncidentReportsBl:
         return severity_metrics
 
     def __calculate_mttd(self, incidents: list[IncidentDto]) -> int:
-        if len(incidents) == 0:
-            return 0
-
         duration_sum = 0
         incidents_count = 0
 
@@ -195,16 +192,20 @@ class IncidentReportsBl:
             ).total_seconds()
             incidents_count += 1
 
+        if incidents_count == 0:
+            return 0
+
         return math.ceil(duration_sum / incidents_count)
 
     def __calculate_mttr(self, resolved_incidents: list[IncidentDto]) -> int:
-        if len(resolved_incidents) == 0:
-            return 0
-
-        duration_sum = 0
         filtered_incidents = [
             incident for incident in resolved_incidents if incident.end_time
         ]
+
+        if len(filtered_incidents) == 0:
+            return 0
+
+        duration_sum = 0
         for incident in filtered_incidents:
             start_time = incident.start_time or incident.creation_time
             duration_sum += (incident.end_time - start_time).total_seconds()
