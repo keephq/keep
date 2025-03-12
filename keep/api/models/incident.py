@@ -213,7 +213,7 @@ class IncidentDto(IncidentDtoIn):
             affected_services=self.services,
             sources=self.alert_sources,
             is_predicted=self.is_predicted,
-            is_confirmed=self.is_confirmed,
+            is_candidate=self.is_candidate,
             rule_fingerprint=self.rule_fingerprint,
             fingerprint=self.fingerprint,
             same_incident_in_the_past_id=self.same_incident_in_the_past_id,
