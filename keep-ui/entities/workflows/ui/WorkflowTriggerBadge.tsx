@@ -13,21 +13,22 @@ export function WorkflowTriggerBadge({
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   showTooltip?: boolean;
 }) {
-
   let label = trigger.type;
-  const badge = <button
-    className={clsx(
-      "border bg-white border-gray-500 p-0.5 pr-2.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-3xl font-medium flex items-center gap-1 capitalize",
-      onClick !== undefined
-        ? "hover:bg-gray-100 hover:border-gray cursor-pointer"
-        : "hover:bg-white hover:border-gray-500 cursor-default"
-    )}
-    onClick={onClick}
-    disabled={onClick === undefined}
-  >
-    <TriggerIcon trigger={trigger}/>
-    {label}
-  </button>
+  const badge = (
+    <button
+      className={clsx(
+        "border bg-white border-gray-500 p-0.5 pr-2.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-3xl font-medium flex items-center gap-1 capitalize",
+        onClick !== undefined
+          ? "hover:bg-gray-100 hover:border-gray cursor-pointer"
+          : "hover:bg-white hover:border-gray-500 cursor-default"
+      )}
+      onClick={onClick}
+      disabled={onClick === undefined}
+    >
+      <TriggerIcon trigger={trigger} />
+      {label}
+    </button>
+  );
 
   if (!showTooltip) {
     return badge;
@@ -36,7 +37,7 @@ export function WorkflowTriggerBadge({
   let tooltipContent = getTriggerDescription(trigger);
 
   return (
-    <Tooltip content={tooltipContent}>
+    <Tooltip content={tooltipContent} asChild>
       {badge}
     </Tooltip>
   );

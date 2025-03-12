@@ -83,6 +83,7 @@ export function IncidentChangeStatusSelect({
 
   return (
     <Select
+      instanceId={`incident-status-select-${incidentId}`}
       className={className}
       isSearchable={false}
       options={statusOptions}

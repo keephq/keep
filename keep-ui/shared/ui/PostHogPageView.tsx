@@ -8,7 +8,7 @@ import { useConfig } from "@/utils/hooks/useConfig";
 import { useHydratedSession as useSession } from "../lib/hooks/useHydratedSession";
 import { NoAuthUserEmail } from "@/utils/authenticationType";
 
-export default function PostHogPageView(): null {
+export function PostHogPageView(): null {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const posthog = usePostHog();

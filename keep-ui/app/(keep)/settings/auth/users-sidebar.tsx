@@ -326,7 +326,7 @@ const UsersSidebar = ({
                           {...field}
                           onValueChange={(value) => field.onChange(value)}
                           value={field.value as string[]}
-                          className="custom-multiselect"
+                          className="custom-multiselect !max-w-none"
                           disabled={!userCreationAllowed}
                         >
                           {groups.map((group) => (
