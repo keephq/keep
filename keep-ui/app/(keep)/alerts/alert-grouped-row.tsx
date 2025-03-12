@@ -144,5 +144,3 @@ export const GroupedRow = ({
     </TableRow>
   );
 };
-
-export default GroupedRow;
