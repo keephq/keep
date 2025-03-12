@@ -22,6 +22,31 @@ def upgrade() -> None:
     conn = op.get_bind()
     dialect = conn.dialect.name
 
+    op.create_table(
+        "alertenrichment_before_tenant_fingerprint_constraint",
+        sa.Column("enrichments", sa.JSON(), nullable=True),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
+        sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("timestamp", sa.DateTime(), nullable=False),
+        sa.Column(
+            "alert_fingerprint", sqlmodel.sql.sqltypes.AutoString(), nullable=False
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id"],
+            ["tenant.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("alert_fingerprint"),
+    )
+
+    # Copy existing data
+    op.execute(
+        """
+            INSERT INTO alertenrichment_before_tenant_fingerprint_constraint (id, tenant_id, alert_fingerprint, timestamp, enrichments)
+            SELECT id, tenant_id, alert_fingerprint, timestamp, enrichments FROM alertenrichment;
+        """
+    )
+
     if dialect == "mysql":
         try:
             op.drop_constraint("alert_fingerprint", "alertenrichment", type_="unique")
@@ -83,8 +108,9 @@ def upgrade() -> None:
                 ["tenant_id", "alert_fingerprint"],
             )
     elif dialect == "sqlite":
+        op.execute("DROP TABLE alertenrichment;")
         op.create_table(
-            "alertenrichment_new",
+            "alertenrichment",
             sa.Column("enrichments", sa.JSON(), nullable=True),
             sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -102,8 +128,8 @@ def upgrade() -> None:
         # Copy existing data
         op.execute(
             """
-                INSERT INTO alertenrichment_new (id, tenant_id, alert_fingerprint, timestamp, enrichments)
-                SELECT id, tenant_id, alert_fingerprint, timestamp, enrichments FROM alertenrichment;
+                INSERT INTO alertenrichment (id, tenant_id, alert_fingerprint, timestamp, enrichments)
+                SELECT id, tenant_id, alert_fingerprint, timestamp, enrichments FROM alertenrichment_before_tenant_fingerprint_constraint;
             """
         )
         op.execute(
@@ -114,20 +140,17 @@ def upgrade() -> None:
                             PARTITION BY tenant_id, alert_fingerprint 
                             ORDER BY timestamp DESC
                         ) AS rn
-                    FROM alertenrichment_new
+                    FROM alertenrichment
                 )
-                DELETE FROM alertenrichment_new
+                DELETE FROM alertenrichment
                 WHERE id IN (SELECT id FROM duplicates WHERE rn > 1);
             """
         )
-        with op.batch_alter_table("alertenrichment_new") as batch_op:
+        with op.batch_alter_table("alertenrichment") as batch_op:
             batch_op.create_unique_constraint(
                 "uc_alertenrichment_tenant_fingerprint",
                 ["tenant_id", "alert_fingerprint"],
             )
-
-        op.execute("DROP TABLE alertenrichment;")
-        op.execute("ALTER TABLE alertenrichment_new RENAME TO alertenrichment;")
     # ### end Alembic commands ###
 
 
