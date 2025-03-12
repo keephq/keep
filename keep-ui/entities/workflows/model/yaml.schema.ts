@@ -96,6 +96,7 @@ export function getYamlWorkflowDefinitionSchema(providers: Provider[]) {
     )
     .map((provider) => getYamlProviderSchema(provider, "step"));
   const stepSchema = YamlStepOrActionSchema.extend({
+    // @ts-ignore TODO: fix type inference
     provider: z.discriminatedUnion("type", providerStepSchemas),
   });
   const providerActionSchemas = providers
@@ -104,6 +105,7 @@ export function getYamlWorkflowDefinitionSchema(providers: Provider[]) {
     )
     .map((provider) => getYamlProviderSchema(provider, "action"));
   const actionSchema = YamlStepOrActionSchema.extend({
+    // @ts-ignore TODO: fix type inference
     provider: z.discriminatedUnion("type", providerActionSchemas),
   });
   return z.object({
