@@ -22,7 +22,8 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { DefaultRuleGroupType, parseCEL } from "react-querybuilder";
+import { DefaultRuleGroupType } from "react-querybuilder";
+import { parseCEL } from "react-querybuilder/parseCEL";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormattedQueryCell } from "./FormattedQueryCell";
 import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
@@ -82,6 +83,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         query: queryInGroup,
         incidents: selectedRule.incidents,
         incidentNameTemplate: selectedRule.incident_name_template || "",
+        incidentPrefix: selectedRule.incident_prefix || "",
       };
     }
 
@@ -122,6 +124,13 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
             <Badge color="gray">default</Badge>
           );
         },
+      }),
+      columnHelper.accessor("incident_prefix", {
+        header: "Incident Prefix",
+        cell: (context) =>
+          context.getValue() && (
+            <Badge color="orange">{context.getValue()}</Badge>
+          ),
       }),
       columnHelper.accessor("definition_cel", {
         header: "Description",

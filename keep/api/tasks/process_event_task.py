@@ -270,7 +270,7 @@ def __save_to_db(
                         extra={"alert_id": alert.id, "tenant_id": tenant_id},
                     )
                     for incident in alert._incidents:
-                        IncidentBl.resolve_incident_if_require(incident, session)
+                        IncidentBl(tenant_id, session).resolve_incident_if_require(incident)
             logger.info(
                 "Completed checking for incidents to resolve",
                 extra={"tenant_id": tenant_id},

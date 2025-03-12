@@ -13,10 +13,12 @@ import {
   ArrowUpRightIcon,
   CodeBracketIcon,
   WrenchIcon,
+  KeyIcon,
 } from "@heroicons/react/24/outline";
 import { Workflow } from "@/shared/api/workflows";
 import { WorkflowBuilderWidget } from "@/widgets/workflow-builder";
 import WorkflowOverview from "./workflow-overview";
+import WorkflowSecrets from "./workflow-secrets";
 import { useConfig } from "utils/hooks/useConfig";
 import { AiOutlineSwap } from "react-icons/ai";
 import { ErrorComponent, TabNavigationLink } from "@/shared/ui";
@@ -44,6 +46,8 @@ export default function WorkflowDetailPage({
       setTabIndex(2);
     } else if (tab === "builder") {
       setTabIndex(1);
+    } else if (tab === "secrets") {
+      setTabIndex(3);
     } else {
       setTabIndex(0);
     }
@@ -73,6 +77,9 @@ export default function WorkflowDetailPage({
       case 2:
         router.push(`${basePath}?tab=yaml`);
         break;
+      case 3:
+        router.push(`${basePath}?tab=secrets`);
+        break;
     }
   };
 
@@ -83,6 +90,7 @@ export default function WorkflowDetailPage({
           <Tab icon={AiOutlineSwap}>Overview</Tab>
           <Tab icon={WrenchIcon}>Builder</Tab>
           <Tab icon={CodeBracketIcon}>YAML Definition</Tab>
+          <Tab icon={KeyIcon}>Secrets</Tab>
           <TabNavigationLink
             href="https://www.youtube.com/@keepalerting"
             icon={ArrowUpRightIcon}
@@ -131,6 +139,9 @@ export default function WorkflowDetailPage({
                 />
               </Card>
             )}
+          </TabPanel>
+          <TabPanel>
+            <WorkflowSecrets workflowId={params.workflow_id} />
           </TabPanel>
         </TabPanels>
       </TabGroup>
