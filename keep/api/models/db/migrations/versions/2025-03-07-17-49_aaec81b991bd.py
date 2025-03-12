@@ -204,10 +204,19 @@ def upgrade():
 
     transfer_data()
 
-    op.drop_table("topologyservicedependency_tmp")
-    op.drop_table("topologyserviceapplication_tmp")
-    op.drop_table("topologyapplication_tmp")
-    op.drop_table("topologyservice_tmp")
+    # Let's do not drop this as backup for a while
+
+    op.rename_table('topologyapplication_tmp', 'topologyapplication_backup')
+    op.rename_table('topologyservice_tmp', 'topologyservice_backup')
+    op.rename_table('topologyserviceapplication_tmp', 'topologyserviceapplication_backup')
+    op.rename_table('topologyservicedependency_tmp', 'topologyservicedependency_backup')
+
+    # But after some time we will need to execute this:
+
+    # op.drop_table("topologyservicedependency_backup")
+    # op.drop_table("topologyserviceapplication_backup")
+    # op.drop_table("topologyapplication_backup")
+    # op.drop_table("topologyservice_backup")
 
 
 def downgrade():
