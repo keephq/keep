@@ -83,6 +83,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         query: queryInGroup,
         incidents: selectedRule.incidents,
         incidentNameTemplate: selectedRule.incident_name_template || "",
+        incidentPrefix: selectedRule.incident_prefix || "",
       };
     }
 
@@ -123,6 +124,13 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
             <Badge color="gray">default</Badge>
           );
         },
+      }),
+      columnHelper.accessor("incident_prefix", {
+        header: "Incident Prefix",
+        cell: (context) =>
+          context.getValue() && (
+            <Badge color="orange">{context.getValue()}</Badge>
+          ),
       }),
       columnHelper.accessor("definition_cel", {
         header: "Description",

@@ -98,7 +98,7 @@ export const CorrelationForm = ({
           />
         </span>
       </fieldset>
-      <fieldset className="grid grid-cols-1">
+      <fieldset className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong flex items-center">
             Incident name template
@@ -126,6 +126,43 @@ export const CorrelationForm = ({
             errorMessage={
               isSubmitted && get(errors, "incidentNameTemplate.message")
             }
+          />
+        </div>
+        <div>
+          <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong flex items-center">
+            Incident prefix
+            <Button
+              className="cursor-default ml-2"
+              type="button"
+              tooltip="Incident prefix will be added to the incident name with a running number. For example, if the incident prefix is ACME and the incident name is 'Incident on hosts host1, host2', the incident name will be 'ACME-1 - Incident on hosts host1, host2'."
+              icon={QuestionMarkCircleIcon}
+              size="xs"
+              variant="light"
+              color="slate"
+            />
+          </label>
+          <TextInput
+            type="text"
+            placeholder="INC"
+            className="mt-2"
+            {...register("incidentPrefix", {
+              required: {
+                message: "Incident prefix is required",
+                value: false,
+              },
+              validate: (value) => {
+                if (!value) return true;
+                if (value.length > 10) {
+                  return "Incident prefix must be less than 10 characters";
+                }
+                if (!/^[a-zA-Z0-9]+$/.test(value)) {
+                  return "Incident prefix must contain only letters and numbers";
+                }
+                return true;
+              },
+            })}
+            error={isSubmitted && !!get(errors, "incidentPrefix.message")}
+            errorMessage={isSubmitted && get(errors, "incidentPrefix.message")}
           />
         </div>
       </fieldset>
