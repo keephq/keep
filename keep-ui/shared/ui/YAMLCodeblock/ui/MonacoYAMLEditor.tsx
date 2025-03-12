@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import Editor from "@monaco-editor/react";
 import { type editor } from "monaco-editor";
 import { Download, Copy, Check, Save } from "lucide-react";
 import { Button } from "@tremor/react";
@@ -7,13 +6,27 @@ import { LogEntry } from "@/shared/api/workflow-executions";
 import { getStepStatus } from "@/shared/lib/logs-utils";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
+import { useProviders } from "@/utils/hooks/useProviders";
+import Skeleton from "react-loading-skeleton";
+import dynamic from "next/dynamic";
 import "./MonacoYAMLEditor.css";
-import {
-  StepValidationError,
-  useGetYamlValidationErrors,
-  YAMLSchemaValidationErrors,
-  YAMLValidationErrors,
-} from "./YAMLValidationErrors";
+import { KeepSchemaPath } from "../../WorkflowYamlEditor/lib/constants";
+
+const WorkflowYamlEditor = dynamic(
+  () =>
+    import("@/shared/ui/WorkflowYamlEditor/ui/WorkflowYamlEditor").then(
+      (mod) => mod.WorkflowYamlEditor
+    ),
+  {
+    ssr: false,
+  }
+);
+
+// const EditorExtended = dynamic(() =>
+//   import("@/shared/ui/WorkflowYamlEditor/ui/EditorExtended").then(
+//     (mod) => mod.EditorExtended
+//   )
+// );
 
 interface Props {
   workflowRaw: string;
@@ -44,6 +57,9 @@ const MonacoYAMLEditor = ({
 }: Props) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const { updateWorkflow } = useWorkflowActions();
+
+  const { data: { providers } = {}, isLoading: isLoadingProviders } =
+    useProviders();
 
   const findStepNameForPosition = (
     lineNumber: number,
@@ -78,86 +94,21 @@ const MonacoYAMLEditor = ({
   const [isCopied, setIsCopied] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
-  const [currentContent, setCurrentContent] = useState("");
-  const validateYaml = useGetYamlValidationErrors();
-  const [validationErrors, setValidationErrors] = useState<
-    StepValidationError[]
-  >([]);
 
   const getStatus = useCallback(
     (name: string, isAction: boolean = false) => {
-      return validationErrors.find((error) => error[0] === name)?.[1] ?? "";
+      if (!executionLogs || !executionStatus) {
+        return "pending";
+      }
+      if (executionStatus === "in_progress") {
+        return "in_progress";
+      }
+      return getStepStatus(name, isAction, executionLogs);
     },
-    [validationErrors]
+    [executionLogs, executionStatus]
   );
 
-  // const getStatus = useCallback(
-  //   (name: string, isAction: boolean = false) => {
-  //     if (!executionLogs || !executionStatus) {
-  //       return "pending";
-  //     }
-  //     if (executionStatus === "in_progress") {
-  //       return "in_progress";
-  //     }
-  //     return getStepStatus(name, isAction, executionLogs);
-  //   },
-  //   [executionLogs, executionStatus]
-  // );
-
-  const updateValidationDecorations = ({
-    validationErrors,
-    monacoInstance,
-  }: {
-    validationErrors: StepValidationError[];
-    monacoInstance: typeof import("monaco-editor");
-  }) => {
-    if (!editorRef.current) return;
-
-    const model = editorRef.current.getModel();
-    if (!model) return;
-
-    const content = model.getValue();
-    const lines = content.split("\n");
-    const decorations: editor.IModelDeltaDecoration[] = [];
-
-    const errorredSteps = Array.from(
-      new Set(
-        validationErrors
-          .filter((error) => error[2] === "error")
-          .map((error) => error[0])
-      )
-    );
-    const warnedSteps = Array.from(
-      new Set(
-        validationErrors
-          .filter((error) => error[2] === "warning")
-          .map((error) => error[0])
-      )
-    );
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmedLine = line.trim();
-
-      const isError = errorredSteps.some((step) => trimmedLine.includes(step));
-      const isWarning = warnedSteps.some((step) => trimmedLine.includes(step));
-
-      if (isError) {
-        decorations.push({
-          range: new monacoInstance.Range(i + 1, 1, i + 1, 1),
-          options: { isWholeLine: true, className: "bg-red-100" },
-        });
-      } else if (isWarning) {
-        decorations.push({
-          range: new monacoInstance.Range(i + 1, 1, i + 1, 1),
-          options: { isWholeLine: true, className: "bg-yellow-100" },
-        });
-      }
-    }
-
-    editorRef.current.deltaDecorations(stepDecorationsRef.current, decorations);
-  };
-
+  // TODO: move logs decoration to helper function or separate component
   const handleEditorDidMount = (
     editor: editor.IStandaloneCodeEditor,
     monacoInstance: typeof import("monaco-editor")
@@ -350,14 +301,6 @@ const MonacoYAMLEditor = ({
       editor.onDidChangeModelContent(() => {
         const currentContent = editor.getValue();
         setHasChanges(currentContent !== originalContent);
-        setCurrentContent(currentContent);
-        // const { isValid, canDeploy, validationErrors } =
-        //   validateYaml(currentContent);
-        // setValidationErrors(validationErrors);
-        // updateValidationDecorations({
-        //   validationErrors,
-        //   monacoInstance,
-        // });
       });
     }
 
@@ -516,7 +459,6 @@ const MonacoYAMLEditor = ({
     wordWrap: "on",
     wordWrapColumn: 80,
     wrappingIndent: "indent",
-    theme: "vs-light",
   };
 
   return (
@@ -525,7 +467,7 @@ const MonacoYAMLEditor = ({
       data-testid={dataTestId + "-container"}
     >
       <div
-        className="relative flex-1 min-h-0"
+        className="relative flex-1 min-h-0 p-1"
         style={{ height: "calc(100vh - 300px)" }}
       >
         <div className="absolute right-2 top-2 z-10 flex gap-2">
@@ -569,14 +511,27 @@ const MonacoYAMLEditor = ({
             <Download className="h-4 w-4" />
           </Button>
         </div>
-        <Editor
-          wrapperProps={{ "data-testid": dataTestId }}
-          height="100%"
-          defaultLanguage="yaml"
-          defaultValue={getOrderedWorkflowYamlString(workflowRaw)}
-          onMount={handleEditorDidMount}
-          options={editorOptions}
-        />
+        {!providers || isLoadingProviders ? (
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        ) : (
+          <WorkflowYamlEditor
+            height="100%"
+            wrapperProps={{ "data-testid": dataTestId }}
+            defaultValue={getOrderedWorkflowYamlString(workflowRaw)}
+            onMount={handleEditorDidMount}
+            options={editorOptions}
+            providers={providers}
+            theme="light"
+            defaultPath={KeepSchemaPath}
+            defaultLanguage="yaml"
+          />
+        )}
       </div>
       <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200">
         <span className="text-sm text-gray-500">{filename}.yaml</span>

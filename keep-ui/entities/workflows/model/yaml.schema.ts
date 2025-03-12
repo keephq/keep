@@ -71,43 +71,38 @@ function getYamlProviderSchema(provider: Provider, type: "step" | "action") {
     "enrich_incident",
   ];
 
+  // @ts-ignore
+  const validKeysSchema = z.enum(validKeys);
+
   return YamlProviderSchema.extend({
     type: z.literal(provider.type),
-    with: z
-      .record(
-        z.union([z.string(), EnrichAlertSchema, EnrichIncidentSchema]),
-        z.union([
-          z.string(),
-          z.number(),
-          z.boolean(),
-          z.object({}),
-          z.array(z.any()),
-        ])
-      )
-      .superRefine((data, ctx) => {
-        Object.keys(data).forEach((key) => {
-          if (!validKeys.includes(key)) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: `Invalid parameter key: ${key}. Must be one of: ${validKeys.join(", ")}`,
-              path: [key],
-            });
-          }
-        });
-      }),
+    with: z.record(
+      validKeysSchema,
+      z.union([
+        z.string(),
+        z.number(),
+        z.boolean(),
+        z.object({}),
+        z.array(z.any()),
+      ])
+    ),
   });
 }
 
 export function getYamlWorkflowDefinitionSchema(providers: Provider[]) {
-  const providerStepSchemas = providers.map((provider) =>
-    getYamlProviderSchema(provider, "step")
-  );
+  const providerStepSchemas = providers
+    .filter(
+      (provider) => provider.query_params && provider.query_params.length > 0
+    )
+    .map((provider) => getYamlProviderSchema(provider, "step"));
   const stepSchema = YamlStepOrActionSchema.extend({
     provider: z.discriminatedUnion("type", providerStepSchemas),
   });
-  const providerActionSchemas = providers.map((provider) =>
-    getYamlProviderSchema(provider, "action")
-  );
+  const providerActionSchemas = providers
+    .filter(
+      (provider) => provider.notify_params && provider.notify_params.length > 0
+    )
+    .map((provider) => getYamlProviderSchema(provider, "action"));
   const actionSchema = YamlStepOrActionSchema.extend({
     provider: z.discriminatedUnion("type", providerActionSchemas),
   });
