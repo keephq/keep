@@ -21,13 +21,27 @@ def transfer_data():
     session = Session(bind=op.get_bind())
     dialect = session.bind.dialect.name
 
-    session.execute(sa.text("""
+    uuid_generation_func = "replace(uuid(),'-','')"
+    if dialect == "sqlite":
+        uuid_generation_func = """
+        lower(
+            hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-' || '4' ||
+            substr(hex( randomblob(2)), 2) || '-' ||
+            substr('AB89', 1 + (abs(random()) % 4) , 1)  ||
+            substr(hex(randomblob(2)), 2) || '-' ||
+            hex(randomblob(6))
+          )
+        """
+    elif dialect == "postgresql":
+        uuid_generation_func = "gen_random_uuid()"
+
+    session.execute(sa.text(f"""
         INSERT INTO topologyservice (
-            id, tenant_id, source_provider_id, repository, tags, service, environment, display_name, description, 
+            id, external_id, tenant_id, source_provider_id, repository, tags, service, environment, display_name, description, 
             team, email, slack, ip_address, mac_address, category, manufacturer, namespace, is_manual
         )  
         SELECT 
-            id, tenant_id, source_provider_id, repository, tags, service, environment, display_name, description, 
+            {uuid_generation_func} as id, id as external_id, tenant_id, source_provider_id, repository, tags, service, environment, display_name, description, 
             team, email, slack, ip_address, mac_address, category, manufacturer, namespace, is_manual 
         FROM topologyservice_tmp
     """))
@@ -39,37 +53,17 @@ def transfer_data():
 
     session.execute(sa.text("""
         INSERT INTO topologyserviceapplication (service_id, application_id, tenant_id) 
-        SELECT tsa.service_id, tsa.application_id, ts.tenant_id FROM topologyserviceapplication_tmp as tsa
-        JOIN topologyservice_tmp as ts ON tsa.service_id = ts.id
+        SELECT ts.id, tsa.application_id, ts.tenant_id FROM topologyserviceapplication_tmp as tsa
+        JOIN topologyservice as ts ON tsa.service_id = ts.external_id
     """))
 
-    if dialect == "sqlite":
-        session.execute(sa.text("""
-            INSERT INTO topologyservicedependency (id, service_id, depends_on_service_id, updated_at, protocol, tenant_id) 
-            SELECT lower(
-                hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-' || '4' ||
-                substr(hex( randomblob(2)), 2) || '-' ||
-                substr('AB89', 1 + (abs(random()) % 4) , 1)  ||
-                substr(hex(randomblob(2)), 2) || '-' ||
-                hex(randomblob(6))
-              ) as id, tsd.service_id, tsd.depends_on_service_id, tsd.updated_at, tsd.protocol, ts.tenant_id
-            FROM topologyservicedependency_tmp as tsd
-            JOIN topologyservice_tmp as ts ON tsd.service_id = ts.id
-        """))
-    elif dialect == "postgres":
-        session.execute(sa.text("""
-            INSERT INTO topologyservicedependency (id, service_id, depends_on_service_id, updated_at, protocol, tenant_id) 
-            SELECT gen_random_uuid() as id, tsd.service_id, tsd.depends_on_service_id, tsd.updated_at, tsd.protocol, ts.tenant_id
-            FROM topologyservicedependency_tmp as tsd
-            JOIN topologyservice_tmp as ts ON tsd.service_id = ts.id
-        """))
-    elif dialect == "mysql":
-        session.execute(sa.text("""
-            INSERT INTO topologyservicedependency (id, service_id, depends_on_service_id, updated_at, protocol, tenant_id) 
-            SELECT uuid() as id, tsd.service_id, tsd.depends_on_service_id, tsd.updated_at, tsd.protocol, ts.tenant_id
-            FROM topologyservicedependency_tmp as tsd
-            JOIN topologyservice_tmp as ts ON tsd.service_id = ts.id
-        """))
+    session.execute(sa.text(f"""
+        INSERT INTO topologyservicedependency (id, service_id, depends_on_service_id, updated_at, protocol, tenant_id) 
+        SELECT {uuid_generation_func} as id, ts.id as service_id, ts_dep.id as depends_on_service_id, tsd.updated_at, tsd.protocol, ts.tenant_id
+        FROM topologyservicedependency_tmp as tsd
+        JOIN topologyservice as ts ON tsd.service_id = ts.external_id
+        JOIN topologyservice as ts_dep ON tsd.depends_on_service_id = ts_dep.external_id
+    """))
 
 
 def transfer_data_back():
@@ -80,7 +74,7 @@ def transfer_data_back():
             id, tenant_id, source_provider_id, repository, tags, service, environment, display_name, description, 
             team, email, slack, ip_address, mac_address, category, manufacturer, namespace, is_manual
         )
-        SELECT id, tenant_id, source_provider_id, repository, tags, service, environment, display_name, description, 
+        SELECT external_id as id, tenant_id, source_provider_id, repository, tags, service, environment, display_name, description, 
         team, email, slack, ip_address, mac_address, category, manufacturer, namespace, is_manual 
         FROM topologyservice_tmp
     """))
@@ -92,12 +86,17 @@ def transfer_data_back():
 
     session.execute(sa.text("""
         INSERT INTO topologyserviceapplication (service_id, application_id) 
-        SELECT service_id, application_id FROM topologyserviceapplication_tmp
+        SELECT ts.external_id, tsa.application_id FROM topologyserviceapplication_tmp as tsa
+        JOIN topologyservice_tmp as ts ON tsa.service_id = ts.id
+        
     """))
 
     session.execute(sa.text("""
         INSERT INTO topologyservicedependency (service_id, depends_on_service_id, updated_at, protocol) 
-        SELECT service_id, depends_on_service_id, updated_at, protocol FROM topologyservicedependency_tmp
+        SELECT ts.external_id, ts_dep.external_id, tsd.updated_at, tsd.protocol 
+        FROM topologyservicedependency_tmp as tsd
+        JOIN topologyservice_tmp as ts ON tsd.service_id = ts.id
+        JOIN topologyservice_tmp as ts_dep ON tsd.depends_on_service_id = ts_dep.id
     """))
 
 def upgrade():
@@ -121,7 +120,8 @@ def upgrade():
     )
     op.create_table(
         "topologyservice",
-        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("external_id", sa.Integer(), nullable=True),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column(
             "source_provider_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False
@@ -156,7 +156,7 @@ def upgrade():
     op.create_table(
         "topologyserviceapplication",
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("service_id", sa.Integer(), nullable=False),
+        sa.Column("service_id", sa.Uuid(), nullable=False),
         sa.Column("application_id", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(
             ["application_id", "tenant_id"],
@@ -176,8 +176,8 @@ def upgrade():
         "topologyservicedependency",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("service_id", sa.Integer(), nullable=False),
-        sa.Column("depends_on_service_id", sa.Integer(), nullable=False),
+        sa.Column("service_id", sa.Uuid(), nullable=False),
+        sa.Column("depends_on_service_id", sa.Uuid(), nullable=False),
         sa.Column("protocol", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column(
             "updated_at",

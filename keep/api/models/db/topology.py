@@ -9,7 +9,7 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel, func
 
 class TopologyServiceApplication(SQLModel, table=True):
     tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id"), primary_key=True))
-    service_id: int = Field(primary_key=True)
+    service_id: UUID = Field(primary_key=True)
     application_id: UUID = Field(primary_key=True)
 
     service: "TopologyService" = Relationship(
@@ -51,7 +51,8 @@ class TopologyApplication(SQLModel, table=True):
 
 
 class TopologyService(SQLModel, table=True):
-    id: int
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    external_id: Optional[int]
     tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id")))
     source_provider_id: str = "unknown"
     repository: Optional[str]
@@ -103,8 +104,8 @@ class TopologyService(SQLModel, table=True):
 class TopologyServiceDependency(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4)
     tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id")))
-    service_id: int
-    depends_on_service_id: int
+    service_id: UUID
+    depends_on_service_id: UUID
     protocol: Optional[str] = "unknown"
     updated_at: Optional[datetime] = Field(
         sa_column=Column(
@@ -169,7 +170,7 @@ class TopologyServiceInDto(TopologyServiceDtoBase):
 
 class TopologyServiceDependencyDto(BaseModel, extra="ignore"):
     id: str | UUID
-    serviceId: str
+    serviceId: str | UUID
     serviceName: str
     protocol: Optional[str] = "unknown"
 
@@ -194,7 +195,7 @@ class TopologyApplicationDto(BaseModel, extra="ignore"):
 
 
 class TopologyServiceDtoIn(BaseModel, extra="ignore"):
-    id: int
+    id: UUID
 
 
 class TopologyApplicationDtoIn(BaseModel, extra="ignore"):
@@ -239,7 +240,7 @@ class TopologyApplicationDtoOut(TopologyApplicationDto):
 
 
 class TopologyServiceDtoOut(TopologyServiceDtoBase):
-    id: str
+    id: UUID | str
     dependencies: List[TopologyServiceDependencyDto]
     application_ids: List[UUID]
     updated_at: Optional[datetime]
@@ -298,21 +299,21 @@ class TopologyServiceCreateRequestDTO(BaseModel, extra="ignore"):
 
 
 class TopologyServiceUpdateRequestDTO(TopologyServiceCreateRequestDTO, extra="ignore"):
-    id: int
+    id: UUID | str
 
 
 class TopologyServiceDependencyCreateRequestDto(BaseModel, extra="ignore"):
-    service_id: int
-    depends_on_service_id: int
+    service_id: UUID | str
+    depends_on_service_id: UUID | str
     protocol: Optional[str] = "unknown"
 
 
 class TopologyServiceDependencyUpdateRequestDto(
     TopologyServiceDependencyCreateRequestDto, extra="ignore"
 ):
-    service_id: Optional[int]
-    depends_on_service_id: Optional[int]
-    id: int
+    service_id: Optional[UUID | str]
+    depends_on_service_id: Optional[UUID | str]
+    id: UUID | str
 
 
 class DeleteServicesRequest(BaseModel, extra="ignore"):
@@ -320,6 +321,6 @@ class DeleteServicesRequest(BaseModel, extra="ignore"):
 
 
 class TopologyServiceYAML(TopologyServiceCreateRequestDTO, extra="ignore"):
-    id: int
-    source_provider_id: Optional[str] = None
+    id: UUID | str
+    source_provider_id: Optional[UUID | str] = None
     is_manual: Optional[bool] = None

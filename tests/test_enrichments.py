@@ -557,7 +557,7 @@ def test_disposable_enrichment(db_session, client, test_app, mock_alert_dto):
 def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
     # Mock a TopologyService with dependencies to simulate the DB structure
     mock_topology_service = TopologyService(
-        id=1, tenant_id="keep", service="test-service", display_name="Test Service"
+        external_id=1, tenant_id="keep", service="test-service", display_name="Test Service"
     )
 
     # Create a mock MappingRule for topology

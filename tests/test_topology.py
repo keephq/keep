@@ -23,12 +23,12 @@ from tests.fixtures.client import setup_api_key, client, test_app  # noqa: F401
 VALID_API_KEY = "valid_api_key"
 
 
-def create_service(db_session, tenant_id, service_id):
+def create_service(db_session, tenant_id, external_id):
     service = TopologyService(
-        id=service_id,
+        external_id=external_id,
         tenant_id=tenant_id,
-        service="test_service_" + service_id,
-        display_name=service_id,
+        service="test_service_" + external_id,
+        display_name=external_id,
         repository="test_repository",
         tags=["test_tag"],
         description="test_description",
@@ -105,7 +105,7 @@ def test_create_application_by_tenant_id(db_session):
             SINGLE_TENANT_UUID, application_dto, db_session
         )
 
-    application_dto.services.append(TopologyServiceDtoIn(id=123))
+    application_dto.services.append(TopologyServiceDtoIn(id=uuid.uuid4()))
     with pytest.raises(ServiceNotFoundException):
         TopologiesService.create_application_by_tenant_id(
             SINGLE_TENANT_UUID, application_dto, db_session
@@ -131,8 +131,10 @@ def test_create_application_by_tenant_id(db_session):
     assert len(result) == 1
     assert result[0].name == "New Application"
     assert len(result[0].services) == 2
-    assert result[0].services[0].service == "test_service_1"
-    assert result[0].services[1].service == "test_service_2"
+
+    services_names = [s.service for s in result[0].services]
+    assert "test_service_1" in services_names
+    assert "test_service_2" in services_names
 
 
 def test_update_application_by_id(db_session):
@@ -213,7 +215,7 @@ def test_create_application(db_session, client, test_app):
 
     service = create_service(db_session, SINGLE_TENANT_UUID, "1")
 
-    application_data = {"name": "New Application", "services": [{"id": service.id}]}
+    application_data = {"name": "New Application", "services": [{"id": str(service.id)}]}
 
     response = client.post(
         "/topology/applications",
@@ -256,7 +258,7 @@ def test_update_application(db_session, client, test_app):
     assert response.status_code == 200
     assert response.json()["name"] == "Updated Application"
 
-    invalid_update_data = {"name": "Invalid Application", "services": [{"id": "123"}]}
+    invalid_update_data = {"name": "Invalid Application", "services": [{"id": str(random_uuid)}]}
 
     response = client.put(
         f"/topology/applications/{application.id}",
@@ -335,10 +337,15 @@ def test_import_to_db(db_session):
 
     # Do same operation twice - import and re-import
     for i in range(2):
+
+        s1_id = str(uuid.uuid4())
+        s2_id = str(uuid.uuid4())
+
         topology_data = {
             "services": [
                 {
-                    "id": 1,
+                    "id": s1_id,
+                    "external_id": "1",
                     "service": "test_service_1",
                     "display_name": "Service 1",
                     "tags": ["tag1"],
@@ -346,7 +353,8 @@ def test_import_to_db(db_session):
                     "email": "test1@example.com",
                 },
                 {
-                    "id": 2,
+                    "id": s2_id,
+                    "external_id": "2",
                     "service": "test_service_2",
                     "display_name": "Service 2",
                     "tags": ["tag2"],
@@ -358,18 +366,18 @@ def test_import_to_db(db_session):
                 {
                     "name": "Test Application 1",
                     "description": "Application 1 description",
-                    "services": [1],
+                    "services": [s1_id],
                 },
                 {
                     "name": "Test Application 2",
                     "description": "Application 2 description",
-                    "services": [2],
+                    "services": [s2_id],
                 },
             ],
             "dependencies": [
                 {
-                    "service_id": 1,
-                    "depends_on_service_id": 2,
+                    "service_id": s1_id,
+                    "depends_on_service_id": s2_id,
                 }
             ],
         }
@@ -388,5 +396,5 @@ def test_import_to_db(db_session):
 
         dependencies = db_session.exec(select(TopologyServiceDependency)).all()
         assert len(dependencies) == 1
-        assert dependencies[0].service_id == 1
-        assert dependencies[0].depends_on_service_id == 2
+        assert str(dependencies[0].service_id) == s1_id
+        assert str(dependencies[0].depends_on_service_id) == s2_id
