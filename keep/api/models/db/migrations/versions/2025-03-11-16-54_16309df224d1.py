@@ -50,8 +50,18 @@ def upgrade() -> None:
                 ["tenant_id", "alert_fingerprint"],
             )
     elif dialect == "postgresql":
+        constraint_exists = conn.execute(
+            """
+                SELECT conname 
+                FROM pg_constraint 
+                WHERE conrelid = 'alertenrichment'::regclass 
+                AND conname = 'alert_fingerprint';
+            """
+        ).fetchone()
         with op.batch_alter_table("alertenrichment") as batch_op:
-            batch_op.drop_constraint("alert_fingerprint", type_="unique")
+            if constraint_exists:
+                batch_op.drop_constraint("alert_fingerprint", type_="unique")
+
             batch_op.execute(
                 """
                     WITH duplicates AS (
