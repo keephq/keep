@@ -6,6 +6,7 @@ import { GenericTable } from "@/components/table/GenericTable";
 import { DisplayColumnDef } from "@tanstack/react-table";
 import { useSecrets } from "@/utils/hooks/useWorkFlowSecrets";
 import { Button } from "@/components/ui";
+import { Input } from "@/shared/ui";
 
 const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
   const { getSecrets, error, addOrUpdateSecret, deleteSecret } =
@@ -50,7 +51,12 @@ const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
       header: "Value",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          {showValues[row.original.name] ? row.original.value : "••••••••"}
+          <div
+            className="w-96 overflow-hidden text-ellipsis whitespace-nowrap"
+            title={showValues[row.original.name] ? row.original.value : ""}
+          >
+            {showValues[row.original.name] ? row.original.value : "••••••••"}
+          </div>
           <Button
             onClick={() => toggleShowValue(row.original.name)}
             className="p-1 hover:bg-gray-100 rounded"
@@ -88,30 +94,22 @@ const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
       )}
 
       <div className="flex gap-4 my-4">
-        <input
+        <Input
           type="text"
           placeholder="Secret name"
           value={newSecret.name}
           onChange={(e) =>
             setNewSecret((prev) => ({ ...prev, name: e.target.value }))
           }
-          className="flex-1 border rounded px-3 py-2"
         />
-        <input
-          type="password"
+        <Input
           placeholder="Secret value"
           value={newSecret.value}
           onChange={(e) =>
             setNewSecret((prev) => ({ ...prev, value: e.target.value }))
           }
-          className="flex-1 border rounded px-3 py-2"
         />
-        <Button
-          onClick={handleAddSecret}
-          className="flex items-center gap-2  text-white px-4 py-2 rounded"
-          variant="primary"
-          icon={PlusIcon}
-        >
+        <Button onClick={handleAddSecret} variant="primary" icon={PlusIcon}>
           Add Secret
         </Button>
       </div>

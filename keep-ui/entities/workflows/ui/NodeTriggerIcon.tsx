@@ -24,6 +24,7 @@ export function NodeTriggerIcon({ nodeData }: { nodeData: NodeData }) {
           <DynamicImageProviderIcon
             key={alertSource}
             providerType={alertSource}
+            src={`/icons/${alertSource}-icon.png`}
             height="32"
             width="32"
           />
