@@ -17,6 +17,9 @@ export async function authenticate(username: string, password: string) {
       return { success: true, data: result };
     } else {
       // Handle the case where signIn returns undefined
+      console.log(
+        "Authentication failed: No response from authentication service"
+      );
       return {
         success: false,
         error: "Authentication failed: No response from authentication service",
