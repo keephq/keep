@@ -113,6 +113,9 @@ class ContextManager:
     def set_consts_context(self, consts):
         self.consts_context = consts
 
+    def get_workflow_id(self):
+        return self.workflow_id
+
     def set_secret_context(self):
         """
         Set the secret context for the workflow.
