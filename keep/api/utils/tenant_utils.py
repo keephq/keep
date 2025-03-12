@@ -157,8 +157,8 @@ def create_api_key(
         )
 
         return api_key
-    except SqlalchemyIntegrityError as e:
-        raise APIKeyException(f"API key already exists")
+    except SqlalchemyIntegrityError:
+        raise APIKeyException("API key already exists.")
     except GoogleAPIInvalidArgument as e:
         if "does not match the expected format" in str(e):
             raise APIKeyException(str(e))
@@ -167,7 +167,7 @@ def create_api_key(
             "Error creating API key: " + str(e),
             extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
         )
-        raise APIKeyException(f"Error creating API key.")
+        raise APIKeyException("Error creating API key.")
 
 
 def get_api_keys(
