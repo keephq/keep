@@ -45,7 +45,9 @@ export function WorkflowYamlEditor({
   ) => void;
   options?: monaco.editor.IEditorOptions;
   theme?: string;
-  wrapperProps?: React.HTMLAttributes<HTMLDivElement>;
+  wrapperProps?: React.HTMLAttributes<HTMLDivElement> & {
+    "data-testid"?: string;
+  };
 }) {
   const [isEditorReady, setIsEditorReady] = useState(false);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -75,6 +77,7 @@ export function WorkflowYamlEditor({
       schemas: [
         {
           fileMatch: ["*"],
+          // @ts-ignore TODO: fix type inference
           schema: globalSchema,
           uri: schemaUri,
         },

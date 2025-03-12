@@ -2,7 +2,7 @@ import { getYamlWorkflowDefinitionSchema } from "@/entities/workflows/model/yaml
 import * as monaco from "monaco-editor";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { configureMonacoYaml } from "monaco-yaml";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Provider } from "@/shared/api/providers";
 import { Monaco } from "../lib/monaco-utils";
 import clsx from "clsx";
@@ -33,12 +33,14 @@ export function EditorExtended({
   beforeMount,
   ...rest
 }: {
-  providers: Provider[];
+  providers: Provider[] | undefined;
 } & EditorProps) {
+  const monacoRef = useRef<Monaco | null>(null);
   const [isConfigured, setConfigured] = useState(false);
 
-  const configureYamlSchema = useCallback((monaco: Monaco) => {
-    const globalSchema = zodToJsonSchema(
+  const globalSchema = useMemo(() => {
+    if (!providers) return undefined;
+    return zodToJsonSchema(
       // todo: is it efficient to generate the schema for each provider?
       getYamlWorkflowDefinitionSchema(providers),
       {
@@ -46,12 +48,17 @@ export function EditorExtended({
         $refStrategy: "none",
       }
     );
+  }, [providers]);
+
+  useEffect(() => {
+    if (!globalSchema) return;
 
     configureMonacoYaml(monaco, {
       enableSchemaRequest: false,
       schemas: [
         {
           fileMatch: ["*"],
+          // @ts-ignore TODO: fix type inference
           schema: globalSchema,
           uri: KeepSchemaPath,
         },
@@ -59,23 +66,16 @@ export function EditorExtended({
     });
 
     setConfigured(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [globalSchema]);
 
-  useEffect(() => {
-    loader.init().then((monaco) => configureYamlSchema(monaco));
-  }, []);
-
-  // function handleEditorWillMount(monaco: Monaco) {
-  //   if (!configuredRef.current) {
-  //     configureYamlSchema(monaco);
-  //   }
-  //   beforeMount?.(monaco);
-  // }
+  function handleEditorWillMount(monaco: Monaco) {
+    beforeMount?.(monaco);
+    monacoRef.current = monaco;
+  }
 
   if (!isConfigured) {
     return "Configuring Monaco";
   }
 
-  return <Editor beforeMount={beforeMount} {...rest} />;
+  return <Editor beforeMount={handleEditorWillMount} {...rest} />;
 }
