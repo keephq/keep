@@ -55,7 +55,12 @@ def upgrade() -> None:
         )
 
     elif dialect == "postgresql":
-        pass
+        op.drop_constraint("alert_fingerprint", "alertenrichment", type_="unique")
+        with op.batch_alter_table("alertenrichment") as batch_op:
+            batch_op.create_unique_constraint(
+                "uc_alertenrichment_tenant_fingerprint",
+                ["tenant_id", "alert_fingerprint"],
+            )
     elif dialect == "sqlite":
         op.create_table(
             "alertenrichment_new",
