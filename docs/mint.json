@@ -159,6 +159,7 @@
             "providers/documentation/dynatrace-provider",
             "providers/documentation/eks-provider",
             "providers/documentation/elastic-provider",
+            "providers/documentation/flashduty-provider",
             "providers/documentation/gcpmonitoring-provider",
             "providers/documentation/gemini-provider",
             "providers/documentation/github-provider",
