@@ -138,6 +138,11 @@ class WorkflowManager:
                 )
                 continue
 
+            incident_enrichment = get_enrichment(tenant_id, str(incident.id))
+            if incident_enrichment:
+                for k, v in incident_enrichment.enrichments.items():
+                    setattr(incident, k, v)
+
             self.logger.info("Adding workflow to run")
             with self.scheduler.lock:
                 self.scheduler.workflows_to_run.append(
