@@ -24,7 +24,6 @@ def test_topology_manual(browser):
         # Open the Service Topology page
         browser.get_by_role("link", name="Service Topology").hover()
         browser.get_by_role("link", name="Service Topology").click()
-        browser.wait_for_timeout(10000)
 
         max_retries = 5
         retries = 0
@@ -32,8 +31,6 @@ def test_topology_manual(browser):
         # Attempt to add a new service node, retrying in case of failure
         while retries <= max_retries:
             try:
-                browser.reload()
-                browser.wait_for_timeout(5000)
                 browser.get_by_role("button", name="Add Node", exact=True).click()
                 browser.get_by_placeholder("Enter service here...").fill("service_id_1")
                 break
@@ -41,6 +38,7 @@ def test_topology_manual(browser):
                 if retries == max_retries:
                     raise
                 retries += 1
+                browser.reload()
 
         # Ensure Save button is disabled when required fields are empty
         expect(browser.get_by_role("button", name="Save", exact=True)).to_be_disabled()
@@ -58,23 +56,23 @@ def test_topology_manual(browser):
             has_text="SERVICE_ID_1"
         )
         expect(node_with_text_1).to_have_count(1)
-        browser.wait_for_timeout(8000)
+        browser.wait_for_timeout(1000)
 
         # Add another node to the topology
         browser.get_by_role("button", name="Add Node", exact=True).click()
         browser.get_by_placeholder("Enter service here...").fill("service_id_2")
         browser.get_by_placeholder("Enter display name here...").fill("SERVICE_ID_2")
         browser.get_by_role("button", name="Save", exact=True).click()
-        browser.wait_for_timeout(3000)
+        browser.wait_for_timeout(1000)
         expect(browser.locator("div.react-flow__node")).to_have_count(2)
-        browser.wait_for_timeout(8000)
+        browser.wait_for_timeout(1000)
 
         # Add a third node
         browser.get_by_role("button", name="Add Node", exact=True).click()
         browser.get_by_placeholder("Enter service here...").fill("service_id_1")
         browser.get_by_placeholder("Enter display name here...").fill("SERVICE_ID_3")
         browser.get_by_role("button", name="Save", exact=True).click()
-        browser.wait_for_timeout(3000)
+        browser.wait_for_timeout(1000)
         expect(browser.locator("div.react-flow__node")).to_have_count(3)
 
         # Zoom out for better visibility
@@ -90,7 +88,7 @@ def test_topology_manual(browser):
         source_handle.drag_to(target_handle_2)
         source_handle.drag_to(target_handle_3)
 
-        browser.wait_for_timeout(5000)
+        browser.wait_for_timeout(1000)
 
         # Validate edge connection
         edge_1_to_2 = browser.locator(
@@ -145,7 +143,6 @@ def test_topology_manual(browser):
         expect(
             browser.locator("div.react-flow__node").filter(has_text="UPDATED_SERVICE")
         ).to_have_count(1)
-
     except Exception:
         # Capture screenshots and HTML dumps on test failure
         test_name = (
@@ -154,9 +151,7 @@ def test_topology_manual(browser):
             + "_"
             + sys._getframe().f_code.co_name
         )
-
         browser.screenshot(path=test_name + ".png")
         with open(test_name + ".html", "w") as f:
             f.write(browser.content())
-
         raise

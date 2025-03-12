@@ -375,7 +375,13 @@ def setup_test_data():
 
 
 @pytest.mark.parametrize("facet_test_case", facet_test_cases.keys())
-def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
+def test_filter_by_static_facet(
+    browser: Page,
+    facet_test_case,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
     test_case = facet_test_cases[facet_test_case]
     facet_name = facet_test_case
     alert_property_name = test_case["alert_property_name"]
@@ -414,7 +420,9 @@ def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
     )
 
 
-def test_adding_custom_facet(browser, setup_test_data):
+def test_adding_custom_facet(
+    browser: Page, setup_test_data, setup_page_logging, failure_artifacts
+):
     facet_property_path = "custom_tags.env"
     facet_name = "Custom Env"
     alert_property_name = facet_property_path
@@ -473,7 +481,13 @@ search_by_cel_tescases = {
 
 
 @pytest.mark.parametrize("search_test_case", search_by_cel_tescases.keys())
-def test_search_by_cel(browser, search_test_case, setup_test_data):
+def test_search_by_cel(
+    browser: Page,
+    search_test_case,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
     test_case = search_by_cel_tescases[search_test_case]
     cel_query = test_case["cel_query"]
     predicate = test_case["predicate"]
@@ -512,7 +526,13 @@ sort_tescases = {
 
 
 @pytest.mark.parametrize("sort_test_case", sort_tescases.keys())
-def test_sort_asc_dsc(browser, sort_test_case, setup_test_data):
+def test_sort_asc_dsc(
+    browser: Page,
+    sort_test_case,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
     test_case = sort_tescases[sort_test_case]
     coumn_name = test_case["column_name"]
     column_id = test_case["column_id"]
@@ -552,7 +572,7 @@ def test_sort_asc_dsc(browser, sort_test_case, setup_test_data):
             expect(column_locator).to_have_text(alert["name"])
 
 
-def test_alerts_stream(browser):
+def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
     facet_name = "source"
     alert_property_name = "providerType"
     value = "prometheus"

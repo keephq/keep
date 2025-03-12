@@ -114,7 +114,7 @@ def test_sanity(browser: Page):  # browser is actually a page object
             time.sleep(2)
 
 
-def test_insert_new_alert(browser: Page):  # browser is actually a page object
+def test_insert_new_alert(browser: Page, setup_page_logging, failure_artifacts):
     """
     Test to insert a new alert
     """
@@ -150,13 +150,14 @@ def test_insert_new_alert(browser: Page):  # browser is actually a page object
 
         feed_link = browser.get_by_test_id("menu-alerts-feed-link")
         feed_link.click()
-
     except Exception:
         save_failure_artifacts(browser, log_entries)
         raise
 
 
-def test_providers_page_is_accessible(browser: Page):
+def test_providers_page_is_accessible(
+    browser: Page, setup_page_logging, failure_artifacts
+):
     """
     Test to check if the providers page is accessible
 
@@ -195,7 +196,7 @@ def test_providers_page_is_accessible(browser: Page):
         raise
 
 
-def test_provider_validation(browser: Page):
+def test_provider_validation(browser: Page, setup_page_logging, failure_artifacts):
     """
     Test field validation for provider fields.
     """
@@ -314,11 +315,10 @@ def test_provider_validation(browser: Page):
         raise
 
 
-def test_add_workflow(browser: Page):
+def test_add_workflow(browser: Page, setup_page_logging, failure_artifacts):
     """
     Test to add a workflow node
     """
-    # browser is actually a page object
     page = browser
     log_entries = []
     setup_console_listener(page, log_entries)
@@ -421,18 +421,15 @@ def test_add_upload_workflow_with_alert_trigger(browser: Page):
         raise
 
 
-def test_start_with_keep_db(browser: Page):
-    log_entries = []
-    setup_console_listener(browser, log_entries)
-    try:
-        browser.goto("http://localhost:3001/signin")
-        browser.get_by_placeholder("Enter your username").fill("keep")
-        browser.get_by_placeholder("Enter your password").fill("keep")
-        browser.get_by_role("button", name="Sign in").click()
-        browser.wait_for_url("http://localhost:3001/incidents")
-    except Exception:
-        save_failure_artifacts(browser, log_entries)
-        raise
+def test_start_with_keep_db(browser: Page, setup_page_logging, failure_artifacts):
+    # Navigate to signin page
+    browser.goto("http://localhost:3001/signin")
+    # Fill in credentials
+    browser.get_by_placeholder("Enter your username").fill("keep")
+    browser.get_by_placeholder("Enter your password").fill("keep")
+    # Click sign in and wait for navigation
+    browser.get_by_role("button", name="Sign in").click()
+    browser.wait_for_url("http://localhost:3001/incidents", timeout=5000)
 
 
 def test_provider_deletion(browser: Page):
@@ -507,7 +504,6 @@ def test_provider_deletion(browser: Page):
             provider_name=provider_name,
             provider_count=0,
         )
-
     except Exception:
         save_failure_artifacts(browser, log_entries)
         raise

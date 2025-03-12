@@ -5,7 +5,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon, List, ListItem, TextInput, Subtitle } from "@tremor/react";
-import { Combobox, Transition } from "@headlessui/react";
+import {
+  Combobox,
+  ComboboxButton,
+  ComboboxInput,
+  ComboboxOption,
+  ComboboxOptions,
+  Transition,
+} from "@headlessui/react";
 import {
   GitHubLogoIcon,
   FileTextIcon,
@@ -83,6 +90,7 @@ const NAVIGATION_OPTIONS = [
 
 export const Search = () => {
   const [query, setQuery] = useState<string>("");
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const router = useRouter();
   const comboboxBtnRef = useRef<ElementRef<"button">>(null);
   const comboboxInputRef = useRef<ElementRef<"input">>(null);
@@ -127,6 +135,7 @@ export const Search = () => {
   }, []);
 
   const onOptionSelection = (value: string | null) => {
+    setSelectedOption(value);
     if (value && comboboxInputRef.current) {
       comboboxInputRef.current.blur();
       router.push(value);
@@ -168,7 +177,7 @@ export const Search = () => {
       return (
         <>
           {queriedOptions.map((option) => (
-            <Combobox.Option
+            <ComboboxOption
               key={option.label}
               as={Fragment}
               value={option.navigate}
@@ -185,7 +194,7 @@ export const Search = () => {
                   <span className="text-left">{option.label}</span>
                 </ListItem>
               )}
-            </Combobox.Option>
+            </ComboboxOption>
           ))}
         </>
       );
@@ -206,7 +215,7 @@ export const Search = () => {
             <Subtitle>Navigate</Subtitle>
           </ListItem>
           {NAVIGATION_OPTIONS.map((option) => (
-            <Combobox.Option
+            <ComboboxOption
               key={option.label}
               as={Fragment}
               value={option.navigate}
@@ -223,7 +232,7 @@ export const Search = () => {
                   <span className="text-left">{option.label}</span>
                 </ListItem>
               )}
-            </Combobox.Option>
+            </ComboboxOption>
           ))}
         </List>
         <List>
@@ -231,7 +240,7 @@ export const Search = () => {
             <Subtitle>External Sources</Subtitle>
           </ListItem>
           {EXTERNAL_OPTIONS.map((option) => (
-            <Combobox.Option
+            <ComboboxOption
               key={option.label}
               as={Fragment}
               value={option.navigate}
@@ -248,7 +257,7 @@ export const Search = () => {
                   <span className="text-left">{option.label}</span>
                 </ListItem>
               )}
-            </Combobox.Option>
+            </ComboboxOption>
           ))}
         </List>
       </ListItem>
@@ -283,7 +292,6 @@ export const Search = () => {
       <Combobox
         value={query}
         onChange={onOptionSelection}
-        nullable
         as="div"
         className="relative"
       >
@@ -295,17 +303,16 @@ export const Search = () => {
                 aria-hidden="true"
               />
             )}
-            <Combobox.Button ref={comboboxBtnRef} aria-disabled={open}>
-              <Combobox.Input
-                as={TextInput}
-                className="z-20"
+            <ComboboxButton ref={comboboxBtnRef}>
+              <ComboboxInput
+                className="z-20 tremor-TextInput-root relative flex items-center min-w-[10rem] outline-none rounded-tremor-default transition duration-100 border shadow-tremor-input dark:shadow-dark-tremor-input bg-tremor-background dark:bg-dark-tremor-background hover:bg-tremor-background-muted dark:hover:bg-dark-tremor-background-muted text-tremor-content dark:text-dark-tremor-content border-tremor-border dark:border-dark-tremor-border tremor-TextInput-input w-full bg-transparent focus:outline-none focus:ring-0 text-tremor-default py-2  [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none pr-3 pl-3 placeholder:text-tremor-content dark:placeholder:text-dark-tremor-content"
                 placeholder={placeholderText}
                 color="orange"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 ref={comboboxInputRef}
               />
-            </Combobox.Button>
+            </ComboboxButton>
             <Transition
               as={Fragment}
               beforeLeave={onLeave}
@@ -313,14 +320,14 @@ export const Search = () => {
               leaveFrom="opacity-100"
               leaveTo="opacity-0"
             >
-              <Combobox.Options
+              <ComboboxOptions
                 className="absolute mt-1 max-h-screen overflow-auto rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-20 w-96"
                 as={List}
               >
                 <NoQueriesFoundResult />
                 <FilteredResults />
                 <DefaultResults />
-              </Combobox.Options>
+              </ComboboxOptions>
             </Transition>
           </>
         )}

@@ -86,6 +86,7 @@ export function MergeIncidentsModal({
             <span className="font-bold">Destination Incident</span>
           </div>
           <Select
+            instanceId="merge-incidents-destination-incident-select"
             options={incidentOptions}
             value={selectValue}
             onChange={(option) => setDestinationIncidentId(option!.value)}

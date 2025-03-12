@@ -49,7 +49,7 @@ def install_webhook_provider(browser, provider_name, webhook_url, webhook_action
     browser.get_by_placeholder("Enter url").fill(webhook_url)
     browser.mouse.wheel(1000, 10000)
     browser.get_by_role("button", name="POST", exact=True).click()
-    browser.locator("li:has-text('GET')").click()
+    browser.get_by_role("option", name="GET", exact=True).click()
 
     browser.get_by_role("button", name="Connect", exact=True).click()
     browser.mouse.wheel(0, 0)  # Scrolling back to initial position

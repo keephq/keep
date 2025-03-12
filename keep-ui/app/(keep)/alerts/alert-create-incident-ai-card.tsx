@@ -15,7 +15,13 @@ import {
   TextInput,
   Textarea,
 } from "@tremor/react";
-import { Droppable, Draggable } from "react-beautiful-dnd";
+import { useDroppable } from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { AlertDto } from "@/entities/alerts/model";
 import { IncidentCandidateDto } from "@/entities/incidents/model";
 
@@ -42,6 +48,88 @@ const editableFields: EditableField[] = [
   },
 ];
 
+interface DraggableAlertRowProps {
+  alert: AlertDto;
+  alertIndex: number;
+  incidentIndex: number;
+}
+
+const DraggableAlertRow: React.FC<DraggableAlertRowProps> = ({
+  alert,
+  alertIndex,
+  incidentIndex,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: alert.fingerprint,
+    data: {
+      type: "alert",
+      alertIndex,
+      incidentIndex,
+    },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    cursor: "grab",
+    touchAction: "none",
+  };
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`${isDragging ? "bg-gray-50" : ""} hover:bg-gray-50 transition-colors`}
+    >
+      <TableCell className="w-1/6 break-words">
+        {alert.name || "Unnamed Alert"}
+      </TableCell>
+      <TableCell className="w-2/3 break-words whitespace-normal">
+        {alert.description || "No description"}
+      </TableCell>
+      <TableCell className="w-1/12 break-words">
+        {alert.severity || "N/A"}
+      </TableCell>
+      <TableCell className="w-1/12 break-words">
+        {alert.status || "N/A"}
+      </TableCell>
+    </TableRow>
+  );
+};
+
+const DroppableContainer: React.FC<{
+  id: string;
+  children: React.ReactNode;
+}> = ({ id, children }) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    data: {
+      type: "container",
+      accepts: "alert",
+      incidentIndex: id,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`transition-colors ${isOver ? "bg-orange-50" : ""}`}
+    >
+      {children}
+    </div>
+  );
+};
+
 const IncidentCard: React.FC<IncidentCardProps> = ({
   incident,
   index,
@@ -52,12 +140,14 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
     useState<IncidentCandidateDto>(incident);
 
   useEffect(() => {
-    setEditedIncident(incident);
+    if (incident) {
+      setEditedIncident(incident);
+    }
   }, [incident]);
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
-    if (isEditing) {
+    if (isEditing && editedIncident) {
       onIncidentChange(editedIncident);
     }
   };
@@ -66,10 +156,15 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
     field: keyof IncidentCandidateDto,
     value: string
   ) => {
-    setEditedIncident((prev) => ({ ...prev, [field]: value }));
+    setEditedIncident((prev) => {
+      if (!prev) return prev;
+      return { ...prev, [field]: value };
+    });
   };
 
   const renderEditableField = (field: EditableField) => {
+    if (!editedIncident) return null;
+
     const value = editedIncident[field.name] as string;
     return (
       <div key={field.name} className="mb-4">
@@ -78,13 +173,13 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
         </label>
         {field.type === "textarea" ? (
           <Textarea
-            value={value}
+            value={value || ""}
             onChange={(e) => handleFieldChange(field.name, e.target.value)}
             className="mt-1"
           />
         ) : (
           <TextInput
-            value={value}
+            value={value || ""}
             onChange={(e) => handleFieldChange(field.name, e.target.value)}
             className="mt-1"
           />
@@ -92,6 +187,8 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
       </div>
     );
   };
+
+  if (!editedIncident) return null;
 
   return (
     <Card key={incident.id} className="mb-6 relative">
@@ -104,70 +201,50 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
         <div className="mt-12">{editableFields.map(renderEditableField)}</div>
       ) : (
         <>
-          <Title>{editedIncident.name}</Title>
+          <Title>{editedIncident.name || "Unnamed Incident"}</Title>
           <Subtitle className="mt-2">Description</Subtitle>
-          <Text className="mt-2">{editedIncident.description}</Text>
+          <Text className="mt-2">
+            {editedIncident.description || "No description"}
+          </Text>
           <Subtitle className="mt-2">Severity</Subtitle>
-          <Badge color="orange">{editedIncident.severity}</Badge>
+          <Badge color="orange">{editedIncident.severity || "N/A"}</Badge>
           <Subtitle className="mt-2">Confidence Score</Subtitle>
-          <Text>{editedIncident.confidence_score}</Text>
+          <Text>{editedIncident.confidence_score || "N/A"}</Text>
           <Subtitle className="mt-2">Confidence Explanation</Subtitle>
-          <Text>{editedIncident.confidence_explanation}</Text>
+          <Text>
+            {editedIncident.confidence_explanation || "No explanation"}
+          </Text>
         </>
       )}
-      <Droppable droppableId={index.toString()}>
-        {(provided: any) => (
-          <div {...provided.droppableProps} ref={provided.innerRef}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeaderCell className="w-1/6">
-                    Alert Name
-                  </TableHeaderCell>
-                  <TableHeaderCell className="w-2/3">
-                    Description
-                  </TableHeaderCell>
-                  <TableHeaderCell className="w-1/12">Severity</TableHeaderCell>
-                  <TableHeaderCell className="w-1/12">Status</TableHeaderCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {editedIncident.alerts.map(
-                  (alert: AlertDto, alertIndex: number) => (
-                    <Draggable
-                      key={alert.fingerprint}
-                      draggableId={alert.fingerprint}
-                      index={alertIndex}
-                    >
-                      {(provided: any) => (
-                        <TableRow
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                        >
-                          <TableCell className="w-1/6 break-words">
-                            {alert.name}
-                          </TableCell>
-                          <TableCell className="w-2/3 break-words whitespace-normal">
-                            {alert.description}
-                          </TableCell>
-                          <TableCell className="w-1/12 break-words">
-                            {alert.severity}
-                          </TableCell>
-                          <TableCell className="w-1/12 break-words">
-                            {alert.status}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </Draggable>
-                  )
-                )}
-              </TableBody>
-            </Table>
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
+      <DroppableContainer id={index.toString()}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell className="w-1/6">Alert Name</TableHeaderCell>
+              <TableHeaderCell className="w-2/3">Description</TableHeaderCell>
+              <TableHeaderCell className="w-1/12">Severity</TableHeaderCell>
+              <TableHeaderCell className="w-1/12">Status</TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            <SortableContext
+              items={(editedIncident.alerts || []).map((a) => a.fingerprint)}
+              strategy={verticalListSortingStrategy}
+            >
+              {(editedIncident.alerts || []).map(
+                (alert: AlertDto, alertIndex: number) => (
+                  <DraggableAlertRow
+                    key={alert.fingerprint}
+                    alert={alert}
+                    alertIndex={alertIndex}
+                    incidentIndex={index}
+                  />
+                )
+              )}
+            </SortableContext>
+          </TableBody>
+        </Table>
+      </DroppableContainer>
     </Card>
   );
 };

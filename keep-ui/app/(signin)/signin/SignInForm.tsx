@@ -124,7 +124,7 @@ export default function SignInForm({
         setError("root", {
           message: result.error,
         });
-        return <></>;
+        return;
       }
 
       // Set redirecting state before navigation
@@ -136,10 +136,9 @@ export default function SignInForm({
 
       // Disable form interactions during redirect
       await revalidateAfterAuth();
-      return <></>;
     } catch (error) {
       setError("root", {
-        message: "An unexpected error occurred",
+        message: (error as Error)?.message || "An unexpected error occurred",
       });
       setIsRedirecting(false);
     }

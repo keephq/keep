@@ -2,8 +2,9 @@ import { getWorkflowWithRedirectSafe } from "@/shared/api/workflows";
 
 export async function GET(
   request: Request,
-  { params }: { params: { workflow_filename: string } }
+  props: { params: Promise<{ workflow_filename: string }> }
 ) {
+  const params = await props.params;
   const { workflow_filename } = params;
   const workflow_id = workflow_filename.replace(".yaml", "");
   const workflow = await getWorkflowWithRedirectSafe(workflow_id);

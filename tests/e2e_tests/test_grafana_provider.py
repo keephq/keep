@@ -4,7 +4,7 @@ import sys
 from datetime import datetime
 
 import requests
-from playwright.sync_api import expect
+from playwright.sync_api import Page, expect
 
 from tests.e2e_tests.utils import (
     assert_connected_provider_count,
@@ -66,7 +66,7 @@ def open_grafana_card(browser):
     grafana_tile.first.click()
 
 
-def test_grafana_provider(browser):
+def test_grafana_provider(browser: Page, setup_page_logging, failure_artifacts):
     try:
         provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
         provider_name_invalid = provider_name + "-invalid"
@@ -184,7 +184,6 @@ def test_grafana_provider(browser):
         browser.get_by_role("link", name="Providers").hover()
         browser.get_by_role("link", name="Providers").click()
         providers_to_delete = [provider_name_readonly, provider_name_success]
-
         for provider_to_delete in providers_to_delete:
             # Perform actions on each matching element
             delete_provider(
