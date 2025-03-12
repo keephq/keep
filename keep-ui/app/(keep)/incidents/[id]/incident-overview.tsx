@@ -95,13 +95,14 @@ function Summary({
   };
 
   const formatedSummary = (
-    <Markdown
-      remarkPlugins={[remarkGfm, remarkRehype]}
-      rehypePlugins={[rehypeRaw]}
-      className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1"
-    >
-      {summary ?? generatedSummary}
-    </Markdown>
+    <div className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1">
+      <Markdown
+        remarkPlugins={[remarkGfm, remarkRehype]}
+        rehypePlugins={[rehypeRaw]}
+      >
+        {summary ?? generatedSummary}
+      </Markdown>
+    </div>
   );
 
   if (collapsable) {
@@ -317,6 +318,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                                 providerType={
                                   incident.enrichments?.incident_provider
                                 }
+                                src={`/icons/${incident.enrichments?.incident_provider}-icon.png`}
                                 height="24"
                                 width="24"
                                 {...props}
@@ -352,6 +354,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                           icon={(props: any) => (
                             <DynamicImageProviderIcon
                               providerType="github"
+                              src={`/icons/github-icon.png`}
                               height="24"
                               width="24"
                               {...props}
@@ -408,7 +411,9 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                         className="cursor-pointer overflow-ellipsis"
                         tooltip={incident.rule_fingerprint}
                       >
-                        {incident.rule_fingerprint.length > 10 ? incident.rule_fingerprint.slice(0, 10) + "..." : incident.rule_fingerprint}
+                        {incident.rule_fingerprint.length > 10
+                          ? incident.rule_fingerprint.slice(0, 10) + "..."
+                          : incident.rule_fingerprint}
                       </Badge>
                     </div>
                   </div>

@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-// https://github.com/zenoamaro/react-quill/issues/292
-const ReactQuill =
-  typeof window === "object" ? require("react-quill") : () => false;
-import "react-quill/dist/quill.snow.css";
+import "react-quill-new/dist/quill.snow.css";
 import { Button } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
+import dynamic from "next/dynamic";
+
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
 interface AlertNoteModalProps {
   handleClose: () => void;
