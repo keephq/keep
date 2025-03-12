@@ -43,28 +43,18 @@ class IncidentReport(BaseModel):
     most_frequent_reasons: Optional[dict[str, list[str]]] = None
     recurring_incidents: Optional[list[ReoccuringIncidentReportDto]] = None
 
+
+class OpenAIReportPart(BaseModel):
+    most_frequent_reasons: Optional[dict[str, list[str]]] = None
+
+
 system_prompt = """
 Generate an incident report based on the provided incidents dataset and response schema. Ensure all calculated metrics follow the specified format for consistency.
 
 **Calculations and Metrics:**
-
-1. **Mean Time to Detect (MTTD)**
-   - Skip mean_time_to_detect_seconds
-
-2. **Mean Time to Resolve (MTTR)**
-   - Skip mean_time_to_resolve_seconds
-
-3. **Severity Metrics**
-   - Skip severity_metrics
-
-4. **Incident Duration Metrics**
-   - Skip incident_durations
-
-5. **Top Services Affected**
-   - Skip services_affected_metrics
-
-6. **Most Frequent Incident Reasons**
-   - Identify the most common root causes by analyzing the following fields: user_generated_name, ai_generated_name, user_summary, generated_summary.
+1. **Most Frequent Incident Reasons**
+   - Identify the most common root causes by analyzing the following fields: incident_name, incident_summary, severity.
+   - Try to find root causes that are not explicitly mentioned in the dataset.
    - Group similar reasons to avoid duplicates.
    - Output `most_frequent_reasons` as a dictionary with reason as key and list of incident ids as value whose reason it is.
 """
@@ -91,7 +81,10 @@ class IncidentReportsBl:
         self, incidents_query_cel: str, allowed_incident_ids: list[str]
     ) -> IncidentReport:
         incidents = self.__get_incidents(incidents_query_cel, allowed_incident_ids)
-        report = self.__calculate_report_in_openai(incidents)
+        open_ai_report_part = self.__calculate_report_in_openai(incidents)
+        report = IncidentReport(
+            most_frequent_reasons=open_ai_report_part.most_frequent_reasons
+        )
         incidents_dict = {incident.id: incident for incident in incidents}
         resolved_incidents = [
             incident
@@ -113,11 +106,26 @@ class IncidentReportsBl:
 
     def __calculate_report_in_openai(
         self, incidents: list[IncidentDto]
-    ) -> IncidentReport:
+    ) -> OpenAIReportPart:
         if self.open_ai_client is None:
             return IncidentReport()
 
-        incidents_json = json.dumps([item.dict() for item in incidents], default=str)
+        incidents_minified: list[dict] = []
+        for item in incidents:
+            incidents_minified.append(
+                {
+                    "incident_name": "\n".join(
+                        filter(None, [item.user_generated_name, item.ai_generated_name])
+                    ),
+                    "incident_summary": "\n".join(
+                        filter(None, [item.user_summary, item.generated_summary])
+                    ),
+                    "severity": item.severity,
+                    "services": item.services,
+                }
+            )
+
+        incidents_json = json.dumps(incidents_minified, default=str)
 
         response = self.open_ai_client.chat.completions.create(
             model="gpt-4o-2024-08-06",
@@ -128,8 +136,8 @@ class IncidentReportsBl:
             response_format={
                 "type": "json_schema",
                 "json_schema": {
-                    "name": "IncidentReport",
-                    "schema": IncidentReport.schema(),
+                    "name": "OpenAIReportPart",
+                    "schema": OpenAIReportPart.schema(),
                 },
             },
             seed=1239,
@@ -137,7 +145,7 @@ class IncidentReportsBl:
         )
 
         model_response = response.choices[0].message.content
-        report = IncidentReport(**json.loads(model_response))
+        report = OpenAIReportPart(**json.loads(model_response))
         return report
 
     def __calculate_top_services_affected(
