@@ -1,0 +1,41 @@
+---
+title: "Flashduty"
+sidebarTitle: "Flashduty Provider"
+description: "Flashduty docs"
+---
+
+![Flashduty](/images/flashduty_1.png)
+
+## Inputs
+
+The `notify` method of the Flashduty Provider takes the following inputs:
+
+- `title (str)`: The title of Flashduty incident
+- `event_status (str)`: The status of the incident, one of: Info, Warning, Critical, Ok
+- `description (str)`: The description of Flashduty incident
+- `alert_key (str)`: Alert identifier, used to update or automatically recover existing alerts. If you're reporting a recovery event, this value must exist
+- `labels (dict)`: The labels of Flashduty incident
+
+## Outputs
+
+None.
+
+## Integration Key Generation
+
+The Flashduty gets integration key as an authentication method
+
+1.Enter the Flashduty console, select Integration Center => Alert Events to enter the integration selection page
+
+![Flashduty](/images/flashduty_2.png)
+
+2.Select Keep integration
+3.Define a name for the current integration
+4.Configure default routing and select the corresponding channel
+5.Copy the integration Key to Keep
+6.Complete the integration configuration
+
+![Flashduty](/images/flashduty_3.png)
+
+## Useful Links
+
+- https://docs.flashcat.cloud/en/flashduty/keep-alert-integration-guide?nav=01JCQ7A4N4WRWNXW8EWEHXCMF5

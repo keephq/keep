@@ -153,9 +153,9 @@ class RulesEngine:
 
                             send_created_event = incident.is_confirmed
 
-                        incident = IncidentBl(self.tenant_id, session).resolve_incident_if_require(
-                            incident
-                        )
+                        incident = IncidentBl(
+                            self.tenant_id, session
+                        ).resolve_incident_if_require(incident)
 
                         incident_dto = IncidentDto.from_db_incident(incident)
                         if send_created_event:
@@ -215,6 +215,14 @@ class RulesEngine:
             rule_fingerprint,
             session=session,
         )
+
+        if existed_incident and not expired and rule.incident_prefix:
+            if rule.incident_prefix not in existed_incident.user_generated_name:
+                existed_incident.user_generated_name = f"{rule.incident_prefix}-{existed_incident.running_number} - {existed_incident.user_generated_name}"
+                self.logger.info(
+                    "Incident name updated with prefix",
+                )
+
         # if not incident name template, return the incident
         if existed_incident and not expired and not rule.incident_name_template:
             return existed_incident, False

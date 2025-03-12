@@ -590,6 +590,12 @@
               Zenduty
           </a>
       </td>
+      <td align="center" width="150">
+          <a href="https://docs.keephq.dev/providers/documentation/flashduty-provider" target="_blank">
+              <img width="40" src="keep-ui/public/icons/flashduty-icon.png" alt="Flashduty"/><br/>
+              Flashduty
+          </a>
+      </td>
   </tr>
 </table>
 
