@@ -7,9 +7,9 @@ import QueryBuilder, {
   RuleGroupType,
   defaultOperators,
   formatQuery,
-  parseCEL,
-  parseSQL,
 } from "react-querybuilder";
+import { parseCEL } from "react-querybuilder/parseCEL";
+import { parseSQL } from "react-querybuilder/parseSQL";
 import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
 import { FiSave } from "react-icons/fi";
@@ -512,8 +512,8 @@ export const AlertsRulesBuilder = ({
           operators: getOperators(id),
         }))
     : customFields
-      ? customFields
-      : [];
+    ? customFields
+    : [];
 
   const onImportSQL = () => {
     setImportSQLOpen(true);

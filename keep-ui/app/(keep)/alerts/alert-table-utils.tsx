@@ -43,7 +43,6 @@ import {
   TimeFormatOption,
   isDateTimeColumn,
 } from "./alert-table-time-format";
-import { format } from "path";
 import { useIncidents } from "@/utils/hooks/useIncidents";
 
 export const DEFAULT_COLS = [
@@ -287,16 +286,21 @@ export const useAlertTableCols = (
             const incidentString = String(value || "");
             const incidentSplit = incidentString.split(",");
             return (
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1 w-full overflow-hidden">
                 {incidentSplit.map((incidentId, index) => {
                   const incident = incidents?.items.find(
                     (incident) => incident.id === incidentId
                   );
+                  if (!incident) return <></>;
+                  const title =
+                    incident.user_generated_name || incident.ai_generated_name;
                   return (
-                    <Link key={incidentId} href={`/incidents/${incidentId}`}>
-                      {incident?.user_generated_name ||
-                        incident?.ai_generated_name ||
-                        incidentId}
+                    <Link
+                      key={incidentId}
+                      href={`/incidents/${incidentId}`}
+                      title={title}
+                    >
+                      {title}
                     </Link>
                   );
                 })}

@@ -20,8 +20,8 @@ from sqlmodel import Session
 from keep.api.arq_pool import get_pool
 from keep.api.bl.ai_suggestion_bl import AISuggestionBl
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.bl.incident_reports import IncidentReportsBl
+from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, REDIS
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.db import (
@@ -45,11 +45,7 @@ from keep.api.core.incidents import (
     get_incident_potential_facet_fields,
 )
 from keep.api.models.action_type import ActionType
-from keep.api.models.alert import (
-    AlertDto,
-    EnrichAlertRequestBody,
-    EnrichIncidentRequestBody,
-)
+from keep.api.models.alert import AlertDto, EnrichIncidentRequestBody
 from keep.api.models.db.alert import AlertAudit
 from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
 from keep.api.models.facet import FacetOptionsQueryDto
@@ -68,7 +64,6 @@ from keep.api.models.incident import (
     SplitIncidentResponseDto,
 )
 from keep.api.models.workflow import WorkflowExecutionDTO
-from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import (
@@ -872,14 +867,25 @@ def change_incident_status(
     # We need to do something only if status really changed
     if change.status != incident.status:
         if change.status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:
-            for alert in incident._alerts:
-                _enrich_alert(
-                    EnrichAlertRequestBody(
-                        enrichments={"status": change.status.value},
-                        fingerprint=alert.fingerprint,
-                    ),
-                    authenticated_entity=authenticated_entity,
-                )
+            enrichments = {"status": change.status.value}
+            fingerprints = [alert.fingerprint for alert in incident._alerts]
+            enrichments_bl = EnrichmentsBl(tenant_id)
+            (
+                action_type,
+                action_description,
+                should_run_workflow,
+                should_check_incidents_resolution,
+            ) = enrichments_bl.get_enrichment_metadata(
+                enrichments, authenticated_entity
+            )
+            enrichments_bl.batch_enrich(
+                fingerprints,
+                enrichments,
+                action_type,
+                authenticated_entity.email,
+                action_description,
+                dispose_on_new_alert=True,
+            )
 
         if change.status == IncidentStatus.RESOLVED:
             end_time = datetime.now(tz=timezone.utc)

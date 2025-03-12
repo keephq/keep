@@ -78,13 +78,26 @@ export function AlertsTableBody({
     );
   }
 
+  // This trick handles cases when rows have duplicated ids
+  // It shouldn't happen, but the API currently returns duplicated ids
+  // And in order to mitigate this issue, we append the rowIndex to the key for duplicated keys
+  const visitedIds = new Set<string>();
+
   return (
     <TableBody>
-      {table.getRowModel().rows.map((row) => {
+      {table.getRowModel().rows.map((row, rowIndex) => {
+        let renderingKey = row.id;
+
+        if (visitedIds.has(renderingKey)) {
+          renderingKey = `${renderingKey}-${rowIndex}`;
+        } else {
+          visitedIds.add(renderingKey);
+        }
+
         if (row.getIsGrouped()) {
           return (
             <GroupedRow
-              key={row.id}
+              key={renderingKey}
               row={row}
               table={table}
               theme={theme}
@@ -99,7 +112,7 @@ export function AlertsTableBody({
 
         return (
           <TableRow
-            key={row.id}
+            key={renderingKey}
             className={clsx(
               "group/row",
               getRowClassName(row, theme, lastViewedAlert, rowStyle)
