@@ -53,10 +53,22 @@ Generate an incident report based on the provided incidents dataset and response
 
 **Calculations and Metrics:**
 1. **Most Frequent Incident Reasons**
+   - JSON property name: most_frequent_reasons
    - Identify the most common root causes by analyzing the following fields: incident_name, incident_summary, severity.
    - Try to find root causes that are not explicitly mentioned in the dataset.
+   - Be concise, the reasons must be short but descriptive at the same time.
    - Group similar reasons to avoid duplicates.
-   - Output `most_frequent_reasons` as a dictionary with reason as key and list of incident ids as value whose reason it is.
+   - Output only top 6 reasons.
+   - Return a JSON object, which is a dictionary.
+   - Each key in this dictionary must be an incident reason (a string describing the reason for the incident).
+   - The value for each key must be a list of incident IDs (strings) that correspond to that reason.
+   - The structure should follow this exact format:
+            "most_frequent_reasons": {
+                "Reason 1": ["incident_id_1", "incident_id_2"],
+                "Reason 2": ["incident_id_3"],
+                "Reason 3": ["incident_id_4", "incident_id_5", "incident_id_6"]
+            }
+}
 """
 
 logger = logging.getLogger(__name__)
@@ -110,10 +122,17 @@ class IncidentReportsBl:
         if self.open_ai_client is None:
             return IncidentReport()
 
+        # Most recent incidents first
+        incidents = sorted(incidents, key=lambda x: x.creation_time, reverse=True)
+
+        # Limit incidents because OpenAI is either slow (timeouts) or has token limits
+        incidents = incidents[:40]
+
         incidents_minified: list[dict] = []
         for item in incidents:
             incidents_minified.append(
                 {
+                    "incident_id": str(item.id),
                     "incident_name": "\n".join(
                         filter(None, [item.user_generated_name, item.ai_generated_name])
                     ),
@@ -145,8 +164,16 @@ class IncidentReportsBl:
         )
 
         model_response = response.choices[0].message.content
-        report = OpenAIReportPart(**json.loads(model_response))
-        return report
+        try:
+            report = OpenAIReportPart(**json.loads(model_response))
+            return report
+        except Exception as e:
+            logger.error(
+                f"""Failed to parse OpenAI response: {e}
+                    Response: {model_response}
+                """
+            )
+            raise e
 
     def __calculate_top_services_affected(
         self, incidents: list[IncidentDto]
@@ -291,6 +318,15 @@ class IncidentReportsBl:
     def __get_incidents(
         self, incidents_query_cel: str, allowed_incident_ids: list[str]
     ) -> list[IncidentDto]:
+        # with open(
+        #     "/Users/skynet_igor/Documents/GitHub/keep/keep/api/bl/incidents.json",
+        #     "r",
+        #     encoding="utf-8",
+        # ) as file:
+        #     file_content = file.read()
+        #     incidents = json.loads(file_content)
+        #     return [IncidentDto(**incident) for incident in incidents]
+
         query_result = self.incidents_bl.query_incidents(
             tenant_id=self.tenant_id,
             cel=f"status != 'deleted' && {incidents_query_cel}",
