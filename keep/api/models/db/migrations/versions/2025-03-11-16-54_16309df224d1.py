@@ -55,8 +55,22 @@ def upgrade() -> None:
         )
 
     elif dialect == "postgresql":
-        op.drop_constraint("alert_fingerprint", "alertenrichment", type_="unique")
         with op.batch_alter_table("alertenrichment") as batch_op:
+            batch_op.drop_constraint("alert_fingerprint", type_="unique")
+            batch_op.execute(
+                """
+                    WITH duplicates AS (
+                        SELECT id,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY tenant_id, alert_fingerprint 
+                                ORDER BY timestamp DESC
+                            ) AS rn
+                        FROM alertenrichment
+                    )
+                    DELETE FROM alertenrichment
+                    WHERE id IN (SELECT id FROM duplicates WHERE rn > 1);
+                """
+            )
             batch_op.create_unique_constraint(
                 "uc_alertenrichment_tenant_fingerprint",
                 ["tenant_id", "alert_fingerprint"],
@@ -84,6 +98,20 @@ def upgrade() -> None:
             INSERT INTO alertenrichment_new (id, tenant_id, alert_fingerprint, timestamp, enrichments)
             SELECT id, tenant_id, alert_fingerprint, timestamp, enrichments FROM alertenrichment;
         """
+        )
+        op.execute(
+            """
+                WITH duplicates AS (
+                    SELECT id,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY tenant_id, alert_fingerprint 
+                            ORDER BY timestamp DESC
+                        ) AS rn
+                    FROM alertenrichment_new
+                )
+                DELETE FROM alertenrichment_new
+                WHERE id IN (SELECT id FROM duplicates WHERE rn > 1);
+            """
         )
 
         # Drop the old table and rename the new one
