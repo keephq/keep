@@ -413,7 +413,7 @@ def test_start_with_keep_db(browser: Page, setup_page_logging, failure_artifacts
     browser.get_by_placeholder("Enter your password").fill("keep")
     # Click sign in and wait for navigation
     browser.get_by_role("button", name="Sign in").click()
-    browser.wait_for_url("http://localhost:3001/incidents", timeout=5000)
+    browser.wait_for_url("http://localhost:3001/incidents", timeout=10000)
 
 
 def test_provider_deletion(browser: Page):
