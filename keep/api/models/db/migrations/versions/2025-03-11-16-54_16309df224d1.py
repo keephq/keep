@@ -51,12 +51,14 @@ def upgrade() -> None:
             )
     elif dialect == "postgresql":
         constraint_exists = conn.execute(
-            """
+            sa.text(
+                """
                 SELECT conname 
                 FROM pg_constraint 
                 WHERE conrelid = 'alertenrichment'::regclass 
                 AND conname = 'alert_fingerprint';
             """
+            )
         ).fetchone()
         with op.batch_alter_table("alertenrichment") as batch_op:
             if constraint_exists:
