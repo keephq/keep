@@ -4,7 +4,6 @@ import Modal from "@/components/ui/Modal";
 import { useWorkflows } from "utils/hooks/useWorkflows";
 import { useState } from "react";
 import { toast } from "react-toastify";
-import { useRouter } from "next/navigation";
 import { IncidentDto } from "@/entities/incidents/model";
 import { AlertDto } from "@/entities/alerts/model";
 import { useApi } from "@/shared/lib/hooks/useApi";
@@ -13,6 +12,7 @@ import { Trigger, Workflow } from "@/shared/api/workflows";
 import { components, OptionProps } from "react-select";
 import { FilterOptionOption } from "react-select/dist/declarations/src/filters";
 import { WorkflowTriggerBadge } from "@/entities/workflows/ui/WorkflowTriggerBadge";
+import Link from "next/link";
 
 interface Props {
   alert?: AlertDto | null | undefined;
@@ -31,9 +31,8 @@ export default function ManualRunWorkflowModal({
   const [selectedWorkflow, setSelectedWorkflow] = useState<
     Workflow | undefined
   >(undefined);
-  const { data: workflows } = useWorkflows({});
+  const { data: workflows } = useWorkflows();
   const api = useApi();
-  const router = useRouter();
 
   const isOpen = !!alert || !!incident;
 
@@ -58,16 +57,15 @@ export default function ManualRunWorkflowModal({
       toast.success(
         <div>
           Workflow started successfully.{" "}
-          <a
+          <Link
             href={executionUrl}
             className="text-orange-500 hover:text-orange-600 underline"
             onClick={(e) => {
-              e.preventDefault();
-              router.push(executionUrl);
+              e.stopPropagation();
             }}
           >
             View execution
-          </a>
+          </Link>
         </div>,
         { position: "top-right" }
       );
@@ -136,7 +134,8 @@ export default function ManualRunWorkflowModal({
             }
             return (
               workflow.name.toLowerCase().indexOf(query.toLowerCase()) > -1 ||
-              workflow.description.toLowerCase().indexOf(query.toLowerCase()) > -1 ||
+              workflow.description.toLowerCase().indexOf(query.toLowerCase()) >
+                -1 ||
               workflow.id.toLowerCase().indexOf(query.toLowerCase()) > -1
             );
           }}

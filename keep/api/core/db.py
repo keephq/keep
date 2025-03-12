@@ -1955,6 +1955,7 @@ def get_incident_for_grouping_rule(
         is_incident_expired = False
         if incident and incident.status in [
             IncidentStatus.RESOLVED.value,
+            IncidentStatus.MERGED.value,
             IncidentStatus.DELETED.value,
         ]:
             is_incident_expired = True

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, ReactNode, useEffect } from "react";
+import { ReactNode, useEffect } from "react";
 import { Popover } from "@headlessui/react";
 import { Icon } from "@tremor/react";
 import { AiOutlineMenu, AiOutlineClose } from "react-icons/ai";
@@ -44,7 +44,7 @@ export const Menu = ({ children }: MenuButtonProps) => {
   );
 
   return (
-    <Popover as={Fragment}>
+    <Popover>
       {({ close: closeMenu }) => (
         <>
           <div className="p-3 w-full block lg:hidden">
