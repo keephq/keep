@@ -1,0 +1,23 @@
+---
+title: "AI Incident Assistant"
+---
+
+<Tip>
+Keep Cloud: ✅ <br/>
+Keep Enterprise On-Premises: ✅ <br/>
+Keep Open Source: ✅ 🤔 (experimental)
+</Tip>
+
+The AI incident assistant is a chat feature embedded in the incident page. It streamlines all incident context—including 
+alerts, descriptions, and impacted topology—to the LLM, helping on-call engineers gather information faster and 
+resolve incidents more efficiently. Users can ask for root cause analysis and even execute commands on third-party 
+services ([read more about provider methods](/providers/provider-methods#via-ai-assistant)).
+
+<Frame>
+  <img src="/images/provider-methods-assistant.png" />
+</Frame>
+
+## Frequent questions:
+
+**Model used:** OpenAI, a model hosted by Keep, or other.<br/>
+**Data flow:** Data is shared between LLM provider and Keep whether the LLM provider may vary depending on the contract.
