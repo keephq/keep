@@ -15,7 +15,6 @@ import { SortingState } from "@tanstack/react-table";
 import { IncidentListError } from "@/features/incident-list/ui/incident-list-error";
 import { InitialFacetsData } from "@/features/filter/api";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
-import Image from "next/image";
 import { Icon } from "@tremor/react";
 import {
   PageSubtitle,
@@ -47,6 +46,7 @@ import {
   DEFAULT_INCIDENTS_SORTING,
   DEFAULT_INCIDENTS_UNCHECKED_OPTIONS,
 } from "@/entities/incidents/model/models";
+import { DynamicImageProviderIcon } from "@/components/ui";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -223,7 +223,7 @@ export function IncidentList({
           }
 
           return (
-            <Image
+            <DynamicImageProviderIcon
               className="inline-block"
               alt={facetOption.display_name}
               height={16}

@@ -153,11 +153,9 @@ class RulesEngine:
 
                             send_created_event = incident.is_confirmed
 
-                        incident = IncidentBl.resolve_incident_if_require(
-                            incident, session
+                        incident = IncidentBl(self.tenant_id, session).resolve_incident_if_require(
+                            incident
                         )
-                        session.add(incident)
-                        session.commit()
 
                         incident_dto = IncidentDto.from_db_incident(incident)
                         if send_created_event:
@@ -254,15 +252,16 @@ class RulesEngine:
                 # note that it will be commited later, when the incident is commited
                 incident_name = re.sub(pattern, var_to_replace, incident_name)
             # we are done
-            existed_incident.user_generated_name = incident_name
-            self.logger.info(
-                "Incident name updated",
-                extra={
-                    "incident_id": existed_incident.id,
-                    "old_incident_name": current_name,
-                    "new_incident_name": existed_incident.user_generated_name,
-                },
-            )
+            if existed_incident.user_generated_name != incident_name:
+                existed_incident.user_generated_name = incident_name
+                self.logger.info(
+                    "Incident name updated",
+                    extra={
+                        "incident_id": existed_incident.id,
+                        "old_incident_name": current_name,
+                        "new_incident_name": existed_incident.user_generated_name,
+                    },
+                )
             return existed_incident, False
 
         # else, this is the first time

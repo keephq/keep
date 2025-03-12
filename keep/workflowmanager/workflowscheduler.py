@@ -395,7 +395,7 @@ class WorkflowScheduler:
             )
         return workflow_execution_id
 
-    def _get_unique_execution_number(self, fingerprint=None):
+    def _get_unique_execution_number(self, fingerprint=None, workflow_id=None):
         """
         Translates the fingerprint to a unique execution number
 
@@ -403,9 +403,11 @@ class WorkflowScheduler:
             int: an int represents unique execution number
         """
         # if fingerprint supplied
-        if fingerprint:
-            payload = str(fingerprint).encode()
+        if fingerprint and workflow_id:
+            payload = f"{str(fingerprint)}:{str(workflow_id)}".encode()
         # else, just return random
+        elif fingerprint:
+            payload = str(fingerprint).encode()
         else:
             payload = str(uuid.uuid4()).encode()
         return int(hashlib.sha256(payload).hexdigest(), 16) % (
@@ -527,7 +529,7 @@ class WorkflowScheduler:
             if isinstance(event, IncidentDto):
                 event_id = str(event.id)
                 event_type = "incident"
-                fingerprint = "incident:{}".format(event_id)
+                fingerprint = event_id
             else:
                 event_id = event.event_id
                 event_type = "alert"
@@ -546,7 +548,7 @@ class WorkflowScheduler:
                     # else, we want to enforce that no workflow already run with the same fingerprint
                     else:
                         workflow_execution_number = self._get_unique_execution_number(
-                            fingerprint
+                            fingerprint, workflow_id
                         )
                     workflow_execution_id = create_workflow_execution(
                         workflow_id=workflow_id,
@@ -611,14 +613,14 @@ class WorkflowScheduler:
                     self.logger.error(f"Error creating workflow execution: {e}")
                     continue
 
-            # if thats a retry, we need to re-pull the alert to update the enrichments
+            # if thats a retry, we need to re-pull the alert/incident to update the enrichments
             # for example: 2 alerts arrived within a 0.1 seconds the first one is "firing" and the second one is "resolved"
             #               - the first alert will trigger a workflow that will create a ticket with "firing"
             #                    and enrich the alert with the ticket_url
             #               - the second one will wait for the next iteration
             #               - on the next iteratino, the second alert enriched with the ticket_url
             #                    and will trigger a workflow that will update the ticket with "resolved"
-            if workflow_to_run.get("retry", False) and isinstance(event, AlertDto):
+            if workflow_to_run.get("retry", False):
                 try:
                     self.logger.info(
                         "Updating enrichments for workflow after retry",
@@ -629,13 +631,16 @@ class WorkflowScheduler:
                         },
                     )
                     new_enrichment = get_enrichment(
-                        tenant_id, event.fingerprint, refresh=True
+                        tenant_id, fingerprint, refresh=True
                     )
                     # merge the new enrichment with the original event
                     if new_enrichment:
                         new_event = event.dict()
                         new_event.update(new_enrichment.enrichments)
-                        event = AlertDto(**new_event)
+                        if isinstance(event, IncidentDto):
+                            event = IncidentDto(**new_event)
+                        else:
+                            event = AlertDto(**new_event)
                     self.logger.info(
                         "Enrichments updated for workflow after retry",
                         extra={

@@ -22,7 +22,8 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { DefaultRuleGroupType, parseCEL } from "react-querybuilder";
+import { DefaultRuleGroupType } from "react-querybuilder";
+import { parseCEL } from "react-querybuilder/parseCEL";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormattedQueryCell } from "./FormattedQueryCell";
 import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
