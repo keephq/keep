@@ -123,8 +123,15 @@ class ContextManager:
         secret_manager = SecretManagerFactory.get_secret_manager(self)
 
         secret_key = f"{self.tenant_id}_{self.workflow_id}_secrets"
-        secret = secret_manager.read_secret(secret_name=secret_key, is_json=True)
-        self.secret_context = secret or {}
+        try:
+            secret = secret_manager.read_secret(secret_name=secret_key, is_json=True)
+            self.secret_context = secret or {}
+        except Exception:
+            self.logger.warning(
+                "Could not load secrets for workflow",
+                extra={"workflow_id": self.workflow_id, "tenant_id": self.tenant_id},
+            )
+            self.secret_context = {}
 
     def get_full_context(self, exclude_providers=False, exclude_env=False):
         """
