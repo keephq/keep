@@ -14,7 +14,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref }}
+  group: ${{ github.event_name }}-${{ github.workflow }}-${{ github.head_ref }}
   cancel-in-progress: true
 
 env:
@@ -36,6 +36,10 @@ jobs:
   # Prepare test environment in parallel with Docker builds
   prepare-test-environment:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        db_type: [mysql, postgres]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
