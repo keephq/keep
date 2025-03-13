@@ -525,9 +525,10 @@ class EnrichmentsBl:
             )
             return False
 
+    @staticmethod
     def get_enrichment_metadata(
-        self, enrichments: dict, authenticated_entity: AuthenticatedEntity
-    ) -> tuple[str, str, bool]:
+        enrichments: dict, authenticated_entity: AuthenticatedEntity
+    ) -> tuple[ActionType, str, bool, bool]:
         """
         Get the metadata for the enrichment
 
@@ -536,7 +537,7 @@ class EnrichmentsBl:
             authenticated_entity (AuthenticatedEntity): The authenticated entity that performed the enrichment
 
         Returns:
-            tuple[str, str, bool, bool]: action_type, action_description, should_run_workflow, should_check_incidents_resolution
+            tuple[ActionType, str, bool, bool]: action_type, action_description, should_run_workflow, should_check_incidents_resolution
         """
         should_run_workflow = False
         should_check_incidents_resolution = False
