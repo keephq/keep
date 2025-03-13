@@ -11,7 +11,7 @@ import uuid
 import pydantic
 import requests
 
-from keep.api.models.alert import IncidentDto, IncidentStatus, IncidentSeverity
+from keep.api.models.incident import IncidentDto, IncidentStatus, IncidentSeverity
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseIncidentProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -239,8 +239,7 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
 
             alertDto = IncidentDto(
                 id=id,
-                original_incident_id=incident.get("incidentID"),
-                incident_id=incident.get("id"),
+                incident_id=incident.get("incidentID"),
                 severity_id=incident.get("severityID"),
                 severity=severity_label,
                 incident_type=incident.get("incidentType"),
@@ -269,7 +268,8 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
                 is_confirmed=True,
                 services=["incidentPreviews"],
                 alert_sources=["grafana_incident"],
-                alerts_count=alerts_count
+                alerts_count=alerts_count,
+                fingerprint=incident.get("incidentID")
             )
             alertDtos.append(alertDto)
 
