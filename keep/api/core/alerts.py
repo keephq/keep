@@ -241,7 +241,7 @@ def build_alerts_query(
     base = __build_query_for_filtering(tenant_id).cte("alerts_query")
 
     if not sort_by:
-        sort_by = "timestamp"
+        sort_by = "lastReceived"
         sort_dir = "desc"
 
     metadata = properties_metadata.get_property_metadata(sort_by)
