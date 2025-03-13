@@ -37,6 +37,7 @@ workflow:
         type: grafana_incident
         config: "{{ providers.grafana }}"
         with:
+          # Checkout https://docs.keephq.dev/providers/documentation/grafana_incident-provider for other available fields
           updateType: updateIncidentTitle
           operationType: update
           incident_id: "{{ incident.fingerprint }}"
