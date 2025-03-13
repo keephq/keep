@@ -30,17 +30,13 @@ def upgrade() -> None:
             )
             batch_op.add_column(sa.Column("dismissed", sa.Boolean(), nullable=True))
 
-            # Update existing rows with default values
-            op.execute("UPDATE alertraw SET error = false WHERE error IS NULL")
-            op.execute("UPDATE alertraw SET dismissed = false WHERE dismissed IS NULL")
-
-            # Then alter the columns to NOT NULL with default values
-            op.execute("ALTER TABLE alertraw ALTER COLUMN error SET NOT NULL")
-            op.execute("ALTER TABLE alertraw ALTER COLUMN dismissed SET NOT NULL")
-
-            # Set default for future inserts
-            op.execute("ALTER TABLE alertraw ALTER COLUMN error SET DEFAULT false")
-            op.execute("ALTER TABLE alertraw ALTER COLUMN dismissed SET DEFAULT false")
+            # Set default values for the new columns
+            batch_op.alter_column(
+                "error", nullable=False, server_default=sa.text("false")
+            )
+            batch_op.alter_column(
+                "dismissed", nullable=False, server_default=sa.text("false")
+            )
         else:
             # For MySQL
             if dialect_name == "mysql":
