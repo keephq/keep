@@ -1231,6 +1231,11 @@ def count_alerts(
             )
 
 
+def get_enrichment(tenant_id, fingerprint, refresh=False):
+    with Session(engine) as session:
+        return get_enrichment_with_session(session, tenant_id, fingerprint, refresh)
+
+
 @retry(exceptions=(Exception,), tries=3, delay=0.1, backoff=2)
 def get_enrichment_with_session(session, tenant_id, fingerprint, refresh=False):
     try:
