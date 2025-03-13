@@ -22,6 +22,7 @@ from keep.api.utils.tenant_utils import (
     get_api_keys_secret,
     get_or_create_api_key,
     update_api_key_internal,
+    APIKeyException,
 )
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -225,31 +226,37 @@ async def create_key(
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
-    api_key = create_api_key(
-        session=session,
-        tenant_id=authenticated_entity.tenant_id,
-        created_by=authenticated_entity.email,
-        unique_api_key_id=unique_api_key_id,
-        role=role.name,
-        is_system=False,
-    )
+    try:
+        api_key = create_api_key(
+            session=session,
+            tenant_id=authenticated_entity.tenant_id,
+            created_by=authenticated_entity.email,
+            unique_api_key_id=unique_api_key_id,
+            role=role.name,
+            is_system=False,
+        )
 
-    tenant_api_key = get_api_key(
-        session,
-        unique_api_key_id=unique_api_key_id,
-        tenant_id=authenticated_entity.tenant_id,
-    )
+        tenant_api_key = get_api_key(
+            session,
+            unique_api_key_id=unique_api_key_id,
+            tenant_id=authenticated_entity.tenant_id,
+        )
 
-    return {
-        "reference_id": tenant_api_key.reference_id,
-        "tenant": tenant_api_key.tenant,
-        "is_deleted": tenant_api_key.is_deleted,
-        "created_at": tenant_api_key.created_at,
-        "created_by": tenant_api_key.created_by,
-        "last_used": tenant_api_key.last_used,
-        "secret": api_key,
-        "role": tenant_api_key.role,
-    }
+        return {
+            "reference_id": tenant_api_key.reference_id,
+            "tenant": tenant_api_key.tenant,
+            "is_deleted": tenant_api_key.is_deleted,
+            "created_at": tenant_api_key.created_at,
+            "created_by": tenant_api_key.created_by,
+            "last_used": tenant_api_key.last_used,
+            "secret": api_key,
+            "role": tenant_api_key.role,
+        }
+    except APIKeyException as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error creating API key: {str(e)}",
+        )
 
 
 @router.get("/apikeys", description="Get API keys")

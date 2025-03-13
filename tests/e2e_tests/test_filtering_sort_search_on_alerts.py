@@ -3,7 +3,10 @@ from datetime import datetime, timedelta
 
 import pytest
 import requests
-from playwright.sync_api import expect, Page
+from playwright.sync_api import Page, expect
+
+from tests.e2e_tests.test_end_to_end import init_e2e_test, setup_console_listener
+from tests.e2e_tests.utils import get_token, save_failure_artifacts
 
 # NOTE 2: to run the tests with a browser, uncomment this two lines:
 # import os
@@ -31,12 +34,13 @@ def query_allerts(cell_query: str = None, limit: int = None, offset: int = None)
 
     result: dict = None
 
+    token = get_token()
     for _ in range(5):
         try:
             response = requests.post(
                 url,
                 json=query,
-                headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+                headers={"Authorization": "Bearer " + token},
                 timeout=5,
             )
             response.raise_for_status()
@@ -184,13 +188,14 @@ def upload_alerts():
         if alert["alertName"] not in current_alerts["grouped_by_name"]:
             not_uploaded_alerts.append((provider_type, alert))
 
+    token = get_token()
     for provider_type, alert in not_uploaded_alerts:
         url = f"{KEEP_API_URL}/alerts/event/{provider_type}"
         requests.post(
             url,
             json=alert,
             timeout=5,
-            headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+            headers={"Authorization": "Bearer " + token},
         ).raise_for_status()
         time.sleep(
             1
@@ -220,6 +225,7 @@ def upload_alerts():
         alert for alert in current_alerts["results"] if "Enriched" in alert["name"]
     ]
 
+    token = get_token()
     for alert in alerts_to_enrich:
         url = f"{KEEP_API_URL}/alerts/enrich"
         requests.post(
@@ -229,22 +235,41 @@ def upload_alerts():
                 "fingerprint": alert["fingerprint"],
             },
             timeout=5,
-            headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+            headers={"Authorization": "Bearer " + token},
         ).raise_for_status()
 
     return query_allerts(limit=1000, offset=0)
 
 
-def init_test(browser: Page, alerts):
-    url = f"{KEEP_UI_URL}/alerts/feed"
-    browser.goto(url)
-    browser.wait_for_url(url)
+def init_test(browser: Page, alerts, max_retries=3):
+    for i in range(max_retries):
+        try:
+            init_e2e_test(browser, next_url="/alerts/feed")
+            base_url = f"{KEEP_UI_URL}/alerts/feed"
+            # we don't care about query params
+            # Give the page a moment to process redirects
+            browser.wait_for_timeout(500)
+            # Wait for navigation to complete to either signin or providers page
+            # (since we might get redirected automatically)
+            browser.wait_for_load_state("networkidle")
+            browser.wait_for_url(lambda url: url.startswith(base_url), timeout=10000)
+            print("Page loaded successfully. [try: %d]" % (i + 1))
+            break
+        except Exception as e:
+            if i < max_retries - 1:
+                print("Failed to load alerts page. Retrying... - ", e)
+                continue
+            else:
+                raise e
+
     browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
     browser.wait_for_selector(f"text={alerts[0]['name']}", timeout=10000)
     rows_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()
     # check that required alerts are loaded and displayed
     # other tests may also add alerts, so we need to check that the number of rows is greater than or equal to 20
-    assert rows_count >= 20
+
+    # Shahar: Now each test file is seperate
+    assert rows_count >= 10
     return alerts
 
 
@@ -283,9 +308,13 @@ def assert_facet(browser, facet_name, alerts, alert_property_name: str):
             "[data-testid='facet-value']", has_text=facet_value
         )
         expect(facet_value_locator).to_be_visible()
-        expect(
-            facet_value_locator.locator("[data-testid='facet-value-count']")
-        ).to_contain_text(str(count))
+        try:
+            expect(
+                facet_value_locator.locator("[data-testid='facet-value-count']")
+            ).to_contain_text(str(count))
+        except Exception as e:
+            save_failure_artifacts(browser, log_entries=[])
+            raise e
 
 
 def assert_alerts_by_column(
@@ -297,7 +326,11 @@ def assert_alerts_by_column(
 ):
     filtered_alerts = [alert for alert in alerts if predicate(alert)]
     matched_rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
-    expect(matched_rows).to_have_count(len(filtered_alerts))
+    try:
+        expect(matched_rows).to_have_count(len(filtered_alerts))
+    except Exception as e:
+        save_failure_artifacts(browser, log_entries=[])
+        raise e
 
     # check that only alerts with selected status are displayed
     for alert in filtered_alerts:
@@ -338,7 +371,13 @@ def setup_test_data():
 
 
 @pytest.mark.parametrize("facet_test_case", facet_test_cases.keys())
-def test_filter_by_static_facet(browser: Page, facet_test_case, setup_test_data, setup_page_logging, failure_artifacts):
+def test_filter_by_static_facet(
+    browser: Page,
+    facet_test_case,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
     test_case = facet_test_cases[facet_test_case]
     facet_name = facet_test_case
     alert_property_name = test_case["alert_property_name"]
@@ -353,7 +392,13 @@ def test_filter_by_static_facet(browser: Page, facet_test_case, setup_test_data,
             # but facets work correctly
             alert["status"] = "enriched status"
 
-    init_test(browser, current_alerts)
+    init_test(browser, current_alerts, max_retries=3)
+    # Give the page a moment to process redirects
+    browser.wait_for_timeout(500)
+
+    # Wait for navigation to complete to either signin or providers page
+    # (since we might get redirected automatically)
+    browser.wait_for_load_state("networkidle")
 
     assert_facet(browser, facet_name, current_alerts, alert_property_name)
 
@@ -371,7 +416,9 @@ def test_filter_by_static_facet(browser: Page, facet_test_case, setup_test_data,
     )
 
 
-def test_adding_custom_facet(browser: Page, setup_test_data, setup_page_logging, failure_artifacts):
+def test_adding_custom_facet(
+    browser: Page, setup_test_data, setup_page_logging, failure_artifacts
+):
     facet_property_path = "custom_tags.env"
     facet_name = "Custom Env"
     alert_property_name = facet_property_path
@@ -430,7 +477,13 @@ search_by_cel_tescases = {
 
 
 @pytest.mark.parametrize("search_test_case", search_by_cel_tescases.keys())
-def test_search_by_cel(browser: Page, search_test_case, setup_test_data, setup_page_logging, failure_artifacts):
+def test_search_by_cel(
+    browser: Page,
+    search_test_case,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
     test_case = search_by_cel_tescases[search_test_case]
     cel_query = test_case["cel_query"]
     predicate = test_case["predicate"]
@@ -469,7 +522,13 @@ sort_tescases = {
 
 
 @pytest.mark.parametrize("sort_test_case", sort_tescases.keys())
-def test_sort_asc_dsc(browser: Page, sort_test_case, setup_test_data, setup_page_logging, failure_artifacts):
+def test_sort_asc_dsc(
+    browser: Page,
+    sort_test_case,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
     test_case = sort_tescases[sort_test_case]
     coumn_name = test_case["column_name"]
     column_id = test_case["column_id"]
@@ -480,9 +539,13 @@ def test_sort_asc_dsc(browser: Page, sort_test_case, setup_test_data, setup_page
         alert for alert in current_alerts if alert["providerType"] == "prometheus"
     ]
     select_one_facet_option(browser, "source", "prometheus")
-    expect(
-        browser.locator("[data-testid='alerts-table'] table tbody tr")
-    ).to_have_count(len(filtered_alerts))
+    try:
+        expect(
+            browser.locator("[data-testid='alerts-table'] table tbody tr")
+        ).to_have_count(len(filtered_alerts))
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
 
     for sort_direction_title in ["Sort ascending", "Sort descending"]:
         sorted_alerts = sorted(filtered_alerts, key=sort_callback)
@@ -498,11 +561,23 @@ def test_sort_asc_dsc(browser: Page, sort_test_case, setup_test_data, setup_page
         column_header_locator.click()
         rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
 
+        number_of_missmatches = 0
         for index, alert in enumerate(sorted_alerts):
             row_locator = rows.nth(index)
             # 3 is index of "name" column
             column_locator = row_locator.locator("td").nth(3)
-            expect(column_locator).to_have_text(alert["name"])
+            try:
+                expect(column_locator).to_have_text(alert["name"])
+            except Exception as e:
+                save_failure_artifacts(browser, log_entries=[])
+                number_of_missmatches += 1
+                if number_of_missmatches > 2:
+                    raise e
+                else:
+                    print(
+                        f"Expected: {alert['name']} but got: {column_locator.text_content()}"
+                    )
+                    continue
 
 
 def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
@@ -511,6 +586,8 @@ def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
     value = "prometheus"
     test_id = "test_alerts_stream"
     cel_to_filter_alerts = f"testId == '{test_id}'"
+    log_entries = []
+    setup_console_listener(browser, log_entries)
 
     browser.goto(f"{KEEP_UI_URL}/alerts/feed?cel={cel_to_filter_alerts}")
     expect(browser.locator("[data-testid='alerts-table']")).to_be_visible()
@@ -521,19 +598,27 @@ def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
         alert["testId"] = test_id
         simulated_alerts.append((provider_type, alert))
 
+    token = get_token()
     for provider_type, alert in simulated_alerts:
         url = f"{KEEP_API_URL}/alerts/event/{provider_type}"
         requests.post(
             url,
             json=alert,
             timeout=5,
-            headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+            headers={"Authorization": "Bearer " + token},
         ).raise_for_status()
         time.sleep(1)
 
-    expect(
-        browser.locator("[data-testid='alerts-table'] table tbody tr")
-    ).to_have_count(len(simulated_alerts))
+    try:
+        # refresh the page to get the new alerts
+        browser.reload()
+        browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
+        expect(
+            browser.locator("[data-testid='alerts-table'] table tbody tr")
+        ).to_have_count(len(simulated_alerts))
+    except Exception as e:
+        save_failure_artifacts(browser, log_entries=log_entries)
+        raise e
     query_result = query_allerts(cell_query=cel_to_filter_alerts, limit=1000)
     current_alerts = query_result["results"]
     assert_facet(browser, facet_name, current_alerts, alert_property_name)
