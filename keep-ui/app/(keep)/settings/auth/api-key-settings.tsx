@@ -112,7 +112,7 @@ export default function ApiKeySettings({ selectedTab }: Props) {
             size="md"
             icon={KeyIcon}
             onClick={() => setApiKeyModalOpen(true)}
-            disabled={!createApiKeyEnabled}
+            disabled={createApiKeyEnabled}
             tooltip={
               !createApiKeyEnabled
                 ? "API Key creation is disabled because Keep is running in NO_AUTH mode."

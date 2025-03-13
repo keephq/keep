@@ -1,0 +1,31 @@
+"""Unique api key reference
+
+Revision ID: c0e70149c9ec
+Revises: 9f11356d8ed9
+Create Date: 2025-03-13 14:08:22.939513
+
+"""
+
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.dialects import postgresql, sqlite
+
+# revision identifiers, used by Alembic.
+revision = "c0e70149c9ec"
+down_revision = "9f11356d8ed9"
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+
+    with op.batch_alter_table("tenantapikey", schema=None) as batch_op:
+        batch_op.create_unique_constraint(
+            "unique_tenant_reference", ["tenant_id", "reference_id"]
+        )
+
+
+def downgrade() -> None:
+
+    with op.batch_alter_table("tenantapikey", schema=None) as batch_op:
+        batch_op.drop_constraint("unique_tenant_reference", type_="unique")
