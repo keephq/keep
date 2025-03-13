@@ -92,6 +92,9 @@ class EnrichmentsBl:
         if not EnrichmentsBl.ENRICHMENT_DISABLED:
             self.db_session = db or get_session_sync()
             self.elastic_client = ElasticClient(tenant_id=tenant_id)
+        else:
+            self.db_session = None
+            self.elastic_client = None
 
     def run_mapping_rule_by_id(self, rule_id: int, alert_id: UUID) -> AlertDto:
         rule = get_mapping_rule_by_id(self.tenant_id, rule_id, session=self.db_session)
@@ -522,9 +525,10 @@ class EnrichmentsBl:
             )
             return False
 
+    @staticmethod
     def get_enrichment_metadata(
-        self, enrichments: dict, authenticated_entity: AuthenticatedEntity
-    ) -> tuple[str, str, bool]:
+        enrichments: dict, authenticated_entity: AuthenticatedEntity
+    ) -> tuple[ActionType, str, bool, bool]:
         """
         Get the metadata for the enrichment
 
@@ -533,7 +537,7 @@ class EnrichmentsBl:
             authenticated_entity (AuthenticatedEntity): The authenticated entity that performed the enrichment
 
         Returns:
-            tuple[str, str, bool, bool]: action_type, action_description, should_run_workflow, should_check_incidents_resolution
+            tuple[ActionType, str, bool, bool]: action_type, action_description, should_run_workflow, should_check_incidents_resolution
         """
         should_run_workflow = False
         should_check_incidents_resolution = False

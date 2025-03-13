@@ -1,10 +1,18 @@
+import re
 from datetime import datetime
 
 import requests
-from playwright.sync_api import expect, Page
+from playwright.sync_api import Page, expect
 
-from tests.e2e_tests.utils import trigger_alert, assert_scope_text_count, open_connected_provider, delete_provider, assert_connected_provider_count
-
+from tests.e2e_tests.utils import (
+    assert_connected_provider_count,
+    assert_scope_text_count,
+    delete_provider,
+    init_e2e_test,
+    open_connected_provider,
+    save_failure_artifacts,
+    trigger_alert,
+)
 
 # NOTE 2: to run the tests with a browser, uncomment this:
 # os.environ["PLAYWRIGHT_HEADLESS"] = "false"
@@ -58,88 +66,138 @@ def open_grafana_card(browser):
 
 
 def test_grafana_provider(browser: Page, setup_page_logging, failure_artifacts):
-    provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
-    provider_name_invalid = provider_name + "-invalid"
-    provider_name_readonly = provider_name + "-read-only"
-    provider_name_success = provider_name + "-success"
+    try:
+        provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
+        provider_name_invalid = provider_name + "-invalid"
+        provider_name_readonly = provider_name + "-read-only"
+        provider_name_success = provider_name + "-success"
 
-    browser.goto(f"{KEEP_UI_URL}/signin")
-    browser.get_by_role("link", name="Providers").hover()
-    browser.get_by_role("link", name="Providers").click()
+        # browser.goto(f"{KEEP_UI_URL}/signin")
+        max_attemps = 3
+        for attempt in range(max_attemps):
+            try:
+                init_e2e_test(
+                    browser,
+                    next_url="/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders",
+                )
+                # Give the page a moment to process redirects
+                browser.wait_for_timeout(500)
+                # Wait for navigation to complete to either signin or providers page
+                # (since we might get redirected automatically)
+                browser.wait_for_load_state("networkidle")
 
-    # First trying to install with invalid token, provider installation should fail
-    open_grafana_card(browser)
-    browser.get_by_placeholder("Enter provider name").fill(provider_name_invalid)
-    browser.get_by_placeholder("Enter token").fill("random_token_UwU")
-    browser.get_by_placeholder("Enter host").fill(GRAFANA_HOST)
-    browser.get_by_role("button", name="Connect", exact=True).click()
-    assert_scope_text_count(browser=browser, contains_text="Missing Scope", count=3)
-    browser.get_by_role("button", name="Cancel", exact=True).click()
+                # init_e2e_test(browser=browser, next_url="/signin")
+                base_url = "http://localhost:3000/providers"
+                url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
+                browser.wait_for_url(url_pattern)
+                print("Providers page loaded successfully. [try: %d]" % (attempt + 1))
+                break
+            except Exception as e:
+                if attempt < max_attemps - 1:
+                    print("Failed to load providers page. Retrying...")
+                    continue
+                else:
+                    raise e
 
-    # Then trying to install with read scope, webhook installation should fail
-    open_grafana_card(browser)
-    browser.get_by_placeholder("Enter provider name").fill(provider_name_readonly)
-    browser.get_by_placeholder("Enter token").fill(
-        get_grafana_access_token("Viewer")
-    )
-    browser.get_by_placeholder("Enter host").fill(GRAFANA_HOST)
-    browser.get_by_role("button", name="Connect", exact=True).click()
-    open_connected_provider(browser=browser, provider_type="Grafana", provider_name=provider_name_readonly)
-    assert_scope_text_count(browser=browser, contains_text="Missing Scope", count=2)
-    assert_scope_text_count(browser=browser, contains_text="Valid", count=1)
-    browser.get_by_role("button", name="Cancel", exact=True).click()
+        browser.get_by_role("link", name="Providers").hover()
+        browser.get_by_role("link", name="Providers").click()
 
-    # Then trying to install with admin scope, webhook installation should pass
-    open_grafana_card(browser)
-    browser.get_by_placeholder("Enter provider name").fill(provider_name_success)
-    browser.get_by_placeholder("Enter token").fill(
-        get_grafana_access_token("Admin")
-    )
-    browser.get_by_placeholder("Enter host").fill(GRAFANA_HOST)
-    browser.get_by_role("button", name="Connect", exact=True).click()
-    open_connected_provider(browser=browser, provider_type="Grafana", provider_name=provider_name_success)
-    toast_div = browser.locator(".Toastify")
-    browser.get_by_role("button", name="Install/Update Webhook", exact=True).click()
-    expect(toast_div).to_contain_text("grafana webhook installed", timeout=10000)
-    assert_scope_text_count(browser=browser, contains_text="Valid", count=3)
-    browser.get_by_role("button", name="Cancel", exact=True).click()
+        browser.wait_for_timeout(10000)
+        # First trying to install with invalid token, provider installation should fail
+        open_grafana_card(browser)
+        browser.get_by_placeholder("Enter provider name").fill(provider_name_invalid)
+        browser.get_by_placeholder("Enter token").fill("random_token_UwU")
+        browser.get_by_placeholder("Enter host").fill(GRAFANA_HOST)
+        browser.get_by_role("button", name="Connect", exact=True).click()
+        assert_scope_text_count(browser=browser, contains_text="Missing Scope", count=3)
+        browser.get_by_role("button", name="Cancel", exact=True).click()
 
-    trigger_alert("grafana")
-    browser.get_by_role("link", name="Feed").hover()
-    browser.get_by_role("link", name="Feed").click()
+        # Then trying to install with read scope, webhook installation should fail
+        open_grafana_card(browser)
+        browser.get_by_placeholder("Enter provider name").fill(provider_name_readonly)
+        browser.get_by_placeholder("Enter token").fill(
+            get_grafana_access_token("Viewer")
+        )
+        browser.get_by_placeholder("Enter host").fill(GRAFANA_HOST)
+        browser.get_by_role("button", name="Connect", exact=True).click()
+        browser.wait_for_timeout(5000)
+        # browser.reload()
+        open_connected_provider(
+            browser=browser,
+            provider_type="Grafana",
+            provider_name=provider_name_readonly,
+        )
+        assert_scope_text_count(browser=browser, contains_text="Missing Scope", count=2)
+        assert_scope_text_count(browser=browser, contains_text="Valid", count=1)
+        browser.get_by_role("button", name="Cancel", exact=True).click()
 
-    max_attemps = 5
+        # Then trying to install with admin scope, webhook installation should pass
+        open_grafana_card(browser)
+        browser.get_by_placeholder("Enter provider name").fill(provider_name_success)
+        browser.get_by_placeholder("Enter token").fill(
+            get_grafana_access_token("Admin")
+        )
+        browser.get_by_placeholder("Enter host").fill(GRAFANA_HOST)
+        browser.get_by_role("button", name="Connect", exact=True).click()
+        open_connected_provider(
+            browser=browser,
+            provider_type="Grafana",
+            provider_name=provider_name_success,
+        )
+        toast_div = browser.locator("div.Toastify")
+        browser.get_by_role("button", name="Install/Update Webhook", exact=True).click()
+        expect(toast_div).to_contain_text("grafana webhook installed", timeout=10000)
+        assert_scope_text_count(browser=browser, contains_text="Valid", count=3)
+        browser.get_by_role("button", name="Cancel", exact=True).click()
 
-    for attempt in range(max_attemps):
-        print(f"Attempt {attempt + 1} to load alerts...")
+        trigger_alert("grafana")
+        browser.get_by_role("link", name="Feed").hover()
         browser.get_by_role("link", name="Feed").click()
 
-        try:
-            # Wait for an element that indicates alerts have loaded
+        max_attemps = 5
+
+        for attempt in range(max_attemps):
+            print(f"Attempt {attempt + 1} to load alerts...")
+            browser.get_by_role("link", name="Feed").click()
+
             try:
-                browser.wait_for_selector(
-                    "text=HighMemoryConsumption", timeout=5000
-                )
-                print("Alerts loaded successfully.")
-                break
+                # Wait for an element that indicates alerts have loaded
+                try:
+                    browser.wait_for_selector(
+                        "text=HighMemoryConsumption", timeout=5000
+                    )
+                    print("Alerts loaded successfully.")
+                    break
+                except Exception:
+                    browser.wait_for_selector("text=NetworkLatencyIsHigh", timeout=5000)
+                    print("Alerts loaded successfully.")
+                    break
             except Exception:
-                browser.wait_for_selector("text=NetworkLatencyIsHigh", timeout=5000)
-                print("Alerts loaded successfully.")
-                break
-        except Exception:
-            if attempt < max_attemps - 1:
-                print("Alerts not loaded yet. Retrying...")
-                browser.reload()
-            else:
-                print("Failed to load alerts after maximum attempts.")
-                raise Exception("Failed to load alerts after maximum attempts.")
+                if attempt < max_attemps - 1:
+                    print("Alerts not loaded yet. Retrying...")
+                    browser.reload()
+                else:
+                    print("Failed to load alerts after maximum attempts.")
+                    raise Exception("Failed to load alerts after maximum attempts.")
 
-    browser.get_by_role("link", name="Providers").hover()
-    browser.get_by_role("link", name="Providers").click()
-    providers_to_delete = [provider_name_readonly, provider_name_success]
+        browser.get_by_role("link", name="Providers").hover()
+        browser.get_by_role("link", name="Providers").click()
+        providers_to_delete = [provider_name_readonly, provider_name_success]
+        for provider_to_delete in providers_to_delete:
+            # Perform actions on each matching element
+            delete_provider(
+                browser=browser,
+                provider_type="Grafana",
+                provider_name=provider_to_delete,
+            )
+            # Assert provider was deleted
+            assert_connected_provider_count(
+                browser=browser,
+                provider_type="Grafana",
+                provider_name=provider_to_delete,
+                provider_count=0,
+            )
 
-    for provider_to_delete in providers_to_delete:
-        # Perform actions on each matching element
-        delete_provider(browser=browser, provider_type="Grafana", provider_name=provider_to_delete)
-        # Assert provider was deleted
-        assert_connected_provider_count(browser=browser, provider_type="Grafana", provider_name=provider_to_delete, provider_count=0)
+    except Exception:
+        # Current file + test name for unique html and png dump.
+        save_failure_artifacts(browser)
