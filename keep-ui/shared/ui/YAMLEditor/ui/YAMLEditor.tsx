@@ -11,31 +11,22 @@ import { Button } from "@tremor/react";
 import { LogEntry } from "@/shared/api/workflow-executions";
 import { getStepStatus } from "@/shared/lib/logs-utils";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import {
-  getCurrentPath,
-  getOrderedWorkflowYamlString,
-} from "@/entities/workflows/lib/yaml-utils";
-import { useProviders } from "@/utils/hooks/useProviders";
+import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 import dynamic from "next/dynamic";
-import "./MonacoYAMLEditor.css";
-import { KeepSchemaPath } from "../../WorkflowYamlEditor/lib/constants";
 import { parseDocument, Document } from "yaml";
+import { useWorkflowJsonSchema } from "@/entities/workflows/model/useWorkflowJsonSchema";
+import { KeepLoader } from "../../KeepLoader/KeepLoader";
+import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
+import "./YAMLEditor.css";
 
-const WorkflowYamlEditor = dynamic(
-  () =>
-    import("@/shared/ui/WorkflowYamlEditor/ui/WorkflowYamlEditor").then(
-      (mod) => mod.WorkflowYamlEditor
-    ),
+const KeepSchemaPath = "file:///workflow-schema.json";
+
+const YamlEditor = dynamic(
+  () => import("./MonacoYAMLEditor").then((mod) => mod.YamlEditor),
   {
     ssr: false,
   }
 );
-
-// const EditorExtended = dynamic(() =>
-//   import("@/shared/ui/WorkflowYamlEditor/ui/EditorExtended").then(
-//     (mod) => mod.EditorExtended
-//   )
-// );
 
 interface Props {
   workflowRaw: string;
@@ -51,7 +42,7 @@ interface Props {
   "data-testid"?: string;
 }
 
-const MonacoYAMLEditor = ({
+export const YAMLEditor = ({
   workflowRaw,
   filename = "workflow",
   workflowId,
@@ -67,8 +58,7 @@ const MonacoYAMLEditor = ({
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const { updateWorkflow } = useWorkflowActions();
 
-  const { data: { providers } = {}, isLoading: isLoadingProviders } =
-    useProviders();
+  const workflowJsonSchema = useWorkflowJsonSchema();
 
   const findStepNameForPosition = (
     lineNumber: number,
@@ -133,28 +123,6 @@ const MonacoYAMLEditor = ({
     monacoInstance: typeof import("monaco-editor")
   ) => {
     editorRef.current = editor;
-
-    // if (monacoInstance) {
-    //   monacoInstance.languages.registerHoverProvider("yaml", {
-    //     provideHover: function (model, position) {
-    //       const offset = model.getOffsetAt(position);
-    //       if (!yamlDocumentRef.current) {
-    //         return {
-    //           contents: [],
-    //         };
-    //       }
-    //       const path = getCurrentPath(yamlDocumentRef.current, offset);
-    //       const pathString = path.join(".");
-    //       return {
-    //         contents: [
-    //           {
-    //             value: pathString,
-    //           },
-    //         ],
-    //       };
-    //     },
-    //   });
-    // }
 
     const updateStepDecorations = () => {
       if (!editor) return;
@@ -467,17 +435,14 @@ const MonacoYAMLEditor = ({
   };
 
   const downloadYaml = () => {
-    if (!editorRef.current) return;
-    const content = editorRef.current.getValue();
-    const blob = new Blob([content], { type: "text/yaml" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${filename}.yaml`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    if (!editorRef.current) {
+      return;
+    }
+    downloadFileFromString({
+      data: editorRef.current.getValue(),
+      filename: `${filename}.yaml`,
+      contentType: "application/x-yaml",
+    });
   };
 
   const copyToClipboard = async () => {
@@ -506,6 +471,7 @@ const MonacoYAMLEditor = ({
     wordWrap: "on",
     wordWrapColumn: 80,
     wrappingIndent: "indent",
+    theme: "vs-light",
   };
 
   return (
@@ -558,14 +524,25 @@ const MonacoYAMLEditor = ({
             <Download className="h-4 w-4" />
           </Button>
         </div>
-        <Suspense fallback={<div>Loading YAML editor...</div>}>
-          <WorkflowYamlEditor
+        <Suspense
+          fallback={<KeepLoader loadingText="Loading YAML editor..." />}
+        >
+          <YamlEditor
+            height="100%"
+            className="[&_.monaco-editor]:outline-none"
             wrapperProps={{ "data-testid": dataTestId }}
             defaultValue={getOrderedWorkflowYamlString(workflowRaw)}
             onMount={handleEditorDidMount}
             options={editorOptions}
-            providers={providers}
+            loading={<KeepLoader loadingText="Loading YAML editor..." />}
             theme="light"
+            schemas={[
+              {
+                fileMatch: ["*"],
+                schema: workflowJsonSchema,
+                uri: KeepSchemaPath,
+              },
+            ]}
           />
         </Suspense>
       </div>
@@ -578,5 +555,3 @@ const MonacoYAMLEditor = ({
     </div>
   );
 };
-
-export default MonacoYAMLEditor;

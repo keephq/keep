@@ -64,7 +64,7 @@ import { AddEditNodeSidePanel } from "./AddEditNodeSidePanel";
 import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { DropdownMenu, EmptyStateCard, ErrorComponent } from "@/shared/ui";
-import { downloadFileFromString } from "@/shared/ui/YAMLCodeblock/ui/YAMLCodeblock";
+import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { TbTopologyRing } from "react-icons/tb";
 
@@ -209,7 +209,11 @@ export function TopologyMap({
               Accept: "application/x-yaml",
             },
           });
-          downloadFileFromString(response, "topology-export.yaml");
+          downloadFileFromString({
+            data: response,
+            filename: "topology-export.yaml",
+            contentType: "application/x-yaml",
+          });
         } catch (error) {
           console.log(error);
         }
