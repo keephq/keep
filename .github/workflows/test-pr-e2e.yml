@@ -29,6 +29,7 @@ jobs:
   tests-e2e:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         db_type: [mysql, postgres]
     steps:
