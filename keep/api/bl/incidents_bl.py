@@ -37,6 +37,7 @@ from keep.api.models.db.rule import ResolveOn
 from keep.api.models.incident import IncidentDto, IncidentDtoIn, IncidentSorting
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import IncidentsPaginatedResultsDto
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION = int(
@@ -445,7 +446,13 @@ class IncidentBl:
 
         return incident
 
-    def change_status(self, incident_id: UUID | str, new_status: IncidentStatus, change_by: "AuthenticatedEntity") -> IncidentDto:
+    def change_status(
+        self,
+        incident_id: UUID | str,
+        new_status: IncidentStatus,
+        change_by:
+        AuthenticatedEntity
+    ) -> IncidentDto:
 
         self.logger.info(
             "Fetching incident",
