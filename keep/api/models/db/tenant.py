@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID, uuid4
 
-from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
 class Tenant(SQLModel, table=True):
@@ -26,9 +26,12 @@ class TenantApiKey(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_used: str = Field(default=None)
 
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "reference_id", name="unique_tenant_reference"),
+    )
+
     class Config:
         orm_mode = True
-        unique_together = ["tenant_id", "reference_id"]
 
 
 class TenantInstallation(SQLModel, table=True):

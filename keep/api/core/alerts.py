@@ -39,7 +39,7 @@ alert_field_configurations = [
     FieldMappingConfiguration("source", "filter_provider_type"),
     FieldMappingConfiguration("providerId", "filter_provider_id"),
     FieldMappingConfiguration("providerType", "filter_provider_type"),
-    FieldMappingConfiguration("lastReceived", "filter_last_received"),
+    FieldMappingConfiguration("timestamp", "filter_timestamp"),
     FieldMappingConfiguration("fingerprint", "filter_fingerprint"),
     FieldMappingConfiguration("startedAt", "startedAt"),
     FieldMappingConfiguration(
@@ -70,6 +70,13 @@ alert_field_configurations = [
         ],
     ),
     FieldMappingConfiguration(
+        map_from_pattern="lastReceived",
+        map_to=[
+            "JSON(filter_alert_enrichment_json).*",
+            "JSON(filter_alert_event_json).*",
+        ],
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="status",
         map_to=[
             "JSON(filter_alert_enrichment_json).*",
@@ -86,7 +93,7 @@ alert_field_configurations = [
     ),
 ]
 alias_column_mapping = {
-    "filter_last_received": "alert.timestamp",
+    "filter_timestamp": "alert.timestamp",
     "filter_provider_id": "alert.provider_id",
     "filter_provider_type": "alert.provider_type",
     "filter_incident_id": "incident.id",
