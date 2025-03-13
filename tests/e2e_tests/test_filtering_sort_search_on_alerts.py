@@ -118,15 +118,13 @@ def create_fake_alert(index: int, provider_type: str):
             "monitor_id": test_alert_id,
             "scopes": "srv2-eu1-prod",
             "host.name": "srv2-ap1-prod",
-            "last_updated": 1739114561286,
+            "last_updated": (datetime.utcnow() + timedelta(days=-index)).timestamp()
+            * 1000,
             "alert_transition": STATUS_MAP.get(status, "Triggered"),
             "date_happened": (datetime.utcnow() + timedelta(days=-index)).timestamp(),
             "tags": {
                 "envNameTag": "production" if index % 2 else "development",
                 "testAlertId": test_alert_id,
-            },
-            "attributes": {
-                "timestamp": (datetime.utcnow() + timedelta(days=-index)).isoformat(),
             },
             "custom_tags": {
                 "env": custom_tag,
@@ -184,12 +182,6 @@ def upload_alerts():
         ).isoformat()
 
         simulated_alerts.append((provider_type, alert))
-
-    varka = [
-        x[1].get("attributes").get("timestamp")
-        for x in simulated_alerts
-        if x[0] == "datadog"
-    ]
 
     not_uploaded_alerts = []
 
