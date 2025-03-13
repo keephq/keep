@@ -206,7 +206,7 @@ def get_next_running_number(session, tenant_id: str) -> int:
         session.rollback()
         # Refresh the session's view of the data
         session.expire_all()
-        raise  # Th
+        raise
 
 
 @event.listens_for(Incident, "before_insert")
