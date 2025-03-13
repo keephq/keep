@@ -12,6 +12,7 @@ import uuid
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
+from functools import wraps
 from typing import Any, Callable, Dict, List, Tuple, Type, Union
 from uuid import UUID, uuid4
 
@@ -21,6 +22,7 @@ from dateutil.tz import tz
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from psycopg2.errors import NoActiveSqlTransaction
+from retry import retry
 from sqlalchemy import (
     String,
     and_,
@@ -149,6 +151,30 @@ def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
         if should_raise:
             raise ValueError(f"Invalid UUID: {value}")
         return None
+
+
+def retry_on_deadlock(f):
+    @retry(
+        exceptions=(OperationalError,),
+        tries=3,
+        delay=0.1,
+        backoff=2,
+        jitter=(0, 0.1),
+        logger=logger,
+    )
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except OperationalError as e:
+            if "Deadlock found" in str(e):
+                logger.warning(
+                    "Deadlock detected, retrying transaction", extra={"error": str(e)}
+                )
+                raise  # retry will catch this
+            raise  # if it's not a deadlock, let it propagate
+
+    return wrapper
 
 
 def create_workflow_execution(
@@ -1016,24 +1042,37 @@ def _enrich_entity(
         session.refresh(enrichment)
         return enrichment
     else:
-        alert_enrichment = AlertEnrichment(
-            tenant_id=tenant_id,
-            alert_fingerprint=fingerprint,
-            enrichments=enrichments,
-        )
-        session.add(alert_enrichment)
-        # add audit event
-        if audit_enabled:
-            audit = AlertAudit(
+        try:
+            alert_enrichment = AlertEnrichment(
                 tenant_id=tenant_id,
-                fingerprint=fingerprint,
-                user_id=action_callee,
-                action=action_type.value,
-                description=action_description,
+                alert_fingerprint=fingerprint,
+                enrichments=enrichments,
             )
-            session.add(audit)
-        session.commit()
-        return alert_enrichment
+            session.add(alert_enrichment)
+            # add audit event
+            if audit_enabled:
+                audit = AlertAudit(
+                    tenant_id=tenant_id,
+                    fingerprint=fingerprint,
+                    user_id=action_callee,
+                    action=action_type.value,
+                    description=action_description,
+                )
+                session.add(audit)
+            session.commit()
+            return alert_enrichment
+        except IntegrityError:
+            # If we hit a duplicate entry error, rollback and get the existing enrichment
+            logger.warning(
+                "Duplicate entry error",
+                extra={
+                    "tenant_id": tenant_id,
+                    "fingerprint": fingerprint,
+                    "enrichments": enrichments,
+                },
+            )
+            session.rollback()
+            return get_enrichment_with_session(session, tenant_id, fingerprint)
 
 
 def batch_enrich(
@@ -1192,9 +1231,42 @@ def count_alerts(
             )
 
 
-def get_enrichment(tenant_id, fingerprint, refresh=False):
-    with Session(engine) as session:
-        return get_enrichment_with_session(session, tenant_id, fingerprint, refresh)
+@retry(exceptions=(Exception,), tries=3, delay=0.1, backoff=2)
+def get_enrichment_with_session(session, tenant_id, fingerprint, refresh=False):
+    try:
+        alert_enrichment = session.exec(
+            select(AlertEnrichment)
+            .where(AlertEnrichment.tenant_id == tenant_id)
+            .where(AlertEnrichment.alert_fingerprint == fingerprint)
+        ).first()
+
+        if refresh and alert_enrichment:
+            try:
+                session.refresh(alert_enrichment)
+            except Exception:
+                logger.exception(
+                    "Failed to refresh enrichment",
+                    extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
+                )
+                session.rollback()
+                raise  # This will trigger a retry
+
+        return alert_enrichment
+
+    except Exception as e:
+        if "PendingRollbackError" in str(e):
+            logger.warning(
+                "Session has pending rollback, attempting recovery",
+                extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
+            )
+            session.rollback()
+            raise  # This will trigger a retry
+        else:
+            logger.exception(
+                "Unexpected error getting enrichment",
+                extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
+            )
+            raise  # This will trigger a retry
 
 
 def get_enrichments(
@@ -1214,23 +1286,6 @@ def get_enrichments(
             .where(AlertEnrichment.alert_fingerprint.in_(fingerprints))
         ).all()
     return result
-
-
-def get_enrichment_with_session(session, tenant_id, fingerprint, refresh=False):
-    alert_enrichment = session.exec(
-        select(AlertEnrichment)
-        .where(AlertEnrichment.tenant_id == tenant_id)
-        .where(AlertEnrichment.alert_fingerprint == fingerprint)
-    ).first()
-    if refresh and alert_enrichment:
-        try:
-            session.refresh(alert_enrichment)
-        except Exception:
-            logger.exception(
-                "Failed to refresh enrichment",
-                extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
-            )
-    return alert_enrichment
 
 
 def get_alerts_with_filters(
@@ -3875,6 +3930,7 @@ def add_alerts_to_incident_by_incident_id(
         )
 
 
+@retry_on_deadlock
 def add_alerts_to_incident(
     tenant_id: str,
     incident: Incident,

@@ -4,7 +4,9 @@ from typing import List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import PrivateAttr
+from retry import retry
 from sqlalchemy import ForeignKey, event
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy_utils import UUIDType
 from sqlmodel import (
     JSON,
@@ -186,14 +188,25 @@ class Incident(SQLModel, table=True):
         return getattr(self, "_enrichments", {})
 
 
-def get_next_running_number(session: Session, tenant_id: str) -> int:
-    result: int = session.exec(
-        select(func.max(Incident.running_number)).filter(
-            Incident.tenant_id == tenant_id
-        )
-    ).first()
+@retry(exceptions=(IntegrityError,), tries=3, delay=0.1, backoff=2, jitter=(0, 0.1))
+def get_next_running_number(session, tenant_id: str) -> int:
+    """Get the next running number for a tenant."""
+    try:
+        # Get the maximum running number for the tenant
+        result = session.exec(
+            select(func.max(Incident.running_number)).where(
+                Incident.tenant_id == tenant_id
+            )
+        ).first()
 
-    return (result or 0) + 1
+        # If no incidents exist yet, start from 1
+        next_number = (result or 0) + 1
+        return next_number
+    except IntegrityError:
+        session.rollback()
+        # Refresh the session's view of the data
+        session.expire_all()
+        raise  # Th
 
 
 @event.listens_for(Incident, "before_insert")
