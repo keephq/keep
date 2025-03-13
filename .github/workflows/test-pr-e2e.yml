@@ -9,7 +9,7 @@ on:
       - "tests/**"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref }}
+  group: ${{ github.event_name }}-${{ github.workflow }}-${{ github.head_ref }}
   cancel-in-progress: true
 
 env:
