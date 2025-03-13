@@ -1,12 +1,13 @@
 """
 VictoriaLogsProvider is a class that allows you to query logs from VictoriaLogs.
 """
-import dataclasses
 
-import json
 import base64
-import pydantic
+import dataclasses
+import json
 import typing
+
+import pydantic
 import requests
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -30,14 +31,16 @@ class VictorialogsProviderAuthConfig:
         }
     )
 
-    authentication_type: typing.Literal["NoAuth", "Basic", "Bearer"] = dataclasses.field(
-        default=typing.cast(typing.Literal["NoAuth", "Basic", "Bearer"], "NoAuth"),
-        metadata={
-            "required": True,
-            "description": "Authentication Type",
-            "type": "select",
-            "options": ["NoAuth", "Basic", "Bearer"],
-        },
+    authentication_type: typing.Literal["NoAuth", "Basic", "Bearer"] = (
+        dataclasses.field(
+            default=typing.cast(typing.Literal["NoAuth", "Basic", "Bearer"], "NoAuth"),
+            metadata={
+                "required": True,
+                "description": "Authentication Type",
+                "type": "select",
+                "options": ["NoAuth", "Basic", "Bearer"],
+            },
+        )
     )
 
     # Basic Authentication
@@ -85,12 +88,24 @@ class VictorialogsProviderAuthConfig:
             "config_main_group": "authentication",
         },
     )
+    insecure: bool = dataclasses.field(
+        default=False,
+        metadata={
+            "name": "insecure",
+            "description": "Skip TLS verification",
+            "required": False,
+            "sensitive": False,
+            "type": "switch",
+        },
+    )
+
 
 class VictorialogsProvider(BaseProvider):
     """
     VictoriaLogsProvider is a class that allows
     you to query logs from VictoriaLogs.
     """
+
     PROVIDER_DISPLAY_NAME = "VictoriaLogs"
     PROVIDER_TAGS = ["alert"]
 
@@ -104,13 +119,13 @@ class VictorialogsProvider(BaseProvider):
     PROVIDER_CATEGORY = ["Monitoring"]
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
     def dispose(self):
         pass
-    
+
     def validate_config(self):
         """
         Validate the configuration of the provider.
@@ -127,7 +142,8 @@ class VictorialogsProvider(BaseProvider):
             url = self._get_url("/")
             response = requests.get(
                 url=url,
-                headers=self.generate_auth_headers()
+                headers=self.generate_auth_headers(),
+                verify=not self.authentication_config.insecure,
             )
 
             if response.status_code != 200:
@@ -136,33 +152,35 @@ class VictorialogsProvider(BaseProvider):
             self.logger.info("Successfully validate scopes")
 
             return {"authenticated": True}
-        
+
         except Exception as e:
             self.logger.exception("Failed to validate scopes", extra={"error": str(e)})
             return {"authenticated": str(e)}
 
     def _get_url(self, endpoint: str):
         return f"{self.authentication_config.host_url}{endpoint}"
-    
+
     def generate_auth_headers(self):
         """
         Generate the authentication headers.
         """
         if self.authentication_config.authentication_type == "Basic":
-            credentials = f"{self.authentication_config.username}:{self.authentication_config.password}".encode("utf-8")
+            credentials = f"{self.authentication_config.username}:{self.authentication_config.password}".encode(
+                "utf-8"
+            )
             encoded_credentials = base64.b64encode(credentials).decode("utf-8")
-            return {
-                "Authorization": f"Basic {encoded_credentials}"
-            }
-        
+            return {"Authorization": f"Basic {encoded_credentials}"}
+
         if self.authentication_config.authentication_type == "Bearer":
             headers = {}
             if self.authentication_config.bearer_token:
-                headers["Authorization"] = f"Bearer {self.authentication_config.bearer_token}"
+                headers["Authorization"] = (
+                    f"Bearer {self.authentication_config.bearer_token}"
+                )
             if self.authentication_config.x_scope_orgid:
                 headers["X-Scope-OrgID"] = self.authentication_config.x_scope_orgid
             return headers
-    
+
     def _convert_to_json(self, response: str) -> dict:
         """
         Convert the response string to JSON.
@@ -174,32 +192,39 @@ class VictorialogsProvider(BaseProvider):
             log_entries = json.loads(response)
 
         return log_entries
-    
-    def _query(self, queryType="", query="", time="", start="", end="", step="", account_id="", project_id="", limit="", timeout="", **kwargs: dict) -> dict:
+
+    def _query(
+        self,
+        queryType="",
+        query="",
+        time="",
+        start="",
+        end="",
+        step="",
+        account_id="",
+        project_id="",
+        limit="",
+        timeout="",
+        **kwargs: dict,
+    ) -> dict:
         """
         Query logs from VictoriaLogs.
         """
 
         if queryType == "query":
             url = self._get_url("/select/logsql/query")
-            params = {
-                "query": query,
-                "limit": limit,
-                "timeout": timeout 
-            }
+            params = {"query": query, "limit": limit, "timeout": timeout}
             params = {k: v for k, v in params.items() if v}
 
             headers = self.generate_auth_headers()
-            headers.update({
-                "AccountID": account_id,
-                "ProjectID": project_id
-            })
+            headers.update({"AccountID": account_id, "ProjectID": project_id})
             headers = {k: v for k, v in headers.items() if v}
 
             response = requests.post(
                 url=url,
                 data=params,
-                headers=headers
+                headers=headers,
+                verify=not self.authentication_config.insecure,
             )
 
             try:
@@ -207,29 +232,25 @@ class VictorialogsProvider(BaseProvider):
                 return self._convert_to_json(response.text)
             except Exception as e:
                 self.logger.exception("Failed to query logs")
-                raise Exception("Could not query logs from VictoriaLogs on /query endpoint: ", str(e))
-            
+                raise Exception(
+                    "Could not query logs from VictoriaLogs on /query endpoint: ",
+                    str(e),
+                )
+
         elif queryType == "hits":
             url = self._get_url("/select/logsql/hits")
-            params = {
-                "query": query,
-                "start": start,
-                "end": end,
-                "step": step
-            }
+            params = {"query": query, "start": start, "end": end, "step": step}
             params = {k: v for k, v in params.items() if v}
 
             headers = self.generate_auth_headers()
-            headers.update({
-                "AccountID": account_id,
-                "ProjectID": project_id
-            })
+            headers.update({"AccountID": account_id, "ProjectID": project_id})
             headers = {k: v for k, v in headers.items() if v}
 
             response = requests.post(
                 url=url,
                 data=params,
-                headers=headers
+                headers=headers,
+                verify=not self.authentication_config.insecure,
             )
 
             try:
@@ -237,20 +258,20 @@ class VictorialogsProvider(BaseProvider):
                 return self._convert_to_json(response.text)
             except Exception as e:
                 self.logger.exception("Failed to query logs")
-                raise Exception("Could not query logs from VictoriaLogs on /hits endpoint: ", str(e))
-            
+                raise Exception(
+                    "Could not query logs from VictoriaLogs on /hits endpoint: ", str(e)
+                )
+
         elif queryType == "stats_query":
             url = self._get_url("/select/logsql/stats_query")
-            params = {
-                "query": query,
-                "time": time
-            }
+            params = {"query": query, "time": time}
             params = {k: v for k, v in params.items() if v}
 
             response = requests.post(
                 url=url,
                 data=params,
-                headers=self.generate_auth_headers()
+                headers=self.generate_auth_headers(),
+                verify=not self.authentication_config.insecure,
             )
 
             try:
@@ -258,22 +279,21 @@ class VictorialogsProvider(BaseProvider):
                 return self._convert_to_json(response.text)
             except Exception as e:
                 self.logger.exception("Failed to query logs")
-                raise Exception("Could not query logs from VictoriaLogs on /stats_query endpoint: ", str(e))
-            
+                raise Exception(
+                    "Could not query logs from VictoriaLogs on /stats_query endpoint: ",
+                    str(e),
+                )
+
         elif queryType == "stats_query_range":
             url = self._get_url("/select/logsql/stats_query_range")
-            params = {
-                "query": query,
-                "start": start,
-                "end": end,
-                "step": step
-            }
+            params = {"query": query, "start": start, "end": end, "step": step}
             params = {k: v for k, v in params.items() if v}
 
             response = requests.post(
                 url=url,
                 data=params,
-                headers=self.generate_auth_headers()
+                headers=self.generate_auth_headers(),
+                verify=not self.authentication_config.insecure,
             )
 
             try:
@@ -281,12 +301,16 @@ class VictorialogsProvider(BaseProvider):
                 return self._convert_to_json(response.text)
             except Exception as e:
                 self.logger.exception("Failed to query logs")
-                raise Exception("Could not query logs from VictoriaLogs on /stats_query_range endpoint: ", str(e))
-            
+                raise Exception(
+                    "Could not query logs from VictoriaLogs on /stats_query_range endpoint: ",
+                    str(e),
+                )
+
         else:
             self.logger.exception("Invalid queryType")
             raise Exception("Invalid queryType")
-        
+
+
 if __name__ == "__main__":
     import logging
 
@@ -304,14 +328,11 @@ if __name__ == "__main__":
         description="VictoriaLogs Provider",
         authentication={
             "host_url": victorialogs_host_url,
-        }
+        },
     )
 
     provider = VictorialogsProvider(context_manager, "victorialogs", config)
 
-    logs = provider._query(
-        queryType="query",
-        query="error"
-    )
+    logs = provider._query(queryType="query", query="error")
 
     print(logs)
