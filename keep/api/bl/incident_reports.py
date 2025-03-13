@@ -317,15 +317,6 @@ class IncidentReportsBl:
     def __get_incidents(
         self, incidents_query_cel: str, allowed_incident_ids: list[str]
     ) -> list[IncidentDto]:
-        # with open(
-        #     "/Users/skynet_igor/Documents/GitHub/keep/keep/api/bl/incidents.json",
-        #     "r",
-        #     encoding="utf-8",
-        # ) as file:
-        #     file_content = file.read()
-        #     incidents = json.loads(file_content)
-        #     return [IncidentDto(**incident) for incident in incidents]
-
         query_result = self.incidents_bl.query_incidents(
             tenant_id=self.tenant_id,
             cel=f"status != 'deleted' && {incidents_query_cel}",
