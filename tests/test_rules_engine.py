@@ -1781,17 +1781,195 @@ def test_correlation_to_incident_candidate(db_session):
     assert incident.is_candidate is True
 
 
-# Next steps:
-#   - test that alerts in the same group are being updated correctly
-#   - test group are being updated correctly
-#   - test that alerts in different groups are being updated correctly
-#   - test timeframes - new group is created
-#   - test timeframes - old group is not updated
-#   - test more matchers (CEL's)
-#       - three groups
-#       - one group
-#       - more CEL operators
-#   - test group attributes - severity and status
-#   - test group attributes - labels
-#   - test that if more than one rule matches, the alert is being updated correctly
-#   - test that if more than one rule matches, the alert is being updated correctly - different group
+def test_incident_prefix_simple(db_session):
+    """Test that incident prefix is correctly added to new incidents"""
+    # Create alert
+    alert = AlertDto(
+        id="grafana-1",
+        source=["grafana"],
+        name="Test alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+        labels={"host": "web-1"},
+    )
+
+    # Create rule with prefix
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={"sql": "N/A", "params": {}},
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='source == "grafana"',
+        created_by="test@keephq.dev",
+        incident_prefix="INC",
+    )
+
+    # Add alert to db
+    db_alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert.dict(),
+        fingerprint=alert.fingerprint,
+    )
+    db_session.add(db_alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, db_alert, db_session)
+
+    alert.event_id = db_alert.id
+    results = rules_engine.run_rules([alert], session=db_session)
+
+    # Verify results
+    assert len(results) == 1
+    assert results[0].user_generated_name.startswith("INC-1 - ")
+    assert results[0].user_generated_name == "INC-1 - test-rule"
+
+
+def test_incident_prefix_with_template(db_session):
+    """Test that incident prefix works correctly with name templates"""
+    alert = AlertDto(
+        id="grafana-1",
+        source=["grafana"],
+        name="Test alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+        labels={"host": "web-1", "service": "nginx"},
+    )
+
+    # Create rule with both prefix and template
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={"sql": "N/A", "params": {}},
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='source == "grafana"',
+        created_by="test@keephq.dev",
+        incident_prefix="SRE",
+        incident_name_template="Issue on {{ alert.labels.host }} with {{ alert.labels.service }}",
+    )
+
+    # Add alert to db
+    db_alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert.dict(),
+        fingerprint=alert.fingerprint,
+    )
+    db_session.add(db_alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, db_alert, db_session)
+
+    alert.event_id = db_alert.id
+    results = rules_engine.run_rules([alert], session=db_session)
+
+    # Verify results
+    assert len(results) == 1
+    assert results[0].user_generated_name == "SRE-1 - Issue on web-1 with nginx"
+
+
+def test_incident_prefix_multiple_incidents(db_session):
+    """Test that incident prefixes increment correctly across multiple incidents"""
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+
+    # Create rule with prefix
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={"sql": "N/A", "params": {}},
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='source == "grafana"',
+        created_by="test@keephq.dev",
+        incident_prefix="PROD",
+        grouping_criteria=["labels.host"],  # Create separate incidents per host
+    )
+
+    # First alert - will create first incident
+    alert1 = AlertDto(
+        id="grafana-1",
+        source=["grafana"],
+        name="First alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+        labels={"host": "web-1"},
+    )
+
+    db_alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert1.dict(),
+        fingerprint=alert1.fingerprint,
+    )
+    db_session.add(db_alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, db_alert, db_session)
+
+    alert1.event_id = db_alert.id
+    results = rules_engine.run_rules([alert1], session=db_session)
+    assert len(results) == 1
+    assert results[0].user_generated_name == "PROD-1 - test-rule"
+
+    # Second alert - will create second incident (different host)
+    alert2 = AlertDto(
+        id="grafana-2",
+        source=["grafana"],
+        name="Second alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+        labels={"host": "web-2"},
+    )
+
+    db_alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert2.dict(),
+        fingerprint=alert2.fingerprint,
+    )
+    db_session.add(db_alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, db_alert, db_session)
+
+    alert2.event_id = db_alert.id
+    results = rules_engine.run_rules([alert2], session=db_session)
+    assert len(results) == 1
+    assert results[0].user_generated_name == "PROD-2 - test-rule"
+
+    # Third alert - should be added to first incident (same host)
+    alert3 = AlertDto(
+        id="grafana-3",
+        source=["grafana"],
+        name="Third alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+        labels={"host": "web-1"},  # Same host as alert1
+    )
+
+    db_alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert3.dict(),
+        fingerprint=alert3.fingerprint,
+    )
+    db_session.add(db_alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, db_alert, db_session)
+
+    alert3.event_id = db_alert.id
+    results = rules_engine.run_rules([alert3], session=db_session)
+    assert len(results) == 1
+    assert (
+        results[0].user_generated_name == "PROD-1 - test-rule"
+    )  # Same prefix-number as first incident

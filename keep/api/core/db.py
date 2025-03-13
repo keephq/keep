@@ -1818,6 +1818,7 @@ def create_rule(
     resolve_on=ResolveOn.NEVER.value,
     create_on=CreateIncidentOn.ANY.value,
     incident_name_template=None,
+    incident_prefix=None,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -1836,6 +1837,7 @@ def create_rule(
             resolve_on=resolve_on,
             create_on=create_on,
             incident_name_template=incident_name_template,
+            incident_prefix=incident_prefix,
         )
         session.add(rule)
         session.commit()
@@ -1857,6 +1859,7 @@ def update_rule(
     resolve_on,
     create_on,
     incident_name_template,
+    incident_prefix,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -1880,6 +1883,7 @@ def update_rule(
             rule.resolve_on = resolve_on
             rule.create_on = create_on
             rule.incident_name_template = incident_name_template
+            rule.incident_prefix = incident_prefix
             session.commit()
             session.refresh(rule)
             return rule
@@ -1974,7 +1978,7 @@ def get_incident_for_grouping_rule(
 
 def create_incident_for_grouping_rule(
     tenant_id,
-    rule,
+    rule: Rule,
     rule_fingerprint,
     incident_name: str = None,
     past_incident: Optional[Incident] = None,
@@ -1996,6 +2000,9 @@ def create_incident_for_grouping_rule(
             resolve_on=rule.resolve_on,
         )
         session.add(incident)
+        session.flush()
+        if rule.incident_prefix:
+            incident.user_generated_name = f"{rule.incident_prefix}-{incident.running_number} - {incident.user_generated_name}"
         session.commit()
         session.refresh(incident)
     return incident
