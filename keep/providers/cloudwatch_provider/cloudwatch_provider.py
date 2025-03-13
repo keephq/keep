@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import time
+import typing
 from typing import List
 from urllib.parse import urlparse
 
@@ -63,6 +64,15 @@ class CloudwatchProviderAuthConfig:
             "description": "AWS Cloudwatch SNS Topic [ARN or name]",
             "hint": "Default SNS Topic to send notifications (Optional since if your alarms already sends notifications to SNS topic, Keep will use the exists SNS topic)",
             "sensitive": False,
+        },
+    )
+    protocol: typing.Literal["https", "http"] = dataclasses.field(
+        default="https",
+        metadata={
+            "required": True,
+            "description": "Protocol to use for the webhook",
+            "type": "select",
+            "options": ["https", "http"],
         },
     )
 
@@ -501,13 +511,18 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                     for sub in subscriptions
                 )
                 if not already_subscribed:
-                    url_with_api_key = keep_api_url.replace(
-                        "https://", f"https://api_key:{api_key}@"
-                    )
+                    if self.authentication_config.protocol == "http":
+                        url_with_api_key = keep_api_url.replace(
+                            "https://", f"http://api_key:{api_key}@"
+                        )
+                    else:
+                        url_with_api_key = keep_api_url.replace(
+                            "http://", f"https://api_key:{api_key}@"
+                        )
                     self.logger.info("Subscribing to topic %s...", topic)
                     sns_client.subscribe(
                         TopicArn=topic,
-                        Protocol="https",
+                        Protocol=self.authentication_config.protocol,
                         Endpoint=url_with_api_key,
                     )
                     self.logger.info("Subscribed to topic %s!", topic)
