@@ -340,7 +340,6 @@ def query_last_alerts(
             data_query = build_alerts_query(
                 tenant_id, cel, sort_by, sort_dir, limit, offset
             )
-
             alerts_with_start = session.execute(data_query).all()
         except OperationalError as e:
             logger.warning(f"Failed to query alerts for CEL '{cel}': {e}")
