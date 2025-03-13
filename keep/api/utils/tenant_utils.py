@@ -4,6 +4,8 @@ from typing import Optional
 from uuid import uuid4
 
 from sqlmodel import Session, select
+from sqlalchemy.exc import IntegrityError as SqlalchemyIntegrityError
+from google.api_core.exceptions import InvalidArgument as GoogleAPIInvalidArgument
 
 from keep.api.core.config import config
 from keep.api.models.db.tenant import TenantApiKey
@@ -14,6 +16,10 @@ from keep.identitymanager.rbac import Webhook as WebhookRole
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 logger = logging.getLogger(__name__)
+
+
+class APIKeyException(Exception):
+    pass
 
 
 def get_api_key(
@@ -125,31 +131,47 @@ def create_api_key(
     # Save the api key in the secret manager
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    secret_manager.write_secret(
-        secret_name=f"{tenant_id}-{unique_api_key_id}",
-        secret_value=api_key,
-    )
-    # Save the api key in the database
-    new_installation_api_key = TenantApiKey(
-        tenant_id=tenant_id,
-        reference_id=unique_api_key_id,
-        key_hash=hashed_api_key,
-        is_system=is_system,
-        system_description=system_description,
-        created_by=created_by,
-        role=role,
-    )
-    session.add(new_installation_api_key)
+    try:
+        secret_manager.write_secret(
+            secret_name=f"{tenant_id}-{unique_api_key_id}",
+            secret_value=api_key,
+        )
+        # Save the api key in the database
+        new_installation_api_key = TenantApiKey(
+            tenant_id=tenant_id,
+            reference_id=unique_api_key_id,
+            key_hash=hashed_api_key,
+            is_system=is_system,
+            system_description=system_description,
+            created_by=created_by,
+            role=role,
+        )
+        session.add(new_installation_api_key)
 
-    if commit:
-        session.commit()
+        if commit:
+            session.commit()
 
-    logger.info(
-        "Created API key",
-        extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
-    )
+        logger.info(
+            "Created API key",
+            extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
+        )
 
-    return api_key
+        return api_key
+    except SqlalchemyIntegrityError as e:
+        logger.warning(
+            f"API key already exists: {e}",
+            extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
+        )
+        raise APIKeyException("API key already exists.")
+    except GoogleAPIInvalidArgument as e:
+        if "does not match the expected format" in str(e):
+            raise APIKeyException(str(e))
+    except Exception as e:
+        logger.error(
+            "Error creating API key: " + str(e),
+            extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
+        )
+        raise APIKeyException("Error creating API key.")
 
 
 def get_api_keys(
