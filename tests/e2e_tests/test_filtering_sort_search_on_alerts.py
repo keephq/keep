@@ -118,6 +118,7 @@ def create_fake_alert(index: int, provider_type: str):
             "monitor_id": test_alert_id,
             "scopes": "srv2-eu1-prod",
             "host.name": "srv2-ap1-prod",
+            # last_updated is lastReceived in alerts, it's important for sorting tests
             "last_updated": (datetime.utcnow() + timedelta(days=-index)).timestamp()
             * 1000,
             "alert_transition": STATUS_MAP.get(status, "Triggered"),
@@ -537,9 +538,9 @@ def test_sort_asc_dsc(
     current_alerts = setup_test_data
     init_test(browser, current_alerts)
     filtered_alerts = [
-        alert for alert in current_alerts if alert["providerType"] == "prometheus"
+        alert for alert in current_alerts if alert["providerType"] == "datadog"
     ]
-    select_one_facet_option(browser, "source", "prometheus")
+    select_one_facet_option(browser, "source", "datadog")
     try:
         expect(
             browser.locator("[data-testid='alerts-table'] table tbody tr")
