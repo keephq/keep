@@ -52,3 +52,4 @@ class Rule(SQLModel, table=True):
     create_on: str = CreateIncidentOn.ANY.value
     is_deleted: bool = False
     incident_name_template: str = None
+    incident_prefix: str | None = None
