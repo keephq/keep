@@ -472,10 +472,17 @@ class PagerdutyProvider(
     ):
         """Triggers an incident via the V2 REST API using sample data."""
 
+        update = True
+
         if not incident_key:
             incident_key = str(uuid.uuid4()).replace("-", "")
+            update = False
 
-        url = f"{self.BASE_API_URL}/incidents"
+        url = (
+            f"{self.BASE_API_URL}/incidents"
+            if not update
+            else f"{self.BASE_API_URL}/incidents/{incident_key}"
+        )
         headers = self.__get_headers(From=requester)
 
         if isinstance(body, str):
@@ -499,16 +506,32 @@ class PagerdutyProvider(
                 "type": "priority_reference",
             }
 
-        r = requests.post(url, headers=headers, data=json.dumps(payload))
+        r = (
+            requests.post(url, headers=headers, data=json.dumps(payload))
+            if not update
+            else requests.put(url, headers=headers, data=json.dumps(payload))
+        )
         try:
             r.raise_for_status()
             response = r.json()
-            self.logger.info("Incident triggered")
+            self.logger.info(
+                "Incident triggered",
+                extra={
+                    "update": update,
+                    "incident_key": incident_key,
+                    "tenant_id": self.context_manager.tenant_id,
+                },
+            )
             return response
         except Exception as e:
             self.logger.error(
                 "Failed to trigger incident",
-                extra={"response_text": r.text},
+                extra={
+                    "response_text": r.text,
+                    "update": update,
+                    "incident_key": incident_key,
+                    "tenant_id": self.context_manager.tenant_id,
+                },
             )
             # This will give us a better error message in Keep workflows
             raise Exception(r.text) from e
