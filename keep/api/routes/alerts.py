@@ -31,20 +31,16 @@ from keep.api.core.config import config
 from keep.api.core.db import dismiss_error_alerts as dismiss_error_alerts_db
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
+    get_error_alerts as get_error_alerts_db,
+    get_alert_audit as get_alert_audit_db,
     dismiss_error_alerts as dismiss_error_alerts_db,
     get_last_alerts_by_fingerprints,
     get_alerts_by_ids,
-)
-from keep.api.core.db import enrich_alerts_with_incidents
-from keep.api.core.db import (
+    enrich_alerts_with_incidents,
     get_alerts_by_fingerprint,
     get_alerts_by_ids,
     get_alerts_metrics_by_provider,
     get_enrichment,
-)
-from keep.api.core.db import get_error_alerts as get_error_alerts_db
-from keep.api.core.db import (
-    get_last_alert_by_fingerprint,
     get_last_alerts,
     get_last_alerts_by_fingerprints,
     get_provider_by_name,
@@ -64,6 +60,7 @@ from keep.api.models.alert import (
     EnrichAlertNoteRequestBody,
     EnrichAlertRequestBody,
     UnEnrichAlertRequestBody,
+
 )
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.facet import FacetOptionsQueryDto
