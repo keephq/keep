@@ -95,7 +95,7 @@ httptools = "^0.6.4"
 anthropic = "^0.44.0"
 google-generativeai = "^0.8.4"
 js2py = "^0.74"
-retry = "^0.9.2"
+retry2 = "^0.9.5"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
 pre-commit-hooks = "^4.4.0"
