@@ -63,7 +63,7 @@ def _is_localhost():
     return False
 
 
-@router.get("")
+@router.get("", description="Get all providers")
 def get_providers(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:providers"])
@@ -108,7 +108,7 @@ def get_providers(
     }
 
 
-@router.get("/{provider_id}/logs")
+@router.get("/{provider_id}/logs", description="Get provider logs")
 def get_provider_logs(
     provider_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -136,7 +136,7 @@ def get_provider_logs(
 
 @router.get(
     "/export",
-    description="export all installed providers",
+    description="Export all installed providers",
     response_model=list[ProviderDTO],
 )
 @limiter.exempt
@@ -363,7 +363,7 @@ def test_provider(
         return JSONResponse(status_code=400, content=str(e))
 
 
-@router.delete("/{provider_type}/{provider_id}")
+@router.delete("/{provider_type}/{provider_id}", description="Delete provider")
 def delete_provider(
     provider_type: str,
     provider_id: str,
@@ -466,7 +466,7 @@ async def update_provider(
         return JSONResponse(status_code=400, content={"message": str(e)})
 
 
-@router.post("/install")
+@router.post("/install", description="Install provider")
 async def install_provider(
     request: Request,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -533,7 +533,9 @@ async def install_provider(
         return JSONResponse(status_code=400, content={"message": str(e)})
 
 
-@router.post("/install/oauth2/{provider_type}")
+@router.post(
+    "/install/oauth2/{provider_type}", description="Install provider via oauth2."
+)
 async def install_provider_oauth2(
     provider_type: str,
     provider_info: dict = Body(...),
@@ -719,7 +721,10 @@ def invoke_provider_method(
 
 
 # Webhook related endpoints
-@router.post("/install/webhook/{provider_type}/{provider_id}")
+@router.post(
+    "/install/webhook/{provider_type}/{provider_id}",
+    description="Install webhook for a provider.",
+)
 def install_provider_webhook(
     provider_type: str,
     provider_id: str,
@@ -779,7 +784,7 @@ def install_provider_webhook(
     return JSONResponse(status_code=200, content={"message": "webhook installed"})
 
 
-@router.get("/{provider_type}/webhook")
+@router.get("/{provider_type}/webhook", description="Get provider's webhook settings.")
 def get_webhook_settings(
     provider_type: str,
     provider_id: str | None = None,
@@ -834,7 +839,7 @@ def get_webhook_settings(
     )
 
 
-@router.post("/healthcheck")
+@router.post("/healthcheck", description="Run healthcheck on a provider")
 async def healthcheck_provider(
     request: Request,
 ) -> Dict[str, Any]:
@@ -871,7 +876,7 @@ async def healthcheck_provider(
     return result
 
 
-@router.get("/healthcheck")
+@router.get("/healthcheck", description="Get all providers for healthcheck")
 def get_healthcheck_providers():
     logger.info("Getting all providers for healthcheck")
     providers = ProvidersService.get_all_providers()

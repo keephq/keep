@@ -49,6 +49,34 @@
       ]
     },
     {
+      "group": "AIOps",
+      "pages": [
+        {
+          "group": "AI",
+          "pages": [
+            "overview/ai-incident-assistant",
+            "overview/ai-workflow-assistant",
+            "overview/ai-semi-automatic-correlation",
+            "overview/ai-in-workflows",
+            "overview/ai-correlation"
+          ]
+        },
+        {
+          "group": "Non-AI Correlation",
+          "pages": [
+            "overview/correlation-rules",
+            "overview/correlation-topology"
+          ]
+        },
+        "overview/deduplication",
+        "overview/enrichment/extraction",
+        "overview/enrichment/mapping",
+        "overview/maintenance-windows",
+        "overview/servicetopology",
+        "overview/workflow-automation"
+      ]
+    },
+    {
       "group": "Alerts",
       "pages": [
         "alerts/overview",
@@ -62,24 +90,6 @@
     {
       "group": "Incidents",
       "pages": ["incidents/overview", "incidents/facets"]
-    },
-    {
-      "group": "AIOps",
-      "pages": [
-        {
-          "group": "Correlation",
-          "pages": [
-            "overview/correlation-rules",
-            "overview/correlation-topology"
-          ]
-        },
-        "overview/deduplication",
-        "overview/enrichment/extraction",
-        "overview/enrichment/mapping",
-        "overview/maintenance-windows",
-        "overview/servicetopology",
-        "overview/workflow-automation"
-      ]
     },
     {
       "group": "Workflow Automation",
