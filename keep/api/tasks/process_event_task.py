@@ -733,16 +733,16 @@ def process_event(
 
         # Check if the last function matches the pattern
         if "_format_alert" in last_function or "_format" in last_function:
-            logger.exception(
-                "Error processing event",
-                extra={**extra_dict, "processing_time": time.time() - start_time},
-            )
             # In case of exception, add the alerts to the defect table
             error_msg = stacktrace
         # if this is a bug in the code, we don't want the user to see the stacktrace
         else:
             error_msg = "Error processing event, contact Keep team for more information"
 
+        logger.exception(
+            "Error processing event",
+            extra={**extra_dict, "processing_time": time.time() - start_time},
+        )
         __save_error_alerts(tenant_id, provider_type, raw_event, error_msg)
         events_error_counter.inc()
 
