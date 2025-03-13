@@ -31,7 +31,6 @@ from keep.api.core.config import config
 from keep.api.core.db import enrich_alerts_with_incidents
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import dismiss_error_alerts as dismiss_error_alerts_db
-from keep.api.core.db import enrich_alerts_with_incidents
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_metrics_by_provider,
@@ -39,7 +38,6 @@ from keep.api.core.db import (
 )
 from keep.api.core.db import get_error_alerts as get_error_alerts_db
 from keep.api.core.db import (
-    get_last_alert_by_fingerprint,
     get_last_alerts,
     get_session,
 )
