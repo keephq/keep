@@ -39,7 +39,6 @@ alert_field_configurations = [
     FieldMappingConfiguration("source", "filter_provider_type"),
     FieldMappingConfiguration("providerId", "filter_provider_id"),
     FieldMappingConfiguration("providerType", "filter_provider_type"),
-    FieldMappingConfiguration("lastReceived", "filter_last_received"),
     FieldMappingConfiguration("timestamp", "filter_timestamp"),
     FieldMappingConfiguration("fingerprint", "filter_fingerprint"),
     FieldMappingConfiguration("startedAt", "startedAt"),
@@ -94,7 +93,7 @@ alert_field_configurations = [
     ),
 ]
 alias_column_mapping = {
-    "filter_last_received": "alert.timestamp",
+    "filter_timestamp": "alert.timestamp",
     "filter_provider_id": "alert.provider_id",
     "filter_provider_type": "alert.provider_type",
     "filter_incident_id": "incident.id",
@@ -242,7 +241,7 @@ def build_alerts_query(
     base = __build_query_for_filtering(tenant_id).cte("alerts_query")
 
     if not sort_by:
-        sort_by = "lastReceived"
+        sort_by = "timestamp"
         sort_dir = "desc"
 
     metadata = properties_metadata.get_property_metadata(sort_by)
@@ -341,6 +340,11 @@ def query_last_alerts(
             data_query = build_alerts_query(
                 tenant_id, cel, sort_by, sort_dir, limit, offset
             )
+            strq = str(
+                data_query.compile(compile_kwargs={"literal_binds": True}),
+                dialect=session.bind.dialect,
+            )
+
             alerts_with_start = session.execute(data_query).all()
         except OperationalError as e:
             logger.warning(f"Failed to query alerts for CEL '{cel}': {e}")
