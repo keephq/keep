@@ -204,32 +204,7 @@ def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=
 def take_screenshot(page):
     """Save screenshots, HTML content, and console logs on test failure."""
     # Generate unique name for the dump files
-    current_test_name = "screenshot_"
-
-    # try to get test_name from PYTEST_CURRENT_TEST
-    test_name = os.getenv("PYTEST_CURRENT_TEST") or "screenshot"
-    # Replace invalid filename characters with underscores
-    invalid_chars = [
-        ":",
-        "/",
-        "\\",
-        "?",
-        "*",
-        '"',
-        "<",
-        ">",
-        "|",
-        " ",
-        "[",
-        "]",
-        "(",
-        ")",
-        "'",
-    ]
-    for char in invalid_chars:
-        test_name = test_name.replace(char, "_")
-
-    current_test_name += test_name
+    current_test_name = get_current_test_name()
 
     # Save screenshot
     page.screenshot(path=current_test_name + ".png")
