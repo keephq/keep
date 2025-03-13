@@ -19,11 +19,11 @@ def upgrade() -> None:
 
     with op.batch_alter_table("tenantapikey", schema=None) as batch_op:
         batch_op.create_unique_constraint(
-            "unique_tenant_reference", ["tenant_id", "reference_id"]
+            "unique_tenant_to_reference", ["tenant_id", "reference_id"]
         )
 
 
 def downgrade() -> None:
 
     with op.batch_alter_table("tenantapikey", schema=None) as batch_op:
-        batch_op.drop_constraint("unique_tenant_reference", type_="unique")
+        batch_op.drop_constraint("unique_tenant_to_reference", type_="unique")
