@@ -125,6 +125,9 @@ def create_fake_alert(index: int, provider_type: str):
                 "envNameTag": "production" if index % 2 else "development",
                 "testAlertId": test_alert_id,
             },
+            "attributes": {
+                "timestamp": (datetime.utcnow() + timedelta(days=-index)).isoformat(),
+            },
             "custom_tags": {
                 "env": custom_tag,
             },
@@ -181,6 +184,12 @@ def upload_alerts():
         ).isoformat()
 
         simulated_alerts.append((provider_type, alert))
+
+    varka = [
+        x[1].get("attributes").get("timestamp")
+        for x in simulated_alerts
+        if x[0] == "datadog"
+    ]
 
     not_uploaded_alerts = []
 
@@ -560,6 +569,7 @@ def test_sort_asc_dsc(
         expect(column_header_locator).to_be_visible()
         column_header_locator.click()
         rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
+        browser.wait_for_timeout(2000)
 
         number_of_missmatches = 0
         for index, alert in enumerate(sorted_alerts):
