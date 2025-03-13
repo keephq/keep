@@ -40,6 +40,7 @@ alert_field_configurations = [
     FieldMappingConfiguration("providerId", "filter_provider_id"),
     FieldMappingConfiguration("providerType", "filter_provider_type"),
     FieldMappingConfiguration("lastReceived", "filter_last_received"),
+    FieldMappingConfiguration("timestamp", "filter_timestamp"),
     FieldMappingConfiguration("fingerprint", "filter_fingerprint"),
     FieldMappingConfiguration("startedAt", "startedAt"),
     FieldMappingConfiguration(
@@ -67,6 +68,13 @@ alert_field_configurations = [
                 [severity for _, severity in enumerate(AlertSeverity)],
                 key=lambda s: s.order,
             )
+        ],
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="lastReceived",
+        map_to=[
+            "JSON(filter_alert_enrichment_json).lastReceived",
+            "JSON(filter_alert_event_json).lastReceived",
         ],
     ),
     FieldMappingConfiguration(
