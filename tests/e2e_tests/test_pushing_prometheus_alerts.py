@@ -51,7 +51,7 @@ def test_pulling_prometheus_alerts_to_provider(
     browser.wait_for_load_state("networkidle")
 
     prometheus_tile = browser.locator(
-        "button:has-text('prometheus'):has-text('alert'):has-text('data')"
+        "button:has-text('prometheus', i):has-text('alert'):has-text('data')"
     )
     prometheus_tile.first.wait_for(state="visible")
     prometheus_tile.first.hover()
@@ -75,7 +75,7 @@ def test_pulling_prometheus_alerts_to_provider(
 
     # Validate provider is created - increase timeout for validation
     expect(
-        browser.locator("button:has-text('prometheus'):has-text('connected')")
+        browser.locator("button:has-text('prometheus', i):has-text('connected', i)")
     ).to_be_visible(
         timeout=10000
     )  # Increase timeout to 10 seconds
@@ -162,7 +162,7 @@ def test_pulling_prometheus_alerts_to_provider(
 
     # Find and interact with the provider
     provider_button = browser.locator(
-        f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
+        f"button:has-text('Prometheus', i):has-text('Connected', i):has-text('{provider_name}')"
     )
     provider_button.wait_for(state="visible")
     provider_button.click()
@@ -176,6 +176,6 @@ def test_pulling_prometheus_alerts_to_provider(
     # Assert provider was deleted with increased timeout
     expect(
         browser.locator(
-            f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
+            f"button:has-text('Prometheus', i):has-text('Connected', i):has-text('{provider_name}')"
         )
     ).not_to_be_visible(timeout=10000)
