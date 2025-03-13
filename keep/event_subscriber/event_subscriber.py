@@ -3,7 +3,7 @@ import threading
 
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
-print()
+
 
 class EventSubscriber:
     @staticmethod
