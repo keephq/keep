@@ -3717,8 +3717,12 @@ def update_incident_from_dto_by_id(
         return incident
 
 
-def get_incident_by_fingerprint(tenant_id: str, fingerprint: str) -> Optional[Incident]:
-    with Session(engine) as session:
+def get_incident_by_fingerprint(
+    tenant_id: str,
+    fingerprint: str,
+    session: Optional[Session] = None
+) -> Optional[Incident]:
+    with existed_or_new_session(session) as session:
         return session.exec(
             select(Incident).where(
                 Incident.tenant_id == tenant_id, Incident.fingerprint == fingerprint
@@ -3729,10 +3733,11 @@ def get_incident_by_fingerprint(tenant_id: str, fingerprint: str) -> Optional[In
 def delete_incident_by_id(
     tenant_id: str,
     incident_id: UUID,
+    session: Optional[Session] = None
 ) -> bool:
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id)
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         incident = session.exec(
             select(Incident).filter(
                 Incident.tenant_id == tenant_id,
