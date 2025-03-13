@@ -52,7 +52,7 @@ jest.mock("@/features/workflows/ai-assistant", () => ({
 
 jest.mock("@/shared/ui/YAMLEditor", () => ({
   __esModule: true,
-  default: () => <div>YAMLEditor</div>,
+  YAMLEditor: () => <div>YAMLEditor</div>,
 }));
 
 jest.mock("next/navigation", () => ({

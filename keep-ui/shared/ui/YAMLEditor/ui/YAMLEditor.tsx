@@ -12,21 +12,14 @@ import { LogEntry } from "@/shared/api/workflow-executions";
 import { getStepStatus } from "@/shared/lib/logs-utils";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
-import dynamic from "next/dynamic";
 import { parseDocument, Document } from "yaml";
 import { useWorkflowJsonSchema } from "@/entities/workflows/model/useWorkflowJsonSchema";
 import { KeepLoader } from "../../KeepLoader/KeepLoader";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import "./YAMLEditor.css";
+import { MonacoYAMLEditor } from "./MonacoYamlEditor";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
-
-const YamlEditor = dynamic(
-  () => import("./MonacoYAMLEditor").then((mod) => mod.YamlEditor),
-  {
-    ssr: false,
-  }
-);
 
 interface Props {
   workflowRaw: string;
@@ -527,7 +520,7 @@ export const YAMLEditor = ({
         <Suspense
           fallback={<KeepLoader loadingText="Loading YAML editor..." />}
         >
-          <YamlEditor
+          <MonacoYAMLEditor
             height="100%"
             className="[&_.monaco-editor]:outline-none"
             wrapperProps={{ "data-testid": dataTestId }}
