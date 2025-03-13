@@ -73,6 +73,7 @@ def process_incident(
                     incident_from_db = incident_bl.update_incident(
                         incident_id=incident_from_db.id,
                         updated_incident_dto=incident,
+                        generated_by_ai=False,
                     )
                     logger.info(
                         f"Updated incident: {incident.id}",
