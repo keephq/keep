@@ -100,7 +100,7 @@ def get_service_application_ids_dict(
 
 
 def validate_non_manual_exists(
-    service_ids: list[int], session: Session, tenant_id: str
+    service_ids: list[UUID | str], session: Session, tenant_id: str
 ) -> bool:
     non_manual_exists = session.query(
         exists()
@@ -677,7 +677,7 @@ class TopologiesService:
             session.close()
 
     @staticmethod
-    def delete_dependency(dependency_id: int, session: Session, tenant_id: str):
+    def delete_dependency(dependency_id: UUID | str, session: Session, tenant_id: str):
         try:
             db_dependency: TopologyServiceDependency = (
                 TopologiesService.get_dependency_by_id(

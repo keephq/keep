@@ -317,7 +317,7 @@ class TopologyServiceDependencyUpdateRequestDto(
 
 
 class DeleteServicesRequest(BaseModel, extra="ignore"):
-    service_ids: List[int]
+    service_ids: List[UUID | str]
 
 
 class TopologyServiceYAML(TopologyServiceCreateRequestDTO, extra="ignore"):
