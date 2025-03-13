@@ -5337,3 +5337,67 @@ def enrich_incidents_with_enrichments(
             incident._enrichments = enrichments_map.get(str(incident.id), {})
 
         return incidents
+
+
+def get_error_alerts(tenant_id: str, limit: int = 1000) -> int:
+    with Session(engine) as session:
+        return (
+            session.query(AlertRaw)
+            .filter(
+                AlertRaw.tenant_id == tenant_id,
+                AlertRaw.error == True,
+                AlertRaw.dismissed == False,
+            )
+            .all()
+        )
+
+
+def dismiss_error_alerts(tenant_id: str, alert_id=None, dismissed_by=None) -> None:
+    with Session(engine) as session:
+        stmt = (
+            update(AlertRaw)
+            .where(
+                AlertRaw.tenant_id == tenant_id,
+            )
+            .values(
+                dismissed=True,
+                dismissed_by=dismissed_by,
+                dismissed_at=datetime.now(tz=timezone.utc),
+            )
+        )
+        if alert_id:
+            if isinstance(alert_id, str):
+                alert_id_uuid = uuid.UUID(alert_id)
+                stmt = stmt.where(AlertRaw.id == alert_id_uuid)
+            else:
+                stmt = stmt.where(AlertRaw.id == alert_id)
+        session.exec(stmt)
+        session.commit()
+
+
+def create_single_tenant_for_e2e(tenant_id: str) -> None:
+    """
+    Creates the single tenant and the default user if they don't exist.
+    """
+    with Session(engine) as session:
+        try:
+            # check if the tenant exist:
+            logger.info("Checking if single tenant exists")
+            tenant = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
+            if not tenant:
+                # Do everything related with single tenant creation in here
+                logger.info("Creating single tenant", extra={"tenant_id": tenant_id})
+                session.add(Tenant(id=tenant_id, name="Single Tenant"))
+            else:
+                logger.info("Single tenant already exists")
+
+            # commit the changes
+            session.commit()
+            logger.info("Single tenant created", extra={"tenant_id": tenant_id})
+        except IntegrityError:
+            # Tenant already exists
+            logger.exception("Failed to provision single tenant")
+            raise
+        except Exception:
+            logger.exception("Failed to create single tenant")
+            pass

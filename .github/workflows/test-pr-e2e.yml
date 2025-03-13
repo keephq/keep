@@ -8,6 +8,11 @@ on:
       - "keep-ui/**"
       - "tests/**"
 
+# Add permissions for GitHub Container Registry
+permissions:
+  contents: read
+  packages: write
+
 concurrency:
   group: ${{ github.event_name }}-${{ github.workflow }}-${{ github.head_ref }}
   cancel-in-progress: true
@@ -24,21 +29,16 @@ env:
   POSTGRES_DB: keepdb
   # To test if imports are working properly
   EE_ENABLED: true
+  # Docker Compose project name
+  COMPOSE_PROJECT_NAME: keep
 
 jobs:
-  tests-e2e:
+  # Prepare test environment in parallel with Docker builds
+  prepare-test-environment:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        db_type: [mysql, postgres]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
-      - uses: chartboost/ruff-action@v1
-        with:
-          src: "./keep"
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
@@ -66,6 +66,7 @@ jobs:
         run: |
           PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
           echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4.2.0
@@ -81,129 +82,399 @@ jobs:
             poetry run playwright install-deps
           fi
 
+  # Build images in parallel
+  build-frontend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Set up Keep environment
+      - name: Set cache key variables
+        id: cache-keys
         run: |
-          DOCKER_BUILDKIT=1 docker compose \
-            --project-directory . \
-            -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml up -d
+          # Create a safe branch name for cache key (replace / with - and remove special chars)
+          SAFE_BRANCH=$(echo "${{ github.head_ref || github.ref_name }}" | sed 's/\//-/g' | sed 's/[^a-zA-Z0-9._-]//g')
+          echo "SAFE_BRANCH_NAME=${SAFE_BRANCH}" >> $GITHUB_OUTPUT
 
-      - name: Wait for database to be ready
+          # Create a hash ONLY of the dependencies section of package.json and package-lock.json
+          # This ensures the hash only changes when dependencies change
+          DEPS_HASH=$(jq '.dependencies' keep-ui/package.json | sha256sum | cut -d ' ' -f 1)
+          echo "DEPS_HASH=${DEPS_HASH:0:8}" >> $GITHUB_OUTPUT
+
+      - name: Debug repository and cache info
         run: |
-          # Add commands to wait for the database to be ready
-          echo "Waiting for Database to be ready..."
-          if [ "${{ matrix.db_type }}" == "mysql" ]; then
-            until docker exec $(docker ps -qf "name=keep-database-1") mysqladmin ping -h "localhost" --silent; do
-              echo "Waiting for MySQL to be ready..."
-              sleep 2
-            done
-          elif [ "${{ matrix.db_type }}" == "postgres" ]; then
-            until docker exec $(docker ps -qf "name=keep-database-1") pg_isready -h localhost -U keepuser; do
-              echo "Waiting for Postgres to be ready..."
-              sleep 2
-            done
+          echo "Repository: ${{ github.repository }}"
+          echo "Repository owner: ${{ github.repository_owner }}"
+          echo "Branch: ${{ github.head_ref || github.ref_name }}"
+          echo "Safe branch name: ${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          echo "Dependencies hash: ${{ steps.cache-keys.outputs.DEPS_HASH }}"
+
+      # Pre-check if branch cache exists
+      - name: Check if branch cache exists
+        id: branch-cache-exists
+        continue-on-error: true
+        run: |
+          BRANCH_CACHE_TAG="ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          if docker buildx imagetools inspect "$BRANCH_CACHE_TAG" &>/dev/null; then
+            echo "Branch cache exists: $BRANCH_CACHE_TAG"
+            echo "cache_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Branch cache does not exist: $BRANCH_CACHE_TAG"
+            echo "cache_exists=false" >> $GITHUB_OUTPUT
           fi
-          echo "Database is ready!"
-          
-          echo "Waiting for Database (DB AUTH) to be ready..."
+
+      - name: Log frontend cache status
+        run: |
+          if [ "${{ steps.branch-cache-exists.outputs.cache_exists }}" == "true" ]; then
+            echo "FRONTEND CACHE HIT ✅"
+            echo "Cache tag: ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          else
+            echo "FRONTEND CACHE MISS ❌"
+            echo "Will attempt to use main branch cache and create a new branch cache"
+          fi
+
+      - name: Build and push frontend image with registry cache
+        uses: docker/build-push-action@v4
+        with:
+          context: keep-ui
+          file: ./docker/Dockerfile.ui
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}
+          # Use registry-based caching with branch-specific tags
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-main
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
+          # Add build args for better caching
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          # Verbose output
+          outputs: type=image,push=true
+
+  build-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Set cache key variables
+        id: cache-keys
+        run: |
+          # Create a safe branch name for cache key (replace / with - and remove special chars)
+          SAFE_BRANCH=$(echo "${{ github.head_ref || github.ref_name }}" | sed 's/\//-/g' | sed 's/[^a-zA-Z0-9._-]//g')
+          echo "SAFE_BRANCH_NAME=${SAFE_BRANCH}" >> $GITHUB_OUTPUT
+
+          # Create a hash of poetry files for version-specific caching
+          DEPS_HASH=$(cat poetry.lock pyproject.toml | sha256sum | cut -d ' ' -f 1)
+          echo "DEPS_HASH=${DEPS_HASH:0:8}" >> $GITHUB_OUTPUT
+
+      - name: Debug repository and cache info
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Repository owner: ${{ github.repository_owner }}"
+          echo "Branch: ${{ github.head_ref || github.ref_name }}"
+          echo "Safe branch name: ${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          echo "Dependencies hash: ${{ steps.cache-keys.outputs.DEPS_HASH }}"
+
+      # Pre-check if branch cache exists
+      - name: Check if branch cache exists
+        id: branch-cache-exists
+        continue-on-error: true
+        run: |
+          BRANCH_CACHE_TAG="ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          if docker buildx imagetools inspect "$BRANCH_CACHE_TAG" &>/dev/null; then
+            echo "Branch cache exists: $BRANCH_CACHE_TAG"
+            echo "cache_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Branch cache does not exist: $BRANCH_CACHE_TAG"
+            echo "cache_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Log backend cache status
+        run: |
+          if [ "${{ steps.branch-cache-exists.outputs.cache_exists }}" == "true" ]; then
+            echo "BACKEND CACHE HIT ✅"
+            echo "Cache tag: ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          else
+            echo "BACKEND CACHE MISS ❌"
+            echo "Will attempt to use main branch cache and create a new branch cache"
+          fi
+
+      - name: Build and push backend image with registry cache
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./docker/Dockerfile.api
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}
+          # Use registry-based caching with branch-specific tags
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
+          # Add build args for better caching
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          # Verbose output
+          outputs: type=image,push=true
+
+  # Run tests with all services in one job
+  run-tests:
+    needs: [build-frontend, build-backend, prepare-test-environment]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        db_type: [mysql, postgres]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: chartboost/ruff-action@v1
+        with:
+          src: "./keep"
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Restore dependencies cache
+        id: cache-deps
+        uses: actions/cache@v4.2.0
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+      # Only install dependencies if cache miss
+      - name: Install dependencies using poetry
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root --with dev
+
+      - name: Get Playwright version from poetry.lock
+        id: playwright-version
+        run: |
+          PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
+          echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright and dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: |
+          poetry run playwright install --with-deps
+
+      # Create a modified compose file with our built images
+      - name: Create modified docker-compose file with built images
+        run: |
+          cp tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml tests/e2e_tests/docker-compose-modified.yml
+
+          # Replace image placeholders with actual image references
+          sed -i "s|%KEEPFRONTEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPBACKEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPFRONTEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-frontend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPBACKEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-backend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+
+          # cat the modified file for debugging
+          cat tests/e2e_tests/docker-compose-modified.yml
+
+      # Start ALL services in one go
+      - name: Start ALL services
+        run: |
+          echo "Starting ALL services for ${{ matrix.db_type }}..."
+
+          # Pull the required images first
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
+
+          # Start all services together
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+
+          # Show running containers
+          docker ps
+
+          # Show the images sha of the running containers
+          docker images
+
+      # Wait for all services to be ready
+      - name: Wait for services to be ready
+        run: |
+          # Function for exponential backoff
+          function wait_for_service() {
+            local service_name=$1
+            local check_command=$2
+            local max_attempts=$3
+            local compose_service=$4  # Docker Compose service name
+            local attempt=0
+            local wait_time=1
+
+            echo "Waiting for $service_name to be ready..."
+            until eval "$check_command"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "Max attempts reached, exiting..."
+                # Show final logs before exiting
+                if [ ! -z "$compose_service" ]; then
+                  echo "===== FINAL LOGS FOR $compose_service ====="
+                  docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 50
+                  echo "=========================================="
+                fi
+                exit 1
+              fi
+
+              echo "Waiting for $service_name... (Attempt: $((attempt+1)), waiting ${wait_time}s)"
+
+              # Print logs using docker compose
+              if [ ! -z "$compose_service" ]; then
+                echo "===== RECENT LOGS FOR $compose_service ====="
+                docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
+                echo "=========================================="
+              fi
+
+              attempt=$((attempt+1))
+              sleep $wait_time
+              # Exponential backoff with max of 8 seconds
+              wait_time=$((wait_time * 2 > 8 ? 8 : wait_time * 2))
+            done
+            echo "$service_name is ready!"
+          }
+
+          # Database checks
           if [ "${{ matrix.db_type }}" == "mysql" ]; then
-            until docker exec $(docker ps -qf "name=keep-database-db-auth-1") mysqladmin ping -h "localhost" --silent; do
-              echo "Waiting for MySQL (DB AUTH) to be ready..."
-              sleep 3
-            done
+            wait_for_service "MySQL Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h \"localhost\" --silent" 10 "keep-database"
+            wait_for_service "MySQL Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth"
           elif [ "${{ matrix.db_type }}" == "postgres" ]; then
-            until docker exec $(docker ps -qf "name=keep-database-db-auth-1") pg_isready -h localhost -U keepuser; do
-              echo "Waiting for Postgres (DB AUTH) to be ready..."
-              sleep 2
-            done
-          fi      
-          echo "Database (DB AUTH) is ready!"
-          
-          attempt=0
-          max_attempts=10
-          echo "Waiting for Keep backend (DB AUTH) to be ready..."
-          until $(curl --output /dev/null --silent --fail http://localhost:8081/healthcheck); do
-            if [ "$attempt" -ge "$max_attempts" ]; then
-              echo "Max attempts reached, exiting... Sometimes Keep can't start because of double-headed migrations, use: 'alembic -c keep/alembic.ini history' to investigate, or check artifacts."
-              exit 1
-            fi
-            echo "Waiting for Keep backend (DB AUTH) to be ready... (Attempt: $((attempt+1)))"
-            attempt=$((attempt+1))
-            sleep 4
-          done
-          echo "Keep backend (DB AUTH) is ready!"
-          # wait to the backend
-          
+            wait_for_service "Postgres Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser" 10 "keep-database"
+            wait_for_service "Postgres Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
+          fi
 
-          # wait to keep backend on port 8080
-          echo "Waiting for Keep backend to be ready..."
-          attempt=0
-          max_attempts=10
+          # Wait for services with health checks
+          wait_for_service "Keep backend" "curl --output /dev/null --silent --fail http://localhost:8080/healthcheck" 15 "keep-backend"
+          wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 15 "keep-backend-db-auth"
+          wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 15 "keep-frontend"
+          wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth"
 
-          until $(curl --output /dev/null --silent --fail http://localhost:8080/healthcheck); do
-            if [ "$attempt" -ge "$max_attempts" ]; then
-              echo "Max attempts reached, exiting... Sometimes Keep can't start because of double-headed migrations, use: 'alembic -c keep/alembic.ini history' to investigate, or check artifacts."
-              exit 1
+          # Give Prometheus and Grafana extra time to initialize
+          # (using direct curl commands instead of container exec)
+          echo "Waiting for Prometheus to be ready..."
+          MAX_ATTEMPTS=15
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            if curl --output /dev/null --silent --fail http://localhost:9090/-/healthy; then
+              echo "Prometheus is ready!"
+              break
+            elif [ $i -eq $MAX_ATTEMPTS ]; then
+              echo "Prometheus did not become ready in time, but continuing..."
+              docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs prometheus-server-for-test-target --tail 50
+            else
+              echo "Waiting for Prometheus... Attempt $i/$MAX_ATTEMPTS"
+              sleep 5
             fi
-            echo "Waiting for Keep backend to be ready... (Attempt: $((attempt+1)))"
-            attempt=$((attempt+1))
-            sleep 4
           done
-          echo "Keep backend is ready!"
-          
-          
-          echo "Waiting for Keep frontend to be ready..."
-          attempt=0
-          max_attempts=10
 
-          until $(curl --output /dev/null --silent --fail http://localhost:3000/); do
-            if [ "$attempt" -ge "$max_attempts" ]; then
-              echo "Max attempts reached, exiting..."
-              exit 1
-            fi
-            echo "Waiting for Keep frontend to be ready... (Attempt: $((attempt+1)))"
-            attempt=$((attempt+1))
-            sleep 2
-          done
-          echo "Keep frontend is ready"
-          
-          echo "Waiting for Keep frontend (DB AUTH) to be ready..."
-          attempt=0
-          max_attempts=10
-          until $(curl --output /dev/null --silent --fail http://localhost:3001/); do
-            if [ "$attempt" -ge "$max_attempts" ]; then
-              echo "Max attempts reached, exiting..."
-              exit 1
-            fi
-            echo "Waiting for Keep frontend (DB AUTH) to be ready... (Attempt: $((attempt+1)))"
-            attempt=$((attempt+1))
-            sleep 2
-          done
-          echo "Keep frontend (DB AUTH) is ready"
-          
-          
           echo "Waiting for Grafana to be ready..."
-          attempt=0
-          max_attempts=10
-          until $(curl --output /dev/null --silent --fail http://localhost:3002/api/health); do
-            if [ "$attempt" -ge "$max_attempts" ]; then
-              echo "Max attempts reached, exiting... "
-              exit 1
+          MAX_ATTEMPTS=15
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            if curl --output /dev/null --silent --fail http://localhost:3002/api/health; then
+              echo "Grafana is ready!"
+              break
+            elif [ $i -eq $MAX_ATTEMPTS ]; then
+              echo "Grafana did not become ready in time, but continuing..."
+              docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs grafana --tail 50
+            else
+              echo "Waiting for Grafana... Attempt $i/$MAX_ATTEMPTS"
+              sleep 5
             fi
-            echo "Waiting for Grafana to be ready... (Attempt: $((attempt+1)))"
-            attempt=$((attempt+1))
-            sleep 2
           done
-          echo "Grafana is ready..."
 
-          # create the state directory
-          # mkdir -p ./state && chown -R root:root ./state && chmod -R 777 ./state
+          # Give everything a bit more time to stabilize
+          echo "Giving services additional time to stabilize..."
+          sleep 10
 
+      # Debug the environment before running tests
+      - name: Debug environment
+        run: |
+          echo "Checking all container status..."
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml ps
+
+          echo "Network information:"
+          docker network ls
+          docker network inspect keep_default || true
+
+          echo "Testing Prometheus API..."
+          curl -v http://localhost:9090/api/v1/status/config || echo "Prometheus API not responding, but continuing..."
+
+          echo "Testing Grafana API..."
+          curl -v http://localhost:3002/api/health || echo "Grafana API not responding, but continuing..."
+
+          echo "Test Keep Frontend..."
+          curl -v http://localhost:3000/ || echo "Keep Frontend not responding, but continuing..."
+
+          echo "Test Keep Frontend with DB Auth..."
+          curl -v http://localhost:3001/ || echo "Keep Frontend with DB Auth not responding, but continuing..."
+
+          echo "Listing available ports:"
+          netstat -tuln | grep -E '3000|3001|3002|8080|8081|9090'
+
+      # Run e2e tests
       - name: Run e2e tests and report coverage
         run: |
-          poetry run coverage run --branch -m pytest -s tests/e2e_tests/
+          echo "Running tests..."
+          poetry run coverage run --branch -m pytest -v tests/e2e_tests/ -n 4 --dist=loadfile
+          echo "Tests completed!"
 
       - name: Convert coverage results to JSON (for CodeCov support)
         run: poetry run coverage json --omit="keep/providers/*"
@@ -211,19 +482,23 @@ jobs:
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
         with:
-          fail_ci_if_error: false # don't fail if we didn't manage to upload the coverage report
+          fail_ci_if_error: false
           files: coverage.json
           verbose: true
 
-      - name: Dump backend logs
+      # Collect logs
+      - name: Dump logs
         if: always()
         run: |
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-backend > backend_logs-${{ matrix.db_type }}.txt
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-frontend > frontend_logs-${{ matrix.db_type }}.txt
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-backend-db-auth > backend_logs-${{ matrix.db_type }}-db-auth.txt
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-frontend-db-auth > frontend_logs-${{ matrix.db_type }}-db-auth.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-backend > backend_logs-${{ matrix.db_type }}.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-frontend > frontend_logs-${{ matrix.db_type }}.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-backend-db-auth > backend_logs-${{ matrix.db_type }}-db-auth.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-frontend-db-auth > frontend_logs-${{ matrix.db_type }}-db-auth.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs prometheus-server-for-test-target > prometheus_logs-${{ matrix.db_type }}.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs grafana > grafana_logs-${{ matrix.db_type }}.txt
         continue-on-error: true
 
+      # Upload artifacts
       - name: Upload test artifacts on failure
         if: always()
         uses: actions/upload-artifact@v4.4.3
@@ -238,8 +513,12 @@ jobs:
             frontend_logs-${{ matrix.db_type }}.txt
             backend_logs-${{ matrix.db_type }}-db-auth.txt
             frontend_logs-${{ matrix.db_type }}-db-auth.txt
+            prometheus_logs-${{ matrix.db_type }}.txt
+            grafana_logs-${{ matrix.db_type }}.txt
         continue-on-error: true
 
+      # Tear down environment
       - name: Tear down environment
+        if: always()
         run: |
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml down
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
