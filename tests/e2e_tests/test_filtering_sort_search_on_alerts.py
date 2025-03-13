@@ -561,7 +561,6 @@ def test_sort_asc_dsc(
         expect(column_header_locator).to_be_visible()
         column_header_locator.click()
         rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
-        browser.wait_for_timeout(2000)
 
         number_of_missmatches = 0
         for index, alert in enumerate(sorted_alerts):
