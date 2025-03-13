@@ -51,7 +51,7 @@ class TopologyApplication(SQLModel, table=True):
 
 
 class TopologyService(SQLModel, table=True):
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    id: UUID = Field(default_factory=uuid4)
     external_id: Optional[int]
     tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id")))
     source_provider_id: str = "unknown"
