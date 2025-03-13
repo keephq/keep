@@ -1,7 +1,7 @@
 """Unique api key reference
 
 Revision ID: c0e70149c9ec
-Revises: 9f11356d8ed9
+Revises: ca74b4a04371
 Create Date: 2025-03-13 14:08:22.939513
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql, sqlite
 
 # revision identifiers, used by Alembic.
 revision = "c0e70149c9ec"
-down_revision = "9f11356d8ed9"
+down_revision = "ca74b4a04371"
 branch_labels = None
 depends_on = None
 
