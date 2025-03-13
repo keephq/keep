@@ -50,9 +50,9 @@ jest.mock("@/features/workflows/ai-assistant", () => ({
   WorkflowBuilderChatSafe: () => <div>WorkflowBuilderChat</div>,
 }));
 
-jest.mock("@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor", () => ({
+jest.mock("@/shared/ui/YAMLEditor", () => ({
   __esModule: true,
-  default: () => <div>MonacoYAMLEditor</div>,
+  default: () => <div>YAMLEditor</div>,
 }));
 
 jest.mock("next/navigation", () => ({
