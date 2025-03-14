@@ -50,9 +50,9 @@ export const DEFAULT_COLS = [
   "checkbox",
   "noise",
   "source",
+  "status",
   "name",
   "description",
-  "status",
   "lastReceived",
   "alertMenu",
 ];
@@ -430,6 +430,31 @@ export const useAlertTableCols = (
           }),
         ]
       : []),
+    columnHelper.accessor("status", {
+      id: "status",
+      header: () => <></>, // Empty header like source column
+      enableGrouping: true,
+      getGroupingValue: (row) => row.status,
+      maxSize: 12,
+      minSize: 12,
+      size: 12,
+      enableResizing: false,
+      cell: (context) => (
+        <div className="flex items-center justify-center">
+          <Icon
+            icon={getStatusIcon(context.getValue())}
+            size="sm"
+            color={getStatusColor(context.getValue())}
+            className="!p-0"
+            title={context.getValue()} // Add title for tooltip on hover
+          />
+        </div>
+      ),
+      meta: {
+        tdClassName: "!p-0 w-4 sm:w-8 !box-border", // Same styling as source
+        thClassName: "!p-0 w-4 sm:w-8 !box-border",
+      },
+    }),
     // Source column with exact 40px width ( see alert-table-headers )
     columnHelper.accessor("source", {
       id: "source",
@@ -505,27 +530,6 @@ export const useAlertTableCols = (
             {context.getValue()}
           </div>
         </div>
-      ),
-    }),
-    columnHelper.accessor("status", {
-      id: "status",
-      header: "Status",
-      enableGrouping: true,
-      getGroupingValue: (row) => row.status,
-      maxSize: 50,
-      size: 50,
-      cell: (context) => (
-        <span className="flex items-center justify-center xl:justify-start gap-1">
-          <Icon
-            icon={getStatusIcon(context.getValue())}
-            size="sm"
-            color={getStatusColor(context.getValue())}
-            className="!p-0"
-          />
-          <span className="truncate capitalize hidden xl:block">
-            {context.getValue()}
-          </span>
-        </span>
       ),
     }),
     columnHelper.accessor("lastReceived", {

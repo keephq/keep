@@ -262,8 +262,8 @@ export function AlertTableServerSide({
     useState<boolean>(false);
 
   const leftPinnedColumns = noisyAlertsEnabled
-    ? ["severity", "checkbox", "source", "name", "noise"]
-    : ["severity", "checkbox", "source", "name"];
+    ? ["severity", "checkbox", "status", "source", "name", "noise"]
+    : ["severity", "checkbox", "status", "source", "name"];
 
   const table = useReactTable({
     getRowId: (row) => row.fingerprint,
