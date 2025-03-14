@@ -567,8 +567,8 @@ def test_sort_asc_dsc(
         number_of_missmatches = 0
         for index, alert in enumerate(sorted_alerts):
             row_locator = rows.nth(index)
-            # 3 is index of "name" column
-            column_locator = row_locator.locator("td").nth(3)
+            # 4 is index of "name" column
+            column_locator = row_locator.locator("td").nth(4)
             try:
                 expect(column_locator).to_have_text(alert["name"])
             except Exception as e:
