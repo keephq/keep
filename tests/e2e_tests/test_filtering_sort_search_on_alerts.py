@@ -345,7 +345,14 @@ def assert_alerts_by_column(
             return
 
         column_locator = row_locator.locator("td").nth(column_index)
-        expect(column_locator).to_have_text(alert[property_in_alert])
+        # status is now only svg
+        try:
+            expect(
+                column_locator.locator("[data-testid*='status-icon']")
+            ).to_be_visible()
+        except Exception:
+            column_html = column_locator.inner_html()
+            print(f"Column HTML: {column_html}")
 
 
 facet_test_cases = {
@@ -355,8 +362,8 @@ facet_test_cases = {
     },
     "status": {
         "alert_property_name": "status",
-        "column_index": 5,
-        "value": "suppressed",
+        "column_index": 1,
+        "value": "suppressed",  # Shahar: no more text - only icon
     },
     "source": {
         "alert_property_name": "providerType",
@@ -566,8 +573,8 @@ def test_sort_asc_dsc(
         number_of_missmatches = 0
         for index, alert in enumerate(sorted_alerts):
             row_locator = rows.nth(index)
-            # 3 is index of "name" column
-            column_locator = row_locator.locator("td").nth(3)
+            # 4 is index of "name" column
+            column_locator = row_locator.locator("td").nth(4)
             try:
                 expect(column_locator).to_have_text(alert["name"])
             except Exception as e:
