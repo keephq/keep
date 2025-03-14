@@ -4,6 +4,8 @@ from datetime import datetime
 import requests
 from playwright.sync_api import Page, expect
 
+from tests.e2e_tests.utils import save_failure_artifacts
+
 # Dear developer, thank you for checking E2E tests!
 # For instructions, please check test_end_to_end.py.
 
@@ -173,14 +175,19 @@ def test_pulling_prometheus_alerts_to_provider(
         provider_button = browser.locator(
             f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
         )
-    provider_button.wait_for(state="visible")
-    provider_button.click()
 
-    # Delete the provider
-    delete_button = browser.get_by_role("button", name="Delete")
-    delete_button.wait_for(state="visible")
-    browser.once("dialog", lambda dialog: dialog.accept())
-    delete_button.click()
+    try:
+        provider_button.wait_for(state="visible")
+        provider_button.click()
+
+        # Delete the provider
+        delete_button = browser.get_by_role("button", name="Delete")
+        delete_button.wait_for(state="visible")
+        browser.once("dialog", lambda dialog: dialog.accept())
+        delete_button.click()
+    except Exception:
+        save_failure_artifacts(browser, prefix="delete_provider")
+        raise
 
     # Assert provider was deleted with increased timeout
     try:
