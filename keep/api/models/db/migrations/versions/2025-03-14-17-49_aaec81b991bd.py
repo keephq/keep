@@ -1,8 +1,8 @@
 """Crecreate topology tables with tenant_id in all keys and transfer data
 
 Revision ID: aaec81b991bd
-Revises: 0b80bda47ee2
-Create Date: 2025-03-07 17:49:13.393091
+Revises: f3ecc7411f38
+Create Date: 2025-03-14 17:49:13.393091
 
 """
 
@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 # revision identifiers, used by Alembic.
 revision = "aaec81b991bd"
-down_revision = "0b80bda47ee2"
+down_revision = "f3ecc7411f38"
 branch_labels = None
 depends_on = None
 
