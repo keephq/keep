@@ -235,7 +235,7 @@ export default function IncidentAlerts({ incident }: Props) {
               alert={context.row.original}
               onViewAlert={setViewAlertModal}
               onUnlink={(alert) => {
-                if (incident.is_confirmed) {
+                if (!incident.is_candidate) {
                   if (confirm("Are you sure you want to unlink this alert?")) {
                     api
                       .post(`/incidents/${incident.id}/unlink`, {
@@ -247,7 +247,7 @@ export default function IncidentAlerts({ incident }: Props) {
                   }
                 }
               }}
-              isConfirmed={incident.is_confirmed}
+              isCandidate={!incident.is_candidate}
             />
           </div>
         ),
@@ -256,7 +256,7 @@ export default function IncidentAlerts({ incident }: Props) {
         },
       }),
     ],
-    [incident.id, incident.is_confirmed, api, mutateAlerts]
+    [incident.id, incident.is_candidate, api, mutateAlerts]
   );
 
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});

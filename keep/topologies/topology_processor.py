@@ -355,7 +355,8 @@ class TopologyProcessor:
                 user_summary=f"Multiple services in application {application.name} are experiencing issues",
                 incident_type="topology",
                 incident_application=application.id,
-                is_confirmed=True,  # Topology-based incidents are always confirmed
+                is_candidate=False,  # Topology-based incidents are always confirmed
+                is_visible=True,  # Topology-based incidents are always confirmed
             )
 
             # Get all alerts for the services and find max severity
