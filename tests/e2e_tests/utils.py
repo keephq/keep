@@ -220,10 +220,13 @@ def get_token():
     )
 
 
-def save_failure_artifacts(page, log_entries=[]):
+def save_failure_artifacts(page, log_entries=[], prefix=""):
     """Save screenshots, HTML content, and console logs on test failure."""
 
     current_test_name = get_current_test_name()
+
+    if prefix:
+        current_test_name = prefix + "_" + current_test_name
 
     # Save screenshot
     page.screenshot(path=current_test_name + ".png")
