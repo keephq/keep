@@ -345,7 +345,8 @@ def assert_alerts_by_column(
             return
 
         column_locator = row_locator.locator("td").nth(column_index)
-        expect(column_locator).to_have_text(alert[property_in_alert])
+        # status is now only svg
+        expect(column_locator.locator("svg")).to_be_visible()
 
 
 facet_test_cases = {
@@ -355,7 +356,7 @@ facet_test_cases = {
     },
     "status": {
         "alert_property_name": "status",
-        "column_index": 5,
+        "column_index": 1,
         "value": "suppressed",
     },
     "source": {
