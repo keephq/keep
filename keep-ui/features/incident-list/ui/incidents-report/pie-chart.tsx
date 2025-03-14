@@ -33,13 +33,13 @@ export const PieChart: React.FC<PieChartProps> = ({
   return (
     <div className="flex items-center gap-10">
       <DonutChart
-        className="w-48 h-48"
+        className="min-w-48 min-h-48 w-48 h-48"
         data={sortedByValue}
         colors={colors}
         variant="pie"
         onValueChange={(v) => console.log(v)}
       />
-      <div className="flex-col">
+      <div className="flex-col flex-1">
         {sortedByValue.map((chartValue, index) => (
           <div key={chartValue.name} className="flex gap-2">
             <div className={`min-w-5 h-3 mt-2 bg-${colors[index]}`}></div>
