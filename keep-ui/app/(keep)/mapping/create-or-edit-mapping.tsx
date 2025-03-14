@@ -18,6 +18,7 @@ import {
   TabPanel,
   MultiSelect,
   MultiSelectItem,
+  Switch,
 } from "@tremor/react";
 import {
   ChangeEvent,
@@ -63,6 +64,9 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const [priority, setPriority] = useState<number>(0);
   const editMode = editRule !== null;
   const inputFile = useRef<HTMLInputElement>(null);
+  const [isMultiLevel, setIsMultiLevel] = useState<boolean>(false);
+  const [newPropertyName, setNewPropertyName] = useState<string>("");
+  const [prefixToRemove, setPrefixToRemove] = useState<string>("");
 
   // This useEffect runs whenever an `Edit` button is pressed in the table, and populates the form with the mapping data that needs to be edited.
   useEffect(() => {
@@ -75,6 +79,9 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       setTabIndex(editRule.type === "csv" ? 0 : 1);
       setAttributeGroups(editRule.matchers ?? [[]]);
       setPriority(editRule.priority);
+      setIsMultiLevel(editRule.is_multi_level ?? false);
+      setNewPropertyName(editRule.new_property_name ?? "");
+      setPrefixToRemove(editRule.prefix_to_remove ?? "");
     }
   }, [editRule]);
 
@@ -162,6 +169,9 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
     setParsedData(null);
     setAttributeGroups([[]]);
     setCsvText("");
+    setIsMultiLevel(false);
+    setNewPropertyName("");
+    setPrefixToRemove("");
     handleFileReset();
   };
 
@@ -176,6 +186,9 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         type: mappingType,
         matchers: attributeGroups,
         rows: mappingType === "csv" ? parsedData : null,
+        is_multi_level: isMultiLevel,
+        new_property_name: newPropertyName,
+        prefix_to_remove: prefixToRemove,
       });
       exitEditOrCreateMode();
       mutate();
@@ -198,6 +211,9 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         type: mappingType,
         matchers: attributeGroups,
         rows: mappingType === "csv" ? parsedData : null,
+        is_multi_level: isMultiLevel,
+        new_property_name: newPropertyName,
+        prefix_to_remove: prefixToRemove,
       });
       exitEditOrCreateMode();
       mutate();
@@ -220,9 +236,22 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
 
   const handleAttributeChange = (groupIndex: number, selected: string[]) => {
     const newGroups = [...attributeGroups];
-    newGroups[groupIndex] = selected;
+    if (isMultiLevel) {
+      newGroups[groupIndex] = selected.slice(-1);
+    } else {
+      newGroups[groupIndex] = selected;
+    }
     setAttributeGroups(newGroups);
   };
+
+  useEffect(() => {
+    if (isMultiLevel && attributeGroups.length > 0) {
+      const firstGroup = attributeGroups[0];
+      setAttributeGroups([
+        [firstGroup.length > 0 ? firstGroup[firstGroup.length - 1] : ""],
+      ]);
+    }
+  }, [isMultiLevel]);
 
   const addAttributeGroup = () => {
     setAttributeGroups([...attributeGroups, []]);
@@ -368,6 +397,45 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         </div>
       )}
 
+      {parsedData && mappingType === "csv" && (
+        <div className="mt-4">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="multi-level"
+              name="multi-level"
+              checked={isMultiLevel}
+              onChange={setIsMultiLevel}
+            />
+            <Text>Enable Multi-level Mapping</Text>
+          </div>
+
+          {isMultiLevel && (
+            <div className="mt-2.5 space-y-2">
+              <div>
+                <Text>
+                  New Property Name
+                  <span className="text-red-500 text-xs">*</span>
+                </Text>
+                <TextInput
+                  placeholder="Enter property name"
+                  required={true}
+                  value={newPropertyName}
+                  onValueChange={setNewPropertyName}
+                />
+              </div>
+              <div>
+                <Text>Prefix to Remove</Text>
+                <TextInput
+                  placeholder="Enter prefix to remove from keys (optional)"
+                  value={prefixToRemove}
+                  onValueChange={setPrefixToRemove}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <Subtitle className="mt-2.5">Mapping Configuration</Subtitle>
       <div className="mt-2.5">
         If alert will match the atributes, it will be enriched with the rest of
@@ -383,42 +451,56 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
                   handleAttributeChange(index, selected)
                 }
                 value={group}
-                placeholder="Select Attributes"
+                placeholder={
+                  isMultiLevel ? "Select Single Attribute" : "Select Attributes"
+                }
                 className="max-w-96"
                 disabled={mappingType === "topology"}
               >
                 {attributes.map((attribute) => (
-                  <MultiSelectItem key={attribute} value={attribute}>
+                  <MultiSelectItem
+                    key={attribute}
+                    value={attribute}
+                    disabled={
+                      isMultiLevel &&
+                      group.length > 0 &&
+                      !group.includes(attribute)
+                    }
+                  >
                     {attribute}
                   </MultiSelectItem>
                 ))}
               </MultiSelect>
-              {index === attributeGroups.length - 1 &&
-                mappingType !== "topology" && (
-                  <Button
-                    onClick={addAttributeGroup}
-                    color="orange"
-                    size="xs"
-                    variant="secondary"
-                    className="flex items-center"
-                    disabled={group.length === 0}
-                  >
-                    <PlusIcon className="w-4 h-4" />
-                  </Button>
-                )}
-              {index > 0 && mappingType !== "topology" && (
-                <Button
-                  onClick={() => removeAttributeGroup(index)}
-                  color="red"
-                  size="xs"
-                  variant="secondary"
-                  className="flex items-center"
-                >
-                  <MinusIcon className="w-4 h-4" />
-                </Button>
-              )}
-              {index < attributeGroups.length - 1 && (
-                <Text className="mx-2">OR</Text>
+              {!isMultiLevel && (
+                <>
+                  {index === attributeGroups.length - 1 &&
+                    mappingType !== "topology" && (
+                      <Button
+                        onClick={addAttributeGroup}
+                        color="orange"
+                        size="xs"
+                        variant="secondary"
+                        className="flex items-center"
+                        disabled={group.length === 0}
+                      >
+                        <PlusIcon className="w-4 h-4" />
+                      </Button>
+                    )}
+                  {index > 0 && mappingType !== "topology" && (
+                    <Button
+                      onClick={() => removeAttributeGroup(index)}
+                      color="red"
+                      size="xs"
+                      variant="secondary"
+                      className="flex items-center"
+                    >
+                      <MinusIcon className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {index < attributeGroups.length - 1 && (
+                    <Text className="mx-2">OR</Text>
+                  )}
+                </>
               )}
             </div>
           ))}

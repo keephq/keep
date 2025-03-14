@@ -8,6 +8,7 @@ from uuid import UUID
 
 import celpy
 import chevron
+import json5
 from fastapi import HTTPException
 from sqlalchemy import func
 from sqlmodel import Session, select
@@ -106,7 +107,7 @@ class EnrichmentsBl:
         )
         if not alert:
             raise HTTPException(status_code=404, detail="Alert not found")
-        return self._check_match_rule_and_enrich(alert, rule)
+        return self.check_if_match_and_enrich(alert, rule)
 
     def run_extraction_rule_by_id(self, rule_id: int, alert: Alert) -> AlertDto:
         rule = get_extraction_rule_by_id(
@@ -325,11 +326,11 @@ class EnrichmentsBl:
             return alert
 
         for rule in rules:
-            self._check_match_rule_and_enrich(alert, rule)
+            self.check_if_match_and_enrich(alert, rule)
 
         return alert
 
-    def _check_match_rule_and_enrich(self, alert: AlertDto, rule: MappingRule) -> bool:
+    def check_if_match_and_enrich(self, alert: AlertDto, rule: MappingRule) -> bool:
         """
         Check if the alert matches the conditions specified in the mapping rule.
         If a match is found, enrich the alert and log the enrichment.
@@ -413,36 +414,58 @@ class EnrichmentsBl:
                 enrichments.pop("tenant_id", None)
                 enrichments.pop("id", None)
         elif rule.type == "csv":
-            for row in rule.rows:
-                if any(
-                    self._check_matcher(alert, row, matcher)
-                    for matcher in rule.matchers
-                ):
-                    # Extract enrichments from the matched row
-                    enrichments = {}
-                    for key, value in row.items():
-                        if value is not None:
-                            is_matcher = False
-                            for matcher in rule.matchers:
-                                if key in matcher:
-                                    is_matcher = True
-                                    break
-                            if not is_matcher:
-                                # If the key has . (dot) in it, it'll be added as is while it needs to be nested.
-                                # @tb: fix when somebody will be complaining about this.
-                                if isinstance(value, str):
-                                    value = value.strip()
-                                enrichments[key.strip()] = value
-                    break
-
+            if not rule.is_multi_level:
+                for row in rule.rows:
+                    if any(
+                        self._check_matcher(alert, row, matcher)
+                        for matcher in rule.matchers
+                    ):
+                        # Extract enrichments from the matched row
+                        enrichments = {}
+                        for key, matcher in row.items():
+                            if matcher is not None:
+                                is_matcher = False
+                                for matcher in rule.matchers:
+                                    if key in matcher:
+                                        is_matcher = True
+                                        break
+                                if not is_matcher:
+                                    # If the key has . (dot) in it, it'll be added as is while it needs to be nested.
+                                    # @tb: fix when somebody will be complaining about this.
+                                    if isinstance(matcher, str):
+                                        matcher = matcher.strip()
+                                    enrichments[key.strip()] = matcher
+                        break
+            else:
+                # Multi-level mapping
+                # We can assume that the matcher is only a single key. i.e., [['customers']]
+                key = rule.matchers[0][0]
+                # this should be a list of values we need to try and match, and enrich
+                matcher_values = get_nested_attribute(alert, key)
+                if not matcher_values:
+                    self._add_enrichment_log("WTF, should not happen?", "error")
+                else:
+                    if isinstance(matcher_value, str):
+                        matcher_values = json5.loads(matcher_value)
+                    for matcher in matcher_values:
+                        if rule.prefix_to_remove:
+                            matcher = matcher.replace(rule.prefix_to_remove, "")
+                        for row in rule.rows:
+                            if self._check_matcher(alert, row, [matcher]):
+                                for key, value in row.items():
+                                    if value is not None:
+                                        enrichments[rule.new_property_name][
+                                            key.strip()
+                                        ] = value.strip()
+                            break
         if enrichments:
             # Enrich the alert with the matched data from the row
-            for key, value in enrichments.items():
+            for key, matcher in enrichments.items():
                 # It's not relevant to enrich if the value if empty
-                if value is not None:
-                    if isinstance(value, str):
-                        value = value.strip()
-                    setattr(alert, key.strip(), value)
+                if matcher is not None:
+                    if isinstance(matcher, str):
+                        matcher = matcher.strip()
+                    setattr(alert, key.strip(), matcher)
 
             # Save the enrichments to the database
             # SHAHAR: since when running this enrich_alert, the alert is not in elastic yet (its indexed after),
