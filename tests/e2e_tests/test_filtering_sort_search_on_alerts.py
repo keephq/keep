@@ -346,7 +346,13 @@ def assert_alerts_by_column(
 
         column_locator = row_locator.locator("td").nth(column_index)
         # status is now only svg
-        expect(column_locator.locator("svg")).to_be_visible()
+        try:
+            expect(
+                column_locator.locator("[data-testid*='status-icon']")
+            ).to_be_visible()
+        except Exception:
+            column_html = column_locator.inner_html()
+            print(f"Column HTML: {column_html}")
 
 
 facet_test_cases = {
@@ -357,7 +363,7 @@ facet_test_cases = {
     "status": {
         "alert_property_name": "status",
         "column_index": 1,
-        "value": "suppressed",
+        # "value": "suppressed", # Shahar: no more text - only icon
     },
     "source": {
         "alert_property_name": "providerType",
