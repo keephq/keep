@@ -363,7 +363,7 @@ facet_test_cases = {
     "status": {
         "alert_property_name": "status",
         "column_index": 1,
-        # "value": "suppressed", # Shahar: no more text - only icon
+        "value": "suppressed",  # Shahar: no more text - only icon
     },
     "source": {
         "alert_property_name": "providerType",
