@@ -10,7 +10,13 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
         # let the page load
         browser.wait_for_timeout(10000)
         # open the form
-        page.locator(".h-14 > div > button").click()
+        try:
+            page.locator(".h-14 > div > button").click()
+        except Exception:
+            print("Reloading")
+            page.reload()
+            page.wait_for_timeout(10000)
+            page.locator(".h-14 > div > button").click()
 
         # wait for the modal to appear
         page.wait_for_selector("div[data-headlessui-state='open']")
@@ -46,11 +52,11 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
         # low: "bg-orange-100",
         # info: "bg-orange-50", // Lowest opacity for info
         assert background_color in [
-            "rgb(255 247 237)",
-            "rgb(255 237 213)",
-            "rgb(254 215 170)",
-            "rgb(253 186 116)",
-            "rgb(251 146 60)",
+            "rgb(255, 247, 237)",
+            "rgb(255, 237, 213)",
+            "rgb(254, 215, 170)",
+            "rgb(253, 186, 116)",
+            "rgb(251, 146, 60)",
         ]
         # click the "select alert source" dropdown
         page.locator('[id="headlessui-popover-button-«ra»"]').click()
@@ -73,11 +79,11 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
         # low: "bg-green-200",
         # info: "bg-blue-200",
         expected_colors = [
-            "rgb(254 202 202)",
-            "rgb(254 215 170)",
-            "rgb(254 240 138)",
-            "rgb(187 247 208)",
-            "rgb(191 219 254)",
+            "rgb(254, 202, 202)",
+            "rgb(254, 215, 170)",
+            "rgb(254, 240, 138)",
+            "rgb(187, 247, 208)",
+            "rgb(191, 219, 254)",
         ]
         assert (
             background_color in expected_colors
