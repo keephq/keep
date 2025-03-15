@@ -40,8 +40,8 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
             return style.backgroundColor;
         }"""
         )
-        # bg-orange-100
-        assert background_color == "rgb(255, 247, 237)"
+        # bg-orange-200
+        assert background_color == "rgb(254, 215, 170)"
         # click the "select alert source" dropdown
         page.locator('[id="headlessui-popover-button-«ra»"]').click()
         page.get_by_role("tab", name="Theme").click()
