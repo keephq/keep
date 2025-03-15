@@ -1,16 +1,14 @@
-import time
-
 from playwright.sync_api import Page
 
 from tests.e2e_tests.utils import init_e2e_test, save_failure_artifacts
 
 
-def test_start_with_keep_db(browser: Page, setup_page_logging, failure_artifacts):
+def test_theme(browser: Page, setup_page_logging, failure_artifacts):
     init_e2e_test(browser, next_url="/alerts/feed")
     page = browser if hasattr(browser, "goto") else browser.page
     try:
-        # wait a second
-        time.sleep(1)
+        # let the page load
+        browser.wait_for_timeout(10000)
         # open the form
         page.locator(".h-14 > div > button").click()
 
