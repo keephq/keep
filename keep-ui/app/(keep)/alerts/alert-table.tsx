@@ -388,6 +388,7 @@ export function AlertTable({
                       theme={theme}
                       onRowClick={handleRowClick}
                       lastViewedAlert={lastViewedAlert}
+                      presetName={presetName}
                     />
                   </Table>
                 </div>

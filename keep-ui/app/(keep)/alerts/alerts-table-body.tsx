@@ -6,6 +6,7 @@ import { GroupedRow } from "./alert-grouped-row";
 import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import { getRowClassName, getCellClassName } from "./alert-table-utils";
+import { useExpandedRows } from "utils/hooks/useExpandedRows";
 import clsx from "clsx";
 import "react-loading-skeleton/dist/skeleton.css";
 
@@ -15,6 +16,7 @@ interface Props {
   theme: { [key: string]: string };
   onRowClick: (alert: AlertDto) => void;
   lastViewedAlert: string | null;
+  presetName: string;
 }
 
 export function AlertsTableBody({
@@ -23,8 +25,10 @@ export function AlertsTableBody({
   theme,
   onRowClick,
   lastViewedAlert,
+  presetName,
 }: Props) {
   const [rowStyle] = useAlertRowStyle();
+  const { isRowExpanded } = useExpandedRows(presetName);
 
   const handleRowClick = (e: React.MouseEvent, alert: AlertDto) => {
     // Only prevent clicks on specific interactive elements
@@ -109,13 +113,16 @@ export function AlertsTableBody({
         }
 
         const isLastViewed = row.original.fingerprint === lastViewedAlert;
+        const expanded = isRowExpanded(row.original.fingerprint);
 
         return (
           <TableRow
             key={renderingKey}
             className={clsx(
               "group/row",
-              getRowClassName(row, theme, lastViewedAlert, rowStyle)
+              // Using tailwind classes for expanded rows instead of a custom class
+              expanded ? "!h-auto min-h-12" : null,
+              getRowClassName(row, theme, lastViewedAlert, rowStyle, expanded)
             )}
             onClick={(e) => handleRowClick(e, row.original)}
           >
@@ -129,22 +136,32 @@ export function AlertsTableBody({
               return (
                 <TableCell
                   key={cell.id}
-                  className={getCellClassName(
-                    cell,
-                    className,
-                    rowStyle,
-                    isLastViewed
+                  data-column-id={cell.column.id}
+                  className={clsx(
+                    getCellClassName(
+                      cell,
+                      className,
+                      rowStyle,
+                      isLastViewed,
+                      expanded
+                    ),
+                    // Force more padding when expanded
+                    expanded ? "!p-3" : null,
+                    // Give more width to description when expanded
+                    expanded && cell.column.id === "description"
+                      ? "w-full max-w-none"
+                      : null
                   )}
                   style={{
                     ...style,
+                    // Remove maxWidth constraint for name when expanded
                     maxWidth:
-                      rowStyle === "default" && cell.column.id === "name"
+                      rowStyle === "default" &&
+                      cell.column.id === "name" &&
+                      !expanded
                         ? "600px"
                         : undefined,
                   }}
-                  title={
-                    cell.column.id === "name" ? row.original.name : undefined
-                  }
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
