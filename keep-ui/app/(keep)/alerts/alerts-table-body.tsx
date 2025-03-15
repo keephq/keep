@@ -133,6 +133,11 @@ export function AlertsTableBody({
                 table.getState().columnPinning.right?.length
               );
 
+              const isNameCell = cell.column.id === "name";
+              const isDescriptionCell = cell.column.id === "description";
+              const isSourceCell = cell.column.id === "source";
+              const expanded = isRowExpanded(row.original.fingerprint);
+
               return (
                 <TableCell
                   key={cell.id}
@@ -145,22 +150,53 @@ export function AlertsTableBody({
                       isLastViewed,
                       expanded
                     ),
-                    // Force more padding when expanded
-                    expanded ? "!p-3" : null,
-                    // Give more width to description when expanded
-                    expanded && cell.column.id === "description"
-                      ? "w-full max-w-none"
+                    // Force padding when expanded but not for source column
+                    expanded && !isSourceCell ? "!p-3" : null,
+                    // Source cell needs specific treatment when expanded
+                    expanded && isSourceCell
+                      ? "!p-0 !w-8 !min-w-8 !max-w-8 flex items-center justify-center !h-full"
+                      : null,
+                    // Name cell specific classes when expanded
+                    expanded && isNameCell
+                      ? "!max-w-[180px] w-[180px] !overflow-hidden"
+                      : null,
+                    // Description cell specific classes when expanded
+                    expanded && isDescriptionCell
+                      ? "!whitespace-pre-wrap !break-words w-auto"
                       : null
                   )}
                   style={{
                     ...style,
-                    // Remove maxWidth constraint for name when expanded
-                    maxWidth:
-                      rowStyle === "default" &&
-                      cell.column.id === "name" &&
-                      !expanded
-                        ? "600px"
-                        : undefined,
+                    // For source cells, enforce fixed width always
+                    ...(isSourceCell
+                      ? {
+                          width: "32px",
+                          minWidth: "32px",
+                          maxWidth: "32px",
+                          padding: 0,
+                        }
+                      : {}),
+                    // For name cells when expanded, use strict fixed width
+                    ...(expanded && isNameCell
+                      ? {
+                          width: "180px",
+                          maxWidth: "180px",
+                          minWidth: "180px",
+                          overflow: "hidden",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                        }
+                      : {}),
+                    // For description cells when expanded
+                    ...(expanded && isDescriptionCell
+                      ? {
+                          width: "auto",
+                          minWidth: "200px",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          overflow: "visible",
+                        }
+                      : {}),
                   }}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}

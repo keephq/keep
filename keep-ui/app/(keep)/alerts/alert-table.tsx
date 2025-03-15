@@ -34,6 +34,7 @@ import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { ListFormatOption } from "./alert-table-list-format";
 import { TimeFormatOption } from "./alert-table-time-format";
+import clsx from "clsx";
 
 interface PresetTab {
   name: string;
@@ -371,7 +372,16 @@ export function AlertTable({
 
                 {/* Make table wrapper scrollable */}
                 <div className="flex-grow">
-                  <Table className="[&>table]:table-fixed [&>table]:w-full">
+                  <Table
+                    className={clsx(
+                      // Keep table-fixed layout to enforce column widths
+                      "[&>table]:table-fixed [&>table]:w-full",
+                      // Control overflow behavior
+                      "overflow-x-auto",
+                      // Ensure the table uses the full width of its container
+                      "w-full"
+                    )}
+                  >
                     <AlertsTableHeaders
                       columns={columns}
                       table={table}

@@ -480,38 +480,51 @@ export const useAlertTableCols = (
       header: () => <></>,
       minSize: 20,
       maxSize: 20,
+      size: 20, // Add explicit size to maintain consistency
       enableSorting: false,
       enableGrouping: true,
       getGroupingValue: (row) => row.source,
       enableResizing: false,
-      cell: (context) => (
-        <div className="flex items-center justify-center">
-          {(context.getValue() ?? []).map((source, index) => {
-            let imagePath = `/icons/${source}-icon.png`;
-            if (source.includes("@")) {
-              imagePath = "/icons/mailgun-icon.png";
-            }
-            return (
-              <DynamicImageProviderIcon
-                className={clsx(
-                  "inline-block size-5 xl:size-6",
-                  index == 0 ? "" : "-ml-2"
-                )}
-                key={source}
-                alt={source}
-                height={24}
-                width={24}
-                title={source}
-                providerType={source}
-                src={imagePath}
-              />
-            );
-          })}
-        </div>
-      ),
+      cell: (context) => {
+        const row = context.row;
+        const expanded = isRowExpanded?.(row.original.fingerprint);
+
+        return (
+          <div
+            className={clsx(
+              "flex items-center justify-center h-full", // Always use h-full to center vertically
+              expanded ? "" : "" // Keep height consistent when expanded
+            )}
+          >
+            {(context.getValue() ?? []).map((source, index) => {
+              let imagePath = `/icons/${source}-icon.png`;
+              if (source.includes("@")) {
+                imagePath = "/icons/mailgun-icon.png";
+              }
+              return (
+                <DynamicImageProviderIcon
+                  className={clsx(
+                    "inline-block",
+                    // Fixed size regardless of expanded state
+                    "size-5 xl:size-6",
+                    index == 0 ? "" : "-ml-2"
+                  )}
+                  key={source}
+                  alt={source}
+                  height={24}
+                  width={24}
+                  title={source}
+                  providerType={source}
+                  src={imagePath}
+                />
+              );
+            })}
+          </div>
+        );
+      },
       meta: {
-        tdClassName: "!p-0 w-4 sm:w-8 !box-border",
-        thClassName: "!p-0 w-4 sm:w-8 !box-border",
+        tdClassName: "!p-0 w-8 !box-border", // Enforce consistent width
+        thClassName: "!p-0 w-8 !box-border",
       },
     }),
     // Name column butted up against source
@@ -521,26 +534,31 @@ export const useAlertTableCols = (
       enableGrouping: true,
       enableResizing: true,
       getGroupingValue: (row) => row.name,
-      // When expanded, use a more reasonable size for the name column
+      // Set fixed maximum size to prevent overflow
       minSize: 150,
-      maxSize: 400,
+      maxSize: 200, // Reduce from 250 to 200 to constrain more tightly
+      // Use a consistent width for all row states
+      size: 180, // Add a fixed size to ensure consistent width
       cell: (context) => {
         const row = context.row;
         const expanded = isRowExpanded?.(row.original.fingerprint);
 
         return (
-          <div className={clsx("w-full", expanded && "max-w-md")}>
+          // Remove w-full class which can cause expansion
+          <div className={expanded ? "max-w-[180px] overflow-hidden" : ""}>
             <AlertName
               alert={context.row.original}
-              className="flex-grow"
               expanded={expanded}
+              // Remove flex-grow which can cause expansion
+              className={expanded ? "max-w-[180px] overflow-hidden" : ""}
             />
           </div>
         );
       },
       meta: {
-        tdClassName: "w-full",
-        thClassName: "w-full",
+        // Remove w-full from tdClassName to prevent automatic expansion
+        tdClassName: "name-cell",
+        thClassName: "name-cell",
       },
     }),
 
@@ -548,7 +566,9 @@ export const useAlertTableCols = (
       id: "description",
       header: "Description",
       enableGrouping: true,
-      minSize: 100, // Default minimum size
+      // Increase default minSize to give description more space
+      minSize: 200,
+      // Let it grow more when expanded
       cell: (context) => {
         const value = context.getValue();
         const row = context.row;
@@ -557,11 +577,18 @@ export const useAlertTableCols = (
         return (
           <div
             title={expanded ? undefined : value}
-            className={clsx(expanded && "w-full max-w-none")}
+            className={clsx(
+              // Give description more space and control overflow
+              expanded ? "w-full break-words" : "",
+              // Set fixed width when expanded to prevent layout issues
+              expanded ? "max-w-[100%]" : ""
+            )}
           >
             <div
               className={clsx(
+                // Always use whitespace-pre-wrap for consistency
                 "whitespace-pre-wrap",
+                // Only truncate when not expanded
                 !expanded &&
                   (rowStyle === "default"
                     ? "truncate line-clamp-1"
@@ -632,7 +659,7 @@ export const useAlertTableCols = (
       ? [
           columnHelper.display({
             id: "alertMenu",
-            minSize: 170,
+            minSize: 120,
             cell: (context) => (
               <AlertMenu
                 presetName={presetName.toLowerCase()}
