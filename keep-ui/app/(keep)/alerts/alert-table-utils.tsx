@@ -487,15 +487,9 @@ export const useAlertTableCols = (
       enableResizing: false,
       cell: (context) => {
         const row = context.row;
-        const expanded = isRowExpanded?.(row.original.fingerprint);
 
         return (
-          <div
-            className={clsx(
-              "flex items-center justify-center h-full", // Always use h-full to center vertically
-              expanded ? "" : "" // Keep height consistent when expanded
-            )}
-          >
+          <div>
             {(context.getValue() ?? []).map((source, index) => {
               let imagePath = `/icons/${source}-icon.png`;
               if (source.includes("@")) {
@@ -523,8 +517,8 @@ export const useAlertTableCols = (
         );
       },
       meta: {
-        tdClassName: "!p-0 w-8 !box-border", // Enforce consistent width
-        thClassName: "!p-0 w-8 !box-border",
+        tdClassName: "!p-1 w-8 !box-border", // Enforce consistent width
+        thClassName: "!p-1 w-8 !box-border",
       },
     }),
     // Name column butted up against source

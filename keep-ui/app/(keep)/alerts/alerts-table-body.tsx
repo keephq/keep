@@ -151,10 +151,10 @@ export function AlertsTableBody({
                       expanded
                     ),
                     // Force padding when expanded but not for source column
-                    expanded && !isSourceCell ? "!p-3" : null,
+                    expanded && !isSourceCell ? "!p-2" : null,
                     // Source cell needs specific treatment when expanded
                     expanded && isSourceCell
-                      ? "!p-0 !w-8 !min-w-8 !max-w-8 flex items-center justify-center !h-full"
+                      ? "!p-1 !w-8 !min-w-8 !max-w-8"
                       : null,
                     // Name cell specific classes when expanded
                     expanded && isNameCell
