@@ -4,19 +4,23 @@ from tests.e2e_tests.utils import init_e2e_test, save_failure_artifacts
 
 
 def test_theme(browser: Page, setup_page_logging, failure_artifacts):
-    init_e2e_test(browser, next_url="/alerts/feed")
     page = browser if hasattr(browser, "goto") else browser.page
     try:
         # let the page load
-        browser.wait_for_timeout(10000)
-        # open the form
-        try:
-            page.locator(".h-14 > div > button").click()
-        except Exception:
-            print("Reloading")
-            page.reload()
-            page.wait_for_timeout(10000)
-            page.locator(".h-14 > div > button").click()
+        max_attemps = 3
+        for attempt in range(3):
+            try:
+                init_e2e_test(browser, next_url="/alerts/feed")
+                browser.wait_for_timeout(10000)
+                browser.wait_for_load_state("networkidle")
+                page.locator(".h-14 > div > button").click()
+                break
+            except Exception as e:
+                if attempt < max_attemps - 1:
+                    print("Failed to load alerts feed page. Retrying...")
+                    continue
+                else:
+                    raise e
 
         # wait for the modal to appear
         page.wait_for_selector("div[data-headlessui-state='open']")
