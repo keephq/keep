@@ -163,23 +163,33 @@ def test_pulling_prometheus_alerts_to_provider(
     browser.wait_for_load_state("networkidle")
 
     # Find and interact with the provider
-    try:
-        provider_button = browser.locator(
-            f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
-        )
-    except Exception as e:
-        print(f"Failed to find provider button: {e}")
-        # Try to reload the page and find the provider again
-        browser.reload()
-        browser.wait_for_load_state("networkidle")
-        provider_button = browser.locator(
-            f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
-        )
+    max_attemps = 3
+    for attempt in range(max_attemps):
+        try:
+            provider_button = browser.locator(
+                f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
+            )
+        except Exception as e:
+            print(f"Failed to find provider button: {e}")
+            # Try to reload the page and find the provider again
+            browser.reload()
+            browser.wait_for_load_state("networkidle")
+            provider_button = browser.locator(
+                f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
+            )
+        try:
+            provider_button.wait_for(state="visible")
+            break
+        except Exception as e:
+            print(f"Failed to find provider button after reload: {e}")
+            if attempt < max_attemps - 1:
+                print("Retrying after page reload...")
+                continue
+            else:
+                raise
 
     try:
-        provider_button.wait_for(state="visible")
         provider_button.click()
-
         # Delete the provider
         delete_button = browser.get_by_role("button", name="Delete")
         delete_button.wait_for(state="visible")
