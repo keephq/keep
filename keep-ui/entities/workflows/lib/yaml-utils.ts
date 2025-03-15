@@ -1,4 +1,13 @@
-import { parseDocument, Document, YAMLMap, Pair, Scalar } from "yaml";
+import {
+  parseDocument,
+  Document,
+  YAMLMap,
+  Pair,
+  Scalar,
+  visit,
+  isPair,
+  isSeq,
+} from "yaml";
 
 const YAML_STRINGIFY_OPTIONS = {
   indent: 2,
@@ -65,4 +74,39 @@ export function parseWorkflowYamlStringToJSON(yamlString: string) {
     ? JSON.parse(yamlString)
     : yamlString;
   return parseDocument(content).toJSON();
+}
+
+export function getCurrentPath(document: Document, absolutePosition: number) {
+  let path: (string | number)[] = [];
+  if (!document.contents) return [];
+
+  visit(document, {
+    Scalar(key, node, ancestors) {
+      if (!node.range) return;
+      if (
+        absolutePosition >= node.range[0] &&
+        absolutePosition <= node.range[2]
+      ) {
+        // Create a new array to store path components
+        ancestors.forEach((ancestor, index) => {
+          if (isPair(ancestor)) {
+            path.push((ancestor.key as Scalar).value as string);
+          } else if (isSeq(ancestor)) {
+            // If ancestor is a Sequence, we need to find the index of the child item
+            const childNode = ancestors[index + 1]; // Get the child node
+            const seqIndex = ancestor.items.findIndex(
+              (item) => item === childNode
+            );
+            if (seqIndex !== -1) {
+              path.push(seqIndex);
+            }
+          }
+        });
+        // Path should be reversed as we're traversing from the node up to the root
+        return visit.BREAK;
+      }
+    },
+  });
+
+  return path;
 }

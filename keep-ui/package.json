@@ -54,6 +54,7 @@
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.479.0",
     "monaco-editor": "^0.52.2",
+    "monaco-yaml": "^5.3.1",
     "next": "15.2.1",
     "next-auth": "^5.0.0-beta.25",
     "openai": "^4.86.2",
@@ -95,6 +96,7 @@
     "yaml": "^2.7.0",
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.0",
+    "zod-to-json-schema": "^3.24.3",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

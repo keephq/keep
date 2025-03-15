@@ -1,5 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import Editor from "@monaco-editor/react";
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { type editor } from "monaco-editor";
 import { Download, Copy, Check, Save } from "lucide-react";
 import { Button } from "@tremor/react";
@@ -7,7 +12,14 @@ import { LogEntry } from "@/shared/api/workflow-executions";
 import { getStepStatus } from "@/shared/lib/logs-utils";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
-import "./MonacoYAMLEditor.css";
+import { parseDocument, Document } from "yaml";
+import { useWorkflowJsonSchema } from "@/entities/workflows/model/useWorkflowJsonSchema";
+import { KeepLoader } from "../../KeepLoader/KeepLoader";
+import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
+import "./YAMLEditor.css";
+import { MonacoYAMLEditor } from "./MonacoYamlEditor";
+
+const KeepSchemaPath = "file:///workflow-schema.json";
 
 interface Props {
   workflowRaw: string;
@@ -23,7 +35,7 @@ interface Props {
   "data-testid"?: string;
 }
 
-const MonacoYAMLEditor = ({
+export const YAMLEditor = ({
   workflowRaw,
   filename = "workflow",
   workflowId,
@@ -38,6 +50,8 @@ const MonacoYAMLEditor = ({
 }: Props) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const { updateWorkflow } = useWorkflowActions();
+
+  const workflowJsonSchema = useWorkflowJsonSchema();
 
   const findStepNameForPosition = (
     lineNumber: number,
@@ -72,6 +86,16 @@ const MonacoYAMLEditor = ({
   const [isCopied, setIsCopied] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
+  const yamlDocumentRef = useRef<Document | null>(null);
+
+  function parseYamlToRef(yamlString: string) {
+    try {
+      const yamlDocument = parseDocument(yamlString);
+      yamlDocumentRef.current = yamlDocument;
+    } catch (error) {
+      console.error("Failed to parse YAML:", error);
+    }
+  }
 
   const getStatus = useCallback(
     (name: string, isAction: boolean = false) => {
@@ -86,6 +110,7 @@ const MonacoYAMLEditor = ({
     [executionLogs, executionStatus]
   );
 
+  // TODO: move logs decoration to helper function or separate component
   const handleEditorDidMount = (
     editor: editor.IStandaloneCodeEditor,
     monacoInstance: typeof import("monaco-editor")
@@ -270,10 +295,21 @@ const MonacoYAMLEditor = ({
     };
 
     if (!readOnly) {
+      // Enable the glyph margin for status indicators
+      editor.updateOptions({
+        glyphMargin: true,
+      });
+
       editor.onDidChangeModelContent(() => {
         const currentContent = editor.getValue();
         setHasChanges(currentContent !== originalContent);
+        parseYamlToRef(currentContent);
       });
+
+      const model = editor?.getModel();
+      if (model) {
+        parseYamlToRef(model.getValue());
+      }
     }
 
     if (readOnly) {
@@ -392,17 +428,14 @@ const MonacoYAMLEditor = ({
   };
 
   const downloadYaml = () => {
-    if (!editorRef.current) return;
-    const content = editorRef.current.getValue();
-    const blob = new Blob([content], { type: "text/yaml" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${filename}.yaml`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    if (!editorRef.current) {
+      return;
+    }
+    downloadFileFromString({
+      data: editorRef.current.getValue(),
+      filename: `${filename}.yaml`,
+      contentType: "application/x-yaml",
+    });
   };
 
   const copyToClipboard = async () => {
@@ -440,7 +473,7 @@ const MonacoYAMLEditor = ({
       data-testid={dataTestId + "-container"}
     >
       <div
-        className="relative flex-1 min-h-0"
+        className="relative flex-1 min-h-0 p-1"
         style={{ height: "calc(100vh - 300px)" }}
       >
         <div className="absolute right-2 top-2 z-10 flex gap-2">
@@ -484,14 +517,27 @@ const MonacoYAMLEditor = ({
             <Download className="h-4 w-4" />
           </Button>
         </div>
-        <Editor
-          wrapperProps={{ "data-testid": dataTestId }}
-          height="100%"
-          defaultLanguage="yaml"
-          defaultValue={getOrderedWorkflowYamlString(workflowRaw)}
-          onMount={handleEditorDidMount}
-          options={editorOptions}
-        />
+        <Suspense
+          fallback={<KeepLoader loadingText="Loading YAML editor..." />}
+        >
+          <MonacoYAMLEditor
+            height="100%"
+            className="[&_.monaco-editor]:outline-none"
+            wrapperProps={{ "data-testid": dataTestId }}
+            defaultValue={getOrderedWorkflowYamlString(workflowRaw)}
+            onMount={handleEditorDidMount}
+            options={editorOptions}
+            loading={<KeepLoader loadingText="Loading YAML editor..." />}
+            theme="light"
+            schemas={[
+              {
+                fileMatch: ["*"],
+                schema: workflowJsonSchema,
+                uri: KeepSchemaPath,
+              },
+            ]}
+          />
+        </Suspense>
       </div>
       <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200">
         <span className="text-sm text-gray-500">{filename}.yaml</span>
@@ -502,5 +548,3 @@ const MonacoYAMLEditor = ({
     </div>
   );
 };
-
-export default MonacoYAMLEditor;

@@ -18,7 +18,7 @@ import {
 } from "@/entities/workflows/model/yaml.types";
 import { parseWorkflowYamlStringToJSON } from "./yaml-utils";
 
-function getActionOrStepObj(
+function getV2StepOrV2Action(
   actionOrStep: YamlStepOrAction,
   type: "action" | "step",
   providers?: Provider[]
@@ -47,7 +47,7 @@ function getActionOrStepObj(
   };
 }
 
-function generateForeach(
+function getV2Foreach(
   actionOrStep: YamlStepOrAction & { foreach: string },
   stepType: "step" | "action",
   providers?: Provider[],
@@ -67,17 +67,17 @@ function generateForeach(
       value: actionOrStep.foreach,
     },
     sequence: [
-      sequenceStep ?? getActionOrStepObj(actionOrStep, stepType, providers),
+      sequenceStep ?? getV2StepOrV2Action(actionOrStep, stepType, providers),
     ],
   };
 }
 
-function generateCondition(
+function getV2Condition(
   condition: YamlAssertCondition | YamlThresholdCondition,
   action: YamlStepOrAction,
   stepType: "step" | "action",
   providers?: Provider[]
-): (V2StepConditionThreshold | V2StepConditionAssert) | V2StepForeach {
+): V2StepConditionThreshold | V2StepConditionAssert {
   const generatedConditionStep =
     condition.type === "threshold"
       ? {
@@ -91,7 +91,7 @@ function generateCondition(
             compare_to: condition.compare_to,
           },
           branches: {
-            true: [getActionOrStepObj(action, stepType, providers)],
+            true: [getV2StepOrV2Action(action, stepType, providers)],
             false: [],
           },
         }
@@ -105,25 +105,15 @@ function generateCondition(
             assert: (condition as YamlAssertCondition).assert,
           },
           branches: {
-            true: [getActionOrStepObj(action, stepType, providers)],
+            true: [getV2StepOrV2Action(action, stepType, providers)],
             false: [],
           },
         };
 
-  // If this is a foreach, we need to add the foreach to the condition
-  if (action.foreach) {
-    return generateForeach(
-      action as YamlStepOrAction & { foreach: string },
-      stepType,
-      providers,
-      generatedConditionStep
-    );
-  }
-
   return generatedConditionStep;
 }
 
-export function generateWorkflow(
+export function getWorkflowDefinition(
   workflowId: string,
   name: string,
   description: string,
@@ -151,6 +141,14 @@ export function generateWorkflow(
   };
 }
 
+// For steps, we have 2 types of data representations for the same data
+// 1. YamlStepOrAction, YamlAssertCondition, YamlThresholdCondition: json from yaml
+// 2. V2StepStep, V2ActionStep, V2StepConditionAssert, V2StepConditionThreshold: a bit different json for working with on frontend
+
+// The flow of parseWorkflow() is as follows:
+// 1. Parse the yaml file to get YamlStepOrAction, YamlAssertCondition, YamlThresholdCondition
+// 2. Convert YamlStepOrAction, YamlAssertCondition, YamlThresholdCondition to V2StepStep, V2ActionStep, V2StepConditionAssert, V2StepConditionThreshold
+
 export function parseWorkflow(
   workflowString: string,
   providers: Provider[]
@@ -173,7 +171,7 @@ export function parseWorkflow(
       ...a,
       type: "action",
     })) || [];
-  const conditions = [] as any;
+  const conditions: (V2StepConditionThreshold | V2StepConditionAssert)[] = [];
 
   const workflowStepsAndActions: (YamlStepOrAction & {
     type: "step" | "action";
@@ -183,33 +181,31 @@ export function parseWorkflow(
     const stepType = action.type === "step" ? "step" : "action";
     // This means this action always runs, there's no condition and no alias
     if (!action.condition && !action.if && !action.foreach) {
-      steps.push(getActionOrStepObj(action, stepType, providers));
+      steps.push(getV2StepOrV2Action(action, stepType, providers));
     } else if (action.if) {
       // If this is an alias, we need to find the existing condition and add this action to it
       const cleanIf = action.if.replace("{{", "").replace("}}", "").trim();
-      const existingCondition = conditions.find(
-        (a: any) => a.alias === cleanIf
-      );
+      const existingCondition = conditions.find((a) => a.alias === cleanIf);
       if (existingCondition) {
         existingCondition.branches.true.push(
-          getActionOrStepObj(action, stepType, providers)
+          getV2StepOrV2Action(action, stepType, providers)
         );
       } else {
         if (action.foreach) {
           steps.push(
-            generateForeach(
+            getV2Foreach(
               action as YamlStepOrAction & { foreach: string },
               stepType,
               providers
             )
           );
         } else {
-          steps.push(getActionOrStepObj(action, stepType, providers));
+          steps.push(getV2StepOrV2Action(action, stepType, providers));
         }
       }
     } else if (action.foreach) {
       steps.push(
-        generateForeach(
+        getV2Foreach(
           action as YamlStepOrAction & { foreach: string },
           stepType,
           providers
@@ -217,9 +213,7 @@ export function parseWorkflow(
       );
     } else if (action.condition) {
       action.condition.forEach((condition) => {
-        conditions.push(
-          generateCondition(condition, action, stepType, providers)
-        );
+        conditions.push(getV2Condition(condition, action, stepType, providers));
       });
     }
   });
@@ -246,7 +240,7 @@ export function parseWorkflow(
       return prev;
     }, {}) || {};
 
-  return generateWorkflow(
+  return getWorkflowDefinition(
     workflow.id,
     workflow.name,
     workflow.description,
@@ -281,43 +275,70 @@ export function getWithParams(
   return withParams;
 }
 
-function getYamlConditionFromStep(
+export function getYamlConditionFromStep(
   condition: V2StepConditionThreshold | V2StepConditionAssert
-): YamlThresholdCondition | YamlAssertCondition {
+) {
   return condition.type === "condition-threshold"
-    ? {
+    ? ({
         name: condition.name,
         type: "threshold" as const,
+        alias: condition.alias,
         value: condition.properties.value,
         compare_to: condition.properties.compare_to,
-      }
-    : {
+      } as YamlThresholdCondition)
+    : ({
         name: condition.name,
         type: "assert" as const,
+        alias: condition.alias,
         assert: condition.properties.assert,
-      };
+      } as YamlAssertCondition);
 }
 
 function getActionsFromCondition(
   condition: V2StepConditionThreshold | V2StepConditionAssert,
   foreach?: string
 ): { actions: YamlStepOrAction[]; steps: YamlStepOrAction[] } {
+  // TODO: refactor this to be more readable
+  // TODO: should we create alias if it doesn't exist? and if so, should we restrict user from setting 'if' if action is in condition already?
   const steps: (V2StepStep | V2ActionStep)[] = condition?.branches?.true || [];
   const compiledActions: YamlStepOrAction[] = [];
   const compiledSteps: YamlStepOrAction[] = [];
+  let isConditionInsertedStep = false;
+  let isConditionInsertedAction = false;
+  const alias =
+    condition.alias || (steps.length > 1 ? condition.name : undefined);
+  const conditionWithAlias = alias ? { ...condition, alias } : condition;
   steps.forEach((a) => {
     if (a.type.startsWith("step-")) {
-      const compiledAction = getYamlStepFromStep(a as V2StepStep, {
-        condition,
-        foreach,
-      });
+      const ifParam =
+        alias && isConditionInsertedStep ? `{{ ${alias} }}` : a.properties.if;
+      const shouldInsertCondition =
+        !alias || (!!alias && !isConditionInsertedStep);
+      const compiledAction = getYamlStepFromStep(
+        { ...a, properties: { ...a.properties, if: ifParam } } as V2StepStep,
+        {
+          condition: shouldInsertCondition ? conditionWithAlias : undefined,
+          foreach,
+        }
+      );
       compiledSteps.push(compiledAction);
+      isConditionInsertedStep =
+        isConditionInsertedStep || shouldInsertCondition;
     } else {
-      const compiledAction = getYamlActionFromAction(a as V2ActionStep, {
-        condition,
-        foreach,
-      });
+      const ifParam =
+        alias && isConditionInsertedAction ? `{{ ${alias} }}` : a.properties.if;
+      const shouldInsertCondition =
+        !alias || (!!alias && !isConditionInsertedAction);
+      const compiledAction = getYamlActionFromAction(
+        { ...a, properties: { ...a.properties, if: ifParam } } as V2ActionStep,
+        {
+          condition: shouldInsertCondition ? conditionWithAlias : undefined,
+          foreach,
+        }
+      );
       compiledActions.push(compiledAction);
+      isConditionInsertedAction =
+        isConditionInsertedAction || shouldInsertCondition;
     }
   });
   return {

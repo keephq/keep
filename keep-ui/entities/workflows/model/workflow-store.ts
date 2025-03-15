@@ -408,7 +408,7 @@ export const useWorkflowStore = create<WorkflowState>()(
 
       // Check each step's validity
       for (const step of sequence) {
-        const error = validateStepPure(
+        const errors = validateStepPure(
           step,
           get().providers ?? [],
           get().installedProviders ?? [],
@@ -416,34 +416,34 @@ export const useWorkflowStore = create<WorkflowState>()(
         );
         if (step.componentType === "switch") {
           [...step.branches.true, ...step.branches.false].forEach((branch) => {
-            const error = validateStepPure(
+            const errors = validateStepPure(
               branch,
               get().providers ?? [],
               get().installedProviders ?? [],
               definition
             );
-            if (error) {
-              validationErrors[branch.name || branch.id] = error;
+            if (errors.length > 0) {
+              validationErrors[branch.name || branch.id] = errors[0][0];
               isValid = false;
             }
           });
         }
         if (step.componentType === "container") {
           step.sequence.forEach((s) => {
-            const error = validateStepPure(
+            const errors = validateStepPure(
               s,
               get().providers ?? [],
               get().installedProviders ?? [],
               definition
             );
-            if (error) {
-              validationErrors[s.name || s.id] = error;
+            if (errors.length > 0) {
+              validationErrors[s.name || s.id] = errors[0][0];
               isValid = false;
             }
           });
         }
-        if (error) {
-          validationErrors[step.name || step.id] = error;
+        if (errors.length > 0) {
+          validationErrors[step.name || step.id] = errors[0][0];
           isValid = false;
         }
       }

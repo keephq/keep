@@ -8,6 +8,9 @@ const isSentryDisabled =
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  devIndicators: {
+    position: "bottom-right",
+  },
   webpack: (
     config,
     { buildId, dev, isServer, defaultLoaders, nextRuntime, webpack }

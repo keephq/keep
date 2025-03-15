@@ -12,7 +12,7 @@ import {
   isWorkflowExecution,
 } from "@/shared/api/workflow-executions";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
+import { YAMLEditor } from "@/shared/ui/YAMLEditor";
 import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
 import { setFavicon } from "@/shared/ui/utils/favicon";
@@ -187,7 +187,7 @@ export function WorkflowExecutionResultsInternal({
       name: "Workflow Definition",
       content: (
         <div className="h-[calc(100vh-220px)]">
-          <MonacoYAMLEditor
+          <YAMLEditor
             workflowRaw={workflowRaw ?? ""}
             workflowId={workflowId}
             executionLogs={logs}
