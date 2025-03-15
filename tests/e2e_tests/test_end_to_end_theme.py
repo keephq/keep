@@ -36,8 +36,33 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
 
         # refresh the page
         page.reload()
-        # click the "select alert source" dropdown
-        page.locator('[id="headlessui-popover-button-«ra»"]').click()
+
+        # More robust way to click the test alerts button using multiple strategies
+        # Strategy 1: Using the tooltip content and button attributes
+        try:
+            page.get_by_role("button", name="Test alerts").click()
+        except Exception:
+            # Strategy 2: Using the icon inside the button
+            try:
+                page.locator("button:has(svg[viewBox='0 0 24 24'])").nth(0).click()
+            except Exception:
+                # Strategy 3: Using the class and position
+                try:
+                    page.locator("button.ml-2:has(svg)").nth(0).click()
+                except Exception:
+                    # Strategy 4: Force click on the button next to the main UI element
+                    page.evaluate(
+                        """
+                        () => {
+                            const buttons = Array.from(document.querySelectorAll('button'));
+                            const testButton = buttons.find(b =>
+                                b.innerHTML.includes('svg') &&
+                                b.className.includes('ml-2')
+                            );
+                            if (testButton) testButton.click();
+                        }
+                    """
+                    )
 
         # click the "theme" tab
         page.get_by_role("tab", name="Theme").click()
@@ -62,8 +87,30 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
             "rgb(253, 186, 116)",
             "rgb(251, 146, 60)",
         ]
-        # click the "select alert source" dropdown
-        page.locator('[id="headlessui-popover-button-«ra»"]').click()
+
+        # More robust way to click the select alert source dropdown
+        try:
+            # Try by role first
+            page.get_by_role("button", name="Select alert source").click()
+        except Exception:
+            try:
+                # Try by text content
+                page.locator("button:has-text('Select alert source')").click()
+            except Exception:
+                # Fallback to JavaScript execution
+                page.evaluate(
+                    """
+                    () => {
+                        const buttons = Array.from(document.querySelectorAll('button'));
+                        const dropdown = buttons.find(b =>
+                            b.textContent.includes('Select alert source') ||
+                            b.getAttribute('aria-haspopup') === 'true'
+                        );
+                        if (dropdown) dropdown.click();
+                    }
+                """
+                )
+
         page.get_by_role("tab", name="Theme").click()
         page.get_by_role("tab", name="Basic").click()
         page.get_by_role("button", name="Apply theme").click()
