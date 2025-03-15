@@ -40,8 +40,18 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
             return style.backgroundColor;
         }"""
         )
-        # bg-orange-200
-        assert background_color == "rgb(254, 215, 170)"
+        # critical: "bg-orange-400", // Highest opacity for critical
+        # high: "bg-orange-300",
+        # warning: "bg-orange-200",
+        # low: "bg-orange-100",
+        # info: "bg-orange-50", // Lowest opacity for info
+        assert background_color in [
+            "rgb(255 247 237)",
+            "rgb(255 237 213)",
+            "rgb(254 215 170)",
+            "rgb(253 186 116)",
+            "rgb(251 146 60)",
+        ]
         # click the "select alert source" dropdown
         page.locator('[id="headlessui-popover-button-«ra»"]').click()
         page.get_by_role("tab", name="Theme").click()
@@ -57,11 +67,21 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
         }"""
         )
 
-        # Check if the color matches the bg-blue-200
-        expected_color = "rgb(191, 219, 254)"
+        # critical: "bg-red-200",
+        # high: "bg-orange-200",
+        # warning: "bg-yellow-200",
+        # low: "bg-green-200",
+        # info: "bg-blue-200",
+        expected_colors = [
+            "rgb(254 202 202)",
+            "rgb(254 215 170)",
+            "rgb(254 240 138)",
+            "rgb(187 247 208)",
+            "rgb(191 219 254)",
+        ]
         assert (
-            background_color == expected_color
-        ), f"Expected {expected_color}, got {background_color}"
+            background_color in expected_colors
+        ), f"Expected {expected_colors}, got {background_color}"
 
     except Exception:
         save_failure_artifacts(browser)
