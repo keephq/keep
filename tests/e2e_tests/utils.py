@@ -134,6 +134,8 @@ def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=
     print("Going to URL: ", url)
     try:
         page.goto(url, timeout=15000)
+        page.wait_for_load_state("networkidle")
+
         if wait_time:
             page.wait_for_timeout(wait_time)
 
