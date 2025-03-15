@@ -124,6 +124,7 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
 
         <Button
           variant="secondary"
+          tooltip="Test alerts"
           size="sm"
           icon={GrTest}
           onClick={handleAddAlertModalOpen}

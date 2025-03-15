@@ -639,6 +639,7 @@ export function AlertTableServerSide({
           theme={theme}
           lastViewedAlert={lastViewedAlert}
           onRowClick={handleRowClick}
+          presetName={presetName}
         />
       </Table>
     );
