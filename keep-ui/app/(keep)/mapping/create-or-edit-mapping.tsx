@@ -237,7 +237,8 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const handleAttributeChange = (groupIndex: number, selected: string[]) => {
     const newGroups = [...attributeGroups];
     if (isMultiLevel) {
-      newGroups[groupIndex] = selected.slice(-1);
+      newGroups[groupIndex] =
+        selected.length > 0 ? [selected[selected.length - 1]] : [];
     } else {
       newGroups[groupIndex] = selected;
     }
@@ -457,16 +458,8 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
                 className="max-w-96"
                 disabled={mappingType === "topology"}
               >
-                {attributes.map((attribute) => (
-                  <MultiSelectItem
-                    key={attribute}
-                    value={attribute}
-                    disabled={
-                      isMultiLevel &&
-                      group.length > 0 &&
-                      !group.includes(attribute)
-                    }
-                  >
+                {attributes?.map((attribute) => (
+                  <MultiSelectItem key={attribute} value={attribute}>
                     {attribute}
                   </MultiSelectItem>
                 ))}
