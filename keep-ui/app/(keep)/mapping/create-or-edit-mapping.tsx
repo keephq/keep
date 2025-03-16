@@ -42,7 +42,7 @@ import Editor from "@monaco-editor/react";
 // https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
 import * as monaco from "monaco-editor";
 import { loader } from "@monaco-editor/react";
-import { useTenantConfigurationKey } from "@/utils/hooks/useTenantConfigurationKey";
+import { useTenantConfiguration } from "@/utils/hooks/useTenantConfigurationKey";
 loader.config({ monaco });
 
 interface Props {
@@ -71,9 +71,7 @@ export default function CreateOrEditMapping({
   const [isMultiLevel, setIsMultiLevel] = useState<boolean>(false);
   const [newPropertyName, setNewPropertyName] = useState<string>("");
   const [prefixToRemove, setPrefixToRemove] = useState<string>("");
-  const { data: multiLevelEnabled } = useTenantConfigurationKey<boolean>(
-    "multi_level_enabled"
-  );
+  const { data: tenantConfiguration } = useTenantConfiguration();
 
   const { data: editRule, isLoading: isLoadingEditRule } =
     useMappingRule(editRuleId);
@@ -413,44 +411,46 @@ export default function CreateOrEditMapping({
         </div>
       )}
 
-      {parsedData && mappingType === "csv" && multiLevelEnabled && (
-        <div className="mt-4">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="multi-level"
-              name="multi-level"
-              checked={isMultiLevel}
-              onChange={setIsMultiLevel}
-            />
-            <Text>Enable Multi-level Mapping</Text>
-          </div>
-
-          {isMultiLevel && (
-            <div className="mt-2.5 space-y-2">
-              <div>
-                <Text>
-                  New Property Name
-                  <span className="text-red-500 text-xs">*</span>
-                </Text>
-                <TextInput
-                  placeholder="Enter property name"
-                  required={true}
-                  value={newPropertyName}
-                  onValueChange={setNewPropertyName}
-                />
-              </div>
-              <div>
-                <Text>Prefix to Remove</Text>
-                <TextInput
-                  placeholder="Enter prefix to remove from keys (optional)"
-                  value={prefixToRemove}
-                  onValueChange={setPrefixToRemove}
-                />
-              </div>
+      {parsedData &&
+        mappingType === "csv" &&
+        tenantConfiguration?.["multi_level_enabled"] && (
+          <div className="mt-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="multi-level"
+                name="multi-level"
+                checked={isMultiLevel}
+                onChange={setIsMultiLevel}
+              />
+              <Text>Enable Multi-level Mapping</Text>
             </div>
-          )}
-        </div>
-      )}
+
+            {isMultiLevel && (
+              <div className="mt-2.5 space-y-2">
+                <div>
+                  <Text>
+                    New Property Name
+                    <span className="text-red-500 text-xs">*</span>
+                  </Text>
+                  <TextInput
+                    placeholder="Enter property name"
+                    required={true}
+                    value={newPropertyName}
+                    onValueChange={setNewPropertyName}
+                  />
+                </div>
+                <div>
+                  <Text>Prefix to Remove</Text>
+                  <TextInput
+                    placeholder="Enter prefix to remove from keys (optional)"
+                    value={prefixToRemove}
+                    onValueChange={setPrefixToRemove}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
       <Subtitle className="mt-2.5">Mapping Configuration</Subtitle>
       <div className="mt-2.5">

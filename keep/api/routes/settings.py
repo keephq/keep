@@ -5,7 +5,7 @@ import smtplib
 from email.mime.text import MIMEText
 from typing import Optional, Tuple
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session
@@ -391,22 +391,13 @@ async def get_sso_settings(
         return {"sso": False}
 
 
-@router.get("/tenant/configuration/{key}")
+@router.get("/tenant/configuration")
 def get_tenant_configuration(
-    key: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:settings"])
     ),
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
     tenant_configuration = TenantConfiguration()
-    config_value = tenant_configuration.get_configuration(
-        tenant_id=tenant_id, config_name=key
-    )
-
-    if config_value is None:
-        raise HTTPException(
-            status_code=404, detail=f"Configuration key ({key}) not found"
-        )
-
-    return Response(content=json.dumps(config_value))
+    config_value = tenant_configuration.get_configuration(tenant_id=tenant_id)
+    return JSONResponse(status_code=200, content=config_value)
