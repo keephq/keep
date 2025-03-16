@@ -1181,7 +1181,7 @@ def get_error_alerts(
             event=alert.raw_alert,
             error_message=alert.error_message,
             timestamp=alert.timestamp,
-            provider_type=alert.provider_type,
+            provider_type=alert.provider_type or "keep",
         )
         for alert in error_alerts
     ]

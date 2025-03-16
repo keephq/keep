@@ -90,7 +90,8 @@ class Incident(SQLModel, table=True):
     last_seen_time: datetime | None
 
     is_predicted: bool = Field(default=False)
-    is_confirmed: bool = Field(default=False)
+    is_candidate: bool = Field(default=False)
+    is_visible: bool = Field(default=True)
 
     alerts_count: int = Field(default=0)
     affected_services: list = Field(sa_column=Column(JSON), default_factory=list)

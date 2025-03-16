@@ -10,7 +10,7 @@ interface Filters {
 }
 
 export type GetIncidentsParams = {
-  confirmed: boolean;
+  candidate: boolean;
   limit: number;
   offset: number;
   sorting: { id: string; desc: boolean };
@@ -35,7 +35,7 @@ function buildIncidentsUrl(params: GetIncidentsParams) {
     filtersParams.append("cel", params.cel);
   }
 
-  return `/incidents?confirmed=${params.confirmed}&limit=${params.limit}&offset=${params.offset}&sorting=${
+  return `/incidents?candidate=${params.candidate}&limit=${params.limit}&offset=${params.offset}&sorting=${
     params.sorting.desc ? "-" : ""
   }${params.sorting.id}&${filtersParams.toString()}`;
 }

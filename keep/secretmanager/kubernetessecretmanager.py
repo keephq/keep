@@ -6,7 +6,10 @@ import kubernetes.client
 import kubernetes.config
 from kubernetes.client.exceptions import ApiException
 
+from keep.api.core.config import config
 from keep.secretmanager.secretmanager import BaseSecretManager
+
+VERIFY_SSL_CERT = config.get("K8S_VERIFY_SSL_CERT", cast=bool, default=True)
 
 
 class KubernetesSecretManager(BaseSecretManager):
@@ -20,6 +23,8 @@ class KubernetesSecretManager(BaseSecretManager):
         # kubernetes.config.load_config()  # when running locally
         kubernetes.config.load_incluster_config()
         self.api = kubernetes.client.CoreV1Api()
+        if not VERIFY_SSL_CERT:
+            self.api.api_client.configuration.verify_ssl = False
 
     def write_secret(self, secret_name: str, secret_value: str) -> None:
         """
