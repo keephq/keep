@@ -442,7 +442,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         If alert will match the atributes, it will be enriched with the rest of
         the fields{" "}
         {mappingType === "csv"
-          ? "from matched row in the CVS."
+          ? "from matched row in the CSV."
           : "from matching node in the topology."}
         <div className="flex flex-col gap-4 mt-2">
           {attributeGroups.map((group, index) => (
