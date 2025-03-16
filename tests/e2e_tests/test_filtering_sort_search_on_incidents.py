@@ -10,14 +10,32 @@ from tests.e2e_tests.incidents_alerts_setup import (
     upload_alert,
     create_fake_alert,
 )
+from tests.e2e_tests.utils import init_e2e_test
 
 KEEP_UI_URL = "http://localhost:3000"
 
 
-def init_test(browser: Page, incidents):
-    url = f"{KEEP_UI_URL}/incidents"
-    browser.goto(url)
-    browser.wait_for_url(url)
+def init_test(browser: Page, incidents, max_retries=3):
+    for i in range(max_retries):
+        try:
+            init_e2e_test(browser, next_url="/incidents")
+            base_url = f"{KEEP_UI_URL}/incidents"
+            # we don't care about query params
+            # Give the page a moment to process redirects
+            browser.wait_for_timeout(500)
+            # Wait for navigation to complete to either signin or providers page
+            # (since we might get redirected automatically)
+            browser.wait_for_load_state("networkidle")
+            browser.wait_for_url(lambda url: url.startswith(base_url), timeout=10000)
+            print("Page loaded successfully. [try: %d]" % (i + 1))
+            break
+        except Exception as e:
+            if i < max_retries - 1:
+                print("Failed to load alerts page. Retrying... - ", e)
+                continue
+            else:
+                raise e
+
     browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
     browser.wait_for_selector(
         f"text={incidents[0]['user_generated_name']}", timeout=10000
@@ -39,7 +57,6 @@ def init_test(browser: Page, incidents):
     expect(
         browser.locator("table[data-testid='incidents-table'] tbody tr")
     ).to_have_count(20)
-    # return not_resolved_not_deleted
 
 
 def select_one_facet_option(browser, facet_name, option_name):

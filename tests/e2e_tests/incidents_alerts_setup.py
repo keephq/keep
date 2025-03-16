@@ -5,6 +5,8 @@ import pytest
 import requests
 from playwright.sync_api import expect, Page
 
+from tests.e2e_tests.utils import get_token
+
 
 GRAFANA_HOST = "http://grafana:3000"
 GRAFANA_HOST_LOCAL = "http://localhost:3002"
@@ -33,7 +35,7 @@ def query_alerts(cell_query: str = None, limit: int = None, offset: int = None):
             response = requests.post(
                 url,
                 json=query,
-                headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+                headers={"Authorization": f"Bearer {get_token()}"},
                 timeout=5,
             )
             response.raise_for_status()
@@ -111,7 +113,9 @@ def create_fake_alert(index: int, provider_type: str):
             "monitor_id": test_alert_id,
             "scopes": "srv2-eu1-prod",
             "host.name": "srv2-ap1-prod",
-            "last_updated": 1739114561286,
+            # last_updated is lastReceived in alerts, it's important for sorting tests
+            "last_updated": (datetime.utcnow() + timedelta(days=-index)).timestamp()
+            * 1000,
             "alert_transition": STATUS_MAP.get(status, "Triggered"),
             "date_happened": (datetime.utcnow() + timedelta(days=-index)).timestamp(),
             "tags": {
@@ -187,7 +191,7 @@ def upload_alerts():
             url,
             json=alert,
             timeout=5,
-            headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+            headers={"Authorization": f"Bearer {get_token()}"},
         ).raise_for_status()
         time.sleep(
             1
@@ -226,7 +230,7 @@ def upload_alerts():
                 "fingerprint": alert["fingerprint"],
             },
             timeout=5,
-            headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+            headers={"Authorization": f"Bearer {get_token()}"},
         ).raise_for_status()
 
     return query_alerts(limit=1000, offset=0)
@@ -238,7 +242,7 @@ def upload_alert(provider_type, alert):
         url,
         json=alert,
         timeout=5,
-        headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+        headers={"Authorization": f"Bearer {get_token()}"},
     ).raise_for_status()
 
 
@@ -267,7 +271,7 @@ def query_incidents(cell_query: str = None, limit: int = None, offset: int = Non
             response = requests.get(
                 url,
                 json=query,
-                headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+                headers={"Authorization": f"Bearer {get_token()}"},
                 timeout=5,
             )
             response.raise_for_status()
@@ -303,7 +307,7 @@ def query_incidents(cell_query: str = None, limit: int = None, offset: int = Non
 #         try:
 #             response = requests.get(
 #                 url,
-#                 headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+#                 headers={"Authorization": f"Bearer {get_token()}"},
 #                 timeout=5,
 #             )
 #             response.raise_for_status()
@@ -361,9 +365,9 @@ def upload_incidents():
             url,
             json=incident,
             timeout=5,
-            headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
+            headers={"Authorization": f"Bearer {get_token()}"},
         ).raise_for_status()
-        time.sleep(1)
+        time.sleep(0.5)
 
     if not not_uploaded_incidents:
         return current_incidents
@@ -394,26 +398,37 @@ def upload_incidents():
 
 def associate_alerts_with_incident(incident_id: str, alert_ids: list[str]):
     url = f"{KEEP_API_URL}/incidents/{incident_id}/alerts"
-    requests.post(
-        url,
-        json=alert_ids,
-        timeout=5,
-        headers={"Authorization": "Bearer keep-token-for-no-auth-purposes"},
-    ).raise_for_status()
+    try:
+        requests.post(
+            url,
+            json=alert_ids,
+            timeout=5,
+            headers={"Authorization": f"Bearer {get_token()}"},
+        ).raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to associate alerts with incident {incident_id}: {e}")
+        raise e
 
 
 def setup_incidents_alerts():
-    alerts_query_result = upload_alerts()
-    incidents_query_result = upload_incidents()
+    alerts: list = upload_alerts()["results"]
+    alerts_copy = alerts.copy()
+    incidents: list = upload_incidents()["results"]
+    incidents_alert = {}
 
-    for index, incident in enumerate(incidents_query_result["results"]):
+    for _, incident in enumerate(incidents):
+        if not alerts_copy:
+            break
+
         incident_id = incident["id"]
-        incident_alerts = alerts_query_result["results"][index * 2 : index * 2 + 2]
-        associate_alerts_with_incident(
-            incident_id, [alert["id"] for alert in incident_alerts]
-        )
+        incident_alerts = [alerts_copy.pop(0), alerts_copy.pop(0)]
+        incidents_alert[incident_id] = incident_alerts
+        # associate_alerts_with_incident(
+        #     incident_id, [alert["id"] for alert in incident_alerts]
+        # )
 
     return {
-        "alerts": alerts_query_result["results"],
-        "incidents": incidents_query_result["results"],
+        "alerts": alerts,
+        "incidents": incidents,
+        "incidents_alert": incidents_alert,
     }
