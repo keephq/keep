@@ -323,6 +323,6 @@ class IncidentReportsBl:
             limit=100,
             offset=0,
             allowed_incident_ids=allowed_incident_ids,
-            is_confirmed=True,
+            is_candidate=False,
         )
         return query_result.items

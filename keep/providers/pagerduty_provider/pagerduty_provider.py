@@ -469,6 +469,8 @@ class PagerdutyProvider(
         requester: str,
         incident_key: str | None = None,
         priority: str = "",
+        status: typing.Literal["resolved", "acknowledged"] = "",
+        resolution: str = "",
     ):
         """Triggers an incident via the V2 REST API using sample data."""
 
@@ -499,6 +501,11 @@ class PagerdutyProvider(
                 "body": body,
             }
         }
+
+        if status:
+            payload["incident"]["status"] = status
+            if status == "resolved" and resolution:
+                payload["incident"]["resolution"] = resolution
 
         if priority:
             payload["incident"]["priority"] = {
@@ -672,6 +679,8 @@ class PagerdutyProvider(
         severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
         source: str = "custom_event",
         priority: str = "",
+        status: typing.Literal["resolved", "acknowledged"] = "",
+        resolution: str = "",
         **kwargs: dict,
     ):
         """
@@ -699,6 +708,8 @@ class PagerdutyProvider(
                 requester,
                 incident_id,
                 priority,
+                status,
+                resolution,
             )
 
     def _query(self, incident_id: str = None):
@@ -1021,7 +1032,7 @@ class PagerdutyProvider(
             alerts_count=event.get("alert_counts", {}).get("all", 0),
             services=[service],
             is_predicted=False,
-            is_confirmed=True,
+            is_candidate=False,
             # This is the reference to the incident in PagerDuty
             fingerprint=original_incident_id,
         )
