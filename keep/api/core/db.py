@@ -3652,6 +3652,9 @@ def create_incident_from_dto(
         if "incident_type" not in incident_dict:
             incident_dict["incident_type"] = IncidentType.MANUAL.value
 
+    if incident_dto.severity is not None:
+        incident_dict["severity"] = incident_dto.severity.order
+
     return create_incident_from_dict(tenant_id, incident_dict)
 
 
