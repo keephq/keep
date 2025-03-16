@@ -44,8 +44,6 @@ class ElasticProviderAuthConfig:
         default=None,
         metadata={
             "description": "Elasticsearch username",
-            "sensitive": True,
-            "type": "file",
             "config_sub_group": "username_password",
             "config_main_group": "authentication",
         },
