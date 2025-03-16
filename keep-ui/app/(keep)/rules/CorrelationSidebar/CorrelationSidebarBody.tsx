@@ -70,6 +70,8 @@ export const CorrelationSidebarBody = ({
       createOn,
       incidentNameTemplate,
       incidentPrefix,
+      multiLevel,
+      multiLevelPropertyName,
     } = correlationFormData;
 
     const body = {
@@ -85,6 +87,8 @@ export const CorrelationSidebarBody = ({
       createOn: createOn,
       incidentNameTemplate,
       incidentPrefix,
+      multiLevel,
+      multiLevelPropertyName,
     };
 
     try {
