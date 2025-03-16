@@ -109,7 +109,6 @@ export default function CreateOrUpdateMaintenanceRule({
   };
 
   const updateMaintenanceRule = async (e: FormEvent) => {
-    console.log("updateMaintenanceRule, suppress: ", suppress);
     e.preventDefault();
     if (!maintenanceToEdit?.id) {
       showErrorToast(new Error("No maintenance rule selected for update"));
