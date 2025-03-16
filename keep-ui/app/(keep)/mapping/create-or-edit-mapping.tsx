@@ -30,11 +30,11 @@ import {
 } from "react";
 import { usePapaParse } from "react-papaparse";
 import { toast } from "react-toastify";
-import { useMappings } from "utils/hooks/useMappingRules";
+import { useMappingRule, useMappings } from "utils/hooks/useMappingRules";
 import { MappingRule } from "./models";
 import { useTopology } from "@/app/(keep)/topology/model";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast, Input } from "@/shared/ui";
+import { showErrorToast, Input, KeepLoader } from "@/shared/ui";
 import { PlusIcon, MinusIcon } from "@heroicons/react/20/solid";
 import Editor from "@monaco-editor/react";
 
@@ -45,11 +45,14 @@ import { loader } from "@monaco-editor/react";
 loader.config({ monaco });
 
 interface Props {
-  editRule: MappingRule | null;
+  editRuleId: number | null;
   editCallback: (rule: MappingRule | null) => void;
 }
 
-export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
+export default function CreateOrEditMapping({
+  editRuleId,
+  editCallback,
+}: Props) {
   const api = useApi();
   const { mutate } = useMappings();
   const [tabIndex, setTabIndex] = useState<number>(0);
@@ -62,15 +65,18 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const [mapDescription, setMapDescription] = useState<string>("");
   const { topologyData } = useTopology();
   const [priority, setPriority] = useState<number>(0);
-  const editMode = editRule !== null;
+  const editMode = editRuleId !== null;
   const inputFile = useRef<HTMLInputElement>(null);
   const [isMultiLevel, setIsMultiLevel] = useState<boolean>(false);
   const [newPropertyName, setNewPropertyName] = useState<string>("");
   const [prefixToRemove, setPrefixToRemove] = useState<string>("");
 
+  const { data: editRule, isLoading: isLoadingEditRule } =
+    useMappingRule(editRuleId);
+
   // This useEffect runs whenever an `Edit` button is pressed in the table, and populates the form with the mapping data that needs to be edited.
   useEffect(() => {
-    if (editRule !== null) {
+    if (editRule !== undefined) {
       handleFileReset();
       setMapName(editRule.name);
       setFileName(editRule.file_name ? editRule.file_name : "");
@@ -82,6 +88,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       setIsMultiLevel(editRule.is_multi_level ?? false);
       setNewPropertyName(editRule.new_property_name ?? "");
       setPrefixToRemove(editRule.prefix_to_remove ?? "");
+      setParsedData(editRule.rows);
     }
   }, [editRule]);
 
@@ -261,6 +268,10 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const removeAttributeGroup = (index: number) => {
     setAttributeGroups(attributeGroups.filter((_, i) => i !== index));
   };
+
+  if (editRuleId !== null && isLoadingEditRule) {
+    return <KeepLoader loadingText="Loading mapping rule..." />;
+  }
 
   return (
     <form

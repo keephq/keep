@@ -67,7 +67,7 @@ export default function Mapping() {
             Add dynamic context to your alerts with mapping rules
           </p>
           <CreateOrEditMapping
-            editRule={editRule}
+            editRuleId={editRule?.id ?? null}
             editCallback={handleSidePanelExit}
           />
         </SidePanel>
