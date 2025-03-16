@@ -469,13 +469,22 @@ class PagerdutyProvider(
         requester: str,
         incident_key: str | None = None,
         priority: str = "",
+        status: typing.Literal["resolved", "acknowledged"] = "",
+        resolution: str = "",
     ):
         """Triggers an incident via the V2 REST API using sample data."""
 
+        update = True
+
         if not incident_key:
             incident_key = str(uuid.uuid4()).replace("-", "")
+            update = False
 
-        url = f"{self.BASE_API_URL}/incidents"
+        url = (
+            f"{self.BASE_API_URL}/incidents"
+            if not update
+            else f"{self.BASE_API_URL}/incidents/{incident_key}"
+        )
         headers = self.__get_headers(From=requester)
 
         if isinstance(body, str):
@@ -493,22 +502,43 @@ class PagerdutyProvider(
             }
         }
 
+        if status:
+            payload["incident"]["status"] = status
+            if status == "resolved" and resolution:
+                payload["incident"]["resolution"] = resolution
+
         if priority:
             payload["incident"]["priority"] = {
                 "id": priority,
                 "type": "priority_reference",
             }
 
-        r = requests.post(url, headers=headers, data=json.dumps(payload))
+        r = (
+            requests.post(url, headers=headers, data=json.dumps(payload))
+            if not update
+            else requests.put(url, headers=headers, data=json.dumps(payload))
+        )
         try:
             r.raise_for_status()
             response = r.json()
-            self.logger.info("Incident triggered")
+            self.logger.info(
+                "Incident triggered",
+                extra={
+                    "update": update,
+                    "incident_key": incident_key,
+                    "tenant_id": self.context_manager.tenant_id,
+                },
+            )
             return response
         except Exception as e:
             self.logger.error(
                 "Failed to trigger incident",
-                extra={"response_text": r.text},
+                extra={
+                    "response_text": r.text,
+                    "update": update,
+                    "incident_key": incident_key,
+                    "tenant_id": self.context_manager.tenant_id,
+                },
             )
             # This will give us a better error message in Keep workflows
             raise Exception(r.text) from e
@@ -649,6 +679,8 @@ class PagerdutyProvider(
         severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
         source: str = "custom_event",
         priority: str = "",
+        status: typing.Literal["resolved", "acknowledged"] = "",
+        resolution: str = "",
         **kwargs: dict,
     ):
         """
@@ -676,6 +708,8 @@ class PagerdutyProvider(
                 requester,
                 incident_id,
                 priority,
+                status,
+                resolution,
             )
 
     def _query(self, incident_id: str = None):
@@ -998,7 +1032,7 @@ class PagerdutyProvider(
             alerts_count=event.get("alert_counts", {}).get("all", 0),
             services=[service],
             is_predicted=False,
-            is_confirmed=True,
+            is_candidate=False,
             # This is the reference to the incident in PagerDuty
             fingerprint=original_incident_id,
         )

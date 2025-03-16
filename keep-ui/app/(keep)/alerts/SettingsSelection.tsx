@@ -41,7 +41,7 @@ export default function SettingsSelection({
   });
 
   return (
-    <Popover as={Fragment}>
+    <Popover>
       {({ close }) => (
         <>
           <Popover.Button
@@ -50,11 +50,14 @@ export default function SettingsSelection({
             as={Button}
             icon={FiSettings}
             ref={refs.setReference}
+            data-testid="settings-button"
+            aria-label="Settings"
           />
           <Popover.Overlay className="fixed inset-0 bg-black opacity-30 z-20" />
           <Popover.Panel
             className="bg-white z-30 p-4 rounded-sm w-[400px]"
             ref={refs.setFloating}
+            data-testid="settings-panel"
             style={{
               ...floatingStyles,
               maxHeight: "80vh", // Limit height to 80% of viewport height
@@ -71,30 +74,30 @@ export default function SettingsSelection({
               style={{ maxHeight: "calc(80vh - 40px)" }}
             >
               <TabGroup className="flex flex-col flex-1">
-                <TabList color="orange" className="mb-4">
-                  <Tab>Columns</Tab>
-                  <Tab>Theme</Tab>
-                  <Tab>Row Style</Tab>
-                  <Tab>Action Tray</Tab>
+                <TabList className="mb-4">
+                  <Tab data-testid="tab-columns">Columns</Tab>
+                  <Tab data-testid="tab-theme">Theme</Tab>
+                  <Tab data-testid="tab-row-style">Row Style</Tab>
+                  <Tab data-testid="tab-action-tray">Action Tray</Tab>
                 </TabList>
                 <TabPanels className="flex-1 overflow-hidden">
-                  <TabPanel className="h-full">
+                  <TabPanel className="h-full" data-testid="panel-columns">
                     <ColumnSelection
                       table={table}
                       presetName={presetName}
                       onClose={close}
                     />
                   </TabPanel>
-                  <TabPanel className="h-full">
+                  <TabPanel className="h-full" data-testid="panel-theme">
                     <ThemeSelection
                       onThemeChange={onThemeChange}
                       onClose={close}
                     />
                   </TabPanel>
-                  <TabPanel className="h-full">
+                  <TabPanel className="h-full" data-testid="panel-row-style">
                     <RowStyleSelection onClose={close} />
                   </TabPanel>
-                  <TabPanel className="h-full">
+                  <TabPanel className="h-full" data-testid="panel-action-tray">
                     <ActionTraySelection onClose={close} />
                   </TabPanel>
                 </TabPanels>

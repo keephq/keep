@@ -17,28 +17,24 @@ services:
       retries: 5
 
   # Frontend Services
-  # keep-frontend:
-  #   extends:
-  #     file: docker-compose.common.yml
-  #     service: keep-frontend-common
-  #   build:
-  #     context: ./keep-ui/
-  #     dockerfile: ../docker/Dockerfile.ui
-  #   environment:
-  #     - AUTH_TYPE=NO_AUTH
-  #     - API_URL=http://keep-backend:8080
-  #     - POSTHOG_DISABLED=true
-  #     - FRIGADE_DISABLED=true
-  #     - SENTRY_DISABLED=true
+  keep-frontend:
+    # to be replaced in github actions
+    image: "%KEEPFRONTEND_IMAGE%"
+    ports:
+      - "3000:3000"
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - NEXTAUTH_SECRET=secret
+      - NEXTAUTH_URL=http://localhost:3000
+      - API_URL=http://keep-backend:8080
+      - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
+      - SENTRY_DISABLED=true
 
   # Backend Services
   keep-backend:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-backend-common
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.api
+    # to be replaced in github actions
+    image: "%KEEPBACKEND_IMAGE%"
     environment:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
@@ -46,13 +42,14 @@ services:
       - FRIGADE_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
       - SQLALCHEMY_WARN_20=1
+    ports:
+      - "8080:8080"
     depends_on:
       keep-database:
         condition: service_healthy
 
-
   ## Keep Services with DB
-  # Database Service (5433) 
+  # Database Service (5433)
   keep-database-db-auth:
     image: mysql:latest
     environment:
@@ -68,29 +65,25 @@ services:
       timeout: 5s
       retries: 5
 
-  # # Frontend Services (3001)
-  # keep-frontend-db-auth:
-  #   build:
-  #     context: ./keep-ui/
-  #     dockerfile: ../docker/Dockerfile.ui
-  #   ports:
-  #     - "3001:3000"
-  #   environment:
-  #     - NEXTAUTH_SECRET=secret
-  #     - NEXTAUTH_URL=http://localhost:3001
-  #     - NEXT_PUBLIC_API_URL=http://localhost:8081
-  #     - POSTHOG_DISABLED=true
-  #     - AUTH_TYPE=DB
-  #     - API_URL=http://keep-backend-db-auth:8080
-  #     - POSTHOG_DISABLED=true
-  #     - FRIGADE_DISABLED=true
-  #     - SENTRY_DISABLED=true
+  # Frontend Services (3001)
+  keep-frontend-db-auth:
+    image: "%KEEPFRONTEND_IMAGE%"
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXTAUTH_SECRET=secret
+      - NEXTAUTH_URL=http://localhost:3001
+      - NEXT_PUBLIC_API_URL=http://localhost:8081
+      - AUTH_TYPE=DB
+      - API_URL=http://keep-backend-db-auth:8080
+      - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
+      - SENTRY_DISABLED=true
+      - AUTH_DEBUG=true
 
   # Backend Services (8081)
   keep-backend-db-auth:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.api
+    image: "%KEEPBACKEND_IMAGE%"
     ports:
       - "8081:8080"
     environment:
@@ -116,7 +109,6 @@ services:
     depends_on:
       keep-database-db-auth:
         condition: service_healthy
-
 
   # Other Services (Common)
   keep-websocket-server:

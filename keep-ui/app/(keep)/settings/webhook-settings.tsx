@@ -27,6 +27,12 @@ import { PageSubtitle } from "@/shared/ui";
 import { PageTitle } from "@/shared/ui";
 import { Editor } from "@monaco-editor/react";
 
+// Monaco Editor - do not load from CDN (to support on-prem)
+// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
+import * as monaco from "monaco-editor";
+import { loader } from "@monaco-editor/react";
+loader.config({ monaco });
+
 interface Webhook {
   webhookApi: string;
   apiKey: string;
@@ -206,7 +212,7 @@ req.end();
           >
             <div className="flex justify-between items-center">
               {/* ml-6 to match the editor left padding */}
-              <TabList variant="solid" color="orange" className="ml-6">
+              <TabList variant="solid" className="ml-6">
                 {languages.map(({ title }) => (
                   <Tab key={title}>{title}</Tab>
                 ))}

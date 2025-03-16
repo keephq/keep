@@ -6,6 +6,7 @@ import { GroupedRow } from "./alert-grouped-row";
 import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import { getRowClassName, getCellClassName } from "./alert-table-utils";
+import { useExpandedRows } from "utils/hooks/useExpandedRows";
 import clsx from "clsx";
 import "react-loading-skeleton/dist/skeleton.css";
 
@@ -15,6 +16,7 @@ interface Props {
   theme: { [key: string]: string };
   onRowClick: (alert: AlertDto) => void;
   lastViewedAlert: string | null;
+  presetName: string;
 }
 
 export function AlertsTableBody({
@@ -23,8 +25,10 @@ export function AlertsTableBody({
   theme,
   onRowClick,
   lastViewedAlert,
+  presetName,
 }: Props) {
   const [rowStyle] = useAlertRowStyle();
+  const { isRowExpanded } = useExpandedRows(presetName);
 
   const handleRowClick = (e: React.MouseEvent, alert: AlertDto) => {
     // Only prevent clicks on specific interactive elements
@@ -78,13 +82,26 @@ export function AlertsTableBody({
     );
   }
 
+  // This trick handles cases when rows have duplicated ids
+  // It shouldn't happen, but the API currently returns duplicated ids
+  // And in order to mitigate this issue, we append the rowIndex to the key for duplicated keys
+  const visitedIds = new Set<string>();
+
   return (
     <TableBody>
-      {table.getRowModel().rows.map((row) => {
+      {table.getRowModel().rows.map((row, rowIndex) => {
+        let renderingKey = row.id;
+
+        if (visitedIds.has(renderingKey)) {
+          renderingKey = `${renderingKey}-${rowIndex}`;
+        } else {
+          visitedIds.add(renderingKey);
+        }
+
         if (row.getIsGrouped()) {
           return (
             <GroupedRow
-              key={row.id}
+              key={renderingKey}
               row={row}
               table={table}
               theme={theme}
@@ -96,13 +113,16 @@ export function AlertsTableBody({
         }
 
         const isLastViewed = row.original.fingerprint === lastViewedAlert;
+        const expanded = isRowExpanded(row.original.fingerprint);
 
         return (
           <TableRow
-            key={row.id}
+            key={renderingKey}
             className={clsx(
               "group/row",
-              getRowClassName(row, theme, lastViewedAlert, rowStyle)
+              // Using tailwind classes for expanded rows instead of a custom class
+              expanded ? "!h-auto min-h-12" : null,
+              getRowClassName(row, theme, lastViewedAlert, rowStyle, expanded)
             )}
             onClick={(e) => handleRowClick(e, row.original)}
           >
@@ -113,25 +133,71 @@ export function AlertsTableBody({
                 table.getState().columnPinning.right?.length
               );
 
+              const isNameCell = cell.column.id === "name";
+              const isDescriptionCell = cell.column.id === "description";
+              const isSourceCell = cell.column.id === "source";
+              const expanded = isRowExpanded(row.original.fingerprint);
+
               return (
                 <TableCell
                   key={cell.id}
-                  className={getCellClassName(
-                    cell,
-                    className,
-                    rowStyle,
-                    isLastViewed
+                  data-column-id={cell.column.id}
+                  className={clsx(
+                    getCellClassName(
+                      cell,
+                      className,
+                      rowStyle,
+                      isLastViewed,
+                      expanded
+                    ),
+                    // Force padding when expanded but not for source column
+                    expanded && !isSourceCell ? "!p-2" : null,
+                    // Source cell needs specific treatment when expanded
+                    expanded && isSourceCell
+                      ? "!p-1 !w-8 !min-w-8 !max-w-8"
+                      : null,
+                    // Name cell specific classes when expanded
+                    expanded && isNameCell
+                      ? "!max-w-[180px] w-[180px] !overflow-hidden"
+                      : null,
+                    // Description cell specific classes when expanded
+                    expanded && isDescriptionCell
+                      ? "!whitespace-pre-wrap !break-words w-auto"
+                      : null
                   )}
                   style={{
                     ...style,
-                    maxWidth:
-                      rowStyle === "default" && cell.column.id === "name"
-                        ? "600px"
-                        : undefined,
+                    // For source cells, enforce fixed width always
+                    ...(isSourceCell
+                      ? {
+                          width: "32px",
+                          minWidth: "32px",
+                          maxWidth: "32px",
+                          padding: 0,
+                        }
+                      : {}),
+                    // For name cells when expanded, use strict fixed width
+                    ...(expanded && isNameCell
+                      ? {
+                          width: "180px",
+                          maxWidth: "180px",
+                          minWidth: "180px",
+                          overflow: "hidden",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                        }
+                      : {}),
+                    // For description cells when expanded
+                    ...(expanded && isDescriptionCell
+                      ? {
+                          width: "auto",
+                          minWidth: "200px",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          overflow: "visible",
+                        }
+                      : {}),
                   }}
-                  title={
-                    cell.column.id === "name" ? row.original.name : undefined
-                  }
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>

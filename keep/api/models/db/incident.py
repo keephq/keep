@@ -4,18 +4,22 @@ from typing import List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import PrivateAttr
-from sqlalchemy import ForeignKey
+from retry import retry
+from sqlalchemy import ForeignKey, event
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy_utils import UUIDType
 from sqlmodel import (
     JSON,
     TEXT,
     Column,
     Field,
+    Index,
     Relationship,
     Session,
     SQLModel,
     func,
     select,
+    text,
 )
 
 from keep.api.models.alert import SeverityBaseInterface
@@ -63,7 +67,7 @@ class Incident(SQLModel, table=True):
     tenant: Tenant = Relationship()
 
     # Auto-incrementing number per tenant
-    # running_number: Optional[int] = Field(default=None)
+    running_number: Optional[int] = Field(default=None)
 
     user_generated_name: str | None
     ai_generated_name: str | None
@@ -86,7 +90,8 @@ class Incident(SQLModel, table=True):
     last_seen_time: datetime | None
 
     is_predicted: bool = Field(default=False)
-    is_confirmed: bool = Field(default=False)
+    is_candidate: bool = Field(default=False)
+    is_visible: bool = Field(default=True)
 
     alerts_count: int = Field(default=0)
     affected_services: list = Field(sa_column=Column(JSON), default_factory=list)
@@ -163,20 +168,17 @@ class Incident(SQLModel, table=True):
 
     class Config:
         arbitrary_types_allowed = True
-        # Remove the table constraint
-        # table_constraints = ["UNIQUE (tenant_id, running_number)"]
 
-    # Add a partial unique index instead
-    # __table_args__ = (
-    #     Index(
-    #         "ix_incident_tenant_running_number",
-    #         "tenant_id",
-    #         "running_number",
-    #         unique=True,
-    #         postgresql_where=text("running_number IS NOT NULL"),  # For PostgreSQL
-    #         sqlite_where=text("running_number IS NOT NULL"),  # For SQLite
-    #     ),
-    # )
+    __table_args__ = (
+        Index(
+            "ix_incident_tenant_running_number",
+            "tenant_id",
+            "running_number",
+            unique=True,
+            postgresql_where=text("running_number IS NOT NULL"),  # For PostgreSQL
+            sqlite_where=text("running_number IS NOT NULL"),  # For SQLite
+        ),
+    )
 
     @property
     def alerts(self):
@@ -187,27 +189,38 @@ class Incident(SQLModel, table=True):
         return getattr(self, "_enrichments", {})
 
 
-def get_next_running_number(session: Session, tenant_id: str) -> int:
-    result: int = session.exec(
-        select(func.max(Incident.running_number)).filter(
-            Incident.tenant_id == tenant_id
-        )
-    ).first()
+@retry(exceptions=(IntegrityError,), tries=3, delay=0.1, backoff=2, jitter=(0, 0.1))
+def get_next_running_number(session, tenant_id: str) -> int:
+    """Get the next running number for a tenant."""
+    try:
+        # Get the maximum running number for the tenant
+        result = session.exec(
+            select(func.max(Incident.running_number)).where(
+                Incident.tenant_id == tenant_id
+            )
+        ).first()
 
-    return (result or 0) + 1
+        # If no incidents exist yet, start from 1
+        next_number = (result or 0) + 1
+        return next_number
+    except IntegrityError:
+        session.rollback()
+        # Refresh the session's view of the data
+        session.expire_all()
+        raise
 
 
-# @event.listens_for(Incident, "before_insert")
-# def set_running_number(mapper, connection, target):
-#     if target.running_number is None:
-#         # Create a temporary session to get the next running number
-#         with Session(connection) as session:
-#             try:
-#                 target.running_number = get_next_running_number(
-#                     session, target.tenant_id
-#                 )
-#             except Exception:
-#                 target.running_number = None
+@event.listens_for(Incident, "before_insert")
+def set_running_number(mapper, connection, target):
+    if target.running_number is None:
+        # Create a temporary session to get the next running number
+        with Session(connection) as session:
+            try:
+                target.running_number = get_next_running_number(
+                    session, target.tenant_id
+                )
+            except Exception:
+                target.running_number = None
 
 
 # def upgrade() -> None:

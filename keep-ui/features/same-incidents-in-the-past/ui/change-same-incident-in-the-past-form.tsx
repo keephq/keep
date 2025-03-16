@@ -19,7 +19,7 @@ export function ChangeSameIncidentInThePastForm({
   handleClose,
   linkedIncident,
 }: ChangeSameIncidentInThePastFormProps) {
-  const { data: incidents, isLoading } = useIncidents(true, null, 100);
+  const { data: incidents, isLoading } = useIncidents(false, null, 100);
 
   const [selectedIncident, setSelectedIncident] = useState<string | undefined>(
     linkedIncident?.id
@@ -87,8 +87,9 @@ export function ChangeSameIncidentInThePastForm({
     );
 
     return (
-      <form className="h-full justify-center">
+      <form className="h-full">
         <Select
+          instanceId="change-same-incident-in-the-past-select"
           className="my-2.5"
           placeholder="Select incident"
           value={

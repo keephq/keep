@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timezone
 from typing import List, Optional
 
 from arq import ArqRedis
@@ -20,8 +19,8 @@ from sqlmodel import Session
 from keep.api.arq_pool import get_pool
 from keep.api.bl.ai_suggestion_bl import AISuggestionBl
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.bl.incident_reports import IncidentReportsBl
+from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, REDIS
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.db import (
@@ -45,11 +44,7 @@ from keep.api.core.incidents import (
     get_incident_potential_facet_fields,
 )
 from keep.api.models.action_type import ActionType
-from keep.api.models.alert import (
-    AlertDto,
-    EnrichAlertRequestBody,
-    EnrichIncidentRequestBody,
-)
+from keep.api.models.alert import AlertDto, EnrichIncidentRequestBody
 from keep.api.models.db.alert import AlertAudit
 from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
 from keep.api.models.facet import FacetOptionsQueryDto
@@ -68,7 +63,6 @@ from keep.api.models.incident import (
     SplitIncidentResponseDto,
 )
 from keep.api.models.workflow import WorkflowExecutionDTO
-from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import (
@@ -125,7 +119,7 @@ def get_incidents_meta(
     description="Get last incidents",
 )
 def get_all_incidents(
-    confirmed: bool = True,
+    candidate: bool = False,
     predicted: Optional[bool] = None,
     limit: int = 25,
     offset: int = 0,
@@ -180,7 +174,7 @@ def get_all_incidents(
     try:
         result = incident_bl.query_incidents(
             tenant_id=tenant_id,
-            is_confirmed=confirmed,
+            is_candidate=candidate,
             is_predicted=predicted,
             limit=limit,
             offset=offset,
@@ -850,62 +844,10 @@ def change_incident_status(
     session: Session = Depends(get_session),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Fetching incident",
-        extra={
-            "incident_id": incident_id,
-            "tenant_id": tenant_id,
-        },
-    )
 
-    with_alerts = change.status in [
-        IncidentStatus.RESOLVED,
-        IncidentStatus.ACKNOWLEDGED,
-    ]
-    incident = get_incident_by_id(
-        tenant_id, incident_id, with_alerts=with_alerts, session=session
-    )
+    incident_bl = IncidentBl(tenant_id, session)
 
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-
-    # We need to do something only if status really changed
-    if change.status != incident.status:
-        if change.status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:
-            for alert in incident._alerts:
-                _enrich_alert(
-                    EnrichAlertRequestBody(
-                        enrichments={"status": change.status.value},
-                        fingerprint=alert.fingerprint,
-                    ),
-                    authenticated_entity=authenticated_entity,
-                )
-
-        if change.status == IncidentStatus.RESOLVED:
-            end_time = datetime.now(tz=timezone.utc)
-            incident.end_time = end_time
-
-        if incident.assignee != authenticated_entity.email:
-            incident.assignee = authenticated_entity.email
-            add_audit(
-                tenant_id,
-                str(incident_id),
-                authenticated_entity.email,
-                ActionType.INCIDENT_ASSIGN,
-                f"Incident self-assigned to {authenticated_entity.email}",
-            )
-
-        add_audit(
-            tenant_id,
-            str(incident_id),
-            authenticated_entity.email,
-            ActionType.INCIDENT_STATUS_CHANGE,
-            f"Incident status changed from {incident.status} to {change.status.value}",
-        )
-        incident.status = change.status.value
-        session.commit()
-
-    new_incident_dto = IncidentDto.from_db_incident(incident)
+    new_incident_dto = incident_bl.change_status(incident_id, change.status, authenticated_entity)
 
     return new_incident_dto
 

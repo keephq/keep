@@ -235,7 +235,7 @@ export default function IncidentAlerts({ incident }: Props) {
               alert={context.row.original}
               onViewAlert={setViewAlertModal}
               onUnlink={(alert) => {
-                if (incident.is_confirmed) {
+                if (!incident.is_candidate) {
                   if (confirm("Are you sure you want to unlink this alert?")) {
                     api
                       .post(`/incidents/${incident.id}/unlink`, {
@@ -247,7 +247,7 @@ export default function IncidentAlerts({ incident }: Props) {
                   }
                 }
               }}
-              isConfirmed={incident.is_confirmed}
+              isCandidate={!incident.is_candidate}
             />
           </div>
         ),
@@ -256,7 +256,7 @@ export default function IncidentAlerts({ incident }: Props) {
         },
       }),
     ],
-    [incident.id, incident.is_confirmed, api, mutateAlerts]
+    [incident.id, incident.is_candidate, api, mutateAlerts]
   );
 
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -318,6 +318,51 @@ export default function IncidentAlerts({ incident }: Props) {
 
   const selectedFingerprints = Object.keys(rowSelection);
 
+
+  function renderRows() {
+    // This trick handles cases when rows have duplicated ids
+    // It shouldn't happen, but the API currently returns duplicated ids
+    // And in order to mitigate this issue, we append the rowIndex to the key for duplicated keys
+    const visitedIds = new Set<string>();
+
+    return table.getRowModel().rows.map((row, rowIndex) => {
+      let renderingKey = row.id;
+
+      if (visitedIds.has(renderingKey)) {
+        renderingKey = `${renderingKey}-${rowIndex}`;
+      } else {
+        visitedIds.add(renderingKey);
+      }
+
+      return (
+        <TableRow
+          key={`row-${row.id}-${rowIndex}`}
+          className="group/row hover:bg-gray-50"
+        >
+          {row.getVisibleCells().map((cell, index) => {
+            const { style, className } = getCommonPinningStylesAndClassNames(
+              cell.column,
+              table.getState().columnPinning.left?.length,
+              table.getState().columnPinning.right?.length
+            );
+            return (
+              <TableCell
+                key={`cell-${cell.id}-${index}`}
+                style={style}
+                className={clsx(
+                  cell.column.columnDef.meta?.tdClassName,
+                  className
+                )}
+              >
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </TableCell>
+            );
+          })}
+        </TableRow>
+      );
+    });
+  }
+
   return (
     <>
       <IncidentAlertsActions
@@ -360,38 +405,7 @@ export default function IncidentAlerts({ incident }: Props) {
             ))}
           </TableHead>
           {alerts && alerts?.items?.length > 0 && (
-            <TableBody>
-              {table.getRowModel().rows.map((row, index) => (
-                <TableRow
-                  key={`row-${row.id}-${index}`}
-                  className="group/row hover:bg-gray-50"
-                >
-                  {row.getVisibleCells().map((cell, index) => {
-                    const { style, className } =
-                      getCommonPinningStylesAndClassNames(
-                        cell.column,
-                        table.getState().columnPinning.left?.length,
-                        table.getState().columnPinning.right?.length
-                      );
-                    return (
-                      <TableCell
-                        key={`cell-${cell.id}-${index}`}
-                        style={style}
-                        className={clsx(
-                          cell.column.columnDef.meta?.tdClassName,
-                          className
-                        )}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableBody>
+            <TableBody>{renderRows()}</TableBody>
           )}
           {isLoading && (
             <IncidentAlertsTableBodySkeleton

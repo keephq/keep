@@ -1,6 +1,9 @@
 const { withSentryConfig } = require("@sentry/nextjs");
 
 const isWithTurbo = process.env.NEXT_TURBO === "true";
+const isSentryDisabled =
+  process.env.SENTRY_DISABLED === "true" ||
+  process.env.NODE_ENV === "development";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -84,11 +87,10 @@ const nextConfig = {
   compiler: isWithTurbo
     ? undefined
     : {
-        removeConsole: process.env.NODE_ENV === "production",
+        removeConsole: false,
       },
   output: "standalone",
-  productionBrowserSourceMaps:
-    process.env.ENV === "development" || process.env.SENTRY_DISABLED !== "true",
+  productionBrowserSourceMaps: !isSentryDisabled,
   async redirects() {
     const workflowRawYamlRedirects = [
       {
@@ -189,10 +191,6 @@ const sentryConfig = {
   // https://vercel.com/docs/cron-jobs
   automaticVercelMonitors: true,
 };
-
-const isSentryDisabled =
-  process.env.SENTRY_DISABLED === "true" ||
-  process.env.NODE_ENV === "development";
 
 // Compose the final config
 let config = nextConfig;

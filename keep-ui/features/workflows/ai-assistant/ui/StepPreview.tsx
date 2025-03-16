@@ -3,6 +3,11 @@ import clsx from "clsx";
 import Image from "next/image";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 import { normalizeStepType } from "../../builder/lib/utils";
+// Monaco Editor - do not load from CDN (to support on-prem)
+// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
+import * as monaco from "monaco-editor";
+import { loader } from "@monaco-editor/react";
+loader.config({ monaco });
 import { Editor } from "@monaco-editor/react";
 import { stringify } from "yaml";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";

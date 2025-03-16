@@ -3,6 +3,7 @@ import os
 from typing import Tuple
 
 from sqlalchemy import and_, asc, desc, func, literal_column, select
+from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, text
 
 from keep.api.core.cel_to_sql.properties_metadata import (
@@ -38,8 +39,15 @@ alert_field_configurations = [
     FieldMappingConfiguration("source", "filter_provider_type"),
     FieldMappingConfiguration("providerId", "filter_provider_id"),
     FieldMappingConfiguration("providerType", "filter_provider_type"),
-    FieldMappingConfiguration("lastReceived", "filter_last_received"),
+    FieldMappingConfiguration("timestamp", "filter_timestamp"),
+    FieldMappingConfiguration("fingerprint", "filter_fingerprint"),
     FieldMappingConfiguration("startedAt", "startedAt"),
+    FieldMappingConfiguration(
+        map_from_pattern="incident.id",
+        map_to=[
+            "filter_incident_id",
+        ],
+    ),
     FieldMappingConfiguration(
         map_from_pattern="incident.name",
         map_to=[
@@ -62,6 +70,13 @@ alert_field_configurations = [
         ],
     ),
     FieldMappingConfiguration(
+        map_from_pattern="lastReceived",
+        map_to=[
+            "JSON(filter_alert_enrichment_json).*",
+            "JSON(filter_alert_event_json).*",
+        ],
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="status",
         map_to=[
             "JSON(filter_alert_enrichment_json).*",
@@ -78,13 +93,15 @@ alert_field_configurations = [
     ),
 ]
 alias_column_mapping = {
-    "filter_last_received": "alert.timestamp",
+    "filter_timestamp": "alert.timestamp",
     "filter_provider_id": "alert.provider_id",
     "filter_provider_type": "alert.provider_type",
+    "filter_incident_id": "incident.id",
     "filter_incident_user_generated_name": "incident.user_generated_name",
     "filter_incident_ai_generated_name": "incident.ai_generated_name",
     "filter_alert_enrichment_json": "alertenrichment.enrichments",
     "filter_alert_event_json": "alert.event",
+    "filter_fingerprint": "lastalert.fingerprint",
 }
 
 properties_metadata = PropertiesMetadata(alert_field_configurations)
@@ -141,6 +158,7 @@ def __build_query_for_filtering(tenant_id: str):
             LastAlert.tenant_id.label("last_alert_tenant_id"),
             LastAlert.first_timestamp.label("startedAt"),
             LastAlert.alert_id.label("entity_id"),
+            LastAlert.fingerprint.label("alert_fingerprint"),
             # here it creates aliases for table columns that will be used in filtering and faceting
             text(",".join(columns_to_select)),
         )
@@ -248,18 +266,18 @@ def build_alerts_query(
             literal_column("filter_alert_enrichment_json"),
         )
         .select_from(base)
+        .outerjoin(
+            AlertEnrichment,
+            and_(
+                base.c.last_alert_tenant_id == AlertEnrichment.tenant_id,
+                base.c.alert_fingerprint == AlertEnrichment.alert_fingerprint,
+            ),
+        )
         .join(
             Alert,
             and_(
                 base.c.last_alert_tenant_id == Alert.tenant_id,
                 base.c.alert_id == Alert.id,
-            ),
-        )
-        .outerjoin(
-            AlertEnrichment,
-            and_(
-                AlertEnrichment.tenant_id == Alert.tenant_id,
-                AlertEnrichment.alert_fingerprint == Alert.fingerprint,
             ),
         )
     ).where(Alert.tenant_id == tenant_id)
@@ -304,25 +322,28 @@ def query_last_alerts(
         if cel == "1 == 1":
             logger.warning("Failed to build query for alerts")
             cel = ""
+        try:
+            total_count_query = build_total_alerts_query(
+                tenant_id=tenant_id, cel=cel, limit=alerts_hard_limit
+            )
+            total_count = session.exec(total_count_query).one()[0]
 
-        total_count_query = build_total_alerts_query(
-            tenant_id=tenant_id, cel=cel, limit=alerts_hard_limit
-        )
-        total_count = session.exec(total_count_query).one()[0]
+            if not limit:
+                return [], total_count
 
-        if not limit:
-            return [], total_count
+            if offset >= alerts_hard_limit:
+                return [], total_count
 
-        if offset >= alerts_hard_limit:
-            return [], total_count
+            if offset + limit > alerts_hard_limit:
+                limit = alerts_hard_limit - offset
 
-        if offset + limit > alerts_hard_limit:
-            limit = alerts_hard_limit - offset
-
-        data_query = build_alerts_query(
-            tenant_id, cel, sort_by, sort_dir, limit, offset
-        )
-        alerts_with_start = session.execute(data_query).all()
+            data_query = build_alerts_query(
+                tenant_id, cel, sort_by, sort_dir, limit, offset
+            )
+            alerts_with_start = session.execute(data_query).all()
+        except OperationalError as e:
+            logger.warning(f"Failed to query alerts for CEL '{cel}': {e}")
+            return [], 0
 
         # Process results based on dialect
         alerts = []

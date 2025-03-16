@@ -29,12 +29,16 @@ from keep.api.core.alerts import (
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.config import config
+from keep.api.core.db import dismiss_error_alerts as dismiss_error_alerts_db
 from keep.api.core.db import enrich_alerts_with_incidents
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_metrics_by_provider,
     get_enrichment,
+)
+from keep.api.core.db import get_error_alerts as get_error_alerts_db
+from keep.api.core.db import (
     get_last_alert_by_fingerprint,
     get_last_alerts,
     get_session,
@@ -46,8 +50,10 @@ from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import (
     AlertDto,
+    AlertErrorDto,
     AlertStatus,
     DeleteRequestBody,
+    DismissAlertRequest,
     EnrichAlertNoteRequestBody,
     EnrichAlertRequestBody,
     UnEnrichAlertRequestBody,
@@ -816,39 +822,14 @@ def _enrich_alert(
 
     try:
         enrichement_bl = EnrichmentsBl(tenant_id, db=session)
-        # Shahar: TODO, change to the specific action type, good enough for now
-        if (
-            "status" in enrich_data.enrichments
-            and authenticated_entity.api_key_name is None
-        ):
-            action_type = (
-                ActionType.MANUAL_RESOLVE
-                if enrich_data.enrichments["status"] == "resolved"
-                else ActionType.MANUAL_STATUS_CHANGE
-            )
-            action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by {authenticated_entity.email}"
-            should_run_workflow = True
-            if enrich_data.enrichments["status"] == "resolved":
-                should_check_incidents_resolution = True
-        elif "status" in enrich_data.enrichments and authenticated_entity.api_key_name:
-            action_type = (
-                ActionType.API_AUTOMATIC_RESOLVE
-                if enrich_data.enrichments["status"] == "resolved"
-                else ActionType.API_STATUS_CHANGE
-            )
-            action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by API `{authenticated_entity.api_key_name}`"
-            should_run_workflow = True
-            if enrich_data.enrichments["status"] == "resolved":
-                should_check_incidents_resolution = True
-        elif "note" in enrich_data.enrichments and enrich_data.enrichments["note"]:
-            action_type = ActionType.COMMENT
-            action_description = f"Comment added by {authenticated_entity.email} - {enrich_data.enrichments['note']}"
-        elif "ticket_url" in enrich_data.enrichments:
-            action_type = ActionType.TICKET_ASSIGNED
-            action_description = f"Ticket assigned by {authenticated_entity.email} - {enrich_data.enrichments['ticket_url']}"
-        else:
-            action_type = ActionType.GENERIC_ENRICH
-            action_description = f"Alert enriched by {authenticated_entity.email} - {enrich_data.enrichments}"
+        (
+            action_type,
+            action_description,
+            should_run_workflow,
+            should_check_incidents_resolution,
+        ) = enrichement_bl.get_enrichment_metadata(
+            enrich_data.enrichments, authenticated_entity
+        )
 
         enrichments = deepcopy(enrich_data.enrichments)
         enrichement_bl.enrich_entity(
@@ -1174,3 +1155,106 @@ def get_alert_quality(
     )
 
     return db_alerts_quality
+
+
+@router.get(
+    "/event/error",
+    description="Get alerts that Keep failed to process",
+)
+def get_error_alerts(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+    limit: int = 1000,
+) -> list[AlertErrorDto]:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching error alerts from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    error_alerts = get_error_alerts_db(tenant_id=tenant_id, limit=limit)
+    error_alerts_dtos = [
+        AlertErrorDto(
+            id=str(alert.id),
+            event=alert.raw_alert,
+            error_message=alert.error_message,
+            timestamp=alert.timestamp,
+            provider_type=alert.provider_type or "keep",
+        )
+        for alert in error_alerts
+    ]
+    logger.info(
+        "Fetched error alerts from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return error_alerts_dtos
+
+
+@router.post(
+    "/event/error/dismiss",
+    description="Dismiss error alerts. If alert_id is provided, dismisses that specific alert. If no alert_id is provided, dismisses all alerts.",
+)
+def dismiss_error_alerts(
+    request: DismissAlertRequest = None,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
+) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+
+    # If alert_id is provided, dismiss a specific alert
+    if request and request.alert_id:
+        alert_id = request.alert_id
+
+        logger.info(
+            "Dismissing specific error alert",
+            extra={
+                "tenant_id": tenant_id,
+                "alert_id": alert_id,
+            },
+        )
+
+        # Update the alert in the database to mark it as dismissed
+        dismiss_error_alerts_db(
+            tenant_id=tenant_id,
+            alert_id=alert_id,
+            dismissed_by=authenticated_entity.email,
+        )
+
+        logger.info(
+            "Successfully dismissed an error alert",
+            extra={
+                "tenant_id": tenant_id,
+                "alert_id": alert_id,
+            },
+        )
+
+        return {"success": True, "message": "Alert dismissed successfully"}
+
+    # If no alert_id is provided, dismiss all alerts
+    else:
+        logger.info(
+            "Dismissing all error alerts for tenant",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
+
+        # Update all alerts for the tenant to mark them as dismissed
+        dismiss_error_alerts_db(
+            tenant_id=tenant_id, dismissed_by=authenticated_entity.email
+        )
+
+        logger.info(
+            "Successfully dismissed all error alerts",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
+
+        return {"success": True, "message": "Successfully dismissed all alerts"}

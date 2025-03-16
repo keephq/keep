@@ -1,0 +1,30 @@
+workflow:
+  id: 9f33281e-abf6-4254-b763-611eed6614ec
+  name: test_flashduty_workflow
+  description: desc
+  disabled: false
+  triggers:
+    - type: incident
+      events:
+        - created
+        - updated
+        - deleted
+  consts: {}
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: flashduty-action
+      provider:
+        type: flashduty
+        config: "{{ providers.default-flashduty }}"
+        with:
+          title: test title
+          description: test description
+          event_status: Info
+          alert_key: 611eed6614ec
+          labels:
+            service: flashduty
+            environment: dev
+
+

@@ -16,7 +16,7 @@ export const useAlertPolling = (isEnabled: boolean) => {
     }
 
     const subscription = new Observable((subscriber) => {
-      const callback = () => subscriber.next();
+      const callback = () => subscriber.next(true);
       bind("poll-alerts", callback);
       return () => unbind("poll-alerts", callback);
     }).subscribe(() => setPollAlerts(generateGuid()));

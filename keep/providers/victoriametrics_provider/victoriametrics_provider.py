@@ -155,6 +155,16 @@ class VictoriametricsProviderAuthConfig:
         },
         default=False,
     )
+    insecure: bool = dataclasses.field(
+        default=False,
+        metadata={
+            "name": "insecure",
+            "description": "Skip TLS verification",
+            "required": False,
+            "sensitive": False,
+            "type": "switch",
+        },
+    )
 
 
 class VictoriametricsProvider(BaseProvider):
@@ -225,7 +235,11 @@ receivers:
             return {"connected": True}
 
         if self.vmalert_enabled:
-            vmalert_response = requests.get(self.vmalert_host, auth=self._get_auth())
+            vmalert_response = requests.get(
+                self.vmalert_host,
+                auth=self._get_auth(),
+                verify=not self.authentication_config.insecure,
+            )
             if vmalert_response.status_code == 200:
                 self.logger.info("Connected to VMAlert successfully")
             else:
@@ -237,7 +251,9 @@ receivers:
 
         if self.vmbackend_enabled:
             vmbackend_response = requests.get(
-                self.vmbackend_host, auth=self._get_auth()
+                self.vmbackend_host,
+                auth=self._get_auth(),
+                verify=not self.authentication_config.insecure,
             )
             if vmbackend_response.status_code == 200:
                 self.logger.info("Connected to VM Backend successfully")
@@ -329,8 +345,8 @@ receivers:
             url = f"https://{host}"
             requests.get(
                 url,
-                verify=False,
                 auth=self._get_auth(),
+                verify=not self.authentication_config.insecure,
             )
             self.logger.debug("Using HTTPS for VMAlert")
             self._vmalert_host = f"https://{host}"
@@ -369,8 +385,8 @@ receivers:
             url = f"https://{host}"
             requests.get(
                 url,
-                verify=False,
                 auth=self._get_auth(),
+                verify=not self.authentication_config.insecure,
             )
             self.logger.debug("Using HTTPS for VM Backend")
             self._vmbackend_host = f"https://{host}"
@@ -421,7 +437,9 @@ receivers:
             raise Exception("VMAlert is not configured")
 
         response = requests.get(
-            f"{self.vmalert_host}/api/v1/alerts", auth=self._get_auth()
+            f"{self.vmalert_host}/api/v1/alerts",
+            auth=self._get_auth(),
+            verify=not self.authentication_config.insecure,
         )
         try:
             response.raise_for_status()
@@ -463,6 +481,7 @@ receivers:
                 f"{base_url}/api/v1/query",
                 params={"query": query, "time": start},
                 auth=auth,
+                verify=not self.authentication_config.insecure,
             )
             try:
                 response.raise_for_status()
@@ -477,6 +496,7 @@ receivers:
                 f"{base_url}/api/v1/query_range",
                 params={"query": query, "start": start, "end": end, "step": step},
                 auth=auth,
+                verify=not self.authentication_config.insecure,
             )
             if response.status_code == 200:
                 results = response.json()

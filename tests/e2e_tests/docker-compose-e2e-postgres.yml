@@ -16,14 +16,13 @@ services:
 
   # Frontend Services
   keep-frontend:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-frontend-common
-    build:
-      context: ./keep-ui/
-      dockerfile: ../docker/Dockerfile.ui
+    # to be replaced in github actions
+    image: "%KEEPFRONTEND_IMAGE%"
+    ports:
+      - "3000:3000"
     environment:
       - AUTH_TYPE=NO_AUTH
+      - NEXTAUTH_SECRET=secret
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
       - FRIGADE_DISABLED=true
@@ -31,12 +30,10 @@ services:
 
   # Backend Services
   keep-backend:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-backend-common
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.api
+    # to be replaced in github actions
+    image: "%KEEPBACKEND_IMAGE%"
+    ports:
+      - "8080:8080"
     environment:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=postgresql+psycopg2://keepuser:keeppassword@keep-database:5432/keepdb
@@ -64,27 +61,25 @@ services:
 
   # Frontend Services (3001)
   keep-frontend-db-auth:
-    build:
-      context: ./keep-ui/
-      dockerfile: ../docker/Dockerfile.ui
+    # to be replaced in github actions
+    image: "%KEEPFRONTEND_IMAGE%"
     ports:
       - "3001:3000"
     environment:
       - NEXTAUTH_SECRET=secret
       - NEXTAUTH_URL=http://localhost:3001
-      - NEXT_PUBLIC_API_URL=http://localhost:8080
       - POSTHOG_DISABLED=true
       - AUTH_TYPE=DB
       - API_URL=http://keep-backend-db-auth:8080
       - POSTHOG_DISABLED=true
       - FRIGADE_DISABLED=true
       - SENTRY_DISABLED=true
+      - AUTH_DEBUG=true
 
   # Backend Services (8081)
   keep-backend-db-auth:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.api
+    # to be replaced in github actions
+    image: "%KEEPBACKEND_IMAGE%"
     ports:
       - "8081:8080"
     environment:

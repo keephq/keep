@@ -15,11 +15,15 @@ import {
   XCircleIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
-import parseISO from "date-fns/parseISO";
-import formatDistance from "date-fns/formatDistance";
-import { differenceInSeconds } from "date-fns";
+import { parseISO, differenceInSeconds, formatDistance } from "date-fns";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+
+// Monaco Editor - do not load from CDN (to support on-prem)
+// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
+import * as monaco from "monaco-editor";
+import { loader } from "@monaco-editor/react";
+loader.config({ monaco });
 import Editor from "@monaco-editor/react";
 
 function getStepIcon(status: string) {

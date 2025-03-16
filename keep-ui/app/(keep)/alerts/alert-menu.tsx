@@ -16,8 +16,8 @@ import {
   ClockIcon,
   LinkIcon,
 } from "@heroicons/react/20/solid";
+import { IoNotificationsOffOutline, IoExpandSharp } from "react-icons/io5";
 import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
-import { IoNotificationsOffOutline } from "react-icons/io5";
 import { Icon } from "@tremor/react";
 import { ProviderMethod } from "@/shared/api/providers";
 import { AlertDto } from "@/entities/alerts/model";
@@ -40,6 +40,7 @@ import {
   ImagePreviewTooltip,
   TooltipPosition,
 } from "@/components/ui/ImagePreviewTooltip";
+import { useExpandedRows } from "utils/hooks/useExpandedRows";
 
 interface Props {
   alert: AlertDto;
@@ -85,6 +86,9 @@ export default function AlertMenu({
     []
   );
   const [showActionsOnHover] = useLocalStorage("alert-action-tray-hover", true);
+  const { isRowExpanded, toggleRowExpanded } = useExpandedRows(presetName);
+  const expanded = isRowExpanded(alert.fingerprint);
+
   const {
     data: { installed_providers: installedProviders } = {
       installed_providers: [],
@@ -239,7 +243,25 @@ export default function AlertMenu({
             : "View Alert Payload"
         }
       />
-
+      {/* Expand button */}
+      <Button
+        className={actionIconButtonClassName}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleRowExpanded(alert.fingerprint);
+        }}
+        variant="light"
+        icon={() => (
+          <Icon
+            icon={IoExpandSharp}
+            className={clsx(
+              "w-4 h-4 object-cover rounded",
+              expanded ? "text-orange-400" : "text-gray-500"
+            )}
+          />
+        )}
+        tooltip={expanded ? "Collapse Row" : "Expand Row"}
+      />
       {imageUrl && !imageError && (
         <div
           ref={imageContainerRef}
@@ -478,6 +500,7 @@ export default function AlertMenu({
         icon: (props: any) => (
           <DynamicImageProviderIcon
             providerType={provider.type}
+            src={`/icons/${provider.type}-icon.png`}
             {...props}
             height="16"
             width="16"

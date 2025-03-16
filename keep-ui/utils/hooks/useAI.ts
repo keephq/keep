@@ -36,23 +36,38 @@ export const usePollAILogs = (mutateAILogs: (logs: AILogs) => void) => {
 };
 
 type UseAIActionsValue = {
-  updateAISettings: (algorithm_id: string, settings: AIConfig) => Promise<AIStats>;
+  updateAISettings: (
+    algorithm_id: string,
+    settings: AIConfig
+  ) => Promise<AIStats>;
 };
 
-export function UseAIActions(): UseAIActionsValue {
-
+export function useAIActions(): UseAIActionsValue {
   const api = useApi();
 
-  const updateAISettings = async (algorithm_id:string, settings: AIConfig): Promise<AIStats> => {
-    const response = await api.put<AIStats>(`/ai/${algorithm_id}/settings`, settings);
+  const updateAISettings = async (
+    algorithm_id: string,
+    settings: AIConfig
+  ): Promise<AIStats> => {
+    // TODO: FIX, it's a hack to avoid updating settings_proposed_by_algorithm
+    // DO NOT UPDATE settings_proposed_by_algorithm, it will be updated by the algorithm
+    const settingsToUpdate = {
+      ...settings,
+      settings_proposed_by_algorithm: null,
+    };
+
+    const response = await api.put<AIStats>(
+      `/ai/${algorithm_id}/settings`,
+      settingsToUpdate
+    );
 
     if (!response) {
       throw new Error("Failed to update AI settings");
     }
     return response;
   };
-  
+
   return {
-    updateAISettings: updateAISettings,
+    updateAISettings,
   };
 }
