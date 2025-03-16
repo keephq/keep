@@ -8,6 +8,13 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import Editor, { Monaco } from "@monaco-editor/react";
 import { Lock, Unlock, Save, AlertTriangle, Copy, X } from "lucide-react";
+
+// Monaco Editor - do not load from CDN (to support on-prem)
+// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
+import * as monaco from "monaco-editor";
+import { loader } from "@monaco-editor/react";
+loader.config({ monaco });
+
 import * as monacoEditor from "monaco-editor/esm/vs/editor/editor.api";
 
 interface ViewAlertModalProps {

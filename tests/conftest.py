@@ -1,11 +1,12 @@
 import inspect
+import json
 import os
 import random
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Any, Generator
 from unittest.mock import Mock, patch
-from typing import Generator, Any
 
 import mysql.connector
 import pytest
@@ -17,7 +18,6 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 from starlette_context import context, request_cycle_context
-import json
 
 # This import is required to create the tables
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -538,14 +538,28 @@ def keycloak_token(request):
 def browser():
     from playwright.sync_api import sync_playwright
 
+    try:
+        tenant_id = f"keep{os.getpid()}"
+        print("Creating tenant - ", tenant_id)
+        resp = requests.post(
+            "http://localhost:8080/tenant",
+            json={"tenant_id": tenant_id},
+        )
+        resp.raise_for_status()
+        print("Tenant created")
+    except Exception as exc:
+        print(exc)
     # Force headless mode if running in CI environment
     is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
     headless = is_ci or os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true"
+    # headless = False
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
         context = browser.new_context(
             viewport={"width": 1920, "height": 1080},
+            # macbook 13
+            # viewport={"width": 1280, "height": 800},
         )
         context.grant_permissions(["clipboard-read", "clipboard-write"])
         page = context.new_page()
@@ -723,7 +737,7 @@ def create_alert(db_session):
             event={
                 "name": random_name,
                 "fingerprint": fingerprint,
-                "lastReceived": details.pop('lastReceived', timestamp.isoformat()),
+                "lastReceived": details.pop("lastReceived", timestamp.isoformat()),
                 "status": status.value,
                 **details,
             },
@@ -805,6 +819,7 @@ def console_logs():
     logs = []
     return logs
 
+
 @pytest.fixture
 def setup_page_logging(browser, console_logs):
     """Fixture to set up console logging for a page."""
@@ -846,14 +861,15 @@ def setup_page_logging(browser, console_logs):
             )
         ),
     )
-    
+
     return browser
+
 
 @pytest.fixture
 def failure_artifacts(browser, console_logs, request):
     """Fixture to automatically save failure artifacts on test failure."""
     yield
-    
+
     # Only save artifacts if the test failed
     if request.node.rep_call.failed:
         test_name = (
@@ -862,7 +878,7 @@ def failure_artifacts(browser, console_logs, request):
             + "_"
             + request.node.name
         )
-        
+
         # Save each artifact type independently
         artifacts_saved = []
         artifacts_failed = []
@@ -873,7 +889,7 @@ def failure_artifacts(browser, console_logs, request):
             artifacts_saved.append("screenshot")
         except Exception as e:
             artifacts_failed.append(f"screenshot: {str(e)}")
-            
+
         # Try to save HTML content
         try:
             with open(test_name + ".html", "w", encoding="utf-8") as f:
@@ -881,7 +897,7 @@ def failure_artifacts(browser, console_logs, request):
             artifacts_saved.append("html")
         except Exception as e:
             artifacts_failed.append(f"html: {str(e)}")
-            
+
         # Try to save console logs
         try:
             # Add debug info about console logs
@@ -894,7 +910,7 @@ def failure_artifacts(browser, console_logs, request):
                 artifacts_failed.append("console logs: No logs were captured")
         except Exception as e:
             artifacts_failed.append(f"console logs: {str(e)}")
-            
+
         # Try to save cookies
         try:
             cookies = browser.context.cookies()
@@ -915,11 +931,12 @@ def failure_artifacts(browser, console_logs, request):
         if artifacts_failed:
             print(f"Failed to save or empty: {', '.join(artifacts_failed)}")
 
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call) -> Generator[None, Any, Any]:
     """Hook to store test results for use in fixtures."""
     outcome = yield
     rep = outcome.get_result()
-    
+
     # Set report for each phase (setup, call, teardown)
     setattr(item, f"rep_{rep.when}", rep)

@@ -27,6 +27,7 @@ class IncidentDtoIn(BaseModel):
     assignee: str | None
     user_summary: str | None
     same_incident_in_the_past_id: UUID | None
+    severity: IncidentSeverity | None
 
     class Config:
         extra = Extra.allow
@@ -52,13 +53,12 @@ class IncidentDto(IncidentDtoIn):
 
     alerts_count: int
     alert_sources: list[str]
-    severity: IncidentSeverity
     status: IncidentStatus = IncidentStatus.FIRING
     assignee: str | None
     services: list[str]
 
     is_predicted: bool
-    is_confirmed: bool
+    is_candidate: bool
 
     generated_summary: str | None
     ai_generated_name: str | None
@@ -162,7 +162,7 @@ class IncidentDto(IncidentDtoIn):
             user_summary=db_incident.user_summary,
             generated_summary=db_incident.generated_summary,
             is_predicted=db_incident.is_predicted,
-            is_confirmed=db_incident.is_confirmed,
+            is_candidate=db_incident.is_candidate,
             creation_time=db_incident.creation_time,
             start_time=db_incident.start_time,
             last_seen_time=db_incident.last_seen_time,
@@ -213,7 +213,7 @@ class IncidentDto(IncidentDtoIn):
             affected_services=self.services,
             sources=self.alert_sources,
             is_predicted=self.is_predicted,
-            is_confirmed=self.is_confirmed,
+            is_candidate=self.is_candidate,
             rule_fingerprint=self.rule_fingerprint,
             fingerprint=self.fingerprint,
             same_incident_in_the_past_id=self.same_incident_in_the_past_id,

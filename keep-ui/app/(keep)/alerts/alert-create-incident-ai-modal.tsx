@@ -60,7 +60,7 @@ const CreateIncidentWithAIModal = ({
   const api = useApi();
   const router = useRouter();
   const { mutate: mutateIncidents } = useIncidents(
-    true,
+    false,
     null,
     20,
     0,

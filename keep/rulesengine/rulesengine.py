@@ -127,7 +127,7 @@ class RulesEngine:
                             session=session,
                         )
 
-                        if not incident.is_confirmed:
+                        if not incident.is_visible:
 
                             self.logger.info(
                                 f"No existing incidents for rule {rule.name}. Checking incident creation conditions"
@@ -143,7 +143,7 @@ class RulesEngine:
                                     self.logger.info(
                                         "Single event is enough, so creating incident"
                                     )
-                                    incident.is_confirmed = True
+                                    incident.is_visible = True
                                 elif rule.create_on == "all":
                                     incident = (
                                         self._process_event_for_history_based_rule(
@@ -151,18 +151,18 @@ class RulesEngine:
                                         )
                                     )
 
-                            send_created_event = incident.is_confirmed
+                            send_created_event = incident.is_visible
 
-                        incident = IncidentBl(self.tenant_id, session).resolve_incident_if_require(
-                            incident
-                        )
+                        incident = IncidentBl(
+                            self.tenant_id, session
+                        ).resolve_incident_if_require(incident)
 
                         incident_dto = IncidentDto.from_db_incident(incident)
                         if send_created_event:
                             RulesEngine.send_workflow_event(
                                 self.tenant_id, session, incident_dto, "created"
                             )
-                        elif incident.is_confirmed:
+                        elif incident.is_visible:
                             RulesEngine.send_workflow_event(
                                 self.tenant_id, session, incident_dto, "updated"
                             )
@@ -215,6 +215,14 @@ class RulesEngine:
             rule_fingerprint,
             session=session,
         )
+
+        if existed_incident and not expired and rule.incident_prefix:
+            if rule.incident_prefix not in existed_incident.user_generated_name:
+                existed_incident.user_generated_name = f"{rule.incident_prefix}-{existed_incident.running_number} - {existed_incident.user_generated_name}"
+                self.logger.info(
+                    "Incident name updated with prefix",
+                )
+
         # if not incident name template, return the incident
         if existed_incident and not expired and not rule.incident_name_template:
             return existed_incident, False
@@ -325,7 +333,7 @@ class RulesEngine:
                 fingerprints=fingerprints, status=AlertStatus.FIRING, session=session
             )
             if all_alerts_firing:
-                incident.is_confirmed = True
+                incident.is_visible = True
 
         return incident
 
