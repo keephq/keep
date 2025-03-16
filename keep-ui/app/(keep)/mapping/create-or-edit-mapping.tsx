@@ -42,6 +42,7 @@ import Editor from "@monaco-editor/react";
 // https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
 import * as monaco from "monaco-editor";
 import { loader } from "@monaco-editor/react";
+import { useTenantConfigurationKey } from "@/utils/hooks/useTenantConfigurationKey";
 loader.config({ monaco });
 
 interface Props {
@@ -70,6 +71,9 @@ export default function CreateOrEditMapping({
   const [isMultiLevel, setIsMultiLevel] = useState<boolean>(false);
   const [newPropertyName, setNewPropertyName] = useState<string>("");
   const [prefixToRemove, setPrefixToRemove] = useState<string>("");
+  const { data: multiLevelEnabled } = useTenantConfigurationKey<boolean>(
+    "multi_level_enabled"
+  );
 
   const { data: editRule, isLoading: isLoadingEditRule } =
     useMappingRule(editRuleId);
@@ -409,7 +413,7 @@ export default function CreateOrEditMapping({
         </div>
       )}
 
-      {parsedData && mappingType === "csv" && (
+      {parsedData && mappingType === "csv" && multiLevelEnabled && (
         <div className="mt-4">
           <div className="flex items-center space-x-2">
             <Switch

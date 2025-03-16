@@ -14,6 +14,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import React from "react";
 import { CorrelationFormType } from "./types";
+import { useTenantConfigurationKey } from "@/utils/hooks/useTenantConfigurationKey";
 
 type CorrelationFormProps = {
   alertsFound: AlertDto[];
@@ -30,6 +31,10 @@ export const CorrelationForm = ({
     watch,
     formState: { errors, isSubmitted },
   } = useFormContext<CorrelationFormType>();
+
+  const { data: multiLevelEnabled } = useTenantConfigurationKey<boolean>(
+    "multi_level_enabled"
+  );
 
   const getNestedKeys = (obj: any, prefix = ""): string[] => {
     return Object.entries(obj).reduce<string[]>((acc, [key, value]) => {
@@ -281,28 +286,30 @@ export const CorrelationForm = ({
           <Text>Created incidents require manual approve</Text>
         </label>
       </div>
-      <div className="flex items-center space-x-2">
-        <Controller
-          control={control}
-          name="multiLevel"
-          render={({ field: { value, onChange } }) => (
-            <Switch
-              color="orange"
-              id="multiLevelCorrelation"
-              onChange={onChange}
-              checked={value}
-            />
-          )}
-        />
+      {multiLevelEnabled && (
+        <div className="flex items-center space-x-2">
+          <Controller
+            control={control}
+            name="multiLevel"
+            render={({ field: { value, onChange } }) => (
+              <Switch
+                color="orange"
+                id="multiLevelCorrelation"
+                onChange={onChange}
+                checked={value}
+              />
+            )}
+          />
 
-        <label
-          htmlFor="multiLevelCorrelation"
-          className="text-sm text-gray-500"
-        >
-          <Text>Multi-level correlation</Text>
-        </label>
-      </div>
-      {watch("multiLevel") && (
+          <label
+            htmlFor="multiLevelCorrelation"
+            className="text-sm text-gray-500"
+          >
+            <Text>Multi-level correlation</Text>
+          </label>
+        </div>
+      )}
+      {watch("multiLevel") && multiLevelEnabled && (
         <div>
           <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong flex items-center">
             Multi-level property name
