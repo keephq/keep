@@ -20,8 +20,6 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
-import { set } from "lodash";
-import { logger } from "@sentry/core";
 
 interface Props {
   maintenanceToEdit: MaintenanceRule | null;
