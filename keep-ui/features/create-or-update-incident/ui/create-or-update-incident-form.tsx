@@ -18,6 +18,8 @@ import { getIncidentName } from "@/entities/incidents/lib/utils";
 import "react-quill-new/dist/quill.snow.css";
 import "./react-quill-override.css";
 import dynamic from "next/dynamic";
+import { IncidentSeveritySelect } from "@/features/change-incident-severity";
+import { Severity } from "@/entities/incidents/model/models";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
@@ -32,6 +34,9 @@ export function CreateOrUpdateIncidentForm({
   createCallback,
   exitCallback,
 }: Props) {
+  const [incidentSeverity, setIncidentSeverity] = useState<Severity>(
+    Severity.Critical
+  );
   const [incidentName, setIncidentName] = useState<string>("");
   const [incidentUserSummary, setIncidentUserSummary] = useState<string>("");
   const [incidentAssignee, setIncidentAssignee] = useState<string>("");
@@ -92,6 +97,7 @@ export function CreateOrUpdateIncidentForm({
           user_summary: incidentUserSummary,
           assignee: incidentAssignee,
           resolve_on: resolveOnAlertsResolved,
+          severity: incidentSeverity,
         });
         createCallback?.(newIncident.id);
         exitEditMode();
@@ -134,6 +140,13 @@ export function CreateOrUpdateIncidentForm({
   return (
     <form className="py-2" onSubmit={handleSubmit}>
       <Subtitle>Incident Metadata</Subtitle>
+      <div className="mt-2.5">
+        <Text className="mb-2">Severity</Text>
+        <IncidentSeveritySelect
+          value={incidentSeverity}
+          onChange={setIncidentSeverity}
+        />
+      </div>
       <div className="mt-2.5">
         <Text className="mb-2">
           Name<span className="text-red-500 text-xs">*</span>
