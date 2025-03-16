@@ -1,8 +1,8 @@
 """multi-level mapping
 
-Revision ID: 9bfa7e24a160
-Revises: c0e70149c9ec
-Create Date: 2025-03-14 14:21:25.231987
+Revision ID: aff0128aa8f1
+Revises: f3ecc7411f38
+Create Date: 2025-03-16 11:08:09.846457
 
 """
 
@@ -11,8 +11,8 @@ import sqlmodel
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "9bfa7e24a160"
-down_revision = "c0e70149c9ec"
+revision = "aff0128aa8f1"
+down_revision = "f3ecc7411f38"
 branch_labels = None
 depends_on = None
 

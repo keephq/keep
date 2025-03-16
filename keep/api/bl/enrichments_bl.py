@@ -445,19 +445,25 @@ class EnrichmentsBl:
                 if not matcher_values:
                     self._add_enrichment_log("WTF, should not happen?", "error")
                 else:
-                    if isinstance(matcher_value, str):
-                        matcher_values = json5.loads(matcher_value)
+                    if isinstance(matcher_values, str):
+                        matcher_values = json5.loads(matcher_values)
                     for matcher in matcher_values:
                         if rule.prefix_to_remove:
                             matcher = matcher.replace(rule.prefix_to_remove, "")
                         for row in rule.rows:
-                            if self._check_matcher(alert, row, [matcher]):
-                                for key, value in row.items():
-                                    if value is not None:
-                                        enrichments[rule.new_property_name][
-                                            key.strip()
-                                        ] = value.strip()
-                            break
+                            if self._check_explicit_match(row, key, matcher):
+                                if rule.new_property_name not in enrichments:
+                                    enrichments[rule.new_property_name] = {}
+
+                                if matcher not in enrichments[rule.new_property_name]:
+                                    enrichments[rule.new_property_name][matcher] = {}
+
+                                for enrichment_key, enrichment_value in row.items():
+                                    if enrichment_value is not None:
+                                        enrichments[rule.new_property_name][matcher][
+                                            enrichment_key.strip()
+                                        ] = enrichment_value.strip()
+                                break
         if enrichments:
             # Enrich the alert with the matched data from the row
             for key, matcher in enrichments.items():
@@ -514,7 +520,28 @@ class EnrichmentsBl:
             return False
         return re.search(pattern, value) is not None
 
-    def _check_matcher(self, alert: AlertDto, row: dict, matcher: list) -> bool:
+    def _check_explicit_match(
+        self, row: dict, matcher: str, explicit_value: str
+    ) -> bool:
+        """
+        Check if the row matches the explicit given value, for example, in multi-level-mapping
+
+        Args:
+            row (dict): The row from the mapping rule data to compare against.
+            matcher (str): The matcher string specifying conditions.
+            explicit_value (str): The explicit value to compare against.
+
+        Returns:
+            bool: True if the row matches the explicit given value, False otherwise.
+        """
+        return row.get(matcher.strip()) == explicit_value.strip()
+
+    def _check_matcher(
+        self,
+        alert: AlertDto,
+        row: dict,
+        matcher: list,
+    ) -> bool:
         """
         Check if the alert matches the conditions specified by a matcher.
 
