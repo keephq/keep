@@ -63,6 +63,7 @@ type IncidentCreateDto = {
   user_summary: string;
   assignee: string;
   resolve_on: string;
+  severity: Severity;
 };
 
 type IncidentUpdateDto = Partial<IncidentCreateDto> &
