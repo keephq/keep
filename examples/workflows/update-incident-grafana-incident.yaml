@@ -1,0 +1,44 @@
+workflow:
+  id: enrich-grafana-incident-and-update-title
+  name: Enrich Grafana Incident and Update Title
+  description: Grafana Incident
+  triggers:
+    - type: incident
+      events:
+        - created
+  consts: {}
+  owners: []
+  services: []
+  steps:
+    - name: get-enrichments
+      provider:
+        type: openai
+        config: "{{ providers.openai }}"
+        with:
+          prompt: You received such an incident {{incident}}, generate title
+          model: gpt-4o-mini
+          structured_output_format:
+            type: json_schema
+            json_schema:
+              name: missing_fields
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                    description: "Anaylse the {{incident}} carefully and give a suitable title"
+                required:
+                  - "title"
+                additionalProperties: false
+              strict: true
+  actions:
+    - name: grafana_incident-action
+      provider:
+        type: grafana_incident
+        config: "{{ providers.grafana }}"
+        with:
+          # Checkout https://docs.keephq.dev/providers/documentation/grafana_incident-provider for other available fields
+          updateType: updateIncidentTitle
+          operationType: update
+          incident_id: "{{ incident.fingerprint }}"
+          title: "{{ steps.get-enrichments.results.response.title }}"

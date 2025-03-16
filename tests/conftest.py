@@ -558,6 +558,8 @@ def browser():
         browser = p.chromium.launch(headless=headless)
         context = browser.new_context(
             viewport={"width": 1920, "height": 1080},
+            # macbook 13
+            # viewport={"width": 1280, "height": 800},
         )
         context.grant_permissions(["clipboard-read", "clipboard-write"])
         page = context.new_page()

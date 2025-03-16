@@ -48,7 +48,7 @@ from tests.e2e_tests.utils import (
 #    - Use the `browser` fixture to interact with the browser.
 # 2. Automatically:
 #    - Spin up the environment using docker-compose.
-#    - Run "playwright codegen localhost:3000"
+#    - Run "playwright codegen localhost:3000" (unset DYLD_LIBRARY_PATH)
 #    - Copy the generated code to a new test function.
 
 

@@ -37,6 +37,12 @@ import { showErrorToast, Input } from "@/shared/ui";
 import { PlusIcon, MinusIcon } from "@heroicons/react/20/solid";
 import Editor from "@monaco-editor/react";
 
+// Monaco Editor - do not load from CDN (to support on-prem)
+// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
+import * as monaco from "monaco-editor";
+import { loader } from "@monaco-editor/react";
+loader.config({ monaco });
+
 interface Props {
   editRule: MappingRule | null;
   editCallback: (rule: MappingRule | null) => void;
