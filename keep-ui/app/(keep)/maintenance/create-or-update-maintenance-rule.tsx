@@ -20,6 +20,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
+import { set } from "lodash";
+import { logger } from "@sentry/core";
 
 interface Props {
   maintenanceToEdit: MaintenanceRule | null;
@@ -48,6 +50,7 @@ export default function CreateOrUpdateMaintenanceRule({
       setDescription(maintenanceToEdit.description ?? "");
       setCelQuery(maintenanceToEdit.cel_query);
       setStartTime(new Date(maintenanceToEdit.start_time));
+      setSuppress(maintenanceToEdit.suppress);
       setEnabled(maintenanceToEdit.enabled);
       if (maintenanceToEdit.duration_seconds) {
         setEndInterval(maintenanceToEdit.duration_seconds / 60);
@@ -61,6 +64,7 @@ export default function CreateOrUpdateMaintenanceRule({
     setCelQuery("");
     setStartTime(new Date());
     setEndInterval(5);
+    setSuppress(false);
     setEnabled(true);
     router.replace("/maintenance");
   };
@@ -95,6 +99,7 @@ export default function CreateOrUpdateMaintenanceRule({
         cel_query: celQuery,
         start_time: startTime,
         duration_seconds: calculateDurationInSeconds(),
+        suppress: suppress,
         enabled: enabled,
       });
       clearForm();
@@ -106,6 +111,7 @@ export default function CreateOrUpdateMaintenanceRule({
   };
 
   const updateMaintenanceRule = async (e: FormEvent) => {
+    console.log("updateMaintenanceRule, suppress: ", suppress);
     e.preventDefault();
     if (!maintenanceToEdit?.id) {
       showErrorToast(new Error("No maintenance rule selected for update"));
@@ -118,6 +124,7 @@ export default function CreateOrUpdateMaintenanceRule({
         cel_query: celQuery,
         start_time: startTime,
         duration_seconds: calculateDurationInSeconds(),
+        suppress: suppress,
         enabled: enabled,
       });
       exitEditMode();

@@ -8,6 +8,7 @@ export interface MaintenanceRule {
   end_time?: Date;
   duration_seconds?: number;
   updated_at?: Date;
+  suppress: boolean;
   enabled: boolean;
 }
 
