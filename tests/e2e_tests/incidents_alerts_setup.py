@@ -337,17 +337,26 @@ def query_incidents(cell_query: str = None, limit: int = None, offset: int = Non
 
 
 def create_fake_incident(index: int):
+    severity = "critical"
+
+    if index % 4 == 0:
+        severity = "warning"
+    elif index % 3 == 0:
+        severity = "info"
+
     return {
         "assignee": "",
         "resolve_on": "all",
         "user_generated_name": f"Incident name {index}",
         "user_summary": f"Incident summary {index}",
+        "severity": severity,
     }
 
 
 def upload_incidents():
     current_incidents = query_incidents(limit=1000, offset=0)
     simulated_incidents = []
+    url = f"{KEEP_API_URL}/incidents"
 
     for incident_index in range(20):
         incident = create_fake_incident(incident_index)
@@ -360,7 +369,6 @@ def upload_incidents():
             not_uploaded_incidents.append(incident)
 
     for incident in not_uploaded_incidents:
-        url = f"{KEEP_API_URL}/incidents"
         requests.post(
             url,
             json=incident,
@@ -390,8 +398,32 @@ def upload_incidents():
                 f"Not all incidents were uploaded. Not uploaded incidents: {not_uploaded_incidents}"
             )
 
-    # for index, item in enumerate(current_incidents["results"]):
-    #     if
+    for index, item in enumerate(current_incidents["results"]):
+        incident_id = item["id"]
+        status = "firing"
+
+        if index % 5 == 0:
+            status = "resolved"
+
+        if index % 6 == 0:
+            status = "acknowledged"
+
+        if index % 9 == 0:
+            status = "deleted"
+
+        if status == "deleted":
+            requests.delete(
+                f"{url}/{incident_id}",
+                timeout=5,
+                headers={"Authorization": f"Bearer {get_token()}"},
+            ).raise_for_status()
+        elif item["status"] != status:
+            requests.post(
+                f"{url}/{incident_id}/status",
+                json={"status": status},
+                timeout=5,
+                headers={"Authorization": f"Bearer {get_token()}"},
+            ).raise_for_status()
 
     return query_incidents(limit=1000, offset=0)
 
@@ -423,12 +455,12 @@ def setup_incidents_alerts():
         incident_id = incident["id"]
         incident_alerts = [alerts_copy.pop(0), alerts_copy.pop(0)]
         incidents_alert[incident_id] = incident_alerts
-        # associate_alerts_with_incident(
-        #     incident_id, [alert["id"] for alert in incident_alerts]
-        # )
+        associate_alerts_with_incident(
+            incident_id, [alert["fingerprint"] for alert in incident_alerts]
+        )
 
     return {
-        "alerts": alerts,
-        "incidents": incidents,
+        "alerts": query_alerts(limit=1000, offset=0)["results"],
+        "incidents": query_incidents(limit=1000, offset=0)["results"],
         "incidents_alert": incidents_alert,
     }

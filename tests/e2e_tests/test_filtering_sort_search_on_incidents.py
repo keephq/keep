@@ -36,10 +36,6 @@ def init_test(browser: Page, incidents, max_retries=3):
             else:
                 raise e
 
-    browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
-    browser.wait_for_selector(
-        f"text={incidents[0]['user_generated_name']}", timeout=10000
-    )
     browser.wait_for_selector("[data-testid='facet-value']")
 
     # to select status filters that are initially not selected
@@ -133,8 +129,7 @@ def assert_incidents_by_column(
 @pytest.fixture(scope="module")
 def setup_test_data():
     print("Setting up test data...")
-    test_data = setup_incidents_alerts()
-    yield test_data["incidents"]
+    yield setup_incidents_alerts()
 
 
 facet_test_cases = {
@@ -160,7 +155,7 @@ def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
     incident_property_name = test_case["incident_property_name"]
     column_index = test_case.get("column_index", None)
     value = test_case["value"]
-    incidents = setup_test_data
+    incidents = setup_test_data["incidents"]
 
     init_test(browser, incidents)
 
@@ -184,31 +179,71 @@ def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
         column_index,
     )
 
-
 def test_adding_custom_facet_for_alert_field(browser, setup_test_data):
     facet_property_path = "alert.custom_tags.env"
     facet_name = "Custom Env"
     alert_property_name = facet_property_path
     value = "environment:staging"
-    current_incidents = setup_test_data
+    current_incidents = setup_test_data["incidents"]
+    incidents_alert = setup_test_data["incidents_alert"]
     init_test(browser, current_incidents)
     browser.locator("button", has_text="Add Facet").click()
 
     browser.locator("input[placeholder='Enter facet name']").fill(facet_name)
     browser.locator("input[placeholder*='Search columns']").fill(facet_property_path)
     browser.locator("button", has_text=facet_property_path).click()
-    browser.locator("button", has_text="Create").click()
+    browser.locator("button[data-testid='create-facet-btn']").click()
 
-    assert_facet(browser, facet_name, current_incidents, alert_property_name)
+    ###
+    counters_dict = {}
+    expect(
+        browser.locator("[data-testid='facet']", has_text=facet_name)
+    ).to_be_visible()
+    for incident in current_incidents:
+        incident_alerts = incidents_alert.get(incident["id"], [])
+        seen_values = set()
+        for alert in incident_alerts:
+            facet_value = alert.get("custom_tags", {}).get("env", "None")
 
-    option = browser.locator("[data-testid='facet-value']", has_text=value)
+            if facet_value in seen_values:
+                continue
+
+            if facet_value not in counters_dict:
+                counters_dict[facet_value] = 0
+
+            counters_dict[facet_value] += 1
+            seen_values.add(facet_value)
+
+    facet_locator = browser.locator("[data-testid='facet']", has_text=facet_name)
+
+    for facet_value, count in counters_dict.items():
+        expect(facet_locator).to_be_visible()
+        facet_value_locator = facet_locator.locator(
+            "[data-testid='facet-value']", has_text=facet_value
+        )
+        expect(facet_value_locator).to_be_visible()
+        expect(
+            facet_value_locator.locator("[data-testid='facet-value-count']")
+        ).to_contain_text(str(count))
+    ###
+
+    option = facet_locator.locator("[data-testid='facet-value']", has_text=value)
     option.hover()
     option.locator("button", has_text="Only").click()
 
     assert_incidents_by_column(
         browser,
         current_incidents[:20],
-        lambda alert: alert.get("custom_tags", {}).get("env") == value,
+        lambda incident: len(
+            list(
+                filter(
+                    lambda alert: alert.get("custom_tags", {}).get("env", None)
+                    == value,
+                    incidents_alert.get(incident["id"], []),
+                )
+            )
+        )
+        > 0,
         alert_property_name,
         None,
     )
