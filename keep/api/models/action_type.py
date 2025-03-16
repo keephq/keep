@@ -40,3 +40,8 @@ class ActionType(enum.Enum):
     INCIDENT_ENRICH = "Incident enriched"
     INCIDENT_STATUS_CHANGE = "Incident status changed"
     INCIDENT_ASSIGN = "Incident assigned"
+
+    # Slack related actions
+    SLACK_EMOJI_ADDED = "Slack emoji added"
+    SLACK_EMOJI_REMOVED = "Slack emoji removed"
+    SLACK_REPLY_ADDED = "Slack reply added"

@@ -58,6 +58,7 @@ export interface AlertDto {
   ticket_url: string;
   ticket_status?: string;
   playbook_url?: string;
+  slack_link?: string;
   providerId?: string;
   group?: boolean;
   note?: string;

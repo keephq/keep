@@ -578,6 +578,9 @@ async def install_provider_oauth2(
 
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
+        if "provider_secret_suffix" in provider_info:
+            secret_name += f"_{provider_info['provider_secret_suffix']}"
+
         secret_manager.write_secret(
             secret_name=secret_name,
             secret_value=json.dumps(provider_config),

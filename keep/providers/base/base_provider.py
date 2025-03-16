@@ -20,6 +20,7 @@ from typing import Literal, Optional
 import opentelemetry.trace as trace
 import requests
 from dateutil.parser import parse
+from fastapi import Request
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import (
@@ -143,6 +144,30 @@ class BaseProvider(metaclass=abc.ABCMeta):
         )
         return name_with_spaces.replace(" ", ".")
 
+    @staticmethod
+    async def challenge(request: Request):
+        """
+        Challenge the provider.
+
+        See slack provider for an example.
+        """
+        raise NotImplementedError("challenge(request) method not implemented")
+
+    @staticmethod
+    async def verify_request(request: Request):
+        raise NotImplementedError("verify_request(request) method not implemented")
+
+    @staticmethod
+    async def extract_provider_id_from_event(raw_data, request):
+        """
+        Extract the provider id from the event.
+
+        See slack provider for an example.
+        """
+        raise NotImplementedError(
+            "extract_provider_id_from_event(raw_data, request) method not implemented"
+        )
+
     @abc.abstractmethod
     def dispose(self):
         """
@@ -260,6 +285,18 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     extra={"fingerprint": fingerprint, "provider": self.provider_id},
                 )
                 continue
+
+        # check for auto-enrichments -
+        # all keys that ends with "autoenrichment" will be enriched with the value of the key without the "autoenrichment" suffix
+        for key, val in results.items():
+            if key.endswith("autoenrich"):
+                self.logger.info(
+                    "Auto enriching alert",
+                    extra={"fingerprint": fingerprint, "key": key},
+                )
+                new_key = key.replace("_autoenrich", "")
+                _enrichments[new_key] = val
+
         self.logger.info("Enriching alert", extra={"fingerprint": fingerprint})
         try:
             enrichments_bl = EnrichmentsBl(self.context_manager.tenant_id)

@@ -41,6 +41,7 @@ import {
   TooltipPosition,
 } from "@/components/ui/ImagePreviewTooltip";
 import { useExpandedRows } from "utils/hooks/useExpandedRows";
+import { FaSlack } from "react-icons/fa";
 
 interface Props {
   alert: AlertDto;
@@ -206,6 +207,9 @@ export default function AlertMenu({
       : "rounded-none"
   );
 
+  // check if the alert has slack_link attribute
+  const slackLink = alert?.slack_link;
+
   // Quick actions that appear in the action tray
   // @tb: Create a dynamic component like Druids ActionTray that accepts a list of actions and renders them in a grid
   const quickActions = (
@@ -281,6 +285,20 @@ export default function AlertMenu({
           />
         </div>
       )}
+      {/* Add the slack link button */}
+      {slackLink && (
+        <Button
+          variant="light"
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(slackLink, "_blank");
+          }}
+          className={actionIconButtonClassName}
+          tooltip="Open in Slack"
+          icon={() => <Icon icon={FaSlack} className="w-4 h-4 text-gray-500" />}
+        />
+      )}
+
       {(url ?? generatorURL) && (
         <Button
           variant="light"

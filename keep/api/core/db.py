@@ -3533,7 +3533,7 @@ def get_last_incidents(
         ).filter(
             Incident.tenant_id == tenant_id,
             Incident.is_candidate == is_candidate,
-            Incident.is_visible == True
+            Incident.is_visible == True,
         )
 
         if allowed_incident_ids:
@@ -3722,9 +3722,7 @@ def update_incident_from_dto_by_id(
 
 
 def get_incident_by_fingerprint(
-    tenant_id: str,
-    fingerprint: str,
-    session: Optional[Session] = None
+    tenant_id: str, fingerprint: str, session: Optional[Session] = None
 ) -> Optional[Incident]:
     with existed_or_new_session(session) as session:
         return session.exec(
@@ -3735,9 +3733,7 @@ def get_incident_by_fingerprint(
 
 
 def delete_incident_by_id(
-    tenant_id: str,
-    incident_id: UUID,
-    session: Optional[Session] = None
+    tenant_id: str, incident_id: UUID, session: Optional[Session] = None
 ) -> bool:
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id)
@@ -5382,6 +5378,21 @@ def dismiss_error_alerts(tenant_id: str, alert_id=None, dismissed_by=None) -> No
                 stmt = stmt.where(AlertRaw.id == alert_id)
         session.exec(stmt)
         session.commit()
+
+
+# SHAHAR: this is somewhat dangerous, as it can be used to get the tenant_id of any provider
+#         ** this should be used only from events.py AFTER verifying the request
+def get_provider_by_suffix_without_tenant_id(provider_suffix: str) -> Provider:
+    with Session(engine) as session:
+        provider = session.exec(
+            select(Provider).where(
+                or_(
+                    Provider.configuration_key.like(f"%{provider_suffix}%"),
+                    Provider.configuration_key.like(f"%{provider_suffix.lower()}%"),
+                )
+            )
+        ).first()
+    return provider
 
 
 def create_single_tenant_for_e2e(tenant_id: str) -> None:

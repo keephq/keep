@@ -653,7 +653,7 @@ export const useAlertTableCols = (
       ? [
           columnHelper.display({
             id: "alertMenu",
-            minSize: 120,
+            minSize: 130,
             cell: (context) => (
               <AlertMenu
                 presetName={presetName.toLowerCase()}
