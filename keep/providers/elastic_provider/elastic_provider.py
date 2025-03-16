@@ -20,11 +20,12 @@ from keep.providers.providers_factory import ProvidersFactory
 class ElasticProviderAuthConfig:
     """Elasticsearch authentication configuration."""
 
-    api_key: str = dataclasses.field(
+    api_key: typing.Optional[str] = dataclasses.field(
         metadata={
-            "required": True,
-            "description": "Elasticsearch Api Key",
+            "description": "Elasticsearch API Key",
             "sensitive": True,
+            "config_sub_group": "api_key",
+            "config_main_group": "authentication",
         }
     )
     host: pydantic.AnyHttpUrl | None = dataclasses.field(
@@ -39,6 +40,36 @@ class ElasticProviderAuthConfig:
         default=None,
         metadata={"required": False, "description": "Elasticsearch cloud id"},
     )
+    username: typing.Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "Elasticsearch username",
+            "sensitive": True,
+            "type": "file",
+            "config_sub_group": "username_password",
+            "config_main_group": "authentication",
+        },
+    )
+    password: typing.Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "Elasticsearch password",
+            "sensitive": True,
+            "config_sub_group": "username_password",
+            "config_main_group": "authentication",
+        },
+    )
+
+    @pydantic.root_validator
+    def check_api_key_or_username_password(cls, values):
+        api_key = values.get("api_key")
+        username = values.get("username")
+        password = values.get("password")
+        if api_key is None and username is None and password is None:
+            raise ValueError(
+                "Missing api_key or username and password in provider config"
+            )
+        return values
 
     @pydantic.root_validator
     def check_host_or_cloud_id(cls, values):
@@ -71,15 +102,25 @@ class ElasticProvider(BaseProvider):
         Initialize the ElasticSearch client for the provider.
         """
         api_key = self.authentication_config.api_key
+        username = self.authentication_config.username
+        password = self.authentication_config.password
         host = self.authentication_config.host
         cloud_id = self.authentication_config.cloud_id
 
         # Elastic.co requires you to connect with cloud_id
         if cloud_id:
-            es = Elasticsearch(api_key=api_key, cloud_id=cloud_id)
+            es = (
+                Elasticsearch(api_key=api_key, cloud_id=cloud_id)
+                if api_key
+                else Elasticsearch(cloud_id=cloud_id, basic_auth=(username, password))
+            )
         # Otherwise, connect with host
         elif host:
-            es = Elasticsearch(api_key=api_key, hosts=host)
+            es = (
+                Elasticsearch(api_key=api_key, hosts=host)
+                if api_key
+                else Elasticsearch(hosts=host, basic_auth=(username, password))
+            )
 
         # Check if the connection was successful
         if not es.ping():
