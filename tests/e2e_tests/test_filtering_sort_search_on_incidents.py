@@ -4,7 +4,7 @@ from playwright.sync_api import expect, Page
 from tests.e2e_tests.incidents_alerts_setup import (
     setup_incidents_alerts,
 )
-from tests.e2e_tests.utils import init_e2e_test
+from tests.e2e_tests.utils import init_e2e_test, save_failure_artifacts
 
 KEEP_UI_URL = "http://localhost:3000"
 
@@ -253,3 +253,69 @@ def test_adding_custom_facet_for_alert_field(browser, setup_test_data):
         browser.locator("[data-testid='facet']", has_text=facet_name)
     ).not_to_be_visible()
     # endregion
+
+sort_tescases = {
+    "sort by lastReceived asc/dsc": {
+        "column_name": "Created at",
+        "column_id": "creation_time",
+        "sort_callback": lambda alert: alert["creation_time"],
+    }
+}
+
+
+@pytest.mark.parametrize("sort_test_case", sort_tescases.keys())
+def test_sort_asc_dsc(
+    browser: Page,
+    sort_test_case,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
+    test_case = sort_tescases[sort_test_case]
+    column_id = test_case["column_id"]
+    sort_callback = test_case["sort_callback"]
+    current_incidents = setup_test_data["incidents"]
+    name_column_index = 3
+    init_test(browser, current_incidents)
+    try:
+        expect(
+            browser.locator("table[data-testid='incidents-table'] tbody tr")
+        ).to_have_count(len(current_incidents))
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
+
+    if column_id == "creation_time":
+        browser.locator(
+            f"table[data-testid='incidents-table'] thead th [data-testid='sort-direction-{column_id}']",
+        ).click()  # to reset default sorting by creation_time to no sorting
+
+    for sort_direction_title in ["Sort ascending", "Sort descending"]:
+        sorted_alerts = sorted(current_incidents, key=sort_callback)
+
+        if sort_direction_title == "Sort descending":
+            sorted_alerts = list(reversed(sorted_alerts))
+
+        column_sort_direction_locator = browser.locator(
+            f"table[data-testid='incidents-table'] thead th [data-testid='sort-direction-{column_id}']",
+        )
+        expect(column_sort_direction_locator).to_be_visible()
+        column_sort_direction_locator.click()
+        rows = browser.locator("table[data-testid='incidents-table'] tbody tr")
+
+        number_of_missmatches = 0
+        for index, incident in enumerate(sorted_alerts):
+            row_locator = rows.nth(index)
+            column_locator = row_locator.locator("td").nth(name_column_index)
+            try:
+                expect(column_locator).to_contain_text(incident["user_generated_name"])
+            except Exception as e:
+                save_failure_artifacts(browser, log_entries=[])
+                number_of_missmatches += 1
+                if number_of_missmatches > 2:
+                    raise e
+                else:
+                    print(
+                        f"Expected: {incident['user_generated_name']} but got: {column_locator.text_content()}"
+                    )
+                    continue

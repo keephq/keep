@@ -431,6 +431,7 @@ def test_sort_asc_dsc(
     column_id = test_case["column_id"]
     sort_callback = test_case["sort_callback"]
     current_alerts = setup_test_data
+    alert_name_column_index = 4
     init_test(browser, current_alerts)
     filtered_alerts = [
         alert for alert in current_alerts if alert["providerType"] == "datadog"
@@ -462,7 +463,7 @@ def test_sort_asc_dsc(
         for index, alert in enumerate(sorted_alerts):
             row_locator = rows.nth(index)
             # 4 is index of "name" column
-            column_locator = row_locator.locator("td").nth(4)
+            column_locator = row_locator.locator("td").nth(alert_name_column_index)
             try:
                 expect(column_locator).to_have_text(alert["name"])
             except Exception as e:

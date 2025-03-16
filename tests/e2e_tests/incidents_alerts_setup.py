@@ -375,14 +375,13 @@ def upload_incidents():
             timeout=5,
             headers={"Authorization": f"Bearer {get_token()}"},
         ).raise_for_status()
-        time.sleep(0.5)
+        time.sleep(1)
 
     if not not_uploaded_incidents:
         return current_incidents
 
     attempt = 0
     while True:
-        time.sleep(1)
         current_incidents = query_incidents(limit=1000, offset=0)
         attempt += 1
 
@@ -397,6 +396,7 @@ def upload_incidents():
             raise Exception(
                 f"Not all incidents were uploaded. Not uploaded incidents: {not_uploaded_incidents}"
             )
+        time.sleep(1)
 
     for index, item in enumerate(current_incidents["results"]):
         incident_id = item["id"]
