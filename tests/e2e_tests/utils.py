@@ -134,6 +134,8 @@ def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=
     print("Going to URL: ", url)
     try:
         page.goto(url, timeout=15000)
+        page.wait_for_load_state("networkidle")
+
         if wait_time:
             page.wait_for_timeout(wait_time)
 
@@ -220,10 +222,13 @@ def get_token():
     )
 
 
-def save_failure_artifacts(page, log_entries=[]):
+def save_failure_artifacts(page, log_entries=[], prefix=""):
     """Save screenshots, HTML content, and console logs on test failure."""
 
     current_test_name = get_current_test_name()
+
+    if prefix:
+        current_test_name = prefix + "_" + current_test_name
 
     # Save screenshot
     page.screenshot(path=current_test_name + ".png")

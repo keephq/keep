@@ -1,4 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+// Monaco Editor - do not load from CDN (to support on-prem)
+// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
+import * as monaco from "monaco-editor";
+import { loader } from "@monaco-editor/react";
+loader.config({ monaco });
 import Editor from "@monaco-editor/react";
 import { type editor } from "monaco-editor";
 import { Download, Copy, Check, Save } from "lucide-react";

@@ -122,3 +122,7 @@ html.workaround-dark {
     @apply bg-slate-100;
   }
 }
+
+.tremor-TableRow-row > td.bg-tremor-background {
+  background-color: inherit !important;
+}
