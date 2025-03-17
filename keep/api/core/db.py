@@ -1879,6 +1879,8 @@ def create_rule(
     create_on=CreateIncidentOn.ANY.value,
     incident_name_template=None,
     incident_prefix=None,
+    multi_level=False,
+    multi_level_property_name=None,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -1898,6 +1900,8 @@ def create_rule(
             create_on=create_on,
             incident_name_template=incident_name_template,
             incident_prefix=incident_prefix,
+            multi_level=multi_level,
+            multi_level_property_name=multi_level_property_name,
         )
         session.add(rule)
         session.commit()
@@ -1920,6 +1924,8 @@ def update_rule(
     create_on,
     incident_name_template,
     incident_prefix,
+    multi_level,
+    multi_level_property_name,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -1944,6 +1950,8 @@ def update_rule(
             rule.create_on = create_on
             rule.incident_name_template = incident_name_template
             rule.incident_prefix = incident_prefix
+            rule.multi_level = multi_level
+            rule.multi_level_property_name = multi_level_property_name
             session.commit()
             session.refresh(rule)
             return rule
@@ -1951,7 +1959,7 @@ def update_rule(
             return None
 
 
-def get_rules(tenant_id, ids=None):
+def get_rules(tenant_id, ids=None) -> list[Rule]:
     with Session(engine) as session:
         # Start building the query
         query = (
@@ -3651,6 +3659,9 @@ def create_incident_from_dto(
         # Keep existing incident_type if present, default to MANUAL if not
         if "incident_type" not in incident_dict:
             incident_dict["incident_type"] = IncidentType.MANUAL.value
+
+    if incident_dto.severity is not None:
+        incident_dict["severity"] = incident_dto.severity.order
 
     return create_incident_from_dict(tenant_id, incident_dict)
 

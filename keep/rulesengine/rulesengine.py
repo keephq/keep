@@ -111,63 +111,66 @@ class RulesEngine:
                         f"Rule {rule.name} on event {event.id} is relevant"
                     )
 
-                    rule_fingerprint = self._calc_rule_fingerprint(event, rule)
+                    rule_fingerprints = self._calc_rule_fingerprint(event, rule)
 
-                    incident, send_created_event = self._get_or_create_incident(
-                        rule=rule,
-                        rule_fingerprint=rule_fingerprint,
-                        session=session,
-                        event=event,
-                    )
-                    if incident:
-                        incident = assign_alert_to_incident(
-                            fingerprint=event.fingerprint,
-                            incident=incident,
-                            tenant_id=self.tenant_id,
+                    for rule_fingerprint in rule_fingerprints:
+                        incident, send_created_event = self._get_or_create_incident(
+                            rule=rule,
+                            rule_fingerprint=",".join(rule_fingerprint),
                             session=session,
+                            event=event,
                         )
-
-                        if not incident.is_visible:
-
-                            self.logger.info(
-                                f"No existing incidents for rule {rule.name}. Checking incident creation conditions"
+                        if incident:
+                            incident = assign_alert_to_incident(
+                                fingerprint=event.fingerprint,
+                                incident=incident,
+                                tenant_id=self.tenant_id,
+                                session=session,
                             )
 
-                            rule_groups = self._extract_subrules(rule.definition_cel)
+                            if not incident.is_visible:
 
-                            if not rule.require_approve:
-                                if rule.create_on == "any" or (
-                                    rule.create_on == "all"
-                                    and len(rule_groups) == len(matched_rules)
-                                ):
-                                    self.logger.info(
-                                        "Single event is enough, so creating incident"
-                                    )
-                                    incident.is_visible = True
-                                elif rule.create_on == "all":
-                                    incident = (
-                                        self._process_event_for_history_based_rule(
-                                            incident, rule, session
+                                self.logger.info(
+                                    f"No existing incidents for rule {rule.name}. Checking incident creation conditions"
+                                )
+
+                                rule_groups = self._extract_subrules(
+                                    rule.definition_cel
+                                )
+
+                                if not rule.require_approve:
+                                    if rule.create_on == "any" or (
+                                        rule.create_on == "all"
+                                        and len(rule_groups) == len(matched_rules)
+                                    ):
+                                        self.logger.info(
+                                            "Single event is enough, so creating incident"
                                         )
-                                    )
+                                        incident.is_visible = True
+                                    elif rule.create_on == "all":
+                                        incident = (
+                                            self._process_event_for_history_based_rule(
+                                                incident, rule, session
+                                            )
+                                        )
 
-                            send_created_event = incident.is_visible
+                                send_created_event = incident.is_visible
 
-                        incident = IncidentBl(
-                            self.tenant_id, session
-                        ).resolve_incident_if_require(incident)
+                            incident = IncidentBl(
+                                self.tenant_id, session
+                            ).resolve_incident_if_require(incident)
 
-                        incident_dto = IncidentDto.from_db_incident(incident)
-                        if send_created_event:
-                            RulesEngine.send_workflow_event(
-                                self.tenant_id, session, incident_dto, "created"
-                            )
-                        elif incident.is_visible:
-                            RulesEngine.send_workflow_event(
-                                self.tenant_id, session, incident_dto, "updated"
-                            )
+                            incident_dto = IncidentDto.from_db_incident(incident)
+                            if send_created_event:
+                                RulesEngine.send_workflow_event(
+                                    self.tenant_id, session, incident_dto, "created"
+                                )
+                            elif incident.is_visible:
+                                RulesEngine.send_workflow_event(
+                                    self.tenant_id, session, incident_dto, "updated"
+                                )
 
-                        incidents_dto[incident.id] = incident_dto
+                            incidents_dto[incident.id] = incident_dto
 
                 else:
                     self.logger.info(
@@ -290,6 +293,13 @@ class RulesEngine:
                     incident_name = re.sub(pattern, value, incident_name)
             else:
                 incident_name = None
+
+            if rule.multi_level:
+                incident_name = (
+                    f"{rule_fingerprint} - {rule.name}"
+                    if not incident_name
+                    else f"{rule_fingerprint} - {incident_name}"
+                )
 
             incident = create_incident_for_grouping_rule(
                 tenant_id=self.tenant_id,
@@ -437,7 +447,7 @@ class RulesEngine:
         # no subrules matched
         return sub_rules_matched
 
-    def _calc_rule_fingerprint(self, event: AlertDto, rule):
+    def _calc_rule_fingerprint(self, event: AlertDto, rule: Rule) -> list[list[str]]:
         # extract all the grouping criteria from the event
         # e.g. if the grouping criteria is ["event.labels.queue", "event.labels.cluster"]
         #     and the event is:
@@ -448,38 +458,90 @@ class RulesEngine:
         #        "foo": "bar"
         #      }
         #    }
-        # than the rule_fingerprint will be "queue1,cluster1"
+        # than the rule_fingerprint will be "[queue1,cluster1]"
+        # if the rule is multi_level, the rule_fingerprint will be "[queue1,cluster1]" and "[queue2,cluster2]" and more than 1 incident will be created
 
         # note: rule_fingerprint is not a unique id, since different rules can lead to the same rule_fingerprint
         #       hence, the actual fingerprint is composed of the rule_fingerprint and the incident id
         event_payload = event.dict()
         grouping_criteria = rule.grouping_criteria or []
-        rule_fingerprint = []
-        for criteria in grouping_criteria:
-            # we need to extract the value from the event
-            # e.g. if the criteria is "event.labels.queue"
-            # than we need to extract the value of event["labels"]["queue"]
+
+        if not rule.multi_level:
+            rule_fingerprints = []
+            for criteria in grouping_criteria:
+                # we need to extract the value from the event
+                # e.g. if the criteria is "event.labels.queue"
+                # than we need to extract the value of event["labels"]["queue"]
+                criteria_parts = criteria.split(".")
+                value = event_payload
+                for part in criteria_parts:
+                    value = value.get(part)
+                if isinstance(value, list):
+                    value = ",".join(value)
+
+                rule_fingerprints.append(value)
+            # if, for example, the event should have labels.X but it doesn't,
+            # than we will have None in the rule_fingerprint
+            if not rule_fingerprints:
+                self.logger.warning(
+                    f"Failed to calculate rule fingerprint for event {event.id} and rule {rule.name}",
+                    extra={
+                        "rule_id": rule.id,
+                        "rule_name": rule.name,
+                        "tenant_id": self.tenant_id,
+                    },
+                )
+                return [["none"]]
+            # if any of the values is None, we will return "none"
+            if any([fingerprint is None for fingerprint in rule_fingerprints]):
+                self.logger.warning(
+                    f"Failed to fetch the appropriate labels from the event {event.id} and rule {rule.name}",
+                    extra={
+                        "rule_id": rule.id,
+                        "rule_name": rule.name,
+                        "tenant_id": self.tenant_id,
+                    },
+                )
+                return [["none"]]
+            return [rule_fingerprints]
+        else:
+            fingerprints = set()
+            # the idea is pretty simple but implementation is a bit hacky for now
+            # we expect the grouping criteria to be a dict with the key being the property name
+            # for example: {"customers": {"1": {"name": "John", "age": 30}, "2": {"name": "Jane", "age": 25}}}
+            # and we want to group by the "name" property
+            # so we will get ["John", "Jane"] and 2 incidents will be created: one for "John" and one for "Jane" with same alerts.
+            if not grouping_criteria:
+                self.logger.warning(
+                    "wtf? no grouping criteria for multi_level rule",
+                    extra={
+                        "rule_id": rule.id,
+                        "rule_name": rule.name,
+                        "tenant_id": self.tenant_id,
+                    },
+                )
+                return [["none"]]
+            # @tb: this is a known limitation for now, we only accept 1 grouping criteria for multi_level rule
+            criteria = grouping_criteria[0]
             criteria_parts = criteria.split(".")
-            value = event_payload
             for part in criteria_parts:
-                value = value.get(part)
-            if isinstance(value, list):
-                value = ",".join(value)
-            rule_fingerprint.append(value)
-        # if, for example, the event should have labels.X but it doesn't,
-        # than we will have None in the rule_fingerprint
-        if not rule_fingerprint:
-            self.logger.warning(
-                f"Failed to calculate rule fingerprint for event {event.id} and rule {rule.name}"
-            )
-            return "none"
-        # if any of the values is None, we will return "none"
-        if any([fingerprint is None for fingerprint in rule_fingerprint]):
-            self.logger.warning(
-                f"Failed to fetch the appropriate labels from the event {event.id} and rule {rule.name}"
-            )
-            return "none"
-        return ",".join(rule_fingerprint)
+                value = event_payload
+                for part in criteria_parts:
+                    value = value.get(part)
+                if not isinstance(value, dict):
+                    self.logger.warning(
+                        "multi level rule grouping criteria is not a dict",
+                        extra={
+                            "rule_id": rule.id,
+                            "rule_name": rule.name,
+                            "tenant_id": self.tenant_id,
+                        },
+                    )
+                    return [["none"]]
+                for key in value.keys():
+                    fingerprints.add(value[key].get(rule.multi_level_property_name))
+                return [[key] for key in fingerprints]
+        return [["none"]]
 
     @staticmethod
     def get_alerts_activation(alerts: list[AlertDto]):

@@ -20,7 +20,7 @@ export interface EnrichmentEvent {
   tenant_id: string;
 }
 
-export interface PaginatedMappingExecutionDto {
+export interface PaginatedEnrichmentExecutionDto {
   limit: number;
   offset: number;
   count: number;

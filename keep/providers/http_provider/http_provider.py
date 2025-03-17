@@ -141,4 +141,8 @@ class HttpProvider(BaseProvider):
             body = response.text
 
         result["body"] = body
-        return result
+
+        if response.ok:
+            return result
+        else:
+            raise Exception(result)
