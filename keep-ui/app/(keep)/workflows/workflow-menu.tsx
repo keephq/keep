@@ -37,7 +37,7 @@ export default function WorkflowMenu({
   isDisabled,
 }: WorkflowMenuProps) {
   return (
-    <div className="js-dont-propagate">
+    <div className="js-dont-propagate" data-testid="workflow-menu">
       <DropdownMenu.Menu icon={EllipsisHorizontalIcon} label="">
         <DropdownMenu.Item
           icon={PlayIcon}
