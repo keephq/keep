@@ -38,7 +38,7 @@ class TenantConfiguration:
                 self.configurations = self._load_tenant_configurations()
                 self.logger.info("Tenants configurations reloaded")
 
-        def get_configuration(self, tenant_id, config_name):
+        def get_configuration(self, tenant_id, config_name=None):
             self._reload_if_needed()
             # tenant_config = self.configurations.get(tenant_id, {})
             tenant_config = self.configurations.get(tenant_id)
@@ -48,7 +48,7 @@ class TenantConfiguration:
                 tenant_config = self.configurations.get(tenant_id, {})
 
             if tenant_id not in self.configurations:
-                self.logger.warning(
+                self.logger.exception(
                     f"Tenant not found [id: {tenant_id}]",
                     extra={
                         "tenant_id": tenant_id,
@@ -57,6 +57,9 @@ class TenantConfiguration:
                 raise HTTPException(
                     status_code=401, detail=f"Tenant not found [id: {tenant_id}]"
                 )
+
+            if config_name is None:
+                return tenant_config
 
             return tenant_config.get(config_name, None)
 

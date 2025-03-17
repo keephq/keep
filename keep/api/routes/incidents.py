@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timezone
 from typing import List, Optional
 
 from arq import ArqRedis
@@ -120,7 +119,7 @@ def get_incidents_meta(
     description="Get last incidents",
 )
 def get_all_incidents(
-    confirmed: bool = True,
+    candidate: bool = False,
     predicted: Optional[bool] = None,
     limit: int = 25,
     offset: int = 0,
@@ -175,7 +174,7 @@ def get_all_incidents(
     try:
         result = incident_bl.query_incidents(
             tenant_id=tenant_id,
-            is_confirmed=confirmed,
+            is_candidate=candidate,
             is_predicted=predicted,
             limit=limit,
             offset=offset,
@@ -845,73 +844,10 @@ def change_incident_status(
     session: Session = Depends(get_session),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Fetching incident",
-        extra={
-            "incident_id": incident_id,
-            "tenant_id": tenant_id,
-        },
-    )
 
-    with_alerts = change.status in [
-        IncidentStatus.RESOLVED,
-        IncidentStatus.ACKNOWLEDGED,
-    ]
-    incident = get_incident_by_id(
-        tenant_id, incident_id, with_alerts=with_alerts, session=session
-    )
+    incident_bl = IncidentBl(tenant_id, session)
 
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-
-    # We need to do something only if status really changed
-    if change.status != incident.status:
-        if change.status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:
-            enrichments = {"status": change.status.value}
-            fingerprints = [alert.fingerprint for alert in incident._alerts]
-            enrichments_bl = EnrichmentsBl(tenant_id)
-            (
-                action_type,
-                action_description,
-                should_run_workflow,
-                should_check_incidents_resolution,
-            ) = enrichments_bl.get_enrichment_metadata(
-                enrichments, authenticated_entity
-            )
-            enrichments_bl.batch_enrich(
-                fingerprints,
-                enrichments,
-                action_type,
-                authenticated_entity.email,
-                action_description,
-                dispose_on_new_alert=True,
-            )
-
-        if change.status == IncidentStatus.RESOLVED:
-            end_time = datetime.now(tz=timezone.utc)
-            incident.end_time = end_time
-
-        if incident.assignee != authenticated_entity.email:
-            incident.assignee = authenticated_entity.email
-            add_audit(
-                tenant_id,
-                str(incident_id),
-                authenticated_entity.email,
-                ActionType.INCIDENT_ASSIGN,
-                f"Incident self-assigned to {authenticated_entity.email}",
-            )
-
-        add_audit(
-            tenant_id,
-            str(incident_id),
-            authenticated_entity.email,
-            ActionType.INCIDENT_STATUS_CHANGE,
-            f"Incident status changed from {incident.status} to {change.status.value}",
-        )
-        incident.status = change.status.value
-        session.commit()
-
-    new_incident_dto = IncidentDto.from_db_incident(incident)
+    new_incident_dto = incident_bl.change_status(incident_id, change.status, authenticated_entity)
 
     return new_incident_dto
 

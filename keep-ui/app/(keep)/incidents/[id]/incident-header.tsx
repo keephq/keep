@@ -68,7 +68,7 @@ export function IncidentHeader({
             <Subtitle className="text-sm">
               <Link href="/incidents">All Incidents</Link>{" "}
               <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
-              {incident.is_confirmed ? "" : "Possible "}
+              {incident.is_candidate ? "" : "Possible "}
               {getIncidentName(incident)}
               {pathNameCapitalized && (
                 <>
@@ -79,13 +79,13 @@ export function IncidentHeader({
             </Subtitle>
           </div>
 
-          {incident.is_confirmed && (
+          {!incident.is_candidate && (
             <div className="flex">
               <Button
                 color="orange"
                 size="xs"
                 variant="secondary"
-                className="!px-1 !py-0.5 mr-2"
+                className="!py-0.5 mr-2"
                 icon={MdPlayArrow}
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();
@@ -99,7 +99,7 @@ export function IncidentHeader({
                 color="orange"
                 size="xs"
                 variant="secondary"
-                className="!px-1 !py-0.5"
+                className="!py-0.5"
                 icon={MdModeEdit}
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();
@@ -135,7 +135,7 @@ export function IncidentHeader({
               </Badge>
             )}
           </div>
-          {!incident.is_confirmed && (
+          {incident.is_candidate && (
             <div className="space-x-1 flex flex-row items-center justify-center">
               <Button
                 color="orange"

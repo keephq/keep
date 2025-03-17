@@ -12,6 +12,7 @@ import uuid
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
+from functools import wraps
 from typing import Any, Callable, Dict, List, Tuple, Type, Union
 from uuid import UUID, uuid4
 
@@ -21,6 +22,7 @@ from dateutil.tz import tz
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from psycopg2.errors import NoActiveSqlTransaction
+from retry import retry
 from sqlalchemy import (
     String,
     and_,
@@ -149,6 +151,30 @@ def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
         if should_raise:
             raise ValueError(f"Invalid UUID: {value}")
         return None
+
+
+def retry_on_deadlock(f):
+    @retry(
+        exceptions=(OperationalError,),
+        tries=3,
+        delay=0.1,
+        backoff=2,
+        jitter=(0, 0.1),
+        logger=logger,
+    )
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except OperationalError as e:
+            if "Deadlock found" in str(e):
+                logger.warning(
+                    "Deadlock detected, retrying transaction", extra={"error": str(e)}
+                )
+                raise  # retry will catch this
+            raise  # if it's not a deadlock, let it propagate
+
+    return wrapper
 
 
 def create_workflow_execution(
@@ -1016,24 +1042,37 @@ def _enrich_entity(
         session.refresh(enrichment)
         return enrichment
     else:
-        alert_enrichment = AlertEnrichment(
-            tenant_id=tenant_id,
-            alert_fingerprint=fingerprint,
-            enrichments=enrichments,
-        )
-        session.add(alert_enrichment)
-        # add audit event
-        if audit_enabled:
-            audit = AlertAudit(
+        try:
+            alert_enrichment = AlertEnrichment(
                 tenant_id=tenant_id,
-                fingerprint=fingerprint,
-                user_id=action_callee,
-                action=action_type.value,
-                description=action_description,
+                alert_fingerprint=fingerprint,
+                enrichments=enrichments,
             )
-            session.add(audit)
-        session.commit()
-        return alert_enrichment
+            session.add(alert_enrichment)
+            # add audit event
+            if audit_enabled:
+                audit = AlertAudit(
+                    tenant_id=tenant_id,
+                    fingerprint=fingerprint,
+                    user_id=action_callee,
+                    action=action_type.value,
+                    description=action_description,
+                )
+                session.add(audit)
+            session.commit()
+            return alert_enrichment
+        except IntegrityError:
+            # If we hit a duplicate entry error, rollback and get the existing enrichment
+            logger.warning(
+                "Duplicate entry error",
+                extra={
+                    "tenant_id": tenant_id,
+                    "fingerprint": fingerprint,
+                    "enrichments": enrichments,
+                },
+            )
+            session.rollback()
+            return get_enrichment_with_session(session, tenant_id, fingerprint)
 
 
 def batch_enrich(
@@ -1197,6 +1236,44 @@ def get_enrichment(tenant_id, fingerprint, refresh=False):
         return get_enrichment_with_session(session, tenant_id, fingerprint, refresh)
 
 
+@retry(exceptions=(Exception,), tries=3, delay=0.1, backoff=2)
+def get_enrichment_with_session(session, tenant_id, fingerprint, refresh=False):
+    try:
+        alert_enrichment = session.exec(
+            select(AlertEnrichment)
+            .where(AlertEnrichment.tenant_id == tenant_id)
+            .where(AlertEnrichment.alert_fingerprint == fingerprint)
+        ).first()
+
+        if refresh and alert_enrichment:
+            try:
+                session.refresh(alert_enrichment)
+            except Exception:
+                logger.exception(
+                    "Failed to refresh enrichment",
+                    extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
+                )
+                session.rollback()
+                raise  # This will trigger a retry
+
+        return alert_enrichment
+
+    except Exception as e:
+        if "PendingRollbackError" in str(e):
+            logger.warning(
+                "Session has pending rollback, attempting recovery",
+                extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
+            )
+            session.rollback()
+            raise  # This will trigger a retry
+        else:
+            logger.exception(
+                "Unexpected error getting enrichment",
+                extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
+            )
+            raise  # This will trigger a retry
+
+
 def get_enrichments(
     tenant_id: int, fingerprints: List[str]
 ) -> List[Optional[AlertEnrichment]]:
@@ -1214,23 +1291,6 @@ def get_enrichments(
             .where(AlertEnrichment.alert_fingerprint.in_(fingerprints))
         ).all()
     return result
-
-
-def get_enrichment_with_session(session, tenant_id, fingerprint, refresh=False):
-    alert_enrichment = session.exec(
-        select(AlertEnrichment)
-        .where(AlertEnrichment.tenant_id == tenant_id)
-        .where(AlertEnrichment.alert_fingerprint == fingerprint)
-    ).first()
-    if refresh and alert_enrichment:
-        try:
-            session.refresh(alert_enrichment)
-        except Exception:
-            logger.exception(
-                "Failed to refresh enrichment",
-                extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
-            )
-    return alert_enrichment
 
 
 def get_alerts_with_filters(
@@ -1819,6 +1879,8 @@ def create_rule(
     create_on=CreateIncidentOn.ANY.value,
     incident_name_template=None,
     incident_prefix=None,
+    multi_level=False,
+    multi_level_property_name=None,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -1838,6 +1900,8 @@ def create_rule(
             create_on=create_on,
             incident_name_template=incident_name_template,
             incident_prefix=incident_prefix,
+            multi_level=multi_level,
+            multi_level_property_name=multi_level_property_name,
         )
         session.add(rule)
         session.commit()
@@ -1860,6 +1924,8 @@ def update_rule(
     create_on,
     incident_name_template,
     incident_prefix,
+    multi_level,
+    multi_level_property_name,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -1884,6 +1950,8 @@ def update_rule(
             rule.create_on = create_on
             rule.incident_name_template = incident_name_template
             rule.incident_prefix = incident_prefix
+            rule.multi_level = multi_level
+            rule.multi_level_property_name = multi_level_property_name
             session.commit()
             session.refresh(rule)
             return rule
@@ -1891,7 +1959,7 @@ def update_rule(
             return None
 
 
-def get_rules(tenant_id, ids=None):
+def get_rules(tenant_id, ids=None) -> list[Rule]:
     with Session(engine) as session:
         # Start building the query
         query = (
@@ -1993,8 +2061,8 @@ def create_incident_for_grouping_rule(
             rule_id=rule.id,
             rule_fingerprint=rule_fingerprint,
             is_predicted=True,
-            is_confirmed=rule.create_on == CreateIncidentOn.ANY.value
-            and not rule.require_approve,
+            is_candidate=rule.require_approve,
+            is_visible=rule.create_on == CreateIncidentOn.ANY.value,
             incident_type=IncidentType.RULE.value,
             same_incident_in_the_past_id=past_incident.id if past_incident else None,
             resolve_on=rule.resolve_on,
@@ -2027,7 +2095,7 @@ def create_incident_for_topology(
         user_generated_name=f"Topology incident: Multiple alerts across {', '.join(service_names)}",
         severity=severity.value,
         status=IncidentStatus.FIRING.value,
-        is_confirmed=True,
+        is_visible=True,
         incident_type=IncidentType.TOPOLOGY.value,  # Set incident type for topology
         data={"services": list(services), "alert_count": len(alert_group)},
     )
@@ -3228,7 +3296,7 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                 .outerjoin(
                     affected_services_join, affected_services_join.c.value.isnot(None)
                 )
-                .filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == True)
+                .filter(Incident.tenant_id == tenant_id, Incident.is_visible == True)
             )
             results = session.exec(query).one_or_none()
 
@@ -3265,7 +3333,7 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                 .outerjoin(
                     affected_services_join, affected_services_join.c.value.isnot(None)
                 )
-                .filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == True)
+                .filter(Incident.tenant_id == tenant_id, Incident.is_visible == True)
             )
 
             results = session.exec(query).one_or_none()
@@ -3304,7 +3372,7 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                 .outerjoin(
                     affected_services_join, affected_services_join.c.value.isnot(None)
                 )
-                .filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == True)
+                .filter(Incident.tenant_id == tenant_id, Incident.is_visible == True)
             )
 
             results = session.exec(query).one_or_none()
@@ -3442,7 +3510,7 @@ def get_last_incidents(
     timeframe: int = None,
     upper_timestamp: datetime = None,
     lower_timestamp: datetime = None,
-    is_confirmed: bool = False,
+    is_candidate: bool = False,
     sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
     with_alerts: bool = False,
     is_predicted: bool = None,
@@ -3457,10 +3525,9 @@ def get_last_incidents(
         limit (int): Amount of objects to return
         offset (int): Current offset for
         timeframe (int|null): Return incidents only for the last <N> days
-        is_confirmed (bool): Return confirmed incidents or predictions
         upper_timestamp: datetime = None,
         lower_timestamp: datetime = None,
-        is_confirmed (bool): filter incident candidates or real incidents
+        is_candidate (bool): filter incident candidates or real incidents
         sorting: Optional[IncidentSorting]: how to sort the data
         with_alerts (bool): Pre-load alerts or not
         is_predicted (bool): filter only incidents predicted by KeepAI
@@ -3471,7 +3538,11 @@ def get_last_incidents(
     with Session(engine) as session:
         query = session.query(
             Incident,
-        ).filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed)
+        ).filter(
+            Incident.tenant_id == tenant_id,
+            Incident.is_candidate == is_candidate,
+            Incident.is_visible == True,
+        )
 
         if allowed_incident_ids:
             query = query.filter(Incident.id.in_(allowed_incident_ids))
@@ -3572,7 +3643,8 @@ def create_incident_from_dto(
             "ai_generated_name": incident_dto.dict().get("name"),
             "assignee": incident_dto.assignee,
             "is_predicted": False,  # its not a prediction, but an AI generation
-            "is_confirmed": True,  # confirmed by the user :)
+            "is_candidate": False,  # confirmed by the user :)
+            "is_visible": True,  # confirmed by the user :)
             "incident_type": IncidentType.AI.value,
         }
 
@@ -3588,6 +3660,9 @@ def create_incident_from_dto(
         if "incident_type" not in incident_dict:
             incident_dict["incident_type"] = IncidentType.MANUAL.value
 
+    if incident_dto.severity is not None:
+        incident_dict["severity"] = incident_dto.severity.order
+
     return create_incident_from_dict(tenant_id, incident_dict)
 
 
@@ -3595,8 +3670,8 @@ def create_incident_from_dict(
     tenant_id: str, incident_data: dict
 ) -> Optional[Incident]:
     is_predicted = incident_data.get("is_predicted", False)
-    if "is_confirmed" not in incident_data:
-        incident_data["is_confirmed"] = not is_predicted
+    if "is_candidate" not in incident_data:
+        incident_data["is_candidate"] = is_predicted
     with Session(engine) as session:
         new_incident = Incident(**incident_data, tenant_id=tenant_id)
         session.add(new_incident)
@@ -3657,8 +3732,10 @@ def update_incident_from_dto_by_id(
         return incident
 
 
-def get_incident_by_fingerprint(tenant_id: str, fingerprint: str) -> Optional[Incident]:
-    with Session(engine) as session:
+def get_incident_by_fingerprint(
+    tenant_id: str, fingerprint: str, session: Optional[Session] = None
+) -> Optional[Incident]:
+    with existed_or_new_session(session) as session:
         return session.exec(
             select(Incident).where(
                 Incident.tenant_id == tenant_id, Incident.fingerprint == fingerprint
@@ -3667,12 +3744,11 @@ def get_incident_by_fingerprint(tenant_id: str, fingerprint: str) -> Optional[In
 
 
 def delete_incident_by_id(
-    tenant_id: str,
-    incident_id: UUID,
+    tenant_id: str, incident_id: UUID, session: Optional[Session] = None
 ) -> bool:
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id)
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         incident = session.exec(
             select(Incident).filter(
                 Incident.tenant_id == tenant_id,
@@ -3875,6 +3951,7 @@ def add_alerts_to_incident_by_incident_id(
         )
 
 
+@retry_on_deadlock
 def add_alerts_to_incident(
     tenant_id: str,
     incident: Incident,
@@ -4367,7 +4444,7 @@ def confirm_predicted_incident_by_id(
             .where(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
-                Incident.is_confirmed == expression.false(),
+                Incident.is_candidate == expression.true(),
             )
             .options(joinedload(Incident.alerts))
         ).first()
@@ -4378,10 +4455,10 @@ def confirm_predicted_incident_by_id(
         session.query(Incident).filter(
             Incident.tenant_id == tenant_id,
             Incident.id == incident_id,
-            Incident.is_confirmed == expression.false(),
+            Incident.is_candidate == expression.true(),
         ).update(
             {
-                "is_confirmed": True,
+                "is_visible": True,
             }
         )
 
@@ -5276,3 +5353,67 @@ def enrich_incidents_with_enrichments(
             incident._enrichments = enrichments_map.get(str(incident.id), {})
 
         return incidents
+
+
+def get_error_alerts(tenant_id: str, limit: int = 1000) -> int:
+    with Session(engine) as session:
+        return (
+            session.query(AlertRaw)
+            .filter(
+                AlertRaw.tenant_id == tenant_id,
+                AlertRaw.error == True,
+                AlertRaw.dismissed == False,
+            )
+            .all()
+        )
+
+
+def dismiss_error_alerts(tenant_id: str, alert_id=None, dismissed_by=None) -> None:
+    with Session(engine) as session:
+        stmt = (
+            update(AlertRaw)
+            .where(
+                AlertRaw.tenant_id == tenant_id,
+            )
+            .values(
+                dismissed=True,
+                dismissed_by=dismissed_by,
+                dismissed_at=datetime.now(tz=timezone.utc),
+            )
+        )
+        if alert_id:
+            if isinstance(alert_id, str):
+                alert_id_uuid = uuid.UUID(alert_id)
+                stmt = stmt.where(AlertRaw.id == alert_id_uuid)
+            else:
+                stmt = stmt.where(AlertRaw.id == alert_id)
+        session.exec(stmt)
+        session.commit()
+
+
+def create_single_tenant_for_e2e(tenant_id: str) -> None:
+    """
+    Creates the single tenant and the default user if they don't exist.
+    """
+    with Session(engine) as session:
+        try:
+            # check if the tenant exist:
+            logger.info("Checking if single tenant exists")
+            tenant = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
+            if not tenant:
+                # Do everything related with single tenant creation in here
+                logger.info("Creating single tenant", extra={"tenant_id": tenant_id})
+                session.add(Tenant(id=tenant_id, name="Single Tenant"))
+            else:
+                logger.info("Single tenant already exists")
+
+            # commit the changes
+            session.commit()
+            logger.info("Single tenant created", extra={"tenant_id": tenant_id})
+        except IntegrityError:
+            # Tenant already exists
+            logger.exception("Failed to provision single tenant")
+            raise
+        except Exception:
+            logger.exception("Failed to create single tenant")
+            pass

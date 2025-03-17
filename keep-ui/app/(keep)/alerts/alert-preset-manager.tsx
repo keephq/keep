@@ -11,7 +11,10 @@ import { usePresets } from "@/entities/presets/model/usePresets";
 import { CopilotKit } from "@copilotkit/react-core";
 import { Button } from "@tremor/react";
 import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
+import AlertErrorEventModal from "./alert-error-event-modal";
 import { GrTest } from "react-icons/gr";
+import { useAlerts } from "@/utils/hooks/useAlerts";
+import { MdErrorOutline } from "react-icons/md";
 
 interface Props {
   presetName: string;
@@ -24,6 +27,10 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
   const { dynamicPresets } = usePresets({
     revalidateOnFocus: false,
   });
+
+  const { useErrorAlerts } = useAlerts();
+  const { data: errorAlerts } = useErrorAlerts();
+
   // TODO: make a hook for this? store in the context?
   const selectedPreset = useMemo(() => {
     return dynamicPresets?.find(
@@ -38,6 +45,9 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
 
   // add alert modal
   const [isAddAlertModalOpen, setIsAddAlertModalOpen] = useState(false);
+
+  // error alert modal
+  const [isErrorAlertModalOpen, setIsErrorAlertModalOpen] = useState(false);
 
   const router = useRouter();
 
@@ -57,6 +67,10 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
 
   const handleAddAlertModalClose = () => {
     setIsAddAlertModalOpen(false);
+  };
+
+  const handleErrorAlertModalClose = () => {
+    setIsErrorAlertModalOpen(false);
   };
 
   const isDynamic =
@@ -110,11 +124,28 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
 
         <Button
           variant="secondary"
+          tooltip="Test alerts"
           size="sm"
           icon={GrTest}
           onClick={handleAddAlertModalOpen}
           className="ml-2"
         ></Button>
+
+        {/* Error alerts button with notification counter */}
+        {errorAlerts && errorAlerts.length > 0 && (
+          <div className="relative inline-flex ml-2">
+            <Button
+              color="rose"
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsErrorAlertModalOpen(true)}
+              icon={MdErrorOutline}
+            />
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+              {errorAlerts.length}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Preset Modal */}
@@ -143,6 +174,12 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
         isOpen={isAddAlertModalOpen}
         handleClose={handleAddAlertModalClose}
         presetName={presetName}
+      />
+
+      {/* Error Alert Modal */}
+      <AlertErrorEventModal
+        isOpen={isErrorAlertModalOpen}
+        onClose={handleErrorAlertModalClose}
       />
     </>
   );

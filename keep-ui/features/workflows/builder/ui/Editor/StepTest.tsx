@@ -4,6 +4,11 @@ import { JsonCard } from "@/shared/ui";
 import { Callout, Text } from "@tremor/react";
 import { useMemo, useState } from "react";
 import { EditorLayout } from "./StepEditor";
+// Monaco Editor - do not load from CDN (to support on-prem)
+// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
+import * as monaco from "monaco-editor";
+import { loader } from "@monaco-editor/react";
+loader.config({ monaco });
 import { Editor } from "@monaco-editor/react";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { useCopilotChat } from "@copilotkit/react-core";
@@ -145,8 +150,8 @@ export function TestRunStepForm({
               typeof value === "object"
                 ? JSON.parse(result)
                 : typeof value === "number"
-                  ? Number(result)
-                  : result,
+                ? Number(result)
+                : result,
             ];
           } catch {
             return [key, result];
@@ -287,9 +292,9 @@ export function TestRunStepForm({
               </Callout>
               <WFDebugWithAIButton
                 errors={errors}
-                description={`in step test run ${providerInfo.provider_type}, with parameters ${JSON.stringify(
-                  resultingParameters
-                )}`}
+                description={`in step test run ${
+                  providerInfo.provider_type
+                }, with parameters ${JSON.stringify(resultingParameters)}`}
               />
             </div>
           ))}
