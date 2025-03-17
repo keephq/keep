@@ -21,12 +21,13 @@ class ElasticProviderAuthConfig:
     """Elasticsearch authentication configuration."""
 
     api_key: typing.Optional[str] = dataclasses.field(
+        default=None,
         metadata={
             "description": "Elasticsearch API Key",
             "sensitive": True,
             "config_sub_group": "api_key",
             "config_main_group": "authentication",
-        }
+        },
     )
     host: pydantic.AnyHttpUrl | None = dataclasses.field(
         default=None,
@@ -56,6 +57,15 @@ class ElasticProviderAuthConfig:
             "config_sub_group": "username_password",
             "config_main_group": "authentication",
         },
+    )
+    verify: bool = dataclasses.field(
+        metadata={
+            "description": "Enable SSL verification",
+            "hint": "SSL verification is enabled by default",
+            "type": "switch",
+            "config_main_group": "authentication",
+        },
+        default=True,
     )
 
     @pydantic.root_validator
@@ -108,16 +118,32 @@ class ElasticProvider(BaseProvider):
         # Elastic.co requires you to connect with cloud_id
         if cloud_id:
             es = (
-                Elasticsearch(api_key=api_key, cloud_id=cloud_id)
+                Elasticsearch(
+                    api_key=api_key,
+                    cloud_id=cloud_id,
+                    verify_certs=self.authentication_config.verify,
+                )
                 if api_key
-                else Elasticsearch(cloud_id=cloud_id, basic_auth=(username, password))
+                else Elasticsearch(
+                    cloud_id=cloud_id,
+                    basic_auth=(username, password),
+                    verify_certs=self.authentication_config.verify,
+                )
             )
         # Otherwise, connect with host
         elif host:
             es = (
-                Elasticsearch(api_key=api_key, hosts=host)
+                Elasticsearch(
+                    api_key=api_key,
+                    hosts=host,
+                    verify_certs=self.authentication_config.verify,
+                )
                 if api_key
-                else Elasticsearch(hosts=host, basic_auth=(username, password))
+                else Elasticsearch(
+                    hosts=host,
+                    basic_auth=(username, password),
+                    verify_certs=self.authentication_config.verify,
+                )
             )
 
         # Check if the connection was successful
