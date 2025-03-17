@@ -15,6 +15,8 @@ export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationFormType = {
   createOn: "any",
   incidentNameTemplate: "",
   incidentPrefix: "",
+  multiLevel: false,
+  multiLevelPropertyName: "",
   query: {
     combinator: "or",
     rules: [
