@@ -26,6 +26,7 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.models.provider_method import ProviderMethod
+from keep.providers.providers_factory import ProvidersFactory
 
 
 @pydantic.dataclasses.dataclass
@@ -702,12 +703,14 @@ class SlackProvider(BaseProvider):
             ts = message_event.get("ts")
             thread_ts = message_event.get("thread_ts")
             message_text = message_event.get("text", "")
+            # we want to exclude messages from the Keep bot
+            bot_name = message_event.get("bot_profile").get("name")
 
             # Skip bot messages
             if (
                 message_event.get("bot_id")
                 or message_event.get("subtype") == "bot_message"
-            ):
+            ) and "Keep" in bot_name:
                 self.logger.info("Ignoring bot message")
                 return {"status": "ignored", "reason": "Bot message"}
 
@@ -763,7 +766,17 @@ class SlackProvider(BaseProvider):
             else:
                 # It's a new message, not a reply
                 # In most cases, we might not need to process new messages unless they're bot-triggered
-                self.logger.info("New message detected, not processing further")
+                self.logger.info("New message detected, processing further")
+
+                # What we want to do now is to try and correlate the message with an Keep alert
+                # For example, if Sentry App sent a slack message, we want to correlate that with the alert
+                # that was sent to Keep
+
+                # For sentry, the bot name is Sentry.
+                #   Next bots will be added here?
+                class_name = bot_name.lower()
+                provider_class = ProvidersFactory.get_provider_class(class_name)
+                print(provider_class)
                 return {
                     "status": "ignored",
                     "reason": "Not a reply to a managed message",
@@ -937,7 +950,7 @@ class SlackProvider(BaseProvider):
 
             user = response_data.get("user", {})
             profile = user.get("profile", {})
-            email = profile.get("email")
+            email = profile.get("email") or user.get("name")  # name is for bots
 
             if not email:
                 self.logger.warning(f"No email found for user {user_id}")
