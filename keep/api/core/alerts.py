@@ -93,7 +93,7 @@ alert_field_configurations = [
     ),
 ]
 alias_column_mapping = {
-    "filter_timestamp": "alert.timestamp",
+    "filter_timestamp": "lastalert.timestamp",
     "filter_provider_id": "alert.provider_id",
     "filter_provider_type": "alert.provider_type",
     "filter_incident_id": "incident.id",
@@ -154,6 +154,7 @@ def __build_query_for_filtering(tenant_id: str):
 
     return (
         select(
+            Alert.id,
             LastAlert.alert_id,
             LastAlert.tenant_id.label("last_alert_tenant_id"),
             LastAlert.first_timestamp.label("startedAt"),
@@ -238,10 +239,10 @@ def build_alerts_query(
     offset=None,
 ):
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-    base = __build_query_for_filtering(tenant_id).cte("alerts_query")
+    base = __build_query_for_filtering(tenant_id)
 
     if not sort_by:
-        sort_by = "lastReceived"
+        sort_by = "timestamp"
         sort_dir = "desc"
 
     metadata = properties_metadata.get_property_metadata(sort_by)
@@ -251,11 +252,25 @@ def build_alerts_query(
         if isinstance(item, JsonFieldMapping):
             group_by_exp.append(
                 cel_to_sql_instance.json_extract_as_text(
-                    item.json_prop, item.prop_in_json
+                    alias_column_mapping[item.json_prop], item.prop_in_json
                 )
             )
         elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
             group_by_exp.append(alias_column_mapping[item.map_to])
+
+    if len(group_by_exp) > 1:
+        order_by_field = cel_to_sql_instance.coalesce(
+            [cel_to_sql_instance.cast(item, str) for item in group_by_exp]
+        )
+    else:
+        order_by_field = group_by_exp[0]
+
+    if sort_dir == "desc":
+        base = base.order_by(desc(text(order_by_field)), Alert.id)
+    else:
+        base = base.order_by(asc(text(order_by_field)), Alert.id)
+
+    base = base.distinct(text(order_by_field), Alert.id).cte("alerts_query")
 
     query = (
         select(
@@ -292,19 +307,7 @@ def build_alerts_query(
     if offset is not None:
         query = query.offset(offset)
 
-    if len(group_by_exp) > 1:
-        order_by_field = cel_to_sql_instance.coalesce(
-            [cel_to_sql_instance.cast(item, str) for item in group_by_exp]
-        )
-    else:
-        order_by_field = group_by_exp[0]
-
-    if sort_dir == "desc":
-        query = query.order_by(desc(text(order_by_field)), Alert.id)
-    else:
-        query = query.order_by(asc(text(order_by_field)), Alert.id)
-
-    query = query.distinct(text(order_by_field), Alert.id)
+    # query = query.distinct(Alert.id)
 
     return query
 
@@ -339,6 +342,11 @@ def query_last_alerts(
 
             data_query = build_alerts_query(
                 tenant_id, cel, sort_by, sort_dir, limit, offset
+            )
+            strq = str(
+                data_query.compile(
+                    dialect=session.bind.dialect, compile_kwargs={"literal_binds": True}
+                )
             )
             alerts_with_start = session.execute(data_query).all()
         except OperationalError as e:
