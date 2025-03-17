@@ -550,7 +550,7 @@ export default function CreateOrEditMapping({
           disabled={
             !mapName ||
             !attributeGroups.flat().length ||
-            (multiLevelEnabled && !newPropertyName)
+            (isMultiLevel && !newPropertyName)
           }
         >
           {editMode ? "Update" : "Create"}
