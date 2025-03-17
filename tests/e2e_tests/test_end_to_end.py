@@ -339,6 +339,42 @@ def test_add_workflow(browser: Page, setup_page_logging, failure_artifacts):
         raise
 
 
+def test_test_run_workflow(browser: Page):
+    """
+    Test to test run a workflow
+    """
+    page = browser
+    log_entries = []
+    setup_console_listener(page, log_entries)
+    try:
+        init_e2e_test(browser, next_url="/signin")
+        page.get_by_role("link", name="Workflows").click()
+        page.get_by_role("button", name="Create Workflow").click()
+        page.wait_for_url("http://localhost:3000/workflows/builder")
+        page.get_by_placeholder("Set the name").click()
+        page.get_by_placeholder("Set the name").press("ControlOrMeta+a")
+        page.get_by_placeholder("Set the name").fill("Test Run Workflow")
+        page.get_by_placeholder("Set the name").press("Tab")
+        page.get_by_placeholder("Set the description").fill(
+            "Test Run workflow description"
+        )
+        page.get_by_test_id("wf-add-trigger-button").first.click()
+        page.get_by_text("Manual").click()
+        page.get_by_test_id("wf-add-step-button").first.click()
+        page.get_by_placeholder("Search...").click()
+        page.get_by_placeholder("Search...").fill("cons")
+        page.get_by_text("console-action").click()
+        page.get_by_placeholder("message", exact=True).click()
+        page.get_by_placeholder("message", exact=True).fill("Hello world!")
+        page.get_by_test_id("wf-editor-configure-save-button").click()
+        page.wait_for_url(re.compile(r"http://localhost:3000/workflows/(?!builder).*"))
+        page.get_by_text("Builder").click()
+        page.get_by_test_id("wf-builder-main-test-run-button").click()
+        page.wait_for_selector("text=Workflow Execution Results")
+    except Exception:
+        save_failure_artifacts(page, log_entries)
+        raise
+
 def test_paste_workflow_yaml_quotes_preserved(browser: Page):
     # browser is actually a page object
     page = browser
