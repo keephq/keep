@@ -6,7 +6,7 @@ export const useTenantConfiguration = (options: SWRConfiguration = {}) => {
   const api = useApi();
 
   return useSWRImmutable<{ [key: string]: string }>(
-    api.isReady() ? `/settings/tenant/configuration/` : null,
+    api.isReady() ? `/settings/tenant/configuration` : null,
     (url) => api.get(url),
     options
   );

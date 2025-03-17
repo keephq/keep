@@ -42,7 +42,7 @@ import Editor from "@monaco-editor/react";
 // https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
 import * as monaco from "monaco-editor";
 import { loader } from "@monaco-editor/react";
-import { useTenantConfiguration } from "@/utils/hooks/useTenantConfigurationKey";
+import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
 loader.config({ monaco });
 
 interface Props {
@@ -257,9 +257,9 @@ export default function CreateOrEditMapping({
   useEffect(() => {
     if (isMultiLevel && attributeGroups.length > 0) {
       const firstGroup = attributeGroups[0];
-      setAttributeGroups([
-        [firstGroup.length > 0 ? firstGroup[firstGroup.length - 1] : ""],
-      ]);
+      if (firstGroup.length > 1) {
+        setAttributeGroups([[firstGroup[0]]]);
+      }
     }
   }, [isMultiLevel]);
 
@@ -547,7 +547,11 @@ export default function CreateOrEditMapping({
           color="orange"
           size="xs"
           type="submit"
-          disabled={!mapName || !attributeGroups.flat().length}
+          disabled={
+            !mapName ||
+            !attributeGroups.flat().length ||
+            (multiLevelEnabled && !newPropertyName)
+          }
         >
           {editMode ? "Update" : "Create"}
         </Button>

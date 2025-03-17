@@ -14,7 +14,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import React from "react";
 import { CorrelationFormType } from "./types";
-import { useTenantConfiguration } from "@/utils/hooks/useTenantConfigurationKey";
+import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
 
 type CorrelationFormProps = {
   alertsFound: AlertDto[];
