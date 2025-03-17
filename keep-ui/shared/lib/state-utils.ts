@@ -1,5 +1,6 @@
 import { useSWRConfig } from "swr";
 import { useCallback } from "react";
+
 export const useRevalidateMultiple = () => {
   const { mutate } = useSWRConfig();
   return useCallback(

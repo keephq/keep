@@ -7,6 +7,7 @@ import { stringify } from "yaml";
 import { useCallback } from "react";
 import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
 import { KeepApiError } from "@/shared/api/KeepApiError";
+import { useRevalidateWorkflowsList } from "./useWorkflowsV2";
 
 function getBodyFromStringOrDefinitionOrObject(
   definition: Definition | string | Record<string, unknown>
@@ -41,9 +42,7 @@ type CreateOrUpdateWorkflowResponse = {
 export function useWorkflowActions(): UseWorkflowActionsReturn {
   const api = useApi();
   const revalidateMultiple = useRevalidateMultiple();
-  const refreshWorkflows = useCallback(() => {
-    revalidateMultiple(["/workflows?is_v2=true"], { isExact: true });
-  }, [revalidateMultiple]);
+  const refreshWorkflows = useRevalidateWorkflowsList();
 
   const uploadWorkflowFiles = useCallback(
     async (files: FileList) => {

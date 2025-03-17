@@ -11,6 +11,11 @@ import { SingleValueProps, components, GroupBase } from "react-select";
 import { Select } from "@/shared/ui";
 import { useEffect, useMemo, useState } from "react";
 
+export interface PaginationState {
+  limit: number;
+  offset: number;
+}
+
 interface OptionType {
   value: string;
   label: string;

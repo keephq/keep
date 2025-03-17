@@ -1,6 +1,6 @@
 import useSWR, { mutate, SWRConfiguration } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { Workflow } from "@/shared/api/workflows";
+import { PaginatedWorkflowsResults } from "@/shared/api/workflows";
 
 export interface WorkflowsQuery {
   cel?: string;
@@ -10,12 +10,13 @@ export interface WorkflowsQuery {
   sortDir?: "asc" | "desc";
 }
 
+const requestUrl = "/workflows/query?is_v2=true";
+
 export function useWorkflowsV2(
   workflowsQuery: WorkflowsQuery | null,
   swrConfig?: SWRConfiguration
 ) {
   const api = useApi();
-  let requestUrl = "/workflows/query?is_v2=true";
 
   const queryToPost = workflowsQuery
     ? {
@@ -49,23 +50,24 @@ export function useWorkflowsV2(
           .join("::")
       : null;
 
-    const { data, error, isLoading } = useSWR<any>(
-      api.isReady() && workflowsQuery ? cacheKey : null,
-      () => api.post(requestUrl, queryToPost),
-      swrConfig
-    );
-
-    const mutateWorkflows = () => {
-      return mutate(
-        (key) => typeof key === "string" && key.split("::")[0] === requestUrl
-      );
-    };
+  const { data, error, isLoading } = useSWR<PaginatedWorkflowsResults>(
+    api.isReady() && workflowsQuery ? cacheKey : null,
+    () => api.post(requestUrl, queryToPost),
+    swrConfig
+  );
 
   return {
-    workflows: data?.results as Workflow[],
+    workflows: data?.results,
     totalCount: data?.count,
     isLoading: isLoading || !data,
     error,
-    mutateWorkflows,
+  };
+}
+
+export function useRevalidateWorkflowsList() {
+  return () => {
+    mutate(
+      (key) => typeof key === "string" && key.split("::")[0] === requestUrl
+    );
   };
 }
