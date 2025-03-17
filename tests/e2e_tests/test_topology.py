@@ -37,7 +37,6 @@ def test_topology_manual(browser):
                 browser.get_by_placeholder("Enter service here...").fill("service_id_1")
                 break
             except Exception:
-                raise
                 if retries == max_retries:
                     raise
                 retries += 1
