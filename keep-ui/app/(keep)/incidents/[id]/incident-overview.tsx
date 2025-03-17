@@ -374,14 +374,13 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
               </div>
               <div>
                 <FieldHeader>Assignee</FieldHeader>
-                <div className="flex gap-1">
+                <div className="flex flex-col gap-1">
                   {incident.assignee ? (
                     <p>{incident.assignee}</p>
                   ) : (
                     <p>No assignee yet</p>
                   )}
                   <div>
-                    {" ("}
                     <span
                       className="text-sm text-gray-500 cursor-pointer hover:text-orange-500 underline"
                       onClick={() => {
@@ -396,7 +395,6 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                     >
                       Assign to me
                     </span>
-                    {")"}
                   </div>
                 </div>
               </div>
