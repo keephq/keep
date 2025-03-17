@@ -14,6 +14,7 @@ const READ_ONLY_ALWAYS_ALLOWED_URLS = [
   "/alerts/query",
   "/incidents/facets/options",
   "/workflows/query",
+  "/workflows/facets/options",
 ];
 
 interface ApiClientOptions {
