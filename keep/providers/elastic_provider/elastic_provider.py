@@ -66,15 +66,6 @@ class ElasticProviderAuthConfig:
             "config_main_group": "authentication",
         },
     )
-    verify: bool = dataclasses.field(
-        metadata={
-            "description": "Enable SSL verification",
-            "hint": "SSL verification is enabled by default",
-            "type": "switch",
-            "config_main_group": "authentication",
-        },
-        default=True,
-    )
 
     @pydantic.root_validator
     def check_api_key_or_username_password(cls, values):
