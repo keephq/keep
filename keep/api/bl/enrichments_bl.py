@@ -422,8 +422,8 @@ class EnrichmentsBl:
                     ):
                         # Extract enrichments from the matched row
                         enrichments = {}
-                        for key, matcher in row.items():
-                            if matcher is not None:
+                        for key, value in row.items():
+                            if value is not None:
                                 is_matcher = False
                                 for matcher in rule.matchers:
                                     if key in matcher:
@@ -432,9 +432,9 @@ class EnrichmentsBl:
                                 if not is_matcher:
                                     # If the key has . (dot) in it, it'll be added as is while it needs to be nested.
                                     # @tb: fix when somebody will be complaining about this.
-                                    if isinstance(matcher, str):
-                                        matcher = matcher.strip()
-                                    enrichments[key.strip()] = matcher
+                                    if isinstance(value, str):
+                                        value = value.strip()
+                                    enrichments[key.strip()] = value
                         break
             else:
                 # Multi-level mapping

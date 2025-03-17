@@ -35,6 +35,16 @@ def upgrade() -> None:
                 nullable=True,
             )
         )
+
+    with op.batch_alter_table("rule", schema=None) as batch_op:
+        batch_op.add_column(sa.Column("multi_level", sa.Boolean(), nullable=False))
+        batch_op.add_column(
+            sa.Column(
+                "multi_level_property_name",
+                sqlmodel.sql.sqltypes.AutoString(),
+                nullable=True,
+            )
+        )
     # ### end Alembic commands ###
 
 
@@ -44,4 +54,8 @@ def downgrade() -> None:
         batch_op.drop_column("prefix_to_remove")
         batch_op.drop_column("new_property_name")
         batch_op.drop_column("is_multi_level")
+
+    with op.batch_alter_table("rule", schema=None) as batch_op:
+        batch_op.drop_column("multi_level_property_name")
+        batch_op.drop_column("multi_level")
     # ### end Alembic commands ###
