@@ -7,9 +7,11 @@ import clsx from "clsx";
 export function UserStatefulAvatar({
   email,
   size = "sm",
+  color = "gray",
 }: {
   email: string;
   size?: "sm" | "xs";
+  color?: string;
 }) {
   const user = useUser(email);
   const sizeClass = (function (size: "sm" | "xs") {
@@ -20,7 +22,8 @@ export function UserStatefulAvatar({
     return (
       <Icon
         icon={UserCircleIcon}
-        className={clsx("text-gray-600 !p-0", sizeClass)}
+        color={color}
+        className={clsx("!p-0", sizeClass)}
       />
     );
   }

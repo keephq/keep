@@ -195,8 +195,46 @@ class ProvidersFactory:
             # otherwise fallback to str
             return "str"
 
+    def _get_param_docstring(func, param_name):
+        """
+        Extract the docstring for a specific parameter from a function's docstring.
+
+        Args:
+            func: The function to examine
+            param_name: The name of the parameter to get documentation for
+
+        Returns:
+            str: The parameter's documentation, or None if not found
+        """
+        docstring = func.__doc__
+        if not docstring:
+            return None
+
+        # Look for Args: section in the docstring
+        args_section = docstring.split("Args:", 1)
+        if len(args_section) < 2:
+            return None
+
+        args_text = args_section[1]
+
+        # Split the Args section by parameters
+        param_sections = args_text.split("\n        ")
+
+        for section in param_sections:
+            # Check if this section describes our parameter
+            if section.strip().startswith(param_name + " "):
+                # Extract the description
+                param_desc = section.strip()[len(param_name) :].strip()
+                # Remove the type annotation part
+                if ":" in param_desc:
+                    param_desc = param_desc.split(":", 1)[1].strip()
+                return param_desc
+
+        return None
+
     def __get_methods(provider_class: BaseProvider) -> list[ProviderMethodDTO]:
         methods = []
+
         for method in provider_class.PROVIDER_METHODS:
             params = dict(
                 inspect.signature(
@@ -213,6 +251,15 @@ class ProvidersFactory:
                     mandatory = False
                     default = str(params[param].default)
                 expected_values = list(get_args(params[param].annotation))
+                param_autocomplete = False
+                try:
+                    docstring = ProvidersFactory._get_param_docstring(
+                        provider_class.__dict__.get(method.func_name), param
+                    )
+                    if "autocomplete" in docstring:
+                        param_autocomplete = True
+                except Exception:
+                    pass
                 func_params.append(
                     ProviderMethodParam(
                         name=param,
@@ -220,6 +267,7 @@ class ProvidersFactory:
                         mandatory=mandatory,
                         default=default,
                         expected_values=expected_values,
+                        autocomplete=param_autocomplete,
                     )
                 )
             if "func_params" in method.dict():
@@ -484,6 +532,8 @@ class ProvidersFactory:
             provider_copy.provisioned = p.provisioned
             provider_copy.pulling_enabled = p.pulling_enabled
             provider_copy.installed = True
+            if "oauth2" in p.configuration_key:
+                provider_copy.oauth2_installation = True
             try:
                 provider_auth = {"name": p.name}
                 if include_details:

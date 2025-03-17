@@ -29,6 +29,7 @@ export interface ProviderMethodParam {
   mandatory: boolean;
   default?: string;
   expected_values?: string[];
+  autocomplete?: boolean;
 }
 
 export interface ProviderMethod {
@@ -37,6 +38,7 @@ export interface ProviderMethod {
   func_name: string;
   description: string;
   category: string;
+  generic_action?: boolean;
   type: "view" | "action";
   func_params?: ProviderMethodParam[];
 }
@@ -131,6 +133,7 @@ export interface Provider {
   categories: TProviderCategory[];
   coming_soon: boolean;
   health: boolean;
+  oauth2_installation?: boolean;
 }
 
 export type Providers = Provider[];

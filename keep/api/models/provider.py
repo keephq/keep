@@ -55,3 +55,4 @@ class Provider(BaseModel):
     default_fingerprint_fields: list[str] | None = None
     provisioned: bool = False
     health: bool = False
+    oauth2_installation: bool = False

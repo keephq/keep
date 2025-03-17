@@ -15,6 +15,7 @@ class ProviderMethodParam(BaseModel):
     expected_values: list[str] | None = (
         None  # for example if type is Literal or something
     )
+    autocomplete: bool = False
 
 
 class ProviderMethod(BaseModel):
@@ -27,6 +28,9 @@ class ProviderMethod(BaseModel):
     scopes: list[str] = []  # required scope names, should match ProviderScope names
     description: str | None = None
     category: str | None = None
+    # can we use this action on other alerts than the one that triggered it
+    generic_action: bool = False
+    auto_complete: bool = False
     type: Literal["view", "action"] = "view"
 
 

@@ -1,4 +1,3 @@
-// TODO: this needs to be refactored
 import { useEffect, useState } from "react";
 import {
   Provider,
@@ -11,7 +10,7 @@ import {
   Button,
   TextInput,
   Text,
-  Select,
+  Select as TremorSelect,
   SelectItem,
   DatePicker,
 } from "@tremor/react";
@@ -23,6 +22,7 @@ import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { AlertDto } from "@/entities/alerts/model";
+import { Select } from "@/shared/ui";
 
 const supportedParamTypes = ["datetime", "literal", "str"];
 
@@ -59,12 +59,21 @@ export function AlertMethodModal({
   const [methodResult, setMethodResult] = useState<string[] | object[] | null>(
     null
   );
+  // Creating a mapping to store completions for each parameter
+  const [paramCompletions, setParamCompletions] = useState<{
+    [key: string]: {
+      isLoading: boolean;
+      completions: any[]; // Changed to any[] to accept objects with value and label
+      error: Error | null;
+    };
+  }>({});
 
   useEffect(() => {
     /**
-     * Auto populate params from the AlertDto
+     * Auto populate params from the AlertDto and fetch completions for each parameter
      */
     if (method && alert) {
+      // Auto populate params
       method.func_params?.forEach((param) => {
         const alertParamValue = (alert as any)[param.name];
         if (alertParamValue) {
@@ -72,9 +81,59 @@ export function AlertMethodModal({
             return { ...prevParams, [param.name]: alertParamValue };
           });
         }
+
+        // Fetch completions for string parameters with auto_complete enabled
+        if (param.type.toLowerCase() === "str" && param.autocomplete) {
+          fetchParamCompletions(param.name);
+        }
       });
     }
   }, [alert, method]);
+
+  // Function to fetch completions for a specific parameter
+  const fetchParamCompletions = async (paramName: string) => {
+    if (!providerId || !method) return;
+
+    // Set loading state for this parameter
+    setParamCompletions((prev) => ({
+      ...prev,
+      [paramName]: { isLoading: true, completions: [], error: null },
+    }));
+
+    try {
+      const url = new URL(
+        `/providers/${providerId}/autocomplete/${method.func_name}`,
+        window.location.origin
+      );
+      url.searchParams.append("paramName", paramName);
+      url.searchParams.append("prefix", ""); // Empty prefix to get all available options
+
+      const response = await api.get(url.pathname + url.search);
+
+      // Store completions for this parameter - use response directly without mapping
+      setParamCompletions((prev) => ({
+        ...prev,
+        [paramName]: {
+          isLoading: false,
+          completions: response || [], // Store the response directly
+          error: null,
+        },
+      }));
+    } catch (err) {
+      console.error(`Error fetching completions for ${paramName}:`, err);
+      setParamCompletions((prev) => ({
+        ...prev,
+        [paramName]: {
+          isLoading: false,
+          completions: [],
+          error:
+            err instanceof Error
+              ? err
+              : new Error("Failed to fetch completions"),
+        },
+      }));
+    }
+  };
 
   if (!isOpen || !provider || !method || !alert) {
     return <></>;
@@ -83,6 +142,7 @@ export function AlertMethodModal({
   const handleClose = () => {
     setInputParameters({});
     setMethodResult(null);
+    setParamCompletions({});
     router.replace(`/alerts/${presetName}`);
   };
 
@@ -106,6 +166,25 @@ export function AlertMethodModal({
       return <></>;
     }
 
+    const isAutocompleteEnabled =
+      param.autocomplete && param.type.toLowerCase() === "str";
+
+    // Get completions for this specific parameter
+    const paramData = paramCompletions[param.name] || {
+      isLoading: false,
+      completions: [],
+      error: null,
+    };
+
+    // Get the current value for this parameter as a Select option
+    const currentValue = inputParameters[param.name];
+    const selectValue = currentValue
+      ? {
+          value: currentValue,
+          label: currentValue,
+        }
+      : null;
+
     return (
       <div key={param.name} className="mb-2.5">
         <Text className="capitalize mb-1">
@@ -117,7 +196,7 @@ export function AlertMethodModal({
           )}
         </Text>
         {param.type.toLowerCase() === "literal" && (
-          <Select
+          <TremorSelect
             onValueChange={(value: string) =>
               validateAndSetParams(param.name, value, param.mandatory)
             }
@@ -129,9 +208,37 @@ export function AlertMethodModal({
                 </SelectItem>
               );
             })}
-          </Select>
+          </TremorSelect>
         )}
-        {param.type.toLowerCase() === "str" && (
+        {param.type.toLowerCase() === "str" && isAutocompleteEnabled ? (
+          <Select
+            instanceId={`autocomplete-${param.name}`}
+            options={paramData.completions} // Use completions directly, no mapping needed
+            value={selectValue}
+            onChange={(option: any) => {
+              if (option) {
+                validateAndSetParams(param.name, option.value, param.mandatory);
+              }
+            }}
+            placeholder={param.default ?? "Select an option..."}
+            isLoading={paramData.isLoading}
+            isClearable
+            isSearchable
+            filterOption={(option, inputValue) => {
+              // Allow client-side filtering for better user experience
+              if (!inputValue) return true;
+              return option.label
+                .toLowerCase()
+                .includes(inputValue.toLowerCase());
+            }}
+            noOptionsMessage={() => {
+              if (paramData.isLoading) return "Loading...";
+              if (paramData.error) return "Error fetching suggestions";
+              return "No options available";
+            }}
+            className="w-full"
+          />
+        ) : param.type.toLowerCase() === "str" ? (
           <TextInput
             required={param.mandatory}
             placeholder={param.default ?? ""}
@@ -140,7 +247,7 @@ export function AlertMethodModal({
               validateAndSetParams(param.name, value, param.mandatory)
             }
           />
-        )}
+        ) : null}
         {param.type.toLowerCase() === "datetime" && (
           <DatePicker
             minDate={new Date(Date.now() + 1 * 24 * 60 * 60 * 1000)}
@@ -167,6 +274,7 @@ export function AlertMethodModal({
     userParams: { [key: string]: string }
   ) => {
     try {
+      setIsLoading(true);
       const responseObject = await api.post(
         `/providers/${provider.id}/invoke/${method.func_name}`,
         userParams

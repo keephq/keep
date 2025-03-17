@@ -157,6 +157,21 @@ class BaseProvider(metaclass=abc.ABCMeta):
     async def verify_request(request: Request):
         raise NotImplementedError("verify_request(request) method not implemented")
 
+    def get_autocomplete(self, provider_method):
+        """
+        Get the autocomplete options for the provider method.
+
+        Args:
+            provider_method (str): The provider method.
+
+        Raises:
+            NotImplementedError: For providers who does not implement this method.
+
+        Returns:
+            dict: The autocomplete options.
+        """
+        raise NotImplementedError("get_autocomplete() method not implemented")
+
     @staticmethod
     async def extract_provider_id_from_event(raw_data, request):
         """
@@ -203,7 +218,16 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.results.append(results)
         # if the alert should be enriched, enrich it
         enrich_event = kwargs.get("enrich_alert", kwargs.get("enrich_incident", []))
-        if not enrich_event or results is None:
+
+        # try to check if there are autoenrich
+        autoenrich = False
+        if isinstance(results, dict):
+            for k, v in results.items():
+                if k.endswith("autoenrich"):
+                    autoenrich = True
+                    break
+
+        if (not enrich_event or results is None) and not autoenrich:
             return results if results else None
 
         audit_enabled = bool(kwargs.get("audit_enabled", True))

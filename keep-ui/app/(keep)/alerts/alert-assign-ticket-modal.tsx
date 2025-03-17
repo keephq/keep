@@ -112,9 +112,11 @@ const AlertAssignTicketModal = ({
           ) : (
             props.data.type && (
               <DynamicImageProviderIcon
+                providerType={props.data.type}
                 src={`/icons/${props.data.type}-icon.png`}
                 alt=""
-                style={{ height: "20px", marginRight: "10px" }}
+                height="20"
+                width="10"
               />
             )
           )}
@@ -137,9 +139,11 @@ const AlertAssignTicketModal = ({
           ) : (
             data.type && (
               <DynamicImageProviderIcon
+                providerType={data.type}
                 src={`/icons/${data.type}-icon.png`}
                 alt=""
-                style={{ height: "20px", marginRight: "10px" }}
+                height="20"
+                width="10"
               />
             )
           )}

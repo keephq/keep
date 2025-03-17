@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/ImagePreviewTooltip";
 import { useExpandedRows } from "utils/hooks/useExpandedRows";
 import { FaSlack } from "react-icons/fa";
+import { UserStatefulAvatar } from "@/entities/users/ui";
 
 interface Props {
   alert: AlertDto;
@@ -210,6 +211,8 @@ export default function AlertMenu({
   // check if the alert has slack_link attribute
   const slackLink = alert?.slack_link;
 
+  const assignee = alert?.assignee;
+
   // Quick actions that appear in the action tray
   // @tb: Create a dynamic component like Druids ActionTray that accepts a list of actions and renders them in a grid
   const quickActions = (
@@ -285,6 +288,18 @@ export default function AlertMenu({
           />
         </div>
       )}
+      {/* Add the assignee button */}
+      {assignee && (
+        <Button
+          variant="light"
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+          className={actionIconButtonClassName}
+          tooltip={`Assigned to ${assignee}`}
+          icon={() => <UserStatefulAvatar email={assignee} size="xs" />}
+        />
+      )}
       {/* Add the slack link button */}
       {slackLink && (
         <Button
@@ -295,7 +310,9 @@ export default function AlertMenu({
           }}
           className={actionIconButtonClassName}
           tooltip="Open in Slack"
-          icon={() => <Icon icon={FaSlack} className="w-4 h-4 text-gray-500" />}
+          icon={() => (
+            <Icon icon={FaSlack} className="w-4 h-4 text-green-500" />
+          )}
         />
       )}
 
@@ -417,6 +434,23 @@ export default function AlertMenu({
 
   const provider = installedProviders.find((p) => p.type === alert.source[0]);
 
+  // get generic actions
+  // iterate over installedProvider.methods and get those with generic_action=true
+  const genericProviderActions = installedProviders
+    .filter((provider) => provider && provider.methods)
+    .reduce(
+      (acc, provider) => {
+        const genericActions = (
+          provider.methods?.filter((method) => method.generic_action) || []
+        ).map((method) => ({
+          ...method,
+          provider: provider,
+        }));
+        return [...acc, ...genericActions];
+      },
+      [] as (ProviderMethod & { provider: (typeof installedProviders)[0] })[]
+    );
+
   const onDismiss = useCallback(async () => {
     setDismissModalAlert?.([alert]);
   }, [alert, setDismissModalAlert]);
@@ -453,17 +487,19 @@ export default function AlertMenu({
   );
 
   const openMethodModal = useCallback(
-    (method: ProviderMethod) => {
+    (
+      method: ProviderMethod & { provider?: (typeof installedProviders)[0] }
+    ) => {
       updateUrl({
         newParams: {
           methodName: method.name,
-          providerId: provider!.id,
+          providerId: provider?.id || method.provider?.id,
           alertFingerprint: alert.fingerprint,
         },
         scroll: false,
       });
     },
-    [alert, presetName, provider, router]
+    [alert, presetName, provider, router, updateUrl]
   );
 
   const canAssign = true; // TODO: keep track of assignments for auditing
@@ -528,6 +564,23 @@ export default function AlertMenu({
         onClick: () => openMethodModal(method),
         disabled: !isMethodEnabled(method),
       })) ?? []),
+      ...(genericProviderActions
+        .filter((method) => method.provider)
+        .map((method) => ({
+          icon: (props: any) => (
+            <DynamicImageProviderIcon
+              providerType={method.provider.type}
+              src={`/icons/${method.provider.type}-icon.png`}
+              {...props}
+              height="16"
+              width="16"
+            />
+          ),
+          label: method.name,
+          onClick: () => openMethodModal(method),
+          disabled:
+            !isMethodEnabled(method) && !method.provider.oauth2_installation,
+        })) ?? []),
       {
         icon: IoNotificationsOffOutline,
         label: alert.dismissed ? "Restore" : "Dismiss",

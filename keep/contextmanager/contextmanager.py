@@ -74,6 +74,7 @@ class ContextManager:
         self.workflow_execution_id = None
         self._api_key = None
         self.__loggers = {}
+        self.frontend_url = None
 
     @property
     def api_url(self):

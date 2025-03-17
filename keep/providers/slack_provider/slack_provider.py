@@ -18,6 +18,7 @@ from keep.api.core.db import get_session_sync as get_session
 from keep.api.models.action_type import ActionType
 from keep.api.routes.alerts import assign_alert
 from keep.api.routes.providers import install_provider_oauth2
+from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.functions import utcnowtimestamp
@@ -74,8 +75,142 @@ class SlackProvider(BaseProvider):
             scopes=[],
             description="Send a Slack Message",
             type="action",
+            generic_action=True,
         ),
     ]
+
+    def send_slack_message(self, fingerprint: str, channel: str):
+        """
+        Send a message to Slack.
+
+        Args:
+            channel (str): The channel to send the message to [autocomplete]
+
+        Returns:
+            dict: The response from Slack
+        """
+        alert, _ = query_last_alerts(
+            tenant_id=self.context_manager.tenant_id,
+            limit=1,
+            cel=f"fingerprint == '{fingerprint}'",
+        )
+        if not alert:
+            return False
+
+        alert = convert_db_alerts_to_dto_alerts(alert)
+        alert = alert[0]
+        alert_data = alert.dict()
+
+        if self.context_manager.frontend_url:
+            from urllib.parse import urlparse
+
+            parsed_url = urlparse(self.context_manager.frontend_url)
+            if parsed_url.path:
+                base_url_with_path = (
+                    f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
+                )
+            else:
+                # default to /alerts/feed
+                base_url_with_path = (
+                    f"{parsed_url.scheme}://{parsed_url.netloc}/alerts/feed"
+                )
+            alert_ref_url = (
+                base_url_with_path + "?alertPayloadFingerprint=" + alert.fingerprint
+            )
+        else:
+            alert_ref_url = None
+            self.logger.warning("No frontend url")
+
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": alert_data.get("name", "N/A"),
+                    "emoji": True,
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Status*: {alert_data.get('status', 'firing')}\n*Severity*: {alert_data.get('severity', 'warning')}\n*Fingerprint*: {alert.fingerprint}",
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Description*: {alert_data.get('description', 'N/A')}",
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Source*: {', '.join(alert_data.get('source'))}",
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Error*: {alert_data.get('annotations', {}).get('Error', 'N/A')}",
+                },
+            },
+        ]
+
+        if alert_ref_url:
+            blocks.append(
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": emoji.emojize("🚨 View Alert In Keep"),
+                                "emoji": True,
+                            },
+                            "url": alert_ref_url,
+                            "action_id": "view-alert",
+                        }
+                    ],
+                }
+            )
+        return self.notify(message="", blocks=blocks, channel=channel)
+
+    def get_autocomplete(self, provider_method):
+        """
+        Get autocomplete options for the provider.
+
+        Returns:
+            dict: The autocomplete options
+        """
+        if provider_method == "send_slack_message":
+            # get slack channels
+            response = requests.get(
+                "https://slack.com/api/conversations.list",
+                headers={
+                    "Authorization": f"Bearer {self.authentication_config.access_token}"
+                },
+                params={
+                    "types": "public_channel,private_channel",
+                    "exclude_archived": True,
+                    "limit": 100,
+                },
+            )
+            if response.status_code == 200 and response.json().get("ok"):
+                channels = response.json().get("channels", [])
+                return [
+                    {"value": channel.get("id"), "label": "#" + channel.get("name")}
+                    for channel in channels
+                    if channel.get("is_member")
+                ]
+            else:
+                # Handle errors
+                return []
+        return {}
 
     async def _handle_eyes_reaction(
         self,
@@ -89,13 +224,35 @@ class SlackProvider(BaseProvider):
         message_link,
     ):
         self.logger.info("Handling eyes reaction")
-        # send the full payload
-        self._notify(
-            message=f"👀 <@{user_id}> is watching this alert",
-            channel=channel,
-            thread_timestamp=ts,
-        )
-        return {"status": "success", "event_type": "reaction_added", "reaction": "eyes"}
+
+        # Format the alert payload as a pretty-printed JSON string
+        try:
+            # Convert alert to dictionary if it's not already
+            alert_dict = related_alert
+            if hasattr(related_alert, "dict"):
+                alert_dict = related_alert.dict()
+
+            # Pretty print the JSON with indentation
+            json_payload = json.dumps(alert_dict, indent=2, default=str)
+
+            # Create the code block message with the JSON payload
+            message_text = f"👀 <@{user_id}> Here's the full alert payload:\n```json\n{json_payload}\n```"
+
+            # Send the message in the thread
+            self._notify(
+                message=message_text,
+                channel=channel,
+                thread_timestamp=ts,
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error formatting alert payload: {str(e)}")
+            # Fallback message if JSON formatting fails
+            self._notify(
+                message=f"👀 <@{user_id}> I tried to show the full alert payload, but encountered an error: {str(e)}",
+                channel=channel,
+                thread_timestamp=ts,
+            )
 
     async def _handle_wave_reaction(
         self,
@@ -117,6 +274,11 @@ class SlackProvider(BaseProvider):
                 authenticated_entity=authenticated_entity,
                 fingerprint=related_alert.fingerprint,
                 last_received=related_alert.lastReceived,
+            )
+            self._notify(
+                message=f"👀 <@{user_id}> I've assigned you to the alert",
+                channel=channel,
+                thread_timestamp=ts,
             )
             self.logger.info(f"Assigned alert: {assigned}")
         except Exception:
@@ -461,7 +623,6 @@ class SlackProvider(BaseProvider):
 
             # Query for related alert
             related_alert = await self._query_related_alert(message_link)
-
             handler_method_name = self.EMOJI_HANDLERS.get(reaction)
             if handler_method_name:
                 try:
@@ -675,7 +836,7 @@ class SlackProvider(BaseProvider):
                 }
             else:
                 # No recognizable command, maybe send help info
-                self._notify(
+                self.notify(
                     message=f"Hello <@{user_id}>! I didn't recognize that command. Try 'help' for a list of commands.",
                     channel=channel,
                     thread_timestamp=ts,
@@ -956,7 +1117,7 @@ class SlackProvider(BaseProvider):
 
             if cmd == "help":
                 # Send help information
-                self._notify(
+                self.notify(
                     message="Available commands:\n• `help` - Show this help\n• `status` - Show system status\n• `alerts` - Show recent alerts",
                     channel=channel,
                     thread_timestamp=ts,
@@ -965,7 +1126,7 @@ class SlackProvider(BaseProvider):
 
             elif cmd == "status":
                 # Send status information
-                self._notify(
+                self.notify(
                     message="All systems operational! 🟢",
                     channel=channel,
                     thread_timestamp=ts,
@@ -990,12 +1151,12 @@ class SlackProvider(BaseProvider):
                 else:
                     alerts_text = "No recent alerts found."
 
-                self._notify(message=alerts_text, channel=channel, thread_timestamp=ts)
+                self.notify(message=alerts_text, channel=channel, thread_timestamp=ts)
                 return {"status": "success", "command": "alerts"}
 
             else:
                 # Unknown command
-                self._notify(
+                self.notify(
                     message=f"Unknown command: `{cmd}`. Type `help` for available commands.",
                     channel=channel,
                     thread_timestamp=ts,
@@ -1007,7 +1168,7 @@ class SlackProvider(BaseProvider):
                 f"Error processing mention command: {str(e)}", exc_info=True
             )
             # Notify the user about the error
-            self._notify(
+            self.notify(
                 message=f"Error processing command: {str(e)}",
                 channel=channel,
                 thread_timestamp=ts,
@@ -1035,7 +1196,8 @@ class SlackProvider(BaseProvider):
 
             if related_alert:
                 self.logger.info(f"Found related alert: {related_alert[0].fingerprint}")
-                return related_alert[0]
+                related_alert_dto = convert_db_alerts_to_dto_alerts(related_alert)
+                return related_alert_dto[0]
             else:
                 self.logger.info("No related alert found")
                 return None

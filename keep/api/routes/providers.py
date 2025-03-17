@@ -13,7 +13,12 @@ from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
-from keep.api.core.db import count_alerts, get_provider_distribution, get_session
+from keep.api.core.db import (
+    count_alerts,
+    get_provider_by_id,
+    get_provider_distribution,
+    get_session,
+)
 from keep.api.core.limiter import limiter
 from keep.api.models.db.provider import Provider
 from keep.api.models.provider import Provider as ProviderDTO
@@ -577,7 +582,7 @@ async def install_provider_oauth2(
         validated_scopes = ProvidersService.validate_scopes(provider)
 
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-        secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
+        secret_name = f"{tenant_id}_{provider_type}_oauth2_{provider_unique_id}"
         if "provider_secret_suffix" in provider_info:
             secret_name += f"_{provider_info['provider_secret_suffix']}"
 
@@ -632,6 +637,7 @@ def _get_default_provider_config(provider_info: dict) -> tuple[str, str, dict]:
     status_code=200,
 )
 def invoke_provider_method(
+    request: Request,
     provider_id: str,
     method: str,
     body: dict = Body(...),
@@ -649,6 +655,14 @@ def invoke_provider_method(
     provider = None
 
     context_manager = ContextManager(tenant_id=tenant_id)
+    try:
+        referer_url = request.headers.get("Referer")
+        origin_url = request.headers.get("Origin")
+        frontend_url = referer_url or origin_url
+        context_manager.frontend_url = frontend_url
+    except Exception:
+        logger.warning("Failed to get referer/origin")
+        pass
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     provider_info = body.pop("providerInfo", None)
     method_params = body
@@ -682,6 +696,11 @@ def invoke_provider_method(
             raise HTTPException(400, detail="Method not found")
 
         try:
+            # shahar: this will allow autoenrich to work later in notify
+            if "fingerprint" in method_params:
+                context_manager.set_event_context(
+                    {"fingerprint": method_params["fingerprint"]}
+                )
             response = func(**method_params)
         except ProviderMethodException as e:
             logger.exception(
@@ -892,3 +911,34 @@ def get_healthcheck_providers():
         "providers": healthcheck_providers,
         "is_localhost": is_localhost,
     }
+
+
+@router.get(
+    "/{provider_id}/autocomplete/{provider_method}",
+    description="Autocomplete provider method",
+)
+def get_provider_method_autocomplete(
+    provider_id: str | None = None,
+    provider_method: str | None = None,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:providers"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Getting provider method autocomplete",
+        extra={"tenant_id": tenant_id, "provider_id": provider_id},
+    )
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    provider = get_provider_by_id(tenant_id, provider_id)
+    if not provider:
+        raise HTTPException(404, detail="Provider not found")
+    provider_config = secret_manager.read_secret(
+        provider.configuration_key, is_json=True
+    )
+    provider = ProvidersFactory.get_provider(
+        context_manager, provider_id, provider.type, provider_config
+    )
+    autocomplete_options = provider.get_autocomplete(provider_method)
+    return autocomplete_options

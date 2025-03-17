@@ -4617,6 +4617,16 @@ def get_provider_by_type_and_id(
     return provider
 
 
+def get_provider_by_id(tenant_id: str, provider_id: str) -> Provider:
+    with Session(engine) as session:
+        provider = session.exec(
+            select(Provider)
+            .where(Provider.tenant_id == tenant_id)
+            .where(Provider.id == provider_id)
+        ).first()
+    return provider
+
+
 def bulk_upsert_alert_fields(
     tenant_id: str,
     fields: List[str],
