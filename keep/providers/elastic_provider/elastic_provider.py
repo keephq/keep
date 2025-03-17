@@ -41,6 +41,14 @@ class ElasticProviderAuthConfig:
         default=None,
         metadata={"required": False, "description": "Elasticsearch cloud id"},
     )
+    verify: bool = dataclasses.field(
+        metadata={
+            "description": "Enable SSL verification",
+            "hint": "SSL verification is enabled by default",
+            "type": "switch",
+        },
+        default=True,
+    )
     username: typing.Optional[str] = dataclasses.field(
         default=None,
         metadata={
@@ -57,15 +65,6 @@ class ElasticProviderAuthConfig:
             "config_sub_group": "username_password",
             "config_main_group": "authentication",
         },
-    )
-    verify: bool = dataclasses.field(
-        metadata={
-            "description": "Enable SSL verification",
-            "hint": "SSL verification is enabled by default",
-            "type": "switch",
-            "config_main_group": "authentication",
-        },
-        default=True,
     )
 
     @pydantic.root_validator
