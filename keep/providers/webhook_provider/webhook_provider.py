@@ -119,6 +119,7 @@ class WebhookProvider(BaseProvider):
         try:
             self._notify(body={"test": "payload"})
         except Exception as e:
+            self.logger.exception("Error validating scopes")
             validated_scopes["send_webhook"] = str(e)
             return validated_scopes
         validated_scopes["send_webhook"] = True
@@ -179,7 +180,12 @@ class WebhookProvider(BaseProvider):
         if isinstance(headers, str):
             headers = json.loads(headers)
         if isinstance(headers, list):
-            headers = {header["key"]: header["value"] for header in headers}
+            try:
+                headers = {header["key"]: header["value"] for header in headers}
+            except Exception:
+                raise Exception(
+                    "Headers must be a list of dictionaries with 'key' and 'value' fields, e.g. [{'key': 'Content-Type', 'value': 'application/json'}]"
+                )
         if body is None:
             body = {}
         if params is None:
