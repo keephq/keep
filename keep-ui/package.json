@@ -42,7 +42,7 @@
     "@svgr/webpack": "^8.0.1",
     "@tanstack/react-table": "^8.21.2",
     "@tanstack/table-core": "^8.21.2",
-    "@tremor/react": "^3.18.3",
+    "@tremor/react": "^3.18.7",
     "@xyflow/react": "^12.4.4",
     "@xyflow/system": "^0.0.52",
     "autoprefixer": "^10.4.21",
