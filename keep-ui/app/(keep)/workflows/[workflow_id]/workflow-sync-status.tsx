@@ -12,7 +12,9 @@ export function WorkflowSyncStatus() {
     isInitialized,
   } = useWorkflowStore();
   const isChangesSaved =
-    isEditorSyncedWithNodes && lastDeployedAt >= lastChangedAt;
+    isEditorSyncedWithNodes &&
+    lastDeployedAt === null &&
+    lastDeployedAt >= lastChangedAt;
 
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {

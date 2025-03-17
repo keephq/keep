@@ -1,5 +1,4 @@
 import { Title } from "@tremor/react";
-import ReactLoading from "react-loading";
 import {
   isWorkflowExecution,
   WorkflowExecutionDetail,
@@ -7,6 +6,7 @@ import {
 } from "@/shared/api/workflow-executions";
 import { WorkflowExecutionResults } from "@/features/workflow-execution-results";
 import { IoClose } from "react-icons/io5";
+import { KeepLoader } from "@/shared/ui";
 
 interface Props {
   closeModal: () => void;
@@ -44,12 +44,7 @@ export function BuilderWorkflowTestRunModalContent({
           />
         ) : (
           <div className="flex justify-center">
-            <ReactLoading
-              type="spin"
-              color="rgb(234 160 112)"
-              height={50}
-              width={50}
-            />
+            <KeepLoader loadingText="Loading workflow execution results..." />
           </div>
         )}
       </div>
