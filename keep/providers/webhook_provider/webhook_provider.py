@@ -169,6 +169,7 @@ class WebhookProvider(BaseProvider):
         headers: str = None,
         body: dict = None,
         params: dict = None,
+        fail_on_error: bool = True,
         **kwargs: dict,
     ) -> dict:
         """
@@ -245,6 +246,13 @@ class WebhookProvider(BaseProvider):
             body = response.json()
         except JSONDecodeError:
             body = response.text
+
+        if fail_on_error:
+            self.logger.info(
+                f"Webhook response: {response.status_code} {response.reason}",
+                extra={"body": body},
+            )
+            response.raise_for_status()
 
         result["body"] = body
         return result
