@@ -90,7 +90,7 @@ class KubernetesSecretManager(BaseSecretManager):
             )
             return secret_data
         except ApiException as e:
-            self.logger.error(
+            self.logger.debug(
                 "Error reading secret",
                 extra={"secret_name": secret_name, "error": str(e)},
             )
