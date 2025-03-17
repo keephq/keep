@@ -1,0 +1,14 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Rules and guidelines for running *.spec.tsx, *.tests.tsx tests and writing React tests
+globs: *.spec.tsx, *.tests.tsx
+---
+
+# Running *.spec.tsx tests
+
+Please run tests with command: npm run test in keep-ui folder
+For example: cd keep-ui && npm run test

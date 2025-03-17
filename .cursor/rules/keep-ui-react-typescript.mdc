@@ -1,0 +1,69 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Rules for writing frontend code at Keep (React + Typescript)
+globs: keep-ui/**/*.tsx, keep-ui/**/*.ts
+---
+
+You are an expert in TypeScript, React, Next.js, SWR, Tailwind, and UX design.
+
+# Achitecture
+Use Feature-Slice Design Convention with modification: instead of `pages` and `app` we use default Next.js route-based folder structure.
+
+Example:
+- entities/
+  - incidents/
+    - api/
+    - lib/
+    - model/
+    - ui/
+
+Top-level folders, called Layers: 
+- widgets
+- features
+- entities
+- shared
+
+Each layer have segments, e.g. "entities/users".
+
+Each segment has slices 
+- ui — everything related to UI display: UI components, date formatters, styles, etc.
+- api — backend interactions: request functions, data types, mappers, etc.
+- model — the data model: schemas, interfaces, stores, and business logic.
+- lib — library code that other modules on this slice need.
+- config — configuration files and feature flags.
+
+# Code Style and Structure
+- Write TypeScript with proper typing for all new code
+- Use functional programming patterns; avoid classes
+- Prefer iteration and modularization over code duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
+- Don't use `useEffect` where you can use ref function for dom-dependent things (e.g. ref={el => ...})
+- Don't use `useState` where you can infer from props
+- Use named exports; avoid default exports
+- If you need to create new base component, first look at existing ones in `@/shared/ui`
+
+# Naming Conventions
+- Always look around the codebase for naming conventions, and follow the best practices of the environment (e.g. use `camelCase` variables in JS).
+- Use clear, yet functional names (`searchResults` vs `data`).
+- React components are PascalCase (`IncidentList`).
+- Props for components and hooks are PascalCase and end with `Props`, e.g. `WorkflowBuilderWidgetProps`, return value for hooks is PascalCase and end with `Value`, e.g. `UseIncidentActionsValue` 
+- Name the `.ts` file according to its main export: `IncidentList.ts` or `IncidentList.tsx` or `useIncidents.ts`. Pay attention to the case.
+- Avoid `index.ts`, `styles.css`, and other generic names, even if this is the only file in a directory.
+
+# Data Fetching
+- Use `useSWR` for fetching data, create or extend hook in `@/entities/<entity>/model/use<Entity>.ts` which encapsulates fetching logic, place SWR key in a exported variable, e.g. `export const WorkflowsListSWRKey= '/workflows'`. 
+- For create, update, delete actions create or extend hook `@/entities/<entity>/model/use<Entity>Actions.ts`, mutate proper key after changes with help of `useRevalidateMultiple()`, hook, e.g. `revalidateMultiple([WorkflowsListSWRKey, WorkflowsListSWRKey + "?"], {isExact: true});`
+
+# UI and Styling
+- Use Tailwind CSS as primary styling solution
+- For non-Tailwind cases:
+  - Use CSS with component-specific files
+  - Namespace under component class (.DropdownMenu)
+  - Follow BEM for modals (.DropdownMenu__modal)
+  - Import styles directly (import './DropdownMenu.css')
+- Replace custom CSS with Tailwind when possible
+
