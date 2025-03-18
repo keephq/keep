@@ -50,13 +50,16 @@ const ProviderFormScopes = ({
             Refresh
           </Button>
         )}
-        {provider.installed && invalidScopesPresent && <Callout
-          title="Installed With Missing Scopes"
-          className="mt-5"
-          color="gray"
-        >
-          Provider is installed. Ignore missing scopes if you don't need related features.
-        </Callout>}
+        {provider.installed && invalidScopesPresent && (
+          <Callout
+            title="Installed With Missing Scopes"
+            className="mt-5"
+            color="gray"
+          >
+            Provider is installed. Ignore missing scopes if you don&apos;t need
+            related features.
+          </Callout>
+        )}
         <Table className="mt-5">
           <TableHead>
             <TableRow>
