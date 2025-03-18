@@ -1,16 +1,13 @@
 import asyncio
-import datetime
 import logging
 import os
 import random
 import threading
 import time
-from datetime import timezone
 from uuid import uuid4
 
 import aiohttp
 import requests
-from dateutil import parser
 from requests.models import PreparedRequest
 
 from keep.api.core.db import get_session_sync
