@@ -1,5 +1,8 @@
-id: enrich-using-ai-deepseek
-description: Enrich alerts using structured output from deepseek
+workflow:
+  id: deepseek-alert-enrichment
+  name: DeepSeek Alert Enrichment
+  description: Enriches Prometheus alerts using DeepSeek Coder to determine environment and customer impact information through structured JSON output.
+
 triggers:
   - type: alert
     filters:
@@ -12,16 +15,17 @@ steps:
       config: "{{ providers.my_deepseek }}"
       type: deepseek
       with:
-        prompt: "You received such an alert {{alert}}, generate missing fields.
+        prompt: |
+          You received such an alert {{alert}}, generate missing fields.
 
-        Environment could be \"production\", \"staging\", \"development\".
-        
-        EXAMPLE JSON OUTPUT:
-            {
-                \"environment\": \"production\",
-                \"impacted_customer_name\": \"Acme Corporation\"
-            }
-        "
+          Environment could be \"production\", \"staging\", \"development\".
+
+          EXAMPLE JSON OUTPUT:
+              {
+                  \"environment\": \"production\",
+                  \"impacted_customer_name\": \"Acme Corporation\"
+              }
+
         model: "deepseek-coder-33b-instruct"
         structured_output_format: # We limit what model could return
           type: json_object

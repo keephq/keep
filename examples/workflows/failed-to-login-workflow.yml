@@ -1,6 +1,7 @@
 workflow:
-  id: query-bigquery-when-alert-triggers-by-cloudwatch
-  description: Decide how to alert based on customer tier and enrich context
+  id: tiered-login-failure-response
+  name: Tiered Login Failure Response
+  description: Handles user login failures by querying customer tier from BigQuery and routes notifications to appropriate channels - OpsGenie for enterprise customers and Slack for all tiers.
   triggers:
     - type: alert
       filters:

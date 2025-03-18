@@ -1,6 +1,7 @@
 workflow:
-  id: create-alert
-  description: Just creating one more alert in Keep
+  id: keep-alert-generator
+  name: Keep Alert Generator
+  description: Creates new alerts within the Keep system with customizable parameters and descriptions.
   triggers:
     - type: manual
 
