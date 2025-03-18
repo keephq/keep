@@ -211,7 +211,10 @@ config.callbacks.session = async (params) => {
 
   // Make sure tenantIds from the token are added to the session
   if (params.token && "tenantIds" in params.token) {
-    session.user.tenantIds = params.token.tenantIds;
+    session.user.tenantIds = params.token.tenantIds as {
+      tenant_id: string;
+      tenant_name: string;
+    }[];
   }
 
   // Also copy tenantIds from user object if available
