@@ -826,9 +826,14 @@ function initializeWorkflow(
 export function useWorkflowEditorChangesSaved() {
   const { lastChangedAt, lastDeployedAt, isEditorSyncedWithNodes, isDeployed } =
     useWorkflowStore();
+  const isDeployedAndUntouched =
+    lastDeployedAt === null && lastChangedAt === null && isDeployed;
+  const isDeployedAndChangesSaved =
+    lastDeployedAt !== null &&
+    lastChangedAt !== null &&
+    lastDeployedAt >= lastChangedAt;
   const isChangesSaved =
     isEditorSyncedWithNodes &&
-    ((lastDeployedAt !== null && lastDeployedAt >= lastChangedAt) ||
-      (lastDeployedAt === null && lastChangedAt === null && isDeployed));
+    (isDeployedAndChangesSaved || isDeployedAndUntouched);
   return isChangesSaved;
 }
