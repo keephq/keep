@@ -266,11 +266,11 @@ def build_alerts_query(
         order_by_field = group_by_exp[0]
 
     if sort_dir == "desc":
-        base = base.order_by(desc(text(order_by_field)), LastAlert.alert_id)
+        base = base.order_by(desc(text(order_by_field)))
     else:
-        base = base.order_by(asc(text(order_by_field)), LastAlert.alert_id)
+        base = base.order_by(asc(text(order_by_field)))
 
-    base = base.distinct(text(order_by_field), LastAlert.alert_id).cte("alerts_query")
+    base = base.distinct(text(order_by_field)).cte("alerts_query")
 
     query = (
         select(
