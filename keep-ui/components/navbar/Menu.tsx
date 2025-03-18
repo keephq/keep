@@ -7,6 +7,7 @@ import { AiOutlineMenu, AiOutlineClose } from "react-icons/ai";
 import { usePathname } from "next/navigation";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { useHotkeys } from "react-hotkeys-hook";
+import { Session } from "next-auth";
 
 type CloseMenuOnRouteChangeProps = {
   closeMenu: () => void;
@@ -24,9 +25,10 @@ const CloseMenuOnRouteChange = ({ closeMenu }: CloseMenuOnRouteChangeProps) => {
 
 type MenuButtonProps = {
   children: ReactNode;
+  session: Session | null;
 };
 
-export const Menu = ({ children }: MenuButtonProps) => {
+export const Menu = ({ children, session }: MenuButtonProps) => {
   const [isMenuMinimized, setisMenuMinimized] = useLocalStorage<boolean>(
     "menu-minimized",
     false
@@ -57,7 +59,10 @@ export const Menu = ({ children }: MenuButtonProps) => {
             className='relative bg-gray-50 col-span-1 border-r border-gray-300 h-full hidden lg:block [&[data-minimized="true"]>nav]:invisible'
             data-minimized={isMenuMinimized}
           >
-            <nav className="flex flex-col h-full">{children}</nav>
+            <nav className="flex flex-col h-full">
+              {/* No more TenantSwitcher - the logo and tenant switching is now in Search component */}
+              {children}
+            </nav>
           </aside>
 
           <CloseMenuOnRouteChange closeMenu={closeMenu} />
@@ -71,7 +76,8 @@ export const Menu = ({ children }: MenuButtonProps) => {
               </Popover.Button>
             </div>
 
-            {children}
+            {/* No more TenantSwitcher here either */}
+            <div className="mt-12">{children}</div>
           </Popover.Panel>
         </>
       )}

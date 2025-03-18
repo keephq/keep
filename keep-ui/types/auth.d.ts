@@ -23,6 +23,8 @@ declare module "next-auth" {
     email: string;
     accessToken: string;
     tenantId?: string;
+    // a list of {"tenant_id": id, "tenant_name": name} objects
+    tenantIds?: { tenant_id: string; tenant_name: string }[];
     role?: string;
   }
 }

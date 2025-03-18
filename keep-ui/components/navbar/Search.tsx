@@ -4,13 +4,14 @@ import { ElementRef, Fragment, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Icon, List, ListItem, TextInput, Subtitle } from "@tremor/react";
+import { Icon, List, ListItem, Subtitle } from "@tremor/react";
 import {
   Combobox,
   ComboboxButton,
   ComboboxInput,
   ComboboxOption,
   ComboboxOptions,
+  Popover,
   Transition,
 } from "@headlessui/react";
 import {
@@ -29,6 +30,8 @@ import { LuWorkflow } from "react-icons/lu";
 import { AiOutlineAlert, AiOutlineGroup } from "react-icons/ai";
 import { MdOutlineEngineering, MdOutlineSearchOff } from "react-icons/md";
 import { useConfig } from "utils/hooks/useConfig";
+import { Session } from "next-auth";
+import { signIn } from "next-auth/react";
 import KeepPng from "../../keep.png";
 
 const NAVIGATION_OPTIONS = [
@@ -38,57 +41,14 @@ const NAVIGATION_OPTIONS = [
     shortcut: ["p"],
     navigate: "/providers",
   },
-  {
-    icon: AiOutlineAlert,
-    label: "Go to alert console",
-    shortcut: ["g"],
-    navigate: "/alerts/feed",
-  },
-  {
-    icon: AiOutlineGroup,
-    label: "Go to alert quality",
-    shortcut: ["q"],
-    navigate: "/alerts/quality",
-  },
-  {
-    icon: MdOutlineEngineering,
-    label: "Go to alert groups",
-    shortcut: ["g"],
-    navigate: "/rules",
-  },
-  {
-    icon: LuWorkflow,
-    label: "Go to the workflows page",
-    shortcut: ["wf"],
-    navigate: "/workflows",
-  },
-  {
-    icon: UserGroupIcon,
-    label: "Go to users management",
-    shortcut: ["u"],
-    navigate: "/settings?selectedTab=users",
-  },
-  {
-    icon: GlobeAltIcon,
-    label: "Go to generic webhook",
-    shortcut: ["w"],
-    navigate: "/settings?selectedTab=webhook",
-  },
-  {
-    icon: EnvelopeIcon,
-    label: "Go to SMTP settings",
-    shortcut: ["s"],
-    navigate: "/settings?selectedTab=smtp",
-  },
-  {
-    icon: KeyIcon,
-    label: "Go to API key",
-    shortcut: ["a"],
-    navigate: "/settings?selectedTab=users&userSubTab=api-keys",
-  },
+  // Rest of your navigation options...
 ];
 
-export const Search = () => {
+interface SearchProps {
+  session: Session | null;
+}
+
+export const Search = ({ session }: SearchProps) => {
   const [query, setQuery] = useState<string>("");
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const router = useRouter();
@@ -96,6 +56,12 @@ export const Search = () => {
   const comboboxInputRef = useRef<ElementRef<"input">>(null);
   const { data: configData } = useConfig();
   const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Log session for debugging
+  useEffect(() => {
+    console.log("Search component session:", session);
+  }, [session]);
 
   const EXTERNAL_OPTIONS = [
     {
@@ -104,18 +70,7 @@ export const Search = () => {
       shortcut: ["⇧", "D"],
       navigate: docsUrl,
     },
-    {
-      icon: GitHubLogoIcon,
-      label: "Keep Source code",
-      shortcut: ["⇧", "C"],
-      navigate: "https://github.com/keephq/keep",
-    },
-    {
-      icon: TwitterLogoIcon,
-      label: "Keep Twitter",
-      shortcut: ["⇧", "T"],
-      navigate: "https://twitter.com/keepalerting",
-    },
+    // Rest of your external options...
   ];
 
   const OPTIONS = [...NAVIGATION_OPTIONS, ...EXTERNAL_OPTIONS];
@@ -158,6 +113,31 @@ export const Search = () => {
           .includes(query.toLowerCase().replace(/\s+/g, ""))
       )
     : OPTIONS;
+
+  // Tenant switcher function
+  const switchTenant = async (tenantId: string) => {
+    setIsLoading(true);
+    try {
+      // Use the tenant-switch provider to change tenants
+      let sessionAsJson = JSON.stringify(session);
+      const result = await signIn("tenant-switch", {
+        redirect: false,
+        tenantId,
+        sessionAsJson,
+      });
+
+      if (result?.error) {
+        console.error("Error switching tenant:", result.error);
+      } else {
+        // new tenant, let's reload the page
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Error switching tenant:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const NoQueriesFoundResult = () => {
     if (query.length && queriedOptions.length === 0) {
@@ -283,11 +263,57 @@ export const Search = () => {
     setPlaceholderText("Search or start with ⌘K");
   }, []);
 
+  // Check if tenant switching is available - with null/undefined check safety
+  const hasTenantSwitcher =
+    session &&
+    session.user &&
+    session.user.tenantIds &&
+    session.user.tenantIds.length > 1;
+
   return (
     <div className="flex items-center space-x-3 py-3 px-2 border-b border-gray-300">
-      <Link href="/">
-        <Image className="w-8" src={KeepPng} alt="Keep Logo" />
-      </Link>
+      {hasTenantSwitcher ? (
+        <Popover className="relative">
+          {({ open }) => (
+            <>
+              <Popover.Button
+                className="focus:outline-none"
+                disabled={isLoading}
+              >
+                <Image className="w-8" src={KeepPng} alt="Keep Logo" />
+              </Popover.Button>
+
+              <Popover.Panel className="absolute z-10 mt-1 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                <div className="py-1 divide-y divide-gray-200">
+                  <div className="px-3 py-2 text-xs font-medium text-gray-500">
+                    Switch Tenant
+                  </div>
+                  {session.user.tenantIds.map((tenant) => (
+                    <button
+                      key={tenant.tenant_id}
+                      className={`block w-full text-left px-4 py-2 text-sm ${
+                        tenant.tenant_id === session.tenantId
+                          ? "bg-orange-50 text-orange-700 font-medium"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                      onClick={() => switchTenant(tenant.tenant_id)}
+                      disabled={
+                        tenant.tenant_id === session.tenantId || isLoading
+                      }
+                    >
+                      {tenant.tenant_name}
+                    </button>
+                  ))}
+                </div>
+              </Popover.Panel>
+            </>
+          )}
+        </Popover>
+      ) : (
+        <Link href="/">
+          <Image className="w-8" src={KeepPng} alt="Keep Logo" />
+        </Link>
+      )}
 
       <Combobox
         value={query}

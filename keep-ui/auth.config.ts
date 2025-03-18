@@ -172,6 +172,16 @@ const baseProviderConfigs = {
             tenant_id: tenantId,
             user_id: "keep-user-for-no-auth-purposes",
           }),
+          tenantIds: [
+            {
+              tenant_id: "keep",
+              tenant_name: "Tenant of Keep (tenant_id: keep)",
+            },
+            {
+              tenant_id: "keep2",
+              tenant_name: "Tenant of another Keep (tenant_id: keep2)",
+            },
+          ],
           tenantId: tenantId,
           role: "user",
         };
