@@ -497,7 +497,7 @@ class KeepProvider(BaseProvider):
                 extra={"original": alert_data, "rendered": rendered_alert_data},
             )
             # render tenrary expressions
-            rendered_alert_data = self._handle_ternary_exressions(rendered_alert_data)
+            rendered_alert_data = self._handle_ternary_expressions(rendered_alert_data)
             alert_dto = self._build_alert(
                 alert_results, fingerprint_fields, **rendered_alert_data
             )
@@ -666,7 +666,7 @@ class KeepProvider(BaseProvider):
             return False
         return evaluated_if_met
 
-    def _handle_ternary_exressions(self, rendered_providers_parameters):
+    def _handle_ternary_expressions(self, rendered_providers_parameters):
         # SG: a hack to allow tenrary expressions
         #     e.g.'0.012899999999999995 > 0.9 ? "critical" : 0.012899999999999995 > 0.7 ? "warning" : "info"''
         #
