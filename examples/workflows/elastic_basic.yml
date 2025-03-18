@@ -1,6 +1,6 @@
 workflow:
   id: elastic-basic
-  name: elastic-basic
+  name: Simple query from Elasticsearch
   description: Querying alerts from Keep's elastic index (e.g. info alerts)
   triggers:
     - type: manual
