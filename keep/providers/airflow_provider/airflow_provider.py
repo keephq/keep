@@ -39,7 +39,7 @@ class AirflowProvider(BaseProvider):
             description=event.get("description"),
             severity=event.get("severity", "critical"),
             status=event.get("status", "firing"),
-            environment=event.get("environment"),
+            environment=event.get("environment", "undefined"),
             service=event.get("service"),
             source=["airflow"],
             url=event.get("url"),
