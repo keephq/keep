@@ -401,6 +401,32 @@ class Parser:
         for trigger in triggers:
             if trigger.get("type") == "interval":
                 workflow_interval = trigger.get("value", 0)
+
+        # Convert time strings to seconds
+        if isinstance(workflow_interval, str):
+            if workflow_interval.endswith("m"):
+                try:
+                    minutes = int(workflow_interval[:-1])
+                    workflow_interval = minutes * 60
+                except ValueError:
+                    self.logger.warning(f"Invalid interval format: {workflow_interval}")
+            elif workflow_interval.endswith("h"):
+                try:
+                    hours = int(workflow_interval[:-1])
+                    workflow_interval = hours * 3600
+                except ValueError:
+                    self.logger.warning(f"Invalid interval format: {workflow_interval}")
+
+            elif workflow_interval.endswith("d"):
+                try:
+                    days = int(workflow_interval[:-1])
+                    workflow_interval = days * 86400
+                except ValueError:
+                    self.logger.warning(f"Invalid interval format: {workflow_interval}")
+
+        if not isinstance(workflow_interval, int):
+            raise ValueError(f"Invalid interval format: {workflow_interval}")
+
         return workflow_interval
 
     @staticmethod
