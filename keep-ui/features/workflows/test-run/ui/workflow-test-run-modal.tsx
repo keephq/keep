@@ -14,6 +14,7 @@ import Modal from "@/components/ui/Modal";
 import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
 import { v4 as uuidv4 } from "uuid";
 import { getBodyFromStringOrDefinitionOrObject } from "@/entities/workflows/lib/yaml-utils";
+import { Callout } from "@tremor/react";
 
 // It listens for the runRequestCount and triggers the test run of the workflow, opening the modal with the results.
 export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
@@ -96,14 +97,24 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
       onClose={closeWorkflowExecutionResultsModal}
       className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
     >
-      {isWorkflowExecution(runningWorkflowExecution) ? (
-        <BuilderWorkflowTestRunModalContent
-          closeModal={closeWorkflowExecutionResultsModal}
-          workflowExecutionId={runningWorkflowExecution.id}
-          workflowId={workflowId ?? ""}
-          workflowYamlSent={workflowYamlSent}
-        />
-      ) : (
+      {runningWorkflowExecution !== null &&
+        isWorkflowExecution(runningWorkflowExecution) && (
+          <BuilderWorkflowTestRunModalContent
+            closeModal={closeWorkflowExecutionResultsModal}
+            workflowExecutionId={runningWorkflowExecution.id}
+            workflowId={workflowId ?? ""}
+            workflowYamlSent={workflowYamlSent}
+          />
+        )}
+      {runningWorkflowExecution !== null &&
+        !isWorkflowExecution(runningWorkflowExecution) && (
+          <div className="flex justify-center">
+            <Callout title="Workflow execution failed" color="red">
+              {runningWorkflowExecution.error}
+            </Callout>
+          </div>
+        )}
+      {runningWorkflowExecution == null && (
         <div className="flex justify-center">
           <KeepLoader loadingText="Waiting for workflow execution results..." />
         </div>
