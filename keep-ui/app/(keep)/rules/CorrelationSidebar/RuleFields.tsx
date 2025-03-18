@@ -213,8 +213,6 @@ export const RuleFields = ({
     uniqueDeduplicationFields
   ).filter(({ name }) => selectedFields.includes(name) === false);
 
-  console.log(availableFields);
-
   const onAddRuleFieldClick = () => {
     const nextAvailableField = availableFields.at(0);
 
