@@ -12,7 +12,7 @@ from elasticsearch import Elasticsearch
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_connection_failed import ProviderConnectionFailed
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -20,25 +20,39 @@ from keep.providers.providers_factory import ProvidersFactory
 class ElasticProviderAuthConfig:
     """Elasticsearch authentication configuration."""
 
-    api_key: typing.Optional[str] = dataclasses.field(
-        metadata={
-            "description": "Elasticsearch API Key",
-            "sensitive": True,
-            "config_sub_group": "api_key",
-            "config_main_group": "authentication",
-        }
-    )
     host: pydantic.AnyHttpUrl | None = dataclasses.field(
         default=None,
         metadata={
-            "required": False,
+            "required": True,
             "description": "Elasticsearch host",
             "validation": "any_http_url",
         },
     )
     cloud_id: typing.Optional[str] = dataclasses.field(
         default=None,
-        metadata={"required": False, "description": "Elasticsearch cloud id"},
+        metadata={
+            "required": False,
+            "description": "Elasticsearch cloud id",
+            "hint": "Required for elastic.co managed elastic - should be smth like clustername-prod:dXMtY2....==",
+        },
+    )
+    verify: bool = dataclasses.field(
+        metadata={
+            "description": "Enable SSL verification",
+            "hint": "SSL verification is enabled by default",
+            "type": "switch",
+        },
+        default=True,
+    )
+    api_key: typing.Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "Elasticsearch API Key",
+            "sensitive": True,
+            "config_sub_group": "api_key",
+            "config_main_group": "authentication",
+            "hint": "Should be the encoded api key in base64",
+        },
     )
     username: typing.Optional[str] = dataclasses.field(
         default=None,
@@ -83,6 +97,15 @@ class ElasticProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Elastic"
     PROVIDER_CATEGORY = ["Monitoring", "Database"]
 
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="connect_to_server",
+            description="The user can connect to the server",
+            mandatory=True,
+            alias="Connect to the server",
+        )
+    ]
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -105,24 +128,51 @@ class ElasticProvider(BaseProvider):
         host = self.authentication_config.host
         cloud_id = self.authentication_config.cloud_id
 
+        if "cloud.es" in host and not cloud_id:
+            raise ValueError(
+                "Cloud ID is required for elastic.co managed elastic search"
+            )
+
         # Elastic.co requires you to connect with cloud_id
         if cloud_id:
             es = (
-                Elasticsearch(api_key=api_key, cloud_id=cloud_id)
+                Elasticsearch(
+                    api_key=api_key,
+                    cloud_id=cloud_id,
+                    verify_certs=self.authentication_config.verify,
+                )
                 if api_key
-                else Elasticsearch(cloud_id=cloud_id, basic_auth=(username, password))
+                else Elasticsearch(
+                    cloud_id=cloud_id,
+                    basic_auth=(username, password),
+                    verify_certs=self.authentication_config.verify,
+                )
             )
         # Otherwise, connect with host
         elif host:
             es = (
-                Elasticsearch(api_key=api_key, hosts=host)
+                Elasticsearch(
+                    api_key=api_key,
+                    hosts=host,
+                    verify_certs=self.authentication_config.verify,
+                )
                 if api_key
-                else Elasticsearch(hosts=host, basic_auth=(username, password))
+                else Elasticsearch(
+                    hosts=host,
+                    basic_auth=(username, password),
+                    verify_certs=self.authentication_config.verify,
+                )
             )
+        else:
+            raise ValueError("Missing host or cloud_id in provider config")
 
         # Check if the connection was successful
-        if not es.ping():
-            raise ProviderConnectionFailed("Could not connect to ElasticSearch")
+        try:
+            es.info()
+        except Exception as e:
+            raise ProviderConnectionFailed(
+                f"Failed to connect to ElasticSearch: {str(e)}"
+            )
 
         return es
 
@@ -133,6 +183,23 @@ class ElasticProvider(BaseProvider):
         self.authentication_config = ElasticProviderAuthConfig(
             **self.config.authentication
         )
+
+    def validate_scopes(self):
+        """
+        Validate that the user has the required scopes to use the provider.
+        """
+        # implement
+        try:
+            self.client.ping()
+            scopes = {
+                "connect_to_server": True,
+            }
+        except Exception as e:
+            self.logger.exception("Error validating scopes")
+            scopes = {
+                "connect_to_server": str(e),
+            }
+        return scopes
 
     @staticmethod
     def get_neccessary_config_keys():
@@ -194,8 +261,11 @@ class ElasticProvider(BaseProvider):
     def _run_eql_query(self, query: str | dict, index: str) -> list[str]:
         if isinstance(query, str):
             query = json.loads(query)
-
-        response = self.client.search(index=index, query=query)
+        if "query" in query:
+            _query_to_run = query.get("query")
+        else:
+            _query_to_run = query
+        response = self.client.search(index=index, query=_query_to_run)
         self.logger.debug(
             "Got elasticsearch hits",
             extra={

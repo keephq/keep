@@ -105,7 +105,7 @@ export const CorrelationSidebarBody = ({
   };
 
   return (
-    <div className="space-y-4 pt-10 flex flex-col flex-1">
+    <div className="space-y-4 flex flex-col flex-1 p-4">
       {isCalloutShown && (
         <Callout
           className="relative"
