@@ -233,9 +233,9 @@ def query_alerts(
             status_code=400, detail=f"Error parsing CEL expression: {query.cel}"
         ) from e
 
-    db_alerts = enrich_alerts_with_incidents(tenant_id, db_alerts)
+    # db_alerts = enrich_alerts_with_incidents(tenant_id, db_alerts)
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
-        db_alerts, with_incidents=True
+        db_alerts, with_incidents=False
     )
     logger.info(
         "Fetched alerts from DB",
