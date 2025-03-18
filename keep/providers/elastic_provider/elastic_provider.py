@@ -23,7 +23,7 @@ class ElasticProviderAuthConfig:
     host: pydantic.AnyHttpUrl | None = dataclasses.field(
         default=None,
         metadata={
-            "required": True,
+            "required": False,
             "description": "Elasticsearch host",
             "validation": "any_http_url",
         },
@@ -128,7 +128,7 @@ class ElasticProvider(BaseProvider):
         host = self.authentication_config.host
         cloud_id = self.authentication_config.cloud_id
 
-        if "cloud.es" in host and not cloud_id:
+        if host and "cloud.es" in host and not cloud_id:
             raise ValueError(
                 "Cloud ID is required for elastic.co managed elastic search"
             )

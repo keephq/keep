@@ -1,0 +1,33 @@
+workflow:
+  id: elastic-basic
+  name: Create alerts from Elasticsearch
+  description: Create alerts from Elastic index (e.g. info alerts)
+  triggers:
+    - type: manual
+  steps:
+    - name: query-ack-index
+      provider:
+        type: elastic
+        config: " {{ providers.elastic }} "
+        with:
+          index: keep-alerts-keep
+          query: |
+            {
+              "query_string": {
+                "query": "firing"
+              }
+            }
+  actions:
+    - name: create-alert
+      provider:
+        type: keep
+        with:
+          override_source_with: "elasticsearch"
+          read_only: true
+          fingerprint_fields:
+            - id
+          alert:
+            name: "{{ _source.name }}"
+            status: "{{ _source.status }}"
+            host: "{{ _source.host }}"
+            service: "{{ _source.service }}"
