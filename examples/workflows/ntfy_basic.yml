@@ -1,6 +1,7 @@
 workflow:
-  id: ntfy-example
-  description: ntfy-example
+  id: ntfy-notification-sender
+  name: Ntfy Notification Sender
+  description: Sends notifications to Ntfy topics with customizable messages for basic alerting and communication.
   triggers:
     - type: manual
   actions:

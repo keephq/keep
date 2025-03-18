@@ -22,7 +22,7 @@ workflow:
       provider:
         type: keep
         with:
-          override_source_with: "elasticsearch"
+          override_source_with: "elastic"
           read_only: true
           fingerprint_fields:
             - id

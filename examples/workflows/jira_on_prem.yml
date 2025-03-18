@@ -1,24 +1,24 @@
 workflow:
-  id: jiraonprem-example
-  description: JIRA on-prem example
+  id: jira-onprem-incident-creator
+  name: Jira On-Prem Incident Creator
+  description: Creates standardized incidents in on-premises Jira with customizable fields, labels, and priorities for SRE team tracking.
   triggers:
-  - type: manual
-  name: test
+    - type: manual
   owners: []
   services: []
   steps: []
   actions:
-  - name: jiraonprem-action
-    provider:
-      config: '{{ providers.jira }}'
-      type: jiraonprem
-      with:
-        board_name: SA
-        custom_fields: ''
-        description: test
-        issue_type: Incident
-        labels:
-          - "SRE_Team"
-        priority: Low
-        project_key: SA
-        summary: test
+    - name: jiraonprem-action
+      provider:
+        config: "{{ providers.jira }}"
+        type: jiraonprem
+        with:
+          board_name: SA
+          custom_fields: ""
+          description: test
+          issue_type: Incident
+          labels:
+            - "SRE_Team"
+          priority: Low
+          project_key: SA
+          summary: test

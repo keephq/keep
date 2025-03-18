@@ -1,7 +1,7 @@
 workflow:
-  id: c84cc193-75d0-4eb3-92e7-1218c4909f21
-  name: Example for Mustache
-  description: Example that shows how to extract different paths with Mustache
+  id: mustache-path-extractor
+  name: Mustache Path Extractor
+  description: Demonstrates extraction of values from nested dictionaries and lists using Mustache templating with Python and console output.
   disabled: false
   triggers:
     - type: manual

@@ -1,7 +1,7 @@
 workflow:
-  id: enrich-grafana-incident-and-update-title
-  name: Enrich Grafana Incident and Update Title
-  description: Grafana Incident
+  id: grafana-incident-enricher
+  name: Grafana Incident AI Enricher
+  description: Enriches Grafana incidents with AI-generated titles using OpenAI analysis of incident context.
   triggers:
     - type: incident
       events:
