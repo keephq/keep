@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
-from keep.api.core.db import create_workflow_execution, finish_workflow_execution
+from keep.api.core.db import create_workflow_execution
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
 from keep.api.core.db import (
     get_enrichment,
