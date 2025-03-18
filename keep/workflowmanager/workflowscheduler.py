@@ -319,13 +319,19 @@ class WorkflowScheduler:
         future.result()  # Wait for completion
         errors, _ = result_queue.get()
 
-        finish_workflow_execution(tenant_id, workflow.workflow_id, workflow_execution_id, "success" if not errors else "error", errors)
-
-        status = "success"
+        status = WorkflowStatus.SUCCESS
         error = None
         if errors is not None and any(errors):
             error = "\n".join(str(e) for e in errors)
-            status = "error"
+            status = WorkflowStatus.ERROR
+
+        self._finish_workflow_execution(
+            tenant_id=tenant_id,
+            workflow_id=workflow.workflow_id,
+            workflow_execution_id=workflow_execution_id,
+            status=status,
+            error=error,
+        )
 
         self.logger.info(
             "Workflow test complete",

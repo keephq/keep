@@ -5,12 +5,14 @@ from unittest.mock import Mock, patch
 import pytest
 from fastapi import HTTPException
 
+from keep.api.models.alert import AlertDto
+from keep.api.routes.workflows import get_event_from_body
 from keep.parser.parser import Parser
 
 # Assuming WorkflowParser is the class containing the get_workflow_from_dict method
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
-from keep.workflowmanager.workflowscheduler import WorkflowScheduler
+from keep.workflowmanager.workflowscheduler import WorkflowScheduler, WorkflowStatus
 from keep.workflowmanager.workflowstore import WorkflowStore
 
 path_to_test_resources = Path(__file__).parent / "workflows"
@@ -106,31 +108,36 @@ def test_handle_workflow_test():
     workflow_scheduler.workflow_manager = mock_workflow_manager
 
     workflow_scheduler._get_unique_execution_number = Mock(return_value=123)
+    workflow_scheduler.handle_manual_event_workflow = Mock(return_value="test_execution_id")
+    workflow_scheduler._finish_workflow_execution = Mock()
 
     tenant_id = "test_tenant"
     triggered_by_user = "test_user"
+
+    event = get_event_from_body(body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id)
 
     with patch.object(queue, "Queue", wraps=queue.Queue) as mock_queue:
         result = workflow_scheduler.handle_workflow_test(
             workflow=mock_workflow,
             tenant_id=tenant_id,
             triggered_by_user=triggered_by_user,
+            event=event,
         )
 
         mock_workflow_manager._run_workflow.assert_called_once_with(
-            mock_workflow, 123, True
+            mock_workflow, "test_execution_id", True
         )
 
         assert mock_queue.call_count == 1
-
-        expected_result = {
-            "workflow_execution_id": 123,
-            "status": "success",
-            "error": None,
-            "results": {"result": "value1"},
-        }
-        assert result == expected_result
+        assert result == "test_execution_id"
         assert mock_logger.info.call_count == 2
+        workflow_scheduler._finish_workflow_execution.assert_called_once_with(
+            tenant_id=tenant_id,
+            workflow_id=mock_workflow.workflow_id,
+            workflow_execution_id="test_execution_id",
+            status=WorkflowStatus.SUCCESS,
+            error=None,
+        )
 
 
 def test_handle_workflow_test_with_error():
@@ -147,28 +154,33 @@ def test_handle_workflow_test_with_error():
     workflow_scheduler.workflow_manager = mock_workflow_manager
 
     workflow_scheduler._get_unique_execution_number = Mock(return_value=123)
+    workflow_scheduler.handle_manual_event_workflow = Mock(return_value="test_execution_id")
+    workflow_scheduler._finish_workflow_execution = Mock()
 
     tenant_id = "test_tenant"
     triggered_by_user = "test_user"
+
+    event = get_event_from_body(body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id)
 
     with patch.object(queue, "Queue", wraps=queue.Queue) as mock_queue:
         result = workflow_scheduler.handle_workflow_test(
             workflow=mock_workflow,
             tenant_id=tenant_id,
             triggered_by_user=triggered_by_user,
+            event=event,
         )
 
         mock_workflow_manager._run_workflow.assert_called_once_with(
-            mock_workflow, 123, True
+            mock_workflow, "test_execution_id", True
         )
 
         assert mock_queue.call_count == 1
-
-        expected_result = {
-            "workflow_execution_id": 123,
-            "status": "error",
-            "error": "Error occurred",
-            "results": None,
-        }
-        assert result == expected_result
+        assert result == "test_execution_id"
         assert mock_logger.info.call_count == 2
+        workflow_scheduler._finish_workflow_execution.assert_called_once_with(
+            tenant_id=tenant_id,
+            workflow_id=mock_workflow.workflow_id,
+            workflow_execution_id="test_execution_id",
+            status=WorkflowStatus.ERROR,
+            error="Error occurred",
+        )
