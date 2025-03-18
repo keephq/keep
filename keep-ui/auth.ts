@@ -174,6 +174,26 @@ if (authType === AuthType.AZUREAD && proxyUrl) {
   };
   // Override profile since it uses fetch without customFetch
   provider.profile = async (profile, tokens) => {
+    // @tb: this causes 431 Request Header Fields Too Large
+    // const profilePhotoSize = 48;
+    // console.log("Fetching profile photo via proxy");
+
+    // const response = await proxyFetch(
+    //   `https://graph.microsoft.com/v1.0/me/photos/${profilePhotoSize}x${profilePhotoSize}/$value`,
+    //   { headers: { Authorization: `Bearer ${tokens.access_token}` } }
+    // );
+
+    // let image: string | null = null;
+    // if (response.ok && typeof Buffer !== "undefined") {
+    //   try {
+    //     const pictureBuffer = await response.arrayBuffer();
+    //     const pictureBase64 = Buffer.from(pictureBuffer).toString("base64");
+    //     image = `data:image/jpeg;base64,${pictureBase64}`;
+    //   } catch (error) {
+    //     console.error("Error processing profile photo:", error);
+    //   }
+    // }
+    // https://stackoverflow.com/questions/77686104/how-to-resolve-http-error-431-nextjs-next-auth
     return {
       id: profile.sub,
       name: profile.name,
