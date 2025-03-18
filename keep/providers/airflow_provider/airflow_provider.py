@@ -13,6 +13,66 @@ class AirflowProvider(BaseProvider):
     PROVIDER_CATEGORY = ["Orchestration"]
     FINGERPRINT_FIELDS = ["fingerprint"]
 
+    webhook_description = ""
+    webhook_template = ""
+    webhook_markdown = """
+💡 For more details on configuring Airflow to send alerts to Keep, refer to the [Keep documentation](https://docs.keephq.dev/providers/documentation/airflow-provider).
+
+### 1. Configure Keep's Webhook Credentials
+To send alerts to Keep, set up the webhook URL and API key:
+
+- **Keep Webhook URL**: {keep_webhook_api_url}
+- **Keep API Key**: {api_key}
+
+### 2. Configure Airflow to Send Alerts to Keep
+Airflow uses a callback function to send alerts to Keep. Below is an example configuration:
+
+```python
+import os
+import requests
+
+def task_failure_callback(context):
+    # Replace with your specific Keep webhook URL if different.
+    keep_webhook_url = "{keep_webhook_api_url}"
+    api_key = "{api_key}"
+
+    headers = {{
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-API-KEY": api_key,
+    }}
+
+    data = {{
+        "name": f"Airflow Task Failure",
+        "message": f"Task failed in DAG",
+        "status": "firing",
+        "service": "pipeline",
+        "severity": "critical",
+    }}
+
+    response = requests.post(keep_webhook_url, headers=headers, json=data)
+    response.raise_for_status()
+```
+
+### 3. Attach the Callback to the DAG
+Attach the failure callback to the DAG using the `on_failure_callback` parameter:
+
+```python
+from airflow import DAG
+from datetime import datetime
+
+dag = DAG(
+    dag_id="keep_dag",
+    default_args=default_args,
+    description="A simple DAG with Keep integration",
+    schedule_interval=None,
+    start_date=datetime(2025, 1, 1),
+    catchup=False,
+    on_failure_callback=task_failure_callback,
+)
+```
+"""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
