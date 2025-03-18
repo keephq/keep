@@ -1,15 +1,27 @@
 const { withSentryConfig } = require("@sentry/nextjs");
 
-const isWithTurbo = process.env.NEXT_TURBO === "true";
 const isSentryDisabled =
   process.env.SENTRY_DISABLED === "true" ||
   process.env.NODE_ENV === "development";
+
+const isMonacoEditorNpm = process.env.BUILD_MONACO_EDITOR_NPM === "true";
+
+const aliases = isMonacoEditorNpm
+  ? {
+      "./MonacoEditor": "@/shared/ui/MonacoEditor/index.npm.ts",
+    }
+  : {};
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
   devIndicators: {
     position: "bottom-right",
+  },
+  experimental: {
+    turbo: {
+      resolveAlias: aliases,
+    },
   },
   webpack: (
     config,
@@ -53,6 +65,11 @@ const nextConfig = {
         message: /Critical dependency/,
       },
     ];
+
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      ...aliases,
+    };
     return config;
   },
   // @auth/core is ESM-only and jest fails to transpile it.
@@ -86,12 +103,9 @@ const nextConfig = {
       },
     ],
   },
-  // compiler is not supported in turbo mode
-  compiler: isWithTurbo
-    ? undefined
-    : {
-        removeConsole: false,
-      },
+  compiler: {
+    removeConsole: false,
+  },
   output: "standalone",
   productionBrowserSourceMaps: !isSentryDisabled,
   async redirects() {
