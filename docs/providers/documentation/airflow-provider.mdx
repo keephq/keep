@@ -41,6 +41,8 @@ data = {
 
 To send alerts to Keep, configure the webhook URL and API key. Below is an example of how to send an alert using Python:
 
+> **Note**: You need to set up the `KEEP_API_KEY` environment variable with your Keep API key.
+
 ```python
 import os
 import requests
@@ -75,7 +77,9 @@ Now, configure the callback so that an alert is sent to Keep when a task fails. 
 ```python
 import os
 import requests
+from datetime import datetime
 from datetime import timedelta
+
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 
@@ -119,7 +123,7 @@ def task_failure_callback(context):
     )
 
 dag = DAG(
-    id="keep_dag",
+    dag_id="keep_dag",
     default_args=default_args,
     description="A simple DAG with Keep integration",
     schedule_interval=None,
