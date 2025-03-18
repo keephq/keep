@@ -147,13 +147,19 @@ static_facets = [
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
 
-def __build_query_for_filtering(tenant_id: str):
+def __build_query_for_filtering(tenant_id: str, fetch_incidents: bool = True):
     columns_to_select = []
 
     for key, value in alias_column_mapping.items():
         columns_to_select.append(f"{value} AS {key}")
 
-    return (
+    columns_to_select = (
+        columns_to_select
+        if fetch_incidents
+        else list(filter(lambda x: "incident" not in x, columns_to_select))
+    )
+
+    query = (
         select(
             Alert.id,
             LastAlert.alert_id,
@@ -178,27 +184,35 @@ def __build_query_for_filtering(tenant_id: str):
                 LastAlert.fingerprint == AlertEnrichment.alert_fingerprint,
             ),
         )
-        .outerjoin(
+    )
+
+    if fetch_incidents:
+        query = query.outerjoin(
             LastAlertToIncident,
             and_(
                 LastAlert.tenant_id == LastAlertToIncident.tenant_id,
                 LastAlert.fingerprint == LastAlertToIncident.fingerprint,
             ),
-        )
-        .outerjoin(
+        ).outerjoin(
             Incident,
             and_(
                 LastAlertToIncident.tenant_id == Incident.tenant_id,
                 LastAlertToIncident.incident_id == Incident.id,
             ),
         )
-        .where(LastAlert.tenant_id == tenant_id)
-    )
+
+    query = query.where(LastAlert.tenant_id == tenant_id)
+    return query
 
 
 def build_total_alerts_query(tenant_id, cel=None, limit=None, offset=None):
+    fetch_incidents = False
+
+    if cel and "incident." in cel:
+        fetch_incidents = True
+
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-    base = __build_query_for_filtering(tenant_id)
+    base = __build_query_for_filtering(tenant_id, fetch_incidents)
 
     if limit is not None:
         base = base.limit(limit)
@@ -239,17 +253,13 @@ def build_alerts_query(
     limit=None,
     offset=None,
 ):
+    fetch_incidents = False
+
+    if cel and "incident." in cel:
+        fetch_incidents = True
+
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-    base = __build_query_for_filtering(tenant_id)
-
-    aliased_ = aliased(LastAlert)
-
-    exists_subquery = exists().where(
-        (aliased_.alert_id == LastAlert.alert_id)
-        & (aliased_.tenant_id == LastAlert.tenant_id)
-    )
-
-    base = base.filter(exists_subquery)
+    base = __build_query_for_filtering(tenant_id, fetch_incidents)
 
     if not sort_by:
         sort_by = "timestamp"
@@ -280,7 +290,10 @@ def build_alerts_query(
     else:
         base = base.order_by(asc(text(order_by_field)))
 
-    # base = base.distinct(text(order_by_field), LastAlert.alert_id).cte("alerts_query")
+    if fetch_incidents:
+        base = base.distinct(text(order_by_field), LastAlert.alert_id).cte(
+            "alerts_query"
+        )
 
     query = (
         select(
