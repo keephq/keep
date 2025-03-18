@@ -285,14 +285,15 @@ const defaultState: WorkflowStateValues = {
   selectedEdge: null,
   changes: 0,
   isEditorSyncedWithNodes: true,
-  lastChangedAt: 0,
-  lastDeployedAt: 0,
+  lastChangedAt: null,
+  lastDeployedAt: null,
   canDeploy: false,
   saveRequestCount: 0,
   runRequestCount: 0,
   isSaving: false,
   definition: null,
   isLoading: false,
+  isDeployed: false,
   validationErrors: {},
 };
 
@@ -814,9 +815,20 @@ function initializeWorkflow(
     toolboxConfiguration,
     isLoading: false,
     isInitialized: true,
+    isDeployed: workflowId !== null,
     // If it's a new workflow (workflowId = null), we want to open the editor because metadata fields in there
     editorOpen: !workflowId,
   });
   get().onLayout({ direction: "DOWN" });
   get().updateDefinition();
+}
+
+export function useWorkflowEditorChangesSaved() {
+  const { lastChangedAt, lastDeployedAt, isEditorSyncedWithNodes, isDeployed } =
+    useWorkflowStore();
+  const isChangesSaved =
+    isEditorSyncedWithNodes &&
+    ((lastDeployedAt !== null && lastDeployedAt >= lastChangedAt) ||
+      (lastDeployedAt === null && lastChangedAt === null && isDeployed));
+  return isChangesSaved;
 }
