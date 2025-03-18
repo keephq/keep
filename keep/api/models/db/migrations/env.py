@@ -102,6 +102,7 @@ def list_migrations(connectable):
     try:
         # Get the script directory from the alembic context
         script_directory = ScriptDirectory.from_config(config)
+        current_rev = script_directory.get_current_head()
         # List all available migrations
         print("Available migrations:")
         try:
