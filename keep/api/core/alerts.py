@@ -207,7 +207,6 @@ def __build_query_for_filtering(tenant_id: str, fetch_incidents: bool = True):
 
 def build_total_alerts_query(tenant_id, cel=None, limit=None, offset=None):
     fetch_incidents = False
-
     if cel and "incident." in cel:
         fetch_incidents = True
 
@@ -217,9 +216,13 @@ def build_total_alerts_query(tenant_id, cel=None, limit=None, offset=None):
     if limit is not None:
         base = base.limit(limit)
 
+    count_funct = (
+        func.count(func.distinct(base.c.alert_id)) if fetch_incidents else func.count(1)
+    )
+
     query = (
         select(
-            func.count(func.distinct(base.c.alert_id)).label("total_count"),
+            count_funct.label("total_count"),
         )
         .select_from(base)
         .join(
