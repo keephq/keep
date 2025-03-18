@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Tuple
 
-from sqlalchemy import and_, asc, desc, func, literal_column, select
+from sqlalchemy import and_, asc, desc, exists, func, literal_column, select
 from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, text
 
@@ -30,6 +30,7 @@ from keep.api.models.db.alert import (
 )
 from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
+from sqlalchemy.orm import declarative_base, relationship, aliased
 
 logger = logging.getLogger(__name__)
 
@@ -241,6 +242,15 @@ def build_alerts_query(
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     base = __build_query_for_filtering(tenant_id)
 
+    aliased_ = aliased(LastAlert)
+
+    exists_subquery = exists().where(
+        (aliased_.alert_id == LastAlert.alert_id)
+        & (aliased_.tenant_id == LastAlert.tenant_id)
+    )
+
+    base = base.filter(exists_subquery)
+
     if not sort_by:
         sort_by = "timestamp"
         sort_dir = "desc"
@@ -266,11 +276,11 @@ def build_alerts_query(
         order_by_field = group_by_exp[0]
 
     if sort_dir == "desc":
-        base = base.order_by(desc(text(order_by_field)), LastAlert.alert_id)
+        base = base.order_by(desc(text(order_by_field)))
     else:
-        base = base.order_by(asc(text(order_by_field)), LastAlert.alert_id)
+        base = base.order_by(asc(text(order_by_field)))
 
-    base = base.distinct(text(order_by_field), LastAlert.alert_id).cte("alerts_query")
+    # base = base.distinct(text(order_by_field), LastAlert.alert_id).cte("alerts_query")
 
     query = (
         select(
