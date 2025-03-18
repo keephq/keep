@@ -1,45 +1,47 @@
-id: new-github-stars
-description: Notify Slack about new GitHub star for keephq/keep
-triggers:
-  - type: manual
-  - type: interval
-    value: 300
-steps:
-  - name: get-github-stars
-    provider:
-      config: "{{ providers.github }}"
-      type: github.stars
-      with:
-        previous_stars_count:
-          default: 0
-          key: "{{ last_workflow_results.get-github-stars.0.stars }}"
-        last_stargazer:
-          default: ""
-          key: "{{ last_workflow_results.get-github-stars.0.last_stargazer }}"
-        repository: keephq/keep
-actions:
-  - condition:
-      - assert: "{{ steps.get-github-stars.results.new_stargazers_count }} > 0"
-        name: assert-condition
-        type: assert
-    name: trigger-slack
-    provider:
-      config: "{{ providers.slack-demo }}"
-      type: slack
-      with:
-        blocks:
-          - text:
-              emoji: true
-              text: There are new keep.len({{ steps.get-github-stars.results.new_stargazers}}) stargazers for keephq/keep
-              type: plain_text
-            type: section
-          - text:
-              emoji: true
-              text: "{{#steps.get-github-stars.results.new_stargazers}}
+workflow:
+  id: github-star-tracker
+  name: GitHub Star Tracker
+  description: Monitors new GitHub stars for the Keep repository and sends Slack notifications with stargazer details and timestamps.
+  triggers:
+    - type: manual
+    - type: interval
+      value: 300
+  steps:
+    - name: get-github-stars
+      provider:
+        config: "{{ providers.github }}"
+        type: github.stars
+        with:
+          previous_stars_count:
+            default: 0
+            key: "{{ last_workflow_results.get-github-stars.0.stars }}"
+          last_stargazer:
+            default: ""
+            key: "{{ last_workflow_results.get-github-stars.0.last_stargazer }}"
+          repository: keephq/keep
+  actions:
+    - condition:
+        - assert: "{{ steps.get-github-stars.results.new_stargazers_count }} > 0"
+          name: assert-condition
+          type: assert
+      name: trigger-slack
+      provider:
+        config: "{{ providers.slack-demo }}"
+        type: slack
+        with:
+          blocks:
+            - text:
+                emoji: true
+                text: There are new keep.len({{ steps.get-github-stars.results.new_stargazers}}) stargazers for keephq/keep
+                type: plain_text
+              type: section
+            - text:
+                emoji: true
+                text: "{{#steps.get-github-stars.results.new_stargazers}}
 
-                - {{username}} at {{starred_at}}
+                  - {{username}} at {{starred_at}}
 
-                {{/steps.get-github-stars.results.new_stargazers}}"
-              type: plain_text
-            type: section
-        channel: "C06N0KXXXX"
+                  {{/steps.get-github-stars.results.new_stargazers}}"
+                type: plain_text
+              type: section
+          channel: "C06N0KXXXX"
