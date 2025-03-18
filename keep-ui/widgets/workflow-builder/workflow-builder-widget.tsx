@@ -160,6 +160,7 @@ export function WorkflowBuilderWidget({
               icon={PlayIcon}
               disabled={!isValid}
               onClick={() => triggerRun()}
+              data-testid="wf-builder-main-test-run-button"
             >
               Test Run
             </Button>

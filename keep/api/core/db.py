@@ -1879,6 +1879,8 @@ def create_rule(
     create_on=CreateIncidentOn.ANY.value,
     incident_name_template=None,
     incident_prefix=None,
+    multi_level=False,
+    multi_level_property_name=None,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -1898,6 +1900,8 @@ def create_rule(
             create_on=create_on,
             incident_name_template=incident_name_template,
             incident_prefix=incident_prefix,
+            multi_level=multi_level,
+            multi_level_property_name=multi_level_property_name,
         )
         session.add(rule)
         session.commit()
@@ -1920,6 +1924,8 @@ def update_rule(
     create_on,
     incident_name_template,
     incident_prefix,
+    multi_level,
+    multi_level_property_name,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -1944,6 +1950,8 @@ def update_rule(
             rule.create_on = create_on
             rule.incident_name_template = incident_name_template
             rule.incident_prefix = incident_prefix
+            rule.multi_level = multi_level
+            rule.multi_level_property_name = multi_level_property_name
             session.commit()
             session.refresh(rule)
             return rule
@@ -1951,7 +1959,7 @@ def update_rule(
             return None
 
 
-def get_rules(tenant_id, ids=None):
+def get_rules(tenant_id, ids=None) -> list[Rule]:
     with Session(engine) as session:
         # Start building the query
         query = (
@@ -3533,7 +3541,7 @@ def get_last_incidents(
         ).filter(
             Incident.tenant_id == tenant_id,
             Incident.is_candidate == is_candidate,
-            Incident.is_visible == True
+            Incident.is_visible == True,
         )
 
         if allowed_incident_ids:
@@ -3725,9 +3733,7 @@ def update_incident_from_dto_by_id(
 
 
 def get_incident_by_fingerprint(
-    tenant_id: str,
-    fingerprint: str,
-    session: Optional[Session] = None
+    tenant_id: str, fingerprint: str, session: Optional[Session] = None
 ) -> Optional[Incident]:
     with existed_or_new_session(session) as session:
         return session.exec(
@@ -3738,9 +3744,7 @@ def get_incident_by_fingerprint(
 
 
 def delete_incident_by_id(
-    tenant_id: str,
-    incident_id: UUID,
-    session: Optional[Session] = None
+    tenant_id: str, incident_id: UUID, session: Optional[Session] = None
 ) -> bool:
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id)
