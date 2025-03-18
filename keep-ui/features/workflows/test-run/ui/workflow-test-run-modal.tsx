@@ -3,15 +3,15 @@ import { useWorkflowStore } from "@/entities/workflows";
 import {
   WorkflowExecutionFailure,
   WorkflowExecutionDetail,
+  isWorkflowExecution,
 } from "@/shared/api/workflow-executions";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui";
+import { KeepLoader, showErrorToast } from "@/shared/ui";
 import { useState } from "react";
 import { KeepApiError } from "@/shared/api/KeepApiError";
 import { BuilderWorkflowTestRunModalContent } from "./builder-workflow-testrun-modal-content";
 import Modal from "@/components/ui/Modal";
 import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
-import { stringify } from "yaml";
 import { v4 as uuidv4 } from "uuid";
 import { getBodyFromStringOrDefinitionOrObject } from "@/entities/workflows/lib/yaml-utils";
 
@@ -96,12 +96,18 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
       onClose={closeWorkflowExecutionResultsModal}
       className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
     >
-      <BuilderWorkflowTestRunModalContent
-        closeModal={closeWorkflowExecutionResultsModal}
-        workflowExecutionId={runningWorkflowExecution?.id ?? ""}
-        workflowId={workflowId ?? ""}
-        workflowYamlSent={workflowYamlSent}
-      />
+      {isWorkflowExecution(runningWorkflowExecution) ? (
+        <BuilderWorkflowTestRunModalContent
+          closeModal={closeWorkflowExecutionResultsModal}
+          workflowExecutionId={runningWorkflowExecution.id}
+          workflowId={workflowId ?? ""}
+          workflowYamlSent={workflowYamlSent}
+        />
+      ) : (
+        <div className="flex justify-center">
+          <KeepLoader loadingText="Waiting for workflow execution results..." />
+        </div>
+      )}
     </Modal>
   );
 }
