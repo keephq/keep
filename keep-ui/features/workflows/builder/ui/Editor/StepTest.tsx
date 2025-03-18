@@ -305,6 +305,7 @@ export function TestRunStepForm({
           className="w-full"
           color="orange"
           disabled={isLoading || isDisabled}
+          data-testid="wf-editor-step-test-run-button"
         >
           {isLoading ? "Running..." : "Test Run"}
         </Button>

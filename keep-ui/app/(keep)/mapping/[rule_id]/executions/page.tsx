@@ -1,14 +1,12 @@
 "use client";
 
-import { Fragment, useState, use } from "react";
-import { MappingExecutionTable } from "../mapping-execution-table";
+import { useState, use } from "react";
+import { ExecutionsTable } from "../../../../../components/table/ExecutionsTable";
 import {
   Card,
   Title,
   Icon,
   Subtitle,
-  Badge,
-  Text,
   Table,
   TableHead,
   TableRow,
@@ -24,18 +22,15 @@ import {
   ChevronUpIcon,
 } from "@heroicons/react/16/solid";
 import { useMappings } from "@/utils/hooks/useMappingRules";
-import TimeAgo from "react-timeago";
 
 interface Pagination {
   limit: number;
   offset: number;
 }
 
-export default function MappingExecutionsPage(
-  props: {
-    params: Promise<{ rule_id: string }>;
-  }
-) {
+export default function MappingExecutionsPage(props: {
+  params: Promise<{ rule_id: string }>;
+}) {
   const params = use(props.params);
   const [pagination, setPagination] = useState<Pagination>({
     limit: 20,
@@ -70,7 +65,7 @@ export default function MappingExecutionsPage(
 
       <div className="space-y-4">
         <Card>
-          <MappingExecutionTable
+          <ExecutionsTable
             executions={{
               items: executions,
               count: totalCount,
