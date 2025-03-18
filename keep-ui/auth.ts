@@ -57,9 +57,12 @@ const tenantSwitchProvider = Credentials({
 
     console.log(`Switching to tenant: ${credentials.tenantId}`);
 
-    let accessToken = JSON.parse(user.accessToken) as any;
-    accessToken["tenant_id"] = credentials.tenantId;
-    user.accessToken = JSON.stringify(accessToken);
+    // if user aleady have keepActiveTenant as prefix - remove it
+    if (user.accessToken.startsWith("keepActiveTenant=")) {
+      user.accessToken = user.accessToken.replace(/keepActiveTenant=\w+&/, "");
+    }
+    // add keepActiveTenant= with the current tenant to user.accessToken
+    user.accessToken = `keepActiveTenant=${credentials.tenantId}&${user.accessToken}`;
     // Return the user with the new tenant ID
     return {
       ...user,
