@@ -440,7 +440,6 @@ class WorkflowManager:
         threading.current_thread().workflow_execution_id = workflow_execution_id
         threading.current_thread().tenant_id = workflow.context_manager.tenant_id
         errors = []
-        results = {}
         try:
             self._check_premium_providers(workflow)
             errors = workflow.run(workflow_execution_id)
@@ -461,12 +460,9 @@ class WorkflowManager:
         else:
             self.logger.info(f"Workflow {workflow.workflow_id} ran successfully")
 
-        if test_run:
-            results = self._get_workflow_results(workflow)
-        else:
-            self._save_workflow_results(workflow, workflow_execution_id)
+        self._save_workflow_results(workflow, workflow_execution_id)
 
-        return [errors, results]
+        return [errors, None]
 
     @staticmethod
     def _get_workflow_results(workflow: Workflow):

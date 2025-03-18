@@ -108,7 +108,7 @@ class WorkflowToAlertExecutionDTO(BaseModel):
 
 class WorkflowExecutionDTO(BaseModel):
     id: str
-    workflow_id: str
+    workflow_id: str | None  # None for test runs
     started: datetime
     triggered_by: str
     status: str

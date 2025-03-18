@@ -186,19 +186,25 @@ def create_workflow_execution(
     fingerprint: str = None,
     execution_id: str = None,
     event_type: str = "alert",
+    test_run: bool = False,
 ) -> str:
     with Session(engine) as session:
         try:
+            workflow_execution_id = execution_id or (str(uuid4()) if not test_run else "test_" + str(uuid4()))
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
             workflow_execution = WorkflowExecution(
-                id=execution_id or str(uuid4()),
-                workflow_id=workflow_id,
+                id=workflow_execution_id,
+                workflow_id=workflow_id if not test_run else None,
                 tenant_id=tenant_id,
                 started=datetime.now(tz=timezone.utc),
                 triggered_by=triggered_by,
                 execution_number=execution_number,
                 status="in_progress",
+                error=None,
+                execution_time=None,
+                results={},
+                # is_test_run=test_run,
             )
             session.add(workflow_execution)
             # Ensure the object has an id

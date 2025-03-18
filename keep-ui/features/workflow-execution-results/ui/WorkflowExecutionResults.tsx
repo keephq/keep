@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Card, Title, Callout } from "@tremor/react";
+import { Card, Callout } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { TabGroup, Tab, TabList, TabPanel, TabPanels } from "@tremor/react";
@@ -35,6 +35,7 @@ interface WorkflowResultsProps {
     | WorkflowExecutionFailure
     | null;
   standalone?: boolean;
+  workflowYaml?: string;
 }
 
 export function WorkflowExecutionResults({
@@ -42,6 +43,7 @@ export function WorkflowExecutionResults({
   workflowExecutionId,
   initialWorkflowExecution,
   standalone = false,
+  workflowYaml,
 }: WorkflowResultsProps) {
   const api = useApi();
   const [refreshInterval, setRefreshInterval] = useState(1000);
@@ -66,20 +68,22 @@ export function WorkflowExecutionResults({
   );
 
   const { data: workflowData, error: workflowError } = useSWR(
-    api.isReady() ? `/workflows/${workflowId}` : null,
+    api.isReady() && !workflowYaml ? `/workflows/${workflowId}` : null,
     (url) => api.get(url)
   );
 
+  const finalYaml = workflowYaml ?? workflowData?.workflow_raw;
+
   useEffect(() => {
-    if (!standalone || !workflowData) {
+    if (!standalone || !executionData) {
       return;
     }
-    const status = executionData?.error ? "failed" : executionData?.status;
-    document.title = `${workflowData.name} - Workflow Results - Keep`;
+    const status = executionData.error ? "failed" : executionData.status;
+    document.title = `${executionData.workflow_name} - Workflow Results - Keep`;
     if (status) {
       setFavicon(convertWorkflowStatusToFaviconStatus(status));
     }
-  }, [standalone, executionData, workflowData]);
+  }, [standalone, executionData]);
 
   useEffect(() => {
     if (!executionData) return;
@@ -97,7 +101,7 @@ export function WorkflowExecutionResults({
     }
   }, [executionData]);
 
-  if (!executionData || !workflowData) {
+  if (!executionData || !finalYaml) {
     return <Loading />;
   }
 
@@ -126,7 +130,7 @@ export function WorkflowExecutionResults({
     <WorkflowExecutionResultsInternal
       workflowId={workflowId}
       executionData={executionData}
-      workflowRaw={workflowData.workflow_raw}
+      workflowRaw={finalYaml}
       checks={checks}
     />
   );

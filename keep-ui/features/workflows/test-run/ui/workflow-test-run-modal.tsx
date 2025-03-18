@@ -13,6 +13,7 @@ import Modal from "@/components/ui/Modal";
 import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
 import { stringify } from "yaml";
 import { v4 as uuidv4 } from "uuid";
+import { getBodyFromStringOrDefinitionOrObject } from "@/entities/workflows/lib/yaml-utils";
 
 // It listens for the runRequestCount and triggers the test run of the workflow, opening the modal with the results.
 export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
@@ -23,6 +24,7 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
     WorkflowExecutionDetail | WorkflowExecutionFailure | null
   >(null);
   const currentRequestId = useRef<string | null>(null);
+  const [workflowYamlSent, setWorkflowYamlSent] = useState<string | null>(null);
 
   const closeWorkflowExecutionResultsModal = () => {
     currentRequestId.current = null;
@@ -52,7 +54,10 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
     const workflow = getYamlWorkflowDefinition(definition.value);
     // NOTE: prevent the workflow from being disabled, so test run doesn't fail
     workflow.disabled = false;
-    const body = stringify(workflow);
+    const body = getBodyFromStringOrDefinitionOrObject({
+      workflow,
+    });
+    setWorkflowYamlSent(body);
     api
       .request(`/workflows/test`, {
         method: "POST",
@@ -93,8 +98,9 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
     >
       <BuilderWorkflowTestRunModalContent
         closeModal={closeWorkflowExecutionResultsModal}
-        workflowExecution={runningWorkflowExecution}
+        workflowExecutionId={runningWorkflowExecution?.id ?? ""}
         workflowId={workflowId ?? ""}
+        workflowYamlSent={workflowYamlSent}
       />
     </Modal>
   );

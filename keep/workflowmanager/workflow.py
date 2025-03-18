@@ -21,6 +21,7 @@ class Workflow:
         self,
         context_manager: ContextManager,
         workflow_id: str,
+        workflow_name: str,
         workflow_owners: typing.List[str],
         workflow_tags: typing.List[str],
         workflow_interval: int,
@@ -37,6 +38,7 @@ class Workflow:
         workflow_debug: bool = False,
     ):
         self.workflow_id = workflow_id
+        self.workflow_name = workflow_name
         self.workflow_owners = workflow_owners
         self.workflow_tags = workflow_tags
         self.workflow_interval = workflow_interval

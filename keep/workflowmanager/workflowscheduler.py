@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
-from keep.api.core.db import create_workflow_execution
+from keep.api.core.db import create_workflow_execution, finish_workflow_execution
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
 from keep.api.core.db import (
     get_enrichment,
@@ -274,14 +274,11 @@ class WorkflowScheduler:
 
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
-    def handle_workflow_test(self, workflow, tenant_id, triggered_by_user):
-        workflow_execution_id = self._get_unique_execution_number()
-
+    def handle_workflow_test(self, workflow, tenant_id, triggered_by_user, event) -> str:
         self.logger.info(
-            "Adding workflow to run",
+            "Preparing workflow to test run from definition",
             extra={
                 "workflow_id": workflow.workflow_id,
-                "workflow_execution_id": workflow_execution_id,
                 "tenant_id": tenant_id,
                 "triggered_by": "manual",
                 "triggered_by_user": triggered_by_user,
@@ -303,6 +300,14 @@ class WorkflowScheduler:
                 # errors are expected to be a list of strings, so we wrap it
                 result_queue.put(([str(e)], None))
 
+        workflow_execution_id = self.handle_manual_event_workflow(
+            workflow.workflow_id,
+            tenant_id,
+            triggered_by_user,
+            event,
+            test_run=True,
+        )
+
         future = self.executor.submit(
             run_workflow_wrapper,
             self.workflow_manager._run_workflow,
@@ -312,7 +317,9 @@ class WorkflowScheduler:
             result_queue,
         )
         future.result()  # Wait for completion
-        errors, results = result_queue.get()
+        errors, _ = result_queue.get()
+
+        finish_workflow_execution(tenant_id, workflow.workflow_id, workflow_execution_id, "success" if not errors else "error", errors)
 
         status = "success"
         error = None
@@ -328,19 +335,13 @@ class WorkflowScheduler:
                 "tenant_id": tenant_id,
                 "status": status,
                 "error": error,
-                "results": results,
             },
         )
 
-        return {
-            "workflow_execution_id": workflow_execution_id,
-            "status": status,
-            "error": error,
-            "results": results,
-        }
+        return workflow_execution_id
 
     def handle_manual_event_workflow(
-        self, workflow_id, tenant_id, triggered_by_user, event: [AlertDto | IncidentDto]
+        self, workflow_id, tenant_id, triggered_by_user, event: AlertDto | IncidentDto, test_run: bool = False
     ):
         self.logger.info(f"Running manual event workflow {workflow_id}...")
         try:
@@ -364,12 +365,16 @@ class WorkflowScheduler:
                 fingerprint=fingerprint,
                 event_id=event_id,
                 event_type=event_type,
+                test_run=test_run,
             )
             self.logger.info(f"Workflow execution id: {workflow_execution_id}")
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
         except Exception as e:
             self.logger.error(f"WTF: error creating workflow execution: {e}")
             raise e
+
+        if test_run:
+            return workflow_execution_id
         self.logger.info(
             "Adding workflow to run",
             extra={
