@@ -55,7 +55,7 @@ const ProviderFormScopes = ({
           className="mt-5"
           color="gray"
         >
-          Provider is installed. Ignore missing scopes if you don't need related features.
+          Provider is installed. Ignore missing scopes if you don&apos;t need related features.
         </Callout>}
         <Table className="mt-5">
           <TableHead>

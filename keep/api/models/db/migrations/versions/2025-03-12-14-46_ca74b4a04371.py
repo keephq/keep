@@ -1,7 +1,9 @@
 """Add alertraw index and error
+
 Revision ID: ca74b4a04371
 Revises: 0b80bda47ee2
 Create Date: 2025-03-06 10:46:23.453102
+
 """
 
 import sqlalchemy as sa

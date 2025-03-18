@@ -37,7 +37,14 @@ def upgrade() -> None:
         )
 
     with op.batch_alter_table("rule", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("multi_level", sa.Boolean(), nullable=False))
+        batch_op.add_column(
+            sa.Column(
+                "multi_level",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("(FALSE)"),
+            )
+        )
         batch_op.add_column(
             sa.Column(
                 "multi_level_property_name",
