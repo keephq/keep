@@ -6,9 +6,6 @@ Create Date: 2025-03-18 14:54:56.003392
 
 """
 
-import sqlalchemy as sa
-import sqlalchemy_utils
-import sqlmodel
 from alembic import op
 from sqlalchemy.dialects import mysql
 
