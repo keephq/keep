@@ -439,6 +439,11 @@ class KeepProvider(BaseProvider):
                 extra={"alert_results": alert_results},
             )
 
+        # create_alert_in_keep.yml for example
+        if not alert_results:
+            if kwargs.get("alert"):
+                alert_results = [kwargs.get("alert")]
+
         _if = kwargs.get("if", None)
         _for = kwargs.get("for", None)
         fingerprint_fields = kwargs.pop("fingerprint_fields", [])
@@ -479,10 +484,6 @@ class KeepProvider(BaseProvider):
         else:
             self.logger.info("No 'if' condition - triggering all alerts")
             trigger_alerts = alert_results
-
-        # create_alert_in_keep.yml for example
-        if not trigger_alerts and kwargs.get("alert"):
-            trigger_alerts = [kwargs.get("alert")]
 
         # build the alert dtos
         alert_dtos = []
