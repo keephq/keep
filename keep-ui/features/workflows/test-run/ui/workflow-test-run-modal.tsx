@@ -1,10 +1,5 @@
 import { useEffect, useRef } from "react";
 import { useWorkflowStore } from "@/entities/workflows";
-import {
-  WorkflowExecutionFailure,
-  WorkflowExecutionDetail,
-  isWorkflowExecution,
-} from "@/shared/api/workflow-executions";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
 import { useState } from "react";
@@ -21,16 +16,18 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
   const { definition, runRequestCount } = useWorkflowStore();
   const api = useApi();
   const [testRunModalOpen, setTestRunModalOpen] = useState(false);
-  const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<
-    WorkflowExecutionDetail | WorkflowExecutionFailure | null
-  >(null);
+  const [workflowExecutionId, setWorkflowExecutionId] = useState<string | null>(
+    null
+  );
+  const [error, setError] = useState<string | null>(null);
   const currentRequestId = useRef<string | null>(null);
   const [workflowYamlSent, setWorkflowYamlSent] = useState<string | null>(null);
 
   const closeWorkflowExecutionResultsModal = () => {
     currentRequestId.current = null;
     setTestRunModalOpen(false);
-    setRunningWorkflowExecution(null);
+    setWorkflowExecutionId(null);
+    setError(null);
   };
 
   useEffect(() => {
@@ -66,22 +63,20 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
         headers: { "Content-Type": "application/yaml" },
       })
       .then((data) => {
-        console.log("data", data, currentRequestId.current, requestId);
         if (currentRequestId.current !== requestId) {
           return;
         }
-        setRunningWorkflowExecution({
-          ...data,
-        });
+        setError(null);
+        setWorkflowExecutionId(data.workflow_execution_id);
       })
       .catch((error) => {
         if (currentRequestId.current !== requestId) {
           return;
         }
-        setRunningWorkflowExecution({
-          error:
-            error instanceof KeepApiError ? error.message : "Unknown error",
-        });
+        setError(
+          error instanceof KeepApiError ? error.message : "Unknown error"
+        );
+        setWorkflowExecutionId(null);
       })
       .finally(() => {
         if (currentRequestId.current !== requestId) {
@@ -97,24 +92,22 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
       onClose={closeWorkflowExecutionResultsModal}
       className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
     >
-      {runningWorkflowExecution !== null &&
-        isWorkflowExecution(runningWorkflowExecution) && (
-          <BuilderWorkflowTestRunModalContent
-            closeModal={closeWorkflowExecutionResultsModal}
-            workflowExecutionId={runningWorkflowExecution.id}
-            workflowId={workflowId ?? ""}
-            workflowYamlSent={workflowYamlSent}
-          />
-        )}
-      {runningWorkflowExecution !== null &&
-        !isWorkflowExecution(runningWorkflowExecution) && (
-          <div className="flex justify-center">
-            <Callout title="Workflow execution failed" color="red">
-              {runningWorkflowExecution.error}
-            </Callout>
-          </div>
-        )}
-      {runningWorkflowExecution == null && (
+      {workflowExecutionId !== null && (
+        <BuilderWorkflowTestRunModalContent
+          closeModal={closeWorkflowExecutionResultsModal}
+          workflowExecutionId={workflowExecutionId}
+          workflowId={workflowId ?? ""}
+          workflowYamlSent={workflowYamlSent}
+        />
+      )}
+      {error !== null && (
+        <div className="flex justify-center">
+          <Callout title="Workflow execution failed" color="red">
+            {error}
+          </Callout>
+        </div>
+      )}
+      {workflowExecutionId === null && (
         <div className="flex justify-center">
           <KeepLoader loadingText="Waiting for workflow execution results..." />
         </div>

@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Card, Callout } from "@tremor/react";
+import { Card, Callout, Button } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { TabGroup, Tab, TabList, TabPanel, TabPanels } from "@tremor/react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import {
   WorkflowExecutionDetail,
   WorkflowExecutionFailure,
@@ -16,7 +16,8 @@ import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
 import { setFavicon } from "@/shared/ui/utils/favicon";
-import { ResizableColumns } from "@/shared/ui";
+import { EmptyStateCard, JsonCard, ResizableColumns } from "@/shared/ui";
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 const convertWorkflowStatusToFaviconStatus = (
   status: WorkflowExecutionDetail["status"]
@@ -47,10 +48,15 @@ export function WorkflowExecutionResults({
 }: WorkflowResultsProps) {
   const api = useApi();
   const [refreshInterval, setRefreshInterval] = useState(1000);
-  const [checks, setChecks] = useState(1);
+  const [checks, setChecks] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: executionData, error: executionError } = useSWR(
+  const {
+    data: executionData,
+    error: executionError,
+    isValidating,
+    isLoading,
+  } = useSWR(
     api.isReady() && workflowExecutionId
       ? `/workflows/${workflowId}/runs/${workflowExecutionId}`
       : null,
@@ -62,6 +68,7 @@ export function WorkflowExecutionResults({
       return fetchedData;
     },
     {
+      dedupingInterval: 990,
       refreshInterval: refreshInterval,
       fallbackData: initialWorkflowExecution,
     }
@@ -118,6 +125,14 @@ export function WorkflowExecutionResults({
     );
   }
 
+  if (error) {
+    return (
+      <Callout title="Error" icon={ExclamationCircleIcon} color="rose">
+        {error}
+      </Callout>
+    );
+  }
+
   if (workflowError) {
     return (
       <Callout title="Error" icon={ExclamationCircleIcon} color="rose">
@@ -127,12 +142,15 @@ export function WorkflowExecutionResults({
   }
 
   return (
-    <WorkflowExecutionResultsInternal
-      workflowId={workflowId}
-      executionData={executionData}
-      workflowRaw={finalYaml}
-      checks={checks}
-    />
+    <>
+      <WorkflowExecutionResultsInternal
+        workflowId={workflowId}
+        executionData={executionData}
+        workflowRaw={finalYaml}
+        checks={checks}
+        isLoading={refreshInterval > 0}
+      />
+    </>
   );
 }
 
@@ -141,11 +159,13 @@ export function WorkflowExecutionResultsInternal({
   executionData,
   workflowRaw,
   checks,
+  isLoading,
 }: {
   executionData: WorkflowExecutionDetail | WorkflowExecutionFailure;
   workflowId: string;
   workflowRaw: string | undefined;
   checks: number;
+  isLoading: boolean;
 }) {
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
   const [selectedStep, setSelectedStep] = useState<string | null>(null);
@@ -155,7 +175,7 @@ export function WorkflowExecutionResultsInternal({
   let results: WorkflowExecutionDetail["results"] | undefined;
   let eventId: string | undefined;
   let eventType: string | undefined;
-
+  const revalidateMultiple = useRevalidateMultiple();
   if (isWorkflowExecution(executionData)) {
     status = executionData.status;
     logs = executionData.logs;
@@ -236,16 +256,35 @@ export function WorkflowExecutionResultsInternal({
       )}
       <ResizableColumns initialLeftWidth={50}>
         <div className="pr-2">
-          <Card className="p-0 overflow-hidden">
-            <WorkflowExecutionLogs
-              logs={logs ?? null}
-              results={results ?? null}
-              status={status ?? ""}
-              checks={checks}
-              hoveredStep={hoveredStep}
-              selectedStep={selectedStep}
-            />
-          </Card>
+          {logs ? (
+            <Card className="p-0 overflow-hidden">
+              <WorkflowExecutionLogs
+                logs={logs ?? null}
+                results={results ?? null}
+                status={status ?? ""}
+                checks={checks}
+                hoveredStep={hoveredStep}
+                selectedStep={selectedStep}
+                isLoading={isLoading}
+              />
+            </Card>
+          ) : (
+            <EmptyStateCard
+              title="No logs found"
+              description="The workflow is still running"
+            >
+              <Button
+                variant="primary"
+                color="orange"
+                size="sm"
+                onClick={() => {
+                  revalidateMultiple([`/workflows/${workflowId}/runs`]);
+                }}
+              >
+                Refresh
+              </Button>
+            </EmptyStateCard>
+          )}
         </div>
         <div className="px-2">
           <Card className="p-0 overflow-hidden">
