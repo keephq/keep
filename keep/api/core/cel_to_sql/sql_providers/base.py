@@ -17,12 +17,21 @@ from keep.api.core.cel_to_sql.ast_nodes import (
 from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 
 from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, MultipleFieldsNode, PropertiesMapper, PropertiesMappingException
-from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
+from keep.api.core.cel_to_sql.properties_metadata import (
+    PropertiesMetadata,
+)
 from celpy import CELParseError
 
 
 class CelToSqlException(Exception):
     pass
+
+
+class CelToSqlResult:
+    def __init__(self, sql: str, involved_fields: List[str]):
+        self.sql = sql
+        self.involved_fields = involved_fields
+
 
 class BaseCelToSqlProvider:
     """
@@ -88,6 +97,9 @@ class BaseCelToSqlProvider:
         self.properties_mapper = PropertiesMapper(properties_metadata)
 
     def convert_to_sql_str(self, cel: str) -> str:
+        return self.convert_to_sql_str_v2(cel).sql
+
+    def convert_to_sql_str_v2(self, cel: str) -> CelToSqlResult:
         """
         Converts a CEL (Common Expression Language) expression to an SQL string.
         Args:
@@ -99,7 +111,7 @@ class BaseCelToSqlProvider:
         """
 
         if not cel:
-            return ""
+            return CelToSqlResult(sql="", involved_fields=[])
 
         try:
             original_query = CelToAstConverter.convert_to_ast(cel)
@@ -107,16 +119,18 @@ class BaseCelToSqlProvider:
             raise CelToSqlException(f"Error parsing CEL expression: {str(e)}") from e
 
         try:
-            with_mapped_props = self.properties_mapper.map_props_in_ast(original_query)
+            with_mapped_props, involved_fields = (
+                self.properties_mapper.map_props_in_ast(original_query)
+            )
         except PropertiesMappingException as e:
             raise CelToSqlException(f"Error while mapping columns: {str(e)}") from e
 
         if not with_mapped_props:
-            return ""
+            return CelToSqlResult(sql="", involved_fields=[])
 
         try:
             sql_filter = self.__build_sql_filter(with_mapped_props, [])
-            return sql_filter
+            return CelToSqlResult(sql=sql_filter, involved_fields=involved_fields)
         except NotImplementedError as e:
             raise CelToSqlException(f"Error while converting CEL expression tree to SQL: {str(e)}") from e
 

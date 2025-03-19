@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Tuple
 
-from sqlalchemy import and_, asc, desc, exists, func, literal_column, select
+from sqlalchemy import and_, asc, desc, func, literal_column, select
 from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, text
 
@@ -11,6 +11,7 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     JsonFieldMapping,
     PropertiesMetadata,
     SimpleFieldMapping,
+    remap_fields_configurations,
 )
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
@@ -30,7 +31,6 @@ from keep.api.models.db.alert import (
 )
 from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
-from sqlalchemy.orm import declarative_base, relationship, aliased
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,12 @@ alias_column_mapping = {
     "filter_fingerprint": "lastalert.fingerprint",
 }
 
+remapped_field_configurations = remap_fields_configurations(
+    alias_column_mapping, alert_field_configurations
+)
+
 properties_metadata = PropertiesMetadata(alert_field_configurations)
+remapped_properties_metadata = PropertiesMetadata(remapped_field_configurations)
 
 static_facets = [
     FacetDto(
@@ -147,44 +152,43 @@ static_facets = [
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
 
-def __build_query_for_filtering(tenant_id: str, fetch_incidents: bool = True):
-    columns_to_select = []
+def __build_query_for_filtering(
+    tenant_id: str, fetch_incidents: bool = True, fetch_alerts_data: bool = True
+):
+    select_args = []
+
+    select_args = select_args + [
+        LastAlert.alert_id,
+        LastAlert.tenant_id.label("last_alert_tenant_id"),
+        LastAlert.first_timestamp.label("startedAt"),
+        LastAlert.alert_id.label("entity_id"),
+        LastAlert.fingerprint.label("alert_fingerprint"),
+    ]
 
     for key, value in alias_column_mapping.items():
-        columns_to_select.append(f"{value} AS {key}")
+        if not fetch_incidents and "incident." in value:
+            continue
 
-    columns_to_select = (
-        columns_to_select
-        if fetch_incidents
-        else list(filter(lambda x: "incident" not in x, columns_to_select))
-    )
+        if not fetch_alerts_data and ("alert." in value or "alertenrichment." in value):
+            continue
 
-    query = (
-        select(
-            Alert.id,
-            LastAlert.alert_id,
-            LastAlert.tenant_id.label("last_alert_tenant_id"),
-            LastAlert.first_timestamp.label("startedAt"),
-            LastAlert.alert_id.label("entity_id"),
-            LastAlert.fingerprint.label("alert_fingerprint"),
-            # here it creates aliases for table columns that will be used in filtering and faceting
-            text(",".join(columns_to_select)),
-        )
-        .select_from(LastAlert)
-        .join(
+        select_args.append(literal_column(value).label(key))
+
+    query = select(*select_args).select_from(LastAlert)
+
+    if fetch_alerts_data:
+        query = query.join(
             Alert,
             and_(
                 Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id
             ),
-        )
-        .outerjoin(
+        ).outerjoin(
             AlertEnrichment,
             and_(
                 LastAlert.tenant_id == AlertEnrichment.tenant_id,
                 LastAlert.fingerprint == AlertEnrichment.alert_fingerprint,
             ),
         )
-    )
 
     if fetch_incidents:
         query = query.outerjoin(
@@ -205,45 +209,62 @@ def __build_query_for_filtering(tenant_id: str, fetch_incidents: bool = True):
     return query
 
 
-def build_total_alerts_query(tenant_id, cel=None, limit=None, offset=None):
-    fetch_incidents = False
-    if cel and "incident." in cel:
-        fetch_incidents = True
+def __build_query_for_filtering_v2(
+    tenant_id: str,
+    select_args: list,
+    cel=None,
+    limit=None,
+):
+    fetch_incidents = cel and "incident." in cel
+    cel_to_sql_instance = get_cel_to_sql_provider(remapped_properties_metadata)
 
-    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-    base = __build_query_for_filtering(tenant_id, fetch_incidents)
+    query = select(*select_args).select_from(LastAlert)
 
-    if limit is not None:
-        base = base.limit(limit)
-
-    count_funct = (
-        func.count(func.distinct(base.c.alert_id)) if fetch_incidents else func.count(1)
+    query = query.join(
+        Alert,
+        and_(Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id),
+    ).outerjoin(
+        AlertEnrichment,
+        and_(
+            LastAlert.tenant_id == AlertEnrichment.tenant_id,
+            LastAlert.fingerprint == AlertEnrichment.alert_fingerprint,
+        ),
     )
 
-    query = (
-        select(
-            count_funct.label("total_count"),
-        )
-        .select_from(base)
-        .join(
-            Alert,
+    if fetch_incidents:
+        query = query.outerjoin(
+            LastAlertToIncident,
             and_(
-                base.c.last_alert_tenant_id == Alert.tenant_id,
-                base.c.alert_id == Alert.id,
+                LastAlert.tenant_id == LastAlertToIncident.tenant_id,
+                LastAlert.fingerprint == LastAlertToIncident.fingerprint,
+            ),
+        ).outerjoin(
+            Incident,
+            and_(
+                LastAlertToIncident.tenant_id == Incident.tenant_id,
+                LastAlertToIncident.incident_id == Incident.id,
             ),
         )
-        .outerjoin(
-            AlertEnrichment,
-            and_(
-                AlertEnrichment.tenant_id == Alert.tenant_id,
-                AlertEnrichment.alert_fingerprint == Alert.fingerprint,
-            ),
-        )
-    )
+
+    query = query.filter(LastAlert.tenant_id == tenant_id)
 
     if cel:
         sql_filter = cel_to_sql_instance.convert_to_sql_str(cel)
         query = query.where(text(sql_filter))
+    return query
+
+
+def build_total_alerts_query(tenant_id, cel=None, limit=None):
+    fetch_incidents = cel and "incident." in cel
+
+    count_funct = (
+        func.count(func.distinct(LastAlert.alert_id))
+        if fetch_incidents
+        else func.count(1)
+    )
+    query = __build_query_for_filtering_v2(
+        tenant_id=tenant_id, cel=cel, select_args=[count_funct], limit=limit
+    )
 
     return query
 
@@ -256,30 +277,38 @@ def build_alerts_query(
     limit=None,
     offset=None,
 ):
+    cel_to_sql_instance = get_cel_to_sql_provider(remapped_properties_metadata)
     fetch_incidents = False
 
     if cel and "incident." in cel:
         fetch_incidents = True
 
-    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-    base = __build_query_for_filtering(tenant_id, fetch_incidents)
+    query = __build_query_for_filtering_v2(
+        tenant_id,
+        select_args=[
+            Alert,
+            AlertEnrichment,
+            LastAlert.first_timestamp.label("startedAt"),
+        ],
+        cel=cel,
+    )
 
     if not sort_by:
         sort_by = "timestamp"
         sort_dir = "desc"
 
-    metadata = properties_metadata.get_property_metadata(sort_by)
+    metadata = remapped_properties_metadata.get_property_metadata(sort_by)
     group_by_exp = []
 
     for item in metadata.field_mappings:
         if isinstance(item, JsonFieldMapping):
             group_by_exp.append(
                 cel_to_sql_instance.json_extract_as_text(
-                    alias_column_mapping[item.json_prop], item.prop_in_json
+                    item.json_prop, item.prop_in_json
                 )
             )
         elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-            group_by_exp.append(alias_column_mapping[item.map_to])
+            group_by_exp.append(item.map_to)
 
     if len(group_by_exp) > 1:
         order_by_field = cel_to_sql_instance.coalesce(
@@ -288,52 +317,29 @@ def build_alerts_query(
     else:
         order_by_field = group_by_exp[0]
 
-    if sort_dir == "desc":
-        base = base.order_by(desc(text(order_by_field)))
+    if fetch_incidents:
+        if sort_dir == "desc":
+            query = query.order_by(desc(text(order_by_field)), Alert.id)
+        else:
+            query = query.order_by(asc(text(order_by_field)), Alert.id)
+
+        query = query.distinct(text(order_by_field), Alert.id)
     else:
-        base = base.order_by(asc(text(order_by_field)))
+        if sort_dir == "desc":
+            query = query.order_by(desc(text(order_by_field)))
+        else:
+            query = query.order_by(asc(text(order_by_field)))
 
     if fetch_incidents:
-        base = base.distinct(text(order_by_field), LastAlert.alert_id).cte(
+        query = query.distinct(text(order_by_field), LastAlert.alert_id).cte(
             "alerts_query"
         )
-
-    query = (
-        select(
-            Alert,
-            AlertEnrichment,
-            base.c.startedAt,
-            literal_column("filter_alert_event_json"),
-            literal_column("filter_alert_enrichment_json"),
-        )
-        .select_from(base)
-        .outerjoin(
-            AlertEnrichment,
-            and_(
-                base.c.last_alert_tenant_id == AlertEnrichment.tenant_id,
-                base.c.alert_fingerprint == AlertEnrichment.alert_fingerprint,
-            ),
-        )
-        .join(
-            Alert,
-            and_(
-                base.c.last_alert_tenant_id == Alert.tenant_id,
-                base.c.alert_id == Alert.id,
-            ),
-        )
-    ).where(Alert.tenant_id == tenant_id)
-
-    if cel:
-        sql_filter = cel_to_sql_instance.convert_to_sql_str(cel)
-        query = query.where(text(sql_filter))
 
     if limit is not None:
         query = query.limit(limit)
 
     if offset is not None:
         query = query.offset(offset)
-
-    # query = query.distinct(Alert.id)
 
     return query
 
@@ -369,11 +375,6 @@ def query_last_alerts(
             data_query = build_alerts_query(
                 tenant_id, cel, sort_by, sort_dir, limit, offset
             )
-            # strq = str(
-            #     data_query.compile(
-            #         dialect=session.bind.dialect, compile_kwargs={"literal_binds": True}
-            #     )
-            # )
             alerts_with_start = session.execute(data_query).all()
         except OperationalError as e:
             logger.warning(f"Failed to query alerts for CEL '{cel}': {e}")
