@@ -389,7 +389,7 @@ export const Search = ({ session }: SearchProps) => {
             <Image className="w-8" src={KeepPng} alt="Keep Logo" />
             {hasTenantLogo && (
               <Image
-                src={tenantLogoUrl}
+                src={tenantLogoUrl || ""}
                 alt={`${currentTenant?.tenant_name || "Tenant"} Logo`}
                 width={60}
                 height={60}
