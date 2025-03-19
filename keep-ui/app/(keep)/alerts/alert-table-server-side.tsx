@@ -210,54 +210,64 @@ export function AlertTableServerSide({
     return null;
   }, [timeframeDelta]);
 
-  useEffect(() => {
-    function updateAlertsCelDateRange() {
-      const dateRangeCel = getDateRangeCel();
-      setDateRangeCel(dateRangeCel);
+  const updateAlertsCelDateRange = useCallback(() => {
+    const dateRangeCel = getDateRangeCel();
+    setDateRangeCel(dateRangeCel);
 
-      if (dateRangeCel) {
-        return;
-      }
-
-      onReload && onReload(alertsQueryRef.current as AlertsQuery);
-      onPoll && onPoll();
+    if (dateRangeCel) {
+      return;
     }
 
-    updateAlertsCelDateRange();
+    onReload && onReload(alertsQueryRef.current as AlertsQuery);
+    onPoll && onPoll();
+  }, [getDateRangeCel, onReload, onPoll]);
 
-    if (!isPaused && shouldRefreshDate) {
-      const alertsInterval = setInterval(
-        () => updateAlertsCelDateRange(),
-        Math.max((queryTimeInSeconds || 1) * 2, 3000) // so that gap between poll is 2x of query time and minimu 3sec
-      );
-      return () => clearInterval(alertsInterval);
-    }
-  }, [isPaused, getDateRangeCel, shouldRefreshDate]);
+  useEffect(() => updateAlertsCelDateRange(), [updateAlertsCelDateRange]);
 
   useEffect(() => {
-    function updateFacetsCelDateRange() {
-      const dateRangeCel = getDateRangeCel();
-      setFacetsDateRangeCel(dateRangeCel);
-
-      if (dateRangeCel) {
-        return;
+    // so that gap between poll is 2x of query time and minimum 3sec
+    const refreshInterval = Math.max((queryTimeInSeconds || 1) * 2, 3000);
+    const interval = setInterval(() => {
+      if (!isPaused && shouldRefreshDate) {
+        updateAlertsCelDateRange();
       }
+    }, refreshInterval);
+    return () => clearInterval(interval);
+  }, [isPaused, updateAlertsCelDateRange, shouldRefreshDate]);
 
-      setFacetsPanelRefreshToken(uuidV4());
+  const updateFacetsCelDateRange = useCallback(() => {
+    const dateRangeCel = getDateRangeCel();
+    setFacetsDateRangeCel(dateRangeCel);
+
+    if (dateRangeCel) {
+      return;
     }
 
-    updateFacetsCelDateRange();
+    setFacetsPanelRefreshToken(uuidV4());
+  }, [getDateRangeCel, setFacetsDateRangeCel, setFacetsPanelRefreshToken]);
 
-    if (!isPaused && shouldRefreshDate) {
-      const facetsInterval = setInterval(
-        () => updateFacetsCelDateRange(),
-        Math.max((queryTimeInSeconds || 1) * 15, 5000) // so that gap between poll is 15x of query time and minimum 5sec
-      );
-      return () => {
-        clearInterval(facetsInterval);
-      };
-    }
-  }, [isPaused, getDateRangeCel, shouldRefreshDate]);
+  useEffect(
+    () => updateFacetsCelDateRange(),
+    [timeframeDelta, updateFacetsCelDateRange]
+  );
+
+  useEffect(() => {
+    // so that gap between poll is 15x of query time and minimum 5sec
+    const refreshInterval = Math.max((queryTimeInSeconds || 1) * 15, 5000);
+    const interval = setInterval(() => {
+      if (!isPaused && shouldRefreshDate) {
+        updateFacetsCelDateRange();
+      }
+    }, refreshInterval);
+    return () => {
+      clearInterval(interval);
+    };
+  }, [
+    isPaused,
+    getDateRangeCel,
+    shouldRefreshDate,
+    Math.round(queryTimeInSeconds || 1),
+  ]);
 
   const mainCelQuery = useMemo(() => {
     const filterArray = [dateRangeCel, searchCel];
