@@ -4,7 +4,7 @@
 // https://nextjs.org/docs/app/building-your-application/routing/error-handling#how-errorjs-works
 
 "use client";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Title, Subtitle } from "@tremor/react";
 import { Button, Text } from "@tremor/react";
 import { KeepApiError } from "@/shared/api";
@@ -17,11 +17,13 @@ import { useConfig } from "utils/hooks/useConfig";
 
 export function ErrorComponent({
   error: originalError,
+  defaultMessage = "An error occurred",
   description,
   reset,
 }: {
   error: Error | KeepApiError;
-  description?: string;
+  defaultMessage?: string;
+  description?: React.ReactNode;
   reset?: () => void;
 }) {
   const signOut = useSignOut();
@@ -35,7 +37,10 @@ export function ErrorComponent({
     Sentry.captureException(originalError);
   }, [originalError]);
 
-  const error = isHealthy ? originalError : new KeepApiHealthError();
+  const error = useMemo(() => {
+    return isHealthy ? originalError : new KeepApiHealthError();
+  }, [isHealthy, originalError]);
+
   const subtitle =
     error instanceof KeepApiError
       ? error.proposedResolution || description
@@ -46,11 +51,11 @@ export function ErrorComponent({
       <KeepLogoError />
       <div className="max-w-md">
         <Title className="text-xl font-bold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-          {error.message || "An error occurred"}
+          {error.message || defaultMessage}
         </Title>
         {subtitle && <Subtitle>{subtitle}</Subtitle>}
       </div>
-      {error && (
+      {error && (error instanceof KeepApiError || error.stack) && (
         <code className="text-gray-600 text-left bg-gray-100 p-2 rounded-md">
           {error instanceof KeepApiError && (
             <>

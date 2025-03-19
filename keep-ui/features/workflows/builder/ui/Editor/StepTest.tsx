@@ -1,15 +1,9 @@
 import { Button, TextInput } from "@/components/ui";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { JsonCard } from "@/shared/ui";
+import { JsonCard, MonacoEditor } from "@/shared/ui";
 import { Callout, Text } from "@tremor/react";
 import { useMemo, useState } from "react";
 import { EditorLayout } from "./StepEditor";
-// Monaco Editor - do not load from CDN (to support on-prem)
-// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
-import * as monaco from "monaco-editor";
-import { loader } from "@monaco-editor/react";
-loader.config({ monaco });
-import { Editor } from "@monaco-editor/react";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { useCopilotChat } from "@copilotkit/react-core";
 import { Role } from "@copilotkit/runtime-client-gql";
@@ -150,8 +144,8 @@ export function TestRunStepForm({
               typeof value === "object"
                 ? JSON.parse(result)
                 : typeof value === "number"
-                ? Number(result)
-                : result,
+                  ? Number(result)
+                  : result,
             ];
           } catch {
             return [key, result];
@@ -257,7 +251,7 @@ export function TestRunStepForm({
                   ),
                 }}
               >
-                <Editor
+                <MonacoEditor
                   value={JSON.stringify(result, null, 2)}
                   language="json"
                   theme="vs-light"

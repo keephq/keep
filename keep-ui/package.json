@@ -6,7 +6,7 @@
   "scripts": {
     "build": "./next_build.sh",
     "dev": "next dev --turbopack -p 3000",
-    "dev:turbo": "NEXT_TURBO=true next dev -p 3000",
+    "dev:webpack": "next dev -p 3000",
     "lint": "next lint",
     "start": "next start",
     "test": "jest"

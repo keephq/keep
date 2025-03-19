@@ -13,3 +13,5 @@ workflow:
           alert:
             name: "Alert created from the workflow"
             description: "This alert was created from the create_alert_in_keep.yml example workflow."
+            labels:
+              environment: production
