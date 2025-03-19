@@ -1,6 +1,7 @@
 workflow:
-  id: sendgrid-basic-demo
-  description: send an email
+  id: sendgrid-notification-sender
+  name: SendGrid Notification Sender
+  description: Sends HTML-formatted email notifications to multiple recipients using SendGrid's email service.
   triggers:
     - type: manual
   actions:
@@ -9,8 +10,8 @@ workflow:
         type: sendgrid
         config: " {{ providers.Sendgrid }} "
         with:
-         to:
-          - "youremail@gmail.com"
-          - "youranotheremail@gmail.com"
-         subject: "Hello from Keep!"
-         html: "<strong>Test</strong> with HTML"
+          to:
+            - "youremail@gmail.com"
+            - "youranotheremail@gmail.com"
+          subject: "Hello from Keep!"
+          html: "<strong>Test</strong> with HTML"

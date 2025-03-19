@@ -1,6 +1,7 @@
 workflow:
-  id: slack-basic-demo
-  description: Send a slack message when a cloudwatch alarm is triggered
+  id: cloudwatch-slack-notifier
+  name: CloudWatch Slack Notifier
+  description: Forwards AWS CloudWatch alarms to Slack channels with customized alert messages.
   triggers:
     - type: alert
       filters:

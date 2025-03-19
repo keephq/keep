@@ -1,7 +1,7 @@
 workflow:
-  id: e3199504-6439-424b-82a2-e6b0e4d516cc
-  name: query-grafana-loki
-  description: Query logs from Grafana Loki
+  id: loki-log-analyzer
+  name: Loki Log Analyzer
+  description: Analyzes log rates from Grafana Loki with customizable queries and time ranges for monitoring log patterns.
   disabled: false
   triggers:
     - type: manual
