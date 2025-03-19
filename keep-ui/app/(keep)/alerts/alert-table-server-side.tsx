@@ -32,7 +32,6 @@ import { severityMapping } from "@/entities/alerts/model";
 import AlertSidebar from "./alert-sidebar";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
-import Image from "next/image";
 import { EmptyStateCard, SeverityBorderIcon, UISeverity } from "@/shared/ui";
 import { useUser } from "@/entities/users/model/useUser";
 import { UserStatefulAvatar } from "@/entities/users/ui";
@@ -59,7 +58,6 @@ import { GrTest } from "react-icons/gr";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
-import { ColumnRenameMapping } from "./alert-table-column-rename";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -172,12 +170,6 @@ export function AlertTableServerSide({
     "table-sizes",
     {}
   );
-
-  const [columnRenameMapping, setColumnRenameMapping] =
-    useLocalStorage<ColumnRenameMapping>(
-      `column-rename-mapping-${presetName}`,
-      {}
-    );
 
   const handleThemeChange = (newTheme: any) => {
     setTheme(newTheme);
@@ -639,8 +631,6 @@ export function AlertTableServerSide({
           setColumnTimeFormats={setColumnTimeFormats}
           columnListFormats={columnListFormats}
           setColumnListFormats={setColumnListFormats}
-          columnRenameMapping={columnRenameMapping}
-          setColumnRenameMapping={setColumnRenameMapping}
         />
         <AlertsTableBody
           table={table}
