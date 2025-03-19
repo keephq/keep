@@ -329,6 +329,7 @@ class WorkflowScheduler:
                     "triggered_by_user": triggered_by_user,
                     "event": event,
                     "retry": True,
+                    "test_run": test_run,
                 }
             )
         return workflow_execution_id

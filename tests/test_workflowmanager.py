@@ -91,15 +91,12 @@ def test_get_workflow_results():
     assert result == expected_result
 
 
-def test_handle_workflow_test():
+
+def test_handle_manual_event_workflow():
     mock_workflow = Mock(spec=Workflow)
     mock_workflow.workflow_id = "workflow1"
 
     mock_workflow_manager = Mock()
-    mock_workflow_manager._run_workflow.return_value = (
-        [],
-        {"result": "value1"},
-    )
 
     mock_logger = Mock()
 
@@ -108,45 +105,34 @@ def test_handle_workflow_test():
     workflow_scheduler.workflow_manager = mock_workflow_manager
 
     workflow_scheduler._get_unique_execution_number = Mock(return_value=123)
-    workflow_scheduler.handle_manual_event_workflow = Mock(return_value="test_execution_id")
     workflow_scheduler._finish_workflow_execution = Mock()
 
-    tenant_id = "test_tenant"
-    triggered_by_user = "test_user"
+    # Mock create_workflow_execution
+    with patch('keep.workflowmanager.workflowscheduler.create_workflow_execution') as mock_create_execution:
+        mock_create_execution.return_value = "test_execution_id"
 
-    event = get_event_from_body(body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id)
+        tenant_id = "test_tenant"
+        triggered_by_user = "test_user"
 
-    with patch.object(queue, "Queue", wraps=queue.Queue) as mock_queue:
-        result = workflow_scheduler.handle_manual_event_workflow(
-            workflow=mock_workflow,
+        event = get_event_from_body(body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id)
+
+        workflow_execution_id = workflow_scheduler.handle_manual_event_workflow(
+            workflow_id=mock_workflow.workflow_id,
             tenant_id=tenant_id,
             triggered_by_user=triggered_by_user,
             event=event,
-            is_test=True,
         )
 
-        mock_workflow_manager._run_workflow.assert_called_once_with(
-            mock_workflow, "test_execution_id", True
-        )
-
-        assert mock_queue.call_count == 1
-        assert result == "test_execution_id"
-        assert mock_logger.info.call_count == 2
-        workflow_scheduler._finish_workflow_execution.assert_called_once_with(
-            tenant_id=tenant_id,
-            workflow_id=mock_workflow.workflow_id,
-            workflow_execution_id="test_execution_id",
-            status=WorkflowStatus.SUCCESS,
-            error=None,
-        )
+        assert workflow_execution_id == "test_execution_id"
+        assert len(workflow_scheduler.workflows_to_run) == 1
+        assert workflow_scheduler.workflows_to_run[0]["workflow_execution_id"] == "test_execution_id"
 
 
-def test_handle_workflow_test_with_error():
+def test_handle_manual_event_workflow_test_run():
     mock_workflow = Mock(spec=Workflow)
     mock_workflow.workflow_id = "workflow1"
 
     mock_workflow_manager = Mock()
-    mock_workflow_manager._run_workflow.return_value = (["Error occurred"], None)
 
     mock_logger = Mock()
 
@@ -155,34 +141,28 @@ def test_handle_workflow_test_with_error():
     workflow_scheduler.workflow_manager = mock_workflow_manager
 
     workflow_scheduler._get_unique_execution_number = Mock(return_value=123)
-    workflow_scheduler.handle_manual_event_workflow = Mock(return_value="test_execution_id")
     workflow_scheduler._finish_workflow_execution = Mock()
 
-    tenant_id = "test_tenant"
-    triggered_by_user = "test_user"
+    # Mock create_workflow_execution
+    with patch('keep.workflowmanager.workflowscheduler.create_workflow_execution') as mock_create_execution:
+        mock_create_execution.return_value = "test_execution_id"
 
-    event = get_event_from_body(body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id)
+        tenant_id = "test_tenant"
+        triggered_by_user = "test_user"
 
-    with patch.object(queue, "Queue", wraps=queue.Queue) as mock_queue:
-        result = workflow_scheduler.handle_manual_event_workflow(
+        event = get_event_from_body(body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id)
+
+        workflow_execution_id = workflow_scheduler.handle_manual_event_workflow(
+            workflow_id=mock_workflow.workflow_id,
             workflow=mock_workflow,
             tenant_id=tenant_id,
             triggered_by_user=triggered_by_user,
             event=event,
-            is_test=True,
+            test_run=True,
         )
 
-        mock_workflow_manager._run_workflow.assert_called_once_with(
-            mock_workflow, "test_execution_id", True
-        )
-
-        assert mock_queue.call_count == 1
-        assert result == "test_execution_id"
-        assert mock_logger.info.call_count == 2
-        workflow_scheduler._finish_workflow_execution.assert_called_once_with(
-            tenant_id=tenant_id,
-            workflow_id=mock_workflow.workflow_id,
-            workflow_execution_id="test_execution_id",
-            status=WorkflowStatus.ERROR,
-            error="Error occurred",
-        )
+        assert workflow_execution_id == "test_execution_id"
+        assert len(workflow_scheduler.workflows_to_run) == 1
+        assert workflow_scheduler.workflows_to_run[0]["workflow_execution_id"] == "test_execution_id"
+        assert workflow_scheduler.workflows_to_run[0]["test_run"] == True
+        assert workflow_scheduler.workflows_to_run[0]["workflow"] == mock_workflow
