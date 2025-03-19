@@ -1686,6 +1686,18 @@ def get_alert_by_event_id(
     return alert
 
 
+def get_alerts_by_ids(
+    tenant_id: str, alert_ids: list[str | UUID], session: Optional[Session] = None
+) -> List[Alert]:
+    with existed_or_new_session(session) as session:
+        query = (
+            select(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.id.in_(alert_ids))
+        )
+        query = query.options(subqueryload(Alert.alert_enrichment))
+        return session.exec(query).all()
+
 def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:
     # get the previous alert for a given fingerprint
     with Session(engine) as session:
@@ -5192,6 +5204,21 @@ def get_activity_report(session: Optional[Session] = None):
             .count()
         )
     return activity_report
+
+
+def get_last_alerts_by_fingerprints(
+    tenant_id: str,
+    fingerprint: List[str],
+    session: Optional[Session] = None,
+) -> List[LastAlert]:
+    with existed_or_new_session(session) as session:
+        query = select(LastAlert).where(
+            and_(
+                LastAlert.tenant_id == tenant_id,
+                LastAlert.fingerprint.in_(fingerprint),
+            )
+        )
+        return session.exec(query).all()
 
 
 def get_last_alert_by_fingerprint(
