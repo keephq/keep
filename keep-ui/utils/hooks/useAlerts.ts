@@ -196,6 +196,7 @@ export const useAlerts = () => {
       api.isReady()
         ? requestUrl +
           Object.entries(queryToPost)
+            .sort(([fstKey], [scdKey]) => fstKey.localeCompare(scdKey))
             .map(([key, value]) => `${key}=${value}`)
             .join("&")
         : null;

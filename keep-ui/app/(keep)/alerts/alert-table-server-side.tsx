@@ -132,8 +132,10 @@ export function AlertTableServerSide({
   const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
   const [filterCel, setFilterCel] = useState<string>("");
   const [searchCel, setSearchCel] = useState<string>("");
-  const [dateRangeCel, setDateRangeCel] = useState<string>("");
-  const [facetsDateRangeCel, setFacetsDateRangeCel] = useState<string>("");
+  const [dateRangeCel, setDateRangeCel] = useState<string | null>("");
+  const [facetsDateRangeCel, setFacetsDateRangeCel] = useState<string | null>(
+    ""
+  );
   // const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
   const [rowStyle] = useAlertRowStyle();
@@ -194,7 +196,7 @@ export function AlertTableServerSide({
   );
   const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
 
-  function getDateRangeCel() {
+  const getDateRangeCel = useCallback(() => {
     const filterArray = [];
     const currentDate = new Date();
 
@@ -203,18 +205,18 @@ export function AlertTableServerSide({
         `lastReceived >= '${new Date(currentDate.getTime() - timeframeDelta).toISOString()}'`
       );
       filterArray.push(`lastReceived <= '${currentDate.toISOString()}'`);
-      filterArray.join(" && ");
+      return filterArray.join(" && ");
     }
 
     return null;
-  }
+  }, [timeframeDelta]);
 
   useEffect(() => {
     function updateAlertsCelDateRange() {
       const dateRangeCel = getDateRangeCel();
+      setDateRangeCel(dateRangeCel);
 
       if (dateRangeCel) {
-        setDateRangeCel(dateRangeCel);
         return;
       }
 
@@ -231,14 +233,14 @@ export function AlertTableServerSide({
       );
       return () => clearInterval(alertsInterval);
     }
-  }, [isPaused, timeframeDelta, shouldRefreshDate]);
+  }, [isPaused, getDateRangeCel, shouldRefreshDate]);
 
   useEffect(() => {
     function updateFacetsCelDateRange() {
       const dateRangeCel = getDateRangeCel();
+      setFacetsDateRangeCel(dateRangeCel);
 
       if (dateRangeCel) {
-        setFacetsDateRangeCel(dateRangeCel);
         return;
       }
 
@@ -248,13 +250,17 @@ export function AlertTableServerSide({
     updateFacetsCelDateRange();
 
     if (!isPaused && shouldRefreshDate) {
+      console.log("IHOR CREATE INTERVAL FOR FACETS");
       const facetsInterval = setInterval(
         () => updateFacetsCelDateRange(),
-        Math.max((queryTimeInSeconds || 1) * 10, 5000) // so that gap between poll is 5x of query time and minimum 5sec
+        Math.max((queryTimeInSeconds || 1) * 10, 5000) // so that gap between poll is 10x of query time and minimum 5sec
       );
-      return () => clearInterval(facetsInterval);
+      return () => {
+        console.log("IHOR CLEAR INTERVAL FOR FACETS");
+        clearInterval(facetsInterval);
+      };
     }
-  }, [isPaused, timeframeDelta, shouldRefreshDate]);
+  }, [isPaused, getDateRangeCel, shouldRefreshDate]);
 
   const mainCelQuery = useMemo(() => {
     const filterArray = [dateRangeCel, searchCel];
