@@ -220,10 +220,10 @@ export const useAlerts = () => {
       ...swrValue,
       data: swrValue.data?.queryResult?.results as AlertDto[],
       queryTimeInSeconds: swrValue.data?.queryTimeInSeconds,
-      isLoading: swrValue.isLoading || !swrValue.data,
-      totalCount: swrValue.data?.count,
-      limit: swrValue.data?.limit,
-      offset: swrValue.data?.offset,
+      isLoading: swrValue.isLoading || !swrValue.data?.queryResult,
+      totalCount: swrValue.data?.queryResult?.count,
+      limit: swrValue.data?.queryResult?.limit,
+      offset: swrValue.data?.queryResult?.offset,
     };
   };
 
