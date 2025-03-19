@@ -24,7 +24,11 @@ declare module "next-auth" {
     accessToken: string;
     tenantId?: string;
     // a list of {"tenant_id": id, "tenant_name": name} objects
-    tenantIds?: { tenant_id: string; tenant_name: string }[];
+    tenantIds?: {
+      tenant_id: string;
+      tenant_name: string;
+      tenant_logo_url?: string;
+    }[];
     role?: string;
   }
 }

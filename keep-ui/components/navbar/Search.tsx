@@ -260,7 +260,7 @@ export const Search = ({ session }: SearchProps) => {
     if (!isMac()) {
       return;
     }
-    setPlaceholderText("Search or start with ⌘K");
+    setPlaceholderText("Search (or ⌘K)");
   }, []);
 
   // Check if tenant switching is available - with null/undefined check safety
@@ -270,94 +270,113 @@ export const Search = ({ session }: SearchProps) => {
     session.user.tenantIds &&
     session.user.tenantIds.length > 1;
 
+  // Get current tenant logo URL if available
+  const currentTenant = session?.user?.tenantIds?.find(
+    (tenant) => tenant.tenant_id === session.tenantId
+  );
+  const tenantLogoUrl = currentTenant?.tenant_logo_url;
+
   return (
-    <div className="flex items-center space-x-3 py-3 px-2 border-b border-gray-300">
-      {hasTenantSwitcher ? (
-        <Popover className="relative">
+    <div className="flex items-center w-full py-3 px-2 border-b border-gray-300">
+      <div className="flex-shrink-0 flex items-center">
+        {hasTenantSwitcher ? (
+          <Popover className="relative">
+            {({ open }) => (
+              <>
+                <Popover.Button
+                  className="focus:outline-none flex items-center"
+                  disabled={isLoading}
+                >
+                  <Image className="w-8" src={KeepPng} alt="Keep Logo" />
+                  {tenantLogoUrl && (
+                    <Image
+                      src={tenantLogoUrl}
+                      alt={`${currentTenant?.tenant_name || "Tenant"} Logo`}
+                      width={60}
+                      height={60}
+                      className="ml-4 object-cover"
+                    />
+                  )}
+                </Popover.Button>
+
+                <Popover.Panel className="absolute z-10 mt-1 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                  <div className="py-1 divide-y divide-gray-200">
+                    <div className="px-3 py-2 text-xs font-medium text-gray-500">
+                      Switch Tenant
+                    </div>
+                    {session.user.tenantIds?.map((tenant) => (
+                      <button
+                        key={tenant.tenant_id}
+                        className={`block w-full text-left px-4 py-2 text-sm ${
+                          tenant.tenant_id === session.tenantId
+                            ? "bg-orange-50 text-orange-700 font-medium"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                        onClick={() => switchTenant(tenant.tenant_id)}
+                        disabled={
+                          tenant.tenant_id === session.tenantId || isLoading
+                        }
+                      >
+                        {tenant.tenant_name}
+                      </button>
+                    ))}
+                  </div>
+                </Popover.Panel>
+              </>
+            )}
+          </Popover>
+        ) : (
+          <Link href="/">
+            <Image className="w-8" src={KeepPng} alt="Keep Logo" />
+          </Link>
+        )}
+      </div>
+
+      <div className="flex-grow ml-4">
+        <Combobox
+          value={query}
+          onChange={onOptionSelection}
+          as="div"
+          className="relative w-full"
+        >
           {({ open }) => (
             <>
-              <Popover.Button
-                className="focus:outline-none"
-                disabled={isLoading}
+              {open && (
+                <div
+                  className="fixed inset-0 bg-black/40 z-10"
+                  aria-hidden="true"
+                />
+              )}
+              <ComboboxButton ref={comboboxBtnRef} className="w-full">
+                <ComboboxInput
+                  className="z-20 tremor-TextInput-root relative flex items-center w-full outline-none rounded-tremor-default transition duration-100 border shadow-tremor-input dark:shadow-dark-tremor-input bg-tremor-background dark:bg-dark-tremor-background hover:bg-tremor-background-muted dark:hover:bg-dark-tremor-background-muted text-tremor-content dark:text-dark-tremor-content border-tremor-border dark:border-dark-tremor-border tremor-TextInput-input bg-transparent focus:outline-none focus:ring-0 text-tremor-default py-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none pr-3 pl-3 placeholder:text-tremor-content dark:placeholder:text-dark-tremor-content"
+                  placeholder={placeholderText}
+                  color="orange"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  ref={comboboxInputRef}
+                />
+              </ComboboxButton>
+              <Transition
+                as={Fragment}
+                beforeLeave={onLeave}
+                leave="transition ease-in duration-100"
+                leaveFrom="opacity-100"
+                leaveTo="opacity-0"
               >
-                <Image className="w-8" src={KeepPng} alt="Keep Logo" />
-              </Popover.Button>
-
-              <Popover.Panel className="absolute z-10 mt-1 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                <div className="py-1 divide-y divide-gray-200">
-                  <div className="px-3 py-2 text-xs font-medium text-gray-500">
-                    Switch Tenant
-                  </div>
-                  {session.user.tenantIds.map((tenant) => (
-                    <button
-                      key={tenant.tenant_id}
-                      className={`block w-full text-left px-4 py-2 text-sm ${
-                        tenant.tenant_id === session.tenantId
-                          ? "bg-orange-50 text-orange-700 font-medium"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`}
-                      onClick={() => switchTenant(tenant.tenant_id)}
-                      disabled={
-                        tenant.tenant_id === session.tenantId || isLoading
-                      }
-                    >
-                      {tenant.tenant_name}
-                    </button>
-                  ))}
-                </div>
-              </Popover.Panel>
+                <ComboboxOptions
+                  className="absolute mt-1 max-h-screen overflow-auto rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-20 w-96"
+                  as={List}
+                >
+                  <NoQueriesFoundResult />
+                  <FilteredResults />
+                  <DefaultResults />
+                </ComboboxOptions>
+              </Transition>
             </>
           )}
-        </Popover>
-      ) : (
-        <Link href="/">
-          <Image className="w-8" src={KeepPng} alt="Keep Logo" />
-        </Link>
-      )}
-
-      <Combobox
-        value={query}
-        onChange={onOptionSelection}
-        as="div"
-        className="relative"
-      >
-        {({ open }) => (
-          <>
-            {open && (
-              <div
-                className="fixed inset-0 bg-black/40 z-10"
-                aria-hidden="true"
-              />
-            )}
-            <ComboboxButton ref={comboboxBtnRef}>
-              <ComboboxInput
-                className="z-20 tremor-TextInput-root relative flex items-center min-w-[10rem] outline-none rounded-tremor-default transition duration-100 border shadow-tremor-input dark:shadow-dark-tremor-input bg-tremor-background dark:bg-dark-tremor-background hover:bg-tremor-background-muted dark:hover:bg-dark-tremor-background-muted text-tremor-content dark:text-dark-tremor-content border-tremor-border dark:border-dark-tremor-border tremor-TextInput-input w-full bg-transparent focus:outline-none focus:ring-0 text-tremor-default py-2  [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none pr-3 pl-3 placeholder:text-tremor-content dark:placeholder:text-dark-tremor-content"
-                placeholder={placeholderText}
-                color="orange"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                ref={comboboxInputRef}
-              />
-            </ComboboxButton>
-            <Transition
-              as={Fragment}
-              beforeLeave={onLeave}
-              leave="transition ease-in duration-100"
-              leaveFrom="opacity-100"
-              leaveTo="opacity-0"
-            >
-              <ComboboxOptions
-                className="absolute mt-1 max-h-screen overflow-auto rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-20 w-96"
-                as={List}
-              >
-                <NoQueriesFoundResult />
-                <FilteredResults />
-                <DefaultResults />
-              </ComboboxOptions>
-            </Transition>
-          </>
-        )}
-      </Combobox>
+        </Combobox>
+      </div>
     </div>
   );
 };
