@@ -516,3 +516,24 @@ def test_provider_deletion(browser: Page):
     except Exception:
         save_failure_artifacts(browser, log_entries)
         raise
+
+def test_monaco_editor_npm(browser: Page):
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    try:
+        init_e2e_test(browser, next_url="/signin")
+        browser.route("**/*", lambda route, request: 
+            route.abort() if not request.url.startswith("http://localhost") else route.continue_()
+        )
+        browser.get_by_role("link", name="Workflows").click()
+        browser.get_by_role("button", name="Upload Workflows").click()
+        file_input = browser.locator("#workflowFile")
+        file_input.set_input_files("./tests/e2e_tests/workflow-sample.yaml")
+        browser.get_by_role("button", name="Upload")
+        browser.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        browser.get_by_role("tab", name="YAML Definition").click()
+        editor_container = browser.get_by_test_id("wf-detail-yaml-editor-container")
+        expect(editor_container).not_to_contain_text("Error loading Monaco Editor from CDN")
+    except Exception:
+        save_failure_artifacts(browser, log_entries)
+        raise

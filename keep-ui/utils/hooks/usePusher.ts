@@ -11,9 +11,6 @@ export const useWebsocket = () => {
   const { data: session } = useSession();
   let channelName = `private-${session?.tenantId}`;
 
-  console.log("useWebsocket: Initializing with config:", configData);
-  console.log("useWebsocket: Session:", session);
-
   // TODO: should be in useMemo?
   if (
     PUSHER === null &&
