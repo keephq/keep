@@ -1,7 +1,7 @@
-id: update-workflows-from-http
-description: Dump workflows from HTTP and update them in Keep
-triggers:
-  - type: manual
+workflow:
+  id: http-workflow-sync
+  name: HTTP Workflow Sync
+  description: Updates Keep workflows from remote HTTP sources, supporting GitHub raw content and other HTTP endpoints.
 
 steps:
   - name: get-workflow

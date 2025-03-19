@@ -1,21 +1,22 @@
-id: query-mongodb
-name: Query MongoDB
-description: Querying MongoDB
+workflow:
+  id: mongodb-document-finder
+  name: MongoDB Document Finder
+  description: Executes targeted MongoDB queries with filters to retrieve specific documents from collections.
 
 triggers:
-- type: manual
+  - type: manual
 steps:
-- name: mongodb-step
-  provider:
-    config: '{{ providers.mongo }}'
-    type: mongodb
-    with:
-      # Please note that argument order is important for MongoDB queries.
-      query: |
-        {
-          "find": "mycollection",
-          "filter": {
-            "name": "First Document"
+  - name: mongodb-step
+    provider:
+      config: "{{ providers.mongo }}"
+      type: mongodb
+      with:
+        # Please note that argument order is important for MongoDB queries.
+        query: |
+          {
+            "find": "mycollection",
+            "filter": {
+              "name": "First Document"
+            }
           }
-        }
-      single_row: true
+        single_row: true

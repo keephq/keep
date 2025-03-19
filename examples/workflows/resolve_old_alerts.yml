@@ -1,6 +1,7 @@
 workflow:
-  id: resolve-old-alerts
-  description:
+  id: alert-auto-resolver
+  name: Alert Auto-Resolver
+  description: Automatically resolves stale alerts that haven't been updated in over an hour to maintain alert hygiene.
   triggers:
     - type: manual
     - type: interval
@@ -21,6 +22,6 @@ workflow:
         type: mock
         with:
           enrich_alert:
-          - key: status
-            value: resolved
-            disposable: true
+            - key: status
+              value: resolved
+              disposable: true

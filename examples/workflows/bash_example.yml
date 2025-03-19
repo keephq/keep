@@ -1,29 +1,30 @@
 workflow:
-  id: Resend-Python-service
-  description: Python Resend Mail
+  id: python-service-monitor
+  name: Python Service Monitor
+  description: Monitors a Python service by executing a test script and sends email notifications via Resend when the service is operational.
   triggers:
-  - type: manual
+    - type: manual
   owners: []
   services: []
   steps:
-  - name: run-script
-    provider:
-      config: '{{ providers.default-bash }}'
-      type: bash
-      with:
-        command: python3 test.py
-        timeout: 5
+    - name: run-script
+      provider:
+        config: "{{ providers.default-bash }}"
+        type: bash
+        with:
+          command: python3 test.py
+          timeout: 5
   actions:
-  - condition:
-    - assert: '{{ steps.run-script.results.return_code }} == 0'
-      name: assert-condition
-      type: assert
-    name: trigger-resend
-    provider:
-          type: resend
-          config: "{{ providers.resend-test }}"
-          with:
-            _from: "onboarding@resend.dev"
-            to: "youremail.dev@gmail.com"
-            subject: "Python test is up!"
-            html: <p>Python test is up!</p>
+    - condition:
+        - assert: "{{ steps.run-script.results.return_code }} == 0"
+          name: assert-condition
+          type: assert
+      name: trigger-resend
+      provider:
+        type: resend
+        config: "{{ providers.resend-test }}"
+        with:
+          _from: "onboarding@resend.dev"
+          to: "youremail.dev@gmail.com"
+          subject: "Python test is up!"
+          html: <p>Python test is up!</p>

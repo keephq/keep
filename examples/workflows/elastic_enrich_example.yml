@@ -1,7 +1,8 @@
 # if no acknowledgement has been recieved (updated in index) for x (from config index) time, i want to escalate it to next level of people
 workflow:
-  id: elastic-enrich
-  description: escalate-if-needed
+  id: alert-acknowledgment-escalator
+  name: Alert Acknowledgment Escalator
+  description: Monitors unacknowledged alerts in Elasticsearch and automatically escalates them based on configured thresholds. Integrates with people and configuration indices for smart escalation routing.
   triggers:
     # run every minute
     - type: interval
