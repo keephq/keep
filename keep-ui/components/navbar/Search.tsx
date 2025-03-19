@@ -41,7 +41,54 @@ const NAVIGATION_OPTIONS = [
     shortcut: ["p"],
     navigate: "/providers",
   },
-  // Rest of your navigation options...
+  {
+    icon: AiOutlineAlert,
+    label: "Go to alert console",
+    shortcut: ["g"],
+    navigate: "/alerts/feed",
+  },
+  {
+    icon: AiOutlineGroup,
+    label: "Go to alert quality",
+    shortcut: ["q"],
+    navigate: "/alerts/quality",
+  },
+  {
+    icon: MdOutlineEngineering,
+    label: "Go to alert groups",
+    shortcut: ["g"],
+    navigate: "/rules",
+  },
+  {
+    icon: LuWorkflow,
+    label: "Go to the workflows page",
+    shortcut: ["wf"],
+    navigate: "/workflows",
+  },
+  {
+    icon: UserGroupIcon,
+    label: "Go to users management",
+    shortcut: ["u"],
+    navigate: "/settings?selectedTab=users",
+  },
+  {
+    icon: GlobeAltIcon,
+    label: "Go to generic webhook",
+    shortcut: ["w"],
+    navigate: "/settings?selectedTab=webhook",
+  },
+  {
+    icon: EnvelopeIcon,
+    label: "Go to SMTP settings",
+    shortcut: ["s"],
+    navigate: "/settings?selectedTab=smtp",
+  },
+  {
+    icon: KeyIcon,
+    label: "Go to API key",
+    shortcut: ["a"],
+    navigate: "/settings?selectedTab=users&userSubTab=api-keys",
+  },
 ];
 
 interface SearchProps {
