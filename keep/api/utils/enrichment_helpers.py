@@ -125,12 +125,12 @@ def convert_db_alerts_to_dto_alerts(
                             str(incident.id) for incident in alert._incidents
                         )
                 try:
-                    # if alert_to_incident is not None:
-                    #     alert_dto = AlertWithIncidentLinkMetadataDto.from_db_instance(
-                    #         alert, alert_to_incident
-                    #     )
-                    # else:
-                    alert_dto = AlertDto(**alert.event)
+                    if alert_to_incident is not None:
+                        alert_dto = AlertWithIncidentLinkMetadataDto.from_db_instance(
+                            alert, alert_to_incident
+                        )
+                    else:
+                        alert_dto = AlertDto(**alert.event)
 
                     if enrichments:
                         parse_and_enrich_deleted_and_assignees(alert_dto, enrichments)

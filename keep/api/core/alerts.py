@@ -210,26 +210,26 @@ def __build_query_for_filtering(
 
 
 def __build_query_for_filtering_v2(
-    tenant_id: str,
-    select_args: list,
-    cel=None,
-    limit=None,
+    tenant_id: str, select_args: list, cel=None, limit=None, fetch_alerts_data=True
 ):
     fetch_incidents = cel and "incident." in cel
     cel_to_sql_instance = get_cel_to_sql_provider(remapped_properties_metadata)
 
     query = select(*select_args).select_from(LastAlert)
 
-    query = query.join(
-        Alert,
-        and_(Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id),
-    ).outerjoin(
-        AlertEnrichment,
-        and_(
-            LastAlert.tenant_id == AlertEnrichment.tenant_id,
-            LastAlert.fingerprint == AlertEnrichment.alert_fingerprint,
-        ),
-    )
+    if fetch_alerts_data:
+        query = query.join(
+            Alert,
+            and_(
+                Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id
+            ),
+        ).outerjoin(
+            AlertEnrichment,
+            and_(
+                LastAlert.tenant_id == AlertEnrichment.tenant_id,
+                LastAlert.fingerprint == AlertEnrichment.alert_fingerprint,
+            ),
+        )
 
     if fetch_incidents:
         query = query.outerjoin(
@@ -256,6 +256,7 @@ def __build_query_for_filtering_v2(
 
 def build_total_alerts_query(tenant_id, cel=None, limit=None):
     fetch_incidents = cel and "incident." in cel
+    fetch_alerts_data = cel is not None or cel != ""
 
     count_funct = (
         func.count(func.distinct(LastAlert.alert_id))
@@ -263,7 +264,11 @@ def build_total_alerts_query(tenant_id, cel=None, limit=None):
         else func.count(1)
     )
     query = __build_query_for_filtering_v2(
-        tenant_id=tenant_id, cel=cel, select_args=[count_funct], limit=limit
+        tenant_id=tenant_id,
+        cel=cel,
+        select_args=[count_funct],
+        limit=limit,
+        fetch_alerts_data=fetch_alerts_data,
     )
 
     return query
@@ -361,6 +366,11 @@ def query_last_alerts(
             total_count_query = build_total_alerts_query(
                 tenant_id=tenant_id, cel=cel, limit=alerts_hard_limit
             )
+            total_count_strq = str(
+                total_count_query.compile(
+                    dialect=session.bind.dialect, compile_kwargs={"literal_binds": True}
+                )
+            )
             total_count = session.exec(total_count_query).one()[0]
 
             if not limit:
@@ -374,6 +384,11 @@ def query_last_alerts(
 
             data_query = build_alerts_query(
                 tenant_id, cel, sort_by, sort_dir, limit, offset
+            )
+            strq = str(
+                data_query.compile(
+                    dialect=session.bind.dialect, compile_kwargs={"literal_binds": True}
+                )
             )
             alerts_with_start = session.execute(data_query).all()
         except OperationalError as e:
