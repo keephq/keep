@@ -11,12 +11,9 @@ export function MonacoEditorDefault(props: EditorProps) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const loadMonaco = async () => {
-      loader.init().catch((error: any) => {
-        setError(error);
-      });
-    };
-    loadMonaco();
+    loader.init().catch((error: Error) => {
+      setError(error);
+    });
   }, []);
 
   if (error) {

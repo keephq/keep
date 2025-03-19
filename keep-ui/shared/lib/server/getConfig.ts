@@ -64,6 +64,6 @@ export function getConfig(): InternalConfig {
     KEEP_DOCS_URL: process.env.KEEP_DOCS_URL || "https://docs.keephq.dev",
     KEEP_CONTACT_US_URL:
       process.env.KEEP_CONTACT_US_URL || "https://slack.keephq.dev/",
-    MONACO_EDITOR_NPM: process.env.MONACO_EDITOR_NPM === "true",
+    BUILD_MONACO_EDITOR_NPM: process.env.BUILD_MONACO_EDITOR_NPM === "true",
   };
 }

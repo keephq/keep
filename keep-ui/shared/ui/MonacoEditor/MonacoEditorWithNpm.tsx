@@ -18,7 +18,7 @@ export function MonacoEditorWithNpm(props: EditorProps) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    loader.init().catch((error: any) => {
+    loader.init().catch((error: Error) => {
       setError(error);
     });
   }, []);
@@ -27,13 +27,13 @@ export function MonacoEditorWithNpm(props: EditorProps) {
     return (
       <ErrorComponent
         error={error}
-        defaultMessage={`Error loading Monaco Editor from ${config.MONACO_EDITOR_NPM ? "NPM" : "CDN"}`}
+        defaultMessage={`Error loading Monaco Editor from ${config.BUILD_MONACO_EDITOR_NPM ? "NPM" : "CDN"}`}
         description={
           <>
             Check internet connection. If you are using Keep in an air-gapped
             environment, set
             <code className="text-gray-600 text-left bg-gray-100 px-2 py-1 mx-2 rounded-md">
-              MONACO_EDITOR_NPM=true
+              BUILD_MONACO_EDITOR_NPM=true
             </code>
             in keep-frontend environment variables.
           </>
@@ -42,5 +42,5 @@ export function MonacoEditorWithNpm(props: EditorProps) {
     );
   }
 
-  return true ? <Editor {...props} loading={Loader} /> : Loader;
+  return <Editor {...props} loading={Loader} />;
 }
