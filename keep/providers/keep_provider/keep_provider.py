@@ -441,7 +441,7 @@ class KeepProvider(BaseProvider):
 
         # This handles the case where you explcitly want to add an alert
         # Refer to create_alert_in_keep.yml for an example
-        explicit_alert = kwargs.get("alert", None)
+        explicit_alert = kwargs.get("explicit_alert", None)
         if explicit_alert and isinstance(explicit_alert, dict):
             rendered_alert_data = self.io_handler.render_context(
                 explicit_alert, additional_context=alert_results
