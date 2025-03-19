@@ -252,7 +252,7 @@ export function AlertTableServerSide({
       console.log("IHOR CREATE INTERVAL FOR FACETS");
       const facetsInterval = setInterval(
         () => updateFacetsCelDateRange(),
-        Math.max((queryTimeInSeconds || 1) * 10, 5000) // so that gap between poll is 10x of query time and minimum 5sec
+        Math.max((queryTimeInSeconds || 1) * 15, 5000) // so that gap between poll is 15x of query time and minimum 5sec
       );
       return () => {
         console.log("IHOR CLEAR INTERVAL FOR FACETS");
