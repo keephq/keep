@@ -1,6 +1,7 @@
 workflow:
-  id: servicenow
-  description: create a ticket in servicenow when an alert is triggered
+  id: prometheus-grafana-servicenow-integration
+  name: Prometheus/Grafana ServiceNow Integration
+  description: Creates ServiceNow tickets for Prometheus and Grafana alerts with rich context and alert enrichment.
   triggers:
     - type: alert
       # create ticket for grafana/prometheus alerts

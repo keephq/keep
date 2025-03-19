@@ -265,7 +265,7 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
                 ),
                 version=incident.get("version"),
                 is_predicted=False,
-                is_confirmed=True,
+                is_candidate=False,
                 services=["incidentPreviews"],
                 alert_sources=["grafana_incident"],
                 alerts_count=alerts_count,

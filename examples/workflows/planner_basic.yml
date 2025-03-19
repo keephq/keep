@@ -1,6 +1,7 @@
 workflow:
-  id: planner-demo
-  description: Create a task in planner.
+  id: planner-task-creator
+  name: Microsoft Planner Task Creator
+  description: Creates tasks in Microsoft Planner with retry capabilities for reliable task creation.
   triggers:
     - type: interval
       value: 15

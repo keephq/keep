@@ -1,6 +1,7 @@
 workflow:
-  id: alert-time-check
-  description: Handle alerts based on startedAt timestamp
+  id: tiered-alert-escalator
+  name: Tiered Alert Escalator
+  description: Manages alert escalation through different tiers based on alert duration with targeted Slack notifications.
   triggers:
     - type: alert
       filters:
