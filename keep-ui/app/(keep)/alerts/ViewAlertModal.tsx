@@ -7,6 +7,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { MonacoEditor, showErrorToast } from "@/shared/ui";
 import { type Monaco } from "@monaco-editor/react";
 import { Lock, Unlock, Save, AlertTriangle, Copy, X } from "lucide-react";
+import { type editor } from "monaco-editor";
 import "./ViewAlertModal.css";
 
 interface ViewAlertModalProps {
@@ -63,7 +64,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     []
   );
   const api = useApi();
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
 
