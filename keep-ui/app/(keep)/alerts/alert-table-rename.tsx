@@ -3,6 +3,7 @@ import { PencilIcon } from "@heroicons/react/24/outline";
 import { Dialog } from "@headlessui/react";
 import { TextInput, Button } from "@tremor/react";
 import { useState } from "react";
+ז;
 
 interface RenameColumnDialogProps {
   isOpen: boolean;
@@ -40,7 +41,9 @@ export const RenameColumnDialog = ({
           <form onSubmit={handleSubmit}>
             <TextInput
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setNewName(e.target.value)
+              }
               placeholder="Enter new name"
               autoFocus
             />
@@ -65,13 +68,13 @@ export const createRenameColumnMenuItem = (
   getColumnName: (columnId: string, defaultName: string) => string,
   setRenamingColumn: (columnId: string | null) => void,
   setNewColumnName: (name: string) => void,
-  DropdownMenu: typeof DropdownMenu
+  DropdownMenu: any
 ) => {
   return (
     <DropdownMenu.Item
       icon={PencilIcon}
       label="Rename Column"
-      onClick={(e) => {
+      onClick={(e: React.MouseEvent) => {
         e.stopPropagation();
         setRenamingColumn(columnId);
         setNewColumnName(getColumnName(columnId, columnHeader));
