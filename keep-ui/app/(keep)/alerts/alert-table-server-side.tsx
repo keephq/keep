@@ -136,7 +136,6 @@ export function AlertTableServerSide({
   const [facetsDateRangeCel, setFacetsDateRangeCel] = useState<string | null>(
     ""
   );
-  // const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
   const [rowStyle] = useAlertRowStyle();
   const [columnTimeFormats, setColumnTimeFormats] = useLocalStorage<
