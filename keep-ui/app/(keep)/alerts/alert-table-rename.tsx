@@ -3,7 +3,6 @@ import { PencilIcon } from "@heroicons/react/24/outline";
 import { Dialog } from "@headlessui/react";
 import { TextInput, Button } from "@tremor/react";
 import { useState } from "react";
-ז;
 
 interface RenameColumnDialogProps {
   isOpen: boolean;
