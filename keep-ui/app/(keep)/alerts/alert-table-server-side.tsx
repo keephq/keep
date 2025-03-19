@@ -252,7 +252,7 @@ export function AlertTableServerSide({
   );
 
   useEffect(() => {
-    // so that gap between poll is 15x of query time and minimum 5sec
+    // so that gap between poll is 20x of query time and minimum 5sec
     const refreshInterval = Math.max((queryTimeInSeconds || 1) * 20, 5000);
     const interval = setInterval(() => {
       if (!isPaused && shouldRefreshDate) {
