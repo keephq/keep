@@ -4,6 +4,7 @@
   "description": "Keep UI",
   "main": "next.config.js",
   "scripts": {
+    "copy-monaco": "sh ./scripts/monaco-copy-npm/monaco-copy-npm-to-public.sh",
     "build": "./next_build.sh",
     "dev": "next dev --turbopack -p 3000",
     "dev:webpack": "next dev -p 3000",

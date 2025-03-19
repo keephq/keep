@@ -9,7 +9,12 @@ import { ErrorComponent } from "../ErrorComponent/ErrorComponent";
 
 // Monaco Editor - imported as an npm package instead of loading from the CDN to support air-gapped environments
 // https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
-loader.config({ monaco });
+// loader.config({ monaco });
+loader.config({
+  paths: {
+    vs: window.location.origin + "/monaco-editor/monaco.js",
+  },
+});
 
 const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
 

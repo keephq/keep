@@ -8,11 +8,11 @@ module.exports = {
     "css.worker": "monaco-editor/esm/vs/language/css/css.worker",
     "html.worker": "monaco-editor/esm/vs/language/html/html.worker",
     "ts.worker": "monaco-editor/esm/vs/language/typescript/ts.worker",
-    monaco: "./monaco-entry.js", // Main Monaco bundle
+    loader: "./monaco-entry.js", // Main Monaco bundle
   },
   output: {
     globalObject: "self",
-    filename: "[name].bundle.js",
+    filename: "[name].js",
     path: path.resolve(__dirname, "./monaco-editor"),
   },
   module: {

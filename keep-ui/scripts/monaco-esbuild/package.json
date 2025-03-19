@@ -1,0 +1,12 @@
+{
+  "name": "monaco-build",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "monaco-editor": "^0.32.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.14.38"
+  }
+}
