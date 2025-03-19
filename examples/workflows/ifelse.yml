@@ -1,6 +1,7 @@
 workflow:
   id: alert-routing-policy
-  description: Route alerts based on team and environment conditions
+  name: Alert Routing Policy Manager
+  description: Routes alerts to appropriate channels based on multiple criteria including business hours, team ownership, environment, and monitor type with conditional flow control.
   triggers:
     - type: alert
   actions:

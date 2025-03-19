@@ -1,5 +1,8 @@
-id: enrich-using-vllm-qwen
-description: Enrich alerts using structured output from vLLM & Qwen
+workflow:
+  id: vllm-qwen-alert-enrichment
+  name: vLLM Qwen Alert Enrichment
+  description: Enriches Prometheus alerts using vLLM-hosted Qwen model to automatically determine environment type and impacted customer details.
+
 triggers:
   - type: alert
     filters:

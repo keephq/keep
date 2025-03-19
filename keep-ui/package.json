@@ -6,7 +6,7 @@
   "scripts": {
     "build": "./next_build.sh",
     "dev": "next dev --turbopack -p 3000",
-    "dev:turbo": "NEXT_TURBO=true next dev -p 3000",
+    "dev:webpack": "next dev -p 3000",
     "lint": "next lint",
     "start": "next start",
     "test": "jest"
@@ -70,7 +70,6 @@
     "react-hook-form": "^7.54.2",
     "react-hotkeys-hook": "^4.5.0",
     "react-icons": "^5.5.0",
-    "react-loading": "^2.0.3",
     "react-loading-skeleton": "^3.3.1",
     "react-markdown": "^10.1.0",
     "react-name-initials-avatar": "^0.0.7",
