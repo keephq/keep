@@ -51,18 +51,7 @@ class MockJWKSClient:
         return MockSigningKey(key=self.public_key)
 
 
-@pytest.mark.parametrize(
-    "test_app",
-    [
-        {
-            "AUTH_TYPE": "AUTH0",
-            "AUTH0_DOMAIN": "test-domain.auth0.com",
-            "AUTH0_AUDIENCE": "test-audience",
-        },
-    ],
-    indirect=True,
-)
-def test_auth0_with_active_tenant_success(client, test_app):
+def test_auth0_with_active_tenant_success(db_session, client, test_app):
     """Tests Auth0 authentication with keepActiveTenant parameter when tenant is in the token"""
 
     # Generate test keys
@@ -144,7 +133,7 @@ def test_auth0_with_active_tenant_success(client, test_app):
     ],
     indirect=True,
 )
-def test_auth0_with_unauthorized_active_tenant(client, test_app):
+def test_auth0_with_unauthorized_active_tenant(db_session, client, test_app):
     """Tests Auth0 authentication with keepActiveTenant parameter when tenant is NOT in the token"""
 
     # Generate test keys
@@ -227,7 +216,7 @@ def test_auth0_with_unauthorized_active_tenant(client, test_app):
     ],
     indirect=True,
 )
-def test_auth0_switching_between_tenants(client, test_app):
+def test_auth0_switching_between_tenants(db_session, client, test_app):
     """Tests Auth0 authentication with switching between different active tenants"""
 
     # Generate test keys

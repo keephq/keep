@@ -328,11 +328,12 @@ export const Search = ({ session }: SearchProps) => {
     session.user.tenantIds &&
     session.user.tenantIds.length > 1;
 
-  // Get current tenant logo URL if available
+  // Get current tenant logo URL if available - this now works even with just one tenant
   const currentTenant = session?.user?.tenantIds?.find(
     (tenant) => tenant.tenant_id === session.tenantId
   );
   const tenantLogoUrl = currentTenant?.tenant_logo_url;
+  const hasTenantLogo = Boolean(tenantLogoUrl);
 
   return (
     <div className="flex items-center w-full py-3 px-2 border-b border-gray-300">
@@ -384,8 +385,17 @@ export const Search = ({ session }: SearchProps) => {
             )}
           </Popover>
         ) : (
-          <Link href="/">
+          <Link href="/" className="flex items-center">
             <Image className="w-8" src={KeepPng} alt="Keep Logo" />
+            {hasTenantLogo && (
+              <Image
+                src={tenantLogoUrl}
+                alt={`${currentTenant?.tenant_name || "Tenant"} Logo`}
+                width={60}
+                height={60}
+                className="ml-4 object-cover"
+              />
+            )}
           </Link>
         )}
       </div>
