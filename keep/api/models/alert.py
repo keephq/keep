@@ -72,6 +72,7 @@ class AlertDto(BaseModel):
     severity: AlertSeverity
     lastReceived: str
     firingStartTime: str | None = None
+    firingCounter: int = 0
     environment: str = "undefined"
     isFullDuplicate: bool | None = False
     isPartialDuplicate: bool | None = False
