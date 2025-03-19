@@ -126,4 +126,7 @@ class WorkflowCreateOrUpdateDTO(BaseModel):
     status: Literal["created", "updated"]
     revision: int = 1
 
+class WorkflowRunResponseDTO(BaseModel):
+    workflow_execution_id: str
+
 # trigger CI. TODO: remove this

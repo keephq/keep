@@ -432,7 +432,7 @@ class WorkflowManager:
 
     @timing_histogram(workflow_execution_duration)
     def _run_workflow(
-        self, workflow: Workflow, workflow_execution_id: str, test_run=False
+        self, workflow: Workflow, workflow_execution_id: str
     ):
         self.logger.debug(f"Running workflow {workflow.workflow_id}")
         threading.current_thread().workflow_debug = workflow.workflow_debug

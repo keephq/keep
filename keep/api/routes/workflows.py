@@ -45,6 +45,7 @@ from keep.api.models.workflow import (
     WorkflowDTO,
     WorkflowExecutionDTO,
     WorkflowExecutionLogsDTO,
+    WorkflowRunResponseDTO,
     WorkflowToAlertExecutionDTO,
 )
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
@@ -468,7 +469,7 @@ async def run_workflow_from_definition(
         IdentityManagerFactory.get_auth_verifier(["write:workflows"])
     ),
     body: Optional[Dict[Any, Any]] = Body({}),
-) -> WorkflowExecutionDTO:
+) -> WorkflowRunResponseDTO:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
     workflow_dict = await __get_workflow_raw_data(request, file)
@@ -490,8 +491,8 @@ async def run_workflow_from_definition(
 
     try:
         event = get_event_from_body(body, tenant_id)
-        workflow_execution_id = workflowmanager.scheduler.handle_workflow_test(
-            workflow, tenant_id, created_by, event
+        workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
+            workflow.workflow_id, tenant_id, created_by, event, workflow=workflow, test_run=True
         )
     except Exception as e:
         logger.exception(
@@ -501,53 +502,9 @@ async def run_workflow_from_definition(
             status_code=500,
             detail=f"Failed to run test workflow: {e}",
         )
-    workflow_execution = workflowstore.get_workflow_execution(
+
+    return WorkflowRunResponseDTO(
         workflow_execution_id=workflow_execution_id,
-        tenant_id=tenant_id,
-    )
-    if not workflow_execution:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Workflow execution {workflow_execution_id} not found",
-        )
-
-    logger.info(
-        "Workflow ran successfully",
-        extra={"workflow_execution": workflow_execution},
-    )
-
-    event_id = None
-    event_type = None
-
-    if workflow_execution.workflow_to_alert_execution:
-        event_id = workflow_execution.workflow_to_alert_execution.event_id
-        event_type = "alert"
-    # TODO: sub triggers? on create? on update?
-    elif workflow_execution.workflow_to_incident_execution:
-        event_id = workflow_execution.workflow_to_incident_execution.incident_id
-        event_type = "incident"
-
-    return WorkflowExecutionDTO(
-        id=workflow_execution.id,
-        workflow_id=workflow_execution.workflow_id,
-        workflow_name=workflow.workflow_name,
-        status=workflow_execution.status,
-        started=workflow_execution.started,
-        triggered_by=workflow_execution.triggered_by,
-        error=workflow_execution.error,
-        execution_time=workflow_execution.execution_time,
-        logs=[
-            WorkflowExecutionLogsDTO(
-                id=log.id,
-                timestamp=log.timestamp,
-                message=log.message,
-                context=log.context if log.context else {},
-            )
-            for log in workflow_execution.logs
-        ],
-        results=workflow_execution.results,
-        event_id=event_id,
-        event_type=event_type,
     )
 
 

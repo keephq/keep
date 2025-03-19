@@ -274,80 +274,8 @@ class WorkflowScheduler:
 
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
-    def handle_workflow_test(self, workflow, tenant_id, triggered_by_user, event) -> str:
-        self.logger.info(
-            "Preparing workflow to test run from definition",
-            extra={
-                "workflow_id": workflow.workflow_id,
-                "tenant_id": tenant_id,
-                "triggered_by": "manual",
-                "triggered_by_user": triggered_by_user,
-            },
-        )
-
-        result_queue = queue.Queue()
-
-        def run_workflow_wrapper(
-            run_workflow, workflow, workflow_execution_id, test_run, result_queue
-        ):
-            try:
-                errors, results = run_workflow(
-                    workflow, workflow_execution_id, test_run
-                )
-                result_queue.put((errors, results))
-            except Exception as e:
-                print(f"Exception in workflow: {e}")
-                # errors are expected to be a list of strings, so we wrap it
-                result_queue.put(([str(e)], None))
-
-        workflow_execution_id = self.handle_manual_event_workflow(
-            workflow.workflow_id,
-            tenant_id,
-            triggered_by_user,
-            event,
-            test_run=True,
-        )
-
-        future = self.executor.submit(
-            run_workflow_wrapper,
-            self.workflow_manager._run_workflow,
-            workflow,
-            workflow_execution_id,
-            True,
-            result_queue,
-        )
-        future.result()  # Wait for completion
-        errors, _ = result_queue.get()
-
-        status = WorkflowStatus.SUCCESS
-        error = None
-        if errors is not None and any(errors):
-            error = "\n".join(str(e) for e in errors)
-            status = WorkflowStatus.ERROR
-
-        self._finish_workflow_execution(
-            tenant_id=tenant_id,
-            workflow_id=workflow.workflow_id,
-            workflow_execution_id=workflow_execution_id,
-            status=status,
-            error=error,
-        )
-
-        self.logger.info(
-            "Workflow test complete",
-            extra={
-                "workflow_id": workflow.workflow_id,
-                "workflow_execution_id": workflow_execution_id,
-                "tenant_id": tenant_id,
-                "status": status,
-                "error": error,
-            },
-        )
-
-        return workflow_execution_id
-
     def handle_manual_event_workflow(
-        self, workflow_id, tenant_id, triggered_by_user, event: AlertDto | IncidentDto, test_run: bool = False
+        self, workflow_id, tenant_id, triggered_by_user, event: AlertDto | IncidentDto, workflow: Workflow = None, test_run: bool = False
     ):
         self.logger.info(f"Running manual event workflow {workflow_id}...")
         try:
@@ -379,12 +307,11 @@ class WorkflowScheduler:
             self.logger.error(f"WTF: error creating workflow execution: {e}")
             raise e
 
-        if test_run:
-            return workflow_execution_id
         self.logger.info(
-            "Adding workflow to run",
+            f"Adding workflow to run {'(test)' if test_run else ''}",
             extra={
                 "workflow_id": workflow_id,
+                "by_definition": workflow is not None,
                 "workflow_execution_id": workflow_execution_id,
                 "tenant_id": tenant_id,
                 "triggered_by": "manual",
@@ -396,6 +323,7 @@ class WorkflowScheduler:
             self.workflows_to_run.append(
                 {
                     "workflow_id": workflow_id,
+                    "workflow": workflow,
                     "workflow_execution_id": workflow_execution_id,
                     "tenant_id": tenant_id,
                     "triggered_by": "manual",
