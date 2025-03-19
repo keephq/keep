@@ -59,7 +59,10 @@ const tenantSwitchProvider = Credentials({
 
     // if user aleady have keepActiveTenant as prefix - remove it
     if (user.accessToken.startsWith("keepActiveTenant=")) {
-      user.accessToken = user.accessToken.replace(/keepActiveTenant=\w+&/, "");
+      user.accessToken = user.accessToken.replace(
+        /keepActiveTenant=[\w-]+&/,
+        ""
+      );
     }
     // add keepActiveTenant= with the current tenant to user.accessToken
     user.accessToken = `keepActiveTenant=${credentials.tenantId}&${user.accessToken}`;
