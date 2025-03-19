@@ -72,6 +72,7 @@ class AlertDto(BaseModel):
     severity: AlertSeverity
     lastReceived: str
     firingStartTime: str | None = None
+    firingCounter: int = 0
     environment: str = "undefined"
     isFullDuplicate: bool | None = False
     isPartialDuplicate: bool | None = False
@@ -344,6 +345,11 @@ class EnrichAlertNoteRequestBody(BaseModel):
 class EnrichAlertRequestBody(BaseModel):
     enrichments: dict[str, str]
     fingerprint: str
+
+
+class BatchEnrichAlertRequestBody(BaseModel):
+    enrichments: dict[str, str]
+    fingerprints: list[str]
 
 
 class UnEnrichAlertRequestBody(BaseModel):

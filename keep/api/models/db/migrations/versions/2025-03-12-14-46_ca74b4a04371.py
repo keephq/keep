@@ -26,11 +26,11 @@ def upgrade() -> None:
         # Handle PostgreSQL differently to avoid NOT NULL violation
         if dialect_name == "postgresql":
             # First add the columns as nullable
-            batch_op.add_column(sa.Column("error", sa.Boolean(), nullable=True))
+            batch_op.add_column(sa.Column("error", sa.Boolean(), nullable=True, server_default=sa.false()))
             batch_op.add_column(
                 sa.Column("error_message", sa.String(length=2048), nullable=True)
             )
-            batch_op.add_column(sa.Column("dismissed", sa.Boolean(), nullable=True))
+            batch_op.add_column(sa.Column("dismissed", sa.Boolean(), nullable=True, server_default=sa.false()))
 
             # Set default values for the new columns
             batch_op.alter_column(

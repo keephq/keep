@@ -32,7 +32,6 @@ import { severityMapping } from "@/entities/alerts/model";
 import AlertSidebar from "./alert-sidebar";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
-import Image from "next/image";
 import { EmptyStateCard, SeverityBorderIcon, UISeverity } from "@/shared/ui";
 import { useUser } from "@/entities/users/model/useUser";
 import { UserStatefulAvatar } from "@/entities/users/ui";

@@ -29,7 +29,8 @@ from keep.api.core.alerts import (
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.config import config
-from keep.api.core.db import dismiss_error_alerts as dismiss_error_alerts_db
+from keep.api.core.db import dismiss_error_alerts as dismiss_error_alerts_db, get_last_alerts_by_fingerprints, \
+    get_alerts_by_ids
 from keep.api.core.db import enrich_alerts_with_incidents
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
@@ -56,7 +57,7 @@ from keep.api.models.alert import (
     DismissAlertRequest,
     EnrichAlertNoteRequestBody,
     EnrichAlertRequestBody,
-    UnEnrichAlertRequestBody,
+    UnEnrichAlertRequestBody, BatchEnrichAlertRequestBody,
 )
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.incident import IncidentStatus
@@ -764,6 +765,139 @@ def enrich_alert_note(
 
 
 @router.post(
+    "/batch_enrich",
+    description="Enrich an alerts",
+)
+def batch_enrich_alerts(
+    enrich_data: BatchEnrichAlertRequestBody,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
+    dispose_on_new_alert: Optional[bool] = Query(
+        False, description="Dispose on new alert"
+    ),
+    session: Session = Depends(get_session),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Enriching alerts batch",
+        extra={
+            "fingerprints": enrich_data.fingerprints,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    if "dismissed" in enrich_data.enrichments and enrich_data.enrichments["dismissed"].lower() == "true":
+        enrich_data.enrichments["status"] = AlertStatus.SUPPRESSED.value
+
+    try:
+        enrichment_bl = EnrichmentsBl(tenant_id, db=session)
+        (
+            action_type,
+            action_description,
+            should_run_workflow,
+            should_check_incidents_resolution,
+        ) = enrichment_bl.get_enrichment_metadata(
+            enrich_data.enrichments, authenticated_entity
+        )
+
+        enrichments = deepcopy(enrich_data.enrichments)
+
+        enrichment_bl.batch_enrich(
+            fingerprints=enrich_data.fingerprints,
+            enrichments=enrichments,
+            action_type=action_type,
+            action_callee=authenticated_entity.email,
+            action_description=action_description,
+            dispose_on_new_alert=dispose_on_new_alert,
+        )
+
+        last_alerts = get_last_alerts_by_fingerprints(
+            authenticated_entity.tenant_id, enrich_data.fingerprints, session=session
+        )
+
+        alert_ids = [last_alert.alert_id for last_alert in last_alerts]
+
+        if dispose_on_new_alert:
+            # Create instance-wide enrichment for history
+            
+            # For better database-native UUID support
+            formatted_alert_ids = [UUIDType(binary=False).process_bind_param(
+                alert_id, session.bind.dialect
+            ) for alert_id in alert_ids]
+
+            enrichment_bl.batch_enrich(
+                fingerprint=formatted_alert_ids,
+                enrichments=enrich_data.enrichments,
+                action_type=action_type,
+                action_callee=authenticated_entity.email,
+                action_description=action_description,
+                audit_enabled=False,
+            )
+
+        # get the alert with the new enrichment
+        alerts = get_alerts_by_ids(
+            authenticated_entity.tenant_id, alert_ids, session=session
+        )
+
+        enriched_alerts_dto = convert_db_alerts_to_dto_alerts(alerts, session=session)
+        # push the enriched alert to the elasticsearch
+        try:
+            logger.info("Pushing enriched alerts to elasticsearch")
+            elastic_client = ElasticClient(tenant_id)
+            elastic_client.index_alerts(
+                alerts=enriched_alerts_dto,
+            )
+            logger.info("Pushed enriched alerts to elasticsearch")
+        except Exception:
+            logger.exception("Failed to push alerts to elasticsearch")
+            pass
+        # use pusher to push the enriched alert to the client
+        pusher_client = get_pusher_client()
+        if pusher_client:
+            logger.info("Telling client to poll alerts")
+            try:
+                pusher_client.trigger(
+                    f"private-{tenant_id}",
+                    "poll-alerts",
+                    "{}",
+                )
+                logger.info("Told client to poll alerts")
+            except Exception:
+                logger.exception("Failed to tell client to poll alerts")
+                pass
+        logger.info(
+            "Alerts batch enriched successfully",
+            extra={"fingerprints": enrich_data.fingerprints, "tenant_id": tenant_id},
+        )
+
+        if should_run_workflow:
+            workflow_manager = WorkflowManager.get_instance()
+            workflow_manager.insert_events(
+                tenant_id=tenant_id, events=enriched_alerts_dto,
+            )
+
+        # @tb add "and session" cuz I saw AttributeError: 'NoneType' object has no attribute 'add'"
+        if should_check_incidents_resolution and session:
+            enrich_alerts_with_incidents(tenant_id=tenant_id, alerts=alerts)
+            for alert in alerts:
+                for incident in alert._incidents:
+                    if (
+                            incident.resolve_on == ResolveOn.ALL.value
+                            and is_all_alerts_resolved(incident=incident, session=session)
+                    ):
+                        incident.status = IncidentStatus.RESOLVED.value
+                        session.add(incident)
+                    session.commit()
+
+        return {"status": "ok"}
+
+    except Exception as e:
+        logger.exception("Failed to enrich alerts batch", extra={"error": str(e)})
+        return {"status": "failed"}
+
+
+@router.post(
     "/enrich",
     description="Enrich an alert",
 )
@@ -816,9 +950,6 @@ def _enrich_alert(
             "tenant_id": tenant_id,
         },
     )
-
-    should_run_workflow = False
-    should_check_incidents_resolution = False
 
     try:
         enrichement_bl = EnrichmentsBl(tenant_id, db=session)
