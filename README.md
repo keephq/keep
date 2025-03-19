@@ -754,6 +754,19 @@
 </tr>
 </table>
 
+### Workflow Orchestration
+
+<table>
+<tr>
+    </td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/airflow-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/airflow-icon.png" alt="Airflow"/><br/>
+            Airflow
+        </a>
+    </td>
+</tr>
+</table>
+
 ## Workflows
 
 Keep is GitHub Actions for your monitoring tools.
