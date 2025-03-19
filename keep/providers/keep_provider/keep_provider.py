@@ -439,32 +439,6 @@ class KeepProvider(BaseProvider):
                 extra={"alert_results": alert_results},
             )
 
-        # This handles the case where you explcitly want to add an alert
-        # Refer to create_alert_in_keep.yml for an example
-        explicit_alert = kwargs.get("explicit_alert", None)
-        if explicit_alert and isinstance(explicit_alert, dict):
-            rendered_alert_data = self.io_handler.render_context(
-                explicit_alert, additional_context=alert_results
-            )
-            alert_dto = self._build_alert(
-                explicit_alert,
-                fingerprint_fields=kwargs.get("fingerprint_fields", ["name"]),
-                **rendered_alert_data,
-            )
-            self.logger.info("Processing final alerts")
-            process_event(
-                ctx={},
-                tenant_id=self.context_manager.tenant_id,
-                provider_type="keep",
-                provider_id=self.context_manager.workflow_id,  # so we can track the alerts that are created by this workflow
-                fingerprint=kwargs.get("fingerprint"),
-                api_key_name=None,
-                trace_id=None,
-                event=[alert_dto],
-            )
-            self.logger.info("Alerts processed successfully")
-            return alert_dto
-
         _if = kwargs.get("if", None)
         _for = kwargs.get("for", None)
         fingerprint_fields = kwargs.pop("fingerprint_fields", [])

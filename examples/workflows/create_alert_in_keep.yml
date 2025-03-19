@@ -10,6 +10,6 @@ workflow:
       provider:
         type: keep
         with:
-          explicit_alert:
+          alert:
             name: "Alert created from the workflow"
             description: "This alert was created from the create_alert_in_keep.yml example workflow."
