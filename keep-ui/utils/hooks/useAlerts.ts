@@ -208,7 +208,6 @@ export const useAlerts = () => {
         const queryResult = await api.post(requestUrl, queryToPost);
         const queryTimeInSeconds =
           (new Date().getTime() - date.getTime()) / 1000;
-        console.log(`Ihor QUERY TIME IS ${queryTimeInSeconds}`);
         return {
           queryResult,
           queryTimeInSeconds,
