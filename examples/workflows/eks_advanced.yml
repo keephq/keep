@@ -1,6 +1,7 @@
 workflow:
-  id: eks-example-advanced
-  description: eks-example-advanced
+  id: eks-deployment-scaling-manager
+  name: EKS Deployment Scaling Manager
+  description: Manages EKS cluster operations including pod monitoring and deployment scaling. Retrieves pod status, scales nginx deployment, and provides detailed status reporting.
   triggers:
     - type: manual
   steps:

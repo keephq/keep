@@ -172,6 +172,16 @@ const baseProviderConfigs = {
             tenant_id: tenantId,
             user_id: "keep-user-for-no-auth-purposes",
           }),
+          tenantIds: [
+            {
+              tenant_id: "keep",
+              tenant_name: "Tenant of Keep (tenant_id: keep)",
+            },
+            {
+              tenant_id: "keep2",
+              tenant_name: "Tenant of another Keep (tenant_id: keep2)",
+            },
+          ],
           tenantId: tenantId,
           role: "user",
         };
@@ -240,6 +250,14 @@ export const config = {
         let tenantId: string | undefined = user.tenantId;
         let role: string | undefined = user.role;
 
+        // if the account is from tenant-switch provider, return the token
+        if (account.provider === "tenant-switch") {
+          token.accessToken = user.accessToken;
+          token.tenantId = user.tenantId;
+          token.role = user.role;
+          return token;
+        }
+
         if (authType === AuthType.AZUREAD) {
           accessToken = account.access_token;
           if (account.id_token) {
@@ -260,6 +278,10 @@ export const config = {
           }
           if ((profile as any)?.keep_role) {
             role = (profile as any).keep_role;
+          }
+          // more than one tenants
+          if ((profile as any)?.keep_tenant_ids) {
+            user.tenantIds = (profile as any).keep_tenant_ids;
           }
         } else if (authType === AuthType.KEYCLOAK) {
           // TODO: remove this once we have a proper way to get the tenant id

@@ -1,6 +1,7 @@
 workflow:
-  id: telegram-example
-  description: telegram-example
+  id: telegram-message-sender
+  name: Telegram Message Sender
+  description: Sends customized notifications to Telegram channels or users using environment-configured chat IDs.
   triggers:
     - type: manual
   actions:
@@ -10,4 +11,4 @@ workflow:
         config: "{{ providers.telegram }}"
         with:
           message: "test"
-          chat_id:  " {{ os.environ['TELEGRAM_CHAT_ID'] }}"
+          chat_id: " {{ os.environ['TELEGRAM_CHAT_ID'] }}"

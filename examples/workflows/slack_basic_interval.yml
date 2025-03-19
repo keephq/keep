@@ -1,6 +1,7 @@
 workflow:
-  id: slack-basic-demo
-  description: Send a slack message every interval
+  id: scheduled-slack-notifier
+  name: Scheduled Slack Notifier
+  description: Sends periodic Slack messages at configurable intervals for regular status updates or reminders.
   triggers:
     - type: interval
       value: 15
