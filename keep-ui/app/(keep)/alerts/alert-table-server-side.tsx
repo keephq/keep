@@ -253,7 +253,7 @@ export function AlertTableServerSide({
 
   useEffect(() => {
     // so that gap between poll is 15x of query time and minimum 5sec
-    const refreshInterval = Math.max((queryTimeInSeconds || 1) * 15, 5000);
+    const refreshInterval = Math.max((queryTimeInSeconds || 1) * 20, 5000);
     const interval = setInterval(() => {
       if (!isPaused && shouldRefreshDate) {
         updateFacetsCelDateRange();
