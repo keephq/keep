@@ -446,7 +446,7 @@ def elastic_container(docker_ip, docker_services):
 @pytest.fixture
 def elastic_client(request):
 
-    if request.param is False:
+    if hasattr(request, 'param') and request.param is False:
         yield None
     else:
         # this is so if any other module initialized Elasticsearch, it will be deleted
