@@ -228,7 +228,7 @@ export function AlertTableServerSide({
     if (!isPaused && shouldRefreshDate) {
       const alertsInterval = setInterval(
         () => updateAlertsCelDateRange(),
-        Math.max((queryTimeInSeconds || 1) * 2, 3000)
+        Math.max((queryTimeInSeconds || 1) * 2, 3000) // so that gap between poll is 2x of query time and minimu 3sec
       );
       return () => clearInterval(alertsInterval);
     }
@@ -251,7 +251,7 @@ export function AlertTableServerSide({
     if (!isPaused && shouldRefreshDate) {
       const facetsInterval = setInterval(
         () => updateFacetsCelDateRange(),
-        Math.max((queryTimeInSeconds || 1) * 5, 5000)
+        Math.max((queryTimeInSeconds || 1) * 5, 5000) // so that gap between poll is 5x of query time and minimum 5sec
       );
       return () => clearInterval(facetsInterval);
     }
