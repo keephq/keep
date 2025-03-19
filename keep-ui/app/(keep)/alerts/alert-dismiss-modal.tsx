@@ -41,6 +41,7 @@ export default function AlertDismissModal({
   const [selectedTab, setSelectedTab] = useState<number>(0);
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
   const [showError, setShowError] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const revalidateMultiple = useRevalidateMultiple();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
@@ -82,6 +83,8 @@ export default function AlertDismissModal({
       return;
     }
 
+    setIsLoading(true);
+
     const dismissUntil =
       selectedTab === 0 ? null : selectedDateTime?.toISOString();
 
@@ -105,6 +108,7 @@ export default function AlertDismissModal({
       showErrorToast(error, "Failed to dismiss alerts");
     } finally {
       clearAndClose();
+      setIsLoading(false);
     }
   };
 
@@ -208,7 +212,7 @@ export default function AlertDismissModal({
             <Button variant="secondary" color="orange" onClick={clearAndClose}>
               Cancel
             </Button>
-            <Button onClick={handleDismissChange} color="orange">
+            <Button onClick={handleDismissChange} color="orange" loading={isLoading}>
               Dismiss
             </Button>
           </div>
