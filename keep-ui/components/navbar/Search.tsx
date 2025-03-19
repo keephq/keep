@@ -117,7 +117,18 @@ export const Search = ({ session }: SearchProps) => {
       shortcut: ["⇧", "D"],
       navigate: docsUrl,
     },
-    // Rest of your external options...
+    {
+      icon: GitHubLogoIcon,
+      label: "Keep Source code",
+      shortcut: ["⇧", "C"],
+      navigate: "https://github.com/keephq/keep",
+    },
+    {
+      icon: TwitterLogoIcon,
+      label: "Keep Twitter",
+      shortcut: ["⇧", "T"],
+      navigate: "https://twitter.com/keepalerting",
+    },
   ];
 
   const OPTIONS = [...NAVIGATION_OPTIONS, ...EXTERNAL_OPTIONS];
