@@ -1,3 +1,8 @@
+workflow:
+  id: github-workflow-trigger
+  name: GitHub Workflow Trigger
+  description: Triggers GitHub Actions workflows with customizable inputs for automated documentation testing.
+
 id: run-gh-action
 name: Test Docs one more time
 description: Running GitHub action

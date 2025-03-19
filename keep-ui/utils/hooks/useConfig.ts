@@ -9,6 +9,10 @@ export const useConfig = () => {
     throw new Error("useConfig must be used within a ConfigProvider");
   }
 
+  if (context === null) {
+    throw new Error("config is not passed to ConfigProvider");
+  }
+
   return {
     data: context,
   };

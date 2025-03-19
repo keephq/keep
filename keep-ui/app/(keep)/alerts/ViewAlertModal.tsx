@@ -1,21 +1,14 @@
 import { AlertDto, Status, Severity } from "@/entities/alerts/model"; // Adjust the import path as needed
 import Modal from "@/components/ui/Modal"; // Ensure this path matches your project structure
-import { Button, Subtitle, Switch, Text, Callout } from "@tremor/react";
+import { Button, Switch, Text, Callout } from "@tremor/react";
 import { toast } from "react-toastify";
-import "./ViewAlertModal.css";
 import React, { useState, useRef, useEffect } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui";
-import Editor, { Monaco } from "@monaco-editor/react";
+import { MonacoEditor, showErrorToast } from "@/shared/ui";
+import { type Monaco } from "@monaco-editor/react";
 import { Lock, Unlock, Save, AlertTriangle, Copy, X } from "lucide-react";
-
-// Monaco Editor - do not load from CDN (to support on-prem)
-// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
-import * as monaco from "monaco-editor";
-import { loader } from "@monaco-editor/react";
-loader.config({ monaco });
-
-import * as monacoEditor from "monaco-editor/esm/vs/editor/editor.api";
+import { type editor } from "monaco-editor";
+import "./ViewAlertModal.css";
 
 interface ViewAlertModalProps {
   alert: AlertDto | null | undefined;
@@ -71,8 +64,8 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     []
   );
   const api = useApi();
-  const editorRef = useRef<any>(null);
-  const monacoRef = useRef<typeof monacoEditor | null>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<Monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
 
   // Initialize editor value when alert changes
@@ -198,7 +191,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     }
   };
 
-  const setupMonacoCompletionProvider = (monaco: typeof monacoEditor) => {
+  const setupMonacoCompletionProvider = (monaco: Monaco) => {
     // Set up enum value suggestions
     monaco.languages.registerCompletionItemProvider("json", {
       triggerCharacters: ['"', ":", " ", ","],
@@ -270,7 +263,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     });
   };
 
-  const handleEditorDidMount = (editor: any, monaco: typeof monacoEditor) => {
+  const handleEditorDidMount = (editor: any, monaco: Monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
@@ -378,10 +371,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     }
   }, [showHighlightedOnly, isEditable]);
 
-  const applyReadOnlyDecorations = (
-    editor: any,
-    monaco: typeof monacoEditor
-  ) => {
+  const applyReadOnlyDecorations = (editor: any, monaco: Monaco) => {
     if (!editor || !monaco) return;
 
     const model = editor.getModel();
@@ -761,7 +751,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
                   {getErrorMessage()}
                 </div>
               )}
-              <Editor
+              <MonacoEditor
                 height="100%"
                 defaultLanguage="json"
                 value={editorValue}

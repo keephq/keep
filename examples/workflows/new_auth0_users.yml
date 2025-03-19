@@ -13,9 +13,9 @@ alert:
   actions:
     - name: trigger-slack
       condition:
-      - name: assert-condition
-        type: assert
-        assert: "{{ steps.get-auth0-users.results.new_users_count }} == 0" # if there are more than 0 new users, trigger the action
+        - name: assert-condition
+          type: assert
+          assert: "{{ steps.get-auth0-users.results.new_users_count }} == 0" # if there are more than 0 new users, trigger the action
       provider:
         type: slack
         config: " {{ providers.slack-demo }} "
@@ -34,3 +34,8 @@ alert:
                   - {{user_name}}
                   {{/steps.get-auth0-users.results.new_users}}
                 emoji: true
+
+workflow:
+  id: auth0-user-monitor
+  name: Auth0 User Monitor
+  description: Tracks new Auth0 user signups and sends Slack notifications with detailed user information, maintaining state between runs.

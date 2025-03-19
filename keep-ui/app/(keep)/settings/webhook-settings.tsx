@@ -25,13 +25,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { PageSubtitle } from "@/shared/ui";
 import { PageTitle } from "@/shared/ui";
-import { Editor } from "@monaco-editor/react";
-
-// Monaco Editor - do not load from CDN (to support on-prem)
-// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
-import * as monaco from "monaco-editor";
-import { loader } from "@monaco-editor/react";
-loader.config({ monaco });
+import { MonacoEditor } from "@/shared/ui";
 
 interface Webhook {
   webhookApi: string;
@@ -230,7 +224,7 @@ req.end();
               {languages.map(({ title, language, code }) => (
                 <TabPanel key={title}>
                   <div className="h-[calc(100vh-20rem)]">
-                    <Editor
+                    <MonacoEditor
                       value={code}
                       language={language}
                       theme="vs-light"

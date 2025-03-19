@@ -36,14 +36,8 @@ import { useTopology } from "@/app/(keep)/topology/model";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast, Input, KeepLoader } from "@/shared/ui";
 import { PlusIcon, MinusIcon } from "@heroicons/react/20/solid";
-import Editor from "@monaco-editor/react";
-
-// Monaco Editor - do not load from CDN (to support on-prem)
-// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
-import * as monaco from "monaco-editor";
-import { loader } from "@monaco-editor/react";
+import { MonacoEditor } from "@/shared/ui";
 import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
-loader.config({ monaco });
 
 interface Props {
   editRuleId: number | null;
@@ -364,7 +358,7 @@ export default function CreateOrEditMapping({
                     </TabPanel>
                     <TabPanel>
                       <div className="flex flex-col gap-2">
-                        <Editor
+                        <MonacoEditor
                           height="200px"
                           defaultLanguage="csv"
                           value={csvText}

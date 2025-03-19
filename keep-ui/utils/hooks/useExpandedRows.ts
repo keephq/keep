@@ -5,9 +5,12 @@ import { useLocalStorage } from "utils/hooks/useLocalStorage";
  * Stores the expanded state in localStorage to persist across sessions
  */
 export function useExpandedRows(presetName: string) {
+  // Normalize the presetName to lowercase to ensure consistency regardless of case
+  const normalizedPresetName = presetName.toLowerCase();
+
   const [expandedRows, setExpandedRows] = useLocalStorage<
     Record<string, boolean>
-  >(`expanded-rows-${presetName}`, {});
+  >(`expanded-rows-${normalizedPresetName}`, {});
 
   const toggleRowExpanded = (fingerprint: string) => {
     setExpandedRows((prev) => ({
