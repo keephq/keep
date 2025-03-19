@@ -81,6 +81,11 @@ const nextConfig = {
         protocol: "https",
         hostname: "cdn.prod.website-files.com",
       },
+      // Cloudflare Image Delivery
+      {
+        protocol: "https",
+        hostname: "imagedelivery.net",
+      },
     ],
   },
   // compiler is not supported in turbo mode
