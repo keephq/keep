@@ -31,7 +31,4 @@ export interface InternalConfig {
 
   // Keep Contact Us
   KEEP_CONTACT_US_URL: string;
-
-  // Use Monaco Editor as NPM package
-  BUILD_MONACO_EDITOR_NPM: boolean;
 }

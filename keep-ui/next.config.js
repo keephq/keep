@@ -4,13 +4,14 @@ const isSentryDisabled =
   process.env.SENTRY_DISABLED === "true" ||
   process.env.NODE_ENV === "development";
 
-const isMonacoEditorNpm = process.env.BUILD_MONACO_EDITOR_NPM === "true";
-
-const aliases = isMonacoEditorNpm
-  ? {
-      "./MonacoEditor": "@/shared/ui/MonacoEditor/index.npm.ts",
-    }
-  : {};
+// Turbopack doesn't support dynamic imports yet, so we need to fallback to CDN for development
+// Checking NODE_ENV because in the future we may use turbopack in production as well
+const turbopackAliases =
+  process.env.NODE_ENV === "development"
+    ? {
+        "./MonacoEditor": "@/shared/ui/MonacoEditor/index.turbopack.ts",
+      }
+    : {};
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -20,7 +21,7 @@ const nextConfig = {
   },
   experimental: {
     turbo: {
-      resolveAlias: aliases,
+      resolveAlias: turbopackAliases,
     },
   },
   webpack: (
@@ -66,10 +67,6 @@ const nextConfig = {
       },
     ];
 
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      ...aliases,
-    };
     return config;
   },
   // @auth/core is ESM-only and jest fails to transpile it.

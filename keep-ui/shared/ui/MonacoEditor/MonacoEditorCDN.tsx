@@ -7,7 +7,7 @@ import { ErrorComponent } from "../ErrorComponent/ErrorComponent";
 
 const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
 
-export function MonacoEditorDefault(props: EditorProps) {
+export function MonacoEditorCDN(props: EditorProps) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
@@ -21,16 +21,7 @@ export function MonacoEditorDefault(props: EditorProps) {
       <ErrorComponent
         error={error}
         defaultMessage={`Error loading Monaco Editor from CDN`}
-        description={
-          <>
-            Check internet connection. If you are using Keep in an air-gapped
-            environment, set
-            <code className="text-gray-600 text-left bg-gray-100 px-2 py-1 mx-2 rounded-md">
-              MONACO_EDITOR_NPM=true
-            </code>
-            in keep-frontend environment variables.
-          </>
-        }
+        description="Check your internet connection and try again"
       />
     );
   }
