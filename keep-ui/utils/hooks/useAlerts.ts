@@ -202,13 +202,24 @@ export const useAlerts = () => {
 
     const swrValue = useSWR<any>(
       swrKey,
-      () => api.post(requestUrl, queryToPost),
+      async () => {
+        const date = new Date();
+        const queryResult = await api.post(requestUrl, queryToPost);
+        const queryTimeInSeconds =
+          (new Date().getTime() - date.getTime()) / 1000;
+        console.log(`Ihor QUERY TIME IS ${queryTimeInSeconds}`);
+        return {
+          queryResult,
+          queryTimeInSeconds,
+        };
+      },
       options
     );
 
     return {
       ...swrValue,
-      data: swrValue.data?.results as AlertDto[],
+      data: swrValue.data?.queryResult?.results as AlertDto[],
+      queryTimeInSeconds: swrValue.data?.queryTimeInSeconds,
       isLoading: swrValue.isLoading || !swrValue.data,
       totalCount: swrValue.data?.count,
       limit: swrValue.data?.limit,

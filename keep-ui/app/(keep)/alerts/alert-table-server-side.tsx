@@ -88,6 +88,7 @@ interface Props {
   presetTabs?: PresetTab[];
   isRefreshAllowed?: boolean;
   isMenuColDisplayed?: boolean;
+  queryTimeInSeconds?: number;
   setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
   mutateAlerts?: () => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
@@ -107,6 +108,7 @@ export function AlertTableServerSide({
   initialFacets,
   isAsyncLoading = false,
   presetName,
+  queryTimeInSeconds,
   presetTabs = [],
   isRefreshAllowed = true,
   setDismissedModalAlert,
@@ -119,6 +121,8 @@ export function AlertTableServerSide({
   onQueryChange,
   onLiveUpdateStateChange,
 }: Props) {
+  const [timeframeDelta, setTimeframeDelta] = useState<number>(0);
+  const [isPaused, setIsPaused] = useState<boolean>(true);
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
@@ -130,7 +134,8 @@ export function AlertTableServerSide({
   const [filterCel, setFilterCel] = useState<string>("");
   const [searchCel, setSearchCel] = useState<string>("");
   const [dateRangeCel, setDateRangeCel] = useState<string>("");
-  const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
+  const [facetsDateRangeCel, setFacetsDateRangeCel] = useState<string>("");
+  // const [dateRange, setDateRange] = useState<TimeFrame | null>(null);
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
   const [rowStyle] = useAlertRowStyle();
   const [columnTimeFormats, setColumnTimeFormats] = useLocalStorage<
@@ -190,32 +195,77 @@ export function AlertTableServerSide({
   );
   const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
 
-  useEffect(() => {
+  function getDateRangeCel() {
     const filterArray = [];
+    const currentDate = new Date();
 
-    if (dateRange?.start) {
-      filterArray.push(`lastReceived >= '${dateRange.start.toISOString()}'`);
+    if (timeframeDelta > 0) {
+      filterArray.push(
+        `lastReceived >= '${new Date(currentDate.getTime() - timeframeDelta).toISOString()}'`
+      );
+      filterArray.push(`lastReceived <= '${currentDate.toISOString()}'`);
+      filterArray.join(" && ");
     }
 
-    if (dateRange?.paused && dateRange?.end) {
-      filterArray.push(`lastReceived <= '${dateRange.end.toISOString()}'`);
+    return null;
+  }
+
+  useEffect(() => {
+    function updateAlertsCelDateRange() {
+      const dateRangeCel = getDateRangeCel();
+
+      if (dateRangeCel) {
+        setDateRangeCel(dateRangeCel);
+        return;
+      }
+
+      onReload && onReload(alertsQueryRef.current as AlertsQuery);
+      onPoll && onPoll();
     }
 
-    setDateRangeCel(filterArray.filter(Boolean).join(" && "));
+    updateAlertsCelDateRange();
 
-    // makes alerts to refresh when not paused and all time is selected
-    if (!dateRange?.start && !dateRange?.end && !dateRange?.paused) {
-      setTimeout(() => {
-        onReload && onReload(alertsQueryRef.current as AlertsQuery);
-        setFacetsPanelRefreshToken(uuidV4());
-      }, 100);
+    if (!isPaused && shouldRefreshDate) {
+      const alertsInterval = setInterval(
+        () => updateAlertsCelDateRange(),
+        Math.max((queryTimeInSeconds || 1) * 2, 3000)
+      );
+      return () => clearInterval(alertsInterval);
     }
-  }, [dateRange]);
+  }, [isPaused, timeframeDelta, shouldRefreshDate]);
+
+  useEffect(() => {
+    function updateFacetsCelDateRange() {
+      const dateRangeCel = getDateRangeCel();
+
+      if (dateRangeCel) {
+        setFacetsDateRangeCel(dateRangeCel);
+        return;
+      }
+
+      setFacetsPanelRefreshToken(uuidV4());
+    }
+
+    updateFacetsCelDateRange();
+
+    if (!isPaused && shouldRefreshDate) {
+      const facetsInterval = setInterval(
+        () => updateFacetsCelDateRange(),
+        Math.max((queryTimeInSeconds || 1) * 5, 5000)
+      );
+      return () => clearInterval(facetsInterval);
+    }
+  }, [isPaused, timeframeDelta, shouldRefreshDate]);
 
   const mainCelQuery = useMemo(() => {
     const filterArray = [dateRangeCel, searchCel];
     return filterArray.filter(Boolean).join(" && ");
   }, [searchCel, dateRangeCel]);
+
+  const facetsCel = useMemo(() => {
+    const filterArray = [facetsDateRangeCel, searchCel];
+    return filterArray.filter(Boolean).join(" && ");
+  }, [searchCel, facetsDateRangeCel]);
 
   const alertsQuery = useMemo(
     function whenQueryChange() {
@@ -363,32 +413,16 @@ export function AlertTableServerSide({
 
   const timeframeChanged = useCallback(
     (timeframe: TimeFrame | null) => {
-      if (!timeframe) {
-        setDateRange(null);
-        return;
+      if (timeframe?.paused != isPaused) {
+        onLiveUpdateStateChange && onLiveUpdateStateChange(!timeframe?.paused);
       }
 
-      if (timeframe?.paused != dateRange?.paused) {
-        onLiveUpdateStateChange && onLiveUpdateStateChange(!timeframe.paused);
-      }
-
-      const currentDiff =
-        (dateRange?.end?.getTime() || 0) - (dateRange?.start?.getTime() || 0);
       const newDiff =
         (timeframe?.end?.getTime() || 0) - (timeframe?.start?.getTime() || 0);
-
-      if (!timeframe?.paused && currentDiff === newDiff) {
-        if (shouldRefreshDate) {
-          onPoll && onPoll();
-          setDateRange(timeframe);
-        }
-        return;
-      }
-
-      onQueryChange && onQueryChange();
-      setDateRange(timeframe);
+      setTimeframeDelta(newDiff);
+      setIsPaused(!!timeframe?.paused);
     },
-    [dateRange, shouldRefreshDate, onLiveUpdateStateChange]
+    [setIsPaused, onLiveUpdateStateChange, setTimeframeDelta]
   );
 
   const facetsConfig: FacetsConfig = useMemo(() => {
@@ -690,7 +724,7 @@ export function AlertTableServerSide({
               key={searchCel}
               usePropertyPathsSuggestions={true}
               entityName={"alerts"}
-              facetOptionsCel={mainCelQuery}
+              facetOptionsCel={facetsCel}
               clearFiltersToken={clearFiltersToken}
               initialFacetsData={{ facets: initialFacets, facetOptions: null }}
               facetsConfig={facetsConfig}
