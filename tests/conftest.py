@@ -445,25 +445,29 @@ def elastic_container(docker_ip, docker_services):
 
 @pytest.fixture
 def elastic_client(request):
-    # this is so if any other module initialized Elasticsearch, it will be deleted
-    ElasticClient._instance = None
-    os.environ["ELASTIC_ENABLED"] = "true"
-    os.environ["ELASTIC_USER"] = "elastic"
-    os.environ["ELASTIC_PASSWORD"] = "keeptests"
-    os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
-    os.environ["ELASTIC_INDEX_SUFFIX"] = "test"
-    # request.getfixturevalue("elastic_container")
-    elastic_client = ElasticClient(
-        tenant_id=SINGLE_TENANT_UUID,
-    )
 
-    yield elastic_client
+    if request.param is False:
+        yield None
+    else:
+        # this is so if any other module initialized Elasticsearch, it will be deleted
+        ElasticClient._instance = None
+        os.environ["ELASTIC_ENABLED"] = "true"
+        os.environ["ELASTIC_USER"] = "elastic"
+        os.environ["ELASTIC_PASSWORD"] = "keeptests"
+        os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
+        os.environ["ELASTIC_INDEX_SUFFIX"] = "test"
+        # request.getfixturevalue("elastic_container")
+        elastic_client = ElasticClient(
+            tenant_id=SINGLE_TENANT_UUID,
+        )
 
-    # remove all from elasticsearch
-    try:
-        elastic_client.drop_index()
-    except Exception:
-        pass
+        yield elastic_client
+
+        # remove all from elasticsearch
+        try:
+            elastic_client.drop_index()
+        except Exception:
+            pass
 
 
 @pytest.fixture(scope="session")
