@@ -8,6 +8,7 @@ from fastapi import HTTPException
 
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
+from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 
 # Reuse functions from your existing test
