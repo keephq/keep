@@ -117,11 +117,12 @@ def test_handle_workflow_test():
     event = get_event_from_body(body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id)
 
     with patch.object(queue, "Queue", wraps=queue.Queue) as mock_queue:
-        result = workflow_scheduler.handle_workflow_test(
+        result = workflow_scheduler.handle_manual_event_workflow(
             workflow=mock_workflow,
             tenant_id=tenant_id,
             triggered_by_user=triggered_by_user,
             event=event,
+            is_test=True,
         )
 
         mock_workflow_manager._run_workflow.assert_called_once_with(
@@ -163,11 +164,12 @@ def test_handle_workflow_test_with_error():
     event = get_event_from_body(body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id)
 
     with patch.object(queue, "Queue", wraps=queue.Queue) as mock_queue:
-        result = workflow_scheduler.handle_workflow_test(
+        result = workflow_scheduler.handle_manual_event_workflow(
             workflow=mock_workflow,
             tenant_id=tenant_id,
             triggered_by_user=triggered_by_user,
             event=event,
+            is_test=True,
         )
 
         mock_workflow_manager._run_workflow.assert_called_once_with(

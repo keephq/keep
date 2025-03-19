@@ -1,7 +1,6 @@
 import enum
 import hashlib
 import logging
-import queue
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
