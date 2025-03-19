@@ -58,6 +58,11 @@ import {
   ListFormatOption,
   createListFormatMenuItems,
 } from "./alert-table-list-format";
+import {
+  ColumnRenameMapping,
+  createColumnRenameMenuItems,
+  getColumnDisplayName,
+} from "./alert-table-column-rename";
 
 interface DraggableHeaderCellProps {
   header: Header<AlertDto, unknown>;
@@ -70,6 +75,8 @@ interface DraggableHeaderCellProps {
   setColumnTimeFormats: (formats: Record<string, TimeFormatOption>) => void;
   columnListFormats: Record<string, ListFormatOption>;
   setColumnListFormats: (formats: Record<string, ListFormatOption>) => void;
+  columnRenameMapping: ColumnRenameMapping;
+  setColumnRenameMapping: (mapping: ColumnRenameMapping) => void;
 }
 
 const DraggableHeaderCell = ({
@@ -83,6 +90,8 @@ const DraggableHeaderCell = ({
   setColumnTimeFormats,
   columnListFormats,
   setColumnListFormats,
+  columnRenameMapping,
+  setColumnRenameMapping,
 }: DraggableHeaderCellProps) => {
   const { column, getResizeHandler } = header;
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
@@ -317,6 +326,12 @@ const DraggableHeaderCell = ({
                     setColumnListFormats,
                     DropdownMenu
                   )}
+                {createColumnRenameMenuItems(
+                  column.id,
+                  columnRenameMapping,
+                  setColumnRenameMapping,
+                  DropdownMenu
+                )}
                 {column.getCanGroup() !== false && (
                   <DropdownMenu.Item
                     icon={ArrowsUpDownIcon}
@@ -429,6 +444,13 @@ export default function AlertsTableHeaders({
     getColumnsIds(columns)
   );
 
+  // Add column rename mapping state
+  const [columnRenameMapping, setColumnRenameMapping] =
+    useLocalStorage<ColumnRenameMapping>(
+      `column-rename-mapping-${presetName}`,
+      {}
+    );
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -493,6 +515,28 @@ export default function AlertsTableHeaders({
                     table.getState().columnPinning.left?.length,
                     table.getState().columnPinning.right?.length
                   );
+
+                // Get the display name for the column header
+                const originalHeader = header.isPlaceholder ? null : (
+                  <div>
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                  </div>
+                );
+
+                // Apply the renamed header if it exists
+                const displayHeader = header.isPlaceholder ? null : (
+                  <div>
+                    {columnRenameMapping[header.column.id] ||
+                      flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                  </div>
+                );
+
                 return (
                   <DraggableHeaderCell
                     key={header.column.columnDef.id}
@@ -508,15 +552,10 @@ export default function AlertsTableHeaders({
                     setColumnTimeFormats={setColumnTimeFormats}
                     columnListFormats={columnListFormats}
                     setColumnListFormats={setColumnListFormats}
+                    columnRenameMapping={columnRenameMapping}
+                    setColumnRenameMapping={setColumnRenameMapping}
                   >
-                    {header.isPlaceholder ? null : (
-                      <div>
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                      </div>
-                    )}
+                    {displayHeader}
                   </DraggableHeaderCell>
                 );
               })}

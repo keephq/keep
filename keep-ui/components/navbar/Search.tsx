@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { Icon, List, ListItem, Subtitle } from "@tremor/react";
 import {
   Combobox,
-  ComboboxButton,
   ComboboxInput,
   ComboboxOption,
   ComboboxOptions,
@@ -97,9 +96,8 @@ interface SearchProps {
 
 export const Search = ({ session }: SearchProps) => {
   const [query, setQuery] = useState<string>("");
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [, setSelectedOption] = useState<string | null>(null);
   const router = useRouter();
-  const comboboxBtnRef = useRef<ElementRef<"button">>(null);
   const comboboxInputRef = useRef<ElementRef<"input">>(null);
   const { data: configData } = useConfig();
   const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
@@ -137,8 +135,8 @@ export const Search = ({ session }: SearchProps) => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        if (comboboxBtnRef.current) {
-          comboboxBtnRef.current.click();
+        if (comboboxInputRef.current) {
+          comboboxInputRef.current.focus();
         }
       }
     };
@@ -406,6 +404,7 @@ export const Search = ({ session }: SearchProps) => {
           onChange={onOptionSelection}
           as="div"
           className="relative w-full"
+          immediate
         >
           {({ open }) => (
             <>
@@ -415,16 +414,16 @@ export const Search = ({ session }: SearchProps) => {
                   aria-hidden="true"
                 />
               )}
-              <ComboboxButton ref={comboboxBtnRef} className="w-full">
-                <ComboboxInput
-                  className="z-20 tremor-TextInput-root relative flex items-center w-full outline-none rounded-tremor-default transition duration-100 border shadow-tremor-input dark:shadow-dark-tremor-input bg-tremor-background dark:bg-dark-tremor-background hover:bg-tremor-background-muted dark:hover:bg-dark-tremor-background-muted text-tremor-content dark:text-dark-tremor-content border-tremor-border dark:border-dark-tremor-border tremor-TextInput-input bg-transparent focus:outline-none focus:ring-0 text-tremor-default py-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none pr-3 pl-3 placeholder:text-tremor-content dark:placeholder:text-dark-tremor-content"
-                  placeholder={placeholderText}
-                  color="orange"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  ref={comboboxInputRef}
-                />
-              </ComboboxButton>
+
+              <ComboboxInput
+                className="z-20 tremor-TextInput-root relative flex items-center w-full outline-none rounded-tremor-default transition duration-100 border shadow-tremor-input dark:shadow-dark-tremor-input bg-tremor-background dark:bg-dark-tremor-background hover:bg-tremor-background-muted dark:hover:bg-dark-tremor-background-muted text-tremor-content dark:text-dark-tremor-content border-tremor-border dark:border-dark-tremor-border tremor-TextInput-input bg-transparent focus:outline-none focus:ring-0 text-tremor-default py-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none pr-3 pl-3 placeholder:text-tremor-content dark:placeholder:text-dark-tremor-content"
+                placeholder={placeholderText}
+                color="orange"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                ref={comboboxInputRef}
+              />
+
               <Transition
                 as={Fragment}
                 beforeLeave={onLeave}
