@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 from typing import Tuple
@@ -151,6 +152,19 @@ static_facets = [
 ]
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
+
+def get_threeshold_query(tenant_id: str):
+    return func.coalesce(
+        select(LastAlert.timestamp)
+        .select_from(LastAlert)
+        .where(LastAlert.tenant_id == tenant_id)
+        .order_by(LastAlert.timestamp.desc())
+        .limit(1)
+        .offset(alerts_hard_limit - 1),
+        datetime.datetime.min,
+    )
+
+
 def __build_query_for_filtering(tenant_id: str):
     select_args = [
         LastAlert.alert_id,
@@ -191,6 +205,7 @@ def __build_query_for_filtering(tenant_id: str):
     )
 
     query = query.filter(LastAlert.tenant_id == tenant_id)
+    query = query.filter(LastAlert.timestamp >= get_threeshold_query(tenant_id))
     return query
 
 
@@ -247,6 +262,7 @@ def __build_query_for_filtering_v2(
         )
 
     query = query.filter(LastAlert.tenant_id == tenant_id)
+    query = query.filter(LastAlert.timestamp >= get_threeshold_query(tenant_id))
     involved_fields = []
 
     if sql_filter:
@@ -403,11 +419,7 @@ def get_alert_facets_data(
     else:
         facets = static_facets
 
-    base_query_cte = (
-        __build_query_for_filtering(tenant_id)
-        .order_by(desc(LastAlert.timestamp))
-        .limit(alerts_hard_limit)
-    ).cte("alerts_query")
+    base_query_cte = __build_query_for_filtering(tenant_id).cte("alerts_query")
 
     return get_facet_options(
         base_query=base_query_cte,
