@@ -245,9 +245,32 @@ def batch_delete_workflow_executions(
                 logger.info(
                     f"Batch {batch_count}: Processed {processed_count}/{total_count or 'unknown'} executions "
                     f"({pct_complete:.2f}%) at {rate:.2f} records/sec overall, {batch_rate:.2f} records/sec this batch. "
-                    f"Batch contained {actual_batch_size} executions, {logs_count} logs, "
+                    f"{actual_batch_size} executions, {logs_count} logs, "
                     f"{alert_executions_count} alert links, {incident_executions_count} incident links"
                 )
+                
+                # Add ETA calculation if we have a total count
+                if total_count and rate > 0:
+                    remaining_records = total_count - processed_count
+                    eta_seconds = remaining_records / rate
+                    eta_time = datetime.now() + timedelta(seconds=eta_seconds)
+                    eta_str = eta_time.strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    # Calculate hours, minutes, seconds for more readable format
+                    eta_hours = int(eta_seconds // 3600)
+                    eta_minutes = int((eta_seconds % 3600) // 60)
+                    eta_seconds_remainder = int(eta_seconds % 60)
+                    
+                    # Format the time remaining string based on duration
+                    if eta_hours > 0:
+                        time_remaining = f"{eta_hours}h {eta_minutes}m"
+                    else:
+                        time_remaining = f"{eta_minutes}m {eta_seconds_remainder}s"
+                    
+                    logger.info(
+                        f"ETA: {time_remaining} remaining "
+                        f"(completion expected at {eta_str})"
+                    )
                 
             except Exception as e:
                 session.rollback()
@@ -490,14 +513,14 @@ def cleanup_old_workflow_executions(
     )
     
     # Delete failed executions (might want different retention policy)
-    logger.info("Processing failed executions...")
+    logger.info("Processing failed and in_progress executions...")
     failed_count = batch_delete_workflow_executions(
         session=Session,
         criteria={},
         batch_size=batch_size,
         dry_run=dry_run,
         end_time=cutoff_date,  # Use end_time instead of age_days for precise control
-        status_filter=["failed", "error"],
+        status_filter=["failed", "error", "in_progress"],
         skip_count=skip_count
     )
     
