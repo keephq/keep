@@ -288,22 +288,12 @@ def build_alerts_query(
     if cel and "incident." in cel:
         fetch_incidents = True
 
-    query = __build_query_for_filtering_v2(
-        tenant_id,
-        select_args=[
-            Alert,
-            AlertEnrichment,
-            LastAlert.first_timestamp.label("startedAt"),
-        ],
-        cel=cel,
-    )
-
     if not sort_by:
         sort_by = "timestamp"
         sort_dir = "desc"
 
-    metadata = remapped_properties_metadata.get_property_metadata(sort_by)
     group_by_exp = []
+    metadata = remapped_properties_metadata.get_property_metadata(sort_by)
 
     for item in metadata.field_mappings:
         if isinstance(item, JsonFieldMapping):
@@ -322,6 +312,17 @@ def build_alerts_query(
     else:
         order_by_field = group_by_exp[0]
 
+    query = __build_query_for_filtering_v2(
+        tenant_id,
+        select_args=[
+            Alert,
+            AlertEnrichment,
+            LastAlert.first_timestamp.label("startedAt"),
+            literal_column(order_by_field),
+        ],
+        cel=cel,
+    )
+
     if fetch_incidents:
         if sort_dir == "desc":
             query = query.order_by(desc(text(order_by_field)), Alert.id)
@@ -336,9 +337,7 @@ def build_alerts_query(
             query = query.order_by(asc(text(order_by_field)))
 
     if fetch_incidents:
-        query = query.distinct(text(order_by_field), LastAlert.alert_id).cte(
-            "alerts_query"
-        )
+        query = query.distinct(text(order_by_field), LastAlert.alert_id)
 
     if limit is not None:
         query = query.limit(limit)
