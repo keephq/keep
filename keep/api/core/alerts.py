@@ -202,7 +202,7 @@ def __build_query_for_filtering(tenant_id: str):
         and_(
             LastAlertToIncident.tenant_id == Incident.tenant_id,
             LastAlertToIncident.incident_id == Incident.id,
-            Incident.status == IncidentStatus.FIRING,
+            Incident.status == IncidentStatus.FIRING.value,
         ),
     )
 
@@ -260,7 +260,7 @@ def __build_query_for_filtering_v2(
             and_(
                 LastAlertToIncident.tenant_id == Incident.tenant_id,
                 LastAlertToIncident.incident_id == Incident.id,
-                Incident.status == IncidentStatus.FIRING,
+                Incident.status == IncidentStatus.FIRING.value,
             ),
         )
 
