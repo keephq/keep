@@ -420,8 +420,8 @@ def get_alert_facets_data(
         facets = static_facets
     base_query_cte = (
         __build_query_for_filtering(tenant_id)
-        .order_by(desc(literal_column("lastalert.timestamp")))
-        .limit(alerts_hard_limit)
+        # .order_by(desc(literal_column("lastalert.timestamp")))
+        # .limit(alerts_hard_limit)
     ).cte("alerts_query")
 
     return get_facet_options(
