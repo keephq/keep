@@ -8,6 +8,7 @@ import { SparklesIcon } from "@heroicons/react/24/outline";
 import { useCopilotChat } from "@copilotkit/react-core";
 import { Role } from "@copilotkit/runtime-client-gql";
 import { TextMessage } from "@copilotkit/runtime-client-gql";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 export function useTestStep() {
   const api = useApi();
@@ -38,6 +39,7 @@ const WFDebugWithAI = ({
   errors: { [key: string]: string };
   description: string;
 }) => {
+  // careful, useCopilotChat may not be available if user has not set an OpenAI API key
   const { appendMessage } = useCopilotChat();
   return (
     <Button
@@ -68,11 +70,11 @@ const WFDebugWithAIButton = ({
   errors: { [key: string]: string };
   description: string;
 }) => {
-  try {
-    return <WFDebugWithAI errors={errors} description={description} />;
-  } catch (e) {
+  const { data: config } = useConfig();
+  if (!config?.OPEN_AI_API_KEY_SET) {
     return null;
   }
+  return <WFDebugWithAI errors={errors} description={description} />;
 };
 
 const variablesRegex = /{{[\s]*.*?[\s]*}}/g;
