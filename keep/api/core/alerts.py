@@ -151,13 +151,17 @@ static_facets = [
 ]
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
+threeshold_query = (
+    select(LastAlert.timestamp)
+    .select_from(LastAlert)
+    .order_by(LastAlert.timestamp.desc())
+    .offset(alerts_hard_limit - 1)
+    .limit(1)
+)
 
-def __build_query_for_filtering(
-    tenant_id: str, fetch_incidents: bool = True, fetch_alerts_data: bool = True
-):
-    select_args = []
 
-    select_args = select_args + [
+def __build_query_for_filtering(tenant_id: str):
+    select_args = [
         LastAlert.alert_id,
         LastAlert.tenant_id.label("last_alert_tenant_id"),
         LastAlert.first_timestamp.label("startedAt"),
@@ -166,46 +170,37 @@ def __build_query_for_filtering(
     ]
 
     for key, value in alias_column_mapping.items():
-        if not fetch_incidents and "incident." in value:
-            continue
-
-        if not fetch_alerts_data and ("alert." in value or "alertenrichment." in value):
-            continue
-
         select_args.append(literal_column(value).label(key))
 
     query = select(*select_args).select_from(LastAlert)
 
-    if fetch_alerts_data:
-        query = query.join(
-            Alert,
-            and_(
-                Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id
-            ),
-        ).outerjoin(
-            AlertEnrichment,
-            and_(
-                LastAlert.tenant_id == AlertEnrichment.tenant_id,
-                LastAlert.fingerprint == AlertEnrichment.alert_fingerprint,
-            ),
-        )
+    query = query.join(
+        Alert,
+        and_(Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id),
+    ).outerjoin(
+        AlertEnrichment,
+        and_(
+            LastAlert.tenant_id == AlertEnrichment.tenant_id,
+            LastAlert.fingerprint == AlertEnrichment.alert_fingerprint,
+        ),
+    )
 
-    if fetch_incidents:
-        query = query.outerjoin(
-            LastAlertToIncident,
-            and_(
-                LastAlert.tenant_id == LastAlertToIncident.tenant_id,
-                LastAlert.fingerprint == LastAlertToIncident.fingerprint,
-            ),
-        ).outerjoin(
-            Incident,
-            and_(
-                LastAlertToIncident.tenant_id == Incident.tenant_id,
-                LastAlertToIncident.incident_id == Incident.id,
-            ),
-        )
+    query = query.outerjoin(
+        LastAlertToIncident,
+        and_(
+            LastAlert.tenant_id == LastAlertToIncident.tenant_id,
+            LastAlert.fingerprint == LastAlertToIncident.fingerprint,
+        ),
+    ).outerjoin(
+        Incident,
+        and_(
+            LastAlertToIncident.tenant_id == Incident.tenant_id,
+            LastAlertToIncident.incident_id == Incident.id,
+        ),
+    )
 
-    query = query.where(LastAlert.tenant_id == tenant_id)
+    query = query.filter(LastAlert.tenant_id == tenant_id)
+    query = query.filter(LastAlert.timestamp >= threeshold_query)
     return query
 
 
@@ -262,6 +257,7 @@ def __build_query_for_filtering_v2(
         )
 
     query = query.filter(LastAlert.tenant_id == tenant_id)
+    query = query.filter(LastAlert.timestamp >= threeshold_query)
     involved_fields = []
 
     if sql_filter:
@@ -271,7 +267,6 @@ def __build_query_for_filtering_v2(
         "involved_fields": involved_fields,
         "fetch_incidents": fetch_incidents,
     }
-
 
 def build_total_alerts_query(tenant_id, cel=None, limit=None):
     fetch_incidents = cel and "incident." in cel
@@ -418,11 +413,8 @@ def get_alert_facets_data(
         facets = get_alert_facets(tenant_id, facet_options_query.facet_queries.keys())
     else:
         facets = static_facets
-    base_query_cte = (
-        __build_query_for_filtering(tenant_id)
-        # .order_by(desc(literal_column("lastalert.timestamp")))
-        # .limit(alerts_hard_limit)
-    ).cte("alerts_query")
+
+    base_query_cte = __build_query_for_filtering(tenant_id).cte("alerts_query")
 
     return get_facet_options(
         base_query=base_query_cte,
