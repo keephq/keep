@@ -1,7 +1,7 @@
 """Default workflow_id=None for WorkflowExecution for test runs
 
 Revision ID: 971abbbf0a2c
-Revises: aff0128aa8f1
+Revises: c0880e315ebe
 Create Date: 2025-03-18 14:54:56.003392
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
 revision = "971abbbf0a2c"
-down_revision = "aff0128aa8f1"
+down_revision = "c0880e315ebe"
 branch_labels = None
 depends_on = None
 
