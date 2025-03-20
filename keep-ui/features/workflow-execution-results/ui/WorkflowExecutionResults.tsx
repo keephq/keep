@@ -5,7 +5,7 @@ import { Card, Callout, Button } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { TabGroup, Tab, TabList, TabPanel, TabPanels } from "@tremor/react";
-import useSWR, { useSWRConfig } from "swr";
+import useSWR from "swr";
 import {
   WorkflowExecutionDetail,
   WorkflowExecutionFailure,
@@ -16,7 +16,7 @@ import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
 import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
 import { setFavicon } from "@/shared/ui/utils/favicon";
-import { EmptyStateCard, JsonCard, ResizableColumns } from "@/shared/ui";
+import { EmptyStateCard, ResizableColumns } from "@/shared/ui";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 const convertWorkflowStatusToFaviconStatus = (
@@ -49,14 +49,8 @@ export function WorkflowExecutionResults({
   const api = useApi();
   const [refreshInterval, setRefreshInterval] = useState(1000);
   const [checks, setChecks] = useState(0);
-  const [error, setError] = useState<string | null>(null);
 
-  const {
-    data: executionData,
-    error: executionError,
-    isValidating,
-    isLoading,
-  } = useSWR(
+  const { data: executionData, error: executionError } = useSWR(
     api.isReady() && workflowExecutionId
       ? `/workflows/${workflowId}/runs/${workflowExecutionId}`
       : null,
@@ -100,10 +94,8 @@ export function WorkflowExecutionResults({
       setRefreshInterval(0);
     }
     if (executionData.error) {
-      setError(executionData?.error);
       setRefreshInterval(0);
     } else if (executionData?.status === "success") {
-      setError(executionData?.error);
       setRefreshInterval(0);
     }
   }, [executionData]);
@@ -125,14 +117,6 @@ export function WorkflowExecutionResults({
     );
   }
 
-  if (error) {
-    return (
-      <Callout title="Error" icon={ExclamationCircleIcon} color="rose">
-        {error}
-      </Callout>
-    );
-  }
-
   if (workflowError) {
     return (
       <Callout title="Error" icon={ExclamationCircleIcon} color="rose">
@@ -142,15 +126,13 @@ export function WorkflowExecutionResults({
   }
 
   return (
-    <>
-      <WorkflowExecutionResultsInternal
-        workflowId={workflowId}
-        executionData={executionData}
-        workflowRaw={finalYaml}
-        checks={checks}
-        isLoading={refreshInterval > 0}
-      />
-    </>
+    <WorkflowExecutionResultsInternal
+      workflowId={workflowId}
+      executionData={executionData}
+      workflowRaw={finalYaml}
+      checks={checks}
+      isLoading={refreshInterval > 0}
+    />
   );
 }
 
