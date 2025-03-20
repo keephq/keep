@@ -147,8 +147,8 @@ export function IncidentList({
     null
   );
   const [filterRevalidationToken, setFilterRevalidationToken] = useState<
-    string | null
-  >(null);
+    string | undefined
+  >(undefined);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 
   useEffect(() => {
