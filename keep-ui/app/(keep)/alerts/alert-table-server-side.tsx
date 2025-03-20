@@ -144,7 +144,8 @@ export function AlertTableServerSide({
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
-
+  const [isSilentFacetsLoading, setIsSilentFacetsLoading] =
+    useState<boolean>(false);
   const [theme, setTheme] = useLocalStorage(
     "alert-table-theme",
     Object.values(severityMapping).reduce<{ [key: string]: string }>(
@@ -210,19 +211,39 @@ export function AlertTableServerSide({
     return null;
   }, [timeframeDelta]);
 
-  const updateAlertsCelDateRange = useCallback(() => {
+
+  const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (canRevalidate) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setCanRevalidate(true);
+    }, 3000);
+    return () => clearTimeout(timeout);
+  }, [canRevalidate]);
+
+  function updateAlertsCelDateRange() {
+    if (!canRevalidate) {
+      return;
+    }
+
     const dateRangeCel = getDateRangeCel();
+    onPoll && onPoll();
+
     setDateRangeCel(dateRangeCel);
 
     if (dateRangeCel) {
       return;
     }
 
+    // if date does not change, just reload the data
     onReload && onReload(alertsQueryRef.current as AlertsQuery);
-    onPoll && onPoll();
-  }, [getDateRangeCel, onReload, onPoll]);
+  }
 
-  useEffect(() => updateAlertsCelDateRange(), [updateAlertsCelDateRange]);
+  useEffect(() => updateAlertsCelDateRange(), [timeframeDelta]);
 
   useEffect(() => {
     // so that gap between poll is 2x of query time and minimum 3sec
@@ -233,10 +254,15 @@ export function AlertTableServerSide({
       }
     }, refreshInterval);
     return () => clearInterval(interval);
-  }, [isPaused, updateAlertsCelDateRange, shouldRefreshDate]);
+  }, [isPaused, shouldRefreshDate]);
 
-  const updateFacetsCelDateRange = useCallback(() => {
+  function updateFacetsCelDateRange() {
+    if (!canRevalidate) {
+      return;
+    }
+
     const dateRangeCel = getDateRangeCel();
+    setIsSilentFacetsLoading(true);
     setFacetsDateRangeCel(dateRangeCel);
 
     if (dateRangeCel) {
@@ -244,16 +270,26 @@ export function AlertTableServerSide({
     }
 
     setFacetsPanelRefreshToken(uuidV4());
-  }, [getDateRangeCel, setFacetsDateRangeCel, setFacetsPanelRefreshToken]);
+  }
 
-  useEffect(
-    () => updateFacetsCelDateRange(),
-    [timeframeDelta, updateFacetsCelDateRange]
-  );
+  useEffect(() => {
+    updateFacetsCelDateRange();
+  }, [timeframeDelta]);
+  useEffect(() => {
+    if (!isSilentFacetsLoading) {
+      return;
+    }
+    const timeout = setTimeout(() => {
+      setIsSilentFacetsLoading(false);
+    }, 1000);
+    () => clearTimeout(timeout);
+  }, [isSilentFacetsLoading, setIsSilentFacetsLoading]);
 
   useEffect(() => {
     // so that gap between poll is 20x of query time and minimum 5sec
-    const refreshInterval = Math.max((queryTimeInSeconds || 1) * 20, 5000);
+    const refreshInterval = timeframeDelta
+      ? Math.max((queryTimeInSeconds || 1) * 20, 5000)
+      : 2000;
     const interval = setInterval(() => {
       if (!isPaused && shouldRefreshDate) {
         updateFacetsCelDateRange();
@@ -307,17 +343,6 @@ export function AlertTableServerSide({
     onReload && onReload(alertsQueryRef.current as AlertsQuery);
   }, [alertsQuery, onReload]);
 
-  const [tabs, setTabs] = useState<Tab[]>([
-    { name: "All", filter: () => true },
-    ...presetTabs.map((tab) => ({
-      name: tab.name,
-      filter: (alert: AlertDto) => evalWithContext(alert, tab.filter),
-      id: tab.id,
-    })),
-    { name: "+", filter: () => true },
-  ]);
-
-  const [selectedTab, setSelectedTab] = useState(0);
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
@@ -742,6 +767,7 @@ export function AlertTableServerSide({
               facetsConfig={facetsConfig}
               onCelChange={setFilterCel}
               revalidationToken={facetsPanelRefreshToken}
+              isSilentReloading={isSilentFacetsLoading}
             />
           </div>
 
