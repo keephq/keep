@@ -129,6 +129,7 @@ export const V2StepStepSchema = z.object({
           z.string(),
           z.number(),
           z.boolean(),
+          z.record(z.string(), z.any()),
           z.object({}),
           z.array(z.any()),
         ])

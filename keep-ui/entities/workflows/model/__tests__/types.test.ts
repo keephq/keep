@@ -201,6 +201,34 @@ describe("V2StepStepSchema", () => {
 
     expect(() => V2StepStepSchema.parse(invalidStep)).toThrow();
   });
+
+  it("should validate a step with body", () => {
+    const bodyStep = {
+      id: "test-step-id",
+      name: "test-step",
+      componentType: "task",
+      type: "step-test",
+      properties: {
+        stepParams: ["param1", "param2"],
+        config: "test-config",
+        vars: {
+          key1: "value1",
+          key2: "value2",
+        },
+        if: "'{{ alert.service }}' == 'test'",
+        with: {
+          enrich_alert: [{ key: "test_key", value: "test_value" }],
+          enrich_incident: [{ key: "incident_key", value: "incident_value" }],
+          body: {
+            key: "value",
+          }
+        },
+      },
+    };
+
+    expect(V2StepStepSchema.parse(bodyStep).properties.with?.body).toEqual({key: "value"});
+  });
+
 });
 
 describe("V2StepConditionAssertSchema", () => {
