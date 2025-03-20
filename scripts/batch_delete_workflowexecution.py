@@ -300,10 +300,45 @@ def parallel_cleanup_workflow_executions(
     logger.info(f"Starting parallel cleanup with {num_processes} processes")
     logger.info(f"Retention days: {retention_days}, batch size: {batch_size}, dry run: {dry_run}")
     
-    # For UUID fields, we'll use a different approach for parallelism
-    # We'll slice the execution time range instead of using ID modulo
-    cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
-    time_span = datetime.utcnow() - cutoff_date
+    # Use start of today (0h 0m 0s) as reference point
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Calculate the cutoff date (we'll only delete records older than this)
+    cutoff_date = today_start - timedelta(days=retention_days)
+    
+    # Create a connection to find the oldest record
+    engine, temp_session = get_db_connection()
+    
+    try:
+        # Find the actual oldest record in the database
+        with temp_session as session:
+            # Query the oldest record for each status type
+            oldest_records = {}
+            for status_group in [["complete", "success", "completed"], ["failed", "error"]]:
+                oldest_query = select(func.min(WorkflowExecution.started)).where(
+                    WorkflowExecution.started < cutoff_date,
+                    WorkflowExecution.status.in_(status_group)
+                )
+                oldest_date = session.exec(oldest_query).first()
+                if oldest_date:
+                    oldest_records[str(status_group)] = oldest_date
+                    logger.info(f"Oldest record for status {status_group}: {oldest_date}")
+                else:
+                    logger.info(f"No records found older than cutoff for status {status_group}")
+                    
+        # If no old records found, nothing to do
+        if not oldest_records:
+            logger.info("No records found that need deletion. Exiting.")
+            return
+            
+        # The time span we need to process is between oldest_date and cutoff_date
+        logger.info(f"Will process records OLDER than: {cutoff_date}")
+    except Exception as e:
+        logger.warning(f"Error finding oldest record: {str(e)}. Will use default time range.")
+        # Fallback to a reasonable default if we can't query the oldest record
+        oldest_records = {
+            "default": cutoff_date - timedelta(days=365)  # Default to 1 year before cutoff
+        }
     
     # Calculate time slices for each process
     processes = []
@@ -315,14 +350,32 @@ def parallel_cleanup_workflow_executions(
     if num_processes > 1:
         # Create one process per time slice and status group combination
         for status_group in statuses:
+            # Get the oldest date for this status group or use default
+            status_key = str(status_group)
+            if status_key in oldest_records:
+                oldest_date = oldest_records[status_key]
+            else:
+                oldest_date = oldest_records.get("default", cutoff_date - timedelta(days=365))
+                
+            # If no records or oldest date is too close to cutoff, skip this status group
+            if not oldest_date or (cutoff_date - oldest_date).total_seconds() < 3600:  # 1 hour minimum
+                logger.info(f"No significant data to process for status {status_group}. Skipping.")
+                continue
+                
+            # The time span we're dividing among workers
+            time_span = cutoff_date - oldest_date
+            logger.info(f"For status {status_group}: Time span is {time_span} from {oldest_date} to {cutoff_date}")
+            
             for i in range(num_processes):
                 # Calculate a time slice for this process
-                slice_start = cutoff_date + (time_span * i // num_processes)
-                slice_end = cutoff_date + (time_span * (i + 1) // num_processes)
+                slice_start = oldest_date + (time_span * i // num_processes)
+                slice_end = oldest_date + (time_span * (i + 1) // num_processes)
                 
                 if i == num_processes - 1:
-                    # Make sure the last slice includes everything up to now
-                    slice_end = datetime.utcnow() + timedelta(minutes=1)  # Add a minute buffer
+                    # Make sure the last slice includes everything up to the cutoff date
+                    slice_end = cutoff_date + timedelta(seconds=1)  # Add tiny buffer
+                
+                logger.info(f"Process {i} will handle time range: {slice_start} to {slice_end} for status {status_group}")
                 
                 p = multiprocessing.Process(
                     target=_cleanup_process_worker_time_slice,
@@ -331,11 +384,25 @@ def parallel_cleanup_workflow_executions(
                 processes.append(p)
                 p.start()
     else:
-        # Just one process - do everything
+        # Just one process - do everything for each status group
         for status_group in statuses:
+            # Get the oldest date for this status group or use default
+            status_key = str(status_group)
+            if status_key in oldest_records:
+                oldest_date = oldest_records[status_key]
+            else:
+                oldest_date = oldest_records.get("default", cutoff_date - timedelta(days=365))
+                
+            # If no records or oldest date is too close to cutoff, skip this status group
+            if not oldest_date or (cutoff_date - oldest_date).total_seconds() < 3600:  # 1 hour minimum
+                logger.info(f"No significant data to process for status {status_group}. Skipping.")
+                continue
+            
+            logger.info(f"Single process will handle time range: {oldest_date} to {cutoff_date} for status {status_group}")
+            
             p = multiprocessing.Process(
                 target=_cleanup_process_worker_time_slice,
-                args=(cutoff_date, datetime.utcnow() + timedelta(minutes=1), batch_size, dry_run, 0, status_group, skip_count)
+                args=(oldest_date, cutoff_date + timedelta(seconds=1), batch_size, dry_run, 0, status_group, skip_count)
             )
             processes.append(p)
             p.start()
@@ -400,9 +467,15 @@ def cleanup_old_workflow_executions(
     
     engine, Session = get_db_connection()
     
-    logger.info(f"Starting cleanup of workflow executions older than {retention_days} days")
+    # Use start of today for consistent cutoff time
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    logger.info(f"Starting cleanup of workflow executions older than {retention_days} days from {today_start}")
     logger.info(f"batch_size: {batch_size}")
     logger.info(f"dry_run: {dry_run}")
+    
+    # Calculate the cutoff date
+    cutoff_date = today_start - timedelta(days=retention_days)
+    logger.info(f"Will delete records older than: {cutoff_date}")
     
     # Delete completed executions
     logger.info("Processing completed executions...")
@@ -411,7 +484,7 @@ def cleanup_old_workflow_executions(
         criteria={},
         batch_size=batch_size,
         dry_run=dry_run,
-        age_days=retention_days,
+        end_time=cutoff_date,  # Use end_time instead of age_days for precise control
         status_filter=["complete", "success", "completed"],
         skip_count=skip_count
     )
@@ -423,7 +496,7 @@ def cleanup_old_workflow_executions(
         criteria={},
         batch_size=batch_size,
         dry_run=dry_run,
-        age_days=retention_days,  # Could use a different retention for failed ones
+        end_time=cutoff_date,  # Use end_time instead of age_days for precise control
         status_filter=["failed", "error"],
         skip_count=skip_count
     )
