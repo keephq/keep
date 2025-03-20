@@ -80,7 +80,6 @@ export const useFacetOptions = (
         ? requestUrl + "_" + JSON.stringify(facetsQuery)
         : null,
     async () => {
-      console.log("IHOR REQUEST");
       const currentDate = new Date();
       const response = await api.post(requestUrl, facetsQuery);
       const responseTime = new Date().getTime() - currentDate.getTime();

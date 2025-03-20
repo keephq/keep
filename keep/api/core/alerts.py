@@ -379,11 +379,6 @@ def query_last_alerts(
             total_count_query = build_total_alerts_query(
                 tenant_id=tenant_id, cel=cel, limit=alerts_hard_limit
             )
-            total_count_strq = str(
-                total_count_query.compile(
-                    dialect=session.bind.dialect, compile_kwargs={"literal_binds": True}
-                )
-            )
             total_count = session.exec(total_count_query).one()[0]
 
             if not limit:
@@ -397,11 +392,6 @@ def query_last_alerts(
 
             data_query = build_alerts_query(
                 tenant_id, cel, sort_by, sort_dir, limit, offset
-            )
-            strq = str(
-                data_query.compile(
-                    dialect=session.bind.dialect, compile_kwargs={"literal_binds": True}
-                )
             )
             alerts_with_start = session.execute(data_query).all()
         except OperationalError as e:
