@@ -49,6 +49,7 @@ import {
   ColumnRenameMapping,
   getColumnDisplayName,
 } from "./alert-table-column-rename";
+import _ from "lodash";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -490,19 +491,12 @@ export const useAlertTableCols = (
       maxSize: 20,
       size: 20, // Add explicit size to maintain consistency
       enableSorting: false,
-      enableGrouping: true,
       getGroupingValue: (row) => row.source,
       enableResizing: false,
       cell: (context) => {
-        const row = context.row;
-
         return (
           <div>
-            {(context.getValue() ?? []).map((source, index) => {
-              let imagePath = `/icons/${source}-icon.png`;
-              if (source.includes("@")) {
-                imagePath = "/icons/mailgun-icon.png";
-              }
+            {context.getValue().map((source, index) => {
               return (
                 <DynamicImageProviderIcon
                   className={clsx(
@@ -517,7 +511,8 @@ export const useAlertTableCols = (
                   width={24}
                   title={source}
                   providerType={source}
-                  src={imagePath}
+                  src={`/icons/${source}-icon.png`}
+                  id={`${source}-icon-${index}`}
                 />
               );
             })}

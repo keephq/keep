@@ -7,6 +7,8 @@ export interface CustomImage {
   id: string;
 }
 
+export const fallbackIcon = "/icons/unknown-icon.png";
+
 // Cache for blob URLs to prevent memory leaks
 const blobCache: Record<string, string> = {};
 // Cache for in-flight requests to prevent duplicate fetches
@@ -82,10 +84,18 @@ export function useProviderImages() {
         },
       }
     )
-      .then((response) => response.blob())
+      .then((response) => (response.ok ? response.blob() : null))
       .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        blobCache[providerName] = url;
+        let url: string;
+
+        if (!blob) {
+          url = fallbackIcon;
+          blobCache[providerName] = fallbackIcon;
+        } else {
+          url = URL.createObjectURL(blob);
+          blobCache[providerName] = url;
+        }
+
         delete requestCache[providerName];
         return url;
       })
@@ -104,5 +114,6 @@ export function useProviderImages() {
     refresh: mutate,
     getImageUrl,
     useProviderImage,
+    blobCache,
   };
 }

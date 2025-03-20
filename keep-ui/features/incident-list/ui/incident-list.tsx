@@ -229,11 +229,7 @@ export function IncidentList({
               height={16}
               width={16}
               title={facetOption.display_name}
-              src={
-                facetOption.display_name.includes("@")
-                  ? "/icons/mailgun-icon.png"
-                  : `/icons/${facetOption.display_name}-icon.png`
-              }
+              src={`/icons/${facetOption.display_name}-icon.png`}
             />
           );
         },

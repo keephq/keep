@@ -508,11 +508,7 @@ export function AlertTableServerSide({
               width={16}
               providerType={facetOption.display_name}
               title={facetOption.display_name}
-              src={
-                facetOption.display_name.includes("@")
-                  ? "/icons/mailgun-icon.png"
-                  : `/icons/${facetOption.display_name}-icon.png`
-              }
+              src={`/icons/${facetOption.display_name}-icon.png`}
             />
           );
         },
