@@ -51,12 +51,11 @@ const PushAlertToServerModal = ({
   const selectedSource = watch("source");
   const api = useApi();
 
-  const { data: providersData } = useProviders();
-  const providers = providersData?.providers || [];
+  const { data: providersData } = useProviders({ revalidateOnFocus: false });
 
   useEffect(() => {
-    if (providers) {
-      const sources = providers
+    if (providersData?.providers) {
+      const sources = providersData.providers
         .filter((provider) => provider.alertExample)
         .map((provider) => {
           return {
@@ -67,7 +66,7 @@ const PushAlertToServerModal = ({
         });
       setAlertSources(sources);
     }
-  }, [providers]);
+  }, [providersData]);
 
   const handleSourceChange = (source: AlertSource | null) => {
     if (source) {
