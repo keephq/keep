@@ -1,23 +1,19 @@
 import { Title } from "@tremor/react";
-import {
-  isWorkflowExecution,
-  WorkflowExecutionDetail,
-  WorkflowExecutionFailure,
-} from "@/shared/api/workflow-executions";
 import { WorkflowExecutionResults } from "@/features/workflow-execution-results";
 import { IoClose } from "react-icons/io5";
-import { KeepLoader } from "@/shared/ui";
 
 interface Props {
   closeModal: () => void;
   workflowId: string;
-  workflowExecution: WorkflowExecutionDetail | WorkflowExecutionFailure | null;
+  workflowExecutionId: string;
+  workflowYamlSent: string | null;
 }
 
 export function BuilderWorkflowTestRunModalContent({
   closeModal,
   workflowId,
-  workflowExecution,
+  workflowExecutionId,
+  workflowYamlSent,
 }: Props) {
   return (
     <div className="flex flex-col gap-4">
@@ -32,21 +28,11 @@ export function BuilderWorkflowTestRunModalContent({
         </div>
       </div>
       <div className="flex flex-col">
-        {workflowExecution ? (
-          <WorkflowExecutionResults
-            workflowId={workflowId}
-            initialWorkflowExecution={workflowExecution}
-            workflowExecutionId={
-              isWorkflowExecution(workflowExecution)
-                ? workflowExecution.id
-                : null
-            }
-          />
-        ) : (
-          <div className="flex justify-center">
-            <KeepLoader loadingText="Loading workflow execution results..." />
-          </div>
-        )}
+        <WorkflowExecutionResults
+          workflowId={workflowId}
+          workflowExecutionId={workflowExecutionId}
+          workflowYaml={workflowYamlSent ?? ""}
+        />
       </div>
     </div>
   );

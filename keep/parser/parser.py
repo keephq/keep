@@ -159,7 +159,8 @@ class Parser:
             tenant_id, context_manager, workflow, actions_file, workflow_actions
         )
         workflow_id = self._parse_id(workflow)
-        workflow_description = workflow.get("description")
+        workflow_name = workflow.get("name", "Untitled")
+        workflow_description = workflow.get("description", "No description")
         workflow_disabled = self.__class__.parse_disabled(workflow)
         workflow_owners = self._parse_owners(workflow)
         workflow_tags = self._parse_tags(workflow)
@@ -183,8 +184,9 @@ class Parser:
         workflow_consts = workflow.get("consts", {})
         workflow_debug = workflow.get("debug", False)
 
-        workflow = Workflow(
+        workflow_class = Workflow(
             workflow_id=workflow_id,
+            workflow_name=workflow_name,
             workflow_description=workflow_description,
             workflow_disabled=workflow_disabled,
             workflow_owners=workflow_owners,
@@ -201,7 +203,7 @@ class Parser:
             workflow_debug=workflow_debug,
         )
         self.logger.debug("Workflow parsed successfully")
-        return workflow
+        return workflow_class
 
     def _load_providers_config(
         self,
@@ -812,9 +814,9 @@ class Parser:
             workflow (dict): _description_
         """
         actions_providers = [
-            action.get("provider") for action in workflow.get("actions", [])
+            action.get("provider") for action in workflow.get("actions", []) if "provider" in action
         ]
-        steps_providers = [step.get("provider") for step in workflow.get("steps", [])]
+        steps_providers = [step.get("provider") for step in workflow.get("steps", []) if "provider" in step]
         providers = actions_providers + steps_providers
         try:
             providers = [

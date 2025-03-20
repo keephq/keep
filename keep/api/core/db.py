@@ -186,19 +186,25 @@ def create_workflow_execution(
     fingerprint: str = None,
     execution_id: str = None,
     event_type: str = "alert",
+    test_run: bool = False,
 ) -> str:
     with Session(engine) as session:
         try:
+            workflow_execution_id = execution_id or (str(uuid4()) if not test_run else "test_" + str(uuid4()))
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
             workflow_execution = WorkflowExecution(
-                id=execution_id or str(uuid4()),
-                workflow_id=workflow_id,
+                id=workflow_execution_id,
+                workflow_id=workflow_id if not test_run else None,
                 tenant_id=tenant_id,
                 started=datetime.now(tz=timezone.utc),
                 triggered_by=triggered_by,
                 execution_number=execution_number,
                 status="in_progress",
+                error=None,
+                execution_time=None,
+                results={},
+                # is_test_run=test_run,
             )
             session.add(workflow_execution)
             # Ensure the object has an id
@@ -4373,16 +4379,11 @@ def merge_incidents_to_id(
         enrich_incidents_with_alerts(tenant_id, source_incidents, session=session)
 
         merged_incident_ids = []
-        skipped_incident_ids = []
         failed_incident_ids = []
         for source_incident in source_incidents:
             source_incident_alerts_fingerprints = [
                 alert.fingerprint for alert in source_incident._alerts
             ]
-            if not source_incident_alerts_fingerprints:
-                logger.info(f"Source incident {source_incident.id} doesn't have alerts")
-                skipped_incident_ids.append(source_incident.id)
-                continue
             source_incident.merged_into_incident_id = destination_incident.id
             source_incident.merged_at = datetime.now(tz=timezone.utc)
             source_incident.status = IncidentStatus.MERGED.value
@@ -4413,7 +4414,7 @@ def merge_incidents_to_id(
 
         session.commit()
         session.refresh(destination_incident)
-        return merged_incident_ids, skipped_incident_ids, failed_incident_ids
+        return merged_incident_ids, failed_incident_ids
 
 
 def get_alerts_count(
