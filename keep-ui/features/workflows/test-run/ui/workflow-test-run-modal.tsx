@@ -1,33 +1,33 @@
 import { useEffect, useRef } from "react";
 import { useWorkflowStore } from "@/entities/workflows";
-import {
-  WorkflowExecutionFailure,
-  WorkflowExecutionDetail,
-} from "@/shared/api/workflow-executions";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui";
+import { KeepLoader, showErrorToast } from "@/shared/ui";
 import { useState } from "react";
 import { KeepApiError } from "@/shared/api/KeepApiError";
 import { BuilderWorkflowTestRunModalContent } from "./builder-workflow-testrun-modal-content";
 import Modal from "@/components/ui/Modal";
 import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
-import { stringify } from "yaml";
 import { v4 as uuidv4 } from "uuid";
+import { getBodyFromStringOrDefinitionOrObject } from "@/entities/workflows/lib/yaml-utils";
+import { Callout } from "@tremor/react";
 
 // It listens for the runRequestCount and triggers the test run of the workflow, opening the modal with the results.
 export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
   const { definition, runRequestCount } = useWorkflowStore();
   const api = useApi();
   const [testRunModalOpen, setTestRunModalOpen] = useState(false);
-  const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<
-    WorkflowExecutionDetail | WorkflowExecutionFailure | null
-  >(null);
+  const [workflowExecutionId, setWorkflowExecutionId] = useState<string | null>(
+    null
+  );
+  const [error, setError] = useState<string | null>(null);
   const currentRequestId = useRef<string | null>(null);
+  const [workflowYamlSent, setWorkflowYamlSent] = useState<string | null>(null);
 
   const closeWorkflowExecutionResultsModal = () => {
     currentRequestId.current = null;
     setTestRunModalOpen(false);
-    setRunningWorkflowExecution(null);
+    setWorkflowExecutionId(null);
+    setError(null);
   };
 
   useEffect(() => {
@@ -52,7 +52,10 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
     const workflow = getYamlWorkflowDefinition(definition.value);
     // NOTE: prevent the workflow from being disabled, so test run doesn't fail
     workflow.disabled = false;
-    const body = stringify(workflow);
+    const body = getBodyFromStringOrDefinitionOrObject({
+      workflow,
+    });
+    setWorkflowYamlSent(body);
     api
       .request(`/workflows/test`, {
         method: "POST",
@@ -60,22 +63,20 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
         headers: { "Content-Type": "application/yaml" },
       })
       .then((data) => {
-        console.log("data", data, currentRequestId.current, requestId);
         if (currentRequestId.current !== requestId) {
           return;
         }
-        setRunningWorkflowExecution({
-          ...data,
-        });
+        setError(null);
+        setWorkflowExecutionId(data.workflow_execution_id);
       })
       .catch((error) => {
         if (currentRequestId.current !== requestId) {
           return;
         }
-        setRunningWorkflowExecution({
-          error:
-            error instanceof KeepApiError ? error.message : "Unknown error",
-        });
+        setError(
+          error instanceof KeepApiError ? error.message : "Unknown error"
+        );
+        setWorkflowExecutionId(null);
       })
       .finally(() => {
         if (currentRequestId.current !== requestId) {
@@ -91,11 +92,26 @@ export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
       onClose={closeWorkflowExecutionResultsModal}
       className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
     >
-      <BuilderWorkflowTestRunModalContent
-        closeModal={closeWorkflowExecutionResultsModal}
-        workflowExecution={runningWorkflowExecution}
-        workflowId={workflowId ?? ""}
-      />
+      {workflowExecutionId !== null && (
+        <BuilderWorkflowTestRunModalContent
+          closeModal={closeWorkflowExecutionResultsModal}
+          workflowExecutionId={workflowExecutionId}
+          workflowId={workflowId ?? ""}
+          workflowYamlSent={workflowYamlSent}
+        />
+      )}
+      {error !== null && (
+        <div className="flex justify-center">
+          <Callout title="Workflow execution failed" color="red">
+            {error}
+          </Callout>
+        </div>
+      )}
+      {workflowExecutionId === null && (
+        <div className="flex justify-center">
+          <KeepLoader loadingText="Waiting for workflow execution results..." />
+        </div>
+      )}
     </Modal>
   );
 }

@@ -69,8 +69,8 @@ class Incident(SQLModel, table=True):
     # Auto-incrementing number per tenant
     running_number: Optional[int] = Field(default=None)
 
-    user_generated_name: str | None
-    ai_generated_name: str | None
+    user_generated_name: str | None = Field(sa_column=Column(TEXT))
+    ai_generated_name: str | None = Field(sa_column=Column(TEXT))
 
     user_summary: str = Field(sa_column=Column(TEXT))
     generated_summary: str = Field(sa_column=Column(TEXT))
