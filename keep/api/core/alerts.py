@@ -151,13 +151,16 @@ static_facets = [
 ]
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
-threeshold_query = (
-    select(LastAlert.timestamp)
-    .select_from(LastAlert)
-    .order_by(LastAlert.timestamp.desc())
-    .offset(alerts_hard_limit - 1)
-    .limit(1)
-)
+
+def get_threeshold_query(tenant_id: str):
+    return (
+        select(LastAlert.timestamp)
+        .select_from(LastAlert)
+        .where(LastAlert.tenant_id == tenant_id)
+        .order_by(LastAlert.timestamp.desc())
+        .offset(alerts_hard_limit - 1)
+        .limit(1)
+    )
 
 
 def __build_query_for_filtering(tenant_id: str):
@@ -200,7 +203,7 @@ def __build_query_for_filtering(tenant_id: str):
     )
 
     query = query.filter(LastAlert.tenant_id == tenant_id)
-    query = query.filter(LastAlert.timestamp >= threeshold_query)
+    query = query.filter(LastAlert.timestamp >= get_threeshold_query(tenant_id))
     return query
 
 
@@ -257,7 +260,7 @@ def __build_query_for_filtering_v2(
         )
 
     query = query.filter(LastAlert.tenant_id == tenant_id)
-    query = query.filter(LastAlert.timestamp >= threeshold_query)
+    query = query.filter(LastAlert.timestamp >= get_threeshold_query(tenant_id))
     involved_fields = []
 
     if sql_filter:
