@@ -44,7 +44,7 @@ def build_facets_data_query(
     instance = get_cel_to_sql_provider(properties_metadata)
     base_query = base_query.filter(
         text(instance.convert_to_sql_str(facet_options_query.cel))
-    )
+    ).cte("base_query")
 
     # Main Query: JSON Extraction and Counting
     union_queries = []
@@ -139,7 +139,11 @@ def get_facet_options(
                     properties_metadata=properties_metadata,
                     facet_options_query=facet_options_query,
                 )
-
+                strq = str(
+                    db_query.compile(
+                        compile_kwargs={"literal_binds": True}, dialect=engine.dialect
+                    )
+                )
                 data = session.exec(db_query).all()
             except OperationalError as e:
                 logger.warning(
