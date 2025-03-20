@@ -569,7 +569,6 @@ class WorkflowStore:
                 )
                 return providers_dto, triggers
 
-            providers = self.parser.get_providers_from_workflow(workflow_yaml)
         except Exception as e:
             # Improved logging to capture more details about the error
             self.logger.error(
@@ -579,6 +578,14 @@ class WorkflowStore:
                 providers_dto,
                 triggers,
             )  # Return empty providers and triggers in case of error
+
+        try:
+            providers = self.parser.get_providers_from_workflow(workflow_yaml)
+        except Exception as e:
+            self.logger.error(
+                f"Failed to get providerts from workflow: {e}, workflow: {workflow}"
+            )
+            providers = []
 
         # Step 2: Process providers and add them to DTO
         for provider in providers:

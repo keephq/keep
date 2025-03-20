@@ -812,9 +812,9 @@ class Parser:
             workflow (dict): _description_
         """
         actions_providers = [
-            action.get("provider") for action in workflow.get("actions", [])
+            action.get("provider") for action in workflow.get("actions", []) if "provider" in action
         ]
-        steps_providers = [step.get("provider") for step in workflow.get("steps", [])]
+        steps_providers = [step.get("provider") for step in workflow.get("steps", []) if "provider" in step]
         providers = actions_providers + steps_providers
         try:
             providers = [
