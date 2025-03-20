@@ -113,7 +113,12 @@ function InstallProviderButton({ providerType }: { providerType: string }) {
           provider={{ ...providerObject, id: providerObject.type }}
           installedProvidersMode={false}
           mutate={() => {
-            revalidateMultiple(["providers"], { isExact: true });
+            revalidateMultiple(["/providers"], { isExact: true });
+          }}
+          onConnectChange={(isConnecting, isConnected) => {
+            if (isConnected) {
+              setIsFormOpen(false);
+            }
           }}
           closeModal={() => setIsFormOpen(false)}
           isProviderNameDisabled={false}
@@ -134,7 +139,7 @@ function KeepSetupProviderEditor({
   providerError?: string | null;
   providerNameError?: string | null;
 }) {
-  const { data: { providers, installed_providers: installedProviders } = {} } =
+  const { data: { providers, installed_providers: installedProviders} = {}} =
     useProviders();
   const providerObject =
     providers?.find((p) => p.type === providerType) ?? null;
