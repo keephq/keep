@@ -31,6 +31,7 @@ from keep.api.models.db.alert import (
     LastAlertToIncident,
 )
 from keep.api.models.db.facet import FacetType
+from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 
 logger = logging.getLogger(__name__)
@@ -201,6 +202,7 @@ def __build_query_for_filtering(tenant_id: str):
         and_(
             LastAlertToIncident.tenant_id == Incident.tenant_id,
             LastAlertToIncident.incident_id == Incident.id,
+            Incident.status == IncidentStatus.FIRING,
         ),
     )
 
@@ -258,6 +260,7 @@ def __build_query_for_filtering_v2(
             and_(
                 LastAlertToIncident.tenant_id == Incident.tenant_id,
                 LastAlertToIncident.incident_id == Incident.id,
+                Incident.status == IncidentStatus.FIRING,
             ),
         )
 
