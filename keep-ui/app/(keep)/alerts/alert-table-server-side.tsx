@@ -127,8 +127,8 @@ export function AlertTableServerSide({
   );
   const [grouping, setGrouping] = useState<GroupingState>([]);
   const [facetsPanelRefreshToken, setFacetsPanelRefreshToken] = useState<
-    string | null
-  >(null);
+    string | undefined
+  >(undefined);
   const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
   const [filterCel, setFilterCel] = useState<string>("");
   const [searchCel, setSearchCel] = useState<string>("");
