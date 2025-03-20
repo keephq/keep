@@ -247,7 +247,7 @@ export default function IncidentAlerts({ incident }: Props) {
                   }
                 }
               }}
-              isCandidate={!incident.is_candidate}
+              isCandidate={incident.is_candidate}
             />
           </div>
         ),
