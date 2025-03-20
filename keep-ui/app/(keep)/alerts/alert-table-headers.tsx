@@ -516,16 +516,6 @@ export default function AlertsTableHeaders({
                     table.getState().columnPinning.right?.length
                   );
 
-                // Get the display name for the column header
-                const originalHeader = header.isPlaceholder ? null : (
-                  <div>
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                  </div>
-                );
-
                 // Apply the renamed header if it exists
                 const displayHeader = header.isPlaceholder ? null : (
                   <div>

@@ -202,7 +202,9 @@ export function AlertTableServerSide({
 
     if (timeframeDelta > 0) {
       filterArray.push(
-        `lastReceived >= '${new Date(currentDate.getTime() - timeframeDelta).toISOString()}'`
+        `lastReceived >= '${new Date(
+          currentDate.getTime() - timeframeDelta
+        ).toISOString()}'`
       );
       filterArray.push(`lastReceived <= '${currentDate.toISOString()}'`);
       return filterArray.join(" && ");
@@ -210,7 +212,6 @@ export function AlertTableServerSide({
 
     return null;
   }, [timeframeDelta]);
-
 
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
 
@@ -507,11 +508,7 @@ export function AlertTableServerSide({
               width={16}
               providerType={facetOption.display_name}
               title={facetOption.display_name}
-              src={
-                facetOption.display_name.includes("@")
-                  ? "/icons/mailgun-icon.png"
-                  : `/icons/${facetOption.display_name}-icon.png`
-              }
+              src={`/icons/${facetOption.display_name}-icon.png`}
             />
           );
         },
