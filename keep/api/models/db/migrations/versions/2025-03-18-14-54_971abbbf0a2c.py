@@ -25,6 +25,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
+        # Update NULL values to a default value first
+        op.execute("UPDATE workflowexecution SET workflow_id = 'legacy_null' WHERE workflow_id IS NULL")
         batch_op.alter_column(
             "workflow_id", existing_type=mysql.VARCHAR(length=255), nullable=False
         )
