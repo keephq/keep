@@ -1,18 +1,16 @@
-import queue
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import HTTPException
 
-from keep.api.models.alert import AlertDto
 from keep.api.routes.workflows import get_event_from_body
 from keep.parser.parser import Parser
 
 # Assuming WorkflowParser is the class containing the get_workflow_from_dict method
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
-from keep.workflowmanager.workflowscheduler import WorkflowScheduler, WorkflowStatus
+from keep.workflowmanager.workflowscheduler import WorkflowScheduler
 from keep.workflowmanager.workflowstore import WorkflowStore
 
 path_to_test_resources = Path(__file__).parent / "workflows"
@@ -125,7 +123,12 @@ def test_handle_manual_event_workflow():
 
         assert workflow_execution_id == "test_execution_id"
         assert len(workflow_scheduler.workflows_to_run) == 1
-        assert workflow_scheduler.workflows_to_run[0]["workflow_execution_id"] == "test_execution_id"
+        workflow_run = workflow_scheduler.workflows_to_run[0]
+        assert workflow_run["workflow_execution_id"] == "test_execution_id"
+        assert workflow_run["workflow_id"] == mock_workflow.workflow_id
+        assert workflow_run["tenant_id"] == tenant_id
+        assert workflow_run["triggered_by_user"] == triggered_by_user
+        assert workflow_run["event"] == event
 
 
 def test_handle_manual_event_workflow_test_run():
