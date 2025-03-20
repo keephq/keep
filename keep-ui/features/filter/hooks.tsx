@@ -133,10 +133,7 @@ export const useFacetOptions = (
   const refreshInterval = Math.ceil(
     Math.max((swrValue.data?.responseTime || 1) * 2, 5000)
   );
-  useEffect(
-    () => console.log(`Ihor revalidation token ${revalidationToken}`),
-    [revalidationToken]
-  );
+
   useEffect(
     function watchRevalidationToken() {
       const intervalId = setInterval(() => {
