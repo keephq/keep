@@ -316,7 +316,7 @@ export const useAlertTableCols = (
                   const incident = incidents?.items.find(
                     (incident) => incident.id === incidentId
                   );
-                  if (!incident) return <></>;
+                  if (!incident) return null;
                   const title =
                     incident.user_generated_name || incident.ai_generated_name;
                   return (

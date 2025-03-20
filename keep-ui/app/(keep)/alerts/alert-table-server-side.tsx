@@ -202,7 +202,9 @@ export function AlertTableServerSide({
 
     if (timeframeDelta > 0) {
       filterArray.push(
-        `lastReceived >= '${new Date(currentDate.getTime() - timeframeDelta).toISOString()}'`
+        `lastReceived >= '${new Date(
+          currentDate.getTime() - timeframeDelta
+        ).toISOString()}'`
       );
       filterArray.push(`lastReceived <= '${currentDate.toISOString()}'`);
       return filterArray.join(" && ");
@@ -210,7 +212,6 @@ export function AlertTableServerSide({
 
     return null;
   }, [timeframeDelta]);
-
 
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
 
