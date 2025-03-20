@@ -1,4 +1,3 @@
-from keep.api.core.db import get_workflow
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.workflow import Workflow
 from keep.workflowmanager.workflowstore import WorkflowStore
