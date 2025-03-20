@@ -66,7 +66,6 @@ export const useFacetOptions = (
   revalidationToken?: string | undefined,
   options: SWRConfiguration = {
     revalidateOnFocus: false,
-    revalidateOnMount: false,
     dedupingInterval: 3000,
   }
 ) => {
