@@ -1,5 +1,5 @@
 from dotenv import find_dotenv, load_dotenv
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlmodel import Session
 import logging
 import time
@@ -22,8 +22,8 @@ def get_db_connection():
     """Create database engine and session factory with appropriate connection pooling."""
     engine = create_db_engine()
     SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
-    with Session(engine) as session:
-        return engine, session
+    session = Session(engine)
+    return engine, session
 
 
 def batch_delete_workflow_executions(
@@ -58,6 +58,7 @@ def batch_delete_workflow_executions(
     total_alert_executions_deleted = 0
     total_incident_executions_deleted = 0
     
+    logger.info(f"criteria: {criteria}, age_days: {age_days}, status_filter: {status_filter}, total_limit: {total_limit}")
     # Set up age filter if provided
     if age_days:
         cutoff_date = datetime.utcnow() - timedelta(days=age_days)
@@ -67,27 +68,27 @@ def batch_delete_workflow_executions(
     
     with session as count_session:
         # Build base query for counting
-        base_query = count_session.query(WorkflowExecution)
+        base_query = select(WorkflowExecution)
         
         # Apply cutoff date filter if provided
         if cutoff_date:
-            base_query = base_query.filter(WorkflowExecution.started < cutoff_date)
+            base_query = base_query.where(WorkflowExecution.started < cutoff_date)
             
         # Apply status filter if provided
         if status_filter:
-            base_query = base_query.filter(WorkflowExecution.status.in_(status_filter))
+            base_query = base_query.where(WorkflowExecution.status.in_(status_filter))
             
         # Apply any other criteria
         for key, value in criteria.items():
             if hasattr(WorkflowExecution, key):
-                base_query = base_query.filter(getattr(WorkflowExecution, key) == value)
+                base_query = base_query.where(getattr(WorkflowExecution, key) == value)
         
         # Get total count for progress reporting
-        total_count = base_query.count()
+        total_count = len(count_session.exec(base_query).all())
         
         if total_limit and total_limit < total_count:
-            total_count = total_limit
             logger.info(f"Limiting deletion to {total_limit} records (out of {total_count} matching records)")
+            total_count = total_limit
         
         logger.info(f"Found {total_count} workflow executions matching deletion criteria")
         
@@ -113,22 +114,22 @@ def batch_delete_workflow_executions(
         with session as session:
             try:
                 # Create query for current batch
-                query = session.query(WorkflowExecution)
+                query = select(WorkflowExecution)
                 
                 # Apply the same filters as for counting
                 if cutoff_date:
-                    query = query.filter(WorkflowExecution.started < cutoff_date)
+                    query = query.where(WorkflowExecution.started < cutoff_date)
                     
                 if status_filter:
-                    query = query.filter(WorkflowExecution.status.in_(status_filter))
+                    query = query.where(WorkflowExecution.status.in_(status_filter))
                     
                 for key, value in criteria.items():
                     if hasattr(WorkflowExecution, key):
-                        query = query.filter(getattr(WorkflowExecution, key) == value)
+                        query = query.where(getattr(WorkflowExecution, key) == value)
                 
                 # For pagination - grab IDs greater than the last one we processed
                 if last_id:
-                    query = query.filter(WorkflowExecution.id > last_id)
+                    query = query.where(WorkflowExecution.id > last_id)
                 
                 # Order by ID for consistent pagination
                 query = query.order_by(WorkflowExecution.id)
@@ -137,7 +138,7 @@ def batch_delete_workflow_executions(
                 query = query.limit(batch_size)
                 
                 # First, get all execution IDs for this batch
-                execution_batch = query.all()
+                execution_batch = session.exec(query).all()
                 
                 # Check if we have more data to process
                 if not execution_batch:
@@ -152,17 +153,20 @@ def batch_delete_workflow_executions(
                 actual_batch_size = len(execution_ids)
                 
                 # For reporting, count related records
-                logs_count = session.query(func.count(WorkflowExecutionLog.id)).filter(
+                logs_query = select(func.count(WorkflowExecutionLog.id)).where(
                     WorkflowExecutionLog.workflow_execution_id.in_(execution_ids)
-                ).scalar()
+                )
+                logs_count = session.exec(logs_query).first()
                 
-                alert_executions_count = session.query(func.count(WorkflowToAlertExecution.id)).filter(
+                alert_executions_query = select(func.count(WorkflowToAlertExecution.id)).where(
                     WorkflowToAlertExecution.workflow_execution_id.in_(execution_ids)
-                ).scalar()
+                )
+                alert_executions_count = session.exec(alert_executions_query).first()
                 
-                incident_executions_count = session.query(func.count(WorkflowToIncidentExecution.id)).filter(
+                incident_executions_query = select(func.count(WorkflowToIncidentExecution.id)).where(
                     WorkflowToIncidentExecution.workflow_execution_id.in_(execution_ids)
-                ).scalar()
+                )
+                incident_executions_count = session.exec(incident_executions_query).first()
                 
                 if not dry_run:
                     # Delete in optimal order - start with related tables
@@ -170,33 +174,37 @@ def batch_delete_workflow_executions(
                     # But let's be explicit for safety and reporting
                     
                     # 1. Delete workflow execution logs
-                    session.query(WorkflowExecutionLog).filter(
+                    delete_logs = select(WorkflowExecutionLog).where(
                         WorkflowExecutionLog.workflow_execution_id.in_(execution_ids)
-                    ).delete(synchronize_session=False)
+                    )
+                    session.exec(delete_logs).delete()
                     
                     # 2. Delete workflow to alert executions
-                    session.query(WorkflowToAlertExecution).filter(
+                    delete_alerts = select(WorkflowToAlertExecution).where(
                         WorkflowToAlertExecution.workflow_execution_id.in_(execution_ids)
-                    ).delete(synchronize_session=False)
+                    )
+                    session.exec(delete_alerts).delete()
                     
                     # 3. Delete workflow to incident executions
-                    session.query(WorkflowToIncidentExecution).filter(
+                    delete_incidents = select(WorkflowToIncidentExecution).where(
                         WorkflowToIncidentExecution.workflow_execution_id.in_(execution_ids)
-                    ).delete(synchronize_session=False)
+                    )
+                    session.exec(delete_incidents).delete()
                     
                     # 4. Finally delete the workflow executions themselves
-                    session.query(WorkflowExecution).filter(
+                    delete_executions = select(WorkflowExecution).where(
                         WorkflowExecution.id.in_(execution_ids)
-                    ).delete(synchronize_session=False)
+                    )
+                    session.exec(delete_executions).delete()
                     
                     # Commit the transaction
                     session.commit()
                 
                 # Update counters
                 total_executions_deleted += actual_batch_size
-                total_logs_deleted += logs_count
-                total_alert_executions_deleted += alert_executions_count
-                total_incident_executions_deleted += incident_executions_count
+                total_logs_deleted += logs_count or 0
+                total_alert_executions_deleted += alert_executions_count or 0
+                total_incident_executions_deleted += incident_executions_count or 0
                 
                 # Update processed count for progress reporting
                 processed_count += actual_batch_size
@@ -210,8 +218,8 @@ def batch_delete_workflow_executions(
                 logger.info(
                     f"Batch {batch_count}: Processed {processed_count}/{total_count} executions "
                     f"({pct_complete:.2f}%) at {rate:.2f} records/sec. "
-                    f"Batch contained {actual_batch_size} executions, {logs_count} logs, "
-                    f"{alert_executions_count} alert links, {incident_executions_count} incident links"
+                    f"Batch contained {actual_batch_size} executions, {logs_count or 0} logs, "
+                    f"{alert_executions_count or 0} alert links, {incident_executions_count or 0} incident links"
                 )
                 
             except Exception as e:
@@ -255,6 +263,8 @@ def cleanup_old_workflow_executions(
     engine, Session = get_db_connection()
     
     logger.info(f"Starting cleanup of workflow executions older than {retention_days} days")
+    logger.info(f"batch_size: {batch_size}")
+    logger.info(f"dry_run: {dry_run}")
     
     # Delete completed executions
     logger.info("Processing completed executions...")
