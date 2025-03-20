@@ -70,6 +70,7 @@ export const useFacetOptions = (
   }
 ) => {
   const api = useApi();
+  const isLoadingRef = useRef<boolean>(false);
   const [mergedFacetOptions, setMergedFacetOptions] =
     useState(initialFacetOptions);
   const requestUrl = `/${entityName}/facets/options`;
@@ -80,10 +81,11 @@ export const useFacetOptions = (
         ? requestUrl + "_" + JSON.stringify(facetsQuery)
         : null,
     async () => {
+      isLoadingRef.current = true;
       const currentDate = new Date();
       const response = await api.post(requestUrl, facetsQuery);
       const responseTime = new Date().getTime() - currentDate.getTime();
-
+      isLoadingRef.current = false;
       return {
         response,
         responseTime: responseTime,
@@ -140,7 +142,7 @@ export const useFacetOptions = (
         if (
           revalidationTokenRef.current !==
             processedRevalidationTokenRef.current &&
-          !swrValue.isLoading
+          !isLoadingRef.current
         ) {
           processedRevalidationTokenRef.current = revalidationTokenRef.current;
           setIsSilentLoading(true);
