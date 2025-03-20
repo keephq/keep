@@ -19,6 +19,7 @@ from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, MultipleFieldsNode, PropertiesMapper, PropertiesMappingException
 from keep.api.core.cel_to_sql.properties_metadata import (
     PropertiesMetadata,
+    PropertyMetadataInfo,
 )
 from celpy import CELParseError
 
@@ -28,7 +29,8 @@ class CelToSqlException(Exception):
 
 
 class CelToSqlResult:
-    def __init__(self, sql: str, involved_fields: List[str]):
+
+    def __init__(self, sql: str, involved_fields: List[PropertyMetadataInfo]):
         self.sql = sql
         self.involved_fields = involved_fields
 

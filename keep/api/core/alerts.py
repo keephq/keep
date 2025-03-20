@@ -214,6 +214,21 @@ def __build_query_for_filtering_v2(
 ):
     fetch_incidents = cel and "incident." in cel
     cel_to_sql_instance = get_cel_to_sql_provider(remapped_properties_metadata)
+    sql_filter = None
+    involved_fields = []
+
+    if cel:
+        cel_to_sql_result = cel_to_sql_instance.convert_to_sql_str_v2(cel)
+        sql_filter = cel_to_sql_result.sql
+        involved_fields = cel_to_sql_result.involved_fields
+        fetch_incidents = next(
+            (
+                True
+                for field in involved_fields
+                if field.field_name.startswith("incident.")
+            ),
+            False,
+        )
 
     query = select(*select_args).select_from(LastAlert)
 
@@ -247,11 +262,15 @@ def __build_query_for_filtering_v2(
         )
 
     query = query.filter(LastAlert.tenant_id == tenant_id)
+    involved_fields = []
 
-    if cel:
-        sql_filter = cel_to_sql_instance.convert_to_sql_str(cel)
+    if sql_filter:
         query = query.where(text(sql_filter))
-    return query
+    return {
+        "query": query,
+        "involved_fields": involved_fields,
+        "fetch_incidents": fetch_incidents,
+    }
 
 
 def build_total_alerts_query(tenant_id, cel=None, limit=None):
@@ -263,7 +282,7 @@ def build_total_alerts_query(tenant_id, cel=None, limit=None):
         if fetch_incidents
         else func.count(1)
     )
-    query = __build_query_for_filtering_v2(
+    built_query_result = __build_query_for_filtering_v2(
         tenant_id=tenant_id,
         cel=cel,
         select_args=[count_funct],
@@ -271,7 +290,7 @@ def build_total_alerts_query(tenant_id, cel=None, limit=None):
         fetch_alerts_data=fetch_alerts_data,
     )
 
-    return query
+    return built_query_result["query"]
 
 
 def build_alerts_query(
@@ -283,10 +302,6 @@ def build_alerts_query(
     offset=None,
 ):
     cel_to_sql_instance = get_cel_to_sql_provider(remapped_properties_metadata)
-    fetch_incidents = False
-
-    if cel and "incident." in cel:
-        fetch_incidents = True
 
     if not sort_by:
         sort_by = "timestamp"
@@ -312,7 +327,7 @@ def build_alerts_query(
     else:
         order_by_field = group_by_exp[0]
 
-    query = __build_query_for_filtering_v2(
+    built_query_result = __build_query_for_filtering_v2(
         tenant_id,
         select_args=[
             Alert,
@@ -322,6 +337,8 @@ def build_alerts_query(
         ],
         cel=cel,
     )
+    query = built_query_result["query"]
+    fetch_incidents = built_query_result["fetch_incidents"]
 
     if fetch_incidents:
         if sort_dir == "desc":
@@ -335,9 +352,6 @@ def build_alerts_query(
             query = query.order_by(desc(text(order_by_field)))
         else:
             query = query.order_by(asc(text(order_by_field)))
-
-    if fetch_incidents:
-        query = query.distinct(text(order_by_field), LastAlert.alert_id)
 
     if limit is not None:
         query = query.limit(limit)
