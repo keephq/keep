@@ -604,6 +604,12 @@
 <table>
 <tr>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/asana-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/asana-icon.png" alt="Asana"/><br/>
+            Asana
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/github-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/github-icon.png" alt="GitHub"/><br/>
             GitHub
@@ -639,14 +645,14 @@
             Microsoft Planner
         </a>
     </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/monday-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/monday-icon.png" alt="Monday"/><br/>
             Monday
         </a>
     </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/redmine-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/redmine-icon.png" alt="Redmine"/><br/>
