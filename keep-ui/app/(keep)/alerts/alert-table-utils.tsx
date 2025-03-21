@@ -6,6 +6,7 @@ import {
   VisibilityState,
   createColumnHelper,
   Cell,
+  AccessorKeyColumnDef,
 } from "@tanstack/react-table";
 import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
@@ -135,8 +136,8 @@ export const getRowClassName = (
     expanded
       ? "[&>td]:p-3"
       : rowStyle === "default"
-      ? "[&>td]:px-0.5 [&>td]:py-0"
-      : "[&>td]:p-2",
+        ? "[&>td]:px-0.5 [&>td]:py-0"
+        : "[&>td]:p-2",
     "hover:bg-orange-100"
   );
 };
@@ -194,6 +195,8 @@ interface GenerateAlertTableColsArg {
   setChangeStatusAlert?: (alert: AlertDto) => void;
   presetName: string;
   presetNoisy?: boolean;
+  MenuComponent?: (alert: AlertDto) => React.ReactNode;
+  extraColumns?: AccessorKeyColumnDef<AlertDto, boolean | undefined>[];
 }
 
 export const useAlertTableCols = (
@@ -208,6 +211,8 @@ export const useAlertTableCols = (
     setChangeStatusAlert,
     presetName,
     presetNoisy = false,
+    MenuComponent,
+    extraColumns = [],
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
@@ -660,22 +665,26 @@ export const useAlertTableCols = (
       ),
     }),
     ...filteredAndGeneratedCols,
+    ...extraColumns,
     ...((isMenuDisplayed
       ? [
           columnHelper.display({
             id: "alertMenu",
             minSize: 120,
-            cell: (context) => (
-              <AlertMenu
-                presetName={presetName.toLowerCase()}
-                alert={context.row.original}
-                setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-                setDismissModalAlert={setDismissModalAlert}
-                setChangeStatusAlert={setChangeStatusAlert}
-                setTicketModalAlert={setTicketModalAlert}
-                setNoteModalAlert={setNoteModalAlert}
-              />
-            ),
+            cell: (context) =>
+              MenuComponent ? (
+                MenuComponent(context.row.original)
+              ) : (
+                <AlertMenu
+                  presetName={presetName.toLowerCase()}
+                  alert={context.row.original}
+                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+                  setDismissModalAlert={setDismissModalAlert}
+                  setChangeStatusAlert={setChangeStatusAlert}
+                  setTicketModalAlert={setTicketModalAlert}
+                  setNoteModalAlert={setNoteModalAlert}
+                />
+              ),
             meta: {
               tdClassName: "p-0 md:p-2",
               thClassName: "p-0 md:p-2",
