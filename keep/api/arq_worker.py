@@ -2,6 +2,9 @@ import logging
 from typing import Optional
 from uuid import uuid4
 
+import asyncio
+
+import redis
 from arq import Worker
 from arq.connections import RedisSettings
 from arq.worker import create_worker
@@ -78,6 +81,22 @@ def get_arq_worker(queue_name: str) -> Worker:
         health_check_key=f"{queue_name}:{worker_id}:health-check",
     )
     return worker
+
+async def safe_run_worker(worker: Worker):
+    try:
+        while True:
+            try:
+                await worker.async_run()
+            except asyncio.CancelledError:  # pragma: no cover
+                # happens on shutdown, fine
+                pass
+            except redis.exceptions.ConnectionError:
+                logger.exception("Failed to connect to Redis... Retry in 3 seconds")
+                await asyncio.sleep(3)
+                continue
+            break
+    finally:
+        await worker.close()
 
 
 def at_every_x_minutes(x: int, start: int = 0, end: int = 59):
