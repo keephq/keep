@@ -21,10 +21,10 @@ alert:
   actions:
     - name: trigger-slack
       condition:
-      - name: threshold-condition
-        type: threshold
-        value:  "{{ steps.db-no-space.results }}"
-        compare_to: 90% # Trigger if more than 90% full
+        - name: threshold-condition
+          type: threshold
+          value: "{{ steps.db-no-space.results }}"
+          compare_to: 90% # Trigger if more than 90% full
       provider:
         type: slack
         config: " {{ providers.slack-demo }} "
@@ -34,98 +34,102 @@ alert:
             The disk space of {{ providers.db-server-mock.description }} is about to finish
             Disk space left: {{ steps.db-no-space.results }}
           blocks:
-          - type: header
-            text:
-              type: plain_text
-              text: 'Alert! :alarm_clock:'
-              emoji: true
-          - type: section
-            text:
-              type: mrkdwn
-              text: |-
-                Hello, SRE and Assistant to the Regional Manager Dwight! *Michael Scott* wants to know what's going on with the servers in the paper warehouse, there is a critical issue on-going and paper *must be delivered on time*.
-                *This is the alert context:*
-          - type: divider
-          - type: section
-            text:
-              type: mrkdwn
-              text: |-
-                Server *{{ providers.db-server-mock.description }}*
-                :floppy_disk: disk space is at {{ steps.db-no-space.results }} capacity
-                Seems like it prevents further inserts in to the database with some weird exception: 'This is a prank by Jim Halpert'
-                This means that paper production is currently on hold, Dunder Mifflin Paper Company *may lose revenue due to that*.
-            accessory:
-              type: image
-              image_url: https://media.licdn.com/dms/image/C4E03AQGtRDDj3GI4Ig/profile-displayphoto-shrink_800_800/0/1550248958619?e=2147483647&v=beta&t=-AYVwN44CsHUdIcd-7iOHQVVjfhEC0DZydhlmvNvTKo
-              alt_text: jim does dwight
-          - type: divider
-          - type: input
-            element:
-              type: multi_users_select
-              placeholder:
-                type: plain_text
-                text: Select users
-                emoji: true
-              action_id: multi_users_select-action
-            label:
-              type: plain_text
-              text: Select the people for the mission
-              emoji: true
-          - type: divider
-          - type: section
-            text:
-              type: plain_text
-              text: 'Some context that can help you:'
-              emoji: true
-          - type: context
-            elements:
-            - type: plain_text
-              text: 'DB System Info: Some important context fetched from the DB'
-              emoji: true
-          - type: context
-            elements:
-            - type: image
-              image_url: https://pbs.twimg.com/profile_images/625633822235693056/lNGUneLX_400x400.jpg
-              alt_text: cute cat
-            - type: mrkdwn
-              text: "*Cat* is currently on site, ready to follow your instructions."
-          - type: divider
-          - dispatch_action: true
-            type: input
-            element:
-              type: plain_text_input
-              action_id: plain_text_input-action
-            label:
-              type: plain_text
-              text: Please Acknowledge
-              emoji: true
-          - type: actions
-            elements:
-            - type: button
-              style: primary
+            - type: header
               text:
                 type: plain_text
-                text: ":dog: Datadog"
+                text: "Alert! :alarm_clock:"
                 emoji: true
-              value: click_me_123
-            - type: button
-              style: danger
+            - type: section
+              text:
+                type: mrkdwn
+                text: |-
+                  Hello, SRE and Assistant to the Regional Manager Dwight! *Michael Scott* wants to know what's going on with the servers in the paper warehouse, there is a critical issue on-going and paper *must be delivered on time*.
+                  *This is the alert context:*
+            - type: divider
+            - type: section
+              text:
+                type: mrkdwn
+                text: |-
+                  Server *{{ providers.db-server-mock.description }}*
+                  :floppy_disk: disk space is at {{ steps.db-no-space.results }} capacity
+                  Seems like it prevents further inserts in to the database with some weird exception: 'This is a prank by Jim Halpert'
+                  This means that paper production is currently on hold, Dunder Mifflin Paper Company *may lose revenue due to that*.
+              accessory:
+                type: image
+                image_url: https://media.licdn.com/dms/image/C4E03AQGtRDDj3GI4Ig/profile-displayphoto-shrink_800_800/0/1550248958619?e=2147483647&v=beta&t=-AYVwN44CsHUdIcd-7iOHQVVjfhEC0DZydhlmvNvTKo
+                alt_text: jim does dwight
+            - type: divider
+            - type: input
+              element:
+                type: multi_users_select
+                placeholder:
+                  type: plain_text
+                  text: Select users
+                  emoji: true
+                action_id: multi_users_select-action
+              label:
+                type: plain_text
+                text: Select the people for the mission
+                emoji: true
+            - type: divider
+            - type: section
               text:
                 type: plain_text
-                text: ":sos: Database"
+                text: "Some context that can help you:"
                 emoji: true
-              value: click_me_123
-              url: https://google.com
-            - type: button
-              text:
+            - type: context
+              elements:
+                - type: plain_text
+                  text: "DB System Info: Some important context fetched from the DB"
+                  emoji: true
+            - type: context
+              elements:
+                - type: image
+                  image_url: https://pbs.twimg.com/profile_images/625633822235693056/lNGUneLX_400x400.jpg
+                  alt_text: cute cat
+                - type: mrkdwn
+                  text: "*Cat* is currently on site, ready to follow your instructions."
+            - type: divider
+            - dispatch_action: true
+              type: input
+              element:
+                type: plain_text_input
+                action_id: plain_text_input-action
+              label:
                 type: plain_text
-                text: ":book: Playbook"
+                text: Please Acknowledge
                 emoji: true
-              value: click_me_123
-              url: https://google.com
-
+            - type: actions
+              elements:
+                - type: button
+                  style: primary
+                  text:
+                    type: plain_text
+                    text: ":dog: Datadog"
+                    emoji: true
+                  value: click_me_123
+                - type: button
+                  style: danger
+                  text:
+                    type: plain_text
+                    text: ":sos: Database"
+                    emoji: true
+                  value: click_me_123
+                  url: https://google.com
+                - type: button
+                  text:
+                    type: plain_text
+                    text: ":book: Playbook"
+                    emoji: true
+                  value: click_me_123
+                  url: https://google.com
 
 providers:
   db-server-mock:
     description: Paper DB Server
     authentication:
+
+workflow:
+  id: database-disk-space-monitor
+  name: Database Disk Space Monitor
+  description: Monitors database disk space usage and sends detailed Slack notifications with interactive components when space is low.

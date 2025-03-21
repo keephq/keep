@@ -45,6 +45,7 @@ from keep.api.models.workflow import (
     WorkflowDTO,
     WorkflowExecutionDTO,
     WorkflowExecutionLogsDTO,
+    WorkflowRunResponseDTO,
     WorkflowToAlertExecutionDTO,
 )
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
@@ -317,6 +318,34 @@ def export_workflows(
     workflows = workflowstore.get_all_workflows_yamls(tenant_id=tenant_id)
     return workflows
 
+def get_event_from_body(body: dict, tenant_id: str):
+    event_body = body.get("body", {}) or body
+    # Handle regular run from body
+    event_class = (
+        AlertDto if body.get("type", "alert") == "alert" else IncidentDto
+    )
+    
+    # Handle UI triggered events
+    event_body["id"] = event_body.get("fingerprint", "manual-run")
+    event_body["name"] = event_body.get("fingerprint", "manual-run")
+    event_body["lastReceived"] = datetime.datetime.now(
+        tz=datetime.timezone.utc
+    ).isoformat()
+    if "source" in event_body and not isinstance(
+        event_body["source"], list
+    ):
+        event_body["source"] = [event_body["source"]]
+
+    try:
+        event = event_class(**event_body)
+        if isinstance(event, IncidentDto):
+            event._tenant_id = tenant_id
+    except TypeError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid event format",
+        )
+    return event
 
 @router.post(
     "/{workflow_id}/run",
@@ -366,33 +395,7 @@ def run_workflow(
                 )
         else:
             # Handle regular run from body
-            event_body = body.get("body", {}) or body
-            event_class = (
-                AlertDto if body.get("type", "alert") == "alert" else IncidentDto
-            )
-
-            # Handle UI triggered events
-            fingerprint = event_body.get("fingerprint", "")
-            if (fingerprint and "test-workflow" in fingerprint) or not body:
-                event_body["id"] = event_body.get("fingerprint", "manual-run")
-                event_body["name"] = event_body.get("fingerprint", "manual-run")
-                event_body["lastReceived"] = datetime.datetime.now(
-                    tz=datetime.timezone.utc
-                ).isoformat()
-                if "source" in event_body and not isinstance(
-                    event_body["source"], list
-                ):
-                    event_body["source"] = [event_body["source"]]
-
-            try:
-                event = event_class(**event_body)
-                if isinstance(event, IncidentDto):
-                    event._tenant_id = tenant_id
-            except TypeError:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Invalid event format",
-                )
+            event = get_event_from_body(body, tenant_id)
 
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
             workflow_id, tenant_id, created_by, event
@@ -465,20 +468,21 @@ async def run_workflow_from_definition(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:workflows"])
     ),
-) -> dict:
+    body: Optional[Dict[Any, Any]] = Body({}),
+) -> WorkflowRunResponseDTO:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
-    workflow = await __get_workflow_raw_data(request, file)
+    workflow_dict = await __get_workflow_raw_data(request, file)
     workflowstore = WorkflowStore()
     workflowmanager = WorkflowManager.get_instance()
     try:
         workflow = workflowstore.get_workflow_from_dict(
-            tenant_id=tenant_id, workflow=workflow
+            tenant_id=tenant_id, workflow=workflow_dict
         )
     except Exception as e:
         logger.exception(
             "Failed to parse workflow",
-            extra={"tenant_id": tenant_id, "workflow": workflow},
+            extra={"tenant_id": tenant_id, "workflow_dict": workflow_dict},
         )
         raise HTTPException(
             status_code=400,
@@ -486,8 +490,9 @@ async def run_workflow_from_definition(
         )
 
     try:
-        workflow_execution = workflowmanager.scheduler.handle_workflow_test(
-            workflow, tenant_id, created_by
+        event = get_event_from_body(body, tenant_id)
+        workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
+            workflow.workflow_id, tenant_id, created_by, event, workflow=workflow, test_run=True
         )
     except Exception as e:
         logger.exception(
@@ -497,12 +502,10 @@ async def run_workflow_from_definition(
             status_code=500,
             detail=f"Failed to run test workflow: {e}",
         )
-    logger.info(
-        "Workflow ran successfully",
-        extra={"workflow_execution": workflow_execution},
+
+    return WorkflowRunResponseDTO(
+        workflow_execution_id=workflow_execution_id,
     )
-    # TODO: return the workflow execution DTO, or at least logs, so results can be shown in the UI
-    return workflow_execution
 
 
 async def __get_workflow_raw_data(request: Request, file: UploadFile | None) -> dict:
@@ -910,8 +913,9 @@ def delete_workflow_by_id(
     workflowstore = WorkflowStore()
     workflowstore.delete_workflow(workflow_id=workflow_id, tenant_id=tenant_id)
     return {"workflow_id": workflow_id, "status": "deleted"}
+    
 
-
+@router.get("/runs/{workflow_execution_id}")
 @router.get(
     "/{workflow_id}/runs/{workflow_execution_id}",
     description="Get a workflow execution status",

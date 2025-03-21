@@ -1,16 +1,13 @@
 import asyncio
-import datetime
 import logging
 import os
 import random
 import threading
 import time
-from datetime import timezone
 from uuid import uuid4
 
 import aiohttp
 import requests
-from dateutil import parser
 from requests.models import PreparedRequest
 
 from keep.api.core.db import get_session_sync
@@ -282,28 +279,6 @@ def get_or_create_correlation_rules(keep_api_key, keep_api_url):
             )
             response.raise_for_status()
 
-
-def remove_old_incidents(keep_api_key, keep_api_url):
-    consider_old_timedelta = datetime.timedelta(minutes=30)
-    incidents_existing = requests.get(
-        f"{keep_api_url}/incidents",
-        headers={"x-api-key": keep_api_key},
-    )
-    incidents_existing.raise_for_status()
-    incidents_existing = incidents_existing.json()["items"]
-
-    for incident in incidents_existing:
-        if parser.parse(incident["creation_time"]).replace(tzinfo=timezone.utc) < (
-            datetime.datetime.now() - consider_old_timedelta
-        ).astimezone(timezone.utc):
-            incident_id = incident["id"]
-            response = requests.delete(
-                f"{keep_api_url}/incidents/{incident_id}",
-                headers={"x-api-key": keep_api_key},
-            )
-            response.raise_for_status()
-
-
 def get_installed_providers(keep_api_key, keep_api_url):
     response = requests.get(
         f"{keep_api_url}/providers",
@@ -495,11 +470,6 @@ async def simulate_alerts_async(
 
         try:
             logger.info("Looping to send alerts...")
-
-            if clean_old_incidents:
-                logger.info("Removing old incidents...")
-                remove_old_incidents(keep_api_key, keep_api_url)
-                logger.info("Old incidents removed.")
 
             if demo_ai:
                 perform_demo_ai(keep_api_key, keep_api_url)

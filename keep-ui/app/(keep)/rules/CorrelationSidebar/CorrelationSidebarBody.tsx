@@ -70,6 +70,8 @@ export const CorrelationSidebarBody = ({
       createOn,
       incidentNameTemplate,
       incidentPrefix,
+      multiLevel,
+      multiLevelPropertyName,
     } = correlationFormData;
 
     const body = {
@@ -85,6 +87,8 @@ export const CorrelationSidebarBody = ({
       createOn: createOn,
       incidentNameTemplate,
       incidentPrefix,
+      multiLevel,
+      multiLevelPropertyName,
     };
 
     try {
@@ -101,7 +105,7 @@ export const CorrelationSidebarBody = ({
   };
 
   return (
-    <div className="space-y-4 pt-10 flex flex-col flex-1">
+    <div className="space-y-4 flex flex-col flex-1 p-4">
       {isCalloutShown && (
         <Callout
           className="relative"

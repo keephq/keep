@@ -1,8 +1,9 @@
-id: retrieve-cloudwatch-logs
-name: Retrieve CloudWatch Logs
-description: Retrieve CloudWatch Logs
-triggers:
-  - type: manual
+workflow:
+  id: cloudwatch-log-retriever
+  name: CloudWatch Log Retriever
+  description: Retrieves and analyzes CloudWatch logs with custom queries, filtering, and alert generation capabilities.
+  triggers:
+    - type: manual
 
 steps:
   - name: cw-logs
@@ -13,7 +14,7 @@ steps:
         log_group: "meow_logs"
         query: "fields @message | sort @timestamp desc | limit 20"
         hours: 12
-        remove_ptr_from_results: true  # We need only @message, no need for @ptr
+        remove_ptr_from_results: true # We need only @message, no need for @ptr
 
 actions:
   - name: raise-alert

@@ -46,7 +46,7 @@ export const AlertPresetLink = ({
 
   const { totalCount } = useLastAlerts({
     cel: preset.options.find((option) => option.label === "CEL")?.value || "",
-    limit: 20,
+    limit: 0,
     offset: 0,
   });
 

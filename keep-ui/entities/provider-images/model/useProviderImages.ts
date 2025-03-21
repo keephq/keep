@@ -1,14 +1,18 @@
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useApiUrl } from "@/utils/hooks/useConfig";
-import useSWR from "swr";
+import useSWRImmutable from "swr";
 
 export interface CustomImage {
   provider_name: string;
   id: string;
 }
 
+export const fallbackIcon = "/icons/unknown-icon.png";
+
 // Cache for blob URLs to prevent memory leaks
 const blobCache: Record<string, string> = {};
+// Cache for in-flight requests to prevent duplicate fetches
+const requestCache: Record<string, Promise<string>> = {};
 
 export function useProviderImages() {
   const api = useApi();
@@ -19,14 +23,23 @@ export function useProviderImages() {
     isLoading,
     error,
     mutate,
-  } = useSWR<CustomImage[]>("/provider-images", async () => {
-    const response = await api.get("/provider-images");
-    return response;
-  });
+  } = useSWRImmutable<CustomImage[]>(
+    "/provider-images",
+    async () => {
+      const response = await api.get("/provider-images");
+      return response;
+    },
+    {
+      revalidateOnFocus: false,
+      revalidateOnMount: false,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+    }
+  );
 
   // Use SWR for image fetching
   const useProviderImage = (providerName: string) => {
-    return useSWR(
+    return useSWRImmutable(
       providerName ? `/provider-images/${providerName}` : null,
       async () => {
         // Check cache first
@@ -52,24 +65,46 @@ export function useProviderImages() {
   };
 
   const getImageUrl = async (providerName: string) => {
-    // Check cache first
+    // Check blob cache first
     if (blobCache[providerName]) {
       return blobCache[providerName];
     }
 
-    const response = await fetch(`${apiUrl}/provider-images/${providerName}`, {
-      headers: {
-        Authorization: `Bearer ${api.getToken()}`,
-      },
-    });
+    // Check if there's already a request in flight
+    if (providerName in requestCache) {
+      return requestCache[providerName];
+    }
 
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
+    // Create new request promise and store in cache
+    requestCache[providerName] = fetch(
+      `${apiUrl}/provider-images/${providerName}`,
+      {
+        headers: {
+          Authorization: `Bearer ${api.getToken()}`,
+        },
+      }
+    )
+      .then((response) => (response.ok ? response.blob() : null))
+      .then((blob) => {
+        let url: string;
 
-    // Store in cache
-    blobCache[providerName] = url;
+        if (!blob) {
+          url = fallbackIcon;
+          blobCache[providerName] = fallbackIcon;
+        } else {
+          url = URL.createObjectURL(blob);
+          blobCache[providerName] = url;
+        }
 
-    return url;
+        delete requestCache[providerName];
+        return url;
+      })
+      .catch((error) => {
+        delete requestCache[providerName];
+        throw error;
+      });
+
+    return requestCache[providerName];
   };
 
   return {
@@ -79,5 +114,6 @@ export function useProviderImages() {
     refresh: mutate,
     getImageUrl,
     useProviderImage,
+    blobCache,
   };
 }

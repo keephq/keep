@@ -16,14 +16,24 @@ class NoAuthVerifier(AuthVerifierBase):
 
     def _verify_bearer_token(self, token: str) -> AuthenticatedEntity:
         try:
-            token_payload = json.loads(token)
-            tenant_id = token_payload["tenant_id"] or SINGLE_TENANT_UUID
-            email = token_payload["user_id"] or SINGLE_TENANT_EMAIL
-            return AuthenticatedEntity(
-                tenant_id=tenant_id,
-                email=email,
-                role=AdminRole.get_name(),
-            )
+            if token.startswith("keepActiveTenant"):
+                active_tenant, token = token.split("&")
+                active_tenant = active_tenant.split("=")[1]
+                tenant_id = active_tenant or SINGLE_TENANT_UUID
+                return AuthenticatedEntity(
+                    tenant_id=tenant_id,
+                    email=SINGLE_TENANT_EMAIL,
+                    role=AdminRole.get_name(),
+                )
+            else:
+                token_payload = json.loads(token)
+                tenant_id = token_payload["tenant_id"] or SINGLE_TENANT_UUID
+                email = token_payload["user_id"] or SINGLE_TENANT_EMAIL
+                return AuthenticatedEntity(
+                    tenant_id=tenant_id,
+                    email=email,
+                    role=AdminRole.get_name(),
+                )
         except Exception:
             return AuthenticatedEntity(
                 tenant_id=SINGLE_TENANT_UUID,

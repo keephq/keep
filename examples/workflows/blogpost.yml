@@ -1,6 +1,7 @@
 workflow:
-  id: blogpost-workflow
-  description: Enrich the alerts and open ticket
+  id: critical-alert-enrichment
+  name: Critical Alert Enrichment
+  description: Enriches critical alerts with customer information from MySQL and creates ServiceNow incident tickets with detailed context.
   triggers:
     # filter on critical alerts
     - type: alert

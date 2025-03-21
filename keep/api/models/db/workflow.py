@@ -62,7 +62,7 @@ class WorkflowExecution(SQLModel, table=True):
     )
 
     id: str = Field(default=None, primary_key=True)
-    workflow_id: str = Field(foreign_key="workflow.id")
+    workflow_id: str | None = Field(foreign_key="workflow.id", default=None) # default=None for test runs
     tenant_id: str = Field(foreign_key="tenant.id")
     started: datetime = Field(default_factory=datetime.utcnow, index=True)
     triggered_by: str = Field(sa_column=Column(TEXT))
@@ -72,7 +72,6 @@ class WorkflowExecution(SQLModel, table=True):
         default_factory=lambda: int(datetime.utcnow().timestamp() / 120)
     )
     execution_number: int
-    logs: Optional[str]
     error: Optional[str] = Field(max_length=10240)
     execution_time: Optional[int]
     results: dict = Field(sa_column=Column(JSON), default={})

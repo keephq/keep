@@ -45,6 +45,7 @@ from keep.api.models.db.alert import Alert, AlertAudit, AlertRaw
 from keep.api.models.incident import IncidentDto
 from keep.api.tasks.notification_cache import get_notification_cache
 from keep.api.utils.enrichment_helpers import (
+    calculated_firing_counter,
     calculated_start_firing_time,
     convert_db_alerts_to_dto_alerts,
 )
@@ -158,6 +159,11 @@ def __save_to_db(
                 )
                 previous_alert = convert_db_alerts_to_dto_alerts(previous_alert)
                 formatted_event.firingStartTime = calculated_start_firing_time(
+                    formatted_event, previous_alert
+                )
+
+                # we now need to update the firing counter
+                formatted_event.firingCounter = calculated_firing_counter(
                     formatted_event, previous_alert
                 )
 

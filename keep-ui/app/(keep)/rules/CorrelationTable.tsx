@@ -84,6 +84,8 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         incidents: selectedRule.incidents,
         incidentNameTemplate: selectedRule.incident_name_template || "",
         incidentPrefix: selectedRule.incident_prefix || "",
+        multiLevel: selectedRule.multi_level,
+        multiLevelPropertyName: selectedRule.multi_level_property_name || "",
       };
     }
 

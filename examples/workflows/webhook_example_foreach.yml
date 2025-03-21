@@ -1,7 +1,7 @@
 workflow:
-  id: run-webhook-foreach
-  description: Run a webhook for each alert
-  name: Run webhook for each alert
+  id: webhook-batch-processor
+  name: Webhook Batch Processor
+  description: Processes multiple alerts through webhooks with conditional execution based on alert status.
   debug: true
   triggers:
     - type: manual
