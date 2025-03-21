@@ -186,19 +186,25 @@ def create_workflow_execution(
     fingerprint: str = None,
     execution_id: str = None,
     event_type: str = "alert",
+    test_run: bool = False,
 ) -> str:
     with Session(engine) as session:
         try:
+            workflow_execution_id = execution_id or (str(uuid4()) if not test_run else "test_" + str(uuid4()))
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
             workflow_execution = WorkflowExecution(
-                id=execution_id or str(uuid4()),
-                workflow_id=workflow_id,
+                id=workflow_execution_id,
+                workflow_id=workflow_id if not test_run else None,
                 tenant_id=tenant_id,
                 started=datetime.now(tz=timezone.utc),
                 triggered_by=triggered_by,
                 execution_number=execution_number,
                 status="in_progress",
+                error=None,
+                execution_time=None,
+                results={},
+                # is_test_run=test_run,
             )
             session.add(workflow_execution)
             # Ensure the object has an id
@@ -1686,6 +1692,18 @@ def get_alert_by_event_id(
     return alert
 
 
+def get_alerts_by_ids(
+    tenant_id: str, alert_ids: list[str | UUID], session: Optional[Session] = None
+) -> List[Alert]:
+    with existed_or_new_session(session) as session:
+        query = (
+            select(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.id.in_(alert_ids))
+        )
+        query = query.options(subqueryload(Alert.alert_enrichment))
+        return session.exec(query).all()
+
 def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:
     # get the previous alert for a given fingerprint
     with Session(engine) as session:
@@ -1879,6 +1897,8 @@ def create_rule(
     create_on=CreateIncidentOn.ANY.value,
     incident_name_template=None,
     incident_prefix=None,
+    multi_level=False,
+    multi_level_property_name=None,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -1898,6 +1918,8 @@ def create_rule(
             create_on=create_on,
             incident_name_template=incident_name_template,
             incident_prefix=incident_prefix,
+            multi_level=multi_level,
+            multi_level_property_name=multi_level_property_name,
         )
         session.add(rule)
         session.commit()
@@ -1920,6 +1942,8 @@ def update_rule(
     create_on,
     incident_name_template,
     incident_prefix,
+    multi_level,
+    multi_level_property_name,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -1944,6 +1968,8 @@ def update_rule(
             rule.create_on = create_on
             rule.incident_name_template = incident_name_template
             rule.incident_prefix = incident_prefix
+            rule.multi_level = multi_level
+            rule.multi_level_property_name = multi_level_property_name
             session.commit()
             session.refresh(rule)
             return rule
@@ -1951,7 +1977,7 @@ def update_rule(
             return None
 
 
-def get_rules(tenant_id, ids=None):
+def get_rules(tenant_id, ids=None) -> list[Rule]:
     with Session(engine) as session:
         # Start building the query
         query = (
@@ -3533,7 +3559,7 @@ def get_last_incidents(
         ).filter(
             Incident.tenant_id == tenant_id,
             Incident.is_candidate == is_candidate,
-            Incident.is_visible == True
+            Incident.is_visible == True,
         )
 
         if allowed_incident_ids:
@@ -3652,6 +3678,9 @@ def create_incident_from_dto(
         if "incident_type" not in incident_dict:
             incident_dict["incident_type"] = IncidentType.MANUAL.value
 
+    if incident_dto.severity is not None:
+        incident_dict["severity"] = incident_dto.severity.order
+
     return create_incident_from_dict(tenant_id, incident_dict)
 
 
@@ -3722,9 +3751,7 @@ def update_incident_from_dto_by_id(
 
 
 def get_incident_by_fingerprint(
-    tenant_id: str,
-    fingerprint: str,
-    session: Optional[Session] = None
+    tenant_id: str, fingerprint: str, session: Optional[Session] = None
 ) -> Optional[Incident]:
     with existed_or_new_session(session) as session:
         return session.exec(
@@ -3735,9 +3762,7 @@ def get_incident_by_fingerprint(
 
 
 def delete_incident_by_id(
-    tenant_id: str,
-    incident_id: UUID,
-    session: Optional[Session] = None
+    tenant_id: str, incident_id: UUID, session: Optional[Session] = None
 ) -> bool:
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id)
@@ -4354,16 +4379,11 @@ def merge_incidents_to_id(
         enrich_incidents_with_alerts(tenant_id, source_incidents, session=session)
 
         merged_incident_ids = []
-        skipped_incident_ids = []
         failed_incident_ids = []
         for source_incident in source_incidents:
             source_incident_alerts_fingerprints = [
                 alert.fingerprint for alert in source_incident._alerts
             ]
-            if not source_incident_alerts_fingerprints:
-                logger.info(f"Source incident {source_incident.id} doesn't have alerts")
-                skipped_incident_ids.append(source_incident.id)
-                continue
             source_incident.merged_into_incident_id = destination_incident.id
             source_incident.merged_at = datetime.now(tz=timezone.utc)
             source_incident.status = IncidentStatus.MERGED.value
@@ -4394,7 +4414,7 @@ def merge_incidents_to_id(
 
         session.commit()
         session.refresh(destination_incident)
-        return merged_incident_ids, skipped_incident_ids, failed_incident_ids
+        return merged_incident_ids, failed_incident_ids
 
 
 def get_alerts_count(
@@ -5185,6 +5205,21 @@ def get_activity_report(session: Optional[Session] = None):
             .count()
         )
     return activity_report
+
+
+def get_last_alerts_by_fingerprints(
+    tenant_id: str,
+    fingerprint: List[str],
+    session: Optional[Session] = None,
+) -> List[LastAlert]:
+    with existed_or_new_session(session) as session:
+        query = select(LastAlert).where(
+            and_(
+                LastAlert.tenant_id == tenant_id,
+                LastAlert.fingerprint.in_(fingerprint),
+            )
+        )
+        return session.exec(query).all()
 
 
 def get_last_alert_by_fingerprint(

@@ -316,8 +316,16 @@ class ServicenowProvider(BaseTopologyProvider):
         else:
             rel_json = rel_response.json()
             for relationship in rel_json.get("result", []):
-                parent_id = relationship.get("parent", {}).get("value")
-                child_id = relationship.get("child", {}).get("value")
+                parent = relationship.get("parent", {})
+                if type(parent) is dict:
+                    parent_id = relationship.get("parent", {}).get("value")
+                else:
+                    parent_id = None
+                child = relationship.get("child", {})
+                if type(child) is dict:
+                    child_id = child.get("value")
+                else:
+                    child_id = None
                 relationship_type_id = relationship.get("type", {}).get("value")
                 relationship_type = relationship_types.get(relationship_type_id)
                 if parent_id not in relationships:
@@ -329,12 +337,15 @@ class ServicenowProvider(BaseTopologyProvider):
         for entity in cmdb_data:
             sys_id = entity.get("sys_id")
             owned_by = entity.get("owned_by.name")
+            environment = entity.get("environment")
+            if environment is None:
+                environment = ""
             topology_service = TopologyServiceInDto(
                 source_provider_id=self.provider_id,
                 service=sys_id,
                 display_name=entity.get("name"),
                 description=entity.get("short_description"),
-                environment=entity.get("environment"),
+                environment=environment,
                 team=owned_by,
                 dependencies=relationships.get(sys_id, {}),
                 ip_address=entity.get("ip_address"),
@@ -462,10 +473,14 @@ if __name__ == "__main__":
     )
     # Load environment variables
     import os
+    from unittest.mock import patch
 
-    service_now_base_url = os.environ.get("SERVICENOW_BASE_URL")
-    service_now_username = os.environ.get("SERVICENOW_USERNAME")
-    service_now_password = os.environ.get("SERVICENOW_PASSWORD")
+    service_now_base_url = os.environ.get("SERVICENOW_BASE_URL", "https://meow.me")
+    service_now_username = os.environ.get("SERVICENOW_USERNAME", "admin")
+    service_now_password = os.environ.get("SERVICENOW_PASSWORD", "admin")
+    mock_real_requests_with_json_data = (
+        os.environ.get("MOCK_REAL_REQUESTS_WITH_JSON_DATA", "true").lower() == "true"
+    )
 
     # Initalize the provider and provider config
     config = ProviderConfig(
@@ -480,5 +495,40 @@ if __name__ == "__main__":
         context_manager, provider_id="servicenow", config=config
     )
 
-    r = provider.pull_topology()
+    def mock_get(*args, **kwargs):
+        """
+        Mock topology responses using json files.
+        """
+
+        class MockResponse:
+            def __init__(self):
+                self.ok = True
+                self.status_code = 200
+                self.url = args[0]
+
+            def json(self):
+                if "cmdb_ci" in self.url:
+                    with open(
+                        os.path.join(os.path.dirname(__file__), "cmdb_ci.json")
+                    ) as f:
+                        return json.load(f)
+                elif "cmdb_rel_type" in self.url:
+                    with open(
+                        os.path.join(os.path.dirname(__file__), "cmdb_rel_type.json")
+                    ) as f:
+                        return json.load(f)
+                elif "cmdb_rel_ci" in self.url:
+                    with open(
+                        os.path.join(os.path.dirname(__file__), "cmdb_rel_ci.json")
+                    ) as f:
+                        return json.load(f)
+                return {}
+
+        return MockResponse()
+
+    if mock_real_requests_with_json_data:
+        with patch("requests.get", side_effect=mock_get):
+            r = provider.pull_topology()
+    else:
+        r = provider.pull_topology()
     print(r)

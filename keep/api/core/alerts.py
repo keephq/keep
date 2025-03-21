@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 from typing import Tuple
@@ -11,6 +12,7 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     JsonFieldMapping,
     PropertiesMetadata,
     SimpleFieldMapping,
+    remap_fields_configurations,
 )
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
@@ -29,6 +31,7 @@ from keep.api.models.db.alert import (
     LastAlertToIncident,
 )
 from keep.api.models.db.facet import FacetType
+from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 
 logger = logging.getLogger(__name__)
@@ -93,7 +96,7 @@ alert_field_configurations = [
     ),
 ]
 alias_column_mapping = {
-    "filter_timestamp": "alert.timestamp",
+    "filter_timestamp": "lastalert.timestamp",
     "filter_provider_id": "alert.provider_id",
     "filter_provider_type": "alert.provider_type",
     "filter_incident_id": "incident.id",
@@ -104,7 +107,12 @@ alias_column_mapping = {
     "filter_fingerprint": "lastalert.fingerprint",
 }
 
+remapped_field_configurations = remap_fields_configurations(
+    alias_column_mapping, alert_field_configurations
+)
+
 properties_metadata = PropertiesMetadata(alert_field_configurations)
+remapped_properties_metadata = PropertiesMetadata(remapped_field_configurations)
 
 static_facets = [
     FacetDto(
@@ -146,87 +154,146 @@ static_facets = [
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
 
+def get_threeshold_query(tenant_id: str):
+    return func.coalesce(
+        select(LastAlert.timestamp)
+        .select_from(LastAlert)
+        .where(LastAlert.tenant_id == tenant_id)
+        .order_by(LastAlert.timestamp.desc())
+        .limit(1)
+        .offset(alerts_hard_limit - 1),
+        datetime.datetime.min,
+    )
+
+
 def __build_query_for_filtering(tenant_id: str):
-    columns_to_select = []
+    select_args = [
+        LastAlert.alert_id,
+        LastAlert.tenant_id.label("last_alert_tenant_id"),
+        LastAlert.first_timestamp.label("startedAt"),
+        LastAlert.alert_id.label("entity_id"),
+        LastAlert.fingerprint.label("alert_fingerprint"),
+    ]
 
     for key, value in alias_column_mapping.items():
-        columns_to_select.append(f"{value} AS {key}")
+        select_args.append(literal_column(value).label(key))
 
-    return (
-        select(
-            LastAlert.alert_id,
-            LastAlert.tenant_id.label("last_alert_tenant_id"),
-            LastAlert.first_timestamp.label("startedAt"),
-            LastAlert.alert_id.label("entity_id"),
-            LastAlert.fingerprint.label("alert_fingerprint"),
-            # here it creates aliases for table columns that will be used in filtering and faceting
-            text(",".join(columns_to_select)),
+    query = select(*select_args).select_from(LastAlert)
+
+    query = query.join(
+        Alert,
+        and_(Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id),
+    ).outerjoin(
+        AlertEnrichment,
+        and_(
+            LastAlert.tenant_id == AlertEnrichment.tenant_id,
+            LastAlert.fingerprint == AlertEnrichment.alert_fingerprint,
+        ),
+    )
+
+    query = query.outerjoin(
+        LastAlertToIncident,
+        and_(
+            LastAlert.tenant_id == LastAlertToIncident.tenant_id,
+            LastAlert.fingerprint == LastAlertToIncident.fingerprint,
+        ),
+    ).outerjoin(
+        Incident,
+        and_(
+            LastAlertToIncident.tenant_id == Incident.tenant_id,
+            LastAlertToIncident.incident_id == Incident.id,
+            Incident.status == IncidentStatus.FIRING.value,
+        ),
+    )
+
+    query = query.filter(LastAlert.tenant_id == tenant_id)
+    query = query.filter(LastAlert.timestamp >= get_threeshold_query(tenant_id))
+    return query
+
+
+def __build_query_for_filtering_v2(
+    tenant_id: str, select_args: list, cel=None, limit=None, fetch_alerts_data=True
+):
+    fetch_incidents = cel and "incident." in cel
+    cel_to_sql_instance = get_cel_to_sql_provider(remapped_properties_metadata)
+    sql_filter = None
+    involved_fields = []
+
+    if cel:
+        cel_to_sql_result = cel_to_sql_instance.convert_to_sql_str_v2(cel)
+        sql_filter = cel_to_sql_result.sql
+        involved_fields = cel_to_sql_result.involved_fields
+        fetch_incidents = next(
+            (
+                True
+                for field in involved_fields
+                if field.field_name.startswith("incident.")
+            ),
+            False,
         )
-        .select_from(LastAlert)
-        .join(
+
+    query = select(*select_args).select_from(LastAlert)
+
+    if fetch_alerts_data:
+        query = query.join(
             Alert,
             and_(
                 Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id
             ),
-        )
-        .outerjoin(
+        ).outerjoin(
             AlertEnrichment,
             and_(
                 LastAlert.tenant_id == AlertEnrichment.tenant_id,
                 LastAlert.fingerprint == AlertEnrichment.alert_fingerprint,
             ),
         )
-        .outerjoin(
+
+    if fetch_incidents:
+        query = query.outerjoin(
             LastAlertToIncident,
             and_(
                 LastAlert.tenant_id == LastAlertToIncident.tenant_id,
                 LastAlert.fingerprint == LastAlertToIncident.fingerprint,
             ),
-        )
-        .outerjoin(
+        ).outerjoin(
             Incident,
             and_(
                 LastAlertToIncident.tenant_id == Incident.tenant_id,
                 LastAlertToIncident.incident_id == Incident.id,
+                Incident.status == IncidentStatus.FIRING.value,
             ),
         )
-        .where(LastAlert.tenant_id == tenant_id)
-    )
 
+    query = query.filter(LastAlert.tenant_id == tenant_id)
+    query = query.filter(LastAlert.timestamp >= get_threeshold_query(tenant_id))
+    involved_fields = []
 
-def build_total_alerts_query(tenant_id, cel=None, limit=None, offset=None):
-    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-    base = __build_query_for_filtering(tenant_id)
-
-    if limit is not None:
-        base = base.limit(limit)
-
-    query = (
-        select(
-            func.count(func.distinct(base.c.alert_id)).label("total_count"),
-        )
-        .select_from(base)
-        .join(
-            Alert,
-            and_(
-                base.c.last_alert_tenant_id == Alert.tenant_id,
-                base.c.alert_id == Alert.id,
-            ),
-        )
-        .outerjoin(
-            AlertEnrichment,
-            and_(
-                AlertEnrichment.tenant_id == Alert.tenant_id,
-                AlertEnrichment.alert_fingerprint == Alert.fingerprint,
-            ),
-        )
-    )
-
-    if cel:
-        sql_filter = cel_to_sql_instance.convert_to_sql_str(cel)
+    if sql_filter:
         query = query.where(text(sql_filter))
+    return {
+        "query": query,
+        "involved_fields": involved_fields,
+        "fetch_incidents": fetch_incidents,
+    }
 
-    return query
+def build_total_alerts_query(tenant_id, cel=None, limit=None):
+    fetch_incidents = cel and "incident." in cel
+    fetch_alerts_data = cel is not None or cel != ""
+
+    count_funct = (
+        func.count(func.distinct(LastAlert.alert_id))
+        if fetch_incidents
+        else func.count(1)
+    )
+    built_query_result = __build_query_for_filtering_v2(
+        tenant_id=tenant_id,
+        cel=cel,
+        select_args=[count_funct],
+        limit=limit,
+        fetch_alerts_data=fetch_alerts_data,
+    )
+
+    return built_query_result["query"]
 
 
 def build_alerts_query(
@@ -237,15 +304,14 @@ def build_alerts_query(
     limit=None,
     offset=None,
 ):
-    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-    base = __build_query_for_filtering(tenant_id).cte("alerts_query")
+    cel_to_sql_instance = get_cel_to_sql_provider(remapped_properties_metadata)
 
     if not sort_by:
-        sort_by = "lastReceived"
+        sort_by = "timestamp"
         sort_dir = "desc"
 
-    metadata = properties_metadata.get_property_metadata(sort_by)
     group_by_exp = []
+    metadata = remapped_properties_metadata.get_property_metadata(sort_by)
 
     for item in metadata.field_mappings:
         if isinstance(item, JsonFieldMapping):
@@ -255,42 +321,7 @@ def build_alerts_query(
                 )
             )
         elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-            group_by_exp.append(alias_column_mapping[item.map_to])
-
-    query = (
-        select(
-            Alert,
-            AlertEnrichment,
-            base.c.startedAt,
-            literal_column("filter_alert_event_json"),
-            literal_column("filter_alert_enrichment_json"),
-        )
-        .select_from(base)
-        .outerjoin(
-            AlertEnrichment,
-            and_(
-                base.c.last_alert_tenant_id == AlertEnrichment.tenant_id,
-                base.c.alert_fingerprint == AlertEnrichment.alert_fingerprint,
-            ),
-        )
-        .join(
-            Alert,
-            and_(
-                base.c.last_alert_tenant_id == Alert.tenant_id,
-                base.c.alert_id == Alert.id,
-            ),
-        )
-    ).where(Alert.tenant_id == tenant_id)
-
-    if cel:
-        sql_filter = cel_to_sql_instance.convert_to_sql_str(cel)
-        query = query.where(text(sql_filter))
-
-    if limit is not None:
-        query = query.limit(limit)
-
-    if offset is not None:
-        query = query.offset(offset)
+            group_by_exp.append(item.map_to)
 
     if len(group_by_exp) > 1:
         order_by_field = cel_to_sql_instance.coalesce(
@@ -299,12 +330,37 @@ def build_alerts_query(
     else:
         order_by_field = group_by_exp[0]
 
-    if sort_dir == "desc":
-        query = query.order_by(desc(text(order_by_field)), Alert.id)
-    else:
-        query = query.order_by(asc(text(order_by_field)), Alert.id)
+    built_query_result = __build_query_for_filtering_v2(
+        tenant_id,
+        select_args=[
+            Alert,
+            AlertEnrichment,
+            LastAlert.first_timestamp.label("startedAt"),
+            literal_column(order_by_field),
+        ],
+        cel=cel,
+    )
+    query = built_query_result["query"]
+    fetch_incidents = built_query_result["fetch_incidents"]
 
-    query = query.distinct(text(order_by_field), Alert.id)
+    if fetch_incidents:
+        if sort_dir == "desc":
+            query = query.order_by(desc(text(order_by_field)), Alert.id)
+        else:
+            query = query.order_by(asc(text(order_by_field)), Alert.id)
+
+        query = query.distinct(text(order_by_field), Alert.id)
+    else:
+        if sort_dir == "desc":
+            query = query.order_by(desc(text(order_by_field)))
+        else:
+            query = query.order_by(asc(text(order_by_field)))
+
+    if limit is not None:
+        query = query.limit(limit)
+
+    if offset is not None:
+        query = query.offset(offset)
 
     return query
 
@@ -365,22 +421,11 @@ def get_alert_facets_data(
         facets = get_alert_facets(tenant_id, facet_options_query.facet_queries.keys())
     else:
         facets = static_facets
-    base_query_cte = (
-        __build_query_for_filtering(tenant_id)
-        .order_by(desc(literal_column("lastalert.timestamp")))
-        .cte("alerts_query")
-    )
-    base_query = (
-        select(
-            # here it creates aliases for table columns that will be used in filtering and faceting
-            text(",".join(["entity_id"] + [key for key in alias_column_mapping.keys()]))
-        )
-        .select_from(base_query_cte)
-        .limit(alerts_hard_limit)
-    )
+
+    base_query_cte = __build_query_for_filtering(tenant_id).cte("alerts_query")
 
     return get_facet_options(
-        base_query=base_query,
+        base_query=base_query_cte,
         facets=facets,
         facet_options_query=facet_options_query,
         properties_metadata=properties_metadata,

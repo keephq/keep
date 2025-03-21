@@ -25,7 +25,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { PageSubtitle } from "@/shared/ui";
 import { PageTitle } from "@/shared/ui";
-import { Editor } from "@monaco-editor/react";
+import { MonacoEditor } from "@/shared/ui";
 
 interface Webhook {
   webhookApi: string;
@@ -224,7 +224,7 @@ req.end();
               {languages.map(({ title, language, code }) => (
                 <TabPanel key={title}>
                   <div className="h-[calc(100vh-20rem)]">
-                    <Editor
+                    <MonacoEditor
                       value={code}
                       language={language}
                       theme="vs-light"

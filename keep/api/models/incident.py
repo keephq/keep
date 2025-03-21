@@ -27,6 +27,7 @@ class IncidentDtoIn(BaseModel):
     assignee: str | None
     user_summary: str | None
     same_incident_in_the_past_id: UUID | None
+    severity: IncidentSeverity | None
 
     class Config:
         extra = Extra.allow
@@ -52,7 +53,6 @@ class IncidentDto(IncidentDtoIn):
 
     alerts_count: int
     alert_sources: list[str]
-    severity: IncidentSeverity
     status: IncidentStatus = IncidentStatus.FIRING
     assignee: str | None
     services: list[str]
@@ -242,7 +242,6 @@ class MergeIncidentsRequestDto(BaseModel):
 
 class MergeIncidentsResponseDto(BaseModel):
     merged_incident_ids: list[UUID]
-    skipped_incident_ids: list[UUID]
     failed_incident_ids: list[UUID]
     destination_incident_id: UUID
     message: str

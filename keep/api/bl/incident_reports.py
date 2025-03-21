@@ -43,30 +43,31 @@ class IncidentReport(BaseModel):
     most_frequent_reasons: Optional[dict[str, list[str]]] = None
     recurring_incidents: Optional[list[ReoccuringIncidentReportDto]] = None
 
+
+class OpenAIReportPart(BaseModel):
+    most_frequent_reasons: Optional[dict[str, list[str]]] = None
+
+
 system_prompt = """
 Generate an incident report based on the provided incidents dataset and response schema. Ensure all calculated metrics follow the specified format for consistency.
 
 **Calculations and Metrics:**
-
-1. **Mean Time to Detect (MTTD)**
-   - Skip mean_time_to_detect_seconds
-
-2. **Mean Time to Resolve (MTTR)**
-   - Skip mean_time_to_resolve_seconds
-
-3. **Severity Metrics**
-   - Skip severity_metrics
-
-4. **Incident Duration Metrics**
-   - Skip incident_durations
-
-5. **Top Services Affected**
-   - Skip services_affected_metrics
-
-6. **Most Frequent Incident Reasons**
-   - Identify the most common root causes by analyzing the following fields: user_generated_name, ai_generated_name, user_summary, generated_summary.
+1. **Most Frequent Incident Reasons**
+   - JSON property name: most_frequent_reasons
+   - Identify the most common root causes by analyzing the following fields: incident_name, incident_summary, severity.
+   - Try to find root causes that are not explicitly mentioned in the dataset.
+   - Be concise, the reasons must be short but descriptive at the same time.
    - Group similar reasons to avoid duplicates.
-   - Output `most_frequent_reasons` as a dictionary with reason as key and list of incident ids as value whose reason it is.
+   - Output only top 6 reasons.
+   - Return a JSON object, which is a dictionary.
+   - Each key in this dictionary must be an incident reason (a string describing the reason for the incident).
+   - The value for each key must be a list of incident IDs (strings) that correspond to that reason.
+   - The structure of object in most_frequent_reasons property should follow this exact format:
+            {
+                "Reason 1": ["incident_id_1", "incident_id_2"],
+                "Reason 2": ["incident_id_3"],
+                "Reason 3": ["incident_id_4", "incident_id_5", "incident_id_6"]
+            }
 """
 
 logger = logging.getLogger(__name__)
@@ -91,7 +92,10 @@ class IncidentReportsBl:
         self, incidents_query_cel: str, allowed_incident_ids: list[str]
     ) -> IncidentReport:
         incidents = self.__get_incidents(incidents_query_cel, allowed_incident_ids)
-        report = self.__calculate_report_in_openai(incidents)
+        open_ai_report_part = self.__calculate_report_in_openai(incidents)
+        report = IncidentReport(
+            most_frequent_reasons=open_ai_report_part.most_frequent_reasons
+        )
         incidents_dict = {incident.id: incident for incident in incidents}
         resolved_incidents = [
             incident
@@ -113,11 +117,33 @@ class IncidentReportsBl:
 
     def __calculate_report_in_openai(
         self, incidents: list[IncidentDto]
-    ) -> IncidentReport:
+    ) -> OpenAIReportPart:
         if self.open_ai_client is None:
             return IncidentReport()
 
-        incidents_json = json.dumps([item.dict() for item in incidents], default=str)
+        # Most recent incidents first
+        incidents = sorted(incidents, key=lambda x: x.creation_time, reverse=True)
+
+        # Limit incidents because OpenAI is either slow (timeouts) or has token limits
+        incidents = incidents[:40]
+
+        incidents_minified: list[dict] = []
+        for item in incidents:
+            incidents_minified.append(
+                {
+                    "incident_id": str(item.id),
+                    "incident_name": "\n".join(
+                        filter(None, [item.user_generated_name, item.ai_generated_name])
+                    ),
+                    "incident_summary": "\n".join(
+                        filter(None, [item.user_summary, item.generated_summary])
+                    ),
+                    "severity": item.severity,
+                    "services": item.services,
+                }
+            )
+
+        incidents_json = json.dumps(incidents_minified, default=str)
 
         response = self.open_ai_client.chat.completions.create(
             model="gpt-4o-2024-08-06",
@@ -128,8 +154,8 @@ class IncidentReportsBl:
             response_format={
                 "type": "json_schema",
                 "json_schema": {
-                    "name": "IncidentReport",
-                    "schema": IncidentReport.schema(),
+                    "name": "OpenAIReportPart",
+                    "schema": OpenAIReportPart.schema(),
                 },
             },
             seed=1239,
@@ -137,8 +163,16 @@ class IncidentReportsBl:
         )
 
         model_response = response.choices[0].message.content
-        report = IncidentReport(**json.loads(model_response))
-        return report
+        try:
+            report = OpenAIReportPart(**json.loads(model_response))
+            return report
+        except Exception as e:
+            logger.error(
+                f"""Failed to parse OpenAI response: {e}
+                    Response: {model_response}
+                """
+            )
+            raise e
 
     def __calculate_top_services_affected(
         self, incidents: list[IncidentDto]
@@ -172,9 +206,6 @@ class IncidentReportsBl:
         return severity_metrics
 
     def __calculate_mttd(self, incidents: list[IncidentDto]) -> int:
-        if len(incidents) == 0:
-            return 0
-
         duration_sum = 0
         incidents_count = 0
 
@@ -187,16 +218,20 @@ class IncidentReportsBl:
             ).total_seconds()
             incidents_count += 1
 
+        if incidents_count == 0:
+            return 0
+
         return math.ceil(duration_sum / incidents_count)
 
     def __calculate_mttr(self, resolved_incidents: list[IncidentDto]) -> int:
-        if len(resolved_incidents) == 0:
-            return 0
-
-        duration_sum = 0
         filtered_incidents = [
             incident for incident in resolved_incidents if incident.end_time
         ]
+
+        if len(filtered_incidents) == 0:
+            return 0
+
+        duration_sum = 0
         for incident in filtered_incidents:
             start_time = incident.start_time or incident.creation_time
             duration_sum += (incident.end_time - start_time).total_seconds()
@@ -284,7 +319,7 @@ class IncidentReportsBl:
     ) -> list[IncidentDto]:
         query_result = self.incidents_bl.query_incidents(
             tenant_id=self.tenant_id,
-            cel=incidents_query_cel,
+            cel=f"status != 'deleted' && {incidents_query_cel}",
             limit=100,
             offset=0,
             allowed_incident_ids=allowed_incident_ids,

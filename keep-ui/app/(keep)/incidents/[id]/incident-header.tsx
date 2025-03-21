@@ -85,7 +85,7 @@ export function IncidentHeader({
                 color="orange"
                 size="xs"
                 variant="secondary"
-                className="!px-1 !py-0.5 mr-2"
+                className="!py-0.5 mr-2"
                 icon={MdPlayArrow}
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();
@@ -99,7 +99,7 @@ export function IncidentHeader({
                 color="orange"
                 size="xs"
                 variant="secondary"
-                className="!px-1 !py-0.5"
+                className="!py-0.5"
                 icon={MdModeEdit}
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();

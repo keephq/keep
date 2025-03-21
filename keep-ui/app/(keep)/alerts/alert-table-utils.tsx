@@ -44,6 +44,12 @@ import {
   isDateTimeColumn,
 } from "./alert-table-time-format";
 import { useIncidents } from "@/utils/hooks/useIncidents";
+import { useExpandedRows } from "utils/hooks/useExpandedRows";
+import {
+  ColumnRenameMapping,
+  getColumnDisplayName,
+} from "./alert-table-column-rename";
+import _ from "lodash";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -113,7 +119,8 @@ export const getRowClassName = (
   },
   theme: Record<string, string>,
   lastViewedAlert: string | null,
-  rowStyle: RowStyle
+  rowStyle: RowStyle,
+  expanded?: boolean
 ) => {
   const severity = row.original?.severity || "info";
   const rowBgColor = theme[severity] || "bg-white";
@@ -122,8 +129,14 @@ export const getRowClassName = (
   return clsx(
     "cursor-pointer group",
     isLastViewed ? "bg-orange-50" : rowBgColor,
-    rowStyle === "default" ? "h-8" : "h-12",
-    rowStyle === "default" ? "[&>td]:px-0.5 [&>td]:py-0" : "[&>td]:p-2",
+    // Expanded rows should have auto height with a larger minimum height
+    expanded ? "h-auto min-h-16" : rowStyle === "default" ? "h-8" : "h-12",
+    // More padding for expanded rows
+    expanded
+      ? "[&>td]:p-3"
+      : rowStyle === "default"
+      ? "[&>td]:px-0.5 [&>td]:py-0"
+      : "[&>td]:p-2",
     "hover:bg-orange-100"
   );
 };
@@ -143,9 +156,11 @@ export const getCellClassName = (
   cell: Cell<any, unknown> | CustomCell,
   className: string,
   rowStyle: RowStyle,
-  isLastViewed: boolean
+  isLastViewed: boolean,
+  expanded?: boolean
 ) => {
   const isNameCell = cell.column.id === "name";
+  const isDescriptionCell = cell.column.id === "description";
   const tdClassName =
     "getValue" in cell
       ? cell.column.columnDef.meta?.tdClassName || ""
@@ -155,8 +170,12 @@ export const getCellClassName = (
     tdClassName,
     className,
     isNameCell && "name-cell",
-    // For dense rows, make sure name cells don't expand too much
-    rowStyle === "default" && isNameCell && "w-auto max-w-2xl",
+    // For dense rows, make sure name cells don't expand too much, unless expanded
+    rowStyle === "default" && isNameCell && !expanded && "w-auto max-w-2xl",
+    // Remove truncation for expanded rows
+    isDescriptionCell && expanded && "whitespace-pre-wrap break-words",
+    // Remove line clamp for expanded rows
+    expanded && "!whitespace-pre-wrap !overflow-visible",
     "group-hover:bg-orange-100", // Group hover styling
     isLastViewed && "bg-orange-50" // Override with highlight if this is the last viewed row
   );
@@ -198,12 +217,17 @@ export const useAlertTableCols = (
     {}
   );
   const { data: incidents } = useIncidents();
+  const { isRowExpanded } = useExpandedRows(presetName);
   const [columnListFormats, setColumnListFormats] = useLocalStorage<
     Record<string, ListFormatOption>
   >(`column-list-formats-${presetName}`, {});
   const { data: configData } = useConfig();
   // check if noisy alerts are enabled
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
+  const [columnRenameMapping] = useLocalStorage<ColumnRenameMapping>(
+    `column-rename-mapping-${presetName}`,
+    {}
+  );
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.accessor(
@@ -223,7 +247,7 @@ export const useAlertTableCols = (
       },
       {
         id: colName,
-        header: colName,
+        header: getColumnDisplayName(colName, colName, columnRenameMapping),
         minSize: 100,
         enableGrouping: true,
         getGroupingValue: (row) => {
@@ -252,6 +276,8 @@ export const useAlertTableCols = (
         },
         cell: (context) => {
           const value = context.getValue();
+          const row = context.row;
+          const isExpanded = isRowExpanded?.(row.original.fingerprint);
 
           if (typeof value === "object" && value !== null) {
             return (
@@ -291,7 +317,7 @@ export const useAlertTableCols = (
                   const incident = incidents?.items.find(
                     (incident) => incident.id === incidentId
                   );
-                  if (!incident) return <></>;
+                  if (!incident) return null;
                   const title =
                     incident.user_generated_name || incident.ai_generated_name;
                   return (
@@ -333,8 +359,10 @@ export const useAlertTableCols = (
             return (
               <div
                 className={clsx(
-                  "truncate whitespace-pre-wrap",
-                  rowStyle === "default" ? "line-clamp-1" : "line-clamp-3"
+                  "whitespace-pre-wrap",
+                  // Only apply line clamp if not expanded
+                  !isExpanded &&
+                    (rowStyle === "default" ? "line-clamp-1" : "line-clamp-3")
                 )}
               >
                 {value.toString()}
@@ -461,80 +489,126 @@ export const useAlertTableCols = (
       header: () => <></>,
       minSize: 20,
       maxSize: 20,
+      size: 20, // Add explicit size to maintain consistency
       enableSorting: false,
-      enableGrouping: true,
       getGroupingValue: (row) => row.source,
       enableResizing: false,
-      cell: (context) => (
-        <div className="flex items-center justify-center">
-          {(context.getValue() ?? []).map((source, index) => {
-            let imagePath = `/icons/${source}-icon.png`;
-            if (source.includes("@")) {
-              imagePath = "/icons/mailgun-icon.png";
-            }
-            return (
-              <DynamicImageProviderIcon
-                className={clsx(
-                  "inline-block size-5 xl:size-6",
-                  index == 0 ? "" : "-ml-2"
-                )}
-                key={source}
-                alt={source}
-                height={24}
-                width={24}
-                title={source}
-                providerType={source}
-                src={imagePath}
-              />
-            );
-          })}
-        </div>
-      ),
+      cell: (context) => {
+        return (
+          <div>
+            {context.getValue().map((source, index) => {
+              return (
+                <DynamicImageProviderIcon
+                  className={clsx(
+                    "inline-block",
+                    // Fixed size regardless of expanded state
+                    "size-5 xl:size-6",
+                    index == 0 ? "" : "-ml-2"
+                  )}
+                  key={source}
+                  alt={source}
+                  height={24}
+                  width={24}
+                  title={source}
+                  providerType={source}
+                  src={`/icons/${source}-icon.png`}
+                  id={`${source}-icon-${index}`}
+                />
+              );
+            })}
+          </div>
+        );
+      },
       meta: {
-        tdClassName: "!p-0 w-4 sm:w-8 !box-border",
-        thClassName: "!p-0 w-4 sm:w-8 !box-border",
+        tdClassName: "!p-1 w-8 !box-border", // Enforce consistent width
+        thClassName: "!p-1 w-8 !box-border",
       },
     }),
     // Name column butted up against source
     columnHelper.accessor("name", {
       id: "name",
-      header: "Name",
+      header: getColumnDisplayName("name", "Name", columnRenameMapping),
       enableGrouping: true,
       enableResizing: true,
       getGroupingValue: (row) => row.name,
-      cell: (context) => (
-        <div className="w-full">
-          <AlertName alert={context.row.original} className="flex-grow" />
-        </div>
-      ),
+      // Set fixed maximum size to prevent overflow
+      minSize: 150,
+      maxSize: 200, // Reduce from 250 to 200 to constrain more tightly
+      // Use a consistent width for all row states
+      size: 180, // Add a fixed size to ensure consistent width
+      cell: (context) => {
+        const row = context.row;
+        const expanded = isRowExpanded?.(row.original.fingerprint);
+
+        return (
+          // Remove w-full class which can cause expansion
+          <div className={expanded ? "max-w-[180px] overflow-hidden" : ""}>
+            <AlertName
+              alert={context.row.original}
+              expanded={expanded}
+              // Remove flex-grow which can cause expansion
+              className={expanded ? "max-w-[180px] overflow-hidden" : ""}
+            />
+          </div>
+        );
+      },
       meta: {
-        tdClassName: "w-full",
-        thClassName: "w-full",
+        // Remove w-full from tdClassName to prevent automatic expansion
+        tdClassName: "name-cell",
+        thClassName: "name-cell",
       },
     }),
+
     columnHelper.accessor("description", {
       id: "description",
-      header: "Description",
+      header: getColumnDisplayName(
+        "description",
+        "Description",
+        columnRenameMapping
+      ),
       enableGrouping: true,
-      minSize: 100,
-      cell: (context) => (
-        <div title={context.getValue()}>
+      // Increase default minSize to give description more space
+      minSize: 200,
+      // Let it grow more when expanded
+      cell: (context) => {
+        const value = context.getValue();
+        const row = context.row;
+        const expanded = isRowExpanded?.(row.original.fingerprint);
+
+        return (
           <div
+            title={expanded ? undefined : value}
             className={clsx(
-              "whitespace-pre-wrap",
-              rowStyle === "default"
-                ? "truncate line-clamp-1"
-                : "truncate line-clamp-3"
+              // Give description more space and control overflow
+              expanded ? "w-full break-words" : "",
+              // Set fixed width when expanded to prevent layout issues
+              expanded ? "max-w-[100%]" : ""
             )}
           >
-            {context.getValue()}
+            <div
+              className={clsx(
+                // Always use whitespace-pre-wrap for consistency
+                "whitespace-pre-wrap",
+                // Only truncate when not expanded
+                !expanded &&
+                  (rowStyle === "default"
+                    ? "truncate line-clamp-1"
+                    : "truncate line-clamp-3")
+              )}
+            >
+              {value}
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     }),
     columnHelper.accessor("lastReceived", {
       id: "lastReceived",
-      header: "Last Received",
+      header: getColumnDisplayName(
+        "lastReceived",
+        "Last Received",
+        columnRenameMapping
+      ),
       filterFn: isDateWithinRange,
       minSize: 80,
       maxSize: 80,
@@ -553,7 +627,7 @@ export const useAlertTableCols = (
     }),
     columnHelper.accessor("assignee", {
       id: "assignee",
-      header: "Assignee",
+      header: getColumnDisplayName("assignee", "Assignee", columnRenameMapping),
       enableGrouping: true,
       getGroupingValue: (row) => row.assignee,
       minSize: 100,
@@ -590,7 +664,7 @@ export const useAlertTableCols = (
       ? [
           columnHelper.display({
             id: "alertMenu",
-            minSize: 170,
+            minSize: 120,
             cell: (context) => (
               <AlertMenu
                 presetName={presetName.toLowerCase()}

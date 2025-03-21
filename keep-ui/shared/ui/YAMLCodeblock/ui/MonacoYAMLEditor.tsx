@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import Editor from "@monaco-editor/react";
 import { type editor } from "monaco-editor";
 import { Download, Copy, Check, Save } from "lucide-react";
 import { Button } from "@tremor/react";
@@ -7,8 +6,8 @@ import { LogEntry } from "@/shared/api/workflow-executions";
 import { getStepStatus } from "@/shared/lib/logs-utils";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
+import { MonacoEditor } from "@/shared/ui";
 import "./MonacoYAMLEditor.css";
-
 interface Props {
   workflowRaw: string;
   workflowId?: string;
@@ -484,7 +483,7 @@ const MonacoYAMLEditor = ({
             <Download className="h-4 w-4" />
           </Button>
         </div>
-        <Editor
+        <MonacoEditor
           wrapperProps={{ "data-testid": dataTestId }}
           height="100%"
           defaultLanguage="yaml"

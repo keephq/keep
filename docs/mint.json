@@ -142,6 +142,7 @@
         {
           "group": "Supported Providers",
           "pages": [
+            "providers/documentation/airflow-provider",
             "providers/documentation/aks-provider",
             "providers/documentation/amazonsqs-provider",
             "providers/documentation/anthropic-provider",
