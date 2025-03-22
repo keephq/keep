@@ -1702,3 +1702,89 @@ async def test_incident_timestamps_based_on_alert_last_received(
     assert updated_incident.last_seen_time.replace(
         microsecond=0
     ) == future_date.replace(microsecond=0, tzinfo=None)
+
+
+@pytest.mark.asyncio
+def test_incident_auto_resolve_without_rule( db_session, create_alert):
+
+    incident = create_incident_from_dict(
+        SINGLE_TENANT_UUID, {
+            "user_generated_name": "test",
+            "user_summary": "test",
+            "resolve_on": ResolveOn.ALL.value,
+        },
+        session=db_session
+    )
+
+    create_alert(
+        "alert-test",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    alerts = db_session.query(Alert).all()
+    assert len(alerts) == 1
+
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident.id, [alerts[0].fingerprint], session=db_session
+    )
+
+    db_session.refresh(incident)
+    assert incident.status == IncidentStatus.FIRING.value
+
+    create_alert(
+        "alert-test",
+        AlertStatus.RESOLVED,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    db_session.refresh(incident)
+    assert incident.status == IncidentStatus.RESOLVED.value
+
+
+@pytest.mark.asyncio
+def test_incident_auto_resolve_only_if_active(db_session, create_alert):
+
+    def create_incident_with_status(status: IncidentStatus):
+        return create_incident_from_dict(
+            SINGLE_TENANT_UUID, {
+                "user_generated_name": "test",
+                "user_summary": "test",
+                "resolve_on": ResolveOn.ALL.value,
+                "status": status.value
+            },
+            session=db_session
+        )
+
+    firing_incident = create_incident_with_status(IncidentStatus.FIRING)
+    acknowledged_incident = create_incident_with_status(IncidentStatus.ACKNOWLEDGED)
+    resolved_incident = create_incident_with_status(IncidentStatus.RESOLVED)
+    deleted_incident = create_incident_with_status(IncidentStatus.DELETED)
+    merged_incident = create_incident_with_status(IncidentStatus.MERGED)
+
+    create_alert(
+        "alert-test",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    alerts = db_session.query(Alert).all()
+    assert len(alerts) == 1
+
+    for incident in [firing_incident, acknowledged_incident, resolved_incident, deleted_incident, merged_incident]:
+        add_alerts_to_incident_by_incident_id(
+            SINGLE_TENANT_UUID, incident.id, [alerts[0].fingerprint], session=db_session
+        )
+
+    with patch("keep.api.tasks.process_event_task.IncidentBl.resolve_incident_if_require") as incident_bl_mock:
+        create_alert(
+            "alert-test",
+            AlertStatus.RESOLVED,
+            datetime.utcnow(),
+            {"severity": AlertSeverity.CRITICAL.value},
+        )
+        assert incident_bl_mock.call_count == 2 # firing and acknowledged
+
