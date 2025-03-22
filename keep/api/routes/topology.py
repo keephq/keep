@@ -425,7 +425,7 @@ def update_dependency(
     "/dependency/{dependency_id}", description="Deleting a dependency manually"
 )
 def delete_dependency(
-    dependency_id: int,
+    dependency_id: UUID | str,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:topology"])
     ),

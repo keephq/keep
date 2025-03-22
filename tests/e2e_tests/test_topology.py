@@ -24,7 +24,7 @@ def test_topology_manual(browser):
         # Open the Service Topology page
         browser.get_by_role("link", name="Service Topology").hover()
         browser.get_by_role("link", name="Service Topology").click()
-        browser.wait_for_timeout(2000)  # Added extra wait for page to fully load
+        browser.wait_for_timeout(5000)  # Added extra wait for page to fully load
 
         max_retries = 5
         retries = 0
@@ -33,6 +33,7 @@ def test_topology_manual(browser):
         while retries <= max_retries:
             try:
                 browser.get_by_role("button", name="Add Node", exact=True).click()
+                browser.wait_for_timeout(2000)
                 browser.get_by_placeholder("Enter service here...").fill("service_id_1")
                 break
             except Exception:
@@ -89,9 +90,7 @@ def test_topology_manual(browser):
         browser.wait_for_timeout(2000)
 
         # Improved edge connection with retries
-        def connect_nodes(source_selector, target_selector, edge_label, max_attempts=3):
-            source_handle = browser.locator(source_selector)
-            target_handle = browser.locator(target_selector)
+        def connect_nodes(source_handle, target_handle, edge_label, max_attempts=3):
 
             for attempt in range(max_attempts):
                 try:
@@ -147,13 +146,22 @@ def test_topology_manual(browser):
             return False
 
         # Define handles with stable selectors
-        source_handle_1 = "div[data-id='1-1-right-source']"
-        target_handle_2 = "div[data-id='1-2-left-target']"
-        target_handle_3 = "div[data-id='1-3-left-target']"
+        node_1 = browser.locator("div.react-flow__node-service").filter(has_text="SERVICE_ID_1")
+        node_2 = browser.locator("div.react-flow__node-service").filter(has_text="SERVICE_ID_2")
+        node_3 = browser.locator("div.react-flow__node-service").filter(has_text="SERVICE_ID_3")
+
+        node_1_id = node_1.get_attribute('data-id')
+        node_2_id = node_2.get_attribute('data-id')
+        node_3_id = node_3.get_attribute('data-id')
+
+        # Connect nodes by dragging source to target handles
+        source_handle_1 = node_1.locator(f"div[data-id='1-{node_1_id}-right-source']")
+        target_handle_2 = node_2.locator(f"div[data-id='1-{node_2_id}-left-target']")
+        target_handle_3 = node_3.locator(f"div[data-id='1-{node_3_id}-left-target']")
 
         # Connect nodes with retry logic
         edge1_created = connect_nodes(
-            source_handle_1, target_handle_2, "Edge from 1 to 2"
+            source_handle_1, target_handle_2, f"Edge from {node_1_id} to {node_2_id}"
         )
         if not edge1_created:
             # Take diagnostic screenshots
@@ -162,7 +170,7 @@ def test_topology_manual(browser):
             print("Failed to create edge from node 1 to node 2 after multiple attempts")
 
         edge2_created = connect_nodes(
-            source_handle_1, target_handle_3, "Edge from 1 to 3"
+            source_handle_1, target_handle_3, f"Edge from {node_1_id} to {node_3_id}"
         )
         if not edge2_created:
             # Take diagnostic screenshots
@@ -172,18 +180,13 @@ def test_topology_manual(browser):
 
         # Validate edge connections with more flexible assertions
         browser.wait_for_timeout(2000)
-
-        edge_1_to_2 = browser.locator(
-            "g.react-flow__edge[aria-label='Edge from 1 to 2']"
-        )
+        edge_1_to_2 = browser.locator(f"g.react-flow__edge[aria-label='Edge from {node_1_id} to {node_2_id}']")
         expect(edge_1_to_2).to_have_count(1, timeout=10000)  # Increased timeout
-
-        edge_1_to_3 = browser.locator(
-            "g.react-flow__edge[aria-label='Edge from 1 to 3']"
-        )
+        edge_1_to_3 = browser.locator(f"g.react-flow__edge[aria-label='Edge from {node_1_id} to {node_3_id}']")
         expect(edge_1_to_3).to_have_count(1, timeout=10000)  # Increased timeout
 
         # Continue with rest of the test...
+
         # Delete edge
         edge_end = edge_1_to_2.locator("circle.react-flow__edgeupdater-target")
         edge_end.scroll_into_view_if_needed()
@@ -194,21 +197,22 @@ def test_topology_manual(browser):
         # Ensure edge was deleted with retry
         for _ in range(5):
             if (
-                browser.locator(
-                    "g.react-flow__edge[aria-label='Edge from 1 to 2']"
-                ).count()
-                == 0
+                    browser.locator(
+                        f"g.react-flow__edge[aria-label='Edge from {node_1_id} to {node_2_id}']"
+                    ).count()
+                    == 0
             ):
-                break
+                if browser.locator("g.react-flow__edge").count() == 1:
+                    break
             browser.wait_for_timeout(1000)
 
         expect(
-            browser.locator("g.react-flow__edge[aria-label='Edge from 1 to 2']")
+            browser.locator(f"g.react-flow__edge[aria-label='Edge {node_1_id} to {node_2_id}']")
         ).to_have_count(0, timeout=5000)
 
         # Ensure remaining edges are intact
         expect(
-            browser.locator("g.react-flow__edge[aria-label='Edge from 1 to 3']")
+            browser.locator(f"g.react-flow__edge[aria-label='Edge from {node_1_id} to {node_3_id}']")
         ).to_have_count(1, timeout=5000)
         browser.wait_for_timeout(2000)
 
@@ -241,7 +245,7 @@ def test_topology_manual(browser):
         for _ in range(5):
             if (
                 browser.locator(
-                    "g.react-flow__edge[aria-label='Edge from 1 to 3']"
+                    f"g.react-flow__edge[aria-label='Edge from {node_1_id} to {node_3_id}']"
                 ).count()
                 == 0
             ):
@@ -249,7 +253,7 @@ def test_topology_manual(browser):
             browser.wait_for_timeout(1000)
 
         expect(
-            browser.locator("g.react-flow__edge[aria-label='Edge from 1 to 3']")
+            browser.locator(f"g.react-flow__edge[aria-label='Edge from {node_1_id} to {node_3_id}']")
         ).to_have_count(0, timeout=5000)
 
         # Update node name and verify the change
