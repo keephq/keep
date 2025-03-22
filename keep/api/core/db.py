@@ -3685,12 +3685,12 @@ def create_incident_from_dto(
 
 
 def create_incident_from_dict(
-    tenant_id: str, incident_data: dict
+    tenant_id: str, incident_data: dict, session: Optional[Session] = None
 ) -> Optional[Incident]:
     is_predicted = incident_data.get("is_predicted", False)
     if "is_candidate" not in incident_data:
         incident_data["is_candidate"] = is_predicted
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         new_incident = Incident(**incident_data, tenant_id=tenant_id)
         session.add(new_incident)
         session.commit()
