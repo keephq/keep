@@ -3,6 +3,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, validator
 from sqlalchemy import String
+from sqlalchemy.orm import deferred
 from sqlmodel import JSON, Column, Field, SQLModel
 
 
@@ -32,9 +33,11 @@ class MappingRule(SQLModel, table=True):
     # Within a list it's AND, between lists it's OR: (service AND pod) OR pod
     matchers: list[list[str]] = Field(sa_column=Column(JSON))
     # The rows of the CSV file [{service: "service1", region: "region1", ...}, ...]
-    rows: Optional[list[dict]] = Field(
-        sa_column=Column(JSON),
-    )  # max_length=204800)
+    rows: Optional[list[dict]] = deferred(
+        Field(
+            sa_column=Column(JSON),
+        )
+    )
     updated_by: Optional[str] = Field(max_length=255, default=None)
     last_updated_at: datetime = Field(default_factory=datetime.utcnow)
     # Multi-level mapping fields
