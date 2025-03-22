@@ -273,6 +273,7 @@ def __save_to_db(
                 tenant_id, saved_alerts, session
             )  # note: this only enriches incidents that were not yet ended
 
+            session.expire_on_commit = False
             incident_bl = IncidentBl(tenant_id, session)
             for alert in saved_alerts:
                 if alert.event.get("status") == AlertStatus.RESOLVED.value:
