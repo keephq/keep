@@ -272,6 +272,8 @@ def __save_to_db(
             saved_alerts = enrich_alerts_with_incidents(
                 tenant_id, saved_alerts, session
             )  # note: this only enriches incidents that were not yet ended
+
+            incident_bl = IncidentBl(tenant_id, session)
             for alert in saved_alerts:
                 if alert.event.get("status") == AlertStatus.RESOLVED.value:
                     logger.debug(
@@ -280,7 +282,7 @@ def __save_to_db(
                     )
                     for incident in alert._incidents:
                         if incident.status in IncidentStatus.get_active(return_values=True):
-                            IncidentBl(tenant_id, session).resolve_incident_if_require(
+                            incident_bl.resolve_incident_if_require(
                                 incident
                             )
             logger.info(

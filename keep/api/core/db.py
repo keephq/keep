@@ -2549,6 +2549,7 @@ def update_key_last_used(
             try:
                 session.add(tenant_api_key_entry)
                 session.commit()
+                break
             except StaleDataError as ex:
                 if "expected to update" in ex.args[0]:
                     logger.info(
@@ -4138,6 +4139,7 @@ def add_alerts_to_incident(
                 try:
                     session.add(incident)
                     session.commit()
+                    break
                 except StaleDataError as ex:
                     if "expected to update" in ex.args[0]:
                         logger.info(
@@ -5321,6 +5323,7 @@ def set_last_alert(
 
                 session.add(last_alert)
                 session.commit()
+                break
             except OperationalError as ex:
                 if "no such savepoint" in ex.args[0]:
                     logger.info(
