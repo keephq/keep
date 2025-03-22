@@ -11,6 +11,7 @@ import chevron
 import json5
 from fastapi import HTTPException
 from sqlalchemy import func
+from sqlalchemy.orm import defer
 from sqlalchemy_utils import UUIDType
 from sqlmodel import Session, select
 
@@ -317,6 +318,7 @@ class EnrichmentsBl:
             self.db_session.query(MappingRule)
             .filter(MappingRule.tenant_id == self.tenant_id)
             .filter(MappingRule.disabled == False)
+            .options(defer(MappingRule.rows))
             .order_by(MappingRule.priority.desc())
             .all()
         )

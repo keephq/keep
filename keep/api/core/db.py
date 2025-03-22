@@ -40,7 +40,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy.orm import defer, joinedload, subqueryload
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
@@ -243,8 +243,10 @@ def get_mapping_rule_by_id(
     tenant_id: str, rule_id: int, session: Optional[Session] = None
 ) -> MappingRule | None:
     with existed_or_new_session(session) as session:
-        query = select(MappingRule).where(
-            MappingRule.tenant_id == tenant_id, MappingRule.id == rule_id
+        query = (
+            select(MappingRule)
+            .where(MappingRule.tenant_id == tenant_id, MappingRule.id == rule_id)
+            .options(defer(MappingRule.rows))
         )
         return session.exec(query).first()
 
