@@ -614,7 +614,9 @@ def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
     )
 
     # Mock the session to return this topology mapping rule
-    mock_session.query.return_value.filter.return_value.all.return_value = [rule]
+    mock_session.query.return_value.filter.return_value.filter.return_value.options.return_value.order_by.return_value.all.return_value = [
+        rule
+    ]
 
     # Initialize the EnrichmentsBl class with the mock session
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
@@ -733,7 +735,7 @@ def test_run_mapping_rules_enrichments_filtering(mock_session, mock_alert_dto):
         disabled=False,
         type="csv",
     )
-    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
+    mock_session.query.return_value.filter.return_value.filter.return_value.options.return_value.order_by.return_value.all.return_value = [
         rule
     ]
 
