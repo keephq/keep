@@ -41,6 +41,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
@@ -2511,6 +2512,7 @@ def get_last_alert_hashes_by_fingerprints(
 def update_key_last_used(
     tenant_id: str,
     reference_id: str,
+    max_retries=3,
 ) -> str:
     """
     Updates API key last used.
@@ -2542,8 +2544,23 @@ def update_key_last_used(
             )
             return
         tenant_api_key_entry.last_used = datetime.utcnow()
-        session.add(tenant_api_key_entry)
-        session.commit()
+
+        for attempt in range(max_retries):
+            try:
+                session.add(tenant_api_key_entry)
+                session.commit()
+                break
+            except StaleDataError as ex:
+                if "expected to update" in ex.args[0]:
+                    logger.info(
+                        f"Phantom read detected while updating API key `{reference_id}`, retry #{attempt}"
+                    )
+                    session.rollback()
+                    continue
+                else:
+                    raise
+
+
 
 
 def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
@@ -3685,12 +3702,12 @@ def create_incident_from_dto(
 
 
 def create_incident_from_dict(
-    tenant_id: str, incident_data: dict
+    tenant_id: str, incident_data: dict, session: Optional[Session] = None
 ) -> Optional[Incident]:
     is_predicted = incident_data.get("is_predicted", False)
     if "is_candidate" not in incident_data:
         incident_data["is_candidate"] = is_predicted
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         new_incident = Incident(**incident_data, tenant_id=tenant_id)
         session.add(new_incident)
         session.commit()
@@ -3978,6 +3995,7 @@ def add_alerts_to_incident(
     session: Optional[Session] = None,
     override_count: bool = False,
     exclude_unlinked_alerts: bool = False,  # if True, do not add alerts to incident if they are manually unlinked
+    max_retries=3,
 ) -> Optional[Incident]:
     logger.info(
         f"Adding alerts to incident {incident.id} in database, total {len(fingerprints)} alerts",
@@ -4117,8 +4135,20 @@ def add_alerts_to_incident(
             incident.start_time = started_at
             incident.last_seen_time = last_seen_at
 
-            session.add(incident)
-            session.commit()
+            for attempt in range(max_retries):
+                try:
+                    session.add(incident)
+                    session.commit()
+                    break
+                except StaleDataError as ex:
+                    if "expected to update" in ex.args[0]:
+                        logger.info(
+                            f"Phantom read detected while updating incident `{incident.id}`, retry #{attempt}"
+                        )
+                        session.rollback()
+                        continue
+                    else:
+                        raise
             session.refresh(incident)
 
             return incident
@@ -5293,6 +5323,7 @@ def set_last_alert(
 
                 session.add(last_alert)
                 session.commit()
+                break
             except OperationalError as ex:
                 if "no such savepoint" in ex.args[0]:
                     logger.info(

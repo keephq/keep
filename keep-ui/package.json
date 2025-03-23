@@ -54,7 +54,7 @@
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.479.0",
     "monaco-editor": "^0.52.2",
-    "next": "15.2.1",
+    "next": "15.2.3",
     "next-auth": "^5.0.0-beta.25",
     "openai": "^4.86.2",
     "posthog-js": "^1.229.5",

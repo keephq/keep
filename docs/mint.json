@@ -147,6 +147,7 @@
             "providers/documentation/amazonsqs-provider",
             "providers/documentation/anthropic-provider",
             "providers/documentation/appdynamics-provider",
+            "providers/documentation/asana-provider",
             "providers/documentation/s3-provider",
             "providers/documentation/argocd-provider",
             "providers/documentation/auth0-provider",

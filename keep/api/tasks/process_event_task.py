@@ -42,6 +42,7 @@ from keep.api.core.metrics import (
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.alert import Alert, AlertAudit, AlertRaw
+from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.incident import IncidentDto
 from keep.api.tasks.notification_cache import get_notification_cache
 from keep.api.utils.enrichment_helpers import (
@@ -271,6 +272,9 @@ def __save_to_db(
             saved_alerts = enrich_alerts_with_incidents(
                 tenant_id, saved_alerts, session
             )  # note: this only enriches incidents that were not yet ended
+
+            session.expire_on_commit = False
+            incident_bl = IncidentBl(tenant_id, session)
             for alert in saved_alerts:
                 if alert.event.get("status") == AlertStatus.RESOLVED.value:
                     logger.debug(
@@ -278,9 +282,10 @@ def __save_to_db(
                         extra={"alert_id": alert.id, "tenant_id": tenant_id},
                     )
                     for incident in alert._incidents:
-                        IncidentBl(tenant_id, session).resolve_incident_if_require(
-                            incident
-                        )
+                        if incident.status in IncidentStatus.get_active(return_values=True):
+                            incident_bl.resolve_incident_if_require(
+                                incident
+                            )
             logger.info(
                 "Completed checking for incidents to resolve",
                 extra={"tenant_id": tenant_id},

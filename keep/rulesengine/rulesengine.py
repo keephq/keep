@@ -344,6 +344,8 @@ class RulesEngine:
             )
             if all_alerts_firing:
                 incident.is_visible = True
+                session.add(incident)
+                session.commit()
 
         return incident
 
