@@ -18,8 +18,10 @@ from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 
 from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, MultipleFieldsNode, PropertiesMapper, PropertiesMappingException
 from keep.api.core.cel_to_sql.properties_metadata import (
+    JsonFieldMapping,
     PropertiesMetadata,
     PropertyMetadataInfo,
+    SimpleFieldMapping,
 )
 from celpy import CELParseError
 
@@ -96,6 +98,7 @@ class BaseCelToSqlProvider:
     def __init__(self, dialect: Dialect, properties_metadata: PropertiesMetadata):
         super().__init__()
         self.__literal_proc = String("").literal_processor(dialect=dialect)
+        self.properties_metadata = properties_metadata
         self.properties_mapper = PropertiesMapper(properties_metadata)
 
     def convert_to_sql_str(self, cel: str) -> str:
@@ -135,6 +138,33 @@ class BaseCelToSqlProvider:
             return CelToSqlResult(sql=sql_filter, involved_fields=involved_fields)
         except NotImplementedError as e:
             raise CelToSqlException(f"Error while converting CEL expression tree to SQL: {str(e)}") from e
+
+    def get_order_by_exp(self, sort_by_cel_field: str) -> str:
+        fields_to_sort_by = []
+        metadata = self.properties_metadata.get_property_metadata(sort_by_cel_field)
+        is_json = isinstance(metadata.field_mappings[0], JsonFieldMapping)
+
+        for item in metadata.field_mappings:
+            if isinstance(item, JsonFieldMapping):
+                fields_to_sort_by.append(
+                    self.json_extract_as_text(item.json_prop, item.prop_in_json)
+                )
+            elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
+                fields_to_sort_by.append(item.map_to)
+
+        if len(fields_to_sort_by) > 1:
+            order_by_exp = self.coalesce(
+                [self.cast(item, str) for item in fields_to_sort_by]
+            )
+        else:
+            order_by_exp = fields_to_sort_by[0]
+
+        if is_json and metadata.data_type != str:
+            order_by_exp = self.cast(
+                expression_to_cast=order_by_exp, to_type=metadata.data_type, force=True
+            )
+
+        return order_by_exp
 
     def literal_proc(self, value: Any) -> str:
         if isinstance(value, str):
@@ -192,7 +222,7 @@ class BaseCelToSqlProvider:
     def coalesce(self, args: List[str]) -> str:
         raise NotImplementedError("COALESCE is not implemented. Must be implemented in the child class.")
 
-    def cast(self, expression_to_cast: str, to_type: type) -> str:
+    def cast(self, expression_to_cast: str, to_type: type, force=False) -> str:
         raise NotImplementedError("CAST is not implemented. Must be implemented in the child class.")
 
     def _visit_parentheses(self, node: str) -> str:
