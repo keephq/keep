@@ -80,9 +80,6 @@ KEEP_DEBUG_TASKS = config("KEEP_DEBUG_TASKS", default="false", cast=bool)
 KEEP_DEBUG_MIDDLEWARES = config("KEEP_DEBUG_MIDDLEWARES", default="false", cast=bool)
 KEEP_USE_LIMITER = config("KEEP_USE_LIMITER", default="false", cast=bool)
 
-# New env var that allows to control which services to keep running
-# Currently Backwards compatible with the old env var
-SERVICES = config("KEEP_SERVICES", default=None)
 
 AUTH_TYPE = config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH.value).lower()
 try:
