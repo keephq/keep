@@ -1,12 +1,17 @@
 import asyncio
+import copy
 import json
 import time
 from datetime import datetime, timedelta
 
 import pytest
 import pytz
+import yaml
 
-from keep.api.core.db import get_last_workflow_execution_by_workflow_id
+from keep.api.core.db import (
+    get_last_workflow_execution_by_workflow_id,
+    get_workflow_executions,
+)
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.workflow import Workflow
@@ -44,6 +49,25 @@ actions:
         "Tier 2 Alert: {{ alert.name }} - {{ alert.description }}
          Alert details: {{ alert }}"
 """
+
+
+workflow_alert_description = {
+    "workflow": {
+        "id": "workflow_alert_description",
+        "triggers": [
+            {"type": "alert", "filters": [{"key": "name", "value": "server-is-down"}]}
+        ],
+        "actions": [
+            {
+                "name": "meow",
+                "provider": {
+                    "type": "console",
+                    "with": {"message": '{{ alert.description }}'},
+                },
+            }
+        ],
+    }
+}
 
 
 workflow_definition_with_two_providers = """workflow:
@@ -1371,3 +1395,125 @@ def test_nested_conditional_flow(
                     expected_message in json.dumps(result)
                     for result in workflow_execution.results[action_name]
                 ), f"Expected message '{expected_message}' not found in {action_name} results"
+
+
+def test_workflow_triggers_for_suppressed_alerts(
+    db_session,
+    create_alert,
+    workflow_manager,
+):
+    """
+    In this test, we're sending 3 alerts. Two of them are regular, one is suppressed.
+    We expect suppressed alert not to trigger regular workflows
+    unless worlflow explicitly mentions it in the filters.
+
+    Covering issue: https://github.com/keephq/keep/issues/4005
+    """
+    # The first workflow is regular, it doesn't mention suppressed alerts at all
+    workflow_id_for_suppressed = "give_me_description_for_suppressed"
+    workflow = Workflow(
+        id="workflow_alert_description",
+        name="workflow_alert_description",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="",
+        created_by="",
+        workflow_raw=yaml.dump(
+            workflow_alert_description, sort_keys=False, default_flow_style=False
+        ),
+    )
+    db_session.add(workflow)
+
+    # Second workflow we'll filter by status = suppressed
+    workflow_alert_description_for_suppressed = copy.deepcopy(workflow_alert_description)
+    workflow_alert_description_for_suppressed["workflow"][
+        "id"
+    ] = workflow_id_for_suppressed
+    workflow_alert_description_for_suppressed["workflow"]["triggers"][0]["filters"] = [
+        {"key": "status", "value": "suppressed"}
+    ]
+    workflow = Workflow(
+        id=workflow_id_for_suppressed,
+        name=workflow_id_for_suppressed,
+        tenant_id=SINGLE_TENANT_UUID,
+        description="",
+        created_by="",
+        workflow_raw=yaml.dump(
+            workflow_alert_description_for_suppressed,
+            sort_keys=False,
+            default_flow_style=False,
+        ),
+    )
+    db_session.add(workflow)
+    db_session.commit()
+
+    # Insert 2 non-suppressed and one suppressed alert.
+    workflow_manager.insert_events(
+        SINGLE_TENANT_UUID,
+        [
+            AlertDto(
+                id="server-is-down",
+                source=["test"],
+                name="server-is-down",
+                description="First",
+                status=AlertStatus.FIRING,
+                severity="critical",
+            ),
+            AlertDto(
+                id="server-is-down",
+                source=["test"],
+                name="server-is-down",
+                description="Second",
+                status=AlertStatus.SUPPRESSED,
+                severity="critical",
+            ),
+            AlertDto(
+                id="server-is-down",
+                source=["test"],
+                name="server-is-down",
+                description="Third",
+                status=AlertStatus.FIRING,
+                severity="critical",
+            ),
+        ],
+    )
+
+    # Get at least 2 regular workflow executions.
+    workflow_executions = []
+    count = 0
+    while (len(workflow_executions) < 2) and count < 30:
+        workflow_executions = get_workflow_executions(
+            SINGLE_TENANT_UUID, "workflow_alert_description"
+        )[1]
+        time.sleep(1)
+        count += 1
+
+    # Re-take to make sure we collected leftovers
+    workflow_executions = get_workflow_executions(
+        SINGLE_TENANT_UUID, "workflow_alert_description"
+    )[1]
+
+    # Get executions for the second workflow
+    workflow_executions_for_suppressed = []
+    count = 0
+    while (len(workflow_executions_for_suppressed) < 1) and count < 30:
+        workflow_executions_for_suppressed = get_workflow_executions(
+            SINGLE_TENANT_UUID, workflow_id_for_suppressed
+        )[1]
+        time.sleep(1)
+        count += 1
+
+    descriptions = [we.results["meow"][0] for we in workflow_executions]
+    descriptions_for_suppressed = [
+        we.results["meow"][0] for we in workflow_executions_for_suppressed
+    ]
+    # Remove " and \n from the descriptions
+    descriptions = [desc.replace('"', "").replace("\n", "") for desc in descriptions]
+    descriptions_for_suppressed = [
+        desc.replace('"', "").replace("\n", "") for desc in descriptions_for_suppressed
+    ]
+    assert "First" in descriptions
+    assert "Third" in descriptions
+
+    # It's a suppressed alert, it shouldn't trigger the default workflow. Only the one it is mentioned explicitly in.
+    assert "Second" in descriptions_for_suppressed
+    assert "Second" not in descriptions
