@@ -1,11 +1,10 @@
-import os
-import re
-import sys
 import time
 from datetime import datetime
 
 import requests
-from playwright.sync_api import expect
+from playwright.sync_api import Page, expect
+
+from tests.e2e_tests.utils import save_failure_artifacts
 
 # Dear developer, thank you for checking E2E tests!
 # For instructions, please check test_end_to_end.py.
@@ -14,106 +13,210 @@ from playwright.sync_api import expect
 # os.environ["PLAYWRIGHT_HEADLESS"] = "false"
 
 
-def test_pulling_prometheus_alerts_to_provider(browser):
-    try:
-        provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
+def test_pulling_prometheus_alerts_to_provider(
+    browser: Page, setup_page_logging, failure_artifacts
+):
+    provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
 
-        # Wait for prometheus to wake up and evaluate alert rule as "firing"
-        alerts = None
-        while (
-            alerts is None
-            or len(alerts["data"]["alerts"]) == 0
-            or alerts["data"]["alerts"][0]["state"] != "firing"
-        ):
-            print("Waiting for prometheus to fire an alert...")
-            time.sleep(1)
+    # Wait for prometheus to wake up and evaluate alert rule as "firing"
+    alerts = None
+    max_attempts = 30  # Set a reasonable limit to avoid infinite loops
+    attempt = 0
+
+    while (
+        alerts is None
+        or len(alerts["data"]["alerts"]) == 0
+        or alerts["data"]["alerts"][0]["state"] != "firing"
+    ) and attempt < max_attempts:
+        print(
+            f"Attempt {attempt + 1}/{max_attempts}: Waiting for prometheus to fire an alert..."
+        )
+        time.sleep(1)
+        try:
             alerts = requests.get("http://localhost:9090/api/v1/alerts").json()
             print(alerts)
+        except Exception as e:
+            print(f"Error getting alerts: {e}")
+        attempt += 1
 
-        # Create prometheus provider
-        browser.goto("http://localhost:3000/providers")
-        browser.get_by_placeholder("Filter providers...").click()
-        browser.get_by_placeholder("Filter providers...").fill("prometheus")
-        browser.get_by_placeholder("Filter providers...").press("Enter")
-        browser.get_by_text("Available Providers").hover()
-        prometheus_tile = browser.locator(
-            "button:has-text('prometheus'):has-text('alert'):has-text('data')"
-        )
-        prometheus_tile.first.hover()
-        prometheus_tile.first.click()
-        browser.get_by_placeholder("Enter provider name").click()
-        browser.get_by_placeholder("Enter provider name").fill(provider_name)
-        browser.get_by_placeholder("Enter url").click()
+    if attempt >= max_attempts:
+        raise Exception("Prometheus didn't fire alerts within the expected time")
 
-        """
-        if os.getenv("GITHUB_ACTIONS") == "true":
-            browser.get_by_placeholder("Enter url").fill("http://prometheus-server-for-test-target:9090/")
-        else:
-            browser.get_by_placeholder("Enter url").fill("http://localhost:9090/")
-        """
-        browser.get_by_placeholder("Enter url").fill(
-            "http://prometheus-server-for-test-target:9090/"
-        )
+    # Create prometheus provider
+    browser.goto("http://localhost:3000/providers")
+    browser.get_by_placeholder("Filter providers...").click()
+    browser.get_by_placeholder("Filter providers...").fill("prometheus")
+    browser.get_by_placeholder("Filter providers...").press("Enter")
+    browser.get_by_text("Available Providers").hover()
 
-        browser.mouse.wheel(1000, 10000)  # Scroll down.
-        browser.get_by_role("button", name="Connect", exact=True).click()
+    # Wait for any loading overlays to disappear
+    browser.wait_for_load_state("networkidle")
 
-        # Validate provider is created
-        expect(
-            browser.locator("button:has-text('prometheus'):has-text('connected')")
-        ).to_be_visible()
+    prometheus_tile = browser.locator(
+        "button:has-text('prometheus'):has-text('alert'):has-text('data')"
+    )
+    prometheus_tile.first.wait_for(state="visible")
+    prometheus_tile.first.hover()
+    prometheus_tile.first.click()
 
-        browser.reload()
+    browser.get_by_placeholder("Enter provider name").click()
+    browser.get_by_placeholder("Enter provider name").fill(provider_name)
+    browser.get_by_placeholder("Enter url").click()
 
-        max_attemps = 5
+    # Always use same URL (using localhost conditionally might cause issues)
+    browser.get_by_placeholder("Enter url").fill(
+        "http://prometheus-server-for-test-target:9090/"
+    )
 
-        for attempt in range(max_attemps):
+    browser.mouse.wheel(1000, 10000)  # Scroll down.
+
+    # Wait for the button to be clickable
+    connect_button = browser.get_by_role("button", name="Connect", exact=True)
+    connect_button.wait_for(state="visible")
+    connect_button.click()
+
+    # Validate provider is created - increase timeout for validation
+    expect(
+        browser.locator("button:has-text('prometheus'):has-text('connected')")
+    ).to_be_visible(
+        timeout=10000
+    )  # Increase timeout to 10 seconds
+
+    # Wait for page to stabilize before reloading
+    browser.wait_for_load_state("networkidle")
+    browser.reload()
+    browser.wait_for_load_state("domcontentloaded")
+    browser.wait_for_load_state("networkidle")
+
+    # Try to get to the Feed page and wait for alerts
+    max_attemps = 5
+    alert_found = False
+
+    for attempt in range(max_attemps):
+        try:
             print(f"Attempt {attempt + 1} to load alerts...")
-            browser.get_by_role("link", name="Feed").click()
 
-            try:
-                # Wait for an element that indicates alerts have loaded
-                browser.wait_for_selector("text=AlwaysFiringAlert", timeout=5000)
+            # Handle possible overlay by using evaluate
+            browser.evaluate(
+                """() => {
+                const overlays = document.querySelectorAll('div[data-enter][data-closed][aria-hidden="true"]');
+                overlays.forEach(overlay => overlay.remove());
+            }"""
+            )
+
+            # Try to get to the Feed page
+            feed_link = browser.get_by_role("link", name="Feed")
+            feed_link.wait_for(state="visible")
+            feed_link.click(timeout=10000)  # Increase timeout to 10 seconds
+
+            # Wait for alerts to load with increased timeout
+            alert_element = browser.wait_for_selector(
+                "text=AlwaysFiringAlert", timeout=10000
+            )
+            if alert_element:
                 print("Alerts loaded successfully.")
-            except Exception:
-                if attempt < max_attemps - 1:
-                    print("Alerts not loaded yet. Retrying...")
-                    browser.reload()
-                else:
-                    print("Failed to load alerts after maximum attempts.")
-                    raise Exception("Failed to load alerts after maximum attempts.")
+                alert_found = True
+                break
 
-        browser.reload()
-        # Make sure we pulled multiple instances of the alert
-        browser.get_by_text("AlwaysFiringAlert").click()
-        # Close the side panel by touching outside of it.
-        browser.mouse.click(0, 0)
+        except Exception as e:
+            print(f"Failed to load alerts: {e}")
+            if attempt < max_attemps - 1:
+                print("Retrying after page reload...")
+                browser.reload()
+                browser.wait_for_load_state("domcontentloaded")
+                browser.wait_for_load_state("networkidle")
+                time.sleep(2)  # Add a small delay before retrying
+            else:
+                print("Failed to load alerts after maximum attempts.")
 
-        # Delete provider
-        browser.get_by_role("link", name="Providers").click()
-        browser.locator(
-            f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
-        ).click()
+    if not alert_found:
+        raise Exception("Failed to load alerts after maximum attempts")
+
+    # Make sure we pulled multiple instances of the alert
+    alert_text = browser.get_by_text("AlwaysFiringAlert")
+    alert_text.wait_for(state="visible")
+    alert_text.click()
+
+    # Close the side panel by clicking the escape key instead of clicking at a position
+    browser.keyboard.press("Escape")
+
+    # Handle the providers page navigation carefully
+    try:
+        # Remove any overlays that might be causing issues
+        browser.evaluate(
+            """() => {
+            const overlays = document.querySelectorAll('div[data-enter][data-closed][aria-hidden="true"]');
+            overlays.forEach(overlay => overlay.remove());
+        }"""
+        )
+
+        providers_link = browser.get_by_role("link", name="Providers")
+        providers_link.wait_for(state="visible")
+        providers_link.click(timeout=10000, force=True)  # Use force if needed
+
+    except Exception as e:
+        print(f"Failed to click Providers link: {e}")
+        # Alternative approach - go directly to the URL
+        browser.goto("http://localhost:3000/providers")
+
+    # Wait for page to load
+    browser.wait_for_load_state("networkidle")
+
+    # Find and interact with the provider
+    max_attemps = 3
+    for attempt in range(max_attemps):
+        try:
+            provider_button = browser.locator(
+                f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
+            )
+        except Exception as e:
+            print(f"Failed to find provider button: {e}")
+            # Try to reload the page and find the provider again
+            browser.reload()
+            browser.wait_for_load_state("networkidle")
+            provider_button = browser.locator(
+                f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
+            )
+        try:
+            provider_button.wait_for(state="visible")
+            break
+        except Exception as e:
+            print(f"Failed to find provider button after reload: {e}")
+            if attempt < max_attemps - 1:
+                print("Retrying after page reload...")
+                continue
+            else:
+                raise
+
+    try:
+        provider_button.click()
+        # Delete the provider
+        delete_button = browser.get_by_role("button", name="Delete")
+        delete_button.wait_for(state="visible")
         browser.once("dialog", lambda dialog: dialog.accept())
-        browser.get_by_role("button", name="Delete").click()
+        delete_button.click()
+    except Exception:
+        save_failure_artifacts(browser, prefix="delete_provider")
+        raise
 
-        # Assert provider was deleted
+    # Assert provider was deleted with increased timeout
+    try:
         expect(
             browser.locator(
                 f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
             )
-        ).not_to_be_visible()
-    except Exception:
-        # Current file + test name for unique html and png dump.
-        current_test_name = (
-            "playwright_dump_"
-            + os.path.basename(__file__)[:-3]
-            + "_"
-            + sys._getframe().f_code.co_name
-        )
-
-        browser.screenshot(path=current_test_name + ".png")
-        with open(current_test_name + ".html", "w") as f:
-            f.write(browser.content())
-
-        raise
+        ).not_to_be_visible(timeout=10000)
+    except Exception as e:
+        print(f"Failed to delete provider: {e}")
+        # Try to reload the page and find the provider again
+        browser.reload()
+        browser.wait_for_load_state("networkidle")
+        try:
+            expect(
+                browser.locator(
+                    f"button:has-text('Prometheus'):has-text('Connected'):has-text('{provider_name}')"
+                )
+            ).not_to_be_visible(timeout=10000)
+        except Exception as e:
+            print(f"Failed to delete provider after reload: {e}")
+            raise

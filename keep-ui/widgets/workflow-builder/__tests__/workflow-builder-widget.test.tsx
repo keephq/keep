@@ -5,10 +5,10 @@ import { WorkflowBuilderWidget } from "../workflow-builder-widget";
 
 // Mock the actual WorkflowBuilderWidget component
 jest.mock("../workflow-builder-widget", () => ({
-  WorkflowBuilderWidget: jest.fn(({ workflowRaw, workflowId }) => (
+  WorkflowBuilderWidget: jest.fn((props) => (
     <div data-testid="workflow-builder">
-      <span>workflowRaw: {workflowRaw}</span>
-      <span>workflowId: {workflowId}</span>
+      <span>workflowRaw: {props.workflowRaw}</span>
+      <span>workflowId: {props.workflowId}</span>
     </div>
   )),
 }));
@@ -51,11 +51,11 @@ describe("WorkflowBuilderWidgetSafe", () => {
 
     // Verify WorkflowBuilderWidget was called with correct props
     expect(WorkflowBuilderWidget).toHaveBeenCalledWith(
-      expect.objectContaining({
+      {
         workflowRaw: mockWorkflowRaw,
         workflowId: mockWorkflowId,
-      }),
-      expect.anything()
+      },
+      undefined
     );
 
     // Verify the rendered content
@@ -86,11 +86,11 @@ describe("WorkflowBuilderWidgetSafe", () => {
 
     // Verify WorkflowBuilderWidget was called with correct props
     expect(WorkflowBuilderWidget).toHaveBeenCalledWith(
-      expect.objectContaining({
+      {
         workflowRaw: mockWorkflowRaw,
         workflowId: mockWorkflowId,
-      }),
-      expect.anything()
+      },
+      undefined
     );
 
     // Verify the rendered content is inside CopilotKit

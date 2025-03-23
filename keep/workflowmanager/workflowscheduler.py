@@ -1,7 +1,6 @@
 import enum
 import hashlib
 import logging
-import queue
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -28,7 +27,8 @@ from keep.api.core.metrics import (
     workflow_queue_size,
     workflows_running,
 )
-from keep.api.models.alert import AlertDto, IncidentDto
+from keep.api.models.alert import AlertDto
+from keep.api.models.incident import IncidentDto
 from keep.api.utils.email_utils import KEEP_EMAILS_ENABLED, EmailTemplates, send_email
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
@@ -273,73 +273,8 @@ class WorkflowScheduler:
 
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
-    def handle_workflow_test(self, workflow, tenant_id, triggered_by_user):
-        workflow_execution_id = self._get_unique_execution_number()
-
-        self.logger.info(
-            "Adding workflow to run",
-            extra={
-                "workflow_id": workflow.workflow_id,
-                "workflow_execution_id": workflow_execution_id,
-                "tenant_id": tenant_id,
-                "triggered_by": "manual",
-                "triggered_by_user": triggered_by_user,
-            },
-        )
-
-        result_queue = queue.Queue()
-
-        def run_workflow_wrapper(
-            run_workflow, workflow, workflow_execution_id, test_run, result_queue
-        ):
-            try:
-                errors, results = run_workflow(
-                    workflow, workflow_execution_id, test_run
-                )
-                result_queue.put((errors, results))
-            except Exception as e:
-                print(f"Exception in workflow: {e}")
-                # errors are expected to be a list of strings, so we wrap it
-                result_queue.put(([str(e)], None))
-
-        future = self.executor.submit(
-            run_workflow_wrapper,
-            self.workflow_manager._run_workflow,
-            workflow,
-            workflow_execution_id,
-            True,
-            result_queue,
-        )
-        future.result()  # Wait for completion
-        errors, results = result_queue.get()
-
-        status = "success"
-        error = None
-        if errors is not None and any(errors):
-            error = "\n".join(str(e) for e in errors)
-            status = "error"
-
-        self.logger.info(
-            "Workflow test complete",
-            extra={
-                "workflow_id": workflow.workflow_id,
-                "workflow_execution_id": workflow_execution_id,
-                "tenant_id": tenant_id,
-                "status": status,
-                "error": error,
-                "results": results,
-            },
-        )
-
-        return {
-            "workflow_execution_id": workflow_execution_id,
-            "status": status,
-            "error": error,
-            "results": results,
-        }
-
     def handle_manual_event_workflow(
-        self, workflow_id, tenant_id, triggered_by_user, event: [AlertDto | IncidentDto]
+        self, workflow_id, tenant_id, triggered_by_user, event: AlertDto | IncidentDto, workflow: Workflow = None, test_run: bool = False
     ):
         self.logger.info(f"Running manual event workflow {workflow_id}...")
         try:
@@ -363,16 +298,19 @@ class WorkflowScheduler:
                 fingerprint=fingerprint,
                 event_id=event_id,
                 event_type=event_type,
+                test_run=test_run,
             )
             self.logger.info(f"Workflow execution id: {workflow_execution_id}")
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
         except Exception as e:
             self.logger.error(f"WTF: error creating workflow execution: {e}")
             raise e
+
         self.logger.info(
-            "Adding workflow to run",
+            f"Adding workflow to run {'(test)' if test_run else ''}",
             extra={
                 "workflow_id": workflow_id,
+                "by_definition": workflow is not None,
                 "workflow_execution_id": workflow_execution_id,
                 "tenant_id": tenant_id,
                 "triggered_by": "manual",
@@ -384,17 +322,19 @@ class WorkflowScheduler:
             self.workflows_to_run.append(
                 {
                     "workflow_id": workflow_id,
+                    "workflow": workflow,
                     "workflow_execution_id": workflow_execution_id,
                     "tenant_id": tenant_id,
                     "triggered_by": "manual",
                     "triggered_by_user": triggered_by_user,
                     "event": event,
                     "retry": True,
+                    "test_run": test_run,
                 }
             )
         return workflow_execution_id
 
-    def _get_unique_execution_number(self, fingerprint=None):
+    def _get_unique_execution_number(self, fingerprint=None, workflow_id=None):
         """
         Translates the fingerprint to a unique execution number
 
@@ -402,9 +342,11 @@ class WorkflowScheduler:
             int: an int represents unique execution number
         """
         # if fingerprint supplied
-        if fingerprint:
-            payload = str(fingerprint).encode()
+        if fingerprint and workflow_id:
+            payload = f"{str(fingerprint)}:{str(workflow_id)}".encode()
         # else, just return random
+        elif fingerprint:
+            payload = str(fingerprint).encode()
         else:
             payload = str(uuid.uuid4()).encode()
         return int(hashlib.sha256(payload).hexdigest(), 16) % (
@@ -526,7 +468,7 @@ class WorkflowScheduler:
             if isinstance(event, IncidentDto):
                 event_id = str(event.id)
                 event_type = "incident"
-                fingerprint = "incident:{}".format(event_id)
+                fingerprint = event_id
             else:
                 event_id = event.event_id
                 event_type = "alert"
@@ -545,7 +487,7 @@ class WorkflowScheduler:
                     # else, we want to enforce that no workflow already run with the same fingerprint
                     else:
                         workflow_execution_number = self._get_unique_execution_number(
-                            fingerprint
+                            fingerprint, workflow_id
                         )
                     workflow_execution_id = create_workflow_execution(
                         workflow_id=workflow_id,
@@ -610,14 +552,14 @@ class WorkflowScheduler:
                     self.logger.error(f"Error creating workflow execution: {e}")
                     continue
 
-            # if thats a retry, we need to re-pull the alert to update the enrichments
+            # if thats a retry, we need to re-pull the alert/incident to update the enrichments
             # for example: 2 alerts arrived within a 0.1 seconds the first one is "firing" and the second one is "resolved"
             #               - the first alert will trigger a workflow that will create a ticket with "firing"
             #                    and enrich the alert with the ticket_url
             #               - the second one will wait for the next iteration
             #               - on the next iteratino, the second alert enriched with the ticket_url
             #                    and will trigger a workflow that will update the ticket with "resolved"
-            if workflow_to_run.get("retry", False) and isinstance(event, AlertDto):
+            if workflow_to_run.get("retry", False):
                 try:
                     self.logger.info(
                         "Updating enrichments for workflow after retry",
@@ -628,13 +570,16 @@ class WorkflowScheduler:
                         },
                     )
                     new_enrichment = get_enrichment(
-                        tenant_id, event.fingerprint, refresh=True
+                        tenant_id, fingerprint, refresh=True
                     )
                     # merge the new enrichment with the original event
                     if new_enrichment:
                         new_event = event.dict()
                         new_event.update(new_enrichment.enrichments)
-                        event = AlertDto(**new_event)
+                        if isinstance(event, IncidentDto):
+                            event = IncidentDto(**new_event)
+                        else:
+                            event = AlertDto(**new_event)
                     self.logger.info(
                         "Enrichments updated for workflow after retry",
                         extra={

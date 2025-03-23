@@ -1,0 +1,87 @@
+workflow:
+  id: pod-crash-recovery
+  name: Pod Crash Recovery
+  description: Automatically diagnoses and recovers crashed pods by analyzing logs, events, and node pressure before performing targeted restarts or rollouts.
+  triggers:
+    - type: alert
+      filters:
+        - key: name
+          value: PodCrashLooping
+        - key: source
+          value: prometheus
+    # get logs and events of the pod
+  steps:
+    - name: get-logs
+      provider:
+        type: kubernetes
+        with:
+          command_type: get_logs
+          namespace: "{{ alert.namespace }}"
+          pod_name: "{{ alert.pod_name }}"
+          container_name: "{{ alert.container_name }}"
+          tail_lines: 200 # Get more log lines for better analysis
+    - name: get-events
+      provider:
+        type: kubernetes
+        with:
+          command_type: get_events
+          namespace: "{{ alert.namespace }}"
+          pod_name: "{{ alert.pod_name }}"
+    - name: get-pod-details
+      provider:
+        type: kubernetes
+        with:
+          command_type: get_pods
+          namespace: "{{ alert.namespace }}"
+          label_selector: "app={{ alert.app_name }}"
+    - name: check-node-pressure
+      provider:
+        type: kubernetes
+        with:
+          command_type: get_node_pressure
+  # Filter events to check if the pod is in CrashLoopBackOff state
+  # Restart the pod only if it's in CrashLoopBackOff and node isn't under pressure
+  actions:
+    - name: restart-pod
+      if: >
+        '{{ steps.get-events.results | select(attribute="reason", equals="BackOff") | count > 0 }}' == 'True' and
+        '{{ steps.check-node-pressure.results | selectattr("conditions[].type", "equalto", "MemoryPressure") | selectattr("conditions[].status", "equalto", "True") | count }}' == '0'
+      provider:
+        type: kubernetes
+        with:
+          action: restart_pod
+          namespace: "{{ alert.namespace }}"
+          pod_name: "{{ alert.pod_name }}"
+          message: "Pod {{ alert.pod_name }} in namespace {{ alert.namespace }} is in CrashLoopBackOff state with no node pressure issues. Automatically restarting the pod."
+    - name: rollout-restart-deployment
+      if: >
+        '{{ steps.get-events.results | select(attribute="reason", equals="BackOff") | count > 0 }}' == 'True' and
+        '{{ steps.get-pod-details.results | select(attribute="metadata.ownerReferences[].kind", equals="ReplicaSet") | count > 0 }}' == 'True'
+      provider:
+        type: kubernetes
+        with:
+          action: rollout_restart
+          kind: deployment
+          name: "{{ steps.get-pod-details.results[0].metadata.ownerReferences[0].name }}"
+          namespace: "{{ alert.namespace }}"
+          message: "Deployment for pod {{ alert.pod_name }} in namespace {{ alert.namespace }} is having issues. Performing rolling restart."
+    - name: notify-slack
+      if: '{{ steps.get-events.results | select(attribute="reason", equals="BackOff") | count > 0 }}'
+      provider:
+        type: slack
+        with:
+          channel: "#alerts"
+          message: |
+            :warning: Pod `{{ alert.pod_name }}` in namespace `{{ alert.namespace }}` is in CrashLoopBackOff state.
+
+            *Recent logs:*
+            ```
+            {{ steps.get-logs.results | join('\n') | truncate(1000) }}
+            ```
+
+            *Recent events:*
+            {% for event in steps.get-events.results | sort(attribute='lastTimestamp', reverse=True) | slice(0, 5) %}
+            - {{ event.lastTimestamp }}: {{ event.reason }} - {{ event.message }}
+            {% endfor %}
+
+            *Action taken:* {% if steps.restart-pod.status == 'success' %}Pod has been automatically restarted.{% else %}No automatic action was taken. Manual intervention required.{% endif %}

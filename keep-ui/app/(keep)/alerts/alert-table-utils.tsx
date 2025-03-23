@@ -5,36 +5,61 @@ import {
   RowSelectionState,
   VisibilityState,
   createColumnHelper,
+  Cell,
+  AccessorKeyColumnDef,
 } from "@tanstack/react-table";
 import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
-import { AlertName, AlertImage } from "@/entities/alerts/ui";
+import { AlertName } from "@/entities/alerts/ui";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
 import { isSameDay, isValid, isWithinInterval } from "date-fns";
+import { useLocalStorage } from "utils/hooks/useLocalStorage";
+import {
+  isListColumn,
+  formatList,
+  ListFormatOption,
+  ListItem,
+} from "./alert-table-list-format";
 import {
   MdOutlineNotificationsActive,
   MdOutlineNotificationsOff,
 } from "react-icons/md";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
-import TimeAgo from "react-timeago";
 import { useConfig } from "utils/hooks/useConfig";
 import {
   TableIndeterminateCheckbox,
   TableSeverityCell,
   UISeverity,
 } from "@/shared/ui";
-import { DynamicImageProviderIcon } from "@/components/ui";
+import { DynamicImageProviderIcon, Link } from "@/components/ui";
+import clsx from "clsx";
+import {
+  RowStyle,
+  useAlertRowStyle,
+} from "@/entities/alerts/model/useAlertRowStyle";
+import {
+  formatDateTime,
+  TimeFormatOption,
+  isDateTimeColumn,
+} from "./alert-table-time-format";
+import { useIncidents } from "@/utils/hooks/useIncidents";
+import { useExpandedRows } from "utils/hooks/useExpandedRows";
+import {
+  ColumnRenameMapping,
+  getColumnDisplayName,
+} from "./alert-table-column-rename";
+import _ from "lodash";
 
 export const DEFAULT_COLS = [
   "severity",
   "checkbox",
   "noise",
   "source",
+  "status",
   "name",
   "description",
-  "status",
   "lastReceived",
   "alertMenu",
 ];
@@ -42,7 +67,6 @@ export const DEFAULT_COLS_VISIBILITY = DEFAULT_COLS.reduce<VisibilityState>(
   (acc, colId) => ({ ...acc, [colId]: true }),
   {}
 );
-
 export const getColumnsIds = (columns: ColumnDef<AlertDto>[]) =>
   columns.map((column) => column.id as keyof AlertDto);
 
@@ -86,6 +110,78 @@ export const isDateWithinRange: FilterFn<AlertDto> = (row, columnId, value) => {
   return true;
 };
 
+/**
+ * Utility function to get consistent row class names across all table components
+ */
+export const getRowClassName = (
+  row: {
+    id: string;
+    original?: AlertDto;
+  },
+  theme: Record<string, string>,
+  lastViewedAlert: string | null,
+  rowStyle: RowStyle,
+  expanded?: boolean
+) => {
+  const severity = row.original?.severity || "info";
+  const rowBgColor = theme[severity] || "bg-white";
+  const isLastViewed = row.original?.fingerprint === lastViewedAlert;
+
+  return clsx(
+    "cursor-pointer group",
+    isLastViewed ? "bg-orange-50" : rowBgColor,
+    // Expanded rows should have auto height with a larger minimum height
+    expanded ? "h-auto min-h-16" : rowStyle === "default" ? "h-8" : "h-12",
+    // More padding for expanded rows
+    expanded
+      ? "[&>td]:p-3"
+      : rowStyle === "default"
+        ? "[&>td]:px-0.5 [&>td]:py-0"
+        : "[&>td]:p-2",
+    "hover:bg-orange-100"
+  );
+};
+
+type CustomCell = {
+  column: {
+    id: string;
+    columnDef: {
+      meta: {
+        tdClassName: string;
+      };
+    };
+  };
+};
+
+export const getCellClassName = (
+  cell: Cell<any, unknown> | CustomCell,
+  className: string,
+  rowStyle: RowStyle,
+  isLastViewed: boolean,
+  expanded?: boolean
+) => {
+  const isNameCell = cell.column.id === "name";
+  const isDescriptionCell = cell.column.id === "description";
+  const tdClassName =
+    "getValue" in cell
+      ? cell.column.columnDef.meta?.tdClassName || ""
+      : cell.column.columnDef.meta.tdClassName;
+
+  return clsx(
+    tdClassName,
+    className,
+    isNameCell && "name-cell",
+    // For dense rows, make sure name cells don't expand too much, unless expanded
+    rowStyle === "default" && isNameCell && !expanded && "w-auto max-w-2xl",
+    // Remove truncation for expanded rows
+    isDescriptionCell && expanded && "whitespace-pre-wrap break-words",
+    // Remove line clamp for expanded rows
+    expanded && "!whitespace-pre-wrap !overflow-visible",
+    "group-hover:bg-orange-100", // Group hover styling
+    isLastViewed && "bg-orange-50" // Override with highlight if this is the last viewed row
+  );
+};
+
 const columnHelper = createColumnHelper<AlertDto>();
 
 interface GenerateAlertTableColsArg {
@@ -99,6 +195,8 @@ interface GenerateAlertTableColsArg {
   setChangeStatusAlert?: (alert: AlertDto) => void;
   presetName: string;
   presetNoisy?: boolean;
+  MenuComponent?: (alert: AlertDto) => React.ReactNode;
+  extraColumns?: AccessorKeyColumnDef<AlertDto, boolean | undefined>[];
 }
 
 export const useAlertTableCols = (
@@ -113,12 +211,28 @@ export const useAlertTableCols = (
     setChangeStatusAlert,
     presetName,
     presetNoisy = false,
+    MenuComponent,
+    extraColumns = [],
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
+  const [rowStyle] = useAlertRowStyle();
+  const [columnTimeFormats] = useLocalStorage<Record<string, TimeFormatOption>>(
+    `column-time-formats-${presetName}`,
+    {}
+  );
+  const { data: incidents } = useIncidents();
+  const { isRowExpanded } = useExpandedRows(presetName);
+  const [columnListFormats, setColumnListFormats] = useLocalStorage<
+    Record<string, ListFormatOption>
+  >(`column-list-formats-${presetName}`, {});
   const { data: configData } = useConfig();
   // check if noisy alerts are enabled
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
+  const [columnRenameMapping] = useLocalStorage<ColumnRenameMapping>(
+    `column-rename-mapping-${presetName}`,
+    {}
+  );
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.accessor(
@@ -138,7 +252,7 @@ export const useAlertTableCols = (
       },
       {
         id: colName,
-        header: colName,
+        header: getColumnDisplayName(colName, colName, columnRenameMapping),
         minSize: 100,
         enableGrouping: true,
         getGroupingValue: (row) => {
@@ -167,6 +281,8 @@ export const useAlertTableCols = (
         },
         cell: (context) => {
           const value = context.getValue();
+          const row = context.row;
+          const isExpanded = isRowExpanded?.(row.original.fingerprint);
 
           if (typeof value === "object" && value !== null) {
             return (
@@ -180,15 +296,80 @@ export const useAlertTableCols = (
               </Accordion>
             );
           }
+          let isDateColumn = isDateTimeColumn(context.column.id);
+          if (isDateColumn) {
+            const date =
+              value instanceof Date
+                ? value
+                : new Date(value as string | number);
+            const isoString = date.toISOString();
+            // Get the format from column format settings or use default
+            const formatOption =
+              columnTimeFormats[context.column.id] || "timeago";
+            return (
+              <span title={isoString}>
+                {formatDateTime(date, formatOption)}
+              </span>
+            );
+          }
 
-          // Special handling for imageUrl
-          if (colName === "imageUrl" && value) {
-            return <AlertImage imageUrl={value as string} />;
+          if (context.column.id === "incident") {
+            const incidentString = String(value || "");
+            const incidentSplit = incidentString.split(",");
+            return (
+              <div className="flex flex-wrap gap-1 w-full overflow-hidden">
+                {incidentSplit.map((incidentId, index) => {
+                  const incident = incidents?.items.find(
+                    (incident) => incident.id === incidentId
+                  );
+                  if (!incident) return null;
+                  const title =
+                    incident.user_generated_name || incident.ai_generated_name;
+                  return (
+                    <Link
+                      key={incidentId}
+                      href={`/incidents/${incidentId}`}
+                      title={title}
+                    >
+                      {title}
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          let isList = isListColumn(context.column);
+          let listFormatOption =
+            columnListFormats[context.column.id] || "badges";
+          if (isList) {
+            // Type check and convert value to the expected type for formatList
+            if (typeof value === "string") {
+              return formatList(value, listFormatOption);
+            } else if (
+              Array.isArray(value) &&
+              value.every(
+                (item) =>
+                  typeof item === "object" && item !== null && "label" in item
+              )
+            ) {
+              return formatList(value as ListItem[], listFormatOption);
+            } else {
+              // Fallback for incompatible types
+              return String(value || "");
+            }
           }
 
           if (value) {
             return (
-              <div className="truncate whitespace-pre-wrap line-clamp-3">
+              <div
+                className={clsx(
+                  "whitespace-pre-wrap",
+                  // Only apply line clamp if not expanded
+                  !isExpanded &&
+                    (rowStyle === "default" ? "line-clamp-1" : "line-clamp-3")
+                )}
+              >
                 {value.toString()}
               </div>
             );
@@ -219,12 +400,8 @@ export const useAlertTableCols = (
       ? [
           columnHelper.display({
             id: "checkbox",
-            maxSize: 32,
-            minSize: 32,
-            meta: {
-              tdClassName: "w-6 !py-2 !pl-2 !pr-1",
-              thClassName: "w-6 !py-2 !pl-2 !pr-1 ",
-            },
+            maxSize: 16,
+            minSize: 16,
             header: (context) => (
               <TableIndeterminateCheckbox
                 checked={context.table.getIsAllRowsSelected()}
@@ -286,117 +463,176 @@ export const useAlertTableCols = (
           }),
         ]
       : []),
-    // Source column with exact 40px width ( see alert-table-headers )
-    columnHelper.accessor("source", {
-      id: "source",
-      header: () => <></>,
-      minSize: 40,
-      maxSize: 40,
-      enableSorting: false,
+    columnHelper.accessor("status", {
+      id: "status",
+      header: () => <></>, // Empty header like source column
       enableGrouping: true,
-      getGroupingValue: (row) => row.source,
+      getGroupingValue: (row) => row.status,
+      maxSize: 12,
+      minSize: 12,
+      size: 12,
       enableResizing: false,
       cell: (context) => (
         <div className="flex items-center justify-center">
-          {(context.getValue() ?? []).map((source, index) => {
-            let imagePath = `/icons/${source}-icon.png`;
-            if (source.includes("@")) {
-              imagePath = "/icons/mailgun-icon.png";
-            }
-            return (
-              <DynamicImageProviderIcon
-                className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
-                key={source}
-                alt={source}
-                height={24}
-                width={24}
-                title={source}
-                src={imagePath}
-              />
-            );
-          })}
-        </div>
-      ),
-      meta: {
-        tdClassName: "!p-0 w-4 sm:w-8 !box-border",
-        thClassName: "!p-0 w-4 sm:w-8 !box-border",
-      },
-    }),
-    // Name column butted up against source
-    columnHelper.accessor("name", {
-      id: "name",
-      header: "Name",
-      enableGrouping: true,
-      getGroupingValue: (row) => {
-        console.log("Grouping value for row:", row.name);
-        return row.name;
-      },
-      cell: (context) => (
-        <div>
-          <AlertName
-            alert={context.row.original}
-            setNoteModalAlert={setNoteModalAlert}
-            setTicketModalAlert={setTicketModalAlert}
-          />
-        </div>
-      ),
-      meta: {
-        tdClassName: "!pl-0  w-4 sm:w-8",
-        thClassName: "!pl-1  w-4 sm:w-8", // Small padding for header text only
-      },
-    }),
-    columnHelper.accessor("description", {
-      id: "description",
-      header: "Description",
-      enableGrouping: true,
-      minSize: 100,
-      cell: (context) => (
-        <div title={context.getValue()}>
-          <div className="truncate line-clamp-3 whitespace-pre-wrap">
-            {context.getValue()}
-          </div>
-        </div>
-      ),
-    }),
-    columnHelper.accessor("status", {
-      id: "status",
-      header: "Status",
-      enableGrouping: true,
-      getGroupingValue: (row) => row.status,
-      maxSize: 150,
-      size: 150,
-      cell: (context) => (
-        <span className="flex items-center gap-1 capitalize">
           <Icon
             icon={getStatusIcon(context.getValue())}
             size="sm"
             color={getStatusColor(context.getValue())}
             className="!p-0"
+            title={context.getValue()} // Add title for tooltip on hover
           />
-          {context.getValue()}
-        </span>
+        </div>
       ),
+      meta: {
+        tdClassName: "!p-0 w-4 sm:w-8 !box-border", // Same styling as source
+        thClassName: "!p-0 w-4 sm:w-8 !box-border",
+      },
+    }),
+    // Source column with exact 40px width ( see alert-table-headers )
+    columnHelper.accessor("source", {
+      id: "source",
+      header: () => <></>,
+      minSize: 20,
+      maxSize: 20,
+      size: 20, // Add explicit size to maintain consistency
+      enableSorting: false,
+      getGroupingValue: (row) => row.source,
+      enableResizing: false,
+      cell: (context) => {
+        return (
+          <div>
+            {context.getValue().map((source, index) => {
+              return (
+                <DynamicImageProviderIcon
+                  className={clsx(
+                    "inline-block",
+                    // Fixed size regardless of expanded state
+                    "size-5 xl:size-6",
+                    index == 0 ? "" : "-ml-2"
+                  )}
+                  key={source}
+                  alt={source}
+                  height={24}
+                  width={24}
+                  title={source}
+                  providerType={source}
+                  src={`/icons/${source}-icon.png`}
+                  id={`${source}-icon-${index}`}
+                />
+              );
+            })}
+          </div>
+        );
+      },
+      meta: {
+        tdClassName: "!p-1 w-8 !box-border", // Enforce consistent width
+        thClassName: "!p-1 w-8 !box-border",
+      },
+    }),
+    // Name column butted up against source
+    columnHelper.accessor("name", {
+      id: "name",
+      header: getColumnDisplayName("name", "Name", columnRenameMapping),
+      enableGrouping: true,
+      enableResizing: true,
+      getGroupingValue: (row) => row.name,
+      // Set fixed maximum size to prevent overflow
+      minSize: 150,
+      maxSize: 200, // Reduce from 250 to 200 to constrain more tightly
+      // Use a consistent width for all row states
+      size: 180, // Add a fixed size to ensure consistent width
+      cell: (context) => {
+        const row = context.row;
+        const expanded = isRowExpanded?.(row.original.fingerprint);
+
+        return (
+          // Remove w-full class which can cause expansion
+          <div className={expanded ? "max-w-[180px] overflow-hidden" : ""}>
+            <AlertName
+              alert={context.row.original}
+              expanded={expanded}
+              // Remove flex-grow which can cause expansion
+              className={expanded ? "max-w-[180px] overflow-hidden" : ""}
+            />
+          </div>
+        );
+      },
+      meta: {
+        // Remove w-full from tdClassName to prevent automatic expansion
+        tdClassName: "name-cell",
+        thClassName: "name-cell",
+      },
+    }),
+
+    columnHelper.accessor("description", {
+      id: "description",
+      header: getColumnDisplayName(
+        "description",
+        "Description",
+        columnRenameMapping
+      ),
+      enableGrouping: true,
+      // Increase default minSize to give description more space
+      minSize: 200,
+      // Let it grow more when expanded
+      cell: (context) => {
+        const value = context.getValue();
+        const row = context.row;
+        const expanded = isRowExpanded?.(row.original.fingerprint);
+
+        return (
+          <div
+            title={expanded ? undefined : value}
+            className={clsx(
+              // Give description more space and control overflow
+              expanded ? "w-full break-words" : "",
+              // Set fixed width when expanded to prevent layout issues
+              expanded ? "max-w-[100%]" : ""
+            )}
+          >
+            <div
+              className={clsx(
+                // Always use whitespace-pre-wrap for consistency
+                "whitespace-pre-wrap",
+                // Only truncate when not expanded
+                !expanded &&
+                  (rowStyle === "default"
+                    ? "truncate line-clamp-1"
+                    : "truncate line-clamp-3")
+              )}
+            >
+              {value}
+            </div>
+          </div>
+        );
+      },
     }),
     columnHelper.accessor("lastReceived", {
       id: "lastReceived",
-      header: "Last Received",
+      header: getColumnDisplayName(
+        "lastReceived",
+        "Last Received",
+        columnRenameMapping
+      ),
       filterFn: isDateWithinRange,
-      minSize: 100,
-      // data is a Date object (converted in usePresetAlerts)
+      minSize: 80,
+      maxSize: 80,
       cell: (context) => {
         const value = context.getValue();
         const date = value instanceof Date ? value : new Date(value);
         const isoString = date.toISOString();
+
+        // Get the format from column format settings or use default
+        const formatOption = columnTimeFormats[context.column.id] || "timeago";
+
         return (
-          <span>
-            <TimeAgo date={isoString} title={isoString} />
-          </span>
+          <span title={isoString}>{formatDateTime(date, formatOption)}</span>
         );
       },
     }),
     columnHelper.accessor("assignee", {
       id: "assignee",
-      header: "Assignee",
+      header: getColumnDisplayName("assignee", "Assignee", columnRenameMapping),
       enableGrouping: true,
       getGroupingValue: (row) => row.assignee,
       minSize: 100,
@@ -429,26 +665,29 @@ export const useAlertTableCols = (
       ),
     }),
     ...filteredAndGeneratedCols,
+    ...extraColumns,
     ...((isMenuDisplayed
       ? [
           columnHelper.display({
             id: "alertMenu",
-            minSize: 40,
-            maxSize: 48,
-            cell: (context) => (
-              <div className="flex justify-end">
+            minSize: 120,
+            cell: (context) =>
+              MenuComponent ? (
+                MenuComponent(context.row.original)
+              ) : (
                 <AlertMenu
                   presetName={presetName.toLowerCase()}
                   alert={context.row.original}
                   setRunWorkflowModalAlert={setRunWorkflowModalAlert}
                   setDismissModalAlert={setDismissModalAlert}
                   setChangeStatusAlert={setChangeStatusAlert}
+                  setTicketModalAlert={setTicketModalAlert}
+                  setNoteModalAlert={setNoteModalAlert}
                 />
-              </div>
-            ),
+              ),
             meta: {
-              tdClassName: "p-1 md:p-2",
-              thClassName: "p-1 md:p-2",
+              tdClassName: "p-0 md:p-2",
+              thClassName: "p-0 md:p-2",
             },
           }),
         ]

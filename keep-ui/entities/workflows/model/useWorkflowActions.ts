@@ -3,17 +3,18 @@ import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { showErrorToast } from "@/shared/ui";
 import { Definition } from "@/entities/workflows/model/types";
-import { stringify } from "yaml";
 import { useCallback } from "react";
-import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
+import { KeepApiError } from "@/shared/api/KeepApiError";
+import { getBodyFromStringOrDefinitionOrObject } from "../lib/yaml-utils";
 
 type UseWorkflowActionsReturn = {
+  uploadWorkflowFiles: (files: FileList) => Promise<string[]>;
   createWorkflow: (
-    definition: Definition
+    definition: Definition | string
   ) => Promise<CreateOrUpdateWorkflowResponse | null>;
   updateWorkflow: (
     workflowId: string,
-    definition: Definition | Record<string, unknown>
+    definition: Definition | Record<string, unknown> | string
   ) => Promise<CreateOrUpdateWorkflowResponse | null>;
   deleteWorkflow: (workflowId: string) => void;
 };
@@ -31,11 +32,65 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
     revalidateMultiple(["/workflows?is_v2=true"], { isExact: true });
   }, [revalidateMultiple]);
 
+  const uploadWorkflowFiles = useCallback(
+    async (files: FileList) => {
+      const uploadFile = async (formData: FormData, fName: string) => {
+        try {
+          const response = await api.request<CreateOrUpdateWorkflowResponse>(
+            `/workflows`,
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+
+          refreshWorkflows();
+
+          return response;
+        } catch (error) {
+          if (error instanceof KeepApiError) {
+            showErrorToast(
+              error,
+              `Failed to upload ${fName}: ${error.message}`
+            );
+          } else {
+            showErrorToast(error, "Failed to upload file");
+          }
+        }
+      };
+
+      const formData = new FormData();
+      const uploadedWorkflowsIds: string[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fName = file.name;
+        formData.set("file", file);
+        const response = await uploadFile(formData, fName);
+        if (response?.workflow_id) {
+          uploadedWorkflowsIds.push(response.workflow_id);
+        }
+      }
+
+      if (uploadedWorkflowsIds.length === 0) {
+        return [];
+      }
+
+      const plural =
+        uploadedWorkflowsIds.length === 1 ? "workflow" : "workflows";
+      refreshWorkflows();
+      showSuccessToast(
+        `${uploadedWorkflowsIds.length} ${plural} uploaded successfully`
+      );
+      return uploadedWorkflowsIds;
+    },
+    [api, refreshWorkflows]
+  );
+
   const createWorkflow = useCallback(
-    async (definition: Definition) => {
+    async (definition: Definition | string) => {
       try {
-        const workflow = getYamlWorkflowDefinition(definition);
-        const body = stringify(workflow);
+        const body = getBodyFromStringOrDefinitionOrObject(definition);
         const response = await api.request<CreateOrUpdateWorkflowResponse>(
           "/workflows/json",
           {
@@ -58,14 +113,10 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
   const updateWorkflow = useCallback(
     async (
       workflowId: string,
-      definition: Definition | Record<string, unknown>
+      definition: Definition | Record<string, unknown> | string
     ) => {
       try {
-        const body = stringify(
-          "workflow" in definition
-            ? definition
-            : getYamlWorkflowDefinition(definition as Definition)
-        );
+        const body = getBodyFromStringOrDefinitionOrObject(definition);
         const response = await api.request<CreateOrUpdateWorkflowResponse>(
           `/workflows/${workflowId}`,
           {
@@ -113,5 +164,6 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
     createWorkflow,
     updateWorkflow,
     deleteWorkflow,
+    uploadWorkflowFiles,
   };
 }

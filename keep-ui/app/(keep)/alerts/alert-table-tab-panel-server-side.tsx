@@ -16,6 +16,7 @@ interface Props {
   alertsTotalCount: number;
   preset: Preset;
   isAsyncLoading: boolean;
+  queryTimeInSeconds: number;
   setTicketModalAlert: (alert: AlertDto | null) => void;
   setNoteModalAlert: (alert: AlertDto | null) => void;
   setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
@@ -45,6 +46,7 @@ export default function AlertTableTabPanelServerSide({
   onPoll,
   onQueryChange,
   onLiveUpdateStateChange,
+  queryTimeInSeconds,
 }: Props) {
   const additionalColsToGenerate = [
     ...new Set(
@@ -93,9 +95,8 @@ export default function AlertTableTabPanelServerSide({
       setDismissedModalAlert={setDismissModalAlert}
       isAsyncLoading={isAsyncLoading}
       presetName={preset.name}
-      presetStatic={preset.name === "feed"}
-      presetId={preset.id}
       presetTabs={presetTabs}
+      queryTimeInSeconds={queryTimeInSeconds}
       mutateAlerts={mutateAlerts}
       setRunWorkflowModalAlert={setRunWorkflowModalAlert}
       setDismissModalAlert={setDismissModalAlert}

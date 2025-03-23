@@ -1,11 +1,11 @@
 import logging
-from datetime import datetime, timezone
 from typing import List, Optional
 
 from arq import ArqRedis
 from fastapi import (
     APIRouter,
     BackgroundTasks,
+    Body,
     Depends,
     HTTPException,
     Query,
@@ -19,6 +19,7 @@ from sqlmodel import Session
 from keep.api.arq_pool import get_pool
 from keep.api.bl.ai_suggestion_bl import AISuggestionBl
 from keep.api.bl.enrichments_bl import EnrichmentsBl
+from keep.api.bl.incident_reports import IncidentReportsBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, REDIS
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
@@ -41,31 +42,27 @@ from keep.api.core.incidents import (
     get_incident_facets,
     get_incident_facets_data,
     get_incident_potential_facet_fields,
-    get_last_incidents_by_cel,
 )
-from keep.api.models.alert import (
-    AlertDto,
-    EnrichAlertRequestBody,
-    EnrichIncidentRequestBody,
+from keep.api.models.action_type import ActionType
+from keep.api.models.alert import AlertDto, EnrichIncidentRequestBody
+from keep.api.models.db.alert import AlertAudit
+from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
+from keep.api.models.facet import FacetOptionsQueryDto
+from keep.api.models.incident import (
     IncidentCommit,
     IncidentDto,
     IncidentDtoIn,
     IncidentListFilterParamsDto,
     IncidentsClusteringSuggestion,
-    IncidentSeverity,
     IncidentSeverityChangeDto,
     IncidentSorting,
-    IncidentStatus,
     IncidentStatusChangeDto,
     MergeIncidentsRequestDto,
     MergeIncidentsResponseDto,
     SplitIncidentRequestDto,
     SplitIncidentResponseDto,
 )
-from keep.api.models.db.alert import ActionType, AlertAudit
-from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.workflow import WorkflowExecutionDTO
-from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import (
@@ -122,7 +119,7 @@ def get_incidents_meta(
     description="Get last incidents",
 )
 def get_all_incidents(
-    confirmed: bool = True,
+    candidate: bool = False,
     predicted: Optional[bool] = None,
     limit: int = 25,
     offset: int = 0,
@@ -172,10 +169,12 @@ def get_all_incidents(
         authenticated_entity=authenticated_entity,
     )
 
+    incident_bl = IncidentBl(tenant_id, session=None, pusher_client=None)
+
     try:
-        incidents, total_count = get_last_incidents_by_cel(
+        result = incident_bl.query_incidents(
             tenant_id=tenant_id,
-            is_confirmed=confirmed,
+            is_candidate=candidate,
             is_predicted=predicted,
             limit=limit,
             offset=offset,
@@ -183,30 +182,22 @@ def get_all_incidents(
             cel=cel,
             allowed_incident_ids=allowed_incident_ids,
         )
+        logger.info(
+            "Fetched incidents from DB",
+            extra={
+                "tenant_id": tenant_id,
+                "limit": limit,
+                "offset": offset,
+                "sorting": sorting,
+                "filters": filters,
+            },
+        )
+        return result
     except CelToSqlException as e:
         logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
         raise HTTPException(
             status_code=400, detail=f"Error parsing CEL expression: {cel}"
-        )
-
-    incidents_dto = []
-    for incident in incidents:
-        incidents_dto.append(IncidentDto.from_db_incident(incident))
-
-    logger.info(
-        "Fetched incidents from DB",
-        extra={
-            "tenant_id": tenant_id,
-            "limit": limit,
-            "offset": offset,
-            "sorting": sorting,
-            "filters": filters,
-        },
-    )
-
-    return IncidentsPaginatedResultsDto(
-        limit=limit, offset=offset, count=total_count, items=incidents_dto
-    )
+        ) from e
 
 
 @router.post(
@@ -314,6 +305,40 @@ def fetch_alert_facet_fields(
 
 
 @router.get(
+    "/report",
+    description="Get incidents report",
+)
+def get_incidents_report(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+    cel: str = Query(None),
+):
+    tenant_id = authenticated_entity.tenant_id
+    reports_bl = IncidentReportsBl(tenant_id)
+
+    # get all preset ids that the user has access to
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        authenticated_entity.tenant_id
+    )
+    # Note: if no limitations (allowed_preset_ids is []), then all presets are allowed
+    allowed_incident_ids = identity_manager.get_user_permission_on_resource_type(
+        resource_type="incident",
+        authenticated_entity=authenticated_entity,
+    )
+
+    try:
+        return reports_bl.get_incident_reports(
+            incidents_query_cel=cel, allowed_incident_ids=allowed_incident_ids
+        )
+    except CelToSqlException as e:
+        logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
+        raise HTTPException(
+            status_code=400, detail=f"Error parsing CEL expression: {cel}"
+        )
+
+
+@router.get(
     "/{incident_id}",
     description="Get incident by id",
 )
@@ -385,6 +410,24 @@ def update_incident(
         incident_id, updated_incident_dto, generated_by_ai
     )
     return new_incident_dto
+
+
+@router.delete(
+    "/bulk",
+    description="Delete incidents in bulk",
+)
+def bulk_delete_incidents(
+    incident_ids: List[UUID] = Body(..., embed=True),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+    session: Session = Depends(get_session),
+):
+    tenant_id = authenticated_entity.tenant_id
+    incident_bl = IncidentBl(tenant_id, session, pusher_client)
+    incident_bl.bulk_delete_incidents(incident_ids)
+    return Response(status_code=202)
 
 
 @router.delete(
@@ -462,7 +505,7 @@ def merge_incidents(
     )
 
     try:
-        merged_ids, skipped_ids, failed_ids = merge_incidents_to_id(
+        merged_ids, failed_ids = merge_incidents_to_id(
             tenant_id,
             command.source_incident_ids,
             command.destination_incident_id,
@@ -474,14 +517,12 @@ def merge_incidents(
         else:
             message = f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id} successfully"
 
-        if skipped_ids:
-            message += f", {pluralize(len(skipped_ids), 'incident')} were skipped"
         if failed_ids:
             message += f", {pluralize(len(failed_ids), 'incident')} failed to merge"
+            raise HTTPException(f"Some incidents failed to merge. {message}")
 
         return MergeIncidentsResponseDto(
             merged_incident_ids=merged_ids,
-            skipped_incident_ids=skipped_ids,
             failed_incident_ids=failed_ids,
             destination_incident_id=command.destination_incident_id,
             message=message,
@@ -801,62 +842,12 @@ def change_incident_status(
     session: Session = Depends(get_session),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Fetching incident",
-        extra={
-            "incident_id": incident_id,
-            "tenant_id": tenant_id,
-        },
+
+    incident_bl = IncidentBl(tenant_id, session)
+
+    new_incident_dto = incident_bl.change_status(
+        incident_id, change.status, authenticated_entity
     )
-
-    with_alerts = change.status in [
-        IncidentStatus.RESOLVED,
-        IncidentStatus.ACKNOWLEDGED,
-    ]
-    incident = get_incident_by_id(
-        tenant_id, incident_id, with_alerts=with_alerts, session=session
-    )
-
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-
-    # We need to do something only if status really changed
-    if change.status != incident.status:
-        if change.status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:
-            for alert in incident._alerts:
-                _enrich_alert(
-                    EnrichAlertRequestBody(
-                        enrichments={"status": change.status.value},
-                        fingerprint=alert.fingerprint,
-                    ),
-                    authenticated_entity=authenticated_entity,
-                )
-
-        if change.status == IncidentStatus.RESOLVED:
-            end_time = datetime.now(tz=timezone.utc)
-            incident.end_time = end_time
-
-        if incident.assignee != authenticated_entity.email:
-            incident.assignee = authenticated_entity.email
-            add_audit(
-                tenant_id,
-                str(incident_id),
-                authenticated_entity.email,
-                ActionType.INCIDENT_ASSIGN,
-                f"Incident self-assigned to {authenticated_entity.email}",
-            )
-
-        add_audit(
-            tenant_id,
-            str(incident_id),
-            authenticated_entity.email,
-            ActionType.INCIDENT_STATUS_CHANGE,
-            f"Incident status changed from {incident.status} to {change.status.value}",
-        )
-        incident.status = change.status.value
-        session.commit()
-
-    new_incident_dto = IncidentDto.from_db_incident(incident)
 
     return new_incident_dto
 

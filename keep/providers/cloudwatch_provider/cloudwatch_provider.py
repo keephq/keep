@@ -9,6 +9,8 @@ import json
 import logging
 import os
 import time
+import typing
+from typing import List
 from urllib.parse import urlparse
 
 import boto3
@@ -62,6 +64,15 @@ class CloudwatchProviderAuthConfig:
             "description": "AWS Cloudwatch SNS Topic [ARN or name]",
             "hint": "Default SNS Topic to send notifications (Optional since if your alarms already sends notifications to SNS topic, Keep will use the exists SNS topic)",
             "sensitive": False,
+        },
+    )
+    protocol: typing.Literal["https", "http"] = dataclasses.field(
+        default="https",
+        metadata={
+            "required": True,
+            "description": "Protocol to use for the webhook",
+            "type": "select",
+            "options": ["https", "http"],
         },
     )
 
@@ -322,26 +333,37 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         return self._client
 
     def _query(
-        self, log_group: str = None, query: str = None, hours: int = 24, **kwargs: dict
+        self,
+        log_group: str = None,
+        log_groups: List[str] | None = None,
+        remove_ptr_from_results=False,
+        query: str = None,
+        hours: int = 24,
+        **kwargs: dict,
     ) -> dict:
         # log_group = kwargs.get("log_group")
         # query = kwargs.get("query")
         # hours = kwargs.get("hours", 24)
         logs_client = self.__generate_client("logs")
         try:
-            start_query_response = logs_client.start_query(
-                logGroupName=log_group,
-                queryString=query,
-                startTime=int(
+            query_kwargs = {
+                "queryString": query,
+                "startTime": int(
                     (
                         datetime.datetime.today() - datetime.timedelta(hours=hours)
                     ).timestamp()
                 ),
-                endTime=int(datetime.datetime.now().timestamp()),
-            )
-        except Exception:
+                "endTime": int(datetime.datetime.now().timestamp()),
+            }
+            if log_group is not None:
+                query_kwargs["logGroupName"] = log_group
+            if log_groups is not None:
+                query_kwargs["logGroupNames"] = log_groups
+
+            start_query_response = logs_client.start_query(**query_kwargs)
+        except Exception as e:
             self.logger.exception(
-                "Error starting AWS cloudwatch query - add logs:StartQuery permissions",
+                f"Error starting AWS cloudwatch query - add logs:StartQuery permissions, {e}",
                 extra={"kwargs": kwargs},
             )
             raise
@@ -352,17 +374,20 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         while response is None or response["status"] == "Running":
             self.logger.debug("Waiting for AWS cloudwatch query to complete...")
             time.sleep(1)
-            try:
-                response = logs_client.get_query_results(queryId=query_id)
-            except Exception:
-                # probably no permissions
-                self.logger.exception(
-                    "Error getting AWS cloudwatch query results - add logs:GetQueryResults permissions",
-                    extra={"kwargs": kwargs},
-                )
-                raise
-
-        results = response.get("results")
+            response = logs_client.get_query_results(queryId=query_id)
+            # Response in format List[{field: fieldName, value: fieldValue}]
+            # We need to convert it to List[Dict[fieldName: fieldValue]]
+            results = []
+            for result in response.get("results", []):
+                results.append({field["field"]: field["value"] for field in result})
+                # Trying to parse JSON of each field["value"]
+                for field in results[-1]:
+                    try:
+                        results[-1][field] = json.loads(results[-1][field])
+                    except json.JSONDecodeError:
+                        pass
+                if remove_ptr_from_results:
+                    results[-1].pop("@ptr", None)
         return results
 
     def _get_account_id(self):
@@ -486,13 +511,18 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                     for sub in subscriptions
                 )
                 if not already_subscribed:
-                    url_with_api_key = keep_api_url.replace(
-                        "https://", f"https://api_key:{api_key}@"
-                    )
+                    if self.authentication_config.protocol == "http":
+                        url_with_api_key = keep_api_url.replace(
+                            "https://", f"http://api_key:{api_key}@"
+                        )
+                    else:
+                        url_with_api_key = keep_api_url.replace(
+                            "http://", f"https://api_key:{api_key}@"
+                        )
                     self.logger.info("Subscribing to topic %s...", topic)
                     sns_client.subscribe(
                         TopicArn=topic,
-                        Protocol="https",
+                        Protocol=self.authentication_config.protocol,
                         Endpoint=url_with_api_key,
                     )
                     self.logger.info("Subscribed to topic %s!", topic)

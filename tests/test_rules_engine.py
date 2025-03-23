@@ -14,14 +14,9 @@ from keep.api.core.db import (
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import set_last_alert
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import (
-    AlertDto,
-    AlertSeverity,
-    AlertStatus,
-    IncidentSeverity,
-    IncidentStatus,
-)
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import Alert, Incident
+from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
 from keep.api.models.db.rule import CreateIncidentOn, ResolveOn
 from keep.rulesengine.rulesengine import RulesEngine
 from tests.fixtures.client import client, test_app  # noqa
@@ -351,7 +346,7 @@ def test_incident_severity(db_session):
     assert results[0].severity.value == IncidentSeverity.INFO.value
 
 
-def test_incident_resolution_on_all(db_session, create_alert):
+def test_incident_no_auto_resolution(db_session, create_alert):
 
     create_rule_db(
         tenant_id=SINGLE_TENANT_UUID,
@@ -365,12 +360,12 @@ def test_incident_resolution_on_all(db_session, create_alert):
         definition_cel='(severity == "critical")',
         created_by="test@keephq.dev",
         require_approve=False,
-        resolve_on=ResolveOn.ALL.value,
+        resolve_on=ResolveOn.NEVER.value,
     )
 
     incidents, total_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
         limit=10,
         offset=1,
     )
@@ -391,7 +386,7 @@ def test_incident_resolution_on_all(db_session, create_alert):
 
     incidents, incidents_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
         limit=10,
         offset=0,
     )
@@ -419,7 +414,7 @@ def test_incident_resolution_on_all(db_session, create_alert):
 
     incidents, incidents_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
         limit=10,
         offset=0,
     )
@@ -447,7 +442,122 @@ def test_incident_resolution_on_all(db_session, create_alert):
 
     incidents, incidents_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
+        limit=10,
+        offset=0,
+    )
+
+    assert incidents_count == 1
+
+    incident = incidents[0]
+
+    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        limit=10,
+        offset=0,
+    )
+    assert alert_count == 2
+    assert incident.status == IncidentStatus.FIRING.value
+
+
+def test_incident_resolution_on_all(db_session, create_alert):
+
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='(severity == "critical")',
+        created_by="test@keephq.dev",
+        require_approve=False,
+        resolve_on=ResolveOn.ALL.value,
+    )
+
+    incidents, total_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_candidate=False,
+        limit=10,
+        offset=1,
+    )
+    assert total_count == 0
+
+    create_alert(
+        "Something went wrong",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    create_alert(
+        "Something went wrong again",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    incidents, incidents_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_candidate=False,
+        limit=10,
+        offset=0,
+    )
+
+    assert incidents_count == 1
+
+    incident = incidents[0]
+    assert incident.status == IncidentStatus.FIRING.value
+
+    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        limit=10,
+        offset=0,
+    )
+    assert alert_count == 2
+
+    # Same fingerprint
+    create_alert(
+        "Something went wrong",
+        AlertStatus.RESOLVED,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    incidents, incidents_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_candidate=False,
+        limit=10,
+        offset=0,
+    )
+
+    assert incidents_count == 1
+
+    incident = incidents[0]
+
+    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        limit=10,
+        offset=0,
+    )
+    # Still 2 alerts, since 2 unique fingerprints
+    assert alert_count == 2
+    assert incident.status == IncidentStatus.FIRING.value
+
+    create_alert(
+        "Something went wrong again",
+        AlertStatus.RESOLVED,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    incidents, incidents_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_candidate=False,
         limit=10,
         offset=0,
     )
@@ -491,7 +601,7 @@ def test_incident_resolution_on_edge(
 
     incidents, total_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
         limit=10,
         offset=1,
     )
@@ -512,7 +622,7 @@ def test_incident_resolution_on_edge(
 
     incidents, incidents_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
         limit=10,
         offset=0,
     )
@@ -541,7 +651,7 @@ def test_incident_resolution_on_edge(
 
     incidents, incidents_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
         limit=10,
         offset=0,
     )
@@ -568,7 +678,7 @@ def test_incident_resolution_on_edge(
 
     incidents, incidents_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
         limit=10,
         offset=0,
     )
@@ -598,6 +708,7 @@ def test_rule_multiple_alerts(db_session, create_alert):
         },
         timeframe=600,
         timeunit="seconds",
+        require_approve=False,
         definition_cel='(severity == "critical") || (severity == "high")',
         created_by="test@keephq.dev",
         create_on=CreateIncidentOn.ALL.value,
@@ -613,10 +724,10 @@ def test_rule_multiple_alerts(db_session, create_alert):
     )
 
     # No incident yet
-    assert db_session.query(Incident).filter(Incident.is_confirmed == True).count() == 0
-    # But candidate is there
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # But hidden group is there
     assert (
-        db_session.query(Incident).filter(Incident.is_confirmed == False).count() == 1
+        db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
     )
     incident = db_session.query(Incident).first()
     alert_1 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
@@ -640,10 +751,10 @@ def test_rule_multiple_alerts(db_session, create_alert):
     alert_2 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
 
     # Still no incident yet
-    assert db_session.query(Incident).filter(Incident.is_confirmed == True).count() == 0
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
     # And still one candidate is there
     assert (
-        db_session.query(Incident).filter(Incident.is_confirmed == False).count() == 1
+        db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
     )
 
     enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
@@ -666,7 +777,7 @@ def test_rule_multiple_alerts(db_session, create_alert):
     enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
 
     # And incident was official started
-    assert db_session.query(Incident).filter(Incident.is_confirmed == True).count() == 1
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 1
 
     db_session.refresh(incident)
     assert incident.alerts_count == 3
@@ -712,10 +823,10 @@ def test_rule_event_groups_expires(db_session, create_alert):
     )
 
     # Still no incident yet
-    assert db_session.query(Incident).filter(Incident.is_confirmed == True).count() == 0
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
     # And still one candidate is there
     assert (
-        db_session.query(Incident).filter(Incident.is_confirmed == False).count() == 1
+        db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
     )
 
     sleep(1)
@@ -730,10 +841,10 @@ def test_rule_event_groups_expires(db_session, create_alert):
     )
 
     # Still no incident yet
-    assert db_session.query(Incident).filter(Incident.is_confirmed == True).count() == 0
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
     # And now two candidates is there
     assert (
-        db_session.query(Incident).filter(Incident.is_confirmed == False).count() == 2
+        db_session.query(Incident).filter(Incident.is_visible == False).count() == 2
     )
 
 
@@ -1292,7 +1403,7 @@ def test_multiple_incidents_name_template(db_session):
     # Get all incidents and verify their current state
     incidents, total_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
         limit=10,
         offset=0,
     )
@@ -1435,7 +1546,7 @@ def test_multiple_incidents_name_template_with_updates(db_session):
     # Verify final state
     incidents, total_count = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID,
-        is_confirmed=True,
+        is_candidate=False,
         limit=10,
         offset=0,
     )
@@ -1468,7 +1579,7 @@ def test_incident_created_only_for_firing_alerts(db_session):
             status=AlertStatus.RESOLVED,  # Non-firing status
             severity=AlertSeverity.CRITICAL,
             lastReceived=datetime.datetime.now().isoformat(),
-            fingerprint="Non-firing alert"
+            fingerprint="Non-firing alert",
         ),
         AlertDto(
             id="grafana-2",
@@ -1477,7 +1588,7 @@ def test_incident_created_only_for_firing_alerts(db_session):
             status=AlertStatus.FIRING,  # Firing status
             severity=AlertSeverity.CRITICAL,
             lastReceived=datetime.datetime.now().isoformat(),
-            fingerprint="Firing alert"
+            fingerprint="Firing alert",
         ),
     ]
 
@@ -1568,7 +1679,7 @@ def test_same_incident_in_the_past_id_set(db_session, client, test_app):
     # Ensure the first incident is created
     assert incident1.user_generated_name == "test-rule"
     assert incident1.same_incident_in_the_past_id is None
-    
+
     # Set the status of the first incident to resolved
     response_resolved = client.post(
         "/incidents/{}/status".format(incident1.id),
@@ -1582,7 +1693,6 @@ def test_same_incident_in_the_past_id_set(db_session, client, test_app):
     data = response_resolved.json()
     assert data["id"] == str(incident1.id)
     assert data["status"] == IncidentStatus.RESOLVED.value
-
 
     # Second alert with the same rule creates a new incident after timeframe expiration
     sleep(1)
@@ -1618,17 +1728,248 @@ def test_same_incident_in_the_past_id_set(db_session, client, test_app):
     assert incident2.same_incident_in_the_past_id == incident1.id
 
 
-# Next steps:
-#   - test that alerts in the same group are being updated correctly
-#   - test group are being updated correctly
-#   - test that alerts in different groups are being updated correctly
-#   - test timeframes - new group is created
-#   - test timeframes - old group is not updated
-#   - test more matchers (CEL's)
-#       - three groups
-#       - one group
-#       - more CEL operators
-#   - test group attributes - severity and status
-#   - test group attributes - labels
-#   - test that if more than one rule matches, the alert is being updated correctly
-#   - test that if more than one rule matches, the alert is being updated correctly - different group
+def test_correlation_to_incident_candidate(db_session):
+    """
+    Test that a candidate incident is created and not confirmed until explicitly approved,
+    and that the correlation mechanism works correctly for incidents requiring approval.
+    Regression test for https://github.com/keephq/keep/issues/3719
+    """
+
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+
+    # Create a rule that generates incidents based on severity
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={"sql": "N/A", "params": {}},
+        timeframe=600,
+        timeunit="seconds",
+        require_approve=True,
+        definition_cel='severity == "critical"',
+        created_by="test@keephq.dev",
+    )
+
+    # First alert creates an incident
+    alert_dto = AlertDto(
+        id="alert-1",
+        source=["grafana"],
+        name="First critical alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+    )
+
+    alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert_dto.dict(),
+        fingerprint=alert_dto.fingerprint,
+    )
+    db_session.add(alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
+
+    alert_dto.event_id = alert.id
+    results = rules_engine.run_rules([alert_dto], session=db_session)
+    assert len(results) == 1
+    incident = results[0]
+
+    # Ensure the first incident is created
+    assert incident.user_generated_name == "test-rule"
+    assert incident.same_incident_in_the_past_id is None
+    assert incident.is_candidate is True
+
+
+def test_incident_prefix_simple(db_session):
+    """Test that incident prefix is correctly added to new incidents"""
+    # Create alert
+    alert = AlertDto(
+        id="grafana-1",
+        source=["grafana"],
+        name="Test alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+        labels={"host": "web-1"},
+    )
+
+    # Create rule with prefix
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={"sql": "N/A", "params": {}},
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='source == "grafana"',
+        created_by="test@keephq.dev",
+        incident_prefix="INC",
+    )
+
+    # Add alert to db
+    db_alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert.dict(),
+        fingerprint=alert.fingerprint,
+    )
+    db_session.add(db_alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, db_alert, db_session)
+
+    alert.event_id = db_alert.id
+    results = rules_engine.run_rules([alert], session=db_session)
+
+    # Verify results
+    assert len(results) == 1
+    assert results[0].user_generated_name.startswith("INC-1 - ")
+    assert results[0].user_generated_name == "INC-1 - test-rule"
+
+
+def test_incident_prefix_with_template(db_session):
+    """Test that incident prefix works correctly with name templates"""
+    alert = AlertDto(
+        id="grafana-1",
+        source=["grafana"],
+        name="Test alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+        labels={"host": "web-1", "service": "nginx"},
+    )
+
+    # Create rule with both prefix and template
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={"sql": "N/A", "params": {}},
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='source == "grafana"',
+        created_by="test@keephq.dev",
+        incident_prefix="SRE",
+        incident_name_template="Issue on {{ alert.labels.host }} with {{ alert.labels.service }}",
+    )
+
+    # Add alert to db
+    db_alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert.dict(),
+        fingerprint=alert.fingerprint,
+    )
+    db_session.add(db_alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, db_alert, db_session)
+
+    alert.event_id = db_alert.id
+    results = rules_engine.run_rules([alert], session=db_session)
+
+    # Verify results
+    assert len(results) == 1
+    assert results[0].user_generated_name == "SRE-1 - Issue on web-1 with nginx"
+
+
+def test_incident_prefix_multiple_incidents(db_session):
+    """Test that incident prefixes increment correctly across multiple incidents"""
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+
+    # Create rule with prefix
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={"sql": "N/A", "params": {}},
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='source == "grafana"',
+        created_by="test@keephq.dev",
+        incident_prefix="PROD",
+        grouping_criteria=["labels.host"],  # Create separate incidents per host
+    )
+
+    # First alert - will create first incident
+    alert1 = AlertDto(
+        id="grafana-1",
+        source=["grafana"],
+        name="First alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+        labels={"host": "web-1"},
+    )
+
+    db_alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert1.dict(),
+        fingerprint=alert1.fingerprint,
+    )
+    db_session.add(db_alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, db_alert, db_session)
+
+    alert1.event_id = db_alert.id
+    results = rules_engine.run_rules([alert1], session=db_session)
+    assert len(results) == 1
+    assert results[0].user_generated_name == "PROD-1 - test-rule"
+
+    # Second alert - will create second incident (different host)
+    alert2 = AlertDto(
+        id="grafana-2",
+        source=["grafana"],
+        name="Second alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+        labels={"host": "web-2"},
+    )
+
+    db_alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert2.dict(),
+        fingerprint=alert2.fingerprint,
+    )
+    db_session.add(db_alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, db_alert, db_session)
+
+    alert2.event_id = db_alert.id
+    results = rules_engine.run_rules([alert2], session=db_session)
+    assert len(results) == 1
+    assert results[0].user_generated_name == "PROD-2 - test-rule"
+
+    # Third alert - should be added to first incident (same host)
+    alert3 = AlertDto(
+        id="grafana-3",
+        source=["grafana"],
+        name="Third alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+        labels={"host": "web-1"},  # Same host as alert1
+    )
+
+    db_alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert3.dict(),
+        fingerprint=alert3.fingerprint,
+    )
+    db_session.add(db_alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, db_alert, db_session)
+
+    alert3.event_id = db_alert.id
+    results = rules_engine.run_rules([alert3], session=db_session)
+    assert len(results) == 1
+    assert (
+        results[0].user_generated_name == "PROD-1 - test-rule"
+    )  # Same prefix-number as first incident

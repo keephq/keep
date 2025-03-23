@@ -26,6 +26,23 @@ export const DefaultIncidentFilters: object = {
   status: DefaultIncidentFilteredStatuses,
 };
 
+// on initial page load, we have to display only active incidents
+export const DEFAULT_INCIDENTS_CEL =
+  "is_candidate == false && !(status in ['resolved', 'deleted', 'merged'])";
+export const DEFAULT_INCIDENTS_UNCHECKED_OPTIONS = [
+  "resolved",
+  "deleted",
+  "merged",
+];
+export const DEFAULT_INCIDENTS_SORTING = { id: "creation_time", desc: true };
+export const DEFAULT_INCIDENTS_PAGE_SIZE = 20;
+export const INCIDENT_PAGINATION_OPTIONS = [
+  { value: "10", label: "10" },
+  { value: "20", label: "20" },
+  { value: "50", label: "50" },
+  { value: "100", label: "100" },
+];
+
 export interface IncidentDto {
   id: string;
   user_generated_name: string;
@@ -42,7 +59,7 @@ export interface IncidentDto {
   last_seen_time?: Date;
   end_time?: Date;
   creation_time: Date;
-  is_confirmed: boolean;
+  is_candidate: boolean;
   rule_fingerprint: string;
   same_incident_in_the_past_id: string;
   following_incidents_ids: string[];

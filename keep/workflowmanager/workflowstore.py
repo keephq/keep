@@ -2,6 +2,7 @@ import io
 import logging
 import os
 import random
+from typing import Tuple
 import uuid
 
 import requests
@@ -19,8 +20,8 @@ from keep.api.core.db import (
     get_workflow,
     get_workflow_execution,
     get_workflows_with_last_execution,
-    get_workflows_with_last_executions_v2,
 )
+from keep.api.core.workflows import get_workflows_with_last_executions_v2
 from keep.api.models.db.workflow import Workflow as WorkflowModel
 from keep.api.models.workflow import ProviderDTO
 from keep.functions import cyaml
@@ -145,15 +146,28 @@ class WorkflowStore:
         return workflows
 
     def get_all_workflows_with_last_execution(
-        self, tenant_id: str, is_v2: bool = False
-    ) -> list[dict]:
+        self,
+        tenant_id: str,
+        cel: str = None,
+        limit: int = None,
+        offset: int = None,
+        sort_by: str = None,
+        sort_dir: str = None,
+        is_v2: bool = False,
+    ) -> Tuple[list[dict], int]:
         # list all tenant's workflows
         if is_v2:
-            workflows = get_workflows_with_last_executions_v2(tenant_id, 15)
-        else:
-            workflows = get_workflows_with_last_execution(tenant_id)
-
-        return workflows
+            return get_workflows_with_last_executions_v2(
+                tenant_id=tenant_id,
+                cel=cel,
+                limit=limit,
+                offset=offset,
+                sort_by=sort_by,
+                sort_dir=sort_dir,
+                fetch_last_executions=15,
+            )
+        workflows = get_workflows_with_last_execution(tenant_id)
+        return workflows, len(workflows)
 
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
         # list all tenant's workflows yamls (Workflow.workflow_raw)
@@ -555,7 +569,6 @@ class WorkflowStore:
                 )
                 return providers_dto, triggers
 
-            providers = self.parser.get_providers_from_workflow(workflow_yaml)
         except Exception as e:
             # Improved logging to capture more details about the error
             self.logger.error(
@@ -565,6 +578,14 @@ class WorkflowStore:
                 providers_dto,
                 triggers,
             )  # Return empty providers and triggers in case of error
+
+        try:
+            providers = self.parser.get_providers_from_workflow(workflow_yaml)
+        except Exception as e:
+            self.logger.error(
+                f"Failed to get providerts from workflow: {e}, workflow: {workflow}"
+            )
+            providers = []
 
         # Step 2: Process providers and add them to DTO
         for provider in providers:

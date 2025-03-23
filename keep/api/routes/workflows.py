@@ -1,7 +1,8 @@
 import datetime
+import json
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import validators
 from fastapi import (
@@ -11,6 +12,7 @@ from fastapi import (
     HTTPException,
     Query,
     Request,
+    Response,
     UploadFile,
     status,
 )
@@ -18,6 +20,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from opentelemetry import trace
 from sqlmodel import Session
 
+from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.config import config
 from keep.api.core.db import (
     get_alert_by_event_id,
@@ -28,20 +31,31 @@ from keep.api.core.db import (
     get_workflow_by_name,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
-from keep.api.models.alert import AlertDto, IncidentDto
+from keep.api.core.workflows import (
+    get_workflow_facets,
+    get_workflow_facets_data,
+    get_workflow_potential_facet_fields,
+)
+from keep.api.models.alert import AlertDto
+from keep.api.models.facet import FacetOptionsQueryDto
+from keep.api.models.incident import IncidentDto
+from keep.api.models.query import QueryDto
 from keep.api.models.workflow import (
     WorkflowCreateOrUpdateDTO,
     WorkflowDTO,
     WorkflowExecutionDTO,
     WorkflowExecutionLogsDTO,
+    WorkflowRunResponseDTO,
     WorkflowToAlertExecutionDTO,
 )
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import WorkflowExecutionsPaginatedResultsDto
+from keep.contextmanager.contextmanager import ContextManager
 from keep.functions import cyaml
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.parser.parser import Parser
+from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -50,6 +64,107 @@ logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 PLATFORM_URL = config("KEEP_PLATFORM_URL", default="https://platform.keephq.dev")
+
+
+@router.post(
+    "/facets/options",
+    description="Query workflows facet options. Accepts dictionary where key is facet id and value is cel to query facet",
+)
+def fetch_facet_options(
+    facet_options_query: FacetOptionsQueryDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching workflow facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    try:
+        facet_options = get_workflow_facets_data(
+            tenant_id=tenant_id, facet_options_query=facet_options_query
+        )
+    except CelToSqlException as e:
+        logger.exception(
+            f'Error parsing CEL expression "{facet_options_query.cel}". {str(e)}'
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error parsing CEL expression: {facet_options_query.cel}",
+        ) from e
+
+    logger.info(
+        "Fetched workflow facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facet_options
+
+
+@router.get(
+    "/facets",
+    description="Get workflow facets",
+)
+def fetch_facets(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching workflow facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    facets = get_workflow_facets(tenant_id=tenant_id)
+
+    logger.info(
+        "Fetched workflow facets from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return facets
+
+
+@router.get(
+    "/facets/fields",
+    description="Get potential fields for workflow facets",
+)
+def fetch_facet_fields(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+) -> list:
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching workflow facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+
+    fields = get_workflow_potential_facet_fields(tenant_id=tenant_id)
+
+    logger.info(
+        "Fetched workflow facet fields from DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    return fields
 
 
 # Redesign the workflow Card
@@ -66,12 +181,28 @@ PLATFORM_URL = config("KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
     "",
     description="Get workflows",
 )
+# TODO: this should be deprecated and removed
 def get_workflows(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
     is_v2: Optional[bool] = Query(False, alias="is_v2", type=bool),
 ) -> list[WorkflowDTO] | list[dict]:
+    query_result = query_workflows(QueryDto(), authenticated_entity, is_v2)
+    return query_result["results"]
+
+
+@router.post(
+    "/query",
+    description="Query workflows",
+)
+def query_workflows(
+    query: QueryDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+    is_v2: Optional[bool] = Query(False, alias="is_v2", type=bool),
+) -> dict:
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
     workflows_dto = []
@@ -86,10 +217,24 @@ def get_workflows(
             installed_providers_by_type[installed_provider.type][
                 installed_provider.name
             ] = installed_provider
-    # get all workflows
-    workflows = workflowstore.get_all_workflows_with_last_execution(
-        tenant_id=tenant_id, is_v2=is_v2
-    )
+
+    try:
+        # get all workflows
+        workflows, count = workflowstore.get_all_workflows_with_last_execution(
+            tenant_id=tenant_id,
+            cel=query.cel,
+            limit=query.limit,
+            offset=query.offset,
+            sort_by=query.sort_by,
+            sort_dir=query.sort_dir,
+            is_v2=is_v2,
+        )
+    except CelToSqlException as e:
+        logger.exception(f'Error parsing CEL expression "{query.cel}". {str(e)}')
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error parsing CEL expression: {query.cel}",
+        ) from e
 
     # Group last workflow executions by workflow
     if is_v2:
@@ -150,7 +295,12 @@ def get_workflows(
             logger.error(f"Error creating workflow DTO: {e}")
             continue
         workflows_dto.append(workflow_dto)
-    return workflows_dto
+    return {
+        "count": count,
+        "results": workflows_dto,
+        "limit": query.limit,
+        "offset": query.offset,
+    }
 
 
 @router.get(
@@ -168,6 +318,34 @@ def export_workflows(
     workflows = workflowstore.get_all_workflows_yamls(tenant_id=tenant_id)
     return workflows
 
+def get_event_from_body(body: dict, tenant_id: str):
+    event_body = body.get("body", {}) or body
+    # Handle regular run from body
+    event_class = (
+        AlertDto if body.get("type", "alert") == "alert" else IncidentDto
+    )
+    
+    # Handle UI triggered events
+    event_body["id"] = event_body.get("fingerprint", "manual-run")
+    event_body["name"] = event_body.get("fingerprint", "manual-run")
+    event_body["lastReceived"] = datetime.datetime.now(
+        tz=datetime.timezone.utc
+    ).isoformat()
+    if "source" in event_body and not isinstance(
+        event_body["source"], list
+    ):
+        event_body["source"] = [event_body["source"]]
+
+    try:
+        event = event_class(**event_body)
+        if isinstance(event, IncidentDto):
+            event._tenant_id = tenant_id
+    except TypeError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid event format",
+        )
+    return event
 
 @router.post(
     "/{workflow_id}/run",
@@ -217,31 +395,7 @@ def run_workflow(
                 )
         else:
             # Handle regular run from body
-            event_body = body.get("body", {}) or body
-            event_class = (
-                AlertDto if body.get("type", "alert") == "alert" else IncidentDto
-            )
-
-            # Handle UI triggered events
-            fingerprint = event_body.get("fingerprint", "")
-            if (fingerprint and "test-workflow" in fingerprint) or not body:
-                event_body["id"] = event_body.get("fingerprint", "manual-run")
-                event_body["name"] = event_body.get("fingerprint", "manual-run")
-                event_body["lastReceived"] = datetime.datetime.now(
-                    tz=datetime.timezone.utc
-                ).isoformat()
-                if "source" in event_body and not isinstance(
-                    event_body["source"], list
-                ):
-                    event_body["source"] = [event_body["source"]]
-
-            try:
-                event = event_class(**event_body)
-            except TypeError:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Invalid event format",
-                )
+            event = get_event_from_body(body, tenant_id)
 
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
             workflow_id, tenant_id, created_by, event
@@ -314,20 +468,21 @@ async def run_workflow_from_definition(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:workflows"])
     ),
-) -> dict:
+    body: Optional[Dict[Any, Any]] = Body({}),
+) -> WorkflowRunResponseDTO:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
-    workflow = await __get_workflow_raw_data(request, file)
+    workflow_dict = await __get_workflow_raw_data(request, file)
     workflowstore = WorkflowStore()
     workflowmanager = WorkflowManager.get_instance()
     try:
         workflow = workflowstore.get_workflow_from_dict(
-            tenant_id=tenant_id, workflow=workflow
+            tenant_id=tenant_id, workflow=workflow_dict
         )
     except Exception as e:
         logger.exception(
             "Failed to parse workflow",
-            extra={"tenant_id": tenant_id, "workflow": workflow},
+            extra={"tenant_id": tenant_id, "workflow_dict": workflow_dict},
         )
         raise HTTPException(
             status_code=400,
@@ -335,8 +490,9 @@ async def run_workflow_from_definition(
         )
 
     try:
-        workflow_execution = workflowmanager.scheduler.handle_workflow_test(
-            workflow, tenant_id, created_by
+        event = get_event_from_body(body, tenant_id)
+        workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
+            workflow.workflow_id, tenant_id, created_by, event, workflow=workflow, test_run=True
         )
     except Exception as e:
         logger.exception(
@@ -346,12 +502,10 @@ async def run_workflow_from_definition(
             status_code=500,
             detail=f"Failed to run test workflow: {e}",
         )
-    logger.info(
-        "Workflow ran successfully",
-        extra={"workflow_execution": workflow_execution},
+
+    return WorkflowRunResponseDTO(
+        workflow_execution_id=workflow_execution_id,
     )
-    # TODO: return the workflow execution DTO, or at least logs, so results can be shown in the UI
-    return workflow_execution
 
 
 async def __get_workflow_raw_data(request: Request, file: UploadFile | None) -> dict:
@@ -759,8 +913,9 @@ def delete_workflow_by_id(
     workflowstore = WorkflowStore()
     workflowstore.delete_workflow(workflow_id=workflow_id, tenant_id=tenant_id)
     return {"workflow_id": workflow_id, "status": "deleted"}
+    
 
-
+@router.get("/runs/{workflow_execution_id}")
 @router.get(
     "/{workflow_id}/runs/{workflow_execution_id}",
     description="Get a workflow execution status",
@@ -875,3 +1030,114 @@ def toggle_workflow_state(
         "status": "success",
         "is_disabled": workflow.is_disabled,
     }
+
+
+@router.post(
+    "/{workflow_id}/secrets",
+    description="Write a new secret or update existing secret for a workflow",
+)
+def write_workflow_secret(
+    workflow_id: str,
+    secret_data: Dict[str, str],
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:secrets"])
+    ),
+) -> dict:
+    """
+    Write or update multiple secrets for a workflow in a single entry.
+    If a secret already exists, it updates only the changed keys.
+    """
+    tenant_id = authenticated_entity.tenant_id
+
+    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    if not workflow:
+        raise HTTPException(404, "Workflow not found")
+
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+
+    secret_key = f"{tenant_id}_{workflow_id}_secrets"
+
+    try:
+        existing_secrets = secret_manager.read_secret(secret_key, is_json=True)
+        if not isinstance(existing_secrets, dict):
+            existing_secrets = {}
+    except Exception:
+        existing_secrets = {}
+
+    existing_secrets.update(secret_data)
+
+    # Write back the updated secret object
+    secret_manager.write_secret(
+        secret_name=secret_key,
+        secret_value=json.dumps(existing_secrets),
+    )
+    return Response(status_code=201)
+
+
+@router.get(
+    "/{workflow_id}/secrets",
+    description="Read a workflow secret",
+)
+def read_workflow_secret(
+    workflow_id: str,
+    is_json: bool = True,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:secrets"])
+    ),
+) -> Union[Dict, str]:
+    """
+    Read a secret value for a workflow. Optionally parse as JSON if is_json is True.
+    """
+    tenant_id = authenticated_entity.tenant_id
+
+    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    if not workflow:
+        raise HTTPException(404, "Workflow not found")
+
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    secret_key = f"{tenant_id}_{workflow_id}_secrets"
+    try:
+        return secret_manager.read_secret(secret_name=secret_key, is_json=is_json)
+    except Exception:
+        return {}
+
+
+@router.delete(
+    "/{workflow_id}/secrets/{secret_name}",
+    description="Delete a specific secret key for a workflow",
+)
+def delete_workflow_secret(
+    workflow_id: str,
+    secret_name: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:secrets"])
+    ),
+) -> dict:
+    """
+    Delete a specific secret key inside the workflow's secrets entry.
+    If the key exists, it is removed, but other secrets remain.
+    """
+    tenant_id = authenticated_entity.tenant_id
+
+    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    if not workflow:
+        raise HTTPException(404, "Workflow not found")
+
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+
+    secret_key = f"{tenant_id}_{workflow_id}_secrets"
+
+    secrets = secret_manager.read_secret(secret_key, is_json=True)
+
+    if secret_name not in secrets:
+        raise HTTPException(404, f"Secret '{secret_name}' not found")
+
+    del secrets[secret_name]  # Remove only the specific key
+    secret_manager.write_secret(
+        secret_name=secret_key,
+        secret_value=json.dumps(secrets),
+    )
+    return Response(status_code=201)

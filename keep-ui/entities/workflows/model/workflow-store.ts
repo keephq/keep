@@ -285,14 +285,15 @@ const defaultState: WorkflowStateValues = {
   selectedEdge: null,
   changes: 0,
   isEditorSyncedWithNodes: true,
-  lastChangedAt: 0,
-  lastDeployedAt: 0,
+  lastChangedAt: null,
+  lastDeployedAt: null,
   canDeploy: false,
   saveRequestCount: 0,
   testRunRequestCount: 0,
   isSaving: false,
   definition: null,
   isLoading: false,
+  isDeployed: false,
   validationErrors: {},
 };
 
@@ -411,14 +412,16 @@ export const useWorkflowStore = create<WorkflowState>()(
         const error = validateStepPure(
           step,
           get().providers ?? [],
-          get().installedProviders ?? []
+          get().installedProviders ?? [],
+          definition
         );
         if (step.componentType === "switch") {
           [...step.branches.true, ...step.branches.false].forEach((branch) => {
             const error = validateStepPure(
               branch,
               get().providers ?? [],
-              get().installedProviders ?? []
+              get().installedProviders ?? [],
+              definition
             );
             if (error) {
               validationErrors[branch.name || branch.id] = error;
@@ -431,7 +434,8 @@ export const useWorkflowStore = create<WorkflowState>()(
             const error = validateStepPure(
               s,
               get().providers ?? [],
-              get().installedProviders ?? []
+              get().installedProviders ?? [],
+              definition
             );
             if (error) {
               validationErrors[s.name || s.id] = error;
@@ -445,10 +449,13 @@ export const useWorkflowStore = create<WorkflowState>()(
         }
       }
 
-      // We allow deployment even if there are provider errors, as the user can fix them later
+      // We allow deployment even if there are
+      // - provider errors, as the user can fix them later
+      // - variable errors, as the user can fix them later
       const canDeploy =
         Object.values(validationErrors).filter(
-          (error) => !error.includes("provider")
+          (error) =>
+            !error.includes("provider") && !error.startsWith("Variable:")
         ).length === 0;
 
       set({
@@ -808,9 +815,25 @@ function initializeWorkflow(
     toolboxConfiguration,
     isLoading: false,
     isInitialized: true,
+    isDeployed: workflowId !== null,
     // If it's a new workflow (workflowId = null), we want to open the editor because metadata fields in there
     editorOpen: !workflowId,
   });
   get().onLayout({ direction: "DOWN" });
   get().updateDefinition();
+}
+
+export function useWorkflowEditorChangesSaved() {
+  const { lastChangedAt, lastDeployedAt, isEditorSyncedWithNodes, isDeployed } =
+    useWorkflowStore();
+  const isDeployedAndUntouched =
+    lastDeployedAt === null && lastChangedAt === null && isDeployed;
+  const isDeployedAndChangesSaved =
+    lastDeployedAt !== null &&
+    lastChangedAt !== null &&
+    lastDeployedAt >= lastChangedAt;
+  const isChangesSaved =
+    isEditorSyncedWithNodes &&
+    (isDeployedAndChangesSaved || isDeployedAndUntouched);
+  return isChangesSaved;
 }

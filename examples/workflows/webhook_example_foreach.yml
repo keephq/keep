@@ -1,0 +1,42 @@
+workflow:
+  id: webhook-batch-processor
+  name: Webhook Batch Processor
+  description: Processes multiple alerts through webhooks with conditional execution based on alert status.
+  debug: true
+  triggers:
+    - type: manual
+
+  steps:
+    - name: webhook-get
+      provider:
+        type: webhook
+        config: "{{ providers.test }}"
+        with:
+          method: GET
+          url: "http://localhost:8000"
+    - name: get-alerts
+      foreach: " {{ steps.webhook-get.results.body.ids }}"
+      provider:
+        type: keep
+        with:
+          version: 2
+          filter: 'id=="{{ foreach.value }}"'
+  actions:
+    - name: echo
+      foreach: " {{ steps.get-alerts.results }}"
+      if: '{{ foreach.value.0.status }} == "firing"'
+      provider:
+        type: console
+        with:
+          logger: true
+          message: "alert {{ foreach.value.0.id }} is {{ foreach.value.0.status }}"
+  # actions:
+  #   - name: webhook-test
+  #     foreach: " {{ steps.get-alerts.results }}"
+  #     if: '{{ foreach.value.0.status }} == "firing"'
+  #     provider:
+  #       type: webhook
+  #       config: "{{ providers.test }}"
+  #       with:
+  #         body:
+  #           message: "Hello world"

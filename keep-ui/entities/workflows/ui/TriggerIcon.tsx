@@ -21,14 +21,14 @@ export function TriggerIcon({
     case "interval":
       return <ClockIcon className={className} />;
     case "alert": {
-      const alertSource = trigger.filters?.find(
-        (f) => f.key === "source"
-      )?.value;
+      const alertSource = trigger.filters?.find((f) => f.key === "source")
+        ?.value;
       if (alertSource) {
         return (
           <div className={clsx("flex items-center justify-center", className)}>
             <DynamicImageProviderIcon
-              providerType={alertSource!}
+              providerType={alertSource}
+              src={`/icons/${alertSource}-icon.png`}
               height="16"
               width="16"
             />

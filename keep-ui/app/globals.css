@@ -2,9 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* TODO: use proper tailwind/css-variables solution */
+html {
+  /* override default font size for better look on small screens */
+  font-size: 14px;
+}
+
 /**
  * Taken from https://dev.to/jochemstoel/re-add-dark-mode-to-any-website-with-just-a-few-lines-of-code-phl
+ * TODO: use proper tailwind/css-variables solution
  */
 html.workaround-dark {
   filter: invert(100%) hue-rotate(180deg) contrast(80%) !important;
@@ -22,11 +27,20 @@ html.workaround-dark {
     display: block !important;
   }
 }
-/* https://github.com/vercel/next.js/discussions/13387
- nextjs-portal {
-    display: none;
-}
+
+/* --- Radix UI / Tremor Hotfixes --- */
+/* Radix backdrop prevents clicks on elements behind it, so we need to override it.
+   HeadlessUI portal root, should be above all other elements, as Select dropdowns are rendered there
 */
+#headlessui-portal-root {
+  pointer-events: auto;
+  z-index: 55;
+}
+.Toastify {
+  pointer-events: auto;
+}
+/* --- End of Radix UI / Tremor Hotfixes */
+
 .rules-tooltip [role="tooltip"] {
   @apply w-72; /* This sets the width to 16rem. Adjust the number as needed. */
   @apply break-words; /* This will wrap long words if needed. */
@@ -43,9 +57,9 @@ html.workaround-dark {
 }
 
 .page-container {
-  @apply p-4 mx-auto w-full;
+  @apply p-4 pl-1 mx-auto w-full;
   @screen xl {
-    @apply p-6;
+    @apply p-6 pl-1;
   }
 }
 
@@ -63,11 +77,6 @@ html.workaround-dark {
   100% {
     transform: rotate(360deg);
   }
-}
-
-.sliding-panel-container.active {
-  /* original value is ridiculous 15.000, overflowing toasts*/
-  @apply z-[1000] !important;
 }
 
 @keyframes scroll-shadow-left {
@@ -112,4 +121,8 @@ html.workaround-dark {
   &:not(:disabled):hover {
     @apply bg-slate-100;
   }
+}
+
+.tremor-TableRow-row > td.bg-tremor-background {
+  background-color: inherit !important;
 }

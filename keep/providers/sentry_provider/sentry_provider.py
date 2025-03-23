@@ -40,7 +40,7 @@ class SentryProviderAuthConfig:
             "description": "Sentry API URL",
             "hint": "https://sentry.io/api/0 (see https://docs.sentry.io/api/)",
             "sensitive": False,
-            "validation": "https_url"
+            "validation": "https_url",
         },
         default="https://sentry.io/api/0",
     )
@@ -239,12 +239,12 @@ class SentryProvider(BaseProvider):
         status = SentryProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
 
         # https://docs.sentry.io/product/integrations/integration-platform/webhooks/issue-alerts/#dataeventissue_url
-        url = event_data.pop("url", None)
+        url = event_data.pop("url", event.get("url"))
         if "web_url" in event_data:
             url = event_data["web_url"]
         elif "issue_url" in event_data:
             url = event_data["issue_url"]
-        elif "url" in tags_as_dict:
+        elif "url" in tags_as_dict and not url:
             url = tags_as_dict["url"]
 
         exceptions = event_data.get("exception", {}).get("values", [])

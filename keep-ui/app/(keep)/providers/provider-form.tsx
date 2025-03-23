@@ -36,7 +36,6 @@ import {
   ArrowLongLeftIcon,
   ArrowTopRightOnSquareIcon,
   GlobeAltIcon,
-  DocumentTextIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
@@ -191,7 +190,7 @@ const ProviderForm = ({
         },
       },
       {
-        position: toast.POSITION.TOP_LEFT,
+        position: "top-left",
       }
     );
   }
@@ -720,20 +719,6 @@ const ProviderForm = ({
                 Provisioned
               </Badge>
             )}
-            <Link
-              href={`${
-                config?.KEEP_DOCS_URL || "http://docs.keephq.dev"
-              }/providers/documentation/${provider.type}-provider`}
-              target="_blank"
-            >
-              <Icon
-                icon={DocumentTextIcon}
-                variant="simple"
-                color="gray"
-                size="sm"
-                tooltip={`${provider.type} provider documentation`}
-              />
-            </Link>
           </div>
           <Button
             variant="light"
@@ -747,10 +732,29 @@ const ProviderForm = ({
             <XMarkIcon className="size-6" aria-hidden="true" />
           </Button>
         </div>
-
         {installedProvidersMode && provider.id && (
-          <Subtitle>{provider.id}</Subtitle>
+          <Subtitle>Id: {provider.id}</Subtitle>
         )}
+        <Subtitle>
+          Need help? Check out the{" "}
+          <Link
+            className="text-orange-600 underline"
+            href={`${
+              config?.KEEP_DOCS_URL || "http://docs.keephq.dev"
+            }/providers/documentation/${provider.type}-provider`}
+            target="_blank"
+          >
+            {`Provider Documentation`}
+          </Link>
+          , or ask{" "}
+          <Link
+            className="text-orange-600 underline"
+            href={`https://getkeep.slack.com/join/shared_invite/zt-2leydxr6s-XmuQtBttgxZ0GOv8MJu6rQ#/shared-invite/email`}
+            target="_blank"
+          >
+            Slack Community
+          </Link>
+        </Subtitle>
         {installedProvidersMode && provider.last_pull_time && (
           <Subtitle>
             Provider last pull time:{" "}

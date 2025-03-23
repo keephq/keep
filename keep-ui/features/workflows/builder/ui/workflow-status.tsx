@@ -14,22 +14,28 @@ function ErrorList({
   validationErrors: Record<string, string>;
   onErrorClick: (id: string) => void;
 }) {
+  const textSummary = `${Object.keys(validationErrors).length} error${
+    Object.keys(validationErrors).length === 1 ? "" : "s"
+  }`;
   return (
-    <span className="flex flex-col gap-1">
-      {Object.entries(validationErrors).map(([id, error]) => (
-        <span key={id}>
-          {!id.startsWith("workflow_") && (
-            <span
-              className="font-medium hover:underline cursor-pointer"
-              onClick={() => onErrorClick(id)}
-            >
-              {id}:
-            </span>
-          )}{" "}
-          {error}
-        </span>
-      ))}
-    </span>
+    <details className="flex flex-col gap-1">
+      <summary className="text-sm font-medium">{textSummary}</summary>
+      <span className="flex flex-col gap-1">
+        {Object.entries(validationErrors).map(([id, error]) => (
+          <span key={id}>
+            {!id.startsWith("workflow_") && (
+              <span
+                className="font-medium hover:underline cursor-pointer"
+                onClick={() => onErrorClick(id)}
+              >
+                {id}:
+              </span>
+            )}{" "}
+            {error}
+          </span>
+        ))}
+      </span>
+    </details>
   );
 }
 
@@ -41,7 +47,6 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
     edges,
     setSelectedNode,
     setSelectedEdge,
-    getNodeById,
   } = useWorkflowStore();
 
   const handleErrorClick = (id: string) => {
@@ -70,7 +75,7 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
   if (Object.keys(validationErrors).length === 0) {
     return (
       <Callout
-        className={clsx("rounded p-2", className)}
+        className={clsx("rounded p-2 text-sm", className)}
         title="Workflow is valid"
         icon={CheckCircleIcon}
         color="teal"
@@ -82,11 +87,13 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
   if (canDeploy) {
     return (
       <Callout
-        className={clsx("rounded p-2", className)}
-        title="Fix errors before running workflow"
+        className={clsx("rounded p-2 text-sm", className)}
+        title="Workflow has errors"
         icon={ExclamationTriangleIcon}
         color="yellow"
       >
+        It can be saved, but to run it, fix errors
+        {/* TODO: fix In HTML, <summary> cannot be a descendant of <p>. */}
         <ErrorList
           validationErrors={validationErrors}
           onErrorClick={handleErrorClick}
@@ -96,7 +103,7 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
   }
   return (
     <Callout
-      className={clsx("rounded p-2", className)}
+      className={clsx("rounded p-2 text-sm", className)}
       title="Fix the errors before saving"
       icon={ExclamationCircleIcon}
       color="rose"

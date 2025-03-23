@@ -1,0 +1,60 @@
+---
+title: "Asana"
+sidebarTitle: "Asana Provider"
+description: "Asana Provider allows you to create and update tasks in Asana"
+---
+
+## Authentication Parameters
+
+The Asana provider requires the following authentication parameters:
+
+- `Personal Access Token`: The personal access token for the Asana account. This is required for the Asana provider.
+
+## Connecting with the Provider
+
+1. Go to [Asana](https://app.asana.com/0/developer-console)
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/asana-provider_1.png" />
+</Frame>
+
+2. Click on `Create New Personal Access Token`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/asana-provider_2.png" />
+</Frame>
+
+3. Give it a name and click on `Create`.
+
+4. Copy the generated token. This will be used as the `Personal Access Token` in the provider settings.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/asana-provider_3.png" />
+</Frame>
+
+## Create Task
+
+The Asana provider supports creating tasks in Asana.
+
+- `name` (str) - The name of the task.
+- `projects` (list) - The projects to which the task belongs.
+
+Apart from the above parameters, you can also provide few other parameters. Refer to the [Asana API documentation](https://developers.asana.com/docs/create-a-task) for more details.
+
+## Update Task
+
+The Asana provider supports updating tasks in Asana.
+
+- `task_id` (str) - The task ID.
+
+Apart from the above parameters, you can also provide few other parameters. Refer to the [Asana API documentation](https://developers.asana.com/docs/update-a-task) for more details.
+
+## Example Workflows
+
+Refer the below example workflows for more details:
+- [Create a Task in Asana](https://github.com/keephq/keep/blob/main/examples/workflows/create-task-in-asana.yaml)
+- [Update a Task in Asana](https://github.com/keephq/keep/blob/main/examples/workflows/update-task-in-asana.yaml)
+
+## Useful Links
+
+- [Asana](https://asana.com)

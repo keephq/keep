@@ -1,0 +1,28 @@
+workflow:
+  id: flashduty-incident-notifier
+  name: FlashDuty Incident Notifier
+  description: Manages incident notifications in FlashDuty with customizable event statuses, labels, and environment tracking.
+  disabled: false
+  triggers:
+    - type: incident
+      events:
+        - created
+        - updated
+        - deleted
+  consts: {}
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: flashduty-action
+      provider:
+        type: flashduty
+        config: "{{ providers.default-flashduty }}"
+        with:
+          title: test title
+          description: test description
+          event_status: Info
+          alert_key: 611eed6614ec
+          labels:
+            service: flashduty
+            environment: dev

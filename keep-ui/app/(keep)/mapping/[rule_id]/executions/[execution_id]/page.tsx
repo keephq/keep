@@ -1,5 +1,7 @@
 "use client";
 
+import { use } from "react";
+
 import { Card, Title, Badge, Icon, Subtitle } from "@tremor/react";
 import { LogViewer } from "@/components/LogViewer";
 import { getIcon } from "@/app/(keep)/workflows/[workflow_id]/workflow-execution-table";
@@ -8,11 +10,10 @@ import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { useMappings } from "@/utils/hooks/useMappingRules";
 
-export default function MappingExecutionDetailsPage({
-  params,
-}: {
-  params: { rule_id: string; execution_id: string };
+export default function MappingExecutionDetailsPage(props: {
+  params: Promise<{ rule_id: string; execution_id: string }>;
 }) {
+  const params = use(props.params);
   const { execution, isLoading } = useEnrichmentEvent({
     ruleId: params.rule_id,
     executionId: params.execution_id,
@@ -25,8 +26,11 @@ export default function MappingExecutionDetailsPage({
     return null;
   }
 
+  // alert_id in enrichmentevent (keep/api/models/db/enrichment_event.py#L34) refers not to alert.PK,
+  // but to `alert.event->>'id'`.
+  // So, we can't guarantee the format it is stored in. It could be any - dashed or non-dashed
   const alertFilterUrl = `/alerts/feed?cel=${encodeURIComponent(
-    `id=="${execution.enrichment_event.alert_id}"`
+    `id=="${execution.enrichment_event.alert_id}" || id=="${execution.enrichment_event.alert_id.replace("-", "")}"`
   )}`;
 
   return (

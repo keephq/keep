@@ -34,9 +34,9 @@ export const useAlerts = () => {
     return useSWR<AlertDto[]>(
       () =>
         api.isReady() && selectedAlert
-          ? `/alerts/${
-              selectedAlert.fingerprint
-            }/history?provider_id=${selectedAlert.providerId}&provider_type=${
+          ? `/alerts/${selectedAlert.fingerprint}/history?provider_id=${
+              selectedAlert.providerId
+            }&provider_type=${
               selectedAlert.source ? selectedAlert.source[0] : ""
             }`
           : null,
@@ -125,55 +125,105 @@ export const useAlerts = () => {
     );
   };
 
+  const useErrorAlerts = (
+    options: SWRConfiguration = { revalidateOnFocus: false }
+  ) => {
+    const { data, error, isLoading, mutate } = useSWR<any>(
+      () => (api.isReady() ? `/alerts/event/error` : null),
+      (url) => api.get(url),
+      options
+    );
+
+    // Consolidated function to dismiss error alerts
+    // If alertId is provided, dismisses that specific alert
+    // If no alertId is provided, dismisses all alerts
+    const dismissErrorAlerts = async (alertId?: string) => {
+      if (!api.isReady()) return false;
+
+      try {
+        const payload = alertId ? { alert_id: alertId } : {};
+        await api.post(`/alerts/event/error/dismiss`, payload);
+        await mutate(); // Refresh the data
+        return true;
+      } catch (error) {
+        console.error("Failed to dismiss error alert(s):", error);
+        return false;
+      }
+    };
+
+    return {
+      data,
+      error,
+      isLoading,
+      mutate,
+      dismissErrorAlerts,
+    };
+  };
+
   const useLastAlerts = (
     query: AlertsQuery | undefined,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
-    const filtersParams = new URLSearchParams();
+    const queryToPost: { [key: string]: any } = {};
 
     if (query?.offset !== undefined) {
-      filtersParams.set("offset", String(query.offset));
+      queryToPost.offset = query.offset;
     }
 
     if (query?.limit !== undefined) {
-      filtersParams.set("limit", String(query.limit));
+      queryToPost.limit = query.limit;
     }
 
     if (query?.cel) {
-      filtersParams.set("cel", query.cel);
+      queryToPost.cel = query.cel;
     }
 
     if (query?.sortBy) {
-      filtersParams.set("sort_by", query.sortBy);
+      queryToPost.sort_by = query.sortBy;
 
       switch (query?.sortDirection) {
         case "DESC":
-          filtersParams.set("sort_dir", "desc");
+          queryToPost.sort_dir = "desc";
           break;
         default:
-          filtersParams.set("sort_dir", "asc");
+          queryToPost.sort_dir = "asc";
       }
     }
 
-    let requestUrl = `/alerts/query`;
-
-    if (filtersParams.toString()) {
-      requestUrl += `?${filtersParams.toString()}`;
-    }
+    const requestUrl = `/alerts/query`;
+    const swrKey = () =>
+      // adding "/alerts/query" so global revalidation works
+      api.isReady()
+        ? requestUrl +
+          Object.entries(queryToPost)
+            .sort(([fstKey], [scdKey]) => fstKey.localeCompare(scdKey))
+            .map(([key, value]) => `${key}=${value}`)
+            .join("&")
+        : null;
 
     const swrValue = useSWR<any>(
-      () => (api.isReady() && query ? requestUrl : null),
-      () => api.get(requestUrl),
+      swrKey,
+      async () => {
+        const date = new Date();
+        const queryResult = await api.post(requestUrl, queryToPost);
+        const queryTimeInSeconds =
+          (new Date().getTime() - date.getTime()) / 1000;
+        return {
+          queryResult,
+          queryTimeInSeconds,
+        };
+      },
       options
     );
 
     return {
       ...swrValue,
-      data: swrValue.data?.results as AlertDto[],
-      isLoading: swrValue.isLoading || !swrValue.data,
-      totalCount: swrValue.data?.count,
-      limit: swrValue.data?.limit,
-      offset: swrValue.data?.offset,
+      data: swrValue.data?.queryResult?.results as AlertDto[],
+      queryTimeInSeconds: swrValue.data?.queryTimeInSeconds,
+      isLoading: swrValue.isLoading || !swrValue.data?.queryResult,
+      totalCount: swrValue.data?.queryResult?.count,
+      limit: swrValue.data?.queryResult?.limit,
+      offset: swrValue.data?.queryResult?.offset,
     };
   };
 
@@ -183,6 +233,7 @@ export const useAlerts = () => {
     usePresetAlerts,
     useAlertAudit,
     useMultipleFingerprintsAlertAudit,
+    useErrorAlerts,
     useLastAlerts,
     alertsMutator,
   };

@@ -1,6 +1,7 @@
 workflow:
-  id: blogpost-workflow
-  description: Enrich the alerts and open ticket
+  id: critical-alert-enrichment
+  name: Critical Alert Enrichment
+  description: Enriches critical alerts with customer information from MySQL and creates ServiceNow incident tickets with detailed context.
   triggers:
     # filter on critical alerts
     - type: alert
@@ -17,13 +18,13 @@ workflow:
           query: "select * from blogpostdb.customer where customer_id = '{{ alert.customer_id }}'"
           single_row: true
           as_dict: true
-        enrich_alert:
-          - key: customer_name
-            value: results.name
-          - key: customer_email
-            value: results.email
-          - key: customer_tier
-            value: results.tier
+          enrich_alert:
+            - key: customer_name
+              value: results.name
+            - key: customer_email
+              value: results.email
+            - key: customer_tier
+              value: results.tier
   actions:
     # Create service now incident ticket
     - name: create-service-now-ticket

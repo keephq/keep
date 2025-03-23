@@ -39,18 +39,27 @@
     "input_cel": "alert.provider_type.contains('graf')",
     "description": "Contains operator with field refering to one column",
     "expected_sql_dialect_based": {
-      "sqlite": "incident_alert_provider_type IS NOT NULL AND incident_alert_provider_type GLOB '*graf*'",
-      "mysql": "incident_alert_provider_type IS NOT NULL AND incident_alert_provider_type LIKE '%graf%'",
-      "postgresql": "incident_alert_provider_type IS NOT NULL AND incident_alert_provider_type LIKE '%graf%'"
+      "sqlite": "incident_alert_provider_type IS NOT NULL AND incident_alert_provider_type LIKE '%graf%'",
+      "mysql": "incident_alert_provider_type IS NOT NULL AND LOWER(incident_alert_provider_type) LIKE '%graf%'",
+      "postgresql": "incident_alert_provider_type IS NOT NULL AND incident_alert_provider_type ILIKE '%graf%'"
     }
   },
   {
     "input_cel": "alert.some_json_prop.contains('lorem')",
     "description": "Contains operator with field refering to multiple JSON columns",
     "expected_sql_dialect_based": {
-      "sqlite": "(json_extract(alert_enrichments, '$.some_json_prop') IS NOT NULL AND json_extract(alert_enrichments, '$.some_json_prop') GLOB '*lorem*' OR json_extract(alert_event, '$.some_json_prop') IS NOT NULL AND json_extract(alert_event, '$.some_json_prop') GLOB '*lorem*')",
-      "mysql": "(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) LIKE '%lorem%' OR JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) LIKE '%lorem%')",
-      "postgresql": "((alert_enrichments) ->> 'some_json_prop' IS NOT NULL AND (alert_enrichments) ->> 'some_json_prop' LIKE '%lorem%' OR (alert_event) ->> 'some_json_prop' IS NOT NULL AND (alert_event) ->> 'some_json_prop' LIKE '%lorem%')"
+      "sqlite": "(json_extract(alert_enrichments, '$.some_json_prop') IS NOT NULL AND json_extract(alert_enrichments, '$.some_json_prop') LIKE '%lorem%' OR json_extract(alert_event, '$.some_json_prop') IS NOT NULL AND json_extract(alert_event, '$.some_json_prop') LIKE '%lorem%')",
+      "mysql": "(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) IS NOT NULL AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop'))) LIKE '%lorem%' OR JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) IS NOT NULL AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop'))) LIKE '%lorem%')",
+      "postgresql": "((alert_enrichments) ->> 'some_json_prop' IS NOT NULL AND (alert_enrichments) ->> 'some_json_prop' ILIKE '%lorem%' OR (alert_event) ->> 'some_json_prop' IS NOT NULL AND (alert_event) ->> 'some_json_prop' ILIKE '%lorem%')"
+    }
+  },
+  {
+    "input_cel": "alert.some_json_prop.contains(100500)",
+    "description": "Contains operator with arg not string",
+    "expected_sql_dialect_based": {
+      "sqlite": "(json_extract(alert_enrichments, '$.some_json_prop') IS NOT NULL AND json_extract(alert_enrichments, '$.some_json_prop') LIKE '%100500%' OR json_extract(alert_event, '$.some_json_prop') IS NOT NULL AND json_extract(alert_event, '$.some_json_prop') LIKE '%100500%')",
+      "mysql": "(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop')) IS NOT NULL AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.some_json_prop'))) LIKE '%100500%' OR JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop')) IS NOT NULL AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.some_json_prop'))) LIKE '%100500%')",
+      "postgresql": "((alert_enrichments) ->> 'some_json_prop' IS NOT NULL AND (alert_enrichments) ->> 'some_json_prop' ILIKE '%100500%' OR (alert_event) ->> 'some_json_prop' IS NOT NULL AND (alert_event) ->> 'some_json_prop' ILIKE '%100500%')"
     }
   },
   {
@@ -201,18 +210,18 @@
     "input_cel": "alert.tags.tagKey.startsWith(\"with 'single-quotes'\")",
     "description": "When startsWith is used with literal containing quoted substring",
     "expected_sql_dialect_based": {
-      "sqlite": "json_extract(alert_event, '$.tagsContainer.tagKey') IS NOT NULL AND json_extract(alert_event, '$.tagsContainer.tagKey') GLOB 'with ''single-quotes''*'",
-      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) LIKE 'with ''single-quotes''%'",
-      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey' IS NOT NULL AND (alert_event -> 'tagsContainer') ->> 'tagKey' LIKE 'with ''single-quotes''%'"
+      "sqlite": "json_extract(alert_event, '$.tagsContainer.tagKey') IS NOT NULL AND json_extract(alert_event, '$.tagsContainer.tagKey') LIKE 'with ''single-quotes''%'",
+      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) IS NOT NULL AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey'))) LIKE 'with ''single-quotes''%'",
+      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey' IS NOT NULL AND (alert_event -> 'tagsContainer') ->> 'tagKey' ILIKE 'with ''single-quotes''%'"
     }
   },
   {
     "input_cel": "alert.tags.tagKey.endsWith(\"with 'single-quotes'\")",
     "description": "When endsWith is used with literal containing quoted substring",
     "expected_sql_dialect_based": {
-      "sqlite": "json_extract(alert_event, '$.tagsContainer.tagKey') IS NOT NULL AND json_extract(alert_event, '$.tagsContainer.tagKey') GLOB '*with ''single-quotes'''",
-      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) LIKE '%with ''single-quotes'''",
-      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey' IS NOT NULL AND (alert_event -> 'tagsContainer') ->> 'tagKey' LIKE '%with ''single-quotes'''"
+      "sqlite": "json_extract(alert_event, '$.tagsContainer.tagKey') IS NOT NULL AND json_extract(alert_event, '$.tagsContainer.tagKey') LIKE '%with ''single-quotes'''",
+      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey')) IS NOT NULL AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.tagsContainer.tagKey'))) LIKE '%with ''single-quotes'''",
+      "postgresql": "(alert_event -> 'tagsContainer') ->> 'tagKey' IS NOT NULL AND (alert_event -> 'tagsContainer') ->> 'tagKey' ILIKE '%with ''single-quotes'''"
     }
   }
 ]

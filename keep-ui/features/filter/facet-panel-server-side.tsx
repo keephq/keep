@@ -21,17 +21,13 @@ export interface FacetsPanelProps {
    * Revalidation token to force recalculation of the facets.
    * Will call API to recalculate facet options every revalidationToken value change
    */
-  revalidationToken?: string | null;
+  revalidationToken?: string;
   /**
    * Token to clear filters related to facets.
    * Filters will be cleared every clearFiltersToken value change.
    **/
   clearFiltersToken?: string | null;
-  /**
-   * Object with facets that should be unchecked by default.
-   * Key is the facet name, value is the list of option values to uncheck.
-   **/
-  uncheckedByDefaultOptionValues?: { [key: string]: string[] };
+  isSilentReloading?: boolean;
   facetsConfig?: FacetsConfig;
   /** Callback to handle the change of the CEL when options toggle */
   onCelChange?: (cel: string) => void;
@@ -46,8 +42,8 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   revalidationToken,
   clearFiltersToken,
   onCelChange = undefined,
-  uncheckedByDefaultOptionValues,
   facetsConfig,
+  isSilentReloading,
 }) => {
   function buildFacetOptionsQuery() {
     if (!facetQueriesState) {
@@ -80,7 +76,6 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   const facetActions = useFacetActions(entityName, initialFacetsData);
   const [facetQueriesState, setFacetQueriesState] =
     useState<FacetOptionsQueries | null>(null);
-  const [isSilentLoading, setIsSilentLoading] = useState<boolean>(false);
 
   const { data: facetsData } = useFacets(entityName, {
     revalidateOnFocus: false,
@@ -91,11 +86,12 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   const {
     facetOptions,
     mutate: mutateFacetOptions,
-    isLoading,
+    isLoading: facetOptionsLoading,
   } = useFacetOptions(
     entityName,
     initialFacetsData?.facetOptions as any,
-    buildFacetOptionsQuery()
+    buildFacetOptionsQuery(),
+    revalidationToken
   );
 
   useEffect(
@@ -139,20 +135,6 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     return null;
   }
 
-  useEffect(
-    function watchRevalidationToken() {
-      if (revalidationToken) {
-        setIsSilentLoading(true);
-        mutateFacetOptions();
-      }
-    },
-    // disabled as it should watch only revalidationToken
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [revalidationToken]
-  );
-
-  useEffect(() => setIsSilentLoading(false), [facetQueriesState]);
-
   return (
     <>
       <FacetsPanel
@@ -160,9 +142,8 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
         className={className || ""}
         facets={facetsData as any}
         facetOptions={facetOptions as any}
-        areFacetOptionsLoading={!isSilentLoading && isLoading}
+        areFacetOptionsLoading={!isSilentReloading && facetOptionsLoading}
         clearFiltersToken={clearFiltersToken}
-        uncheckedByDefaultOptionValues={uncheckedByDefaultOptionValues}
         facetsConfig={facetsConfig}
         onCelChange={(cel: string) => {
           onCelChange && onCelChange(cel);

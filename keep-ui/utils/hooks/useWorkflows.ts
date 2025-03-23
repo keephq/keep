@@ -3,12 +3,14 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";
 
-export const useWorkflows = (options: SWRConfiguration = {}) => {
+export const useWorkflows = (options?: SWRConfiguration) => {
   const api = useApi();
 
-  return useSWRImmutable<Workflow[]>(
+  const swr = useSWRImmutable<Workflow[]>(
     api.isReady() ? "/workflows" : null,
     (url) => api.get(url),
     options
   );
+
+  return swr;
 };

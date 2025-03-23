@@ -193,7 +193,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
     <SidePanel isOpen={isOpen} onClose={handleToggle}>
       <div className="flex justify-between mb-4">
         <div>
-          <Dialog.Title className="text-3xl font-bold" as={Title}>
+          <Dialog.Title className="font-bold" as={Title}>
             {selectedDeduplicationRule
               ? `Edit ${selectedDeduplicationRule.name}`
               : "Add deduplication rule"}
@@ -219,14 +219,12 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
             icon={ExclamationTriangleIcon}
             color="orange"
           >
-            <Text>
-              Editing a default deduplication rule requires advanced knowledge.
-              Default rules are carefully designed to provide optimal
-              deduplication for specific alert types. Modifying these rules may
-              impact the efficiency of your alert processing. If you&apos;re
-              unsure about making changes, we recommend creating a new custom
-              rule instead of modifying the default one.
-            </Text>
+            Editing a default deduplication rule requires advanced knowledge.
+            Default rules are carefully designed to provide optimal
+            deduplication for specific alert types. Modifying these rules may
+            impact the efficiency of your alert processing. If you&apos;re
+            unsure about making changes, we recommend creating a new custom rule
+            instead of modifying the default one.
             <br></br>
             <a
               href={`${
@@ -434,7 +432,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                 )}
               </div>
               <div>
-                <Text className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2">
                   <Controller
                     name="full_deduplication"
                     control={control}
@@ -446,7 +444,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                       />
                     )}
                   />
-                  <span className="text-sm font-medium text-gray-700 flex items-center">
+                  <Text className="text-sm font-medium text-gray-700 flex items-center">
                     Full deduplication
                     <span className="ml-1 relative inline-flex items-center">
                       <span className="group relative flex items-center">
@@ -466,8 +464,8 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                         </span>
                       </span>
                     </span>
-                  </span>
-                </Text>
+                  </Text>
+                </div>
               </div>
 
               {fullDeduplication && (
@@ -536,7 +534,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
             type="submit"
             disabled={isSubmitting || selectedDeduplicationRule?.is_provisioned}
           >
-            {isSubmitting ? "Saving..." : "Save Rule"}
+            {isSubmitting ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

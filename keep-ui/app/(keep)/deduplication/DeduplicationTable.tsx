@@ -2,18 +2,21 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Card,
-  Subtitle,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeaderCell,
   TableRow,
-  Title,
   Badge,
   SparkAreaChart,
 } from "@tremor/react";
-import { Tooltip } from "@/shared/ui";
+import {
+  getCommonPinningStylesAndClassNames,
+  PageSubtitle,
+  PageTitle,
+  Tooltip,
+} from "@/shared/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   createColumnHelper,
@@ -23,18 +26,16 @@ import {
 } from "@tanstack/react-table";
 import { DeduplicationRule } from "@/app/(keep)/deduplication/models";
 import DeduplicationSidebar from "@/app/(keep)/deduplication/DeduplicationSidebar";
-import {
-  TrashIcon,
-  PlusIcon,
-  QuestionMarkCircleIcon,
-} from "@heroicons/react/24/outline";
+import { TrashIcon } from "@heroicons/react/24/outline";
+import { PlusIcon } from "@heroicons/react/20/solid";
+import { QuestionMarkCircleIcon } from "@heroicons/react/16/solid";
 import { useProviders } from "utils/hooks/useProviders";
 import { useApi } from "@/shared/lib/hooks/useApi";
-
-const columnHelper = createColumnHelper<DeduplicationRule>();
-
 import { KeyedMutator } from "swr";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import clsx from "clsx";
+
+const columnHelper = createColumnHelper<DeduplicationRule>();
 
 type DeduplicationTableProps = {
   deduplicationRules: DeduplicationRule[];
@@ -139,7 +140,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       columnHelper.accessor("provider_type", {
         header: "",
         cell: (info) => (
-          <div className="flex items-center w-8">
+          <div className="flex justify-center items-center">
             <DynamicImageProviderIcon
               className="inline-block"
               key={info.getValue()}
@@ -147,6 +148,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
               height={24}
               width={24}
               title={info.getValue()}
+              providerType={info.getValue()}
               src={`/icons/${info.getValue()}-icon.png`}
             />
           </div>
@@ -154,40 +156,47 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       }),
       columnHelper.accessor("description", {
         header: "Description",
-        cell: (info) => (
-          <div className="flex items-center justify-between max-w-[320px]">
-            <span className="truncate lg:whitespace-normal">
-              {providers.installed_providers.find(
-                (provider) => provider.id === info.row.original.provider_id
-              )?.details.name ||
-                info.row.original.provider_id ||
-                "Keep"}{" "}
-              deduplication rule
-            </span>
-            {info.row.original.default ? (
-              <Badge color="orange" size="xs" className="ml-2">
-                Default
-              </Badge>
-            ) : (
-              <Badge color="orange" size="xs" className="ml-2">
-                Custom
-              </Badge>
-            )}
-            {info.row.original.full_deduplication && (
-              <Badge color="orange" size="xs" className="ml-2">
-                Full Deduplication
-              </Badge>
-            )}
-          </div>
-        ),
+        cell: (info) => {
+          const matchingProvider = providers.installed_providers.find(
+            (provider) => provider.id === info.row.original.provider_id
+          );
+          const providerName =
+            matchingProvider?.details.name ||
+            info.row.original.provider_id ||
+            "Keep";
+
+          return (
+            <div className="flex items-center justify-between max-w-[320px]">
+              <span className="truncate lg:whitespace-normal">
+                {info.row.original.description ||
+                  `${providerName} deduplication rule`}
+              </span>
+              {info.row.original.default ? (
+                <Badge color="gray" size="xs" className="ml-2">
+                  Default
+                </Badge>
+              ) : (
+                <Badge color="orange" size="xs" className="ml-2">
+                  Custom
+                </Badge>
+              )}
+              {info.row.original.full_deduplication && (
+                <Badge color="orange" size="xs" className="ml-2">
+                  Full Deduplication
+                </Badge>
+              )}
+            </div>
+          );
+        },
       }),
       columnHelper.accessor("ingested", {
         header: "Ingested",
         cell: (info) => (
-          <Badge color="orange" className="w-16">
-            {info.getValue() || 0}
-          </Badge>
+          <div className="min-w-16 text-right">{info.getValue() || 0}</div>
         ),
+        meta: {
+          align: "right",
+        },
       }),
       columnHelper.accessor("dedup_ratio", {
         header: "Dedup Ratio",
@@ -199,11 +208,10 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
             const value = info.getValue() || 0;
             formattedValue = `${Number(value).toFixed(1)}%`;
           }
-          return (
-            <Badge color="orange" className="w-fit">
-              {formattedValue}
-            </Badge>
-          );
+          return <p className="text-right">{formattedValue}</p>;
+        },
+        meta: {
+          align: "right",
         },
       }),
       columnHelper.accessor("distribution", {
@@ -277,6 +285,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
             <Button
               size="xs"
               variant="secondary"
+              color="red"
               icon={TrashIcon}
               tooltip={resolveDeleteButtonTooltip(info.row.original)}
               disabled={
@@ -292,7 +301,13 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
   );
 
   const table = useReactTable({
+    getRowId: (row) => row.id,
     data: deduplicationRules,
+    state: {
+      columnPinning: {
+        right: ["actions"],
+      },
+    },
     columns: DEDUPLICATION_TABLE_COLS,
     getCoreRowModel: getCoreRowModel(),
   });
@@ -307,18 +322,18 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col h-full gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <Title className="text-2xl font-normal">
+          <PageTitle>
             Deduplication Rules{" "}
             <span className="text-gray-400">
               ({deduplicationRules?.length})
             </span>
-          </Title>
-          <Subtitle className="text-gray-400">
+          </PageTitle>
+          <PageSubtitle>
             Set up rules to deduplicate similar alerts
-          </Subtitle>
+          </PageSubtitle>
         </div>
         <Button
           color="orange"
@@ -326,35 +341,64 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
             setSelectedDeduplicationRule(null);
             setIsSidebarOpen(true);
           }}
+          icon={PlusIcon}
+          variant="primary"
+          size="md"
         >
           Create Deduplication Rule
         </Button>
       </div>
-      <Card className="flex-1 mt-10">
+      <Card className="p-0">
         <Table>
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHeaderCell key={header.id}>
-                    <span className="flex items-center">
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
+              <TableRow
+                key={headerGroup.id}
+                className="border-b border-tremor-border dark:border-dark-tremor-border"
+              >
+                {headerGroup.headers.map((header) => {
+                  const { style, className } =
+                    getCommonPinningStylesAndClassNames(
+                      header.column,
+                      table.getState().columnPinning.left?.length,
+                      table.getState().columnPinning.right?.length
+                    );
+
+                  return (
+                    <TableHeaderCell
+                      key={header.id}
+                      className={clsx(
+                        header.column.columnDef.meta?.thClassName,
+                        "px-3 py-2"
                       )}
-                      {Object.keys(TOOLTIPS).includes(header.id) && (
-                        <Tooltip
-                          content={
-                            <>{TOOLTIPS[header.id as keyof typeof TOOLTIPS]}</>
-                          }
-                          className="z-50"
-                        >
-                          <QuestionMarkCircleIcon className="w-4 h-4 ml-1" />
-                        </Tooltip>
-                      )}
-                    </span>
-                  </TableHeaderCell>
-                ))}
+                    >
+                      <span
+                        className={clsx(
+                          header.column.columnDef.meta?.align === "right" &&
+                            "flex justify-end",
+                          "flex items-center"
+                        )}
+                      >
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                        {Object.keys(TOOLTIPS).includes(header.id) && (
+                          <Tooltip
+                            content={
+                              <>
+                                {TOOLTIPS[header.id as keyof typeof TOOLTIPS]}
+                              </>
+                            }
+                            className="z-50"
+                          >
+                            <QuestionMarkCircleIcon className="w-4 h-4 ml-1 text-gray-400" />
+                          </Tooltip>
+                        )}
+                      </span>
+                    </TableHeaderCell>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHead>
@@ -365,11 +409,30 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
                 className="cursor-pointer hover:bg-slate-50 group"
                 onClick={() => onDeduplicationClick(row.original)}
               >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
+                {row.getVisibleCells().map((cell) => {
+                  const { style, className } =
+                    getCommonPinningStylesAndClassNames(
+                      cell.column,
+                      table.getState().columnPinning.left?.length,
+                      table.getState().columnPinning.right?.length
+                    );
+                  return (
+                    <TableCell
+                      key={cell.id}
+                      className={clsx(
+                        cell.column.columnDef.meta?.tdClassName,
+                        className,
+                        "px-3 py-2"
+                      )}
+                      style={style}
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  );
+                })}
               </TableRow>
             ))}
           </TableBody>

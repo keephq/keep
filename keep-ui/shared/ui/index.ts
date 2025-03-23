@@ -20,7 +20,9 @@ export { ThemeScript, WatchUpdateTheme, ThemeControl } from "./theme";
 export { JsonCard } from "./JsonCard";
 export { ResizableColumns } from "./ResizableColumns";
 export { KeepLoader } from "./KeepLoader/KeepLoader";
-
+export { PageTitle } from "./PageTitle";
+export { PageSubtitle } from "./PageSubtitle";
+export { MonacoEditor } from "./MonacoEditor";
 export { showErrorToast } from "./utils/showErrorToast";
 export { showSuccessToast } from "./utils/showSuccessToast";
 export { DebugJSON } from "./DebugJSON";

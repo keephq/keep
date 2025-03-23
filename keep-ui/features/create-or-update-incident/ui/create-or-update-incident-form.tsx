@@ -15,11 +15,13 @@ import { useUsers } from "@/entities/users/model/useUsers";
 import { useIncidentActions } from "@/entities/incidents/model";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
-import "react-quill/dist/quill.snow.css";
+import "react-quill-new/dist/quill.snow.css";
 import "./react-quill-override.css";
+import dynamic from "next/dynamic";
+import { IncidentSeveritySelect } from "@/features/change-incident-severity";
+import { Severity } from "@/entities/incidents/model/models";
 
-const ReactQuill =
-  typeof window === "object" ? require("react-quill") : () => false;
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
 interface Props {
   incidentToEdit: IncidentDto | null;
@@ -32,6 +34,9 @@ export function CreateOrUpdateIncidentForm({
   createCallback,
   exitCallback,
 }: Props) {
+  const [incidentSeverity, setIncidentSeverity] = useState<Severity>(
+    Severity.Critical
+  );
   const [incidentName, setIncidentName] = useState<string>("");
   const [incidentUserSummary, setIncidentUserSummary] = useState<string>("");
   const [incidentAssignee, setIncidentAssignee] = useState<string>("");
@@ -92,6 +97,7 @@ export function CreateOrUpdateIncidentForm({
           user_summary: incidentUserSummary,
           assignee: incidentAssignee,
           resolve_on: resolveOnAlertsResolved,
+          severity: incidentSeverity,
         });
         createCallback?.(newIncident.id);
         exitEditMode();
@@ -135,6 +141,13 @@ export function CreateOrUpdateIncidentForm({
     <form className="py-2" onSubmit={handleSubmit}>
       <Subtitle>Incident Metadata</Subtitle>
       <div className="mt-2.5">
+        <Text className="mb-2">Severity</Text>
+        <IncidentSeveritySelect
+          value={incidentSeverity}
+          onChange={setIncidentSeverity}
+        />
+      </div>
+      <div className="mt-2.5">
         <Text className="mb-2">
           Name<span className="text-red-500 text-xs">*</span>
         </Text>
@@ -155,8 +168,6 @@ export function CreateOrUpdateIncidentForm({
           formats={formats} // Add formats
           placeholder="What happened?"
           className="border border-tremor-border rounded-tremor-default shadow-tremor-input"
-          required={false}
-          onValueChange={setIncidentUserSummary}
         />
       </div>
 

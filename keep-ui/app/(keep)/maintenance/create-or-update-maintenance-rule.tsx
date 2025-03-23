@@ -48,6 +48,7 @@ export default function CreateOrUpdateMaintenanceRule({
       setDescription(maintenanceToEdit.description ?? "");
       setCelQuery(maintenanceToEdit.cel_query);
       setStartTime(new Date(maintenanceToEdit.start_time));
+      setSuppress(maintenanceToEdit.suppress);
       setEnabled(maintenanceToEdit.enabled);
       if (maintenanceToEdit.duration_seconds) {
         setEndInterval(maintenanceToEdit.duration_seconds / 60);
@@ -61,6 +62,7 @@ export default function CreateOrUpdateMaintenanceRule({
     setCelQuery("");
     setStartTime(new Date());
     setEndInterval(5);
+    setSuppress(false);
     setEnabled(true);
     router.replace("/maintenance");
   };
@@ -95,6 +97,7 @@ export default function CreateOrUpdateMaintenanceRule({
         cel_query: celQuery,
         start_time: startTime,
         duration_seconds: calculateDurationInSeconds(),
+        suppress: suppress,
         enabled: enabled,
       });
       clearForm();
@@ -118,6 +121,7 @@ export default function CreateOrUpdateMaintenanceRule({
         cel_query: celQuery,
         start_time: startTime,
         duration_seconds: calculateDurationInSeconds(),
+        suppress: suppress,
         enabled: enabled,
       });
       exitEditMode();
@@ -196,7 +200,6 @@ export default function CreateOrUpdateMaintenanceRule({
         </Text>
         <div className="flex gap-2">
           <NumberInput
-            defaultValue={5}
             value={endInterval}
             onValueChange={setEndInterval}
             min={1}

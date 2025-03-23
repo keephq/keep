@@ -23,7 +23,7 @@ import { ResizableColumns } from "@/shared/ui";
 import { WorkflowBuilderChatSafe } from "@/features/workflows/ai-assistant";
 
 interface Props {
-  loadedAlertFile: string | null;
+  loadedYamlFileContents: string | null;
   providers: Provider[];
   workflowRaw?: string;
   workflowId?: string;
@@ -31,7 +31,7 @@ interface Props {
 }
 
 export function WorkflowBuilder({
-  loadedAlertFile,
+  loadedYamlFileContents,
   providers,
   workflowRaw,
   workflowId,
@@ -89,7 +89,7 @@ export function WorkflowBuilder({
             providers,
             installedProviders: installedProviders ?? [],
           });
-        } else if (loadedAlertFile == null) {
+        } else if (loadedYamlFileContents == null) {
           const alertUuid = uuidv4();
           const alertName = searchParams?.get("alertName");
           const alertSource = searchParams?.get("alertSource");
@@ -118,7 +118,10 @@ export function WorkflowBuilder({
             installedProviders: installedProviders ?? [],
           });
         } else {
-          const parsedDefinition = parseWorkflow(loadedAlertFile!, providers);
+          const parsedDefinition = parseWorkflow(
+            loadedYamlFileContents!,
+            providers
+          );
           setDefinition(
             wrapDefinitionV2({
               ...parsedDefinition,
@@ -131,21 +134,11 @@ export function WorkflowBuilder({
           });
         }
       } catch (error) {
-        // Check if error is from js-yaml by checking its name property
-        if (
-          error &&
-          typeof error === "object" &&
-          "name" in error &&
-          error.name === "YAMLException"
-        ) {
-          showErrorToast(error, "Invalid YAML: " + (error as Error).message);
-        } else {
-          showErrorToast(error, "Failed to load workflow");
-        }
+        showErrorToast(error, "Failed to load workflow");
       }
       setIsLoading(false);
     },
-    [loadedAlertFile, workflowRaw, searchParams, providers]
+    [loadedYamlFileContents, workflowRaw, searchParams, providers]
   );
 
   const workflowYaml = useMemo(() => {
@@ -243,6 +236,7 @@ export function WorkflowBuilder({
         workflowId={workflowId}
         // TODO: support write for not yet deployed workflows
         readOnly={!workflowId}
+        data-testid="wf-builder-yaml-editor"
       />
     );
   };

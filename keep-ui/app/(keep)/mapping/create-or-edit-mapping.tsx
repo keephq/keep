@@ -18,6 +18,7 @@ import {
   TabPanel,
   MultiSelect,
   MultiSelectItem,
+  Switch,
 } from "@tremor/react";
 import {
   ChangeEvent,
@@ -29,35 +30,49 @@ import {
 } from "react";
 import { usePapaParse } from "react-papaparse";
 import { toast } from "react-toastify";
-import { useMappings } from "utils/hooks/useMappingRules";
+import { useMappingRule, useMappings } from "utils/hooks/useMappingRules";
 import { MappingRule } from "./models";
 import { useTopology } from "@/app/(keep)/topology/model";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast, Input } from "@/shared/ui";
+import { showErrorToast, Input, KeepLoader } from "@/shared/ui";
 import { PlusIcon, MinusIcon } from "@heroicons/react/20/solid";
+import { MonacoEditor } from "@/shared/ui";
+import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
 
 interface Props {
-  editRule: MappingRule | null;
+  editRuleId: number | null;
   editCallback: (rule: MappingRule | null) => void;
 }
 
-export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
+export default function CreateOrEditMapping({
+  editRuleId,
+  editCallback,
+}: Props) {
   const api = useApi();
   const { mutate } = useMappings();
   const [tabIndex, setTabIndex] = useState<number>(0);
+  const [csvTabIndex, setCsvTabIndex] = useState<number>(0);
   const [mapName, setMapName] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
+  const [csvText, setCsvText] = useState<string>("");
   const [attributeGroups, setAttributeGroups] = useState<string[][]>([[]]);
   const [mappingType, setMappingType] = useState<"csv" | "topology">("csv");
   const [mapDescription, setMapDescription] = useState<string>("");
   const { topologyData } = useTopology();
   const [priority, setPriority] = useState<number>(0);
-  const editMode = editRule !== null;
+  const editMode = editRuleId !== null;
   const inputFile = useRef<HTMLInputElement>(null);
+  const [isMultiLevel, setIsMultiLevel] = useState<boolean>(false);
+  const [newPropertyName, setNewPropertyName] = useState<string>("");
+  const [prefixToRemove, setPrefixToRemove] = useState<string>("");
+  const { data: tenantConfiguration } = useTenantConfiguration();
+
+  const { data: editRule, isLoading: isLoadingEditRule } =
+    useMappingRule(editRuleId);
 
   // This useEffect runs whenever an `Edit` button is pressed in the table, and populates the form with the mapping data that needs to be edited.
   useEffect(() => {
-    if (editRule !== null) {
+    if (editRule !== undefined) {
       handleFileReset();
       setMapName(editRule.name);
       setFileName(editRule.file_name ? editRule.file_name : "");
@@ -66,6 +81,10 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       setTabIndex(editRule.type === "csv" ? 0 : 1);
       setAttributeGroups(editRule.matchers ?? [[]]);
       setPriority(editRule.priority);
+      setIsMultiLevel(editRule.is_multi_level ?? false);
+      setNewPropertyName(editRule.new_property_name ?? "");
+      setPrefixToRemove(editRule.prefix_to_remove ?? "");
+      setParsedData(editRule.rows);
     }
   }, [editRule]);
 
@@ -88,6 +107,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
     if (inputFile.current) {
       inputFile.current.value = "";
     }
+    setCsvText("");
   };
 
   const updateMappingType = (index: number) => {
@@ -110,15 +130,40 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
     reader.onload = (e) => {
       const text = e.target?.result;
       if (typeof text === "string") {
-        readString(text, {
-          header: true,
-          complete: (results) => {
-            if (results.data.length > 0) setParsedData(results.data);
-          },
-        });
+        parseCsvContent(text);
       }
     };
     if (file) reader.readAsText(file);
+  };
+
+  const parseCsvContent = (content: string) => {
+    readString(content, {
+      header: true,
+      complete: (results) => {
+        if (results.data.length > 0) {
+          setParsedData(results.data);
+          // If we're pasting CSV content, set a generic filename
+          if (csvTabIndex === 1 && !fileName) {
+            setFileName("manual-input.csv");
+          }
+        }
+      },
+      error: (error) => {
+        toast.error("Failed to parse CSV: " + error.message);
+      },
+    });
+  };
+
+  const handleCsvTextChange = (value: string | undefined) => {
+    if (value) {
+      setCsvText(value);
+    }
+  };
+
+  const processCsvText = () => {
+    if (csvText.trim()) {
+      parseCsvContent(csvText);
+    }
   };
 
   const clearForm = () => {
@@ -126,6 +171,10 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
     setMapDescription("");
     setParsedData(null);
     setAttributeGroups([[]]);
+    setCsvText("");
+    setIsMultiLevel(false);
+    setNewPropertyName("");
+    setPrefixToRemove("");
     handleFileReset();
   };
 
@@ -140,6 +189,9 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         type: mappingType,
         matchers: attributeGroups,
         rows: mappingType === "csv" ? parsedData : null,
+        is_multi_level: isMultiLevel,
+        new_property_name: newPropertyName,
+        prefix_to_remove: prefixToRemove,
       });
       exitEditOrCreateMode();
       mutate();
@@ -162,6 +214,9 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         type: mappingType,
         matchers: attributeGroups,
         rows: mappingType === "csv" ? parsedData : null,
+        is_multi_level: isMultiLevel,
+        new_property_name: newPropertyName,
+        prefix_to_remove: prefixToRemove,
       });
       exitEditOrCreateMode();
       mutate();
@@ -184,9 +239,23 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
 
   const handleAttributeChange = (groupIndex: number, selected: string[]) => {
     const newGroups = [...attributeGroups];
-    newGroups[groupIndex] = selected;
+    if (isMultiLevel) {
+      newGroups[groupIndex] =
+        selected.length > 0 ? [selected[selected.length - 1]] : [];
+    } else {
+      newGroups[groupIndex] = selected;
+    }
     setAttributeGroups(newGroups);
   };
+
+  useEffect(() => {
+    if (isMultiLevel && attributeGroups.length > 0) {
+      const firstGroup = attributeGroups[0];
+      if (firstGroup.length > 1) {
+        setAttributeGroups([[firstGroup[0]]]);
+      }
+    }
+  }, [isMultiLevel]);
 
   const addAttributeGroup = () => {
     setAttributeGroups([...attributeGroups, []]);
@@ -195,6 +264,10 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const removeAttributeGroup = (index: number) => {
     setAttributeGroups(attributeGroups.filter((_, i) => i !== index));
   };
+
+  if (editRuleId !== null && isLoadingEditRule) {
+    return <KeepLoader loadingText="Loading mapping rule..." />;
+  }
 
   return (
     <form
@@ -263,30 +336,122 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           <TabPanels>
             <TabPanel>
               {mappingType === "csv" && (
-                <Input
-                  type="file"
-                  accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-                  onChange={readFile}
-                  required={!editMode}
-                  ref={inputFile}
-                />
-              )}
-              {!parsedData && (
-                <Text className="text-xs text-red-500">
-                  {!editMode ? "* Upload a CSV file to begin" : ""}
-                </Text>
+                <TabGroup index={csvTabIndex} onIndexChange={setCsvTabIndex}>
+                  <TabList>
+                    <Tab>From File</Tab>
+                    <Tab>From Text</Tab>
+                  </TabList>
+                  <TabPanels>
+                    <TabPanel>
+                      <Input
+                        type="file"
+                        accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                        onChange={readFile}
+                        required={!editMode && csvTabIndex === 0}
+                        ref={inputFile}
+                      />
+                      {!parsedData && (
+                        <Text className="text-xs text-red-500">
+                          {!editMode ? "* Upload a CSV file to begin" : ""}
+                        </Text>
+                      )}
+                    </TabPanel>
+                    <TabPanel>
+                      <div className="flex flex-col gap-2">
+                        <MonacoEditor
+                          height="200px"
+                          defaultLanguage="csv"
+                          value={csvText}
+                          onChange={handleCsvTextChange}
+                          options={{
+                            minimap: { enabled: false },
+                            scrollBeyondLastLine: false,
+                            lineNumbers: "on",
+                          }}
+                        />
+                        <Button
+                          color="orange"
+                          size="xs"
+                          variant="secondary"
+                          onClick={processCsvText}
+                          disabled={!csvText.trim()}
+                        >
+                          Process CSV
+                        </Button>
+                        {!parsedData && (
+                          <Text className="text-xs text-red-500">
+                            {!editMode
+                              ? "* Enter and process CSV data to begin"
+                              : ""}
+                          </Text>
+                        )}
+                      </div>
+                    </TabPanel>
+                  </TabPanels>
+                </TabGroup>
               )}
             </TabPanel>
             <TabPanel></TabPanel>
           </TabPanels>
         </TabGroup>
       </div>
+
+      {parsedData && (
+        <div className="mt-4">
+          <Badge color="green">CSV Data Loaded Successfully</Badge>
+          <Text className="text-xs text-gray-500 mt-1">
+            {parsedData.length} rows and {attributes.length} columns found
+          </Text>
+        </div>
+      )}
+
+      {parsedData &&
+        mappingType === "csv" &&
+        tenantConfiguration?.["multi_level_enabled"] && (
+          <div className="mt-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="multi-level"
+                name="multi-level"
+                checked={isMultiLevel}
+                onChange={setIsMultiLevel}
+              />
+              <Text>Enable Multi-level Mapping</Text>
+            </div>
+
+            {isMultiLevel && (
+              <div className="mt-2.5 space-y-2">
+                <div>
+                  <Text>
+                    New Property Name
+                    <span className="text-red-500 text-xs">*</span>
+                  </Text>
+                  <TextInput
+                    placeholder="Enter property name"
+                    required={true}
+                    value={newPropertyName}
+                    onValueChange={setNewPropertyName}
+                  />
+                </div>
+                <div>
+                  <Text>Prefix to Remove</Text>
+                  <TextInput
+                    placeholder="Enter prefix to remove from keys (optional)"
+                    value={prefixToRemove}
+                    onValueChange={setPrefixToRemove}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       <Subtitle className="mt-2.5">Mapping Configuration</Subtitle>
       <div className="mt-2.5">
         If alert will match the atributes, it will be enriched with the rest of
         the fields{" "}
         {mappingType === "csv"
-          ? "from matched row in the CVS."
+          ? "from matched row in the CSV."
           : "from matching node in the topology."}
         <div className="flex flex-col gap-4 mt-2">
           {attributeGroups.map((group, index) => (
@@ -296,42 +461,48 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
                   handleAttributeChange(index, selected)
                 }
                 value={group}
-                placeholder="Select Attributes"
+                placeholder={
+                  isMultiLevel ? "Select Single Attribute" : "Select Attributes"
+                }
                 className="max-w-96"
                 disabled={mappingType === "topology"}
               >
-                {attributes.map((attribute) => (
+                {attributes?.map((attribute) => (
                   <MultiSelectItem key={attribute} value={attribute}>
                     {attribute}
                   </MultiSelectItem>
                 ))}
               </MultiSelect>
-              {index === attributeGroups.length - 1 &&
-                mappingType !== "topology" && (
-                  <Button
-                    onClick={addAttributeGroup}
-                    color="orange"
-                    size="xs"
-                    variant="secondary"
-                    className="flex items-center"
-                    disabled={group.length === 0}
-                  >
-                    <PlusIcon className="w-4 h-4" />
-                  </Button>
-                )}
-              {index > 0 && mappingType !== "topology" && (
-                <Button
-                  onClick={() => removeAttributeGroup(index)}
-                  color="red"
-                  size="xs"
-                  variant="secondary"
-                  className="flex items-center"
-                >
-                  <MinusIcon className="w-4 h-4" />
-                </Button>
-              )}
-              {index < attributeGroups.length - 1 && (
-                <Text className="mx-2">OR</Text>
+              {!isMultiLevel && (
+                <>
+                  {index === attributeGroups.length - 1 &&
+                    mappingType !== "topology" && (
+                      <Button
+                        onClick={addAttributeGroup}
+                        color="orange"
+                        size="xs"
+                        variant="secondary"
+                        className="flex items-center"
+                        disabled={group.length === 0}
+                      >
+                        <PlusIcon className="w-4 h-4" />
+                      </Button>
+                    )}
+                  {index > 0 && mappingType !== "topology" && (
+                    <Button
+                      onClick={() => removeAttributeGroup(index)}
+                      color="red"
+                      size="xs"
+                      variant="secondary"
+                      className="flex items-center"
+                    >
+                      <MinusIcon className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {index < attributeGroups.length - 1 && (
+                    <Text className="mx-2">OR</Text>
+                  )}
+                </>
               )}
             </div>
           ))}
@@ -370,7 +541,11 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           color="orange"
           size="xs"
           type="submit"
-          disabled={!mapName || !attributeGroups.flat().length}
+          disabled={
+            !mapName ||
+            !attributeGroups.flat().length ||
+            (isMultiLevel && !newPropertyName)
+          }
         >
           {editMode ? "Update" : "Create"}
         </Button>

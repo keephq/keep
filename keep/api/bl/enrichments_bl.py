@@ -8,11 +8,13 @@ from uuid import UUID
 
 import celpy
 import chevron
+import json5
 from fastapi import HTTPException
 from sqlalchemy import func
 from sqlmodel import Session, select
 
 from keep.api.core.config import config
+from keep.api.core.db import batch_enrich
 from keep.api.core.db import enrich_entity as enrich_alert_db
 from keep.api.core.db import (
     get_alert_by_event_id,
@@ -23,8 +25,9 @@ from keep.api.core.db import (
     get_topology_data_by_dynamic_matcher,
 )
 from keep.api.core.elastic import ElasticClient
+from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto
-from keep.api.models.db.alert import ActionType, Alert
+from keep.api.models.db.alert import Alert
 from keep.api.models.db.enrichment_event import (
     EnrichmentEvent,
     EnrichmentLog,
@@ -33,6 +36,7 @@ from keep.api.models.db.enrichment_event import (
 )
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 
 
 def is_valid_uuid(uuid_str):
@@ -89,6 +93,9 @@ class EnrichmentsBl:
         if not EnrichmentsBl.ENRICHMENT_DISABLED:
             self.db_session = db or get_session_sync()
             self.elastic_client = ElasticClient(tenant_id=tenant_id)
+        else:
+            self.db_session = None
+            self.elastic_client = None
 
     def run_mapping_rule_by_id(self, rule_id: int, alert_id: UUID) -> AlertDto:
         rule = get_mapping_rule_by_id(self.tenant_id, rule_id, session=self.db_session)
@@ -100,7 +107,7 @@ class EnrichmentsBl:
         )
         if not alert:
             raise HTTPException(status_code=404, detail="Alert not found")
-        return self._check_match_rule_and_enrich(alert, rule)
+        return self.check_if_match_and_enrich(alert, rule)
 
     def run_extraction_rule_by_id(self, rule_id: int, alert: Alert) -> AlertDto:
         rule = get_extraction_rule_by_id(
@@ -319,11 +326,11 @@ class EnrichmentsBl:
             return alert
 
         for rule in rules:
-            self._check_match_rule_and_enrich(alert, rule)
+            self.check_if_match_and_enrich(alert, rule)
 
         return alert
 
-    def _check_match_rule_and_enrich(self, alert: AlertDto, rule: MappingRule) -> bool:
+    def check_if_match_and_enrich(self, alert: AlertDto, rule: MappingRule) -> bool:
         """
         Check if the alert matches the conditions specified in the mapping rule.
         If a match is found, enrich the alert and log the enrichment.
@@ -385,7 +392,7 @@ class EnrichmentsBl:
             matcher_value = {}
             for matcher in rule.matchers:
                 # [0] because topology is always 1 matcher
-                matcher_value[matcher[0]] = get_nested_attribute(alert, matcher)
+                matcher_value[matcher[0]] = get_nested_attribute(alert, matcher[0])
             topology_service = get_topology_data_by_dynamic_matcher(
                 self.tenant_id, matcher_value
             )
@@ -407,32 +414,64 @@ class EnrichmentsBl:
                 enrichments.pop("tenant_id", None)
                 enrichments.pop("id", None)
         elif rule.type == "csv":
-            for row in rule.rows:
-                if any(
-                    self._check_matcher(alert, row, matcher)
-                    for matcher in rule.matchers
-                ):
-                    # Extract enrichments from the matched row
-                    enrichments = {}
-                    for key, value in row.items():
-                        if value is not None:
-                            is_matcher = False
-                            for matcher in rule.matchers:
-                                if key in matcher:
-                                    is_matcher = True
-                                    break
-                            if not is_matcher:
-                                # If the key has . (dot) in it, it'll be added as is while it needs to be nested.
-                                # @tb: fix when somebody will be complaining about this.
-                                enrichments[key.strip()] = value
-                    break
+            if not rule.is_multi_level:
+                for row in rule.rows:
+                    if any(
+                        self._check_matcher(alert, row, matcher)
+                        for matcher in rule.matchers
+                    ):
+                        # Extract enrichments from the matched row
+                        enrichments = {}
+                        for key, value in row.items():
+                            if value is not None:
+                                is_matcher = False
+                                for matcher in rule.matchers:
+                                    if key in matcher:
+                                        is_matcher = True
+                                        break
+                                if not is_matcher:
+                                    # If the key has . (dot) in it, it'll be added as is while it needs to be nested.
+                                    # @tb: fix when somebody will be complaining about this.
+                                    if isinstance(value, str):
+                                        value = value.strip()
+                                    enrichments[key.strip()] = value
+                        break
+            else:
+                # Multi-level mapping
+                # We can assume that the matcher is only a single key. i.e., [['customers']]
+                key = rule.matchers[0][0]
+                # this should be a list of values we need to try and match, and enrich
+                matcher_values = get_nested_attribute(alert, key)
+                if not matcher_values:
+                    self._add_enrichment_log("WTF, should not happen?", "error")
+                else:
+                    if isinstance(matcher_values, str):
+                        matcher_values = json5.loads(matcher_values)
+                    for matcher in matcher_values:
+                        if rule.prefix_to_remove:
+                            matcher = matcher.replace(rule.prefix_to_remove, "")
+                        for row in rule.rows:
+                            if self._check_explicit_match(row, key, matcher):
+                                if rule.new_property_name not in enrichments:
+                                    enrichments[rule.new_property_name] = {}
 
+                                if matcher not in enrichments[rule.new_property_name]:
+                                    enrichments[rule.new_property_name][matcher] = {}
+
+                                for enrichment_key, enrichment_value in row.items():
+                                    if enrichment_value is not None:
+                                        enrichments[rule.new_property_name][matcher][
+                                            enrichment_key.strip()
+                                        ] = enrichment_value.strip()
+                                break
         if enrichments:
             # Enrich the alert with the matched data from the row
-            for key, value in enrichments.items():
+            for key, matcher in enrichments.items():
                 # It's not relevant to enrich if the value if empty
-                if value is not None:
-                    setattr(alert, key.strip(), value)
+                if matcher is not None:
+                    if isinstance(matcher, str):
+                        matcher = matcher.strip()
+                    setattr(alert, key.strip(), matcher)
 
             # Save the enrichments to the database
             # SHAHAR: since when running this enrich_alert, the alert is not in elastic yet (its indexed after),
@@ -481,7 +520,28 @@ class EnrichmentsBl:
             return False
         return re.search(pattern, value) is not None
 
-    def _check_matcher(self, alert: AlertDto, row: dict, matcher: list) -> bool:
+    def _check_explicit_match(
+        self, row: dict, matcher: str, explicit_value: str
+    ) -> bool:
+        """
+        Check if the row matches the explicit given value, for example, in multi-level-mapping
+
+        Args:
+            row (dict): The row from the mapping rule data to compare against.
+            matcher (str): The matcher string specifying conditions.
+            explicit_value (str): The explicit value to compare against.
+
+        Returns:
+            bool: True if the row matches the explicit given value, False otherwise.
+        """
+        return row.get(matcher.strip()) == explicit_value.strip()
+
+    def _check_matcher(
+        self,
+        alert: AlertDto,
+        row: dict,
+        matcher: list,
+    ) -> bool:
         """
         Check if the alert matches the conditions specified by a matcher.
 
@@ -514,6 +574,103 @@ class EnrichmentsBl:
                 },
             )
             return False
+
+    @staticmethod
+    def get_enrichment_metadata(
+        enrichments: dict, authenticated_entity: AuthenticatedEntity
+    ) -> tuple[ActionType, str, bool, bool]:
+        """
+        Get the metadata for the enrichment
+
+        Args:
+            enrichments (dict): The enrichments to get the metadata for
+            authenticated_entity (AuthenticatedEntity): The authenticated entity that performed the enrichment
+
+        Returns:
+            tuple[ActionType, str, bool, bool]: action_type, action_description, should_run_workflow, should_check_incidents_resolution
+        """
+        should_run_workflow = False
+        should_check_incidents_resolution = False
+        action_type = ActionType.GENERIC_ENRICH
+        action_description = (
+            f"Alert enriched by {authenticated_entity.email} - {enrichments}"
+        )
+        # Shahar: TODO, change to the specific action type, good enough for now
+        if "status" in enrichments and authenticated_entity.api_key_name is None:
+            action_type = (
+                ActionType.MANUAL_RESOLVE
+                if enrichments["status"] == "resolved"
+                else ActionType.MANUAL_STATUS_CHANGE
+            )
+            action_description = f"Alert status was changed to {enrichments['status']} by {authenticated_entity.email}"
+            should_run_workflow = True
+            if enrichments["status"] == "resolved":
+                should_check_incidents_resolution = True
+        elif "status" in enrichments and authenticated_entity.api_key_name:
+            action_type = (
+                ActionType.API_AUTOMATIC_RESOLVE
+                if enrichments["status"] == "resolved"
+                else ActionType.API_STATUS_CHANGE
+            )
+            action_description = f"Alert status was changed to {enrichments['status']} by API `{authenticated_entity.api_key_name}`"
+            should_run_workflow = True
+            if enrichments["status"] == "resolved":
+                should_check_incidents_resolution = True
+        elif "note" in enrichments and enrichments["note"]:
+            action_type = ActionType.COMMENT
+            action_description = (
+                f"Comment added by {authenticated_entity.email} - {enrichments['note']}"
+            )
+        elif "ticket_url" in enrichments:
+            action_type = ActionType.TICKET_ASSIGNED
+            action_description = f"Ticket assigned by {authenticated_entity.email} - {enrichments['ticket_url']}"
+        return (
+            action_type,
+            action_description,
+            should_run_workflow,
+            should_check_incidents_resolution,
+        )
+
+    def batch_enrich(
+        self,
+        fingerprints: list[str],
+        enrichments: dict,
+        action_type: ActionType,
+        action_callee: str,
+        action_description: str,
+        dispose_on_new_alert=False,
+        audit_enabled=True,
+    ):
+        self.logger.debug(
+            "enriching multiple fingerprints",
+            extra={"fingerprints": fingerprints, "tenant_id": self.tenant_id},
+        )
+        # if these enrichments are disposable, manipulate them with a timestamp
+        #   so they can be disposed of later
+        if dispose_on_new_alert:
+            self.logger.info(
+                "Enriching disposable enrichments",
+                extra={"fingerprints": fingerprints, "tenant_id": self.tenant_id},
+            )
+            # for every key, add a disposable key with the value and a timestamp
+            disposable_enrichments = {}
+            for key, value in enrichments.items():
+                disposable_enrichments[f"disposable_{key}"] = {
+                    "value": value,
+                    "timestamp": datetime.datetime.now(
+                        tz=datetime.timezone.utc
+                    ).timestamp(),  # timestamp for disposal [for future use]
+                }
+            enrichments.update(disposable_enrichments)
+        batch_enrich(
+            self.tenant_id,
+            fingerprints,
+            enrichments,
+            action_type,
+            action_callee,
+            action_description,
+            audit_enabled=audit_enabled,
+        )
 
     def enrich_entity(
         self,
@@ -550,7 +707,9 @@ class EnrichmentsBl:
             for key, value in enrichments.items():
                 disposable_enrichments[f"disposable_{key}"] = {
                     "value": value,
-                    "timestamp": datetime.datetime.utcnow().timestamp(),  # timestamp for disposal [for future use]
+                    "timestamp": datetime.datetime.now(
+                        tz=datetime.timezone.utc
+                    ).timestamp(),  # timestamp for disposal [for future use]
                 }
             enrichments.update(disposable_enrichments)
 

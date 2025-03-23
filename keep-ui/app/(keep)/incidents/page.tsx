@@ -2,17 +2,22 @@ import { IncidentList } from "@/features/incident-list";
 import { getIncidents, GetIncidentsParams } from "@/entities/incidents/api";
 import { PaginatedIncidentsDto } from "@/entities/incidents/model";
 import { createServerApiClient } from "@/shared/api/server";
-import { DefaultIncidentFilters } from "@/entities/incidents/model/models";
+import {
+  DEFAULT_INCIDENTS_CEL,
+  DefaultIncidentFilters,
+  DEFAULT_INCIDENTS_PAGE_SIZE,
+  DEFAULT_INCIDENTS_SORTING,
+} from "@/entities/incidents/model/models";
 import { getInitialFacets } from "@/features/filter/api";
 import { FacetDto } from "@/features/filter";
 
 const defaultIncidentsParams: GetIncidentsParams = {
-  confirmed: true,
-  limit: 20,
+  candidate: false,
+  limit: DEFAULT_INCIDENTS_PAGE_SIZE,
   offset: 0,
-  sorting: { id: "creation_time", desc: true },
+  sorting: DEFAULT_INCIDENTS_SORTING,
   filters: DefaultIncidentFilters,
-  cel: "!(status in ['resolved', 'deleted'])", // on initial page load, we have to display only active incidents
+  cel: DEFAULT_INCIDENTS_CEL,
 };
 
 export default async function Page() {
@@ -24,7 +29,7 @@ export default async function Page() {
 
     const tasks = [
       getIncidents(api, defaultIncidentsParams),
-      await getInitialFacets(api, "incidents"),
+      getInitialFacets(api, "incidents"),
     ];
     const [_incidents, _facetsData] = await Promise.all(tasks);
     incidents = _incidents as PaginatedIncidentsDto;

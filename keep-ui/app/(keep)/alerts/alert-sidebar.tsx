@@ -79,17 +79,6 @@ const AlertSidebar = ({
           <Dialog.Panel className="fixed right-0 inset-y-0 w-2/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <div className="w-full">
-                <AlertMenu
-                  alert={alert!}
-                  presetName="feed"
-                  isInSidebar={true}
-                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-                  setDismissModalAlert={setDismissModalAlert}
-                  setChangeStatusAlert={setChangeStatusAlert}
-                  setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
-                  toggleSidebar={toggle}
-                />
-                <Divider />
                 <Dialog.Title
                   className="text-xl font-bold flex flex-col gap-2 items-start"
                   as={Title}
@@ -101,6 +90,17 @@ const AlertSidebar = ({
                   )}
                   {alert?.name ? alert.name : "Alert Details"}
                 </Dialog.Title>
+                <Divider className="mb-0" />
+                <AlertMenu
+                  alert={alert!}
+                  presetName="feed"
+                  isInSidebar={true}
+                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+                  setDismissModalAlert={setDismissModalAlert}
+                  setChangeStatusAlert={setChangeStatusAlert}
+                  setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
+                  toggleSidebar={toggle}
+                />
               </div>
               <div>
                 <Button onClick={toggle} variant="light">
@@ -124,6 +124,7 @@ const AlertSidebar = ({
                     <DynamicImageProviderIcon
                       src={`/icons/${alert.source![0]}-icon.png`}
                       alt={alert.source![0]}
+                      providerType={alert.source![0]}
                       width={24}
                       height={24}
                       className="inline-block w-6 h-6"
@@ -132,7 +133,9 @@ const AlertSidebar = ({
                   </p>
                   <p>
                     <FieldHeader>Description</FieldHeader>
-                    <pre className="whitespace-pre-wrap">{alert.description}</pre>
+                    <pre className="whitespace-pre-wrap">
+                      {alert.description}
+                    </pre>
                   </p>
                   <p>
                     <FieldHeader className="flex items-center gap-1">

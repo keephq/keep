@@ -46,7 +46,7 @@ export const AlertPresetLink = ({
 
   const { totalCount } = useLastAlerts({
     cel: preset.options.find((option) => option.label === "CEL")?.value || "",
-    limit: 20,
+    limit: 0,
     offset: 0,
   });
 
@@ -82,7 +82,7 @@ export const AlertPresetLink = ({
         onDelete={() => deletePreset && deletePreset(preset.id, preset.name)}
         isExact={true}
         className={clsx(
-          "flex items-center space-x-2 text-sm p-1 text-slate-400 font-medium rounded-lg",
+          "flex items-center space-x-2 p-1 text-slate-400 font-medium rounded-lg",
           {
             "bg-stone-200/50": isActive,
             "hover:text-orange-400 focus:ring focus:ring-orange-300 group hover:bg-stone-200/50":

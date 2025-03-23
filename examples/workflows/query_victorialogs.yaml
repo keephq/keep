@@ -1,0 +1,19 @@
+workflow:
+  id: victorialogs-stats-analyzer
+  name: VictoriaLogs Stats Analyzer
+  description: Analyzes VictoriaLogs data with statistical queries to track log level distributions and patterns.
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps:
+    - name: victorialogs-step
+      provider:
+        config: "{{ providers.logs }}"
+        type: victorialogs
+        with:
+          query: "* | stats by (level) count(*)"
+          queryType: stats_query_range
+  actions: []

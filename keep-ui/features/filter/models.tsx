@@ -1,4 +1,5 @@
 export interface FacetConfig {
+  uncheckedByDefaultOptionValues?: string[];
   renderOptionIcon?: (facetOption: FacetOptionDto) => JSX.Element | undefined;
   renderOptionLabel?: (
     facetOption: FacetOptionDto

@@ -52,11 +52,7 @@ export const useWorkflowExecutionsV2 = (
           filteredParams.toString() ? `&${filteredParams.toString()}` : ""
         }`
       : null,
-    (url: string) => api.get(url),
-    {
-      revalidateOnFocus: false,
-      revalidateIfStale: false,
-    }
+    (url: string) => api.get(url)
   );
 };
 

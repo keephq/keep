@@ -3,14 +3,12 @@ import {
   Button,
   Card,
   Icon,
-  Subtitle,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeaderCell,
   TableRow,
-  Title,
 } from "@tremor/react";
 import { useEffect, useMemo, useState } from "react";
 import { Rule } from "utils/hooks/useRules";
@@ -24,12 +22,14 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { DefaultRuleGroupType, parseCEL } from "react-querybuilder";
+import { DefaultRuleGroupType } from "react-querybuilder";
+import { parseCEL } from "react-querybuilder/parseCEL";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormattedQueryCell } from "./FormattedQueryCell";
 import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
-import { PlusIcon } from "@radix-ui/react-icons";
 import { CorrelationFormType } from "./CorrelationSidebar/types";
+import { PageSubtitle, PageTitle } from "@/shared/ui";
+import { PlusIcon } from "@heroicons/react/20/solid";
 
 const TIMEFRAME_UNITS_FROM_SECONDS = {
   seconds: (amount: number) => amount,
@@ -83,6 +83,9 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         query: queryInGroup,
         incidents: selectedRule.incidents,
         incidentNameTemplate: selectedRule.incident_name_template || "",
+        incidentPrefix: selectedRule.incident_prefix || "",
+        multiLevel: selectedRule.multi_level,
+        multiLevelPropertyName: selectedRule.multi_level_property_name || "",
       };
     }
 
@@ -115,7 +118,21 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
       }),
       columnHelper.accessor("incident_name_template", {
         header: "Incident Name Template",
-        cell: (context) => <Badge color="orange">{context.getValue()}</Badge>,
+        cell: (context) => {
+          const template = context.getValue();
+          return template ? (
+            <Badge color="orange">{template}</Badge>
+          ) : (
+            <Badge color="gray">default</Badge>
+          );
+        },
+      }),
+      columnHelper.accessor("incident_prefix", {
+        header: "Incident Prefix",
+        cell: (context) =>
+          context.getValue() && (
+            <Badge color="orange">{context.getValue()}</Badge>
+          ),
       }),
       columnHelper.accessor("definition_cel", {
         header: "Description",
@@ -150,31 +167,41 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
   );
 
   const table = useReactTable({
+    getRowId: (row) => row.id,
     data: rules,
     columns: CORRELATION_TABLE_COLS,
     getCoreRowModel: getCoreRowModel(),
   });
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col h-full gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <Title className="text-2xl font-normal">
+          <PageTitle>
             Correlations <span className="text-gray-400">({rules.length})</span>
-          </Title>
-          <Subtitle className="text-gray-400">
+          </PageTitle>
+          <PageSubtitle>
             Manually setup flexible rules for alert to incident correlation
-          </Subtitle>
+          </PageSubtitle>
         </div>
-        <Button color="orange" onClick={() => onCorrelationClick()}>
-          Create Correlation
+        <Button
+          color="orange"
+          size="md"
+          variant="primary"
+          onClick={() => onCorrelationClick()}
+          icon={PlusIcon}
+        >
+          Create correlation
         </Button>
       </div>
-      <Card className="flex-1 mt-10">
+      <Card className="p-0">
         <Table>
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow
+                key={headerGroup.id}
+                className="border-b border-slate-200"
+              >
                 {headerGroup.headers.map((header) => (
                   <TableHeaderCell key={header.id}>
                     {flexRender(

@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { AlertDto, AlertKnownKeys } from "@/entities/alerts/model";
 import { AlertTable } from "./alert-table";
 import { useAlertTableCols } from "./alert-table-utils";
@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toDateObjectWithFallback } from "utils/helpers";
 import Image from "next/image";
 import Modal from "@/components/ui/Modal";
+import AlertNoteModal from "@/app/(keep)/alerts/alert-note-modal";
 
 interface AlertHistoryPanelProps {
   alertsHistoryWithDate: (Omit<AlertDto, "lastReceived"> & {
@@ -22,6 +23,7 @@ const AlertHistoryPanel = ({
   presetName,
 }: AlertHistoryPanelProps) => {
   const router = useRouter();
+  const [noteModalAlert, setNoteModalAlert] = useState<AlertDto | null>(null);
 
   const additionalColsToGenerate = [
     ...new Set(
@@ -46,6 +48,7 @@ const AlertHistoryPanel = ({
 
   const alertTableColumns = useAlertTableCols({
     additionalColsToGenerate: additionalColsToGenerate,
+    setNoteModalAlert: setNoteModalAlert,
     presetName: alertsHistoryWithDate.at(0)?.fingerprint ?? "",
   });
 
@@ -106,6 +109,11 @@ const AlertHistoryPanel = ({
         isRefreshAllowed={false}
         presetName="alert-history"
       />
+      <AlertNoteModal
+        handleClose={() => setNoteModalAlert(null)}
+        alert={noteModalAlert ?? null}
+        readOnly={true}
+      />
     </Fragment>
   );
 };
@@ -113,9 +121,10 @@ const AlertHistoryPanel = ({
 interface Props {
   alerts: AlertDto[];
   presetName: string;
+  onClose: () => void;
 }
 
-export function AlertHistory({ alerts, presetName }: Props) {
+export function AlertHistory({ alerts, presetName, onClose }: Props) {
   const router = useRouter();
 
   const searchParams = useSearchParams();
@@ -138,9 +147,7 @@ export function AlertHistory({ alerts, presetName }: Props) {
   return (
     <Modal
       isOpen={selectedAlert !== undefined}
-      onClose={() => {
-        router.replace(`/alerts/${presetName.toLowerCase()}`);
-      }}
+      onClose={onClose}
       className="w-full max-w-screen-2xl max-h-[710px] transform overflow-scroll ring-tremor bg-white
                     p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
     >

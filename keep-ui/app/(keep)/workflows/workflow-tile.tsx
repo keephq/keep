@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
 import { KeepLoader } from "@/shared/ui";
@@ -25,6 +25,7 @@ import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowAction
 import { useToggleWorkflow } from "utils/hooks/useWorkflowToggle";
 import "./workflow-tile.css";
 import { WorkflowTriggerBadge } from "@/entities/workflows/ui/WorkflowTriggerBadge";
+import Link from "next/link";
 
 function TriggerTile({ trigger }: { trigger: Trigger }) {
   return (
@@ -40,9 +41,9 @@ function TriggerTile({ trigger }: { trigger: Trigger }) {
         <span className="text-sm text-right">
           {trigger.filters &&
             trigger.filters.map((filter) => (
-              <>
+              <Fragment key={filter.key}>
                 {filter.key} = {filter.value}
-              </>
+              </Fragment>
             ))}
         </span>
       )}
@@ -70,17 +71,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     deleteWorkflow(workflow.id);
   };
 
-  const handleWorkflowClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    const target = e.target as HTMLElement;
-    if (target.closest(".js-dont-propagate")) {
-      // do not redirect if the three-dot menu is clicked
-      return;
-    }
-    router.push(`/workflows/${workflow.id}`);
-  };
-
+  // todo: move to a shared func/component
   const handleDownloadClick = async () => {
     try {
       // Use the raw workflow data directly, as it is already in YAML format
@@ -144,7 +135,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   };
 
   return (
-    <div>
+    <>
+      {/* TODO: fix stuck loader */}
       {isRunning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <KeepLoader />
@@ -152,24 +144,66 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       )}
       <Card
         className="relative flex flex-col justify-between p-4 h-full border-2 border-transparent hover:border-orange-400 overflow-hidden cursor-pointer"
-        onClick={handleWorkflowClick}
+        data-testid={`workflow-tile-${workflow.id}`}
       >
-        <div className="absolute top-0 right-0 mt-2 mr-2 mb-2 flex items-center flex-wrap">
-          {workflow.provisioned && (
-            <Badge color="orange" size="xs" className="mr-2 mb-2">
-              Provisioned
-            </Badge>
-          )}
-          {workflow.alertRule && (
-            <Badge color="orange" size="xs" className="mr-2 mb-2">
-              Alert Rule
-            </Badge>
-          )}
-          {workflow.disabled && (
-            <Badge color="slate" size="xs" className="mr-2 mb-2">
-              Disabled
-            </Badge>
-          )}
+        <Link
+          href={`/workflows/${workflow.id}`}
+          aria-label={`View details for workflow: ${workflow?.name || "Unknown"}`}
+        >
+          <div className="absolute top-0 right-0 mt-2 mr-2 mb-2 flex items-center flex-wrap">
+            {workflow.provisioned && (
+              <Badge color="orange" size="xs" className="mr-2 mb-2">
+                Provisioned
+              </Badge>
+            )}
+            {workflow.alertRule && (
+              <Badge color="orange" size="xs" className="mr-2 mb-2">
+                Alert Rule
+              </Badge>
+            )}
+            {workflow.disabled && (
+              <Badge color="slate" size="xs" className="mr-2 mb-2">
+                Disabled
+              </Badge>
+            )}
+          </div>
+          <WorkflowGraph workflow={workflow} />
+          <div className="container flex flex-col space-between">
+            <div className="h-24">
+              <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">
+                {workflow?.name || "Unknown"}
+              </h2>
+              <p className="text-gray-500 line-clamp-2">
+                {workflow?.description || "no description"}
+              </p>
+            </div>
+            <div className="flex justify-between items-end">
+              <div className="flex flex-row items-center gap-1 flex-wrap text-sm">
+                {workflow.triggers.map((trigger) => (
+                  <WorkflowTriggerBadge
+                    key={trigger.type}
+                    trigger={trigger}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setOpenTriggerModal(true);
+                    }}
+                  />
+                ))}
+              </div>
+              {!isAllExecutionProvidersConfigured &&
+                workflow?.last_execution_started && (
+                  <div className="text-gray-500 text-sm text-right cursor-pointer truncate max-w-full mt-2 grow min-w-[max-content]">
+                    <TimeAgo
+                      date={workflow?.last_execution_started + "Z"}
+                      formatter={customFormatter}
+                    />
+                  </div>
+                )}
+            </div>
+          </div>
+        </Link>
+        <div className="absolute top-4 right-4">
           {!!handleRunClick && (
             <WorkflowMenu
               onDelete={handleDeleteClick}
@@ -184,41 +218,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               provisioned={workflow.provisioned}
             />
           )}
-        </div>
-        <WorkflowGraph workflow={workflow} />
-        <div className="container flex flex-col space-between">
-          <div className="h-24">
-            <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">
-              {workflow?.name || "Unkown"}
-            </h2>
-            <p className="text-gray-500 line-clamp-2">
-              {workflow?.description || "no description"}
-            </p>
-          </div>
-          <div className="flex justify-between items-end">
-            <div className="flex flex-row items-center gap-1 flex-wrap text-sm">
-              {workflow.triggers.map((trigger) => (
-                <WorkflowTriggerBadge
-                  key={trigger.type}
-                  trigger={trigger}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    setOpenTriggerModal(true);
-                  }}
-                />
-              ))}
-            </div>
-            {!isAllExecutionProvidersConfigured &&
-              workflow?.last_execution_started && (
-                <div className="text-gray-500 text-sm text-right cursor-pointer truncate max-w-full mt-2 grow min-w-[max-content]">
-                  <TimeAgo
-                    date={workflow?.last_execution_started + "Z"}
-                    formatter={customFormatter}
-                  />
-                </div>
-              )}
-          </div>
         </div>
       </Card>
 
@@ -256,7 +255,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           </Button>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }
 

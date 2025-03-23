@@ -6,7 +6,13 @@ import kubernetes.client
 import kubernetes.config
 from kubernetes.client.exceptions import ApiException
 
+from keep.api.core.config import config
 from keep.secretmanager.secretmanager import BaseSecretManager
+
+# kubernetes.config.incluster_config.SERVICE_CERT_FILENAME = "/app/bla"
+
+
+VERIFY_SSL_CERT = config.get("K8S_VERIFY_SSL_CERT", cast=bool, default=True)
 
 
 class KubernetesSecretManager(BaseSecretManager):
@@ -19,7 +25,32 @@ class KubernetesSecretManager(BaseSecretManager):
         )
         # kubernetes.config.load_config()  # when running locally
         kubernetes.config.load_incluster_config()
-        self.api = kubernetes.client.CoreV1Api()
+        # If we need to disable SSL, let's do it
+        if not VERIFY_SSL_CERT:
+            self.logger.info("Disabling SSL verification")
+            try:
+                # we want to change the default configuration to disable SSL verification
+                default_config = kubernetes.client.Configuration.get_default_copy()
+                default_config.verify_ssl = False
+                kubernetes.client.Configuration.set_default(default_config)
+                self.api = kubernetes.client.CoreV1Api()
+                # we also need to disable SSL verification in the connection pool
+                # shahar: idk why this is needed, but it is
+                try:
+                    self.api.api_client.rest_client.pool_manager.connection_pool_kw[
+                        "ca_certs"
+                    ] = None
+                except Exception:
+                    self.logger.exception(
+                        "Error disabling SSL verification in the connection pool"
+                    )
+                    pass
+                self.logger.info("SSL verification disabled")
+            except Exception:
+                self.logger.exception("Error disabling SSL verification")
+                self.api = kubernetes.client.CoreV1Api()
+        else:
+            self.api = kubernetes.client.CoreV1Api()
 
     def write_secret(self, secret_name: str, secret_value: str) -> None:
         """
@@ -62,11 +93,12 @@ class KubernetesSecretManager(BaseSecretManager):
                         extra={"secret_name": secret_name, "error": str(patch_error)},
                     )
                     raise patch_error
-            self.logger.error(
-                "Error writing secret",
-                extra={"secret_name": secret_name, "error": str(e)},
-            )
-            raise
+            else:
+                self.logger.error(
+                    "Error writing secret",
+                    extra={"secret_name": secret_name, "error": str(e)},
+                )
+                raise
 
     def read_secret(self, secret_name: str, is_json: bool = False) -> str | dict:
         # k8s requirements: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
@@ -84,7 +116,7 @@ class KubernetesSecretManager(BaseSecretManager):
             )
             return secret_data
         except ApiException as e:
-            self.logger.error(
+            self.logger.debug(
                 "Error reading secret",
                 extra={"secret_name": secret_name, "error": str(e)},
             )

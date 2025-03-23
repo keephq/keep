@@ -12,7 +12,8 @@ from keep.api.core.db import (
     save_workflow_results,
 )
 from keep.api.core.metrics import workflow_execution_duration
-from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto
+from keep.api.models.alert import AlertDto, AlertSeverity
+from keep.api.models.incident import IncidentDto
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
@@ -136,6 +137,11 @@ class WorkflowManager:
                     "workflow does not contain trigger %s, skipping", trigger
                 )
                 continue
+
+            incident_enrichment = get_enrichment(tenant_id, str(incident.id))
+            if incident_enrichment:
+                for k, v in incident_enrichment.enrichments.items():
+                    setattr(incident, k, v)
 
             self.logger.info("Adding workflow to run")
             with self.scheduler.lock:
@@ -426,7 +432,7 @@ class WorkflowManager:
 
     @timing_histogram(workflow_execution_duration)
     def _run_workflow(
-        self, workflow: Workflow, workflow_execution_id: str, test_run=False
+        self, workflow: Workflow, workflow_execution_id: str
     ):
         self.logger.debug(f"Running workflow {workflow.workflow_id}")
         threading.current_thread().workflow_debug = workflow.workflow_debug
@@ -434,7 +440,6 @@ class WorkflowManager:
         threading.current_thread().workflow_execution_id = workflow_execution_id
         threading.current_thread().tenant_id = workflow.context_manager.tenant_id
         errors = []
-        results = {}
         try:
             self._check_premium_providers(workflow)
             errors = workflow.run(workflow_execution_id)
@@ -455,12 +460,9 @@ class WorkflowManager:
         else:
             self.logger.info(f"Workflow {workflow.workflow_id} ran successfully")
 
-        if test_run:
-            results = self._get_workflow_results(workflow)
-        else:
-            self._save_workflow_results(workflow, workflow_execution_id)
+        self._save_workflow_results(workflow, workflow_execution_id)
 
-        return [errors, results]
+        return [errors, None]
 
     @staticmethod
     def _get_workflow_results(workflow: Workflow):

@@ -26,6 +26,10 @@ type UseIncidentActionsValue = {
     incidentId: string,
     skipConfirmation?: boolean
   ) => Promise<boolean>;
+  bulkDeleteIncidents: (
+    incidentIds: string[],
+    skipConfirmation?: boolean
+  ) => Promise<boolean>;
   mergeIncidents: (
     sourceIncidents: IncidentDto[],
     destinationIncident: IncidentDto
@@ -38,7 +42,8 @@ type UseIncidentActionsValue = {
   confirmPredictedIncident: (incidentId: string) => Promise<void>;
   unlinkAlertsFromIncident: (
     incidentId: string,
-    alertFingerprints: string[]
+    alertFingerprints: string[],
+    mutate?: () => void
   ) => Promise<void>;
   splitIncidentAlerts: (
     incidentId: string,
@@ -59,6 +64,7 @@ type IncidentCreateDto = {
   user_summary: string;
   assignee: string;
   resolve_on: string;
+  severity: Severity;
 };
 
 type IncidentUpdateDto = Partial<IncidentCreateDto> &
@@ -208,6 +214,35 @@ export function useIncidentActions(): UseIncidentActionsValue {
     [api, mutateIncidentsList]
   );
 
+  const bulkDeleteIncidents = useCallback(
+    async (incidentIds: string[], skipConfirmation = false) => {
+      if (
+        !skipConfirmation &&
+        !confirm(
+          `Are you sure you want to delete ${
+            incidentIds.length === 1
+              ? "this incident?"
+              : `${incidentIds.length} incidents?`
+          }`
+        )
+      ) {
+        return false;
+      }
+      try {
+        const result = await api.delete("/incidents/bulk", {
+          incident_ids: incidentIds,
+        });
+        mutateIncidentsList();
+        toast.success("Incidents deleted successfully");
+        return true;
+      } catch (error) {
+        showErrorToast(error, "Failed to delete incidents");
+        return false;
+      }
+    },
+    [api, mutateIncidentsList]
+  );
+
   const changeStatus = useCallback(
     async (incidentId: string, status: Status, comment?: string) => {
       if (!status) {
@@ -275,6 +310,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
     async (
       incidentId: string,
       alertFingerprints: string[],
+      mutate?: () => void,
       {
         skipConfirmation = false,
       }: {
@@ -304,8 +340,12 @@ export function useIncidentActions(): UseIncidentActionsValue {
           `/incidents/${incidentId}/alerts`,
           alertFingerprints
         );
-        mutateIncidentsList();
-        mutateIncident(incidentId);
+        if (mutate !== undefined) {
+          await mutate();
+        } else {
+          await mutateIncidentsList();
+          await mutateIncident(incidentId);
+        }
         toast.success("Alerts unlinked from incident successfully");
         return result;
       } catch (error) {
@@ -343,6 +383,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
     changeStatus,
     changeSeverity,
     deleteIncident,
+    bulkDeleteIncidents,
     mergeIncidents,
     confirmPredictedIncident,
     mutateIncidentsList,

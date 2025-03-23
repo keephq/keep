@@ -103,7 +103,7 @@ class MailgunProvider(BaseProvider):
                     }
 
                     # Parse the content line by line
-                    for line in body_content.strip().split("\r\n"):
+                    for line in body_content.strip().splitlines():
                         if ":" in line:
                             key, value = line.split(":", 1)
                             key = key.strip()
@@ -127,6 +127,8 @@ class MailgunProvider(BaseProvider):
                                     parsed_data["timestamp"] = str(
                                         datetime.datetime.now().timestamp()
                                     )
+                            else:
+                                parsed_data[key.lower()] = value
 
                     # Combine relevant fields for the message
                     message_parts = []
@@ -245,6 +247,7 @@ class MailgunProvider(BaseProvider):
         event.pop("token", "")
 
         logging.getLogger(__name__).info("Basic formatting done")
+
         alert = AlertDto(
             name=name,
             source=[source],
@@ -255,6 +258,13 @@ class MailgunProvider(BaseProvider):
             status=status,
             raw_email={**event},
         )
+
+        # now I want to add all attributes from raw_email to the alert dto, except the ones that are already set
+        for key, value in event.items():
+            # avoid "-" in keys cuz CEL will failed [stripped-text screw CEL]
+            if not hasattr(alert, key) and "-" not in key:
+                setattr(alert, key, value)
+
         logging.getLogger(__name__).info(
             "Alert formatted",
         )

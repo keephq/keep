@@ -1,9 +1,11 @@
 import inspect
+import json
 import os
 import random
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Any, Generator
 from unittest.mock import Mock, patch
 
 import mysql.connector
@@ -350,6 +352,7 @@ def mocked_context_manager():
         "foreach": {"value": None},
         "env": {},
     }
+    context_manager.tenant_id = SINGLE_TENANT_UUID
     return context_manager
 
 
@@ -442,25 +445,29 @@ def elastic_container(docker_ip, docker_services):
 
 @pytest.fixture
 def elastic_client(request):
-    # this is so if any other module initialized Elasticsearch, it will be deleted
-    ElasticClient._instance = None
-    os.environ["ELASTIC_ENABLED"] = "true"
-    os.environ["ELASTIC_USER"] = "elastic"
-    os.environ["ELASTIC_PASSWORD"] = "keeptests"
-    os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
-    os.environ["ELASTIC_INDEX_SUFFIX"] = "test"
-    # request.getfixturevalue("elastic_container")
-    elastic_client = ElasticClient(
-        tenant_id=SINGLE_TENANT_UUID,
-    )
 
-    yield elastic_client
+    if hasattr(request, 'param') and request.param is False:
+        yield None
+    else:
+        # this is so if any other module initialized Elasticsearch, it will be deleted
+        ElasticClient._instance = None
+        os.environ["ELASTIC_ENABLED"] = "true"
+        os.environ["ELASTIC_USER"] = "elastic"
+        os.environ["ELASTIC_PASSWORD"] = "keeptests"
+        os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
+        os.environ["ELASTIC_INDEX_SUFFIX"] = "test"
+        # request.getfixturevalue("elastic_container")
+        elastic_client = ElasticClient(
+            tenant_id=SINGLE_TENANT_UUID,
+        )
 
-    # remove all from elasticsearch
-    try:
-        elastic_client.drop_index()
-    except Exception:
-        pass
+        yield elastic_client
+
+        # remove all from elasticsearch
+        try:
+            elastic_client.drop_index()
+        except Exception:
+            pass
 
 
 @pytest.fixture(scope="session")
@@ -535,13 +542,30 @@ def keycloak_token(request):
 def browser():
     from playwright.sync_api import sync_playwright
 
+    try:
+        tenant_id = f"keep{os.getpid()}"
+        print("Creating tenant - ", tenant_id)
+        resp = requests.post(
+            "http://localhost:8080/tenant",
+            json={"tenant_id": tenant_id},
+        )
+        resp.raise_for_status()
+        print("Tenant created")
+    except Exception as exc:
+        print(exc)
     # Force headless mode if running in CI environment
     is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
     headless = is_ci or os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true"
-    
+    # headless = False
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
-        context = browser.new_context()
+        context = browser.new_context(
+            viewport={"width": 1920, "height": 1080},
+            # macbook 13
+            # viewport={"width": 1280, "height": 800},
+        )
+        context.grant_permissions(["clipboard-read", "clipboard-write"])
         page = context.new_page()
         page.set_default_timeout(5000)
         yield page
@@ -717,7 +741,7 @@ def create_alert(db_session):
             event={
                 "name": random_name,
                 "fingerprint": fingerprint,
-                "lastReceived": timestamp.isoformat(),
+                "lastReceived": details.pop("lastReceived", timestamp.isoformat()),
                 "status": status.value,
                 **details,
             },
@@ -791,3 +815,132 @@ def pytest_collection_modifyitems(items):
             and "db" in item.callspec.params["db_session"]
         ):
             item.add_marker("integration")
+
+
+@pytest.fixture
+def console_logs():
+    """Fixture to collect console logs during test execution."""
+    logs = []
+    return logs
+
+
+@pytest.fixture
+def setup_page_logging(browser, console_logs):
+    """Fixture to set up console logging for a page."""
+    # Console logging
+    browser.on(
+        "console",
+        lambda msg: (
+            console_logs.append(
+                f"{datetime.now()}: {msg.text}, location: {msg.location}"
+            )
+        ),
+    )
+
+    # Request logging
+    browser.on(
+        "request",
+        lambda request: (
+            console_logs.append(
+                f"{datetime.now()}: REQUEST: {request.method} {request.url}"
+            )
+        ),
+    )
+
+    # Response logging
+    browser.on(
+        "response",
+        lambda response: (
+            console_logs.append(
+                f"{datetime.now()}: RESPONSE: {response.status} {response.url}"
+            )
+        ),
+    )
+
+    browser.on(
+        "requestfailed",
+        lambda request: (
+            console_logs.append(
+                f"{datetime.now()}: REQUEST FAILED: {request.method} {request.url}"
+            )
+        ),
+    )
+
+    return browser
+
+
+@pytest.fixture
+def failure_artifacts(browser, console_logs, request):
+    """Fixture to automatically save failure artifacts on test failure."""
+    yield
+
+    # Only save artifacts if the test failed
+    if request.node.rep_call.failed:
+        test_name = (
+            "playwright_dump_"
+            + os.path.basename(request.node.fspath)[:-3]
+            + "_"
+            + request.node.name
+        )
+
+        # Save each artifact type independently
+        artifacts_saved = []
+        artifacts_failed = []
+
+        # Try to save screenshot
+        try:
+            browser.screenshot(path=test_name + ".png")
+            artifacts_saved.append("screenshot")
+        except Exception as e:
+            artifacts_failed.append(f"screenshot: {str(e)}")
+
+        # Try to save HTML content
+        try:
+            with open(test_name + ".html", "w", encoding="utf-8") as f:
+                f.write(browser.content())
+            artifacts_saved.append("html")
+        except Exception as e:
+            artifacts_failed.append(f"html: {str(e)}")
+
+        # Try to save console logs
+        try:
+            # Add debug info about console logs
+            print(f"\nNumber of console logs captured: {len(console_logs)}")
+            if console_logs:
+                with open(test_name + "_console.txt", "w", encoding="utf-8") as f:
+                    f.write("\n".join(console_logs))
+                artifacts_saved.append("console logs")
+            else:
+                artifacts_failed.append("console logs: No logs were captured")
+        except Exception as e:
+            artifacts_failed.append(f"console logs: {str(e)}")
+
+        # Try to save cookies
+        try:
+            cookies = browser.context.cookies()
+            print(f"\nNumber of cookies found: {len(cookies)}")
+            if cookies:
+                with open(test_name + "_cookies.json", "w", encoding="utf-8") as f:
+                    json.dump(cookies, f, indent=2)
+                artifacts_saved.append("cookies")
+            else:
+                artifacts_failed.append("cookies: No cookies were present")
+        except Exception as e:
+            artifacts_failed.append(f"cookies: {str(e)}")
+
+        # Log summary of what was saved and what failed
+        print(f"\nFailure artifacts for {test_name}:")
+        if artifacts_saved:
+            print(f"Successfully saved: {', '.join(artifacts_saved)}")
+        if artifacts_failed:
+            print(f"Failed to save or empty: {', '.join(artifacts_failed)}")
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call) -> Generator[None, Any, Any]:
+    """Hook to store test results for use in fixtures."""
+    outcome = yield
+    rep = outcome.get_result()
+
+    # Set report for each phase (setup, call, teardown)
+    setattr(item, f"rep_{rep.when}", rep)

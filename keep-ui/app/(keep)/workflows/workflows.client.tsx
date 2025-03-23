@@ -1,24 +1,47 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Subtitle } from "@tremor/react";
+import {
+  ChangeEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Subtitle, Button } from "@tremor/react";
 import {
   ArrowUpOnSquareStackIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
-import { KeepLoader } from "@/shared/ui";
+import { EmptyStateCard, KeepLoader, PageTitle } from "@/shared/ui";
 import WorkflowsEmptyState from "./noworkflows";
 import WorkflowTile from "./workflow-tile";
-import { Button, Title } from "@tremor/react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
 import { WorkflowTemplates } from "./mockworkflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/api";
-import { showErrorToast, Input, ErrorComponent } from "@/shared/ui";
+import { Input, ErrorComponent } from "@/shared/ui";
 import { Textarea } from "@/components/ui";
-import { useWorkflowsV2 } from "utils/hooks/useWorkflowsV2";
+import { useWorkflowsV2, WorkflowsQuery } from "utils/hooks/useWorkflowsV2";
+import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
+import { PageSubtitle } from "@/shared/ui/PageSubtitle";
+import { PlusIcon } from "@heroicons/react/20/solid";
+import { UserStatefulAvatar } from "@/entities/users/ui";
+import { FacetsConfig } from "@/features/filter/models";
+import {
+  CheckCircleIcon,
+  XCircleIcon,
+  ExclamationCircleIcon,
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  ArrowPathIcon,
+} from "@heroicons/react/24/outline";
+import { useUser } from "@/entities/users/model/useUser";
+import { Pagination, SearchInput } from "@/features/filter";
+import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
+import { InitialFacetsData } from "@/features/filter/api";
+import { v4 as uuidV4 } from "uuid";
 
 const EXAMPLE_WORKFLOW_DEFINITIONS = {
   slack: `
@@ -61,12 +84,58 @@ const EXAMPLE_WORKFLOW_DEFINITIONS = {
 
 type ExampleWorkflowKey = keyof typeof EXAMPLE_WORKFLOW_DEFINITIONS;
 
-export default function WorkflowsPage() {
-  const api = useApi();
+const AssigneeLabel = ({ email }: { email: string }) => {
+  const user = useUser(email);
+  return user ? user.name : email;
+};
+
+export default function WorkflowsPage({
+  initialFacetsData,
+}: {
+  initialFacetsData?: InitialFacetsData;
+}) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [workflowDefinition, setWorkflowDefinition] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
+    null
+  );
+  const [filterCel, setFilterCel] = useState<string | null>(null);
+  const [searchedValue, setSearchedValue] = useState<string | null>(null);
+  const [paginationState, setPaginationState] = useState<{
+    offset: number;
+    limit: number;
+  } | null>(null);
+  const [workflowsQuery, setWorkflowsQuery] = useState<WorkflowsQuery | null>(
+    null
+  );
+
+  const searchCel = useMemo(() => {
+    if (!searchedValue) {
+      return;
+    }
+
+    return `name.contains("${searchedValue}") || description.contains("${searchedValue}")`;
+  }, [searchedValue]);
+
+  useEffect(() => {
+    if (!paginationState) {
+      return;
+    }
+
+    const celList = [searchCel, filterCel].filter((cel) => cel);
+    const cel = celList.join(" && ");
+    const query: WorkflowsQuery = {
+      cel,
+      limit: paginationState?.limit,
+      offset: paginationState?.offset,
+      sortBy: "created_at",
+      sortDir: "desc",
+    };
+
+    setWorkflowsQuery(query);
+  }, [searchCel, filterCel, paginationState]);
 
   // Only fetch data when the user is authenticated
   /**
@@ -81,57 +150,175 @@ export default function WorkflowsPage() {
           -> last_executions: Used for the workflow execution graph.
           ->last_execution_started: Used for showing the start time of execution in real-time.
   **/
-  const { workflows, error, isLoading } = useWorkflowsV2();
+
+  const {
+    workflows: filteredWorkflows,
+    totalCount: filteredWorkflowsCount,
+    error,
+    isLoading: isFilteredWorkflowsLoading,
+  } = useWorkflowsV2(workflowsQuery, { keepPreviousData: true });
+
+  const isFirstLoading = isFilteredWorkflowsLoading && !filteredWorkflows;
+
+  const { uploadWorkflowFiles } = useWorkflowActions();
+
+  const isTableEmpty = filteredWorkflowsCount === 0;
+  const isEmptyState =
+    !isFilteredWorkflowsLoading && isTableEmpty && !workflowsQuery?.cel;
+
+  const showFilterEmptyState = isTableEmpty && !!filterCel;
+  const showSearchEmptyState =
+    isTableEmpty && !!searchCel && !showFilterEmptyState;
+
+  const setPaginationStateCallback = useCallback(
+    (pageIndex: number, limit: number, offset: number) => {
+      setPaginationState({ limit, offset });
+    },
+    [setPaginationState]
+  );
+
+  const facetsConfig: FacetsConfig = useMemo(() => {
+    return {
+      ["Last execution status"]: {
+        renderOptionIcon: (facetOption) => {
+          switch (facetOption.value) {
+            case "success": {
+              return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
+            }
+            case "error":
+            case "failed": {
+              return <XCircleIcon className="w-5 h-5 text-red-500" />;
+            }
+            case "in_progress": {
+              return <ArrowPathIcon className="w-5 h-5 text-orange-500" />;
+            }
+            default: {
+              return (
+                <ExclamationCircleIcon className="w-5 h-5 text-gray-500" />
+              );
+            }
+          }
+        },
+        renderOptionLabel: (facetOption) => {
+          switch (facetOption.value) {
+            case "success": {
+              return "Success";
+            }
+            case "error": {
+              return "Error";
+            }
+            case "in_progress": {
+              return "In progress";
+            }
+            case "":
+            case null:
+            case undefined: {
+              return "Not run yet";
+            }
+            default: {
+              return facetOption.value;
+            }
+          }
+        },
+      },
+      ["Created by"]: {
+        renderOptionIcon: (facetOption) => (
+          <UserStatefulAvatar email={facetOption.display_name} size="xs" />
+        ),
+        renderOptionLabel: (facetOption) => {
+          if (facetOption.display_name === "null") {
+            return "Not assigned";
+          }
+          return <AssigneeLabel email={facetOption.display_name} />;
+        },
+      },
+      ["Enabling status"]: {
+        renderOptionLabel: (facetOption) =>
+          ["true", "1"].includes(facetOption.display_name.toLocaleLowerCase())
+            ? "Disabled"
+            : "Enabled",
+      },
+    };
+  }, []);
+
+  function renderFilterEmptyState() {
+    return (
+      <>
+        <div className="flex items-center h-full w-full">
+          <div className="flex flex-col justify-center items-center w-full p-4">
+            <EmptyStateCard
+              title="No workflows to display matching your filter"
+              icon={FunnelIcon}
+            >
+              <Button
+                color="orange"
+                variant="secondary"
+                onClick={() => setClearFiltersToken(uuidV4())}
+              >
+                Reset filter
+              </Button>
+            </EmptyStateCard>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  function renderSearchEmptyState() {
+    return (
+      <>
+        <div className="flex items-center h-full w-full">
+          <div className="flex flex-col justify-center items-center w-full p-4">
+            <EmptyStateCard
+              title="No workflows to display matching your search"
+              icon={MagnifyingGlassIcon}
+            >
+              <Button
+                color="orange"
+                variant="secondary"
+                onClick={() => setSearchedValue(null)}
+              >
+                Clear search
+              </Button>
+            </EmptyStateCard>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  function renderData() {
+    return (
+      <>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
+          {filteredWorkflows?.map((workflow) => (
+            <WorkflowTile key={workflow.id} workflow={workflow} />
+          ))}
+        </div>
+      </>
+    );
+  }
 
   if (error) {
     return <ErrorComponent error={error} reset={() => {}} />;
   }
 
-  if (isLoading || !workflows) {
-    return <KeepLoader />;
-  }
+  const onDrop = async (files: ChangeEvent<HTMLInputElement>) => {
+    if (!files.target.files) {
+      return;
+    }
 
-  const onDrop = async (files: any) => {
-    const fileUpload = async (
-      formData: FormData,
-      fName: string,
-      reload: boolean
-    ) => {
-      try {
-        const response = await api.request(`/workflows`, {
-          method: "POST",
-          body: formData,
-        });
+    const uploadedWorkflowsIds = await uploadWorkflowFiles(files.target.files);
 
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-        if (reload) {
-          window.location.reload();
-        }
-      } catch (error) {
-        if (error instanceof KeepApiError) {
-          showErrorToast(error, `Failed to upload ${fName}: ${error.message}`);
-        } else {
-          showErrorToast(error, "Failed to upload file");
-        }
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-      }
-    };
+    if (fileInputRef.current) {
+      // Reset the file input to allow for multiple uploads
+      fileInputRef.current.value = "";
+    }
 
-    const formData = new FormData();
-    var reload = false;
-
-    for (let i = 0; i < files.target.files.length; i++) {
-      const file = files.target.files[i];
-      const fName = file.name;
-      formData.set("file", file);
-      if (files.target.files.length === i + 1) {
-        reload = true;
-      }
-      await fileUpload(formData, fName, reload);
+    setIsModalOpen(false);
+    if (uploadedWorkflowsIds.length === 1) {
+      // If there is only one file, redirect to the workflow detail page
+      router.push(`/workflows/${uploadedWorkflowsIds[0]}`);
     }
   };
 
@@ -169,31 +356,26 @@ export default function WorkflowsPage() {
 
   return (
     <>
-      <main className="pt-4 flex flex-col gap-8">
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-center">
+      <main className="flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
+          <div className="flex justify-between items-end">
             <div>
-              <Title className="text-2xl line-clamp-2 font-bold">
-                Workflows
-              </Title>
-              <Subtitle>
-                Automate your alert management with workflows.
-              </Subtitle>
+              <PageTitle>My Workflows</PageTitle>
+              <PageSubtitle>
+                Automate your alert management with workflows
+              </PageSubtitle>
             </div>
-            <div>
+            <SearchInput
+              className="flex-1 mx-4"
+              placeholder="Search workflows"
+              value={searchedValue as string}
+              onValueChange={setSearchedValue}
+            />
+            <div className="flex gap-2">
               <Button
-                className="mr-2.5"
                 color="orange"
                 size="md"
                 variant="secondary"
-                onClick={() => router.push("/workflows/builder")}
-                icon={PlusCircleIcon}
-              >
-                Create a workflow
-              </Button>
-              <Button
-                color="orange"
-                size="md"
                 onClick={() => {
                   setIsModalOpen(true);
                 }}
@@ -202,15 +384,55 @@ export default function WorkflowsPage() {
               >
                 Upload Workflows
               </Button>
+              <Button
+                color="orange"
+                size="md"
+                variant="primary"
+                onClick={() => router.push("/workflows/builder")}
+                icon={PlusIcon}
+              >
+                Create Workflow
+              </Button>
             </div>
           </div>
-          {workflows.length === 0 ? (
-            <WorkflowsEmptyState isNewUI={true} />
+          {isEmptyState ? (
+            <WorkflowsEmptyState />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
-              {workflows.map((workflow) => (
-                <WorkflowTile key={workflow.id} workflow={workflow} />
-              ))}
+            <div className="flex gap-4">
+              <FacetsPanelServerSide
+                entityName={"workflows"}
+                facetsConfig={facetsConfig}
+                facetOptionsCel={searchCel}
+                usePropertyPathsSuggestions={true}
+                clearFiltersToken={clearFiltersToken}
+                initialFacetsData={initialFacetsData}
+                onCelChange={(cel) => setFilterCel(cel)}
+              />
+
+              <div className="flex flex-col flex-1 relative">
+                {isFirstLoading && (
+                  <div className="flex items-center justify-center h-96 w-full">
+                    <KeepLoader includeMinHeight={false} />
+                  </div>
+                )}
+                {!isFirstLoading && (
+                  <>
+                    {showFilterEmptyState && renderFilterEmptyState()}
+                    {showSearchEmptyState && renderSearchEmptyState()}
+                    {!isTableEmpty && renderData()}
+                  </>
+                )}
+                <div className={`mt-4 ${isFirstLoading ? "hidden" : ""}`}>
+                  <Pagination
+                    totalCount={filteredWorkflowsCount}
+                    isRefreshAllowed={false}
+                    isRefreshing={false}
+                    pageSizeOptions={[12, 24, 48]}
+                    onRefresh={() => {}}
+                    onStateChange={setPaginationStateCallback}
+                  />
+                </div>
+              </div>
             </div>
           )}
         </div>

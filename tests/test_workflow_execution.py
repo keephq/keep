@@ -8,8 +8,9 @@ import pytz
 
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
+from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.workflow import Workflow
+from keep.api.models.incident import IncidentDto
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from tests.fixtures.client import client, test_app  # noqa
 
@@ -795,7 +796,7 @@ def test_workflow_incident_triggers(
         services=[],
         severity="critical",
         is_predicted=False,
-        is_confirmed=True,
+        is_candidate=False,
     )
 
     # Insert the current alert into the workflow manager

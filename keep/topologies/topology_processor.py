@@ -16,9 +16,11 @@ from keep.api.core.db import (
 )
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.tenant_configuration import TenantConfiguration
-from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto, IncidentStatus
+from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.alert import Incident
+from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.db.topology import TopologyServiceApplication
+from keep.api.models.incident import IncidentDto
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.rulesengine.rulesengine import RulesEngine
 from keep.topologies.topologies_service import TopologiesService
@@ -353,7 +355,8 @@ class TopologyProcessor:
                 user_summary=f"Multiple services in application {application.name} are experiencing issues",
                 incident_type="topology",
                 incident_application=application.id,
-                is_confirmed=True,  # Topology-based incidents are always confirmed
+                is_candidate=False,  # Topology-based incidents are always confirmed
+                is_visible=True,  # Topology-based incidents are always confirmed
             )
 
             # Get all alerts for the services and find max severity

@@ -2,6 +2,7 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
+from alembic.script import ScriptDirectory
 from sqlalchemy.future import Connection
 from sqlmodel import SQLModel
 
@@ -12,6 +13,7 @@ from keep.api.models.db.ai_suggestion import *
 from keep.api.models.db.alert import *
 from keep.api.models.db.dashboard import *
 from keep.api.models.db.extraction import *
+from keep.api.models.db.facet import *
 from keep.api.models.db.maintenance_window import *
 from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
@@ -22,7 +24,6 @@ from keep.api.models.db.tenant import *
 from keep.api.models.db.topology import *
 from keep.api.models.db.user import *
 from keep.api.models.db.workflow import *
-from keep.api.models.db.facet import *
 
 target_metadata = SQLModel.metadata
 
@@ -86,7 +87,36 @@ async def run_migrations_online() -> None:
     and associate a connection with the context.
     """
     connectable = create_db_engine()
-    do_run_migrations(connectable.connect())
+    try:
+        do_run_migrations(connectable.connect())
+    except Exception as e:
+        # print all migrations so we will know what failed
+        list_migrations(connectable)
+        raise e
+
+
+def list_migrations(connectable):
+    """
+    List all migrations and their status for debugging.
+    """
+    try:
+        # Get the script directory from the alembic context
+        script_directory = ScriptDirectory.from_config(config)
+        current_rev = script_directory.get_current_head()
+        # List all available migrations
+        print("Available migrations:")
+        try:
+            for script in script_directory.walk_revisions():
+                status = (
+                    "PENDING"
+                    if current_rev and script.revision > current_rev
+                    else "APPLIED"
+                )
+                print(f"  - {script.revision}: {script.doc} ({status})")
+        except Exception as exc:
+            logger.exception(f"Failed to list migrations: {exc}")
+    except Exception as exc:
+        logger.exception(f"Failed to process migration information: {exc}")
 
 
 loop = asyncio.get_event_loop()

@@ -5,18 +5,15 @@ import { useRef, useState } from "react";
 import {
   ArrowUpOnSquareIcon,
   PencilIcon,
-  PlayIcon,
   PlusIcon,
 } from "@heroicons/react/20/solid";
 import { WorkflowBuilderCard } from "./workflow-builder-card";
 import { showErrorToast } from "@/shared/ui";
-import { YAMLException } from "js-yaml";
 import { useWorkflowStore } from "@/entities/workflows";
-import { loadWorkflowYAML } from "@/entities/workflows/lib/parser";
 import { WorkflowMetadataModal } from "@/features/workflows/edit-metadata";
-import { WorkflowTestRunModal } from "@/features/workflows/test-run";
 import { WorkflowEnabledSwitch } from "@/features/workflows/enable-disable";
 import { WorkflowSyncStatus } from "@/app/(keep)/workflows/[workflow_id]/workflow-sync-status";
+import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 import clsx from "clsx";
 import { WorkflowTestRunButton } from "@/features/workflows/test-run/ui/workflow-test-run-modal";
 
@@ -71,14 +68,10 @@ export function WorkflowBuilderWidget({
       setFileName(fName);
       const contents = event.target!.result as string;
       try {
-        const parsedWorkflow = loadWorkflowYAML(contents);
+        const _ = parseWorkflowYamlStringToJSON(contents);
         setFileContents(contents);
       } catch (error) {
-        if (error instanceof YAMLException) {
-          showErrorToast(error, "Invalid YAML: " + error.message);
-        } else {
-          showErrorToast(error, "Failed to load workflow");
-        }
+        showErrorToast(error, "Failed to parse workflow");
         setFileName("");
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
@@ -174,7 +167,7 @@ export function WorkflowBuilderWidget({
           </div>
         </div>
         <WorkflowBuilderCard
-          fileContents={fileContents}
+          loadedYamlFileContents={fileContents}
           workflowRaw={workflowRaw}
           workflowId={workflowId}
           standalone={standalone}

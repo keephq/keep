@@ -1,5 +1,8 @@
-id: update-workflows-from-s3
-description: Dump workflows from S3 and update them in Keep
+workflow:
+  id: s3-workflow-sync
+  name: S3 Workflow Sync
+  description: Synchronizes Keep workflows from S3 bucket storage with optional full sync capabilities.
+
 triggers:
   - type: manual
 
@@ -12,12 +15,12 @@ steps:
         bucket: "keep-workflows"
 
 actions:
-  # optional: delete all workflows before updating for full sync
-  # - name: full-sync
+  # optional: delete all other workflows before updating for full sync
+  # - name: delete-all-other-workflows
   #   provider:
   #     type: keep
   #     with:
-  #       workflow_full_sync: true
+  #       delete_all_other_workflows: true
 
   - name: update
     foreach: "{{ steps.s3-dump.results }}"

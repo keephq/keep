@@ -29,9 +29,10 @@ from keep.api.core.db import (
     is_linked_provider,
 )
 from keep.api.logging import ProviderLoggerAdapter
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentDto
-from keep.api.models.db.alert import ActionType
+from keep.api.models.action_type import ActionType
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.topology import TopologyServiceInDto
+from keep.api.models.incident import IncidentDto
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -65,6 +66,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             "Organizational Tools",
             "CRM",
             "Queues",
+            "Orchestration",
             "Others",
         ]
     ] = [

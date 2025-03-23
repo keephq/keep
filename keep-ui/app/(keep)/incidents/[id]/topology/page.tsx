@@ -6,12 +6,14 @@ import { getApplications } from "@/app/(keep)/topology/api";
 import { createServerApiClient } from "@/shared/api/server";
 
 type PageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
-export default async function IncidentTopologyPage({
-  params: { id },
-}: PageProps) {
+export default async function IncidentTopologyPage(props: PageProps) {
+  const params = await props.params;
+
+  const { id } = params;
+
   const api = await createServerApiClient();
   const incident = await getIncidentWithErrorHandling(id);
   const applications = await getApplications(api);
@@ -44,7 +46,8 @@ export default async function IncidentTopologyPage({
   }
 }
 
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata(props: PageProps) {
+  const params = await props.params;
   const incident = await getIncidentWithErrorHandling(params.id);
   const incidentName = getIncidentName(incident);
   const incidentDescription =

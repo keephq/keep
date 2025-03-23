@@ -1,20 +1,24 @@
 # A new trello card was created
-alert:
-  id: notify-new-trello-card
-  description: Notify my slack when new trello card is created
-  steps:
-    - name: trello-cards
-      provider:
-        type: trello
-        config: "{{ providers.trello-provider }}"
-        with:
-          project-name: demo-project
-          board_id: hIjQQX9S
-          filter: "createCard"
-      condition:
-      - name: assert-condition
-        type: assert
-        assert: "{{ state.notify-new-trello-card.-1.alert_context.alert_steps_context.trello-cards.results.number_of_cards }} >= {{steps.trello-cards.results.number_of_cards }}" # if there are more than 0 new stargazers, trigger the action
+workflow:
+  id: trello-card-monitor
+  name: Create Trello Card
+  description: Creates a new trello card
+  alert:
+    id: notify-new-trello-card
+    description: Notify my slack when new trello card is created
+    steps:
+      - name: trello-cards
+        provider:
+          type: trello
+          config: "{{ providers.trello-provider }}"
+          with:
+            project-name: demo-project
+            board_id: hIjQQX9S
+            filter: "createCard"
+        condition:
+          - name: assert-condition
+            type: assert
+            assert: "{{ state.notify-new-trello-card.-1.alert_context.alert_steps_context.trello-cards.results.number_of_cards }} >= {{steps.trello-cards.results.number_of_cards }}" # if there are more than 0 new stargazers, trigger the action
   actions:
     - name: trigger-slack
       provider:
@@ -25,14 +29,3 @@ alert:
           # Message is always mandatory
           message: >
             A new card was created
-
-providers:
-  trello-provider:
-    description: Trello Production
-    authentication:
-      api_key: "{{ env.TRELLO_API_KEY }}"
-      api_token: "{{ env.TRELLO_API_TOKEN }}"
-  slack-demo:
-    description: Slack Demo
-    authentication:
-      webhook_url: "{{ env.SLACK_WEBHOOK_URL }}"

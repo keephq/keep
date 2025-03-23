@@ -333,6 +333,10 @@ class AlertDeduplicator:
         custom_deduplications_dict = {}
         for rule in custom_deduplications_dto:
             key = f"{rule.provider_type}_{rule.provider_id}"
+            # for linked providers without an id ("main")
+            if "null" in key:
+                key = key.replace("null", "None")
+
             if key not in custom_deduplications_dict:
                 custom_deduplications_dict[key] = []
             custom_deduplications_dict[key].append(rule)
@@ -460,6 +464,12 @@ class AlertDeduplicator:
         installed_providers = ProvidersFactory.get_installed_providers(self.tenant_id)
         linked_providers = ProvidersFactory.get_linked_providers(self.tenant_id)
         provider_key = f"{rule.provider_type}_{rule.provider_id}"
+
+        if "null" in provider_key:
+            # for linked providers without an id ("main")
+            # see this ticket - https://github.com/keephq/keep/issues/3729
+            provider_key = provider_key.replace("null", "None")
+            rule.provider_id = None
         for p in installed_providers + linked_providers:
             if provider_key == f"{p.type}_{p.id}":
                 provider = p

@@ -1,4 +1,10 @@
-import { CSSProperties, ReactNode, RefObject } from "react";
+import {
+  CSSProperties,
+  ReactNode,
+  RefObject,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   closestCenter,
   DndContext,
@@ -26,7 +32,6 @@ import { TableHead, TableHeaderCell, TableRow } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { getColumnsIds } from "./alert-table-utils";
-import { FaArrowUp, FaArrowDown, FaArrowRight } from "react-icons/fa";
 import {
   ChevronDownIcon,
   ArrowsUpDownIcon,
@@ -34,6 +39,7 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
 } from "@heroicons/react/24/outline";
+import { ArrowDownIcon, ArrowUpIcon } from "@heroicons/react/24/solid";
 import { BsSortAlphaDown } from "react-icons/bs";
 import { BsSortAlphaDownAlt } from "react-icons/bs";
 
@@ -41,6 +47,22 @@ import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import { DropdownMenu } from "@/shared/ui";
 import { DEFAULT_COLS_VISIBILITY } from "./alert-table-utils";
+import {
+  isDateTimeColumn,
+  TimeFormatOption,
+  createTimeFormatMenuItems,
+} from "./alert-table-time-format";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
+import {
+  isListColumn,
+  ListFormatOption,
+  createListFormatMenuItems,
+} from "./alert-table-list-format";
+import {
+  ColumnRenameMapping,
+  createColumnRenameMenuItems,
+  getColumnDisplayName,
+} from "./alert-table-column-rename";
 
 interface DraggableHeaderCellProps {
   header: Header<AlertDto, unknown>;
@@ -49,6 +71,12 @@ interface DraggableHeaderCellProps {
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
+  columnTimeFormats: Record<string, TimeFormatOption>;
+  setColumnTimeFormats: (formats: Record<string, TimeFormatOption>) => void;
+  columnListFormats: Record<string, ListFormatOption>;
+  setColumnListFormats: (formats: Record<string, ListFormatOption>) => void;
+  columnRenameMapping: ColumnRenameMapping;
+  setColumnRenameMapping: (mapping: ColumnRenameMapping) => void;
 }
 
 const DraggableHeaderCell = ({
@@ -58,12 +86,19 @@ const DraggableHeaderCell = ({
   children,
   className,
   style,
+  columnTimeFormats,
+  setColumnTimeFormats,
+  columnListFormats,
+  setColumnListFormats,
+  columnRenameMapping,
+  setColumnRenameMapping,
 }: DraggableHeaderCellProps) => {
   const { column, getResizeHandler } = header;
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
     getColumnsIds(table.getAllLeafColumns().map((col) => col.columnDef))
   );
+  const [rowStyle] = useAlertRowStyle();
 
   const [columnVisibility, setColumnVisibility] =
     useLocalStorage<VisibilityState>(
@@ -82,6 +117,18 @@ const DraggableHeaderCell = ({
     id: column.id,
     disabled: column.getIsPinned() !== false,
   });
+
+  const handleSortingMenuClick = useMemo(() => {
+    return column.getToggleSortingHandler();
+  }, [column]);
+
+  const handleColumnNameClick = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      listeners?.onClick?.(event);
+      handleSortingMenuClick?.(event);
+    },
+    [listeners, handleSortingMenuClick]
+  );
 
   const moveColumn = (direction: "left" | "right") => {
     const currentIndex = columnOrder.indexOf(column.id);
@@ -108,6 +155,8 @@ const DraggableHeaderCell = ({
         ? "32px !important"
         : column.id === "source"
         ? "40px !important"
+        : column.id === "status"
+        ? "24px !important"
         : column.getSize(),
     opacity: isDragging ? 0.5 : 1,
     transform: CSS.Translate.toString(transform),
@@ -124,6 +173,7 @@ const DraggableHeaderCell = ({
   const shouldShowMenu =
     column.id !== "checkbox" &&
     column.id !== "source" &&
+    column.id !== "status" &&
     column.id !== "severity" &&
     column.id !== "alertMenu";
 
@@ -187,30 +237,40 @@ const DraggableHeaderCell = ({
         "relative group",
         column.columnDef.meta?.thClassName,
         (column.getIsPinned() === false || column.id == "name") &&
-          "hover:bg-orange-200",
+          "hover:bg-orange-100",
         className
       )}
       style={{ ...dragStyle, ...style }}
       ref={setNodeRef}
     >
       <div
-        className={`flex items-center ${
+        data-testid={`header-cell-${column.id}`}
+        className={clsx(
+          column.columnDef.meta?.thClassName,
+          "flex items-center",
           column.id === "checkbox" ? "justify-center" : "justify-between"
-        }`}
+        )}
       >
-        <div className="flex items-center" {...listeners} {...attributes}>
-          {children}
+        <button
+          className={clsx(
+            "flex items-center flex-1 min-w-0",
+            rowStyle === "default" && "px-0.5 py-0",
+            rowStyle === "relaxed" && "px-2 py-1",
+            column.id !== "checkbox" && "flex-1",
+            column.id === "checkbox" && "justify-center"
+          )}
+          {...listeners}
+          onClick={handleColumnNameClick}
+          {...attributes}
+        >
+          <span className="inline-block truncate text-ellipsis [&>*]:truncate">
+            {children}
+          </span>
 
-          {column.getCanSort() && (
+          {column.getCanSort() && column.getIsSorted() && (
             <>
-              <div className="w-px h-5 mx-2 bg-gray-400"></div>
               <span
-                className="cursor-pointer"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  const toggleSorting = column.getToggleSortingHandler();
-                  if (toggleSorting) toggleSorting(event);
-                }}
+                className="cursor-pointer mx-1"
                 title={
                   column.getNextSortingOrder() === "asc"
                     ? "Sort ascending"
@@ -219,26 +279,26 @@ const DraggableHeaderCell = ({
                     : "Clear sort"
                 }
               >
-                {column.getIsSorted() ? (
-                  column.getIsSorted() === "asc" ? (
-                    <FaArrowDown />
-                  ) : (
-                    <FaArrowUp />
-                  )
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowDownIcon className="w-4 h-4" />
                 ) : (
-                  <FaArrowRight />
+                  <ArrowUpIcon className="w-4 h-4" />
                 )}
               </span>
             </>
           )}
-        </div>
+        </button>
 
         {shouldShowMenu && (
           <DropdownMenu.Menu
             icon={ChevronDownIcon}
             label=""
-            className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            iconClassName="group-hover:text-orange-500 transition-colors"
+            className="opacity-0 group-hover:opacity-100 transition-opacity border-l !border-orange-500 hover:!bg-orange-500 text-orange-500 hover:text-white dark:hover:text-gray-900 !rounded-none"
+            iconClassName=" "
+            onClick={(event) => {
+              // prevent click propagation, so the header cell is not clicked
+              event.stopPropagation();
+            }}
           >
             {column.getCanSort() && (
               <>
@@ -252,6 +312,26 @@ const DraggableHeaderCell = ({
                   label="Sort descending"
                   onClick={() => column.toggleSorting(true)}
                 />
+                {isDateTimeColumn(column.id) &&
+                  createTimeFormatMenuItems(
+                    column.id,
+                    columnTimeFormats,
+                    setColumnTimeFormats,
+                    DropdownMenu
+                  )}
+                {isListColumn(column) &&
+                  createListFormatMenuItems(
+                    column.id,
+                    columnListFormats,
+                    setColumnListFormats,
+                    DropdownMenu
+                  )}
+                {createColumnRenameMenuItems(
+                  column.id,
+                  columnRenameMapping,
+                  setColumnRenameMapping,
+                  DropdownMenu
+                )}
                 {column.getCanGroup() !== false && (
                   <DropdownMenu.Item
                     icon={ArrowsUpDownIcon}
@@ -343,6 +423,10 @@ interface Props {
   table: Table<AlertDto>;
   presetName: string;
   a11yContainerRef: RefObject<HTMLDivElement>;
+  columnTimeFormats: Record<string, TimeFormatOption>;
+  setColumnTimeFormats: (formats: Record<string, TimeFormatOption>) => void;
+  columnListFormats: Record<string, ListFormatOption>;
+  setColumnListFormats: (formats: Record<string, ListFormatOption>) => void;
 }
 
 export default function AlertsTableHeaders({
@@ -350,11 +434,22 @@ export default function AlertsTableHeaders({
   table,
   presetName,
   a11yContainerRef,
+  columnTimeFormats,
+  setColumnTimeFormats,
+  columnListFormats,
+  setColumnListFormats,
 }: Props) {
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
     getColumnsIds(columns)
   );
+
+  // Add column rename mapping state
+  const [columnRenameMapping, setColumnRenameMapping] =
+    useLocalStorage<ColumnRenameMapping>(
+      `column-rename-mapping-${presetName}`,
+      {}
+    );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -402,7 +497,13 @@ export default function AlertsTableHeaders({
             container: a11yContainerRef.current ?? undefined,
           }}
         >
-          <TableRow key={headerGroup.id}>
+          <TableRow
+            key={headerGroup.id}
+            className={clsx(
+              "border-b border-tremor-border dark:border-dark-tremor-border",
+              "[&>th]:p-0"
+            )}
+          >
             <SortableContext
               items={headerGroup.headers}
               strategy={horizontalListSortingStrategy}
@@ -414,23 +515,37 @@ export default function AlertsTableHeaders({
                     table.getState().columnPinning.left?.length,
                     table.getState().columnPinning.right?.length
                   );
+
+                // Apply the renamed header if it exists
+                const displayHeader = header.isPlaceholder ? null : (
+                  <div>
+                    {columnRenameMapping[header.column.id] ||
+                      flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                  </div>
+                );
+
                 return (
                   <DraggableHeaderCell
                     key={header.column.columnDef.id}
                     header={header}
                     table={table}
                     presetName={presetName}
-                    className={className}
-                    style={style}
-                  >
-                    {header.isPlaceholder ? null : (
-                      <div>
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                      </div>
+                    className={clsx(
+                      className,
+                      header.column.id === "name" && "px-0"
                     )}
+                    style={style}
+                    columnTimeFormats={columnTimeFormats}
+                    setColumnTimeFormats={setColumnTimeFormats}
+                    columnListFormats={columnListFormats}
+                    setColumnListFormats={setColumnListFormats}
+                    columnRenameMapping={columnRenameMapping}
+                    setColumnRenameMapping={setColumnRenameMapping}
+                  >
+                    {displayHeader}
                   </DraggableHeaderCell>
                 );
               })}

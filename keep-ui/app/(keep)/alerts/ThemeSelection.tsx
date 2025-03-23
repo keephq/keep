@@ -1,5 +1,4 @@
-import React, { useState, Fragment, useRef } from "react";
-import { Popover } from "@headlessui/react";
+import React, { useState } from "react";
 import {
   Button,
   Tab,
@@ -8,8 +7,6 @@ import {
   TabPanels,
   TabPanel,
 } from "@tremor/react";
-import { IoColorPaletteOutline } from "react-icons/io5";
-import { FloatingArrow, arrow, offset, useFloating } from "@floating-ui/react";
 
 const predefinedThemes = {
   Transparent: {
@@ -40,21 +37,17 @@ const themeKeyMapping = {
   1: "Keep",
   2: "Basic",
 };
+
 type ThemeName = keyof typeof predefinedThemes;
 
 export const ThemeSelection = ({
   onThemeChange,
+  onClose,
 }: {
   onThemeChange: (theme: any) => void;
+  onClose?: () => void;
 }) => {
-  const arrowRef = useRef(null);
   const [selectedTab, setSelectedTab] = useState<ThemeName>("Transparent");
-
-  const { refs, floatingStyles, context } = useFloating({
-    strategy: "fixed",
-    placement: "bottom-end",
-    middleware: [offset({ mainAxis: 10 }), arrow({ element: arrowRef })],
-  });
 
   const handleThemeChange = (event: any) => {
     const themeIndex = event as 0 | 1 | 2;
@@ -66,80 +59,53 @@ export const ThemeSelection = ({
     setSelectedTab(themeName as ThemeName);
   };
 
-  const onApplyTheme = (close: () => void) => {
-    // themeName is now assured to be a key of predefinedThemes
+  const onApplyTheme = () => {
     const themeName: ThemeName = selectedTab;
-    const newTheme = predefinedThemes[themeName]; // This should now be error-free
+    const newTheme = predefinedThemes[themeName];
     onThemeChange(newTheme);
-    setSelectedTab("Transparent"); // Assuming 'Transparent' is a valid key
-    close(); // Close the popover
+    setSelectedTab("Transparent");
+    onClose?.();
   };
 
   return (
-    <Popover as={Fragment}>
-      {({ close }) => (
-        <>
-          <Popover.Button
-            as={Button}
-            variant="light"
-            color="gray"
-            icon={IoColorPaletteOutline}
-            ref={refs.setReference}
-            className="ml-2"
-          />
-          <Popover.Overlay className="fixed inset-0 bg-black opacity-30 z-20" />
-          <Popover.Panel
-            className="bg-white z-30 p-4 rounded-sm"
-            ref={refs.setFloating}
-            style={{ ...floatingStyles, minWidth: "250px" }} // Adjust width here
-          >
-            <FloatingArrow
-              className="fill-white [&>path:last-of-type]:stroke-white"
-              ref={arrowRef}
-              context={context}
-            />
-            <span className="text-gray-400 text-sm">Set theme colors</span>
-            <TabGroup onChange={handleThemeChange}>
-              <TabList color="orange">
-                <Tab>Transparent</Tab>
-                <Tab>Keep</Tab>
-                <Tab>Basic</Tab>
-              </TabList>
-              <TabPanels>
-                {Object.keys(predefinedThemes).map((themeName) => (
-                  <TabPanel key={themeName}>
-                    {Object.entries(
-                      predefinedThemes[
-                        themeName as keyof typeof predefinedThemes
-                      ]
-                    ).map(([severity, color]) => (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <span className="text-gray-400 text-sm mb-2">Set theme colors</span>
+        <div className="flex-1 overflow-y-auto">
+          <TabGroup onChange={handleThemeChange}>
+            <TabList>
+              <Tab>Transparent</Tab>
+              <Tab>Keep</Tab>
+              <Tab>Basic</Tab>
+            </TabList>
+            <TabPanels>
+              {Object.keys(predefinedThemes).map((themeName) => (
+                <TabPanel key={themeName}>
+                  {Object.entries(
+                    predefinedThemes[themeName as keyof typeof predefinedThemes]
+                  ).map(([severity, color]) => (
+                    <div
+                      key={severity}
+                      className="flex justify-between items-center my-2"
+                    >
+                      <span>
+                        {severity.charAt(0).toUpperCase() +
+                          severity.slice(1).toLowerCase()}
+                      </span>
                       <div
-                        key={severity}
-                        className="flex justify-between items-center my-2"
-                      >
-                        <span>
-                          {severity.charAt(0).toUpperCase() +
-                            severity.slice(1).toLowerCase()}
-                        </span>
-                        <div
-                          className={`w-6 h-6 rounded-full border border-gray-400 ${color}`}
-                        ></div>
-                      </div>
-                    ))}
-                  </TabPanel>
-                ))}
-              </TabPanels>
-            </TabGroup>
-            <Button
-              className="mt-5"
-              color="orange"
-              onClick={() => onApplyTheme(close)}
-            >
-              Apply theme
-            </Button>
-          </Popover.Panel>
-        </>
-      )}
-    </Popover>
+                        className={`w-6 h-6 rounded-full border border-gray-400 ${color}`}
+                      ></div>
+                    </div>
+                  ))}
+                </TabPanel>
+              ))}
+            </TabPanels>
+          </TabGroup>
+        </div>
+      </div>
+      <Button className="mt-4" color="orange" onClick={onApplyTheme}>
+        Apply theme
+      </Button>
+    </div>
   );
 };

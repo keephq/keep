@@ -5,7 +5,17 @@ import { toast } from "react-toastify";
 import Loading from "@/app/(keep)/loading";
 import { AlertDto } from "@/entities/alerts/model";
 import { IncidentCandidateDto } from "@/entities/incidents/model";
-import { DragDropContext } from "react-beautiful-dnd";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+  closestCenter,
+  DragOverlay,
+  MeasuringStrategy,
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { createPortal } from "react-dom";
 import IncidentCard from "./alert-create-incident-ai-card";
 import { useIncidents } from "utils/hooks/useIncidents";
 import { useRouter } from "next/navigation";
@@ -28,6 +38,10 @@ interface IncidentSuggestion {
   suggestion_id: string;
 }
 
+function deepCopy<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
+}
+
 const CreateIncidentWithAIModal = ({
   isOpen,
   handleClose,
@@ -38,9 +52,6 @@ const CreateIncidentWithAIModal = ({
   const [incidentCandidates, setIncidentCandidates] = useState<
     IncidentCandidateDto[]
   >([]);
-  const [changes, setChanges] = useState<
-    Record<string, Record<string, IncidentChange>>
-  >({});
   const [selectedIncidents, setSelectedIncidents] = useState<string[]>([]);
   const [originalSuggestions, setOriginalSuggestions] = useState<
     IncidentCandidateDto[]
@@ -49,13 +60,17 @@ const CreateIncidentWithAIModal = ({
   const api = useApi();
   const router = useRouter();
   const { mutate: mutateIncidents } = useIncidents(
-    true,
+    false,
     null,
     20,
     0,
     { id: "creation_time", desc: true },
     "",
     {}
+  );
+  const [activeAlert, setActiveAlert] = useState<AlertDto | null>(null);
+  const [activeIncidentIndex, setActiveIncidentIndex] = useState<number | null>(
+    null
   );
 
   const handleCloseAIModal = () => {
@@ -72,7 +87,8 @@ const CreateIncidentWithAIModal = ({
 
     function handleSuccess(data: IncidentSuggestion) {
       setIncidentCandidates(data.incident_suggestion);
-      setOriginalSuggestions(data.incident_suggestion);
+      // Deep copy the incident suggestions to avoid mutating the original suggestions, we later compare the original suggestions with the current state
+      setOriginalSuggestions(deepCopy(data.incident_suggestion));
       setSuggestionId(data.suggestion_id);
 
       setSelectedIncidents(
@@ -138,49 +154,82 @@ const CreateIncidentWithAIModal = ({
     }
   };
 
-  const onDragEnd = (result: any) => {
-    if (!result.destination) return;
+  const onDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    if (!active?.data?.current) return;
 
-    const sourceIncidentIndex = parseInt(result.source.droppableId);
-    const destIncidentIndex = parseInt(result.destination.droppableId);
+    const sourceIncidentIndex = parseInt(active.data.current.incidentIndex);
+    const alertIndex = active.data.current.alertIndex;
 
-    const newIncidentCandidates = incidentCandidates.map((incident) => ({
-      ...incident,
-      alerts: [...incident.alerts],
-    }));
-    const [movedAlert] = newIncidentCandidates[
-      sourceIncidentIndex
-    ].alerts.splice(result.source.index, 1);
-    newIncidentCandidates[destIncidentIndex].alerts.splice(
-      result.destination.index,
-      0,
-      movedAlert
-    );
+    if (isNaN(sourceIncidentIndex) || !incidentCandidates[sourceIncidentIndex])
+      return;
 
-    setIncidentCandidates(newIncidentCandidates);
+    setActiveIncidentIndex(sourceIncidentIndex);
+    setActiveAlert(incidentCandidates[sourceIncidentIndex].alerts[alertIndex]);
+  };
 
-    // Track changes for the alerts field
-    setChanges((prevChanges) => {
-      const sourceId = newIncidentCandidates[sourceIncidentIndex].id;
-      const destId = newIncidentCandidates[destIncidentIndex].id;
-      return {
-        ...prevChanges,
-        [sourceId]: {
-          ...prevChanges[sourceId],
-          alerts: {
-            from: incidentCandidates[sourceIncidentIndex].alerts,
-            to: newIncidentCandidates[sourceIncidentIndex].alerts,
-          },
-        },
-        [destId]: {
-          ...prevChanges[destId],
-          alerts: {
-            from: incidentCandidates[destIncidentIndex].alerts,
-            to: newIncidentCandidates[destIncidentIndex].alerts,
-          },
-        },
-      };
+  const onDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over || !active?.data?.current || !over?.data?.current) return;
+
+    const sourceIncidentIndex = parseInt(active.data.current.incidentIndex);
+    const destIncidentIndex = parseInt(over.data.current.incidentIndex);
+
+    if (
+      isNaN(sourceIncidentIndex) ||
+      isNaN(destIncidentIndex) ||
+      sourceIncidentIndex === destIncidentIndex
+    )
+      return;
+
+    setIncidentCandidates((prev) => {
+      if (!prev[sourceIncidentIndex] || !prev[destIncidentIndex]) return prev;
+
+      const newIncidents = [...prev];
+      const sourceIncident = { ...newIncidents[sourceIncidentIndex] };
+      const destIncident = { ...newIncidents[destIncidentIndex] };
+
+      const alertIndex = active.data.current?.alertIndex;
+      if (typeof alertIndex !== "number") return prev;
+
+      sourceIncident.alerts = [...sourceIncident.alerts];
+      const [movedAlert] = sourceIncident.alerts.splice(alertIndex, 1);
+      const overIndex =
+        over.data.current?.alertIndex ?? destIncident.alerts.length;
+      destIncident.alerts = [...destIncident.alerts];
+      destIncident.alerts.splice(overIndex, 0, movedAlert);
+
+      newIncidents[sourceIncidentIndex] = sourceIncident;
+      newIncidents[destIncidentIndex] = destIncident;
+
+      return newIncidents;
     });
+  };
+
+  const onDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || !active?.data?.current || !over?.data?.current) {
+      setActiveAlert(null);
+      setActiveIncidentIndex(null);
+      return;
+    }
+
+    const sourceIncidentIndex = parseInt(active.data.current.incidentIndex);
+    const destIncidentIndex = parseInt(over.data.current.incidentIndex);
+
+    if (
+      isNaN(sourceIncidentIndex) ||
+      isNaN(destIncidentIndex) ||
+      !incidentCandidates[sourceIncidentIndex] ||
+      !incidentCandidates[destIncidentIndex]
+    ) {
+      setActiveAlert(null);
+      setActiveIncidentIndex(null);
+      return;
+    }
+
+    setActiveAlert(null);
+    setActiveIncidentIndex(null);
   };
 
   const handleIncidentChange = (updatedIncident: IncidentCandidateDto) => {
@@ -189,48 +238,43 @@ const CreateIncidentWithAIModal = ({
         incident.id === updatedIncident.id ? updatedIncident : incident
       )
     );
-
-    // Track changes for the fields that have actually changed
-    setChanges((prevChanges) => {
-      const existingChanges = prevChanges[updatedIncident.id] || {};
-      const newChanges: Record<string, IncidentChange> = {};
-
-      Object.keys(updatedIncident).forEach((key) => {
-        const originalIncident = incidentCandidates.find(
-          (inc) => inc.id === updatedIncident.id
-        );
-        if (
-          originalIncident &&
-          updatedIncident[key as keyof IncidentCandidateDto] !==
-            originalIncident[key as keyof IncidentCandidateDto]
-        ) {
-          newChanges[key] = {
-            from: originalIncident[key as keyof IncidentCandidateDto],
-            to: updatedIncident[key as keyof IncidentCandidateDto],
-          };
-        }
-      });
-
-      return {
-        ...prevChanges,
-        [updatedIncident.id]: {
-          ...existingChanges,
-          ...newChanges,
-        },
-      };
-    });
   };
 
   const handleCreateIncidents = async () => {
     try {
-      const incidentsWithFeedback = incidentCandidates.map((incident) => ({
-        incident: incident,
-        accepted: selectedIncidents.includes(incident.id),
-        changes: changes[incident.id] || {},
-        original_suggestion: originalSuggestions.find(
+      const incidentsWithFeedback = incidentCandidates.map((incident) => {
+        const originalIncident = originalSuggestions.find(
           (inc) => inc.id === incident.id
-        ),
-      }));
+        );
+
+        // Calculate changes by comparing current state with original state
+        const changes: Record<string, IncidentChange> = {};
+
+        if (originalIncident) {
+          // Compare each field and track changes
+          Object.keys(incident).forEach((key) => {
+            const currentValue = incident[key as keyof IncidentCandidateDto];
+            const originalValue =
+              originalIncident[key as keyof IncidentCandidateDto];
+
+            if (
+              JSON.stringify(currentValue) !== JSON.stringify(originalValue)
+            ) {
+              changes[key] = {
+                from: originalValue,
+                to: currentValue,
+              };
+            }
+          });
+        }
+
+        return {
+          incident: incident,
+          accepted: selectedIncidents.includes(incident.id),
+          changes: changes,
+          original_suggestion: originalIncident,
+        };
+      });
 
       const response = await api.post(
         `/incidents/ai/${suggestionId}/commit`,
@@ -273,7 +317,18 @@ const CreateIncidentWithAIModal = ({
             <Loading loadingText="This is taking a bit longer then usual, please wait..." />
           </div>
         ) : incidentCandidates.length > 0 ? (
-          <DragDropContext onDragEnd={onDragEnd}>
+          <DndContext
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDragEnd={onDragEnd}
+            collisionDetection={closestCenter}
+            measuring={{
+              droppable: {
+                strategy: MeasuringStrategy.Always,
+              },
+            }}
+            modifiers={[restrictToVerticalAxis]}
+          >
             <div className="space-y-6">
               <Callout
                 title="Help the AI out by adjusting the incident groupings"
@@ -309,7 +364,30 @@ const CreateIncidentWithAIModal = ({
                 Create Incidents
               </Button>
             </div>
-          </DragDropContext>
+            {createPortal(
+              <DragOverlay dropAnimation={null}>
+                {activeAlert && activeIncidentIndex !== null && (
+                  <div className="bg-white shadow-lg rounded p-2 border border-gray-200 min-w-[800px] flex items-center gap-4">
+                    <div className="w-1/6 break-words font-medium">
+                      {activeAlert.name || "Unnamed Alert"}
+                    </div>
+                    <div className="w-2/3 break-words whitespace-normal text-gray-600">
+                      {activeAlert.description || "No description"}
+                    </div>
+                    <div className="w-1/12 break-words">
+                      <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-sm">
+                        {activeAlert.severity || "N/A"}
+                      </span>
+                    </div>
+                    <div className="w-1/12 break-words text-gray-600">
+                      {activeAlert.status || "N/A"}
+                    </div>
+                  </div>
+                )}
+              </DragOverlay>,
+              document.body
+            )}
+          </DndContext>
         ) : (
           <Card className="flex flex-col items-center h-[400px] p-8">
             <Title className="text-2xl">Create New Incident with AI</Title>

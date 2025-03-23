@@ -1,7 +1,7 @@
 import { Accordion, AccordionBody, AccordionHeader } from "@tremor/react";
 import { AlertDto, AlertKnownKeys } from "@/entities/alerts/model";
 
-export const getExtraPayloadNoKnownKeys = (alert: AlertDto) => {
+const getExtraPayloadNoKnownKeys = (alert: AlertDto) => {
   const extraPayload = Object.entries(alert).filter(
     ([key]) => !AlertKnownKeys.includes(key)
   );
@@ -36,7 +36,7 @@ export default function AlertExtraPayload({
 
   return (
     <Accordion defaultOpen={isToggled}>
-      <AccordionHeader onClick={onAccordionToggle}>
+      <AccordionHeader onClick={onAccordionToggle} className="p-1">
         Extra Payload
       </AccordionHeader>
       <AccordionBody>

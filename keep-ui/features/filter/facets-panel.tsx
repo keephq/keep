@@ -1,15 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Facet } from "./facet";
 import {
-  CreateFacetDto,
   FacetDto,
   FacetOptionDto,
   FacetOptionsQueries,
   FacetsConfig,
 } from "./models";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
-import { AddFacetModal } from "./add-facet-modal";
 import "react-loading-skeleton/dist/skeleton.css";
 import clsx from "clsx";
 
@@ -40,7 +37,9 @@ function buildCel(
         )
         .map((option) => {
           if (typeof option.value === "string") {
-            return `'${option.value}'`;
+            /* Escape single-quote because single-quote is used for string literal mark*/
+            const optionValue = option.value.replace(/'/g, "\\'");
+            return `'${optionValue}'`;
           } else if (option.value == null) {
             return "null";
           }
@@ -74,7 +73,6 @@ export interface FacetsPanelProps {
    * Object with facets that should be unchecked by default.
    * Key is the facet name, value is the list of option values to uncheck.
    **/
-  uncheckedByDefaultOptionValues?: { [key: string]: string[] };
   facetsConfig?: FacetsConfig;
   renderFacetOptionLabel?: (
     facetName: string,
@@ -98,7 +96,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   facetOptions,
   areFacetOptionsLoading = false,
   clearFiltersToken,
-  uncheckedByDefaultOptionValues,
   facetsConfig,
   onCelChange = undefined,
   onAddFacet = undefined,
@@ -128,10 +125,13 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
           ((facetOption: FacetOptionDto) => (
             <span className="capitalize">{facetOption.display_name}</span>
           ));
+        const uncheckedByDefaultOptionValues =
+          facetConfig?.uncheckedByDefaultOptionValues;
         result[facet.id] = {
           sortCallback,
           renderOptionIcon,
           renderOptionLabel,
+          uncheckedByDefaultOptionValues,
         };
       });
     }
@@ -142,15 +142,14 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   function getFacetState(facetId: string): Set<string> {
     if (
       !defaultStateHandledForFacetIds.has(facetId) &&
-      uncheckedByDefaultOptionValues &&
-      Object.keys(uncheckedByDefaultOptionValues).length
+      facetsConfigIdBased[facetId]?.uncheckedByDefaultOptionValues
     ) {
       const facetState = new Set<string>(...(facetsState[facetId] || []));
       const facet = facets.find((f) => f.id === facetId);
 
       if (facet) {
-        uncheckedByDefaultOptionValues[facet?.name]?.forEach((optionValue) =>
-          facetState.add(optionValue)
+        facetsConfigIdBased[facetId]?.uncheckedByDefaultOptionValues.forEach(
+          (optionValue) => facetState.add(optionValue)
         );
         defaultStateHandledForFacetIds.add(facetId);
       }
@@ -160,18 +159,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
 
     return facetsState[facetId] || new Set<string>();
   }
-
-  useEffect(() => {
-    const newFacetsState: FacetState = {};
-
-    facets.forEach((facet) => {
-      newFacetsState[facet.id] = getFacetState(facet.id);
-    });
-
-    setFacetsState(newFacetsState);
-    // we need to run this effect only once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const isOptionSelected = (facet_id: string, option_id: string) => {
     return !facetsState[facet_id] || !facetsState[facet_id].has(option_id);
@@ -252,7 +239,16 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   }
 
   function clearFilters(): void {
-    setFacetsState({});
+    Object.keys(facetsState).forEach((facetId) => facetsState[facetId].clear());
+    defaultStateHandledForFacetIds.clear();
+
+    const newFacetsState: FacetState = {};
+
+    facets.forEach((facet) => {
+      newFacetsState[facet.id] = getFacetState(facet.id);
+    });
+
+    setFacetsState(newFacetsState);
   }
 
   useEffect(
@@ -268,7 +264,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   return (
     <section
       id={`${panelId}-facets`}
-      className={"min-w-52 max-w-52 " + className}
+      className={clsx("w-48 lg:w-56", className)}
       data-testid="facets-panel"
     >
       <div className="space-y-2">
@@ -279,7 +275,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-1"
           >
             <PlusIcon className="h-4 w-4" />
-            Add facet
+            Add Facet
           </button>
           <button
             onClick={() => clearFilters()}

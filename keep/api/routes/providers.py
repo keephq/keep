@@ -63,7 +63,7 @@ def _is_localhost():
     return False
 
 
-@router.get("")
+@router.get("", description="Get all providers")
 def get_providers(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:providers"])
@@ -108,7 +108,7 @@ def get_providers(
     }
 
 
-@router.get("/{provider_id}/logs")
+@router.get("/{provider_id}/logs", description="Get provider logs")
 def get_provider_logs(
     provider_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -124,6 +124,8 @@ def get_provider_logs(
     try:
         logs = ProvidersService.get_provider_logs(tenant_id, provider_id)
         return JSONResponse(content=jsonable_encoder(logs), status_code=200)
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logger.error(
             f"Error getting provider logs: {str(e)}",
@@ -134,7 +136,7 @@ def get_provider_logs(
 
 @router.get(
     "/export",
-    description="export all installed providers",
+    description="Export all installed providers",
     response_model=list[ProviderDTO],
 )
 @limiter.exempt
@@ -214,6 +216,8 @@ def get_logs(
             context_manager, provider_id, provider_type, provider_config
         )
         return provider.get_logs(limit=limit)
+    except HTTPException as e:
+        raise e
     except ModuleNotFoundError:
         raise HTTPException(404, detail=f"Provider {provider_type} not found")
     except Exception:
@@ -359,7 +363,7 @@ def test_provider(
         return JSONResponse(status_code=400, content=str(e))
 
 
-@router.delete("/{provider_type}/{provider_id}")
+@router.delete("/{provider_type}/{provider_id}", description="Delete provider")
 def delete_provider(
     provider_type: str,
     provider_id: str,
@@ -462,7 +466,7 @@ async def update_provider(
         return JSONResponse(status_code=400, content={"message": str(e)})
 
 
-@router.post("/install")
+@router.post("/install", description="Install provider")
 async def install_provider(
     request: Request,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -529,7 +533,9 @@ async def install_provider(
         return JSONResponse(status_code=400, content={"message": str(e)})
 
 
-@router.post("/install/oauth2/{provider_type}")
+@router.post(
+    "/install/oauth2/{provider_type}", description="Install provider via oauth2."
+)
 async def install_provider_oauth2(
     provider_type: str,
     provider_info: dict = Body(...),
@@ -715,7 +721,10 @@ def invoke_provider_method(
 
 
 # Webhook related endpoints
-@router.post("/install/webhook/{provider_type}/{provider_id}")
+@router.post(
+    "/install/webhook/{provider_type}/{provider_id}",
+    description="Install webhook for a provider.",
+)
 def install_provider_webhook(
     provider_type: str,
     provider_id: str,
@@ -775,9 +784,10 @@ def install_provider_webhook(
     return JSONResponse(status_code=200, content={"message": "webhook installed"})
 
 
-@router.get("/{provider_type}/webhook")
+@router.get("/{provider_type}/webhook", description="Get provider's webhook settings.")
 def get_webhook_settings(
     provider_type: str,
+    provider_id: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:providers"])
     ),
@@ -787,6 +797,10 @@ def get_webhook_settings(
     logger.info("Getting webhook settings", extra={"provider_type": provider_type})
     api_url = config("KEEP_API_URL")
     keep_webhook_api_url = f"{api_url}/alerts/event/{provider_type}"
+
+    if provider_id:
+        keep_webhook_api_url = f"{keep_webhook_api_url}?provider_id={provider_id}"
+
     provider_class = ProvidersFactory.get_provider_class(provider_type)
     webhook_api_key = get_or_create_api_key(
         session=session,
@@ -825,7 +839,7 @@ def get_webhook_settings(
     )
 
 
-@router.post("/healthcheck")
+@router.post("/healthcheck", description="Run healthcheck on a provider")
 async def healthcheck_provider(
     request: Request,
 ) -> Dict[str, Any]:
@@ -862,7 +876,7 @@ async def healthcheck_provider(
     return result
 
 
-@router.get("/healthcheck")
+@router.get("/healthcheck", description="Get all providers for healthcheck")
 def get_healthcheck_providers():
     logger.info("Getting all providers for healthcheck")
     providers = ProvidersService.get_all_providers()

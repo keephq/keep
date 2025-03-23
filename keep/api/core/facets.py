@@ -1,4 +1,7 @@
+import json
+import logging
 from sqlalchemy import func, literal, literal_column, select, text
+from sqlalchemy.exc import OperationalError
 from keep.api.core.cel_to_sql.properties_metadata import (
     JsonFieldMapping,
     PropertiesMetadata,
@@ -15,6 +18,8 @@ from sqlmodel import Session
 
 from keep.api.core.db import engine
 from keep.api.models.db.facet import Facet, FacetType
+
+logger = logging.getLogger(__name__)
 
 
 def build_facets_data_query(
@@ -37,8 +42,11 @@ def build_facets_data_query(
         sqlalchemy.sql.Selectable: A SQLAlchemy selectable object representing the constructed query.
     """
     instance = get_cel_to_sql_provider(properties_metadata)
-    base_query = base_query.filter(
-        text(instance.convert_to_sql_str(facet_options_query.cel))
+    base_query = (
+        select(text("*"))
+        .select_from(base_query)
+        .filter(text(instance.convert_to_sql_str(facet_options_query.cel)))
+        .cte("base_filtered_query")
     )
 
     # Main Query: JSON Extraction and Counting
@@ -127,14 +135,23 @@ def get_facet_options(
 
     if valid_facets:
         with Session(engine) as session:
-            db_query = build_facets_data_query(
-                base_query=base_query,
-                facets=valid_facets,
-                properties_metadata=properties_metadata,
-                facet_options_query=facet_options_query,
-            )
+            try:
+                db_query = build_facets_data_query(
+                    base_query=base_query,
+                    facets=valid_facets,
+                    properties_metadata=properties_metadata,
+                    facet_options_query=facet_options_query,
+                )
+                data = session.exec(db_query).all()
+            except OperationalError as e:
+                logger.warning(
+                    f"""Failed to execute query for facet options.
+                    Facet options: {json.dumps(facet_options_query.dict())}
+                    Error: {e}
+                    """
+                )
+                return {facet.id: [] for facet in facets}
 
-            data = session.exec(db_query).all()
             grouped_by_id_dict = {}
 
             for facet_data in data:

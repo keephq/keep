@@ -10,13 +10,13 @@ import {
 } from "@/entities/workflows";
 import { Provider } from "@/shared/api/providers";
 import { v4 as uuidv4 } from "uuid";
-import { JSON_SCHEMA, load } from "js-yaml";
 import {
   YamlAssertCondition,
   YamlStepOrAction,
   YamlThresholdCondition,
   YamlWorkflowDefinition,
 } from "@/entities/workflows/model/yaml.types";
+import { parseWorkflowYamlStringToJSON } from "./yaml-utils";
 
 function getActionOrStepObj(
   actionOrStep: YamlStepOrAction,
@@ -151,12 +151,6 @@ export function generateWorkflow(
   };
 }
 
-export function loadWorkflowYAML(workflowString: string): Definition {
-  return load(workflowString, {
-    schema: JSON_SCHEMA,
-  }) as any;
-}
-
 export function parseWorkflow(
   workflowString: string,
   providers: Provider[]
@@ -164,9 +158,7 @@ export function parseWorkflow(
   /**
    * Parse the alert file and generate the definition
    */
-  const parsedWorkflowFile = load(workflowString, {
-    schema: JSON_SCHEMA,
-  }) as any;
+  const parsedWorkflowFile = parseWorkflowYamlStringToJSON(workflowString);
   // This is to support both old and new structure of workflow
   const workflow = parsedWorkflowFile.alert
     ? parsedWorkflowFile.alert
@@ -266,9 +258,11 @@ export function parseWorkflow(
   );
 }
 
-function getWithParams(s: V2ActionStep | V2StepStep): any {
+export function getWithParams(
+  s: V2ActionStep | V2StepStep
+): Record<string, string | number | boolean | object> {
   if (!s) {
-    return;
+    return {};
   }
   s.properties = s.properties || {};
   const withParams =
@@ -287,47 +281,61 @@ function getWithParams(s: V2ActionStep | V2StepStep): any {
   return withParams;
 }
 
+function getYamlConditionFromStep(
+  condition: V2StepConditionThreshold | V2StepConditionAssert
+): YamlThresholdCondition | YamlAssertCondition {
+  return condition.type === "condition-threshold"
+    ? {
+        name: condition.name,
+        type: "threshold" as const,
+        value: condition.properties.value,
+        compare_to: condition.properties.compare_to,
+      }
+    : {
+        name: condition.name,
+        type: "assert" as const,
+        assert: condition.properties.assert,
+      };
+}
+
 function getActionsFromCondition(
   condition: V2StepConditionThreshold | V2StepConditionAssert,
   foreach?: string
-): YamlStepOrAction[] {
-  const compiledCondition =
-    condition.type === "condition-threshold"
-      ? {
-          name: condition.name,
-          type: "threshold" as const,
-          value: condition.properties.value,
-          compare_to: condition.properties.compare_to,
-        }
-      : {
-          name: condition.name,
-          type: "assert" as const,
-          assert: condition.properties.assert,
-        };
-  const steps = condition?.branches?.true || ([] as V2Step[]);
-  const compiledActions = steps.map((a) => {
-    const withParams = getWithParams(a);
-    const providerType = a?.type?.replace("action-", "");
-    const providerName =
-      (a?.properties?.config as string)?.trim() || `default-${providerType}`;
-    const provider = {
-      type: a.type.replace("action-", ""),
-      config: `{{ providers.${providerName} }}`,
-      with: withParams,
-    };
-    // FIX: type
-    const compiledAction: YamlStepOrAction = {
-      name: a.name,
-      provider: provider,
-      condition: [compiledCondition],
-    };
-    if (foreach) compiledAction["foreach"] = foreach;
-    return compiledAction;
+): { actions: YamlStepOrAction[]; steps: YamlStepOrAction[] } {
+  const steps: (V2StepStep | V2ActionStep)[] = condition?.branches?.true || [];
+  const compiledActions: YamlStepOrAction[] = [];
+  const compiledSteps: YamlStepOrAction[] = [];
+  steps.forEach((a) => {
+    if (a.type.startsWith("step-")) {
+      const compiledAction = getYamlStepFromStep(a as V2StepStep, {
+        condition,
+        foreach,
+      });
+      compiledSteps.push(compiledAction);
+    } else {
+      const compiledAction = getYamlActionFromAction(a as V2ActionStep, {
+        condition,
+        foreach,
+      });
+      compiledActions.push(compiledAction);
+    }
   });
-  return compiledActions;
+  return {
+    actions: compiledActions,
+    steps: compiledSteps,
+  };
 }
 
-export function getYamlStepFromStep(s: V2StepStep): YamlStepOrAction {
+export function getYamlStepFromStep(
+  s: V2StepStep,
+  {
+    condition,
+    foreach,
+  }: {
+    condition?: V2StepConditionThreshold | V2StepConditionAssert;
+    foreach?: string;
+  } = {}
+): YamlStepOrAction {
   const withParams = getWithParams(s);
   const providerType = s.type.replace("step-", "");
   const providerName =
@@ -337,8 +345,15 @@ export function getYamlStepFromStep(s: V2StepStep): YamlStepOrAction {
     config: `{{ providers.${providerName} }}`,
     with: withParams,
   };
+  const ifParam =
+    typeof s.properties.if === "string" && s.properties.if.trim() !== ""
+      ? s.properties.if
+      : undefined;
   const step: YamlStepOrAction = {
     name: s.name,
+    if: ifParam,
+    condition: condition ? [getYamlConditionFromStep(condition)] : undefined,
+    foreach: foreach ? foreach : undefined,
     provider: provider,
   };
   if (s.properties.vars) {
@@ -347,10 +362,18 @@ export function getYamlStepFromStep(s: V2StepStep): YamlStepOrAction {
   return step;
 }
 
-export function getYamlActionFromAction(s: V2ActionStep): YamlStepOrAction {
+export function getYamlActionFromAction(
+  s: V2ActionStep,
+  {
+    condition,
+    foreach,
+  }: {
+    condition?: V2StepConditionThreshold | V2StepConditionAssert;
+    foreach?: string;
+  } = {}
+): YamlStepOrAction {
   const withParams = getWithParams(s);
   const providerType = s.type.replace("action-", "");
-  const ifParam = s.properties.if;
   const providerName =
     (s.properties.config as string)?.trim() || `default-${providerType}`;
   const provider = {
@@ -358,14 +381,17 @@ export function getYamlActionFromAction(s: V2ActionStep): YamlStepOrAction {
     config: `{{ providers.${providerName} }}`,
     with: withParams,
   };
+  const ifParam =
+    typeof s.properties.if === "string" && s.properties.if.trim() !== ""
+      ? s.properties.if
+      : undefined;
   const action: YamlStepOrAction = {
     name: s.name,
+    if: ifParam,
+    condition: condition ? [getYamlConditionFromStep(condition)] : undefined,
+    foreach: foreach ? foreach : undefined,
     provider: provider,
   };
-  // add 'if' only if it's not empty
-  if (ifParam) {
-    action.if = ifParam as string;
-  }
   if (s.properties.vars) {
     action.vars = s.properties.vars;
   }
@@ -387,7 +413,7 @@ export function getYamlWorkflowDefinition(
   const services = (alert.properties.services as string[]) ?? [];
   const consts = (alert.properties.consts as Record<string, string>) ?? {};
   // Steps (move to func?)
-  const steps = alert.sequence
+  let steps = alert.sequence
     .filter((s): s is V2StepStep => s.type.startsWith("step-"))
     .map((s: V2StepStep) => getYamlStepFromStep(s));
   // Actions
@@ -397,57 +423,49 @@ export function getYamlWorkflowDefinition(
   // Actions > Foreach
   alert.sequence
     .filter((step): step is V2StepForeach => step.type === "foreach")
-    ?.forEach((forEach: V2StepForeach) => {
-      const forEachValue = forEach?.properties?.value as string;
-      // FIX: type
-      const condition = forEach?.sequence?.find((c) =>
-        c.type.startsWith("condition-")
-      ) as unknown as V2StepConditionAssert | V2StepConditionThreshold;
-      let foreachActions = [] as YamlStepOrAction[];
+    .forEach((forEach: V2StepForeach) => {
+      const forEachValue = forEach.properties.value as string;
+      const condition = forEach.sequence.find(
+        (step): step is V2StepConditionThreshold | V2StepConditionAssert =>
+          step.type === "condition-assert" ||
+          step.type === "condition-threshold"
+      );
       if (condition) {
-        foreachActions = getActionsFromCondition(condition, forEachValue);
+        const { actions: conditionActions, steps: conditionSteps } =
+          getActionsFromCondition(condition, forEachValue);
+        actions = [...actions, ...conditionActions];
+        steps = [...steps, ...conditionSteps];
       } else {
         const forEachSequence = forEach?.sequence || [];
         const stepOrAction = forEachSequence[0] as V2StepStep | V2ActionStep;
         if (!stepOrAction) {
           return;
         }
-        const withParams = getWithParams(stepOrAction);
-        const providerType = stepOrAction.type
-          .replace("action-", "")
-          .replace("step-", "");
-        const ifParam = stepOrAction.properties.if;
-        const providerName =
-          (stepOrAction.properties.config as string)?.trim() ||
-          `default-${providerType}`;
-        const provider = {
-          type: stepOrAction.type.replace("action-", "").replace("step-", ""),
-          config: `{{ providers.${providerName} }}`,
-          with: withParams,
-        };
-        const foreachAction: any = {
-          name: stepOrAction.name || "",
-          provider: provider,
-          foreach: forEachValue,
-        };
-        if (ifParam) {
-          foreachAction.if = ifParam as string;
+        if (stepOrAction.type === "action") {
+          actions.push(
+            getYamlActionFromAction(stepOrAction as V2ActionStep, {
+              foreach: forEachValue,
+            })
+          );
+        } else {
+          steps.push(
+            getYamlStepFromStep(stepOrAction as V2StepStep, {
+              foreach: forEachValue,
+            })
+          );
         }
-        if (stepOrAction.properties.vars) {
-          foreachAction.vars = stepOrAction.properties.vars;
-        }
-        foreachActions = [foreachAction];
       }
-      actions = [...actions, ...foreachActions];
     });
   // Actions > Condition
   alert.sequence
     .filter((step): step is V2StepConditionThreshold | V2StepConditionAssert =>
       step.type.startsWith("condition-")
     )
-    ?.forEach((condition) => {
-      const conditionActions = getActionsFromCondition(condition);
+    .forEach((condition) => {
+      const { actions: conditionActions, steps: conditionSteps } =
+        getActionsFromCondition(condition);
       actions = [...actions, ...conditionActions];
+      steps = [...steps, ...conditionSteps];
     });
 
   const triggers = [];

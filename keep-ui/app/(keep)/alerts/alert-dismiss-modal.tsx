@@ -13,18 +13,18 @@ import {
 import Modal from "@/components/ui/Modal";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import "react-quill/dist/quill.snow.css";
 import { AlertDto } from "@/entities/alerts/model";
 import { set, isSameDay, isAfter } from "date-fns";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { toast } from "react-toastify";
-const ReactQuill =
-  typeof window === "object" ? require("react-quill") : () => false;
-import "./alert-dismiss-modal.css";
+import "react-quill-new/dist/quill.snow.css";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
-
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
+import "./alert-dismiss-modal.css";
+import dynamic from "next/dynamic";
+
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
 interface Props {
   preset: string;
@@ -41,6 +41,7 @@ export default function AlertDismissModal({
   const [selectedTab, setSelectedTab] = useState<number>(0);
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
   const [showError, setShowError] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const revalidateMultiple = useRevalidateMultiple();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
@@ -82,23 +83,22 @@ export default function AlertDismissModal({
       return;
     }
 
+    setIsLoading(true);
+
     const dismissUntil =
       selectedTab === 0 ? null : selectedDateTime?.toISOString();
-    const requests = alerts.map((alert: AlertDto) => {
-      const requestData = {
+
+    const requestData = {
         enrichments: {
-          fingerprint: alert.fingerprint,
-          dismissed: !alert.dismissed,
+          dismissed: !alerts[0]?.dismissed,
           note: dismissComment,
           dismissUntil: dismissUntil || "",
         },
-        fingerprint: alert.fingerprint,
+        fingerprints: alerts.map( (alert: AlertDto) => alert.fingerprint),
       };
-      return api.post(`/alerts/enrich`, requestData);
-    });
 
     try {
-      const responses = await Promise.all(requests);
+      await api.post(`/alerts/batch_enrich`, requestData);
       toast.success(`${alerts.length} alerts dismissed successfully!`, {
         position: "top-right",
       });
@@ -108,6 +108,7 @@ export default function AlertDismissModal({
       showErrorToast(error, "Failed to dismiss alerts");
     } finally {
       clearAndClose();
+      setIsLoading(false);
     }
   };
 
@@ -131,7 +132,13 @@ export default function AlertDismissModal({
   };
 
   return (
-    <Modal onClose={clearAndClose} isOpen={isOpen} className="overflow-visible">
+    <Modal
+      onClose={clearAndClose}
+      isOpen={isOpen}
+      className="overflow-visible"
+      beforeTitle={alerts?.[0]?.name}
+      title="Dismiss Alert"
+    >
       {alerts && alerts.length == 1 && alerts[0].dismissed ? (
         <>
           <Subtitle className="text-center">
@@ -148,6 +155,7 @@ export default function AlertDismissModal({
           <TabGroup
             index={selectedTab}
             onIndexChange={(index: number) => handleTabChange(index)}
+            className="mb-4"
           >
             <TabList>
               <Tab>Dismiss Forever</Tab>
@@ -192,14 +200,19 @@ export default function AlertDismissModal({
             </TabPanels>
           </TabGroup>
           <Title>Dismiss Comment</Title>
-          <ReactQuill
-            value={dismissComment}
-            onChange={(value: string) => setDismissComment(value)}
-            theme="snow"
-            placeholder="Add your dismiss comment here..."
-          />
-          <div className="mt-4 flex justify-end space-x-2">
-            <Button onClick={handleDismissChange} color="orange">
+          <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+            <ReactQuill
+              value={dismissComment}
+              onChange={(value: string) => setDismissComment(value)}
+              theme="snow"
+              placeholder="Add your dismiss comment here..."
+            />
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="secondary" color="orange" onClick={clearAndClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleDismissChange} color="orange" loading={isLoading}>
               Dismiss
             </Button>
           </div>

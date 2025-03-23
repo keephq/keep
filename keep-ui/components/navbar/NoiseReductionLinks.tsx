@@ -25,7 +25,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
 
   return (
     <Disclosure as="div" className="space-y-1" defaultOpen>
-      <Disclosure.Button className="w-full flex justify-between items-center p-2">
+      <Disclosure.Button className="w-full flex justify-between items-center px-2">
         {({ open }) => (
           <>
             <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
@@ -84,7 +84,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
         <li>
           <AILink></AILink>
         </li>
-    </Disclosure.Panel>
+      </Disclosure.Panel>
     </Disclosure>
   );
 };

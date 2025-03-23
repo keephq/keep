@@ -1,6 +1,7 @@
 workflow:
-  id: alerts-daily-digest
-  description: run alerts digest twice a day (on 11:00 and 14:00)
+  id: alert-digest-scheduler
+  name: Alert Digest Scheduler
+  description: Generates scheduled digests of firing alerts at specified times (11:00 and 14:00) daily.
   triggers:
     - type: manual
     - type: interval

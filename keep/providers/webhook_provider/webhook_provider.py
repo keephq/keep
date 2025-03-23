@@ -3,6 +3,7 @@ WebhookProvider is a class that provides a way to notify a 3rd party service usi
 """
 
 import base64
+import copy
 import dataclasses
 import json
 import typing
@@ -26,7 +27,7 @@ class WebhookProviderAuthConfig:
         metadata={
             "required": True,
             "description": "Webhook URL",
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         }
     )
 
@@ -69,7 +70,7 @@ class WebhookProviderAuthConfig:
         },
     )
 
-    headers: typing.Optional[dict[str, str]] = dataclasses.field(
+    headers: typing.Optional[list[dict[str, str]]] = dataclasses.field(
         default=None,
         metadata={
             "description": "Headers",
@@ -118,6 +119,7 @@ class WebhookProvider(BaseProvider):
         try:
             self._notify(body={"test": "payload"})
         except Exception as e:
+            self.logger.exception("Error validating scopes")
             validated_scopes["send_webhook"] = str(e)
             return validated_scopes
         validated_scopes["send_webhook"] = True
@@ -167,6 +169,7 @@ class WebhookProvider(BaseProvider):
         headers: str = None,
         body: dict = None,
         params: dict = None,
+        fail_on_error: bool = True,
         **kwargs: dict,
     ) -> dict:
         """
@@ -177,10 +180,20 @@ class WebhookProvider(BaseProvider):
             headers = {}
         if isinstance(headers, str):
             headers = json.loads(headers)
+        if isinstance(headers, list):
+            try:
+                headers = {header["key"]: header["value"] for header in headers}
+            except Exception:
+                raise Exception(
+                    "Headers must be a list of dictionaries with 'key' and 'value' fields, e.g. [{'key': 'Content-Type', 'value': 'application/json'}]"
+                )
         if body is None:
             body = {}
         if params is None:
             params = {}
+
+        extra_args = copy.deepcopy(kwargs)
+        extra_args.pop("enrich_alert", None)
 
         if http_basic_authentication_username and http_basic_authentication_password:
             credentials = f"{http_basic_authentication_username}:{http_basic_authentication_password}"
@@ -201,13 +214,21 @@ class WebhookProvider(BaseProvider):
             },
         )
         if method == "GET":
-            response = requests.get(url, headers=headers, params=params, **kwargs)
+            response = requests.get(
+                url, headers=headers, params=params, timeout=10, **extra_args
+            )
         elif method == "POST":
-            response = requests.post(url, headers=headers, json=body, **kwargs)
+            response = requests.post(
+                url, headers=headers, json=body, timeout=10, **extra_args
+            )
         elif method == "PUT":
-            response = requests.put(url, headers=headers, json=body, **kwargs)
+            response = requests.put(
+                url, headers=headers, json=body, timeout=10, **extra_args
+            )
         elif method == "DELETE":
-            response = requests.delete(url, headers=headers, json=body, **kwargs)
+            response = requests.delete(
+                url, headers=headers, json=body, timeout=10, **extra_args
+            )
 
         self.logger.debug(
             f"Trigger a webhook with {method} on {url}",
@@ -225,6 +246,13 @@ class WebhookProvider(BaseProvider):
             body = response.json()
         except JSONDecodeError:
             body = response.text
+
+        if fail_on_error:
+            self.logger.info(
+                f"Webhook response: {response.status_code} {response.reason}",
+                extra={"body": body},
+            )
+            response.raise_for_status()
 
         result["body"] = body
         return result

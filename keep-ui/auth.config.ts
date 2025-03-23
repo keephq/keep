@@ -143,13 +143,46 @@ const baseProviderConfigs = {
     Credentials({
       name: "NoAuth",
       credentials: {},
-      async authorize(): Promise<User> {
+      async authorize(credentials): Promise<User> {
+        // Extract tenantId from callbackUrl if present
+        let tenantId = NoAuthTenant;
+        let name = "Keep";
+
+        if (
+          credentials &&
+          typeof credentials === "object" &&
+          "callbackUrl" in credentials
+        ) {
+          const callbackUrl = credentials.callbackUrl as string;
+          const url = new URL(callbackUrl, "http://localhost");
+          const urlTenantId = url.searchParams.get("tenantId");
+
+          if (urlTenantId) {
+            tenantId = urlTenantId;
+            name += ` (${tenantId})`;
+            console.log("Using tenantId from callbackUrl:", tenantId);
+          }
+        }
+
         return {
           id: "keep-user-for-no-auth-purposes",
-          name: "Keep",
+          name: name,
           email: NoAuthUserEmail,
-          accessToken: "keep-token-for-no-auth-purposes",
-          tenantId: NoAuthTenant,
+          accessToken: JSON.stringify({
+            tenant_id: tenantId,
+            user_id: "keep-user-for-no-auth-purposes",
+          }),
+          tenantIds: [
+            {
+              tenant_id: "keep",
+              tenant_name: "Tenant of Keep (tenant_id: keep)",
+            },
+            {
+              tenant_id: "keep2",
+              tenant_name: "Tenant of another Keep (tenant_id: keep2)",
+            },
+          ],
+          tenantId: tenantId,
           role: "user",
         };
       },
@@ -185,7 +218,7 @@ const baseProviderConfigs = {
 let isDebug =
   process.env.AUTH_DEBUG == "true" || process.env.NODE_ENV === "development";
 if (isDebug) {
-  console.log("Auth deubg mode enabled");
+  console.log("Auth debug mode enabled");
 }
 
 export const config = {
@@ -207,8 +240,7 @@ export const config = {
       const isLoggedIn = !!auth?.user;
       const isOnDashboard = nextUrl.pathname.startsWith("/dashboard");
       if (isOnDashboard) {
-        if (isLoggedIn) return true;
-        return false;
+        return isLoggedIn;
       }
       return true;
     },
@@ -217,6 +249,14 @@ export const config = {
         let accessToken: string | undefined;
         let tenantId: string | undefined = user.tenantId;
         let role: string | undefined = user.role;
+
+        // if the account is from tenant-switch provider, return the token
+        if (account.provider === "tenant-switch") {
+          token.accessToken = user.accessToken;
+          token.tenantId = user.tenantId;
+          token.role = user.role;
+          return token;
+        }
 
         if (authType === AuthType.AZUREAD) {
           accessToken = account.access_token;
@@ -238,6 +278,10 @@ export const config = {
           }
           if ((profile as any)?.keep_role) {
             role = (profile as any).keep_role;
+          }
+          // more than one tenants
+          if ((profile as any)?.keep_tenant_ids) {
+            user.tenantIds = (profile as any).keep_tenant_ids;
           }
         } else if (authType === AuthType.KEYCLOAK) {
           // TODO: remove this once we have a proper way to get the tenant id
