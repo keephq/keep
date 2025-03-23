@@ -159,7 +159,7 @@ class BaseCelToSqlProvider:
         else:
             order_by_exp = fields_to_sort_by[0]
 
-        if is_json and metadata.data_type != str:
+        if is_json and metadata.data_type is not str:
             order_by_exp = self.cast(
                 expression_to_cast=order_by_exp, to_type=metadata.data_type, force=True
             )

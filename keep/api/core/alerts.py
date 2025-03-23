@@ -9,9 +9,7 @@ from sqlmodel import Session, text
 
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
-    JsonFieldMapping,
     PropertiesMetadata,
-    SimpleFieldMapping,
     remap_fields_configurations,
 )
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
@@ -406,11 +404,7 @@ def query_last_alerts(
             data_query = build_alerts_query(
                 tenant_id, cel, sort_by, sort_dir, limit, offset
             )
-            strq = str(
-                data_query.compile(
-                    compile_kwargs={"literal_binds": True}, dialect=session.bind.dialect
-                )
-            )
+
             alerts_with_start = session.execute(data_query).all()
         except OperationalError as e:
             logger.warning(f"Failed to query alerts for CEL '{cel}': {e}")
