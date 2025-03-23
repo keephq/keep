@@ -7,7 +7,7 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
     def json_extract_as_text(self, column: str, path: str) -> str:
         return f"JSON_UNQUOTE(JSON_EXTRACT({column}, '$.{path}'))"
 
-    def cast(self, expression_to_cast: str, to_type):
+    def cast(self, expression_to_cast: str, to_type, force=False):
         if to_type is bool:
             cast_conditions = {
                 # f"{expression_to_cast} is NULL": "FALSE",
@@ -23,8 +23,17 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
             result = f"CASE {result} ELSE NULL END"
             return result
 
-        # MySQL does not need explicit cast for other than boolean because it does it implicitly
-        return expression_to_cast
+        if not force:
+            # MySQL does not need explicit cast for other than boolean because it does it implicitly
+            # so if not forced, we return the expression as is
+            return expression_to_cast
+
+        if to_type is int:
+            return f"CAST({expression_to_cast} AS SIGNED)"
+        elif to_type is float:
+            return f"CAST({expression_to_cast} AS DOUBLE)"
+        else:
+            return expression_to_cast
 
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):

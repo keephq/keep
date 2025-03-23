@@ -20,7 +20,7 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
 
         return f"COALESCE({', '.join(args)})"
 
-    def cast(self, expression_to_cast: str, to_type):
+    def cast(self, expression_to_cast: str, to_type, force=False):
         if to_type is str:
             to_type_str = "TEXT"
         elif to_type is int or to_type is float:
