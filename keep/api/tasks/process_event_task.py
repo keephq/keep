@@ -282,10 +282,10 @@ def __save_to_db(
                         extra={"alert_id": alert.id, "tenant_id": tenant_id},
                     )
                     for incident in alert._incidents:
-                        if incident.status in IncidentStatus.get_active(return_values=True):
-                            incident_bl.resolve_incident_if_require(
-                                incident
-                            )
+                        if incident.status in IncidentStatus.get_active(
+                            return_values=True
+                        ):
+                            incident_bl.resolve_incident_if_require(incident)
             logger.info(
                 "Completed checking for incidents to resolve",
                 extra={"tenant_id": tenant_id},
@@ -444,7 +444,7 @@ def __handle_formatted_events(
                     fields=fields,
                     provider_id=enriched_formatted_event.providerId,
                     provider_type=enriched_formatted_event.providerType,
-                    session=session,
+                    # session=session,
                 )
 
                 logger.debug(

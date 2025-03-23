@@ -117,6 +117,9 @@ async def process_event_in_worker(
     return resp
 
 
+FUNCTIONS.append(process_event_in_worker)
+
+
 async def startup(ctx):
     """ARQ worker startup callback"""
     EVENT_WORKERS = int(config("KEEP_EVENT_WORKERS", default=5, cast=int))
@@ -154,7 +157,7 @@ class WorkerSettings:
         conn_retry_delay=10,
     )
     timeout = 30
-    functions: list = [process_event_in_worker]
+    functions: list = FUNCTIONS
     queue_name: str
     health_check_interval: int = 10
     health_check_key: str
