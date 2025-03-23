@@ -41,7 +41,7 @@ services:
       - FRIGADE_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
       - SQLALCHEMY_WARN_20=1
-      - REDIS=${REDIS_ENABLED:-false}
+      - REDIS=${REDIS:-false}
     depends_on:
       - keep-database
 
@@ -103,7 +103,7 @@ services:
       - KEEP_JWT_SECRET=verysecretkey
       - KEEP_DEFAULT_USERNAME=keep
       - KEEP_DEFAULT_PASSWORD=keep
-      - REDIS=${REDIS_ENABLED:-false}
+      - REDIS=${REDIS:-false}
     depends_on:
       - keep-database-db-auth
 
@@ -125,7 +125,7 @@ services:
     image: redis/redis-stack
     ports:
       - "6379:6379"
-      - "8081:8001"
+      - "8082:8001"
   grafana:
     image: grafana/grafana-enterprise:11.4.0
     user: "472" # Grafana's default user ID
