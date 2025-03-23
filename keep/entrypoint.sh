@@ -29,6 +29,7 @@ else
     echo "Running with Redis"
     # default number of workers is two
     KEEP_WORKERS=${KEEP_WORKERS:-2}
+    echo "KEEP_WORKERS: $KEEP_WORKERS"
     # Run gunicorn with the specified workers
     KEEP_WORKERS=${KEEP_WORKERS} REDIS=true python -m keep.api.arq_worker &
     echo "Running gunicorn with $KEEP_WORKERS workers"

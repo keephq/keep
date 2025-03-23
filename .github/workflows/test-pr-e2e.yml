@@ -264,6 +264,9 @@ jobs:
       fail-fast: false
       matrix:
         db_type: [mysql, postgres]
+        redis_enabled: [true, false]
+    env:
+      REDIS_ENABLED: ${{ matrix.redis_enabled }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -343,7 +346,7 @@ jobs:
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
 
           # Start all services together
-          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d REDIS_ENABLED=${{ matrix.redis_enabled }}
 
           # Show running containers
           docker ps

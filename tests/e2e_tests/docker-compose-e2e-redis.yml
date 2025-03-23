@@ -1,43 +1,4 @@
-
 services:
-  keep-frontend:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-frontend-common
-    build:
-      context: ./keep-ui/
-      dockerfile: ../docker/Dockerfile.ui
-    environment:
-      - AUTH_TYPE=NO_AUTH
-      - API_URL=http://keep-backend:8080
-      - POSTHOG_DISABLED=true
-      - FRIGADE_DISABLED=true
-      - SENTRY_DISABLED=true
-    depends_on:
-      - keep-backend
-
-  keep-backend:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-backend-common
-    image: us-central1-docker.pkg.dev/keephq/keep/keep-api:latest
-    environment:
-      - AUTH_TYPE=NO_AUTH
-      - DATABASE_CONNECTION_STRING=sqlite:///./newdb.db?check_same_thread=False
-      - POSTHOG_DISABLED=true
-      - FRIGADE_DISABLED=true
-      - SECRET_MANAGER_DIRECTORY=/appֿ
-      - REDIS=true
-      - REDIS_HOST=keep-arq-redis
-      - REDIS_PORT=6379
-    depends_on:
-      - keep-redis
-
-  keep-websocket-server:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-websocket-server-common
-
   keep-redis:
     image: redis/redis-stack
     ports:
