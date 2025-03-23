@@ -1,7 +1,9 @@
 import asyncio
+import functools
 import logging
 import multiprocessing
 import os
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 from uuid import uuid4
 
@@ -23,6 +25,7 @@ from keep.api.consts import (
 )
 from keep.api.core.config import config
 from keep.api.core.db import dispose_session
+from keep.api.tasks.process_event_task import process_event
 
 # Load environment variables
 load_dotenv(find_dotenv())
@@ -62,9 +65,66 @@ FUNCTIONS: list = (
 )
 
 
+async def process_event_in_worker(
+    ctx,
+    tenant_id,
+    provider_type,
+    provider_id,
+    fingerprint,
+    api_key_name,
+    trace_id,
+    event,
+    notify_client=True,
+    timestamp_forced=None,
+):
+    logger.info(
+        "Processing event in worker",
+        extra={
+            "tenant_id": tenant_id,
+            "provider_type": provider_type,
+            "provider_id": provider_id,
+            "fingerprint": fingerprint,
+            "tract_id": trace_id,
+        },
+    )
+    # Create a new context that includes both the arq ctx and any other parameters
+    process_event_func_sync = functools.partial(
+        process_event,
+        ctx=ctx,  # Pass ctx as a named parameter
+        tenant_id=tenant_id,
+        provider_type=provider_type,
+        provider_id=provider_id,
+        fingerprint=fingerprint,
+        api_key_name=api_key_name,
+        trace_id=trace_id,
+        event=event,  # This was missing in your error
+        notify_client=notify_client,
+        timestamp_forced=timestamp_forced,
+    )
+    loop = asyncio.get_running_loop()
+    # run the function in the thread pool
+    resp = await loop.run_in_executor(ctx["pool"], process_event_func_sync)
+    logger.info(
+        "Event processed in worker",
+        extra={
+            "tenant_id": tenant_id,
+            "provider_type": provider_type,
+            "provider_id": provider_id,
+            "fingerprint": fingerprint,
+            "tract_id": trace_id,
+        },
+    )
+    return resp
+
+
 async def startup(ctx):
     """ARQ worker startup callback"""
-    pass
+    EVENT_WORKERS = int(config("KEEP_EVENT_WORKERS", default=5, cast=int))
+    # Create dedicated threadpool
+    process_event_executor = ThreadPoolExecutor(
+        max_workers=EVENT_WORKERS, thread_name_prefix="process_event_worker"
+    )
+    ctx["pool"] = process_event_executor
 
 
 async def shutdown(ctx):
@@ -94,7 +154,7 @@ class WorkerSettings:
         conn_retry_delay=10,
     )
     timeout = 30
-    functions: list = FUNCTIONS
+    functions: list = [process_event_in_worker]
     queue_name: str
     health_check_interval: int = 10
     health_check_key: str
