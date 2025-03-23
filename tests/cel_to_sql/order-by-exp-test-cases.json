@@ -1,0 +1,47 @@
+[
+  {
+    "field": "floatNumberColumn",
+    "description": "Float single column no cast",
+    "expected_sql_dialect_based": {
+      "mysql": "float_number_column",
+      "postgresql": "float_number_column",
+      "sqlite": "float_number_column"
+    }
+  },
+  {
+    "field": "intNumberColumn",
+    "description": "Int single column no cast",
+    "expected_sql_dialect_based": {
+      "mysql": "int_number_column",
+      "postgresql": "int_number_column",
+      "sqlite": "int_number_column"
+    }
+  },
+  {
+    "field": "floatNumberColumnFromJson",
+    "description": "Float from JSON column",
+    "expected_sql_dialect_based": {
+      "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(json_column, '$.floatNumberColumnFromJson')) AS DOUBLE)",
+      "postgresql": "((json_column) ->> 'floatNumberColumnFromJson')::FLOAT",
+      "sqlite": "CAST(json_extract(json_column, '$.floatNumberColumnFromJson') as REAL)"
+    }
+  },
+  {
+    "field": "intNumberColumnFromJson",
+    "description": "Int from JSON column",
+    "expected_sql_dialect_based": {
+      "mysql": "CAST(JSON_UNQUOTE(JSON_EXTRACT(json_column, '$.intNumberColumnFromJson')) AS SIGNED)",
+      "postgresql": "((json_column) ->> 'intNumberColumnFromJson')::FLOAT",
+      "sqlite": "CAST(json_extract(json_column, '$.intNumberColumnFromJson') as REAL)"
+    }
+  },
+  {
+    "field": "intNumberColumnFromMultipleJson",
+    "description": "Int from multiple JSON columns",
+    "expected_sql_dialect_based": {
+      "mysql": "CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(json_column_first, '$.intNumberColumnFromMultipleJson')), JSON_UNQUOTE(JSON_EXTRACT(json_column_second, '$.intNumberColumnFromMultipleJson'))) AS SIGNED)",
+      "postgresql": "(COALESCE(((json_column_first) ->> 'intNumberColumnFromMultipleJson')::TEXT, ((json_column_second) ->> 'intNumberColumnFromMultipleJson')::TEXT))::FLOAT",
+      "sqlite": "CAST(COALESCE(CAST(json_extract(json_column_first, '$.intNumberColumnFromMultipleJson') as TEXT), CAST(json_extract(json_column_second, '$.intNumberColumnFromMultipleJson') as TEXT)) as REAL)"
+    }
+  }
+]
