@@ -31,7 +31,7 @@ else
     KEEP_WORKERS=${KEEP_WORKERS:-2}
     echo "KEEP_WORKERS: $KEEP_WORKERS"
     # Run gunicorn with the specified workers
-    KEEP_WORKERS=${KEEP_WORKERS} REDIS=true python -m keep.api.arq_worker &
+    LOG_LEVEL=DEBUG KEEP_WORKERS=${KEEP_WORKERS} REDIS=true python -m keep.api.arq_worker &
     echo "Running gunicorn"
     exec "$@"
 fi

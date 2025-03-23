@@ -314,6 +314,10 @@ async def run_workers():
     """
     try:
         logger.info("Starting Workers")
+        from .arq_worker_debug_patch import apply_arq_debug_patches, patch_process_event
+
+        apply_arq_debug_patches()
+        patch_process_event()
         await start_workers()
         logger.info("Workers finished")
     except KeyboardInterrupt:
