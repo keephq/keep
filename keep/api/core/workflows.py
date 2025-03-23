@@ -27,16 +27,32 @@ from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 
 
 workflow_field_configurations = [
-    FieldMappingConfiguration("name", "filter_workflow_name"),
-    FieldMappingConfiguration("description", "filter_workflow_description"),
-    FieldMappingConfiguration("started", "filter_started"),
-    FieldMappingConfiguration("last_execution_status", "filter_last_execution_status"),
-    FieldMappingConfiguration("last_execution_time", "filter_last_execution_time"),
-    FieldMappingConfiguration("disabled", "filter_workflow_is_disabled"),
-    FieldMappingConfiguration("last_updated", "filter_workflow_last_updated"),
-    FieldMappingConfiguration("created_at", "filter_workflow_creation_time"),
-    FieldMappingConfiguration("created_by", "filter_workflow_created_by"),
-    FieldMappingConfiguration("updated_by", "filter_workflow_updated_by"),
+    FieldMappingConfiguration(map_from_pattern="name", map_to="filter_workflow_name"),
+    FieldMappingConfiguration(
+        map_from_pattern="description", map_to="filter_workflow_description"
+    ),
+    FieldMappingConfiguration(map_from_pattern="started", map_to="filter_started"),
+    FieldMappingConfiguration(
+        map_from_pattern="last_execution_status", map_to="filter_last_execution_status"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="last_execution_time", map_to="filter_last_execution_time"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="disabled", map_to="filter_workflow_is_disabled"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="last_updated", map_to="filter_workflow_last_updated"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="created_at", map_to="filter_workflow_creation_time"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="created_by", map_to="filter_workflow_created_by"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="updated_by", map_to="filter_workflow_updated_by"
+    ),
 ]
 alias_column_mapping = {
     "filter_workflow_name": "workflow.name",
