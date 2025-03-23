@@ -31,6 +31,8 @@ env:
   EE_ENABLED: true
   # Docker Compose project name
   COMPOSE_PROJECT_NAME: keep
+  # Check if PR is from fork (external contributor)
+  IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
 
 jobs:
   # Prepare test environment in parallel with Docker builds
@@ -85,11 +87,23 @@ jobs:
   # Build images in parallel
   build-frontend:
     runs-on: ubuntu-latest
+    outputs:
+      image_name: ${{ steps.set-image-name.outputs.image_name }}
     permissions:
       contents: read
       packages: write
     steps:
+      - name: Set image name
+        id: set-image-name
+        run: |
+          if [[ "${{ env.IS_FORK }}" == "true" ]]; then
+            echo "image_name=keep-frontend:local" >> $GITHUB_OUTPUT
+          else
+            echo "image_name=ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Login to GitHub Container Registry
+        if: ${{ env.IS_FORK != 'true' }}
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -122,10 +136,12 @@ jobs:
           echo "Branch: ${{ github.head_ref || github.ref_name }}"
           echo "Safe branch name: ${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
           echo "Dependencies hash: ${{ steps.cache-keys.outputs.DEPS_HASH }}"
+          echo "Is fork: ${{ env.IS_FORK }}"
 
-      # Pre-check if branch cache exists
+      # Pre-check if branch cache exists (only for non-forks)
       - name: Check if branch cache exists
         id: branch-cache-exists
+        if: ${{ env.IS_FORK != 'true' }}
         continue-on-error: true
         run: |
           BRANCH_CACHE_TAG="ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
@@ -138,6 +154,7 @@ jobs:
           fi
 
       - name: Log frontend cache status
+        if: ${{ env.IS_FORK != 'true' }}
         run: |
           if [ "${{ steps.branch-cache-exists.outputs.cache_exists }}" == "true" ]; then
             echo "FRONTEND CACHE HIT ✅"
@@ -147,7 +164,9 @@ jobs:
             echo "Will attempt to use main branch cache and create a new branch cache"
           fi
 
+      # For non-forks: Build and push to registry
       - name: Build and push frontend image with registry cache
+        if: ${{ env.IS_FORK != 'true' }}
         uses: docker/build-push-action@v4
         with:
           context: keep-ui
@@ -169,13 +188,43 @@ jobs:
           # Verbose output
           outputs: type=image,push=true
 
+      # For forks: Build locally without pushing
+      - name: Build frontend image locally
+        if: ${{ env.IS_FORK == 'true' }}
+        uses: docker/build-push-action@v4
+        with:
+          context: keep-ui
+          file: ./docker/Dockerfile.ui
+          push: false
+          load: true
+          tags: |
+            keep-frontend:local
+          # Use local cache
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # Add build args for better caching
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
   build-backend:
     runs-on: ubuntu-latest
+    outputs:
+      image_name: ${{ steps.set-image-name.outputs.image_name }}
     permissions:
       contents: read
       packages: write
     steps:
+      - name: Set image name
+        id: set-image-name
+        run: |
+          if [[ "${{ env.IS_FORK }}" == "true" ]]; then
+            echo "image_name=keep-backend:local" >> $GITHUB_OUTPUT
+          else
+            echo "image_name=ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Login to GitHub Container Registry
+        if: ${{ env.IS_FORK != 'true' }}
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -207,10 +256,12 @@ jobs:
           echo "Branch: ${{ github.head_ref || github.ref_name }}"
           echo "Safe branch name: ${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
           echo "Dependencies hash: ${{ steps.cache-keys.outputs.DEPS_HASH }}"
+          echo "Is fork: ${{ env.IS_FORK }}"
 
-      # Pre-check if branch cache exists
+      # Pre-check if branch cache exists (only for non-forks)
       - name: Check if branch cache exists
         id: branch-cache-exists
+        if: ${{ env.IS_FORK != 'true' }}
         continue-on-error: true
         run: |
           BRANCH_CACHE_TAG="ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
@@ -223,6 +274,7 @@ jobs:
           fi
 
       - name: Log backend cache status
+        if: ${{ env.IS_FORK != 'true' }}
         run: |
           if [ "${{ steps.branch-cache-exists.outputs.cache_exists }}" == "true" ]; then
             echo "BACKEND CACHE HIT ✅"
@@ -232,7 +284,9 @@ jobs:
             echo "Will attempt to use main branch cache and create a new branch cache"
           fi
 
+      # For non-forks: Build and push to registry
       - name: Build and push backend image with registry cache
+        if: ${{ env.IS_FORK != 'true' }}
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -253,6 +307,24 @@ jobs:
           # Verbose output
           outputs: type=image,push=true
 
+      # For forks: Build locally without pushing
+      - name: Build backend image locally
+        if: ${{ env.IS_FORK == 'true' }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./docker/Dockerfile.api
+          push: false
+          load: true
+          tags: |
+            keep-backend:local
+          # Use local cache
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # Add build args for better caching
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
   # Run tests with all services in one job
   run-tests:
     needs: [build-frontend, build-backend, prepare-test-environment]
@@ -269,11 +341,14 @@ jobs:
       REDIS: ${{ matrix.redis_enabled }}
       REDIS_HOST: keep-redis
       REDIS_PORT: 6379
+      BACKEND_IMAGE: ${{ needs.build-backend.outputs.image_name }}
+      FRONTEND_IMAGE: ${{ needs.build-frontend.outputs.image_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
       - name: Login to GitHub Container Registry
+        if: ${{ env.IS_FORK != 'true' }}
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -331,10 +406,8 @@ jobs:
           cp tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml tests/e2e_tests/docker-compose-modified.yml
 
           # Replace image placeholders with actual image references
-          sed -i "s|%KEEPFRONTEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
-          sed -i "s|%KEEPBACKEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
-          sed -i "s|%KEEPFRONTEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-frontend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
-          sed -i "s|%KEEPBACKEND_IMAGE%|ghcr.io/${{ github.repository_owner }}/keep-backend-db-auth:${{ github.sha }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPFRONTEND_IMAGE%|${{ env.FRONTEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPBACKEND_IMAGE%|${{ env.BACKEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
 
           # cat the modified file for debugging
           cat tests/e2e_tests/docker-compose-modified.yml
@@ -342,10 +415,12 @@ jobs:
       # Start ALL services in one go
       - name: Start ALL services
         run: |
-          echo "Starting ALL services for ${{ matrix.db_type }} with REDIS=${{ matrix.redis_enabled }} REDIS_HOST=${{ env.REDIS_HOST }}..."
+          echo "Starting ALL services for ${{ matrix.db_type }}..."
 
-          # Pull the required images first
-          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
+          # Pull the required images first (only needed for non-fork builds)
+          if [[ "${{ env.IS_FORK }}" != "true" ]]; then
+            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
+          fi
 
           # Start all services together
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
@@ -508,7 +583,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4.4.3
         with:
-          name: test-artifacts-${{ matrix.db_type }}-${{ matrix.redis_enabled }}
+          name: test-artifacts-my-artifacts-${{ matrix.db_type }}
           path: |
             playwright_dump_*.html
             playwright_dump_*.png
