@@ -229,7 +229,16 @@ async def start_worker_instance(queue_name: str, worker_index: int):
     """
     logger.info(f"Starting worker {worker_index} for queue {queue_name}")
     worker = get_arq_worker(queue_name)
+    # start the workflow manager
+    # For now - we must also start the workflow scheduler since its coupled with process workers
+    # TODO (very important): refactor the workflow scheduler to be independent of the workers
+    # and to work with REDIS
+    logger.info("Starting Workflow Manager")
+    wf_manager = WorkflowManager.get_instance()
+    await wf_manager.start()
+    logger.info("Workflow Manager started")
     await safe_run_worker(worker)
+    logger.info(f"Worker {worker_index} finished")
 
 
 def run_worker_process(queue_name: str, worker_index: int):
@@ -328,23 +337,9 @@ async def run_workers():
             logger.info("ARQ debug patches applied")
         await start_workers()
 
-        # For now - we must also start the workflow scheduler since its coupled with process workers
-        # TODO (very important): refactor the workflow scheduler to be independent of the workers
-        # and to work with REDIS
-        logger.info("Starting Workflow Manager")
-        wf_manager = WorkflowManager.get_instance()
-        await wf_manager.start()
-        logger.info("Workflow Manager started")
         logger.info("Workers finished")
     except KeyboardInterrupt:
         logger.info("Workers shutting down due to keyboard interrupt")
-        try:
-            logger.info("Stopping Workflow Manager")
-            await wf_manager.stop()
-            logger.info("Workflow Manager stopped")
-        # in pytest, there could be race condition
-        except TypeError:
-            logger.exception("Failed to stop Workflow Manager")
     except Exception as e:
         logger.exception(f"Workers failed with exception: {e}")
         raise
