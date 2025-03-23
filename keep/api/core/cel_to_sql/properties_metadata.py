@@ -21,10 +21,12 @@ class PropertyMetadataInfo:
         field_name: str,
         field_mappings: list[SimpleFieldMapping | JsonFieldMapping],
         enum_values: list[str],
+        data_type: type = None,
     ):
         self.field_name = field_name
         self.field_mappings = field_mappings
         self.enum_values = enum_values
+        self.data_type = data_type
 
 
 class FieldMappingConfiguration:
@@ -33,10 +35,12 @@ class FieldMappingConfiguration:
         self,
         map_from_pattern: str,
         map_to: list[str] | str,
+        data_type: type = None,
         enum_values: list[str] = None,
     ):
         self.map_from_pattern = map_from_pattern
         self.enum_values = enum_values
+        self.data_type = data_type
         self.map_to: list[str] = map_to if isinstance(map_to, list) else [map_to]
 
 
@@ -58,6 +62,7 @@ def remap_fields_configurations(
             map_from_pattern=item.map_from_pattern,
             map_to=item.map_to,
             enum_values=item.enum_values,
+            data_type=item.data_type,
         )
         for item in field_configurations
     ]
@@ -151,6 +156,7 @@ class PropertiesMetadata:
             field_name=prop_path,
             field_mappings=field_mappings,
             enum_values=field_mapping_config.enum_values,
+            data_type=field_mapping_config.data_type,
         )
 
     def __find_mapping_configuration(self, prop_path: str):
