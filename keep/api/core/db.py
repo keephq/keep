@@ -195,7 +195,7 @@ def create_workflow_execution(
                 triggered_by = triggered_by[:255]
             workflow_execution = WorkflowExecution(
                 id=workflow_execution_id,
-                workflow_id=workflow_id if not test_run else None,
+                workflow_id=workflow_id if not test_run else "test",
                 tenant_id=tenant_id,
                 started=datetime.now(tz=timezone.utc),
                 triggered_by=triggered_by,

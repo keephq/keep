@@ -62,7 +62,7 @@ class WorkflowExecution(SQLModel, table=True):
     )
 
     id: str = Field(default=None, primary_key=True)
-    workflow_id: str | None = Field(foreign_key="workflow.id", default=None) # default=None for test runs
+    workflow_id: str = Field(foreign_key="workflow.id", default="test") # default=test for test runs, which are not associated with a workflow
     tenant_id: str = Field(foreign_key="tenant.id")
     started: datetime = Field(default_factory=datetime.utcnow, index=True)
     triggered_by: str = Field(sa_column=Column(TEXT))
