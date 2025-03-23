@@ -41,8 +41,9 @@ class WorkflowManager:
         self.workflow_store = WorkflowStore()
         self.started = False
         # this is to enqueue the workflows in the REDIS queue
-        self.loop = None
-        self.redis = config("REDIS", default="false").lower() == "true"
+        # SHAHAR: todo - finish the REDIS implementation
+        # self.loop = None
+        # self.redis = config("REDIS", default="false").lower() == "true"
 
     async def start(self):
         """Runs the workflow manager in server mode"""
@@ -58,10 +59,6 @@ class WorkflowManager:
         if not self.started:
             return
 
-        if self.redis:
-            self.logger.info("Stopping event loop")
-            self.loop.close()
-            self.logger.info("Event loop stopped")
         self.scheduler.stop()
         self.started = False
         # Clear the scheduler reference
