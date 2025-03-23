@@ -43,6 +43,32 @@ def upgrade() -> None:
         with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
             batch_op.drop_constraint(fk_name, type_='foreignkey')
     
+    # First create a "test" workflow if it doesn't exist
+    # This helps maintain referential integrity
+    op.execute("""
+    INSERT INTO tenant (id, name)
+    SELECT 'system-test-workflow', 'System Test Workflow Tenant'
+    WHERE NOT EXISTS (SELECT 1 FROM tenant WHERE id = 'system-test-workflow')
+    """)
+
+    # Then create the test workflow using this tenant
+    op.execute("""
+    INSERT INTO workflow (id, tenant_id, name, description, created_by, creation_time, 
+        workflow_raw, is_deleted, is_disabled, revision, last_updated)
+    SELECT 'test', 
+        'system-test-workflow', 
+        'Test Workflow', 
+        'Auto-generated test workflow for unassociated executions', 
+        'system', 
+        CURRENT_TIMESTAMP, 
+        '{}', 
+        FALSE, 
+        FALSE, 
+        1, 
+        CURRENT_TIMESTAMP
+    WHERE NOT EXISTS (SELECT 1 FROM workflow WHERE id = 'test')
+    """)
+    
     # Update NULL values to 'test' if needed
     if is_nullable:
         op.execute("UPDATE workflowexecution SET workflow_id = 'test' WHERE workflow_id IS NULL")
