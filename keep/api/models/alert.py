@@ -302,7 +302,6 @@ class AlertDto(BaseModel):
                     "source": ["prometheus"],
                     "message": "The pod 'api-service-production' lacks memory causing high error rate",
                     "description": "Due to the lack of memory, the pod 'api-service-production' is experiencing high error rate",
-                    "description_format": "markdown",
                     "severity": "critical",
                     "pushed": True,
                     "url": "https://www.keephq.dev?alertId=1234",
