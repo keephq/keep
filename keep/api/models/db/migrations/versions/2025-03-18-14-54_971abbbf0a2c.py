@@ -46,8 +46,8 @@ def upgrade() -> None:
     # First create a "test" workflow if it doesn't exist
     # This helps maintain referential integrity
     op.execute("""
-    INSERT INTO tenant (id, name, description)
-    SELECT 'system-test-workflow', 'System Test Workflow Tenant', 'Auto-generated tenant for test workflows'
+    INSERT INTO tenant (id, name)
+    SELECT 'system-test-workflow', 'System Test Workflow Tenant'
     WHERE NOT EXISTS (SELECT 1 FROM tenant WHERE id = 'system-test-workflow')
     """)
 
