@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { TextInput, Button, Text, Card } from "@tremor/react";
-import { TrashIcon } from "@heroicons/react/24/outline";
+import { TextInput, Button, Text } from "@tremor/react";
+import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import Modal from "@/components/ui/Modal";
 
 interface StaticField {
@@ -167,7 +167,7 @@ export default function AlertTriggerModal({
     <Modal isOpen={isOpen} onClose={onClose} title="Build Alert Payload">
       <form onSubmit={handleSubmit}>
         {Array.isArray(staticFields) && staticFields.length > 0 && (
-          <Card className="mb-4">
+          <>
             <Text className="mb-2">Fields Defined As Workflow Filters</Text>
             {staticFields.map((field, index) => (
               <div key={field.key} className="flex gap-2 mb-2">
@@ -175,80 +175,79 @@ export default function AlertTriggerModal({
                 <TextInput placeholder="Value" value={field.value} disabled />
               </div>
             ))}
-          </Card>
+          </>
         )}
 
-        <Card className="mb-4">
-          <Text className="mb-2">
-            Fields Needed for Workflow (used in the workflow)
-          </Text>
-          {Array.isArray(dependencies) &&
-            dependencies.map((dependencyName, index) => (
-              <div key={dependencyName} className="flex gap-2 mb-2">
-                <TextInput
-                  placeholder={dependencyName}
-                  value={dependencyName}
-                  disabled
-                />
-                <TextInput
-                  className={dependenciesErrors[index] ? "border-red-500" : ""}
-                  placeholder="value"
-                  value={dependencyValues[dependencyName] || ""}
-                  onChange={(e) =>
-                    handleDependencyChange(dependencyName, e.target.value)
-                  }
-                />
-              </div>
-            ))}
-        </Card>
-
-        <Card>
-          {dynamicFields.map((field, index) => (
-            <div
-              key={index}
-              className={`flex items-center gap-2 mb-2 ${
-                fieldErrors[index] ? "border-2 border-red-500 p-2" : ""
-              }`}
-            >
+        <Text className="mb-2">
+          These fields are needed for the workflow to run
+        </Text>
+        {Array.isArray(dependencies) &&
+          dependencies.map((dependencyName, index) => (
+            <div key={dependencyName} className="flex gap-2 mb-2">
               <TextInput
-                placeholder="Key"
-                value={field.key}
-                onChange={(e) =>
-                  handleFieldChange(index, "key", e.target.value)
-                }
+                placeholder={dependencyName}
+                value={dependencyName}
+                disabled
               />
               <TextInput
-                placeholder="Value"
-                value={field.value}
+                placeholder="value"
+                value={dependencyValues[dependencyName] || ""}
                 onChange={(e) =>
-                  handleFieldChange(index, "value", e.target.value)
+                  handleDependencyChange(dependencyName, e.target.value)
                 }
+                error={dependenciesErrors[index]}
               />
-              <button
-                onClick={() => handleDeleteField(index)}
-                className="flex items-center text-gray-500 hover:text-gray-700"
-              >
-                <TrashIcon className="h-5 w-5" aria-hidden="true" />
-              </button>
             </div>
           ))}
-          <div className="flex justify-center">
-            <Button color="orange" onClick={handleAddField}>
-              Add another field
-            </Button>
-          </div>
-        </Card>
 
-        <div className="mt-4 flex gap-2">
-          <Button color="orange" type="submit">
-            Run workflow
+        {dynamicFields.map((field, index) => (
+          <div
+            key={index}
+            className={`flex items-center gap-2 mb-2 ${
+              fieldErrors[index] ? "border-2 border-red-500 p-2" : ""
+            }`}
+          >
+            <TextInput
+              placeholder="Key"
+              value={field.key}
+              onChange={(e) => handleFieldChange(index, "key", e.target.value)}
+            />
+            <TextInput
+              placeholder="Value"
+              value={field.value}
+              onChange={(e) =>
+                handleFieldChange(index, "value", e.target.value)
+              }
+            />
+            <button
+              onClick={() => handleDeleteField(index)}
+              className="flex items-center text-gray-500 hover:text-gray-700"
+            >
+              <TrashIcon className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </div>
+        ))}
+        <div className="flex justify-end">
+          <Button
+            variant="light"
+            icon={PlusIcon}
+            color="orange"
+            onClick={handleAddField}
+          >
+            Add another field
           </Button>
+        </div>
+
+        <div className="mt-8 flex justify-end gap-2">
           <Button
             onClick={onClose}
             variant="secondary"
             className="border border-orange-500 text-orange-500"
           >
             Cancel
+          </Button>
+          <Button color="orange" type="submit">
+            Run workflow
           </Button>
         </div>
       </form>
