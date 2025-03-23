@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.40.3"
+version = "0.40.2"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
@@ -76,7 +76,7 @@ splunk-sdk = "^1.7.4"
 openshift-client = "^2.0.4"
 uptime-kuma-api = "^1.2.1"
 packaging = "^24.0"
-arq = "0.26.3"
+arq = "^0.26.0"
 alembic = "^1.13.2"
 quickchart-io = "^2.0.0"
 google-auth = "2.34.0"
