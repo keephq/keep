@@ -26,6 +26,18 @@ def upgrade() -> None:
     workflow_id_column = next((c for c in columns if c['name'] == 'workflow_id'), None)
     
     is_nullable = workflow_id_column.get('nullable', True) if workflow_id_column else True
+
+    # Check if the foreign key constraint exists
+    foreign_keys = inspector.get_foreign_keys('workflowexecution')
+    fk_names = [fk.get('name') for fk in foreign_keys]
+
+    # First drop the foreign key constraint
+    if 'workflowexecution_ibfk_2' in fk_names or any(fk.get('referred_table') == 'workflow' and 'workflow_id' in fk.get('constrained_columns', []) for fk in foreign_keys):
+        with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
+            batch_op.drop_constraint('workflowexecution_ibfk_2', type_='foreignkey')
+    
+    # Update NULL values to 'test' if needed
+        batch_op.drop_constraint('workflowexecution_ibfk_2', type_='foreignkey')
     
     # Update NULL values to 'test' if needed
     if is_nullable:
@@ -61,6 +73,30 @@ def upgrade() -> None:
         except Exception as e:
             # Log that the index already exists, but don't fail the migration
             print(f"Note: Index creation skipped - {str(e)}")
+        
+    inspector = sa.inspect(connection)  # Refresh inspector to see current state
+    foreign_keys = inspector.get_foreign_keys('workflowexecution')
+    fk_names = [fk.get('name') for fk in foreign_keys]
+    
+    # Only add the constraint back if it doesn't exist
+    has_workflow_fk = 'workflowexecution_ibfk_2' in fk_names or any(
+        fk.get('referred_table') == 'workflow' and 'workflow_id' in fk.get('constrained_columns', []) 
+        for fk in foreign_keys
+    )
+    
+    if not has_workflow_fk:
+        try:
+            with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
+                batch_op.create_foreign_key(
+                    'workflowexecution_ibfk_2',
+                    'workflow',
+                    ['workflow_id'],
+                    ['id'],
+                    ondelete='SET DEFAULT'
+                )
+        except Exception as e:
+            print(f"Note: Foreign key creation skipped - {str(e)}")
+    
 
 
 def downgrade() -> None:
@@ -85,16 +121,20 @@ def downgrade() -> None:
             )
         except Exception:
             pass
-            
-        try:
-            batch_op.create_index(
-                "idx_status_started",
-                ["status", "started"],
-                unique=False,
-                mysql_length={"status": 255},
-            )
-        except Exception:
-            pass
+
+        # Conditionally check if indexes exist before adding
+        indexes = inspector.get_indexes('workflowexecution')
+        index_names = [idx['name'] for idx in indexes]
+        if "idx_status_started" not in index_names:
+            try:
+                batch_op.create_index(
+                    "idx_status_started",
+                    ["status", "started"],
+                    unique=False,
+                    mysql_length={"status": 255},
+                )
+            except Exception:
+                pass
         
         # Make column nullable again
         batch_op.alter_column(
