@@ -438,19 +438,21 @@ class IncidentBl:
             should_resolve = True
 
         incident_id = incident.id
-        for attempt in range(max_retries):
-            try:
-                if should_resolve:
+
+        if should_resolve:
+            for attempt in range(max_retries):
+                try:
                     incident.status = IncidentStatus.RESOLVED.value
-                self.session.add(incident)
-                self.session.commit()
-            except StaleDataError as ex:
-                if "expected to update" in ex.args[0]:
-                    self.logger.info(
-                        f"Phantom read detected while updating incident `{incident_id}`, retry #{attempt}"
-                    )
-                    self.session.rollback()
-                    continue
+                    self.session.add(incident)
+                    self.session.commit()
+                    break
+                except StaleDataError as ex:
+                    if "expected to update" in ex.args[0]:
+                        self.logger.info(
+                            f"Phantom read detected while updating incident `{incident_id}`, retry #{attempt}"
+                        )
+                        self.session.rollback()
+                        continue
 
         return incident
 

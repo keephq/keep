@@ -1,0 +1,31 @@
+workflow:
+  id: send-message-telegram-with-htmlmd
+  name: telegram
+  description: telegram
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps: []
+  actions:
+    # Telegram only supports limited formatting. Refer https://core.telegram.org/bots/api#formatting-options
+    - name: telegram-action
+      provider:
+        type: telegram
+        config: "{{ providers.telegram }}"
+        with:
+          chat_id: 1072776973
+          message: "This is html <b>bold <i>italic bold <s>italic bold strikethrough <span class=\"tg-spoiler\">italic bold strikethrough spoiler</span></s> <u>underline italic bold</u></i> bold</b>"
+          # Uses HTML
+          parse_mode: html
+    - name: telegram-action
+      provider:
+        type: telegram
+        config: "{{ providers.telegram }}"
+        with:
+          chat_id: 1072776973
+          message: "This is markdown *bold _italic bold ~italic bold strikethrough ||italic bold strikethrough spoiler||~ __underline italic bold___ bold*"
+          # Uses MarkdownV2
+          parse_mode: markdown

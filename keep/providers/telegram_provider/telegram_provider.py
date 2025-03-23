@@ -7,6 +7,7 @@ import dataclasses
 
 import pydantic
 import telegram
+from telegram.constants import ParseMode
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
@@ -49,7 +50,7 @@ class TelegramProvider(BaseProvider):
         """
         pass
 
-    def _notify(self, chat_id: str = "", message: str = "", **kwargs: dict):
+    def _notify(self, chat_id: str = "", message: str = "", parse_mode: str = None, **kwargs: dict):
         """
         Notify alert message to Telegram using the Telegram Bot API
         https://core.telegram.org/bots/api
@@ -63,11 +64,18 @@ class TelegramProvider(BaseProvider):
             raise ProviderException(
                 f"{self.__class__.__name__} failed to notify alert message to Telegram: chat_id is required"
             )
+        
+        parse_mode_mapping = {
+            "markdown": ParseMode.MARKDOWN_V2,
+            "html": ParseMode.HTML
+        }
+        parse_mode = parse_mode_mapping.get(parse_mode, None)
+
         loop = asyncio.new_event_loop()
         telegram_bot = telegram.Bot(token=self.authentication_config.bot_token)
         try:
             task = loop.create_task(
-                telegram_bot.send_message(chat_id=chat_id, text=message)
+                telegram_bot.send_message(chat_id=chat_id, text=message, parse_mode=parse_mode)
             )
             loop.run_until_complete(task)
         except Exception as e:
