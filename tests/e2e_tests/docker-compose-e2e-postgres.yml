@@ -104,8 +104,9 @@ services:
       - KEEP_JWT_SECRET=verysecretkey
       - KEEP_DEFAULT_USERNAME=keep
       - KEEP_DEFAULT_PASSWORD=keep
-      - REDIS=${REDIS:-false}
-      - REDIS_HOST=${REDIS_HOST:-localhost}
+      # no need to set REDIS_HOST and REDIS_PORT for auth
+      # - REDIS=${REDIS:-false}
+      # - REDIS_HOST=${REDIS_HOST:-localhost}
     depends_on:
       - keep-database-db-auth
 
