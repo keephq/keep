@@ -15,7 +15,7 @@ from sqlalchemy.orm import defer
 from sqlalchemy_utils import UUIDType
 from sqlmodel import Session, select
 
-from keep.api.core.cel_to_sql.mapping_rule_matcher import MappingRuleMatcher
+from keep.api.bl.mapping_rule_matcher import MappingRuleMatcher
 from keep.api.core.config import config
 from keep.api.core.db import batch_enrich
 from keep.api.core.db import enrich_entity as enrich_alert_db, get_last_alert_by_fingerprint, \

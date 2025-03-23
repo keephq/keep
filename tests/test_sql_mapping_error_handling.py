@@ -5,7 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.core.cel_to_sql.mapping_rule_matcher import MappingRuleMatcher
+from keep.api.bl.mapping_rule_matcher import MappingRuleMatcher
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.mapping import MappingRule

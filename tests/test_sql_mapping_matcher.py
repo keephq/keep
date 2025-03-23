@@ -1,7 +1,7 @@
 import pytest
 from sqlmodel import Session, select
 
-from keep.api.core.cel_to_sql.mapping_rule_matcher import MappingRuleMatcher
+from keep.api.bl.mapping_rule_matcher import MappingRuleMatcher
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.mapping import MappingRule
 from tests.fixtures.client import test_app  # noqa
