@@ -43,5 +43,23 @@
       "postgresql": "(COALESCE(((json_column_first) ->> 'intNumberColumnFromMultipleJson')::TEXT, ((json_column_second) ->> 'intNumberColumnFromMultipleJson')::TEXT))::FLOAT",
       "sqlite": "CAST(COALESCE(CAST(json_extract(json_column_first, '$.intNumberColumnFromMultipleJson') as TEXT), CAST(json_extract(json_column_second, '$.intNumberColumnFromMultipleJson') as TEXT)) as REAL)"
     }
+  },
+  {
+    "field": "jsonPropWithoutType",
+    "description": "For JSON prop without type no cast applied",
+    "expected_sql_dialect_based": {
+      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(json_column_first, '$.jsonPropWithoutType'))",
+      "postgresql": "(json_column_first) ->> 'jsonPropWithoutType'",
+      "sqlite": "json_extract(json_column_first, '$.jsonPropWithoutType')"
+    }
+  },
+  {
+    "field": "stringJsonProp",
+    "description": "String JSON prop no cast applied",
+    "expected_sql_dialect_based": {
+      "mysql": "JSON_UNQUOTE(JSON_EXTRACT(json_column_first, '$.stringJsonProp'))",
+      "postgresql": "(json_column_first) ->> 'stringJsonProp'",
+      "sqlite": "json_extract(json_column_first, '$.stringJsonProp')"
+    }
   }
 ]

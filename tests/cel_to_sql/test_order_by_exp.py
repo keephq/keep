@@ -28,6 +28,16 @@ fake_field_configurations = [
         map_to=["JSON(json_column_first).*", "JSON(json_column_second).*"],
         data_type=int,
     ),
+    FieldMappingConfiguration(
+        map_from_pattern="jsonPropWithoutType",
+        map_to=["JSON(json_column_first).*"],
+        data_type=None,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="stringJsonProp",
+        map_to=["JSON(json_column_first).*"],
+        data_type=str,
+    ),
 ]
 properties_metadata = PropertiesMetadata(fake_field_configurations)
 testcases_dict = {}
