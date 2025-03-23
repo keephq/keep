@@ -144,115 +144,125 @@ facet_test_cases = {
 
 @pytest.mark.parametrize("facet_test_case", facet_test_cases.keys())
 def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
-    test_case = facet_test_cases[facet_test_case]
-    facet_name = facet_test_case
-    incident_property_name = test_case["incident_property_name"]
-    column_index = test_case.get("column_index", None)
-    value = test_case["value"]
-    incidents = setup_test_data["incidents"]
+    try:
+        test_case = facet_test_cases[facet_test_case]
+        facet_name = facet_test_case
+        incident_property_name = test_case["incident_property_name"]
+        column_index = test_case.get("column_index", None)
+        value = test_case["value"]
+        incidents = setup_test_data["incidents"]
 
-    init_test(browser, incidents)
+        init_test(browser, incidents)
 
-    assert_facet(browser, facet_name, incidents, incident_property_name)
+        assert_facet(browser, facet_name, incidents, incident_property_name)
 
-    option = browser.locator("[data-testid='facet-value']", has_text=value)
-    option.hover()
+        option = browser.locator("[data-testid='facet-value']", has_text=value)
+        option.hover()
 
-    option.locator("button", has_text="Only").click()
+        option.locator("button", has_text="Only").click()
 
-    assert_incidents_by_column(
-        browser,
-        incidents,
-        lambda alert: value
-        in (
-            alert[incident_property_name]
-            if isinstance(alert[incident_property_name], list)
-            else [alert[incident_property_name]]
-        ),
-        incident_property_name,
-        column_index,
-    )
+        assert_incidents_by_column(
+            browser,
+            incidents,
+            lambda alert: value
+            in (
+                alert[incident_property_name]
+                if isinstance(alert[incident_property_name], list)
+                else [alert[incident_property_name]]
+            ),
+            incident_property_name,
+            column_index,
+        )
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
 
 def test_adding_custom_facet_for_alert_field(browser, setup_test_data):
-    facet_property_path = "alert.custom_tags.env"
-    facet_name = "Custom Env"
-    alert_property_name = facet_property_path
-    value = "environment:staging"
-    current_incidents = setup_test_data["incidents"]
-    incidents_alert = setup_test_data["incidents_alert"]
-    init_test(browser, current_incidents)
+    try:
+        facet_property_path = "alert.custom_tags.env"
+        facet_name = "Custom Env"
+        alert_property_name = facet_property_path
+        value = "environment:staging"
+        current_incidents = setup_test_data["incidents"]
+        incidents_alert = setup_test_data["incidents_alert"]
+        init_test(browser, current_incidents)
 
-    # region Add custom facet
-    browser.locator("button", has_text="Add Facet").click()
+        # region Add custom facet
+        browser.locator("button", has_text="Add Facet").click()
 
-    browser.locator("input[placeholder='Enter facet name']").fill(facet_name)
-    browser.locator("input[placeholder*='Search columns']").fill(facet_property_path)
-    browser.locator("button", has_text=facet_property_path).click()
-    browser.locator("button[data-testid='create-facet-btn']").click()
-    # endregion
-
-    # region Verify that facet is displayed and has correct facet values with counters
-    counters_dict = {}
-    expect(
-        browser.locator("[data-testid='facet']", has_text=facet_name)
-    ).to_be_visible()
-    for incident in current_incidents:
-        incident_alerts = incidents_alert.get(incident["id"], [])
-        seen_values = set()
-        for alert in incident_alerts:
-            facet_value = alert.get("custom_tags", {}).get("env", "None")
-
-            if facet_value in seen_values:
-                continue
-
-            if facet_value not in counters_dict:
-                counters_dict[facet_value] = 0
-
-            counters_dict[facet_value] += 1
-            seen_values.add(facet_value)
-
-    facet_locator = browser.locator("[data-testid='facet']", has_text=facet_name)
-
-    for facet_value, count in counters_dict.items():
-        expect(facet_locator).to_be_visible()
-        facet_value_locator = facet_locator.locator(
-            "[data-testid='facet-value']", has_text=facet_value
+        browser.locator("input[placeholder='Enter facet name']").fill(facet_name)
+        browser.locator("input[placeholder*='Search columns']").fill(
+            facet_property_path
         )
-        expect(facet_value_locator).to_be_visible()
+        browser.locator("button", has_text=facet_property_path).click()
+        browser.locator("button[data-testid='create-facet-btn']").click()
+        # endregion
+
+        # region Verify that facet is displayed and has correct facet values with counters
+        counters_dict = {}
         expect(
-            facet_value_locator.locator("[data-testid='facet-value-count']")
-        ).to_contain_text(str(count))
-    # endregion
+            browser.locator("[data-testid='facet']", has_text=facet_name)
+        ).to_be_visible()
+        for incident in current_incidents:
+            incident_alerts = incidents_alert.get(incident["id"], [])
+            seen_values = set()
+            for alert in incident_alerts:
+                facet_value = alert.get("custom_tags", {}).get("env", "None")
 
-    # region Select facet value and verify that only incidents with selected value are displayed
-    option = facet_locator.locator("[data-testid='facet-value']", has_text=value)
-    option.hover()
-    option.locator("button", has_text="Only").click()
+                if facet_value in seen_values:
+                    continue
 
-    assert_incidents_by_column(
-        browser,
-        current_incidents[:20],
-        lambda incident: len(
-            list(
-                filter(
-                    lambda alert: alert.get("custom_tags", {}).get("env", None)
-                    == value,
-                    incidents_alert.get(incident["id"], []),
+                if facet_value not in counters_dict:
+                    counters_dict[facet_value] = 0
+
+                counters_dict[facet_value] += 1
+                seen_values.add(facet_value)
+
+        facet_locator = browser.locator("[data-testid='facet']", has_text=facet_name)
+
+        for facet_value, count in counters_dict.items():
+            expect(facet_locator).to_be_visible()
+            facet_value_locator = facet_locator.locator(
+                "[data-testid='facet-value']", has_text=facet_value
+            )
+            expect(facet_value_locator).to_be_visible()
+            expect(
+                facet_value_locator.locator("[data-testid='facet-value-count']")
+            ).to_contain_text(str(count))
+        # endregion
+
+        # region Select facet value and verify that only incidents with selected value are displayed
+        option = facet_locator.locator("[data-testid='facet-value']", has_text=value)
+        option.hover()
+        option.locator("button", has_text="Only").click()
+
+        assert_incidents_by_column(
+            browser,
+            current_incidents[:20],
+            lambda incident: len(
+                list(
+                    filter(
+                        lambda alert: alert.get("custom_tags", {}).get("env", None)
+                        == value,
+                        incidents_alert.get(incident["id"], []),
+                    )
                 )
             )
+            > 0,
+            alert_property_name,
+            None,
         )
-        > 0,
-        alert_property_name,
-        None,
-    )
-    browser.on("dialog", lambda dialog: dialog.accept())
-    browser.locator("[data-testid='facet']", has_text=facet_name).locator(
-        '[data-testid="delete-facet"]'
-    ).click()
-    expect(
-        browser.locator("[data-testid='facet']", has_text=facet_name)
-    ).not_to_be_visible()
-    # endregion
+        browser.on("dialog", lambda dialog: dialog.accept())
+        browser.locator("[data-testid='facet']", has_text=facet_name).locator(
+            '[data-testid="delete-facet"]'
+        ).click()
+        expect(
+            browser.locator("[data-testid='facet']", has_text=facet_name)
+        ).not_to_be_visible()
+        # endregion
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
 
 sort_tescases = {
     "sort by lastReceived asc/dsc": {
@@ -271,51 +281,57 @@ def test_sort_asc_dsc(
     setup_page_logging,
     failure_artifacts,
 ):
-    test_case = sort_tescases[sort_test_case]
-    column_id = test_case["column_id"]
-    sort_callback = test_case["sort_callback"]
-    current_incidents = setup_test_data["incidents"]
-    name_column_index = 3
-    init_test(browser, current_incidents)
     try:
-        expect(
-            browser.locator("table[data-testid='incidents-table'] tbody tr")
-        ).to_have_count(len(current_incidents))
+        test_case = sort_tescases[sort_test_case]
+        column_id = test_case["column_id"]
+        sort_callback = test_case["sort_callback"]
+        current_incidents = setup_test_data["incidents"]
+        name_column_index = 3
+        init_test(browser, current_incidents)
+        try:
+            expect(
+                browser.locator("table[data-testid='incidents-table'] tbody tr")
+            ).to_have_count(len(current_incidents))
+        except Exception:
+            save_failure_artifacts(browser, log_entries=[])
+            raise
+
+        if column_id == "creation_time":
+            browser.locator(
+                f"table[data-testid='incidents-table'] thead th [data-testid='sort-direction-{column_id}']",
+            ).click()  # to reset default sorting by creation_time to no sorting
+
+        for sort_direction_title in ["Sort ascending", "Sort descending"]:
+            sorted_alerts = sorted(current_incidents, key=sort_callback)
+
+            if sort_direction_title == "Sort descending":
+                sorted_alerts = list(reversed(sorted_alerts))
+
+            column_sort_direction_locator = browser.locator(
+                f"table[data-testid='incidents-table'] thead th [data-testid='sort-direction-{column_id}']",
+            )
+            expect(column_sort_direction_locator).to_be_visible()
+            column_sort_direction_locator.click()
+            rows = browser.locator("table[data-testid='incidents-table'] tbody tr")
+
+            number_of_missmatches = 0
+            for index, incident in enumerate(sorted_alerts):
+                row_locator = rows.nth(index)
+                column_locator = row_locator.locator("td").nth(name_column_index)
+                try:
+                    expect(column_locator).to_contain_text(
+                        incident["user_generated_name"]
+                    )
+                except Exception as e:
+                    save_failure_artifacts(browser, log_entries=[])
+                    number_of_missmatches += 1
+                    if number_of_missmatches > 2:
+                        raise e
+                    else:
+                        print(
+                            f"Expected: {incident['user_generated_name']} but got: {column_locator.text_content()}"
+                        )
+                        continue
     except Exception:
         save_failure_artifacts(browser, log_entries=[])
         raise
-
-    if column_id == "creation_time":
-        browser.locator(
-            f"table[data-testid='incidents-table'] thead th [data-testid='sort-direction-{column_id}']",
-        ).click()  # to reset default sorting by creation_time to no sorting
-
-    for sort_direction_title in ["Sort ascending", "Sort descending"]:
-        sorted_alerts = sorted(current_incidents, key=sort_callback)
-
-        if sort_direction_title == "Sort descending":
-            sorted_alerts = list(reversed(sorted_alerts))
-
-        column_sort_direction_locator = browser.locator(
-            f"table[data-testid='incidents-table'] thead th [data-testid='sort-direction-{column_id}']",
-        )
-        expect(column_sort_direction_locator).to_be_visible()
-        column_sort_direction_locator.click()
-        rows = browser.locator("table[data-testid='incidents-table'] tbody tr")
-
-        number_of_missmatches = 0
-        for index, incident in enumerate(sorted_alerts):
-            row_locator = rows.nth(index)
-            column_locator = row_locator.locator("td").nth(name_column_index)
-            try:
-                expect(column_locator).to_contain_text(incident["user_generated_name"])
-            except Exception as e:
-                save_failure_artifacts(browser, log_entries=[])
-                number_of_missmatches += 1
-                if number_of_missmatches > 2:
-                    raise e
-                else:
-                    print(
-                        f"Expected: {incident['user_generated_name']} but got: {column_locator.text_content()}"
-                    )
-                    continue
