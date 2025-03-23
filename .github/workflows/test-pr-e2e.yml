@@ -267,6 +267,8 @@ jobs:
         redis_enabled: [true, false]
     env:
       REDIS: ${{ matrix.redis_enabled }}
+      REDIS_HOST: keep-redis
+      REDIS_PORT: 6379
     steps:
       - name: Checkout
         uses: actions/checkout@v3
