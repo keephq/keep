@@ -444,7 +444,7 @@ def __handle_formatted_events(
                     fields=fields,
                     provider_id=enriched_formatted_event.providerId,
                     provider_type=enriched_formatted_event.providerType,
-                    # session=session,
+                    session=session,
                 )
 
                 logger.debug(
