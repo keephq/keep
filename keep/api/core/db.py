@@ -4134,7 +4134,7 @@ def add_alerts_to_incident(
 
             incident.start_time = started_at
             incident.last_seen_time = last_seen_at
-
+            incident_id = incident.id
             for attempt in range(max_retries):
                 try:
                     session.add(incident)
@@ -4143,7 +4143,7 @@ def add_alerts_to_incident(
                 except StaleDataError as ex:
                     if "expected to update" in ex.args[0]:
                         logger.info(
-                            f"Phantom read detected while updating incident `{incident.id}`, retry #{attempt}"
+                            f"Phantom read detected while updating incident `{incident_id}`, retry #{attempt}"
                         )
                         session.rollback()
                         continue
