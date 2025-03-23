@@ -43,6 +43,7 @@ services:
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
+      - KEEP_ALERT_FIELDS_ENABLED=false
     depends_on:
       - keep-database
 
@@ -106,6 +107,7 @@ services:
       - KEEP_DEFAULT_PASSWORD=keep
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
+      - KEEP_ALERT_FIELDS_ENABLED=false
     depends_on:
       - keep-database-db-auth
 

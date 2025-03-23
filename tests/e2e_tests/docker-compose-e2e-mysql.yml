@@ -44,6 +44,8 @@ services:
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
+      # if REDIS is true - then disable KEEP_ALERT_FIELDS_ENABLED
+      - KEEP_ALERT_FIELDS_ENABLED=false
     ports:
       - "8080:8080"
     depends_on:
@@ -115,6 +117,7 @@ services:
       - KEEP_DEFAULT_PASSWORD=keep
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
+      - KEEP_ALERT_FIELDS_ENABLED=false
     depends_on:
       keep-database-db-auth:
         condition: service_healthy
