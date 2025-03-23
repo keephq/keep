@@ -19,4 +19,18 @@ python "$SCRIPT_DIR/server_jobs_bg.py" &
 }
 
 # Execute the CMD provided in the Dockerfile or as arguments
-exec "$@"
+
+# Check for REDIS env variable == true
+if [ "$REDIS" != "true" ]; then
+    # just run gunicorn
+    exec "$@"
+# else, we want differnt workers for API and for processing
+else
+    echo "Running with Redis"
+    # default number of workers is two
+    KEEP_WORKERS=${KEEP_WORKERS:-2}
+    # Run gunicorn with the specified workers
+    KEEP_WORKERS=${KEEP_WORKERS} REDIS=true python -m keep.api.arq_worker &
+    echo "Running gunicorn with $KEEP_WORKERS workers"
+    exec "$@"
+fi

@@ -24,14 +24,6 @@ from starlette_context.middleware import RawContextMiddleware
 import keep.api.logging
 import keep.api.observability
 import keep.api.utils.import_ee
-from keep.api.arq_worker import get_arq_worker, safe_run_worker
-from keep.api.consts import (
-    KEEP_ARQ_QUEUE_BASIC,
-    KEEP_ARQ_TASK_POOL,
-    KEEP_ARQ_TASK_POOL_ALL,
-    KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
-    KEEP_ARQ_TASK_POOL_NONE,
-)
 from keep.api.core.config import config
 from keep.api.core.db import dispose_session
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -87,6 +79,10 @@ TOPOLOGY = config("KEEP_TOPOLOGY_PROCESSOR", default="false", cast=bool)
 KEEP_DEBUG_TASKS = config("KEEP_DEBUG_TASKS", default="false", cast=bool)
 KEEP_DEBUG_MIDDLEWARES = config("KEEP_DEBUG_MIDDLEWARES", default="false", cast=bool)
 KEEP_USE_LIMITER = config("KEEP_USE_LIMITER", default="false", cast=bool)
+
+# New env var that allows to control which services to keep running
+# Currently Backwards compatible with the old env var
+SERVICES = config("KEEP_SERVICES", default=None)
 
 AUTH_TYPE = config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH.value).lower()
 try:
@@ -162,19 +158,6 @@ async def startup():
         except Exception:
             logger.exception("Failed to start the topology processor")
 
-    if KEEP_ARQ_TASK_POOL != KEEP_ARQ_TASK_POOL_NONE:
-        event_loop = asyncio.get_event_loop()
-        if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL:
-            logger.info("Starting all task pools")
-            basic_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
-            event_loop.create_task(safe_run_worker(basic_worker))
-        elif KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_BASIC_PROCESSING:
-            logger.info("Starting Basic Processing task pool")
-            arq_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
-            event_loop.create_task(safe_run_worker(arq_worker))
-        else:
-            raise ValueError(f"Invalid task pool: {KEEP_ARQ_TASK_POOL}")
-
     logger.info("Services started successfully")
 
 
@@ -203,7 +186,7 @@ async def shutdown():
         except TypeError:
             pass
         logger.info("Consumer stopped successfully")
-    # ARQ workers stops themselves? see "shutdown on SIGTERM" in logs
+
     logger.info("Keep shutdown complete")
 
 
