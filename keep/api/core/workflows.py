@@ -194,30 +194,12 @@ def build_workflows_query(
         sort_by = "started"
         sort_dir = "desc"
 
-    metadata = properties_metadata.get_property_metadata(sort_by)
-    group_by_exp = []
-
-    for item in metadata.field_mappings:
-        if isinstance(item, JsonFieldMapping):
-            group_by_exp.append(
-                cel_to_sql_instance.json_extract_as_text(
-                    item.json_prop, item.prop_in_json
-                )
-            )
-        elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-            group_by_exp.append(item.map_to)
-
-    if len(group_by_exp) > 1:
-        order_by_field = cel_to_sql_instance.coalesce(
-            [cel_to_sql_instance.cast(item, str) for item in group_by_exp]
-        )
-    else:
-        order_by_field = group_by_exp[0]
+    order_by_exp = cel_to_sql_instance.get_order_by_exp(sort_by)
 
     if sort_dir == "desc":
-        base_query = base_query.order_by(desc(text(order_by_field)))
+        base_query = base_query.order_by(desc(text(order_by_exp)))
     else:
-        base_query = base_query.order_by(asc(text(order_by_field)))
+        base_query = base_query.order_by(asc(text(order_by_exp)))
 
     base_query = base_query.limit(limit).offset(offset)
 
