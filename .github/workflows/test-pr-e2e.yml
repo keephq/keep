@@ -342,7 +342,7 @@ jobs:
       # Start ALL services in one go
       - name: Start ALL services
         run: |
-          echo "Starting ALL services for ${{ matrix.db_type }} with REDIS=${{ matrix.redis_enabled }}..."
+          echo "Starting ALL services for ${{ matrix.db_type }} with REDIS=${{ matrix.redis_enabled }} REDIS_HOST=${{ env.REDIS_HOST }}..."
 
           # Pull the required images first
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull

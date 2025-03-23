@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import multiprocessing
+import os
 from typing import Optional
 from uuid import uuid4
 
@@ -177,6 +178,8 @@ def run_worker_process(queue_name: str, worker_index: int):
     """
     logger.info(f"Worker process {worker_index} starting")
     dispose_session()  # Dispose any existing DB connections in the child process
+    pid = os.getpid()
+    logger.info(f"Worker process {worker_index} started with PID: {pid}")
     asyncio.run(start_worker_instance(queue_name, worker_index))
 
 

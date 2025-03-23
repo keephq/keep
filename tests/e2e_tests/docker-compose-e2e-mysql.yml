@@ -43,6 +43,7 @@ services:
       - SECRET_MANAGER_DIRECTORY=/app
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
+      - REDIS_HOST=${REDIS_HOST:-localhost}
     ports:
       - "8080:8080"
     depends_on:
@@ -113,6 +114,7 @@ services:
       - KEEP_DEFAULT_USERNAME=keep
       - KEEP_DEFAULT_PASSWORD=keep
       - REDIS=${REDIS:-false}
+      - REDIS_HOST=${REDIS_HOST:-localhost}
     depends_on:
       keep-database-db-auth:
         condition: service_healthy
