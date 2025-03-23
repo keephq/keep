@@ -21,23 +21,27 @@ depends_on = None
 def upgrade() -> None:
     # First check if the column is nullable (for those who haven't migrated yet)
     connection = op.get_bind()
+    dialect = connection.dialect.name
     inspector = sa.inspect(connection)
     columns = inspector.get_columns('workflowexecution')
     workflow_id_column = next((c for c in columns if c['name'] == 'workflow_id'), None)
     
     is_nullable = workflow_id_column.get('nullable', True) if workflow_id_column else True
 
-    # Check if the foreign key constraint exists
+    # Find the actual foreign key constraint name for workflow_id
     foreign_keys = inspector.get_foreign_keys('workflowexecution')
-    fk_names = [fk.get('name') for fk in foreign_keys]
-
-    # First drop the foreign key constraint
-    if 'workflowexecution_ibfk_2' in fk_names or any(fk.get('referred_table') == 'workflow' and 'workflow_id' in fk.get('constrained_columns', []) for fk in foreign_keys):
-        with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
-            batch_op.drop_constraint('workflowexecution_ibfk_2', type_='foreignkey')
+    workflow_fk = None
+    for fk in foreign_keys:
+        if 'workflow_id' in fk.get('constrained_columns', []) and fk.get('referred_table') == 'workflow':
+            workflow_fk = fk
+            break
     
-    # Update NULL values to 'test' if needed
-        batch_op.drop_constraint('workflowexecution_ibfk_2', type_='foreignkey')
+    fk_name = workflow_fk.get('name') if workflow_fk else None
+    
+    # Drop the foreign key constraint if it exists
+    if fk_name:
+        with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
+            batch_op.drop_constraint(fk_name, type_='foreignkey')
     
     # Update NULL values to 'test' if needed
     if is_nullable:
@@ -51,9 +55,9 @@ def upgrade() -> None:
         # Make column NOT NULL with default 'test'
         batch_op.alter_column(
             "workflow_id", 
-            existing_type=mysql.VARCHAR(length=255), 
+            existing_type=mysql.VARCHAR(length=255) if dialect == 'mysql' else sa.String(length=255),
             nullable=False,
-            server_default="TEST"
+            server_default="test"
         )
         
         # Only drop indexes if they exist
@@ -65,21 +69,36 @@ def upgrade() -> None:
         
         # Create new index (this will fail if it already exists)
         try:
-            batch_op.create_index(
-                "idx_workflowexecution_workflow_tenant_started_status",
-                ["workflow_id", "tenant_id", "started", sa.text("status(255)")],
-                unique=False,
-            )
+            # Create the index based on dialect
+            # This is done outside the batch_alter_table to handle dialect differences properly
+            if dialect == 'mysql':
+                op.execute(
+                    "CREATE INDEX idx_workflowexecution_workflow_tenant_started_status ON "
+                    "workflowexecution (workflow_id, tenant_id, started, status(255))"
+                )
+            elif dialect == 'postgresql':
+                # PostgreSQL doesn't support length specifiers in indexes 
+                op.execute(
+                    "CREATE INDEX idx_workflowexecution_workflow_tenant_started_status ON "
+                    "workflowexecution (workflow_id, tenant_id, started, status)"
+                )
+            else:
+                # SQLite or other dialects
+                with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
+                    batch_op.create_index(
+                        "idx_workflowexecution_workflow_tenant_started_status",
+                        ["workflow_id", "tenant_id", "started", "status"],
+                        unique=False
+                    )
         except Exception as e:
             # Log that the index already exists, but don't fail the migration
             print(f"Note: Index creation skipped - {str(e)}")
         
-    inspector = sa.inspect(connection)  # Refresh inspector to see current state
+    # At the end, add the foreign key back
+    # Need to check again as we may have created or modified tables
+    inspector = sa.inspect(connection)
     foreign_keys = inspector.get_foreign_keys('workflowexecution')
-    fk_names = [fk.get('name') for fk in foreign_keys]
-    
-    # Only add the constraint back if it doesn't exist
-    has_workflow_fk = 'workflowexecution_ibfk_2' in fk_names or any(
+    has_workflow_fk = any(
         fk.get('referred_table') == 'workflow' and 'workflow_id' in fk.get('constrained_columns', []) 
         for fk in foreign_keys
     )
@@ -88,7 +107,7 @@ def upgrade() -> None:
         try:
             with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
                 batch_op.create_foreign_key(
-                    'workflowexecution_ibfk_2',
+                    None,  # Let the database generate a name
                     'workflow',
                     ['workflow_id'],
                     ['id'],
