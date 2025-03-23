@@ -2,11 +2,11 @@ import { createColumnHelper, DisplayColumnDef } from "@tanstack/react-table";
 import { GenericTable } from "@/components/table/GenericTable";
 import {
   EnrichmentEvent,
-  PaginatedMappingExecutionDto,
+  PaginatedEnrichmentExecutionDto,
 } from "@/shared/api/enrichment-events";
 import { Dispatch, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
-import { getIcon } from "../../workflows/[workflow_id]/workflow-execution-table";
+import { getIcon } from "../../app/(keep)/workflows/[workflow_id]/workflow-execution-table";
 import TimeAgo from "react-timeago";
 import { formatDistanceToNowStrict } from "date-fns";
 
@@ -16,11 +16,11 @@ interface Pagination {
 }
 
 interface Props {
-  executions: PaginatedMappingExecutionDto;
+  executions: PaginatedEnrichmentExecutionDto;
   setPagination: Dispatch<SetStateAction<Pagination>>;
 }
 
-export function MappingExecutionTable({ executions, setPagination }: Props) {
+export function ExecutionsTable({ executions, setPagination }: Props) {
   const columnHelper = createColumnHelper<EnrichmentEvent>();
   const router = useRouter();
 

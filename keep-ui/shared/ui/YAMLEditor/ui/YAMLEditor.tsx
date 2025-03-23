@@ -16,11 +16,10 @@ import { parseDocument, Document } from "yaml";
 import { useWorkflowJsonSchema } from "@/entities/workflows/model/useWorkflowJsonSchema";
 import { KeepLoader } from "../../KeepLoader/KeepLoader";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
-import "./YAMLEditor.css";
 import { MonacoYAMLEditor } from "./MonacoYamlEditor";
+import "./YAMLEditor.css";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
-
 interface Props {
   workflowRaw: string;
   workflowId?: string;

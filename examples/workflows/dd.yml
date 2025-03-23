@@ -1,7 +1,9 @@
-alert:
-  id: db-disk-space
+workflow:
+  id: datadog-log-monitor
+  name: Datadog Log Monitor
+  description: Monitors Datadog logs for specific services and sends Slack notifications when error conditions are detected.
   triggers:
-  - type: manual
+    - type: manual
   steps:
     - name: check-error-rate
       provider:
@@ -14,11 +16,11 @@ alert:
   actions:
     - name: trigger-slack
       condition:
-      - name: threshold-condition
-        type: threshold
-        value: "keep.len({{ steps.check-error-rate.results.logs }})"
-        compare_to: 0
-        operator: ">"
+        - name: threshold-condition
+          type: threshold
+          value: "keep.len({{ steps.check-error-rate.results.logs }})"
+          compare_to: 0
+          operator: ">"
       provider:
         type: slack
         config: " {{ providers.slack-demo }} "
@@ -28,15 +30,15 @@ alert:
           message: >
             The db is down. Please investigate.
           blocks:
-          - type: section
-            text:
-              type: plain_text
-              text: |
-                    Query: {{ steps.check-error-rate.provider_parameters.query }}
-                    Timeframe: {{ steps.check-error-rate.provider_parameters.timeframe }}
-                    Number of logs: keep.len({{ steps.check-error-rate.results.logs }})
-                    From: {{ steps.check-error-rate.provider_parameters.from }}
-                    To: {{ steps.check-error-rate.provider_parameters.to }}
+            - type: section
+              text:
+                type: plain_text
+                text: |
+                  Query: {{ steps.check-error-rate.provider_parameters.query }}
+                  Timeframe: {{ steps.check-error-rate.provider_parameters.timeframe }}
+                  Number of logs: keep.len({{ steps.check-error-rate.results.logs }})
+                  From: {{ steps.check-error-rate.provider_parameters.from }}
+                  To: {{ steps.check-error-rate.provider_parameters.to }}
 
 providers:
   db-server-mock:

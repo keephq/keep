@@ -119,7 +119,7 @@ def get_incidents_meta(
     description="Get last incidents",
 )
 def get_all_incidents(
-    confirmed: bool = True,
+    candidate: bool = False,
     predicted: Optional[bool] = None,
     limit: int = 25,
     offset: int = 0,
@@ -174,7 +174,7 @@ def get_all_incidents(
     try:
         result = incident_bl.query_incidents(
             tenant_id=tenant_id,
-            is_confirmed=confirmed,
+            is_candidate=candidate,
             is_predicted=predicted,
             limit=limit,
             offset=offset,
@@ -505,7 +505,7 @@ def merge_incidents(
     )
 
     try:
-        merged_ids, skipped_ids, failed_ids = merge_incidents_to_id(
+        merged_ids, failed_ids = merge_incidents_to_id(
             tenant_id,
             command.source_incident_ids,
             command.destination_incident_id,
@@ -517,14 +517,12 @@ def merge_incidents(
         else:
             message = f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id} successfully"
 
-        if skipped_ids:
-            message += f", {pluralize(len(skipped_ids), 'incident')} were skipped"
         if failed_ids:
             message += f", {pluralize(len(failed_ids), 'incident')} failed to merge"
+            raise HTTPException(f"Some incidents failed to merge. {message}")
 
         return MergeIncidentsResponseDto(
             merged_incident_ids=merged_ids,
-            skipped_incident_ids=skipped_ids,
             failed_incident_ids=failed_ids,
             destination_incident_id=command.destination_incident_id,
             message=message,
@@ -847,7 +845,9 @@ def change_incident_status(
 
     incident_bl = IncidentBl(tenant_id, session)
 
-    new_incident_dto = incident_bl.change_status(incident_id, change.status, authenticated_entity)
+    new_incident_dto = incident_bl.change_status(
+        incident_id, change.status, authenticated_entity
+    )
 
     return new_incident_dto
 

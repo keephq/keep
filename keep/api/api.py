@@ -24,7 +24,7 @@ from starlette_context.middleware import RawContextMiddleware
 import keep.api.logging
 import keep.api.observability
 import keep.api.utils.import_ee
-from keep.api.arq_worker import get_arq_worker
+from keep.api.arq_worker import get_arq_worker, safe_run_worker
 from keep.api.consts import (
     KEEP_ARQ_QUEUE_BASIC,
     KEEP_ARQ_TASK_POOL,
@@ -167,11 +167,11 @@ async def startup():
         if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL:
             logger.info("Starting all task pools")
             basic_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
-            event_loop.create_task(basic_worker.async_run())
+            event_loop.create_task(safe_run_worker(basic_worker))
         elif KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_BASIC_PROCESSING:
             logger.info("Starting Basic Processing task pool")
             arq_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
-            event_loop.create_task(arq_worker.async_run())
+            event_loop.create_task(safe_run_worker(arq_worker))
         else:
             raise ValueError(f"Invalid task pool: {KEEP_ARQ_TASK_POOL}")
 

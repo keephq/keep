@@ -12,6 +12,9 @@ module.exports = {
   darkMode: "class",
   theme: {
     extend: {
+      zIndex: {
+        60: "60",
+      },
       gridTemplateColumns: {
         20: "repeat(20, minmax(0, 1fr))",
         24: "repeat(24, minmax(0, 1fr))",

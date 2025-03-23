@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.39.0"
+version = "0.40.2"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
@@ -64,7 +64,7 @@ azure-mgmt-containerservice = "^27.0.0"
 opentelemetry-exporter-gcp-trace = "^1.6.0"
 pusher = "^3.3.2"
 sendgrid = "^6.10.0"
-gunicorn = "^22.0.0"
+gunicorn = "^23.0.0"
 cel-python = "^0.1.5"
 pymongo = "^4.6.3"
 google-cloud-trace = "1.15.0"

@@ -84,7 +84,7 @@ export function IncidentList({
   });
 
   const mainCelQuery = useMemo(() => {
-    const filterArray = ["is_confirmed == true", dateRangeCel];
+    const filterArray = ["is_candidate == false", dateRangeCel];
     return filterArray.filter(Boolean).join(" && ");
   }, [dateRangeCel]);
 
@@ -133,7 +133,7 @@ export function IncidentList({
   );
 
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
-    useIncidents(false, true);
+    useIncidents(true, true);
   const { incidentChangeToken } = usePollIncidents(
     mutateIncidents,
     dateRange.paused
@@ -147,8 +147,8 @@ export function IncidentList({
     null
   );
   const [filterRevalidationToken, setFilterRevalidationToken] = useState<
-    string | null
-  >(null);
+    string | undefined
+  >(undefined);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 
   useEffect(() => {
@@ -229,11 +229,7 @@ export function IncidentList({
               height={16}
               width={16}
               title={facetOption.display_name}
-              src={
-                facetOption.display_name.includes("@")
-                  ? "/icons/mailgun-icon.png"
-                  : `/icons/${facetOption.display_name}-icon.png`
-              }
+              src={`/icons/${facetOption.display_name}-icon.png`}
             />
           );
         },

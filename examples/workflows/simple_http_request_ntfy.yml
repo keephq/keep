@@ -13,14 +13,14 @@ alert:
   actions:
     - name: trigger-ntfy
       condition:
-      - name: threshold-condition
-        type: threshold
-        # datetime_compare(t1, t2) compares t1-t2 and returns the diff in hours
-        #   utcnow() returns the local machine datetime in UTC
-        #   to_utc() converts a datetime to UTC
-        value: keep.datetime_compare(keep.utcnow(), keep.to_utc({{ steps.get-max-datetime.results[0][0] }}))
-        compare_to: 1 # hours
-        compare_type: gt # greater than
+        - name: threshold-condition
+          type: threshold
+          # datetime_compare(t1, t2) compares t1-t2 and returns the diff in hours
+          #   utcnow() returns the local machine datetime in UTC
+          #   to_utc() converts a datetime to UTC
+          value: keep.datetime_compare(keep.utcnow(), keep.to_utc({{ steps.get-max-datetime.results[0][0] }}))
+          compare_to: 1 # hours
+          compare_type: gt # greater than
       provider:
         type: http
         with:
@@ -30,3 +30,8 @@ alert:
             fingerprint: "{{ alert.fingerprint }}"
             some_customized_field: "{{ keep.strip(alert.some_attribute) }}"
           url: "https://ntfy.sh/MoRen5UlPEQr8s4Y"
+
+workflow:
+  id: mysql-ntfy-monitor
+  name: MySQL Ntfy Monitor
+  description: Monitors MySQL datetime values and sends notifications through Ntfy when thresholds are exceeded.

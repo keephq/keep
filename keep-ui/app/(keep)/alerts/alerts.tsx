@@ -94,6 +94,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     isLoading: isAsyncLoading,
     mutate: mutateAlerts,
     error: alertsError,
+    queryTimeInSeconds,
   } = useLastAlerts(alertsQueryState);
 
   useEffect(() => {
@@ -205,6 +206,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         onPoll={handleOnPoll}
         onQueryChange={handleOnQueryChange}
         onLiveUpdateStateChange={setIsLiveUpdateEnabled}
+        queryTimeInSeconds={queryTimeInSeconds}
       />
       <AlertHistory
         alerts={alerts || []}

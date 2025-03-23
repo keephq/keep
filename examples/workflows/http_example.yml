@@ -1,11 +1,13 @@
 workflow:
-  id: tiering-workflow
+  id: incident-tier-escalation
+  name: Incident Tier Escalation
+  description: Manages incident escalation tiers based on alert conditions, automatically adjusting notification tiers and sending appropriate Slack notifications for each level.
   triggers:
-  # when an incident is created or updated with a new alert
-  - type: incident
-    on:
-      - create
-      - update
+    # when an incident is created or updated with a new alert
+    - type: incident
+      on:
+        - create
+        - update
   actions:
     - name: send-slack-message-tier-0
       # send tier0 if this is a new incident (no tier set) or if the incident is tier0 but the alert is alert2

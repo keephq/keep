@@ -29,7 +29,7 @@ export interface Filters {
 }
 
 export const useIncidents = (
-  confirmed: boolean | null = true,
+  candidate: boolean | null = true,
   predicted: boolean | null = null,
   limit: number = DEFAULT_INCIDENTS_PAGE_SIZE,
   offset: number = 0,
@@ -43,8 +43,8 @@ export const useIncidents = (
 
   const filtersParams = new URLSearchParams();
 
-  if (typeof confirmed === "boolean") {
-    filtersParams.set("confirmed", confirmed.toString());
+  if (typeof candidate === "boolean") {
+    filtersParams.set("candidate", candidate.toString());
   }
 
   if (predicted !== undefined && predicted !== null) {
@@ -190,9 +190,9 @@ export const usePollIncidents = (
   paused: boolean = false
 ) => {
   const { bind, unbind } = useWebsocket();
-  const [incidentChangeToken, setIncidentChangeToken] = useState<string | null>(
-    null
-  );
+  const [incidentChangeToken, setIncidentChangeToken] = useState<
+    string | undefined
+  >(undefined);
   const handleIncoming = useCallback(
     (data: any) => {
       mutateIncidents();

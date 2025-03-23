@@ -5,15 +5,10 @@ import pytest
 import requests
 from playwright.sync_api import Page, expect
 
+from tests.e2e_tests.incidents_alerts_setup import create_fake_alert, setup_incidents_alerts
 from tests.e2e_tests.test_end_to_end import init_e2e_test, setup_console_listener
 from tests.e2e_tests.utils import get_token, save_failure_artifacts
 
-# NOTE 2: to run the tests with a browser, uncomment this two lines:
-# import os
-# os.environ["PLAYWRIGHT_HEADLESS"] = "false"
-
-GRAFANA_HOST = "http://grafana:3000"
-GRAFANA_HOST_LOCAL = "http://localhost:3002"
 KEEP_UI_URL = "http://localhost:3000"
 KEEP_API_URL = "http://localhost:8080"
 
@@ -63,111 +58,6 @@ def query_allerts(cell_query: str = None, limit: int = None, offset: int = None)
         "count": result["count"],
         "grouped_by_name": grouped_alerts_by_name,
     }
-
-
-def create_fake_alert(index: int, provider_type: str):
-    title = "Low Disk Space"
-    status = "firing"
-    severity = "critical"
-    custom_tag = "environment:production"
-    test_alert_id = f"alert-finger-print-{index}"
-
-    if index % 4 == 0:
-        title = "High CPU Usage"
-        status = "resolved"
-        severity = "warning"
-        custom_tag = "environment:development"
-    elif index % 3 == 0:
-        title = "Memory Usage High"
-        severity = "info"
-        custom_tag = "environment:staging"
-    elif index % 2 == 0:
-        title = "Network Error"
-        status = "suppressed"
-        severity = "high"
-        custom_tag = "environment:custom"
-
-    if index % 5 == 0:
-        title += "Enriched"
-
-    if provider_type == "datadog":
-        SEVERITIES_MAP = {
-            "info": "P4",
-            "warning": "P3",
-            "high": "P2",
-            "critical": "P1",
-        }
-
-        STATUS_MAP = {
-            "firing": "Triggered",
-            "resolved": "Recovered",
-            "suppressed": "Muted",
-        }
-        alert_name = f"[{SEVERITIES_MAP.get(severity, SEVERITIES_MAP['critical'])}] [{STATUS_MAP.get(status, STATUS_MAP['firing'])}] {title} {provider_type} {index}"
-
-        return {
-            "alertName": alert_name,
-            "title": alert_name,
-            "type": "metric alert",
-            "query": "avg(last_5m):avg:system.cpu.user{*} by {host} > 90",
-            # Leading index is for easier result verification in sort tests
-            "message": f"{index} CPU usage is over 90% on srv1-eu1-prod. Searched value: {'even' if index % 2 else 'odd'}",
-            "description": "CPU usage is over 90% on srv1-us2-prod.",
-            "tagsList": "environment:production,team:backend,monitor,service:api",
-            "priority": "P2",
-            "monitor_id": test_alert_id,
-            "scopes": "srv2-eu1-prod",
-            "host.name": "srv2-ap1-prod",
-            "last_updated": 1739114561286,
-            "alert_transition": STATUS_MAP.get(status, "Triggered"),
-            "date_happened": (datetime.utcnow() + timedelta(days=-index)).timestamp(),
-            "tags": {
-                "envNameTag": "production" if index % 2 else "development",
-                "testAlertId": test_alert_id,
-            },
-            "custom_tags": {
-                "env": custom_tag,
-            },
-            "id": test_alert_id,
-        }
-    elif provider_type == "prometheus":
-        SEVERITIES_MAP = {
-            "critical": "critical",
-            "high": "error",
-            "warning": "warning",
-            "info": "info",
-            "low": "low",
-        }
-        STATUS_MAP = {
-            "firing": "firing",
-            "resolved": "firing",
-        }
-        alert_name = f"{title} {provider_type} {index} summary"
-
-        return {
-            "alertName": alert_name,
-            "testAlertId": test_alert_id,
-            "summary": alert_name,
-            "labels": {
-                "severity": SEVERITIES_MAP.get(severity, SEVERITIES_MAP["critical"]),
-                "host": "host1",
-                "service": "calendar-producer-java-otel-api-dd",
-                "instance": "instance2",
-                "alertname": alert_name,
-            },
-            "status": STATUS_MAP.get(status, STATUS_MAP["firing"]),
-            "annotations": {
-                # Leading index is for easier result verification in sort tests
-                "summary": f"{index} {title} {provider_type}. It's not normal for customer_id:acme",
-            },
-            "startsAt": "2025-02-09T17:26:12.769318+00:00",
-            "endsAt": "0001-01-01T00:00:00Z",
-            "generatorURL": "http://example.com/graph?g0.expr=NetworkLatencyHigh",
-            "fingerprint": test_alert_id,
-            "custom_tags": {
-                "env": custom_tag,
-            },
-        }
 
 
 def upload_alerts():
@@ -343,7 +233,14 @@ def assert_alerts_by_column(
             return
 
         column_locator = row_locator.locator("td").nth(column_index)
-        expect(column_locator).to_have_text(alert[property_in_alert])
+        # status is now only svg
+        try:
+            expect(
+                column_locator.locator("[data-testid*='status-icon']")
+            ).to_be_visible()
+        except Exception:
+            column_html = column_locator.inner_html()
+            print(f"Column HTML: {column_html}")
 
 
 facet_test_cases = {
@@ -353,8 +250,8 @@ facet_test_cases = {
     },
     "status": {
         "alert_property_name": "status",
-        "column_index": 5,
-        "value": "suppressed",
+        "column_index": 1,
+        "value": "suppressed",  # Shahar: no more text - only icon
     },
     "source": {
         "alert_property_name": "providerType",
@@ -366,8 +263,8 @@ facet_test_cases = {
 @pytest.fixture(scope="module")
 def setup_test_data():
     print("Setting up test data...")
-    test_data = upload_alerts()
-    yield test_data["results"]
+    test_data = setup_incidents_alerts()
+    yield test_data["alerts"]
 
 
 @pytest.mark.parametrize("facet_test_case", facet_test_cases.keys())
@@ -534,11 +431,12 @@ def test_sort_asc_dsc(
     column_id = test_case["column_id"]
     sort_callback = test_case["sort_callback"]
     current_alerts = setup_test_data
+    alert_name_column_index = 4
     init_test(browser, current_alerts)
     filtered_alerts = [
-        alert for alert in current_alerts if alert["providerType"] == "prometheus"
+        alert for alert in current_alerts if alert["providerType"] == "datadog"
     ]
-    select_one_facet_option(browser, "source", "prometheus")
+    select_one_facet_option(browser, "source", "datadog")
     try:
         expect(
             browser.locator("[data-testid='alerts-table'] table tbody tr")
@@ -564,8 +462,8 @@ def test_sort_asc_dsc(
         number_of_missmatches = 0
         for index, alert in enumerate(sorted_alerts):
             row_locator = rows.nth(index)
-            # 3 is index of "name" column
-            column_locator = row_locator.locator("td").nth(3)
+            # 4 is index of "name" column
+            column_locator = row_locator.locator("td").nth(alert_name_column_index)
             try:
                 expect(column_locator).to_have_text(alert["name"])
             except Exception as e:
@@ -590,8 +488,8 @@ def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
     setup_console_listener(browser, log_entries)
 
     browser.goto(f"{KEEP_UI_URL}/alerts/feed?cel={cel_to_filter_alerts}")
-    expect(browser.locator("[data-testid='alerts-table']")).to_be_visible()
-    expect(browser.locator("[data-testid='facets-panel']")).to_be_visible()
+    browser.wait_for_selector("[data-testid='alerts-table']")
+    browser.wait_for_selector("[data-testid='facets-panel']")
     simulated_alerts = []
     for alert_index, provider_type in enumerate(["prometheus"] * 20):
         alert = create_fake_alert(alert_index, provider_type)

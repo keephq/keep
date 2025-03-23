@@ -796,7 +796,7 @@ def test_workflow_incident_triggers(
         services=[],
         severity="critical",
         is_predicted=False,
-        is_confirmed=True,
+        is_candidate=False,
     )
 
     # Insert the current alert into the workflow manager

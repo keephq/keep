@@ -250,7 +250,7 @@ def test_get_last_incidents(db_session, create_alert):
             {
                 "user_generated_name": f"test-{i}",
                 "user_summary": f"test-{i}",
-                "is_confirmed": True,
+                "is_candidate": False,
                 "severity": severity,
                 "status": status,
             },
@@ -281,20 +281,23 @@ def test_get_last_incidents(db_session, create_alert):
             SINGLE_TENANT_UUID, incident.id, [alert.fingerprint, alert2.fingerprint]
         )
 
-    incidents_default, incidents_default_count = get_last_incidents(SINGLE_TENANT_UUID)
-    assert len(incidents_default) == 0
-    assert incidents_default_count == 0
-
-    incidents_confirmed, incidents_confirmed_count = get_last_incidents(
-        SINGLE_TENANT_UUID, is_confirmed=True
+    incidents_candidates, incidents_candidates_count = get_last_incidents(
+        SINGLE_TENANT_UUID,
+        is_candidate=True
     )
-    assert len(incidents_confirmed) == 25
-    assert incidents_confirmed_count == 60
+    assert len(incidents_candidates) == 0
+    assert incidents_candidates_count == 0
+
+    incidents, incidents_count = get_last_incidents(
+        SINGLE_TENANT_UUID, is_candidate=False
+    )
+    assert len(incidents) == 25
+    assert incidents_count == 60
     for i in range(25):
-        assert incidents_confirmed[i].user_generated_name == f"test-{i}"
+        assert incidents[i].user_generated_name == f"test-{i}"
 
     incidents_limit_5, incidents_count_limit_5 = get_last_incidents(
-        SINGLE_TENANT_UUID, is_confirmed=True, limit=5
+        SINGLE_TENANT_UUID, is_candidate=False, limit=5
     )
     assert len(incidents_limit_5) == 5
     assert incidents_count_limit_5 == 60
@@ -302,7 +305,7 @@ def test_get_last_incidents(db_session, create_alert):
         assert incidents_limit_5[i].user_generated_name == f"test-{i}"
 
     incidents_limit_5_page_2, incidents_count_limit_5_page_2 = get_last_incidents(
-        SINGLE_TENANT_UUID, is_confirmed=True, limit=5, offset=5
+        SINGLE_TENANT_UUID, is_candidate=False, limit=5, offset=5
     )
 
     assert len(incidents_limit_5_page_2) == 5
@@ -311,7 +314,7 @@ def test_get_last_incidents(db_session, create_alert):
         assert incidents_limit_5_page_2[i].user_generated_name == f"test-{j}"
 
     incidents_with_alerts, _ = get_last_incidents(
-        SINGLE_TENANT_UUID, is_confirmed=True, with_alerts=True
+        SINGLE_TENANT_UUID, is_candidate=False, with_alerts=True
     )
     for i in range(25):
         if incidents_with_alerts[i].status == IncidentStatus.MERGED.value:
@@ -322,7 +325,7 @@ def test_get_last_incidents(db_session, create_alert):
     # Test sorting
 
     incidents_sorted_by_severity, _ = get_last_incidents(
-        SINGLE_TENANT_UUID, is_confirmed=True, sorting=IncidentSorting.severity, limit=5
+        SINGLE_TENANT_UUID, is_candidate=False, sorting=IncidentSorting.severity, limit=5
     )
     assert all(
         [i.severity == IncidentSeverity.LOW.order for i in incidents_sorted_by_severity]
@@ -332,14 +335,14 @@ def test_get_last_incidents(db_session, create_alert):
 
     filters_1 = {"severity": [1]}
     incidents_with_filters_1, _ = get_last_incidents(
-        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_1, limit=100
+        SINGLE_TENANT_UUID, is_candidate=False, filters=filters_1, limit=100
     )
     assert len(incidents_with_filters_1) == 12
     assert all([i.severity == 1 for i in incidents_with_filters_1])
 
     filters_2 = {"status": ["firing", "acknowledged"]}
     incidents_with_filters_2, _ = get_last_incidents(
-        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_2, limit=100
+        SINGLE_TENANT_UUID, is_candidate=False, filters=filters_2, limit=100
     )
     assert (
         len(incidents_with_filters_2) == 20 + 20
@@ -350,19 +353,19 @@ def test_get_last_incidents(db_session, create_alert):
 
     filters_3 = {"sources": ["keep"]}
     incidents_with_filters_3, _ = get_last_incidents(
-        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_3, limit=100
+        SINGLE_TENANT_UUID, is_candidate=False, filters=filters_3, limit=100
     )
     assert len(incidents_with_filters_3) == 60
     assert all(["keep" in i.sources for i in incidents_with_filters_3])
 
     filters_4 = {"sources": ["grafana"]}
     incidents_with_filters_4, _ = get_last_incidents(
-        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_4, limit=100
+        SINGLE_TENANT_UUID, is_candidate=False, filters=filters_4, limit=100
     )
     assert len(incidents_with_filters_4) == 0
     filters_5 = {"affected_services": "keep"}
     incidents_with_filters_5, _ = get_last_incidents(
-        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_5, limit=100
+        SINGLE_TENANT_UUID, is_candidate=False, filters=filters_5, limit=100
     )
     assert len(incidents_with_filters_5) == 30  # half of incidents
     assert all(["keep" in i.affected_services for i in incidents_with_filters_5])
@@ -550,7 +553,7 @@ def test_incident_metadata(
             {
                 "user_generated_name": f"test-{i}",
                 "user_summary": f"test-{i}",
-                "is_confirmed": True,
+                "is_candidate": False,
                 "assignee": f"assignee-{i % 5}",
                 "severity": severity,
                 "status": status,
@@ -1165,14 +1168,14 @@ def test_incident_bl_create_incident(db_session):
         incidents_count = db_session.query(Incident).count()
         assert incidents_count == 1
 
-        assert incident_dto.is_confirmed is True
+        assert incident_dto.is_candidate is False
         assert incident_dto.is_predicted is False
 
         incident = db_session.query(Incident).get(incident_dto.id)
         assert incident.user_generated_name == "Incident name"
         assert incident.status == "firing"
         assert incident.user_summary == "Keep: Incident description"
-        assert incident.is_confirmed is True
+        assert incident.is_candidate is False
         assert incident.is_predicted is False
 
         # Check pusher
@@ -1202,7 +1205,7 @@ def test_incident_bl_create_incident(db_session):
         incidents_count = db_session.query(Incident).count()
         assert incidents_count == 2
 
-        assert incident_dto_ai.is_confirmed is True
+        assert incident_dto_ai.is_candidate is False
         assert incident_dto_ai.is_predicted is False
 
 
@@ -1558,7 +1561,7 @@ def test_correlation_with_mapping(db_session, create_alert):
 
     # Verify incident was created
     incidents, total = get_last_incidents(
-        tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_confirmed=True
+        tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_candidate=False
     )
 
     assert total == 1
@@ -1591,7 +1594,7 @@ def test_correlation_with_mapping(db_session, create_alert):
 
     # Verify another incident was created
     incidents, total = get_last_incidents(
-        tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_confirmed=True
+        tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_candidate=False
     )
 
     assert total == 1
@@ -1623,7 +1626,7 @@ def test_correlation_with_mapping(db_session, create_alert):
     )
 
     incidents, total = get_last_incidents(
-        tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_confirmed=True
+        tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_candidate=False
     )
 
     assert total == 1
@@ -1699,3 +1702,89 @@ async def test_incident_timestamps_based_on_alert_last_received(
     assert updated_incident.last_seen_time.replace(
         microsecond=0
     ) == future_date.replace(microsecond=0, tzinfo=None)
+
+
+@pytest.mark.asyncio
+def test_incident_auto_resolve_without_rule( db_session, create_alert):
+
+    incident = create_incident_from_dict(
+        SINGLE_TENANT_UUID, {
+            "user_generated_name": "test",
+            "user_summary": "test",
+            "resolve_on": ResolveOn.ALL.value,
+        },
+        session=db_session
+    )
+
+    create_alert(
+        "alert-test",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    alerts = db_session.query(Alert).all()
+    assert len(alerts) == 1
+
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident.id, [alerts[0].fingerprint], session=db_session
+    )
+
+    db_session.refresh(incident)
+    assert incident.status == IncidentStatus.FIRING.value
+
+    create_alert(
+        "alert-test",
+        AlertStatus.RESOLVED,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    db_session.refresh(incident)
+    assert incident.status == IncidentStatus.RESOLVED.value
+
+
+@pytest.mark.asyncio
+def test_incident_auto_resolve_only_if_active(db_session, create_alert):
+
+    def create_incident_with_status(status: IncidentStatus):
+        return create_incident_from_dict(
+            SINGLE_TENANT_UUID, {
+                "user_generated_name": "test",
+                "user_summary": "test",
+                "resolve_on": ResolveOn.ALL.value,
+                "status": status.value
+            },
+            session=db_session
+        )
+
+    firing_incident = create_incident_with_status(IncidentStatus.FIRING)
+    acknowledged_incident = create_incident_with_status(IncidentStatus.ACKNOWLEDGED)
+    resolved_incident = create_incident_with_status(IncidentStatus.RESOLVED)
+    deleted_incident = create_incident_with_status(IncidentStatus.DELETED)
+    merged_incident = create_incident_with_status(IncidentStatus.MERGED)
+
+    create_alert(
+        "alert-test",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    alerts = db_session.query(Alert).all()
+    assert len(alerts) == 1
+
+    for incident in [firing_incident, acknowledged_incident, resolved_incident, deleted_incident, merged_incident]:
+        add_alerts_to_incident_by_incident_id(
+            SINGLE_TENANT_UUID, incident.id, [alerts[0].fingerprint], session=db_session
+        )
+
+    with patch("keep.api.tasks.process_event_task.IncidentBl.resolve_incident_if_require") as incident_bl_mock:
+        create_alert(
+            "alert-test",
+            AlertStatus.RESOLVED,
+            datetime.utcnow(),
+            {"severity": AlertSeverity.CRITICAL.value},
+        )
+        assert incident_bl_mock.call_count == 2 # firing and acknowledged
+

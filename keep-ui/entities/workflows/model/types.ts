@@ -129,6 +129,7 @@ export const V2StepStepSchema = z.object({
           z.string(),
           z.number(),
           z.boolean(),
+          z.record(z.string(), z.any()),
           z.object({}),
           z.array(z.any()),
         ])
@@ -412,10 +413,11 @@ export interface WorkflowStateValues {
   canDeploy: boolean;
   isSaving: boolean;
   isLoading: boolean;
+  isDeployed: boolean;
   validationErrors: Record<string, string>;
 
-  lastChangedAt: number;
-  lastDeployedAt: number;
+  lastChangedAt: number | null;
+  lastDeployedAt: number | null;
 
   // UI
   editorOpen: boolean;

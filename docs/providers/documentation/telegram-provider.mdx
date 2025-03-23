@@ -11,7 +11,10 @@ The `notify` function in the `TelegramProvider` class takes the following parame
 kwargs (dict):
     message (str): The message to send. *Required*
     chat_id (str): The chat_id of which to send the message to. *Required* (How to get chat id - https://stackoverflow.com/questions/32423837/telegram-bot-how-to-get-a-group-chat-id)
+    parse_mode (str): The parse mode of the message. Supports "markdown", "html", None. Default is None.
 ```
+
+Telegram only supports limited formatting options. Refer to the [Telegram Bot API documentation](https://core.telegram.org/bots/api#formatting-options) for more information.
 
 ## Authentication Parameters
 

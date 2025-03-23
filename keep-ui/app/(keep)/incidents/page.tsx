@@ -12,7 +12,7 @@ import { getInitialFacets } from "@/features/filter/api";
 import { FacetDto } from "@/features/filter";
 
 const defaultIncidentsParams: GetIncidentsParams = {
-  confirmed: true,
+  candidate: false,
   limit: DEFAULT_INCIDENTS_PAGE_SIZE,
   offset: 0,
   sorting: DEFAULT_INCIDENTS_SORTING,

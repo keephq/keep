@@ -1,6 +1,7 @@
 workflow:
-  id: run-webhook
-  description: Run a webhook
+  id: webhook-test-runner
+  name: Webhook Test Runner
+  description: Tests webhook functionality with console logging and customizable message payloads.
   debug: true
   triggers:
     - type: manual

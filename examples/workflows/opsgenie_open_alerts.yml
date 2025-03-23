@@ -1,6 +1,7 @@
-alert:
-  id: opsgenie-get-open-alerts
-  description: Get open alerts from Opsgenie
+workflow:
+  id: opsgenie-alert-monitor
+  name: OpsGenie Alert Monitor
+  description: Monitors open alerts in OpsGenie and sends detailed Slack notifications with priority levels and timestamps.
   steps:
     - name: get-open-alerts
       provider:
@@ -19,10 +20,10 @@ alert:
           message: >
             Opsgenie has {{ steps.get-open-alerts.results.number_of_alerts }} open alerts
           blocks:
-          - type: section
-            text:
-              type: mrkdwn
-              text: |-
-                {{#steps.get-open-alerts.results.alerts}}
-                  - Alert Id: {{id}} | Priortiy: {{priority}} | Created at: {{created_at}} | Message: {{message}}
-                {{/steps.get-open-alerts.results.alerts}}
+            - type: section
+              text:
+                type: mrkdwn
+                text: |-
+                  {{#steps.get-open-alerts.results.alerts}}
+                    - Alert Id: {{id}} | Priortiy: {{priority}} | Created at: {{created_at}} | Message: {{message}}
+                  {{/steps.get-open-alerts.results.alerts}}

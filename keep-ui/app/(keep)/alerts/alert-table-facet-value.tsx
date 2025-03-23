@@ -27,7 +27,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
   facetFilters,
 }) => {
   const { data: incidents } = useIncidents(
-    true,
+    false,
     null,
     100,
     undefined,
@@ -81,14 +81,8 @@ export const FacetValue: React.FC<FacetValueProps> = ({
             height={16}
             width={16}
             title={label}
-            providerType={
-              label.includes("@") ? "/icons/mailgun-icon.png" : label
-            }
-            src={
-              label.includes("@")
-                ? "/icons/mailgun-icon.png"
-                : `/icons/${label}-icon.png`
-            }
+            providerType={label}
+            src={`/icons/${label}-icon.png`}
           />
         );
       }

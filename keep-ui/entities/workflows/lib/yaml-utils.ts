@@ -7,7 +7,10 @@ import {
   visit,
   isPair,
   isSeq,
+  stringify,
 } from "yaml";
+import { Definition } from "../model/types";
+import { getYamlWorkflowDefinition } from "./parser";
 
 const YAML_STRINGIFY_OPTIONS = {
   indent: 2,
@@ -109,4 +112,17 @@ export function getCurrentPath(document: Document, absolutePosition: number) {
   });
 
   return path;
+}
+export function getBodyFromStringOrDefinitionOrObject(
+  definition: Definition | string | Record<string, unknown>
+) {
+  if (typeof definition === "string") {
+    return definition;
+  }
+  if (typeof definition === "object" && "workflow" in definition) {
+    return stringify(definition);
+  }
+  return stringify({
+    workflow: getYamlWorkflowDefinition(definition as Definition),
+  });
 }

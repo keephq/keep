@@ -1,8 +1,9 @@
 workflow:
-  id: bq-sql-query
+  id: bigquery-data-freshness-monitor
+  name: BigQuery Data Freshness Monitor
+  description: Monitors data freshness in BigQuery tables by checking time differences and querying public datasets for validation.
   triggers:
     - type: manual
-  description: Monitor that time difference is no more than 1 hour
   steps:
     - name: get-max-datetime
       provider:

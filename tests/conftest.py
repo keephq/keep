@@ -445,25 +445,29 @@ def elastic_container(docker_ip, docker_services):
 
 @pytest.fixture
 def elastic_client(request):
-    # this is so if any other module initialized Elasticsearch, it will be deleted
-    ElasticClient._instance = None
-    os.environ["ELASTIC_ENABLED"] = "true"
-    os.environ["ELASTIC_USER"] = "elastic"
-    os.environ["ELASTIC_PASSWORD"] = "keeptests"
-    os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
-    os.environ["ELASTIC_INDEX_SUFFIX"] = "test"
-    # request.getfixturevalue("elastic_container")
-    elastic_client = ElasticClient(
-        tenant_id=SINGLE_TENANT_UUID,
-    )
 
-    yield elastic_client
+    if hasattr(request, 'param') and request.param is False:
+        yield None
+    else:
+        # this is so if any other module initialized Elasticsearch, it will be deleted
+        ElasticClient._instance = None
+        os.environ["ELASTIC_ENABLED"] = "true"
+        os.environ["ELASTIC_USER"] = "elastic"
+        os.environ["ELASTIC_PASSWORD"] = "keeptests"
+        os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
+        os.environ["ELASTIC_INDEX_SUFFIX"] = "test"
+        # request.getfixturevalue("elastic_container")
+        elastic_client = ElasticClient(
+            tenant_id=SINGLE_TENANT_UUID,
+        )
 
-    # remove all from elasticsearch
-    try:
-        elastic_client.drop_index()
-    except Exception:
-        pass
+        yield elastic_client
+
+        # remove all from elasticsearch
+        try:
+            elastic_client.drop_index()
+        except Exception:
+            pass
 
 
 @pytest.fixture(scope="session")
@@ -558,6 +562,8 @@ def browser():
         browser = p.chromium.launch(headless=headless)
         context = browser.new_context(
             viewport={"width": 1920, "height": 1080},
+            # macbook 13
+            # viewport={"width": 1280, "height": 800},
         )
         context.grant_permissions(["clipboard-read", "clipboard-write"])
         page = context.new_page()

@@ -1,7 +1,9 @@
-id: query-clickhouse
-description: Query Clickhouse and send an alert if there is an error
-triggers:
-  - type: manual
+workflow:
+  id: clickhouse-error-monitor
+  name: ClickHouse Error Monitor
+  description: Monitors ClickHouse logs for errors and sends notifications through both Ntfy and Slack channels.
+  triggers:
+    - type: manual
 
 steps:
   - name: clickhouse-step

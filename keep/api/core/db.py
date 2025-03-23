@@ -41,6 +41,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
@@ -186,19 +187,25 @@ def create_workflow_execution(
     fingerprint: str = None,
     execution_id: str = None,
     event_type: str = "alert",
+    test_run: bool = False,
 ) -> str:
     with Session(engine) as session:
         try:
+            workflow_execution_id = execution_id or (str(uuid4()) if not test_run else "test_" + str(uuid4()))
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
             workflow_execution = WorkflowExecution(
-                id=execution_id or str(uuid4()),
-                workflow_id=workflow_id,
+                id=workflow_execution_id,
+                workflow_id=workflow_id if not test_run else "test",
                 tenant_id=tenant_id,
                 started=datetime.now(tz=timezone.utc),
                 triggered_by=triggered_by,
                 execution_number=execution_number,
                 status="in_progress",
+                error=None,
+                execution_time=None,
+                results={},
+                # is_test_run=test_run,
             )
             session.add(workflow_execution)
             # Ensure the object has an id
@@ -1686,6 +1693,18 @@ def get_alert_by_event_id(
     return alert
 
 
+def get_alerts_by_ids(
+    tenant_id: str, alert_ids: list[str | UUID], session: Optional[Session] = None
+) -> List[Alert]:
+    with existed_or_new_session(session) as session:
+        query = (
+            select(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.id.in_(alert_ids))
+        )
+        query = query.options(subqueryload(Alert.alert_enrichment))
+        return session.exec(query).all()
+
 def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:
     # get the previous alert for a given fingerprint
     with Session(engine) as session:
@@ -1879,6 +1898,8 @@ def create_rule(
     create_on=CreateIncidentOn.ANY.value,
     incident_name_template=None,
     incident_prefix=None,
+    multi_level=False,
+    multi_level_property_name=None,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -1898,6 +1919,8 @@ def create_rule(
             create_on=create_on,
             incident_name_template=incident_name_template,
             incident_prefix=incident_prefix,
+            multi_level=multi_level,
+            multi_level_property_name=multi_level_property_name,
         )
         session.add(rule)
         session.commit()
@@ -1920,6 +1943,8 @@ def update_rule(
     create_on,
     incident_name_template,
     incident_prefix,
+    multi_level,
+    multi_level_property_name,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -1944,6 +1969,8 @@ def update_rule(
             rule.create_on = create_on
             rule.incident_name_template = incident_name_template
             rule.incident_prefix = incident_prefix
+            rule.multi_level = multi_level
+            rule.multi_level_property_name = multi_level_property_name
             session.commit()
             session.refresh(rule)
             return rule
@@ -1951,7 +1978,7 @@ def update_rule(
             return None
 
 
-def get_rules(tenant_id, ids=None):
+def get_rules(tenant_id, ids=None) -> list[Rule]:
     with Session(engine) as session:
         # Start building the query
         query = (
@@ -2053,8 +2080,8 @@ def create_incident_for_grouping_rule(
             rule_id=rule.id,
             rule_fingerprint=rule_fingerprint,
             is_predicted=True,
-            is_confirmed=rule.create_on == CreateIncidentOn.ANY.value
-            and not rule.require_approve,
+            is_candidate=rule.require_approve,
+            is_visible=rule.create_on == CreateIncidentOn.ANY.value,
             incident_type=IncidentType.RULE.value,
             same_incident_in_the_past_id=past_incident.id if past_incident else None,
             resolve_on=rule.resolve_on,
@@ -2087,7 +2114,7 @@ def create_incident_for_topology(
         user_generated_name=f"Topology incident: Multiple alerts across {', '.join(service_names)}",
         severity=severity.value,
         status=IncidentStatus.FIRING.value,
-        is_confirmed=True,
+        is_visible=True,
         incident_type=IncidentType.TOPOLOGY.value,  # Set incident type for topology
         data={"services": list(services), "alert_count": len(alert_group)},
     )
@@ -2485,6 +2512,7 @@ def get_last_alert_hashes_by_fingerprints(
 def update_key_last_used(
     tenant_id: str,
     reference_id: str,
+    max_retries=3,
 ) -> str:
     """
     Updates API key last used.
@@ -2516,8 +2544,23 @@ def update_key_last_used(
             )
             return
         tenant_api_key_entry.last_used = datetime.utcnow()
-        session.add(tenant_api_key_entry)
-        session.commit()
+
+        for attempt in range(max_retries):
+            try:
+                session.add(tenant_api_key_entry)
+                session.commit()
+                break
+            except StaleDataError as ex:
+                if "expected to update" in ex.args[0]:
+                    logger.info(
+                        f"Phantom read detected while updating API key `{reference_id}`, retry #{attempt}"
+                    )
+                    session.rollback()
+                    continue
+                else:
+                    raise
+
+
 
 
 def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
@@ -3288,7 +3331,7 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                 .outerjoin(
                     affected_services_join, affected_services_join.c.value.isnot(None)
                 )
-                .filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == True)
+                .filter(Incident.tenant_id == tenant_id, Incident.is_visible == True)
             )
             results = session.exec(query).one_or_none()
 
@@ -3325,7 +3368,7 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                 .outerjoin(
                     affected_services_join, affected_services_join.c.value.isnot(None)
                 )
-                .filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == True)
+                .filter(Incident.tenant_id == tenant_id, Incident.is_visible == True)
             )
 
             results = session.exec(query).one_or_none()
@@ -3364,7 +3407,7 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                 .outerjoin(
                     affected_services_join, affected_services_join.c.value.isnot(None)
                 )
-                .filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == True)
+                .filter(Incident.tenant_id == tenant_id, Incident.is_visible == True)
             )
 
             results = session.exec(query).one_or_none()
@@ -3502,7 +3545,7 @@ def get_last_incidents(
     timeframe: int = None,
     upper_timestamp: datetime = None,
     lower_timestamp: datetime = None,
-    is_confirmed: bool = False,
+    is_candidate: bool = False,
     sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
     with_alerts: bool = False,
     is_predicted: bool = None,
@@ -3517,10 +3560,9 @@ def get_last_incidents(
         limit (int): Amount of objects to return
         offset (int): Current offset for
         timeframe (int|null): Return incidents only for the last <N> days
-        is_confirmed (bool): Return confirmed incidents or predictions
         upper_timestamp: datetime = None,
         lower_timestamp: datetime = None,
-        is_confirmed (bool): filter incident candidates or real incidents
+        is_candidate (bool): filter incident candidates or real incidents
         sorting: Optional[IncidentSorting]: how to sort the data
         with_alerts (bool): Pre-load alerts or not
         is_predicted (bool): filter only incidents predicted by KeepAI
@@ -3531,7 +3573,11 @@ def get_last_incidents(
     with Session(engine) as session:
         query = session.query(
             Incident,
-        ).filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed)
+        ).filter(
+            Incident.tenant_id == tenant_id,
+            Incident.is_candidate == is_candidate,
+            Incident.is_visible == True,
+        )
 
         if allowed_incident_ids:
             query = query.filter(Incident.id.in_(allowed_incident_ids))
@@ -3632,7 +3678,8 @@ def create_incident_from_dto(
             "ai_generated_name": incident_dto.dict().get("name"),
             "assignee": incident_dto.assignee,
             "is_predicted": False,  # its not a prediction, but an AI generation
-            "is_confirmed": True,  # confirmed by the user :)
+            "is_candidate": False,  # confirmed by the user :)
+            "is_visible": True,  # confirmed by the user :)
             "incident_type": IncidentType.AI.value,
         }
 
@@ -3648,16 +3695,19 @@ def create_incident_from_dto(
         if "incident_type" not in incident_dict:
             incident_dict["incident_type"] = IncidentType.MANUAL.value
 
+    if incident_dto.severity is not None:
+        incident_dict["severity"] = incident_dto.severity.order
+
     return create_incident_from_dict(tenant_id, incident_dict)
 
 
 def create_incident_from_dict(
-    tenant_id: str, incident_data: dict
+    tenant_id: str, incident_data: dict, session: Optional[Session] = None
 ) -> Optional[Incident]:
     is_predicted = incident_data.get("is_predicted", False)
-    if "is_confirmed" not in incident_data:
-        incident_data["is_confirmed"] = not is_predicted
-    with Session(engine) as session:
+    if "is_candidate" not in incident_data:
+        incident_data["is_candidate"] = is_predicted
+    with existed_or_new_session(session) as session:
         new_incident = Incident(**incident_data, tenant_id=tenant_id)
         session.add(new_incident)
         session.commit()
@@ -3718,9 +3768,7 @@ def update_incident_from_dto_by_id(
 
 
 def get_incident_by_fingerprint(
-    tenant_id: str,
-    fingerprint: str,
-    session: Optional[Session] = None
+    tenant_id: str, fingerprint: str, session: Optional[Session] = None
 ) -> Optional[Incident]:
     with existed_or_new_session(session) as session:
         return session.exec(
@@ -3731,9 +3779,7 @@ def get_incident_by_fingerprint(
 
 
 def delete_incident_by_id(
-    tenant_id: str,
-    incident_id: UUID,
-    session: Optional[Session] = None
+    tenant_id: str, incident_id: UUID, session: Optional[Session] = None
 ) -> bool:
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id)
@@ -3949,6 +3995,7 @@ def add_alerts_to_incident(
     session: Optional[Session] = None,
     override_count: bool = False,
     exclude_unlinked_alerts: bool = False,  # if True, do not add alerts to incident if they are manually unlinked
+    max_retries=3,
 ) -> Optional[Incident]:
     logger.info(
         f"Adding alerts to incident {incident.id} in database, total {len(fingerprints)} alerts",
@@ -4087,9 +4134,21 @@ def add_alerts_to_incident(
 
             incident.start_time = started_at
             incident.last_seen_time = last_seen_at
-
-            session.add(incident)
-            session.commit()
+            incident_id = incident.id
+            for attempt in range(max_retries):
+                try:
+                    session.add(incident)
+                    session.commit()
+                    break
+                except StaleDataError as ex:
+                    if "expected to update" in ex.args[0]:
+                        logger.info(
+                            f"Phantom read detected while updating incident `{incident_id}`, retry #{attempt}"
+                        )
+                        session.rollback()
+                        continue
+                    else:
+                        raise
             session.refresh(incident)
 
             return incident
@@ -4350,16 +4409,11 @@ def merge_incidents_to_id(
         enrich_incidents_with_alerts(tenant_id, source_incidents, session=session)
 
         merged_incident_ids = []
-        skipped_incident_ids = []
         failed_incident_ids = []
         for source_incident in source_incidents:
             source_incident_alerts_fingerprints = [
                 alert.fingerprint for alert in source_incident._alerts
             ]
-            if not source_incident_alerts_fingerprints:
-                logger.info(f"Source incident {source_incident.id} doesn't have alerts")
-                skipped_incident_ids.append(source_incident.id)
-                continue
             source_incident.merged_into_incident_id = destination_incident.id
             source_incident.merged_at = datetime.now(tz=timezone.utc)
             source_incident.status = IncidentStatus.MERGED.value
@@ -4390,7 +4444,7 @@ def merge_incidents_to_id(
 
         session.commit()
         session.refresh(destination_incident)
-        return merged_incident_ids, skipped_incident_ids, failed_incident_ids
+        return merged_incident_ids, failed_incident_ids
 
 
 def get_alerts_count(
@@ -4433,7 +4487,7 @@ def confirm_predicted_incident_by_id(
             .where(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
-                Incident.is_confirmed == expression.false(),
+                Incident.is_candidate == expression.true(),
             )
             .options(joinedload(Incident.alerts))
         ).first()
@@ -4444,10 +4498,10 @@ def confirm_predicted_incident_by_id(
         session.query(Incident).filter(
             Incident.tenant_id == tenant_id,
             Incident.id == incident_id,
-            Incident.is_confirmed == expression.false(),
+            Incident.is_candidate == expression.true(),
         ).update(
             {
-                "is_confirmed": True,
+                "is_visible": True,
             }
         )
 
@@ -5183,6 +5237,21 @@ def get_activity_report(session: Optional[Session] = None):
     return activity_report
 
 
+def get_last_alerts_by_fingerprints(
+    tenant_id: str,
+    fingerprint: List[str],
+    session: Optional[Session] = None,
+) -> List[LastAlert]:
+    with existed_or_new_session(session) as session:
+        query = select(LastAlert).where(
+            and_(
+                LastAlert.tenant_id == tenant_id,
+                LastAlert.fingerprint.in_(fingerprint),
+            )
+        )
+        return session.exec(query).all()
+
+
 def get_last_alert_by_fingerprint(
     tenant_id: str,
     fingerprint: str,
@@ -5254,6 +5323,7 @@ def set_last_alert(
 
                 session.add(last_alert)
                 session.commit()
+                break
             except OperationalError as ex:
                 if "no such savepoint" in ex.args[0]:
                     logger.info(

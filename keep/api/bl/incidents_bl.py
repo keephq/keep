@@ -387,7 +387,7 @@ class IncidentBl:
         timeframe: int = None,
         upper_timestamp: datetime = None,
         lower_timestamp: datetime = None,
-        is_confirmed: bool = False,
+        is_candidate: bool = False,
         sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
         with_alerts: bool = False,
         is_predicted: bool = None,
@@ -401,7 +401,7 @@ class IncidentBl:
             timeframe=timeframe,
             upper_timestamp=upper_timestamp,
             lower_timestamp=lower_timestamp,
-            is_confirmed=is_confirmed,
+            is_candidate=is_candidate,
             sorting=sorting,
             with_alerts=with_alerts,
             is_predicted=is_predicted,
@@ -438,19 +438,21 @@ class IncidentBl:
             should_resolve = True
 
         incident_id = incident.id
-        for attempt in range(max_retries):
-            try:
-                if should_resolve:
+
+        if should_resolve:
+            for attempt in range(max_retries):
+                try:
                     incident.status = IncidentStatus.RESOLVED.value
-                self.session.add(incident)
-                self.session.commit()
-            except StaleDataError as ex:
-                if "expected to update" in ex.args[0]:
-                    self.logger.info(
-                        f"Phantom read detected while updating incident `{incident_id}`, retry #{attempt}"
-                    )
-                    self.session.rollback()
-                    continue
+                    self.session.add(incident)
+                    self.session.commit()
+                    break
+                except StaleDataError as ex:
+                    if "expected to update" in ex.args[0]:
+                        self.logger.info(
+                            f"Phantom read detected while updating incident `{incident_id}`, retry #{attempt}"
+                        )
+                        self.session.rollback()
+                        continue
 
         return incident
 

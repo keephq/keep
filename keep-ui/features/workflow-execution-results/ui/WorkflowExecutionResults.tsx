@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Card, Title, Callout } from "@tremor/react";
+import { Card, Callout, Button } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { TabGroup, Tab, TabList, TabPanel, TabPanels } from "@tremor/react";
@@ -16,7 +16,8 @@ import { YAMLEditor } from "@/shared/ui/YAMLEditor";
 import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
 import { setFavicon } from "@/shared/ui/utils/favicon";
-import { ResizableColumns } from "@/shared/ui";
+import { EmptyStateCard, ResizableColumns } from "@/shared/ui";
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 const convertWorkflowStatusToFaviconStatus = (
   status: WorkflowExecutionDetail["status"]
@@ -35,6 +36,7 @@ interface WorkflowResultsProps {
     | WorkflowExecutionFailure
     | null;
   standalone?: boolean;
+  workflowYaml?: string;
 }
 
 export function WorkflowExecutionResults({
@@ -42,11 +44,11 @@ export function WorkflowExecutionResults({
   workflowExecutionId,
   initialWorkflowExecution,
   standalone = false,
+  workflowYaml,
 }: WorkflowResultsProps) {
   const api = useApi();
   const [refreshInterval, setRefreshInterval] = useState(1000);
-  const [checks, setChecks] = useState(1);
-  const [error, setError] = useState<string | null>(null);
+  const [checks, setChecks] = useState(0);
 
   const { data: executionData, error: executionError } = useSWR(
     api.isReady() && workflowExecutionId
@@ -60,26 +62,29 @@ export function WorkflowExecutionResults({
       return fetchedData;
     },
     {
+      dedupingInterval: 990,
       refreshInterval: refreshInterval,
       fallbackData: initialWorkflowExecution,
     }
   );
 
   const { data: workflowData, error: workflowError } = useSWR(
-    api.isReady() ? `/workflows/${workflowId}` : null,
+    api.isReady() && !workflowYaml ? `/workflows/${workflowId}` : null,
     (url) => api.get(url)
   );
 
+  const finalYaml = workflowYaml ?? workflowData?.workflow_raw;
+
   useEffect(() => {
-    if (!standalone || !workflowData) {
+    if (!standalone || !executionData) {
       return;
     }
-    const status = executionData?.error ? "failed" : executionData?.status;
-    document.title = `${workflowData.name} - Workflow Results - Keep`;
+    const status = executionData.error ? "failed" : executionData.status;
+    document.title = `${executionData.workflow_name} - Workflow Results - Keep`;
     if (status) {
       setFavicon(convertWorkflowStatusToFaviconStatus(status));
     }
-  }, [standalone, executionData, workflowData]);
+  }, [standalone, executionData]);
 
   useEffect(() => {
     if (!executionData) return;
@@ -89,15 +94,13 @@ export function WorkflowExecutionResults({
       setRefreshInterval(0);
     }
     if (executionData.error) {
-      setError(executionData?.error);
       setRefreshInterval(0);
     } else if (executionData?.status === "success") {
-      setError(executionData?.error);
       setRefreshInterval(0);
     }
   }, [executionData]);
 
-  if (!executionData || !workflowData) {
+  if (!executionData || !finalYaml) {
     return <Loading />;
   }
 
@@ -126,8 +129,9 @@ export function WorkflowExecutionResults({
     <WorkflowExecutionResultsInternal
       workflowId={workflowId}
       executionData={executionData}
-      workflowRaw={workflowData.workflow_raw}
+      workflowRaw={finalYaml}
       checks={checks}
+      isLoading={refreshInterval > 0}
     />
   );
 }
@@ -137,11 +141,13 @@ export function WorkflowExecutionResultsInternal({
   executionData,
   workflowRaw,
   checks,
+  isLoading,
 }: {
   executionData: WorkflowExecutionDetail | WorkflowExecutionFailure;
   workflowId: string;
   workflowRaw: string | undefined;
   checks: number;
+  isLoading: boolean;
 }) {
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
   const [selectedStep, setSelectedStep] = useState<string | null>(null);
@@ -151,7 +157,7 @@ export function WorkflowExecutionResultsInternal({
   let results: WorkflowExecutionDetail["results"] | undefined;
   let eventId: string | undefined;
   let eventType: string | undefined;
-
+  const revalidateMultiple = useRevalidateMultiple();
   if (isWorkflowExecution(executionData)) {
     status = executionData.status;
     logs = executionData.logs;
@@ -232,16 +238,35 @@ export function WorkflowExecutionResultsInternal({
       )}
       <ResizableColumns initialLeftWidth={50}>
         <div className="pr-2">
-          <Card className="p-0 overflow-hidden">
-            <WorkflowExecutionLogs
-              logs={logs ?? null}
-              results={results ?? null}
-              status={status ?? ""}
-              checks={checks}
-              hoveredStep={hoveredStep}
-              selectedStep={selectedStep}
-            />
-          </Card>
+          {logs ? (
+            <Card className="p-0 overflow-hidden">
+              <WorkflowExecutionLogs
+                logs={logs ?? null}
+                results={results ?? null}
+                status={status ?? ""}
+                checks={checks}
+                hoveredStep={hoveredStep}
+                selectedStep={selectedStep}
+                isLoading={isLoading}
+              />
+            </Card>
+          ) : (
+            <EmptyStateCard
+              title="No logs found"
+              description="The workflow is still running"
+            >
+              <Button
+                variant="primary"
+                color="orange"
+                size="sm"
+                onClick={() => {
+                  revalidateMultiple([`/workflows/${workflowId}/runs`]);
+                }}
+              >
+                Refresh
+              </Button>
+            </EmptyStateCard>
+          )}
         </div>
         <div className="px-2">
           <Card className="p-0 overflow-hidden">

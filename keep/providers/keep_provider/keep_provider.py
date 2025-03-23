@@ -439,6 +439,13 @@ class KeepProvider(BaseProvider):
                 extra={"alert_results": alert_results},
             )
 
+        # create_alert_in_keep.yml for example
+        if not alert_results:
+            self.logger.info("No alert results found")
+            if kwargs.get("alert"):
+                self.logger.info("Creating alert from 'alert' parameter")
+                alert_results = [kwargs.get("alert")]
+
         _if = kwargs.get("if", None)
         _for = kwargs.get("for", None)
         fingerprint_fields = kwargs.pop("fingerprint_fields", [])
@@ -497,7 +504,7 @@ class KeepProvider(BaseProvider):
                 extra={"original": alert_data, "rendered": rendered_alert_data},
             )
             # render tenrary expressions
-            rendered_alert_data = self._handle_ternary_exressions(rendered_alert_data)
+            rendered_alert_data = self._handle_ternary_expressions(rendered_alert_data)
             alert_dto = self._build_alert(
                 alert_results, fingerprint_fields, **rendered_alert_data
             )
@@ -666,7 +673,7 @@ class KeepProvider(BaseProvider):
             return False
         return evaluated_if_met
 
-    def _handle_ternary_exressions(self, rendered_providers_parameters):
+    def _handle_ternary_expressions(self, rendered_providers_parameters):
         # SG: a hack to allow tenrary expressions
         #     e.g.'0.012899999999999995 > 0.9 ? "critical" : 0.012899999999999995 > 0.7 ? "warning" : "info"''
         #
