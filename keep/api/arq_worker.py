@@ -26,6 +26,7 @@ from keep.api.consts import (
 from keep.api.core.config import config
 from keep.api.core.db import dispose_session
 from keep.api.tasks.process_event_task import process_event
+from keep.workflowmanager.workflowmanager import WorkflowManager
 
 # Load environment variables
 load_dotenv(find_dotenv())
@@ -326,9 +327,24 @@ async def run_workers():
             patch_process_event()
             logger.info("ARQ debug patches applied")
         await start_workers()
+
+        # For now - we must also start the workflow scheduler since its coupled with process workers
+        # TODO (very important): refactor the workflow scheduler to be independent of the workers
+        # and to work with REDIS
+        logger.info("Starting Workflow Manager")
+        wf_manager = WorkflowManager.get_instance()
+        await wf_manager.start()
+        logger.info("Workflow Manager started")
         logger.info("Workers finished")
     except KeyboardInterrupt:
         logger.info("Workers shutting down due to keyboard interrupt")
+        try:
+            logger.info("Stopping Workflow Manager")
+            await wf_manager.stop()
+            logger.info("Workflow Manager stopped")
+        # in pytest, there could be race condition
+        except TypeError:
+            logger.exception("Failed to stop Workflow Manager")
     except Exception as e:
         logger.exception(f"Workers failed with exception: {e}")
         raise
