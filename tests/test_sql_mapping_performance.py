@@ -6,7 +6,7 @@ import pytest
 from sqlmodel import Session
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.core.cel_to_sql.mapping_rule_matcher import MappingRuleMatcher
+from keep.api.bl.mapping_rule_matcher import MappingRuleMatcher
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.mapping import MappingRule
@@ -117,7 +117,7 @@ def test_large_dataset_performance(
 
     # Test case 1: Match an item at the beginning of the dataset
     start_time = time.time()
-    alert_values = {"customer_id": "customer-10"}
+    alert_values = {"customer_id": "customer-0010"}
     matched_row = matcher.get_matching_row(large_mapping_rule, alert_values)
     beginning_time = time.time() - start_time
 
@@ -126,16 +126,16 @@ def test_large_dataset_performance(
 
     # Test case 2: Match an item in the middle of the dataset
     start_time = time.time()
-    alert_values = {"customer_id": "customer-500"}
+    alert_values = {"customer_id": "customer-0541"}
     matched_row = matcher.get_matching_row(large_mapping_rule, alert_values)
     middle_time = time.time() - start_time
 
     assert matched_row is not None
-    assert matched_row["name"] == "Customer 500"
+    assert matched_row["name"] == "Customer 541"
 
     # Test case 3: Match an item at the end of the dataset
     start_time = time.time()
-    alert_values = {"customer_id": "customer-990"}
+    alert_values = {"customer_id": "customer-0990"}
     matched_row = matcher.get_matching_row(large_mapping_rule, alert_values)
     end_time = time.time() - start_time
 
@@ -259,7 +259,7 @@ def test_end_to_end_performance(db_session: Session, large_mapping_rule: Mapping
     )
 
     # Add customer_id as a dynamic attribute
-    setattr(alert, "customer_id", "customer-500")  # Match with row in the middle
+    setattr(alert, "customer_id", "customer-0999")  # Match with row in the middle
 
     enrichment_bl = EnrichmentsBl(tenant_id=SINGLE_TENANT_UUID, db=db_session)
 
