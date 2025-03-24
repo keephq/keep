@@ -5,131 +5,16 @@ import pytest
 import requests
 from playwright.sync_api import Page, expect
 
-from tests.e2e_tests.incidents_alerts_setup import create_fake_alert, setup_incidents_alerts
+from tests.e2e_tests.incidents_alerts_setup import (
+    create_fake_alert,
+    query_alerts,
+    setup_incidents_alerts,
+)
 from tests.e2e_tests.test_end_to_end import init_e2e_test, setup_console_listener
 from tests.e2e_tests.utils import get_token, save_failure_artifacts
 
 KEEP_UI_URL = "http://localhost:3000"
 KEEP_API_URL = "http://localhost:8080"
-
-
-def query_allerts(cell_query: str = None, limit: int = None, offset: int = None):
-    url = f"{KEEP_API_URL}/alerts/query"
-
-    query = {}
-
-    if cell_query:
-        query["cel"] = cell_query
-
-    if limit is not None:
-        query["limit"] = limit
-
-    if offset is not None:
-        query["offset"] = offset
-
-    result: dict = None
-
-    token = get_token()
-    for _ in range(5):
-        try:
-            response = requests.post(
-                url,
-                json=query,
-                headers={"Authorization": "Bearer " + token},
-                timeout=5,
-            )
-            response.raise_for_status()
-            result = response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to query alerts: {e}")
-            time.sleep(1)
-            continue
-
-    if result is None:
-        raise Exception(f"Failed to query alerts after {5} attempts")
-
-    grouped_alerts_by_name = {}
-
-    for alert in result["results"]:
-        grouped_alerts_by_name.setdefault(alert["name"], []).append(alert)
-
-    return {
-        "results": result["results"],
-        "count": result["count"],
-        "grouped_by_name": grouped_alerts_by_name,
-    }
-
-
-def upload_alerts():
-    current_alerts = query_allerts(limit=1000, offset=0)
-    simulated_alerts = []
-
-    for alert_index, provider_type in enumerate(["datadog"] * 10 + ["prometheus"] * 10):
-        alert = create_fake_alert(alert_index, provider_type)
-        alert["dateForTests"] = (
-            datetime(2025, 2, 10, 10) + timedelta(days=-alert_index)
-        ).isoformat()
-
-        simulated_alerts.append((provider_type, alert))
-
-    not_uploaded_alerts = []
-
-    for provider_type, alert in simulated_alerts:
-        if alert["alertName"] not in current_alerts["grouped_by_name"]:
-            not_uploaded_alerts.append((provider_type, alert))
-
-    token = get_token()
-    for provider_type, alert in not_uploaded_alerts:
-        url = f"{KEEP_API_URL}/alerts/event/{provider_type}"
-        requests.post(
-            url,
-            json=alert,
-            timeout=5,
-            headers={"Authorization": "Bearer " + token},
-        ).raise_for_status()
-        time.sleep(
-            1
-        )  # this is important for sorting by lastReceived. We need to have different lastReceived for alerts
-
-    if not not_uploaded_alerts:
-        return current_alerts
-
-    attempt = 0
-    while True:
-        time.sleep(1)
-        current_alerts = query_allerts(limit=1000, offset=0)
-        attempt += 1
-
-        if all(
-            simluated_alert["alertName"] in current_alerts["grouped_by_name"]
-            for _, simluated_alert in simulated_alerts
-        ):
-            break
-
-        if attempt >= 10:
-            raise Exception(
-                f"Not all alerts were uploaded. Not uploaded alerts: {not_uploaded_alerts}"
-            )
-
-    alerts_to_enrich = [
-        alert for alert in current_alerts["results"] if "Enriched" in alert["name"]
-    ]
-
-    token = get_token()
-    for alert in alerts_to_enrich:
-        url = f"{KEEP_API_URL}/alerts/enrich"
-        requests.post(
-            url,
-            json={
-                "enrichments": {"status": "enriched status"},
-                "fingerprint": alert["fingerprint"],
-            },
-            timeout=5,
-            headers={"Authorization": "Bearer " + token},
-        ).raise_for_status()
-
-    return query_allerts(limit=1000, offset=0)
-
 
 def init_test(browser: Page, alerts, max_retries=3):
     for i in range(max_retries):
@@ -359,7 +244,7 @@ search_by_cel_tescases = {
         "alert_property_name": "name",
     },
     "using enriched field": {
-        "cel_query": "status == 'enriched status'",
+        "cel_query": "host == 'enriched host'",
         "predicate": lambda alert: "Enriched" in alert["name"],
         "alert_property_name": "name",
     },
@@ -518,7 +403,7 @@ def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
     except Exception as e:
         save_failure_artifacts(browser, log_entries=log_entries)
         raise e
-    query_result = query_allerts(cell_query=cel_to_filter_alerts, limit=1000)
+    query_result = query_alerts(cell_query=cel_to_filter_alerts, limit=1000)
     current_alerts = query_result["results"]
     assert_facet(browser, facet_name, current_alerts, alert_property_name)
 

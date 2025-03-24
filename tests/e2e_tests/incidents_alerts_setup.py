@@ -82,9 +82,6 @@ def create_fake_alert(index: int, provider_type: str):
         severity = "high"
         custom_tag = "environment:custom"
 
-    if index % 5 == 0:
-        title += "Enriched"
-
     if provider_type == "datadog":
         SEVERITIES_MAP = {
             "info": "P4",
@@ -128,6 +125,9 @@ def create_fake_alert(index: int, provider_type: str):
             "id": test_alert_id,
         }
     elif provider_type == "prometheus":
+        if index % 5 == 0:
+            title += " Enriched "
+
         SEVERITIES_MAP = {
             "critical": "critical",
             "high": "error",
@@ -223,15 +223,18 @@ def upload_alerts():
 
     for alert in alerts_to_enrich:
         url = f"{KEEP_API_URL}/alerts/enrich"
-        requests.post(
+        resp = requests.post(
             url,
             json={
-                "enrichments": {"status": "enriched status"},
+                "enrichments": {"host": "enriched host"},
                 "fingerprint": alert["fingerprint"],
             },
             timeout=5,
             headers={"Authorization": f"Bearer {get_token()}"},
-        ).raise_for_status()
+        )
+        resp.raise_for_status()
+        assert resp.json().get("status", "failed") == "ok"
+        print()
 
     return query_alerts(limit=1000, offset=0)
 
