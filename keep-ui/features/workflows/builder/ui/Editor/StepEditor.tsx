@@ -18,6 +18,7 @@ import {
   BackspaceIcon,
   PencilIcon,
   PlusIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import {
   ExclamationCircleIcon,
@@ -53,6 +54,72 @@ export function EditorLayout({
 }) {
   return (
     <div className={`flex flex-col mx-4 my-2.5 ${className}`}>{children}</div>
+  );
+}
+
+function KeyValueListField({
+  keyValueList,
+  onChange,
+}: {
+  keyValueList: { key: string; value: string }[];
+  onChange: (value: any) => void;
+}) {
+  if (!keyValueList || !Array.isArray(keyValueList)) {
+    return null;
+  }
+  return (
+    <div className="flex flex-col gap-2 items-start">
+      {keyValueList.map((item, index) => (
+        <div key={index} className="flex items-center gap-1">
+          <TextInput
+            placeholder={`Key ${item.key}`}
+            value={item.key}
+            className="min-w-0"
+            onChange={(e) => {
+              const updatedKeyValueList = [...keyValueList];
+              updatedKeyValueList[index].key = e.target.value;
+              onChange(updatedKeyValueList);
+            }}
+          />
+          <TextInput
+            placeholder={`Value ${item.value}`}
+            value={item.value as string}
+            className="min-w-0"
+            onChange={(e) => {
+              const updatedKeyValueList = [...keyValueList];
+              updatedKeyValueList[index].value = e.target.value;
+              onChange(updatedKeyValueList);
+            }}
+          />
+          <Button
+            variant="light"
+            color="gray"
+            icon={TrashIcon}
+            className="cursor-pointer hover:text-red-500"
+            tooltip={`Remove ${item.key}`}
+            onClick={() => {
+              const updatedKeyValueList = [...keyValueList];
+              updatedKeyValueList.splice(index, 1);
+              onChange(updatedKeyValueList);
+            }}
+          />
+        </div>
+      ))}
+      <Button
+        onClick={() => {
+          const updatedKeyValueList = [...keyValueList];
+          updatedKeyValueList.push({ key: "", value: "" });
+          onChange(updatedKeyValueList);
+        }}
+        size="xs"
+        className="ml-1 mt-1"
+        variant="light"
+        color="gray"
+        icon={PlusIcon}
+      >
+        Add key-value pair
+      </Button>
+    </div>
   );
 }
 
@@ -293,17 +360,22 @@ function KeepStepEditor({
   const params = [...stepParams, ...existingParams];
   const uniqueParams = params
     .filter((item, pos) => params.indexOf(item) === pos)
-    .filter((item) => item !== "kwargs");
+    .filter(
+      (item) =>
+        item !== "kwargs" &&
+        item !== "enrich_alert" &&
+        item !== "enrich_incident"
+    );
 
-  function propertyChanged(e: any) {
+  function handleWithKeyChange(e: any) {
     const currentWith = (properties.with as object) ?? {};
     updateProperty("with", { ...currentWith, [e.target.id]: e.target.value });
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <section>
-        <div className="mb-2">
+      <section className="flex flex-col gap-2">
+        <div>
           <Text className="font-bold">Provider parameters</Text>
           {parametersError && (
             <Callout
@@ -321,94 +393,96 @@ function KeepStepEditor({
               {variableError.split("-")[1]}
             </Callout>
           )}
-        </div>
-        <div>
-          <Text>If</Text>
-          <TextInput
-            id="if"
-            placeholder="If Condition"
-            onValueChange={(value) => updateProperty("if", value)}
-            className="mb-2.5"
-            value={properties?.if || ("" as string)}
-          />
-        </div>
-        <div>
-          <Text>Vars</Text>
-          {Object.entries(properties?.vars || {}).map(([varKey, varValue]) => (
-            <div key={varKey} className="flex items-center mt-1">
-              <TextInput
-                placeholder={`Key ${varKey}`}
-                value={varKey}
-                onChange={(e) => {
-                  const updatedVars = {
-                    ...(properties.vars as { [key: string]: string }),
-                  };
-                  delete updatedVars[varKey];
-                  updatedVars[e.target.value] = varValue as string;
-                  updateProperty("vars", updatedVars);
-                }}
+          {uniqueParams.map((key) => {
+            let currentPropertyValue = ((properties.with as any) ?? {})[key];
+            const isJson = typeof currentPropertyValue === "object";
+            if (isJson) {
+              currentPropertyValue = JSON.stringify(
+                currentPropertyValue,
+                null,
+                2
+              );
+            }
+            return (
+              <EditorField
+                key={key}
+                name={key}
+                value={currentPropertyValue}
+                onChange={handleWithKeyChange}
+                asTextarea={isJson}
               />
-              <TextInput
-                placeholder={`Value ${varValue}`}
-                value={varValue as string}
-                onChange={(e) => {
-                  const updatedVars = {
-                    ...(properties.vars as { [key: string]: string }),
-                  };
-                  updatedVars[varKey] = e.target.value;
-                  updateProperty("vars", updatedVars);
-                }}
-              />
-              <Icon
-                icon={BackspaceIcon}
-                className="cursor-pointer"
-                color="red"
-                tooltip={`Remove ${varKey}`}
-                onClick={() => {
-                  const updatedVars = {
-                    ...(properties.vars as { [key: string]: string }),
-                  };
-                  delete updatedVars[varKey];
-                  updateProperty("vars", updatedVars);
+            );
+          })}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Text className="font-bold">Step parameters</Text>
+          <div>
+            <Text className="mb-1.5">If Condition</Text>
+            <TextInput
+              id="if"
+              placeholder="If Condition"
+              onValueChange={(value) => updateProperty("if", value)}
+              className="mb-2.5"
+              value={properties?.if || ("" as string)}
+            />
+          </div>
+          <div>
+            <Text className="capitalize mb-1.5">Variables</Text>
+            <KeyValueListField
+              keyValueList={Object.entries(properties.vars ?? {}).map(
+                ([key, value]) => ({
+                  key,
+                  value: value as string,
+                })
+              )}
+              onChange={(newList) => {
+                updateProperty(
+                  "vars",
+                  newList.reduce((acc: any, item: any) => {
+                    acc[item.key] = item.value;
+                    return acc;
+                  }, {})
+                );
+              }}
+            />
+          </div>
+          {properties.with?.enrich_alert && (
+            <div>
+              <Text>Enrich Alert</Text>
+              <Text className="text-sm text-gray-500 mb-2">
+                Enrich alert with the following key-value pairs. Only works if
+                alert trigger is enabled.
+              </Text>
+              <KeyValueListField
+                keyValueList={properties.with.enrich_alert}
+                onChange={(newList) => {
+                  updateProperty("with", {
+                    ...properties.with,
+                    enrich_alert: newList,
+                  });
                 }}
               />
             </div>
-          ))}
-          <Button
-            onClick={() => {
-              const updatedVars = {
-                ...(properties.vars as { [key: string]: string }),
-                "": "",
-              };
-              updateProperty("vars", updatedVars);
-            }}
-            size="xs"
-            className="ml-1 mt-1"
-            variant="light"
-            color="gray"
-            icon={PlusIcon}
-          >
-            Add Var
-          </Button>
+          )}
+          {properties.with?.enrich_incident && (
+            <div>
+              <Text>Enrich Incident</Text>
+              <Text className="text-sm text-gray-500 mb-2">
+                Enrich incident with the following key-value pairs. Only works
+                if incident trigger is enabled.
+              </Text>
+              <KeyValueListField
+                keyValueList={properties.with.enrich_incident}
+                onChange={(newList) => {
+                  updateProperty("with", {
+                    ...properties.with,
+                    enrich_incident: newList,
+                  });
+                }}
+              />
+            </div>
+          )}
         </div>
-        {uniqueParams.map((key) => {
-          let currentPropertyValue = ((properties.with as any) ?? {})[key];
-          if (typeof currentPropertyValue === "object") {
-            currentPropertyValue = JSON.stringify(
-              currentPropertyValue,
-              null,
-              2
-            );
-          }
-          return (
-            <EditorField
-              key={key}
-              name={key}
-              value={currentPropertyValue}
-              onChange={propertyChanged}
-            />
-          );
-        })}
       </section>
     </div>
   );

@@ -23,7 +23,8 @@ workflow:
              Alert details: {{ alert }}"
           # enrich the incident with the current tier
           enrich_incident:
-            current_tier: 0
+            - key: current_tier
+              value: 0
     - name: send-slack-message-tier-1
       if: "{{ incident.current_tier == 0 && alert.name == 'alert1' }}"
       provider:
@@ -36,4 +37,5 @@ workflow:
              Alert: {{ alert.name }} - {{ alert.description }}
              Alert details: {{ alert }}"
           enrich_incident:
-            current_tier: 1
+            - key: current_tier
+              value: 1

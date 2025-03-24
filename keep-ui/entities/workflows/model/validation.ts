@@ -249,6 +249,30 @@ export function validateStepPure(
       validationErrors.push([error, "warning"]);
     });
   }
+  if (step.componentType === "task" && step.properties.with?.enrich_alert) {
+    const values = step.properties.with.enrich_alert.map((item) => item.value);
+    const variableErrors = validateAllMustacheVariablesInString(
+      values.join(","),
+      step,
+      definition
+    );
+    variableErrors.forEach((error) => {
+      validationErrors.push([error, "warning"]);
+    });
+  }
+  if (step.componentType === "task" && step.properties.with?.enrich_incident) {
+    const values = step.properties.with.enrich_incident.map(
+      (item) => item.value
+    );
+    const variableErrors = validateAllMustacheVariablesInString(
+      values.join(","),
+      step,
+      definition
+    );
+    variableErrors.forEach((error) => {
+      validationErrors.push([error, "warning"]);
+    });
+  }
   if (step.componentType === "switch") {
     if (!step.name) {
       validationErrors.push(["Condition name cannot be empty.", "error"]);
