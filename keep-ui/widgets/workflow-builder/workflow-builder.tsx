@@ -9,7 +9,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { useWorkflowStore } from "@/entities/workflows";
 import { showErrorToast, KeepLoader } from "@/shared/ui";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import { YAMLEditor } from "@/shared/ui/YAMLEditor";
+import { WorkflowYAMLEditor } from "@/shared/ui";
 import Skeleton from "react-loading-skeleton";
 import {
   getWorkflowDefinition,
@@ -228,7 +228,7 @@ export function WorkflowBuilder({
       return <Skeleton className="w-full h-full" />;
     }
     return (
-      <YAMLEditor
+      <WorkflowYAMLEditor
         // TODO: do not re-render editor on every workflowYaml change, handle updates inside the editor
         key={workflowYaml}
         workflowRaw={workflowYaml}

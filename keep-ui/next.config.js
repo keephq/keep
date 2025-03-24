@@ -10,6 +10,7 @@ const turbopackAliases =
   process.env.NODE_ENV === "development"
     ? {
         "./MonacoEditor": "@/shared/ui/MonacoEditor/index.turbopack.ts",
+        "./MonacoYamlEditor": "@/shared/ui/MonacoYamlEditor/index.turbopack.ts",
       }
     : {};
 

@@ -78,17 +78,21 @@
   font-size: 12px;
 }
 
+.workflow-yaml-editor .monaco-editor {
+  outline: none;
+}
+
 /* Editor container styles */
-.monaco-editor .margin {
+.workflow-yaml-editor .monaco-editor .margin {
   margin-left: 8px !important;
 }
 
 /* Ensure decorations appear above the text */
-.monaco-editor .decorationsOverviewRuler {
+.workflow-yaml-editor .monaco-editor .decorationsOverviewRuler {
   z-index: 2;
 }
 
 /* Make sure the glyph margin is visible */
-.monaco-editor .margin-view-overlays {
+.workflow-yaml-editor .monaco-editor .margin-view-overlays {
   width: 40px !important;
 }

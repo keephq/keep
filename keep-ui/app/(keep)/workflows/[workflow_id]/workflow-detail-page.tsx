@@ -22,7 +22,7 @@ import WorkflowSecrets from "./workflow-secrets";
 import { useConfig } from "utils/hooks/useConfig";
 import { AiOutlineSwap } from "react-icons/ai";
 import { ErrorComponent, TabNavigationLink } from "@/shared/ui";
-import { YAMLEditor } from "@/shared/ui/YAMLEditor";
+import { WorkflowYAMLEditor } from "@/shared/ui";
 import Skeleton from "react-loading-skeleton";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useWorkflowDetail } from "@/utils/hooks/useWorkflowDetail";
@@ -130,7 +130,7 @@ export default function WorkflowDetailPage({
               <Skeleton className="w-full h-full" />
             ) : (
               <Card className="h-[calc(100vh-12rem)] p-0">
-                <YAMLEditor
+                <WorkflowYAMLEditor
                   key={workflow.workflow_raw!}
                   workflowRaw={workflow.workflow_raw!}
                   filename={workflow.id ?? "workflow"}

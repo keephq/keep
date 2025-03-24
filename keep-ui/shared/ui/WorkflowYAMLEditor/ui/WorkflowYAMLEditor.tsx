@@ -1,7 +1,9 @@
+"use client";
 import React, {
   Suspense,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -16,8 +18,9 @@ import { parseDocument, Document } from "yaml";
 import { useWorkflowJsonSchema } from "@/entities/workflows/model/useWorkflowJsonSchema";
 import { KeepLoader } from "../../KeepLoader/KeepLoader";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
-import { MonacoYAMLEditor } from "./MonacoYamlEditor";
-import "./YAMLEditor.css";
+// NOTE: IT IS IMPORTANT TO IMPORT FROM THE SHARED UI DIRECTORY, because import will be replaced for turbopack
+import { MonacoYAMLEditor } from "@/shared/ui";
+import "./WorkflowYAMLEditor.css";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
 interface Props {
@@ -34,7 +37,7 @@ interface Props {
   "data-testid"?: string;
 }
 
-export const YAMLEditor = ({
+export const WorkflowYAMLEditor = ({
   workflowRaw,
   filename = "workflow",
   workflowId,
@@ -51,6 +54,15 @@ export const YAMLEditor = ({
   const { updateWorkflow } = useWorkflowActions();
 
   const workflowJsonSchema = useWorkflowJsonSchema();
+  const schemas = useMemo(() => {
+    return [
+      {
+        fileMatch: ["*"],
+        schema: workflowJsonSchema,
+        uri: KeepSchemaPath,
+      },
+    ];
+  }, [workflowJsonSchema]);
 
   const findStepNameForPosition = (
     lineNumber: number,
@@ -521,20 +533,14 @@ export const YAMLEditor = ({
         >
           <MonacoYAMLEditor
             height="100%"
-            className="[&_.monaco-editor]:outline-none"
+            className="workflow-yaml-editor"
             wrapperProps={{ "data-testid": dataTestId }}
             defaultValue={getOrderedWorkflowYamlString(workflowRaw)}
             onMount={handleEditorDidMount}
             options={editorOptions}
             loading={<KeepLoader loadingText="Loading YAML editor..." />}
             theme="light"
-            schemas={[
-              {
-                fileMatch: ["*"],
-                schema: workflowJsonSchema,
-                uri: KeepSchemaPath,
-              },
-            ]}
+            schemas={schemas}
           />
         </Suspense>
       </div>
