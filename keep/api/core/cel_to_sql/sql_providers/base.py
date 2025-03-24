@@ -96,6 +96,7 @@ class BaseCelToSqlProvider:
     def __init__(self, dialect: Dialect, properties_metadata: PropertiesMetadata):
         super().__init__()
         self.__literal_proc = String("").literal_processor(dialect=dialect)
+        self.properties_metadata = properties_metadata
         self.properties_mapper = PropertiesMapper(properties_metadata)
 
     def convert_to_sql_str(self, cel: str) -> str:
@@ -136,11 +137,31 @@ class BaseCelToSqlProvider:
         except NotImplementedError as e:
             raise CelToSqlException(f"Error while converting CEL expression tree to SQL: {str(e)}") from e
 
+    def get_order_by_exp(self, sort_by_cel_field: str) -> str:
+        fields_to_sort_by = []
+        metadata = self.properties_metadata.get_property_metadata(sort_by_cel_field)
+        fields_to_sort_by = [
+            self._get_order_by_field(item, metadata.data_type)
+            for item in metadata.field_mappings
+        ]
+
+        if len(fields_to_sort_by) > 1:
+            order_by_exp = self.coalesce(fields_to_sort_by)
+        else:
+            order_by_exp = fields_to_sort_by[0]
+
+        return order_by_exp
+
     def literal_proc(self, value: Any) -> str:
         if isinstance(value, str):
             return self.__literal_proc(value)
 
         return f"'{str(value)}'"
+
+    def _get_order_by_field(self, field_mapping, data_type: type) -> str:
+        raise NotImplementedError(
+            "Order by field is not implemented. Must be implemented in the child class."
+        )
 
     def _get_default_value_for_type(self, type: type) -> str:
         if type is str or type is NoneType:
@@ -183,16 +204,13 @@ class BaseCelToSqlProvider:
             f"{type(abstract_node).__name__} node type is not supported yet"
         )
 
-    def json_extract(self, column: str, path: str) -> str:
-        raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
-
     def json_extract_as_text(self, column: str, path: str) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
 
     def coalesce(self, args: List[str]) -> str:
         raise NotImplementedError("COALESCE is not implemented. Must be implemented in the child class.")
 
-    def cast(self, expression_to_cast: str, to_type: type) -> str:
+    def cast(self, expression_to_cast: str, to_type: type, force=False) -> str:
         raise NotImplementedError("CAST is not implemented. Must be implemented in the child class.")
 
     def _visit_parentheses(self, node: str) -> str:

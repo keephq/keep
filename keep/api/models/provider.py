@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Any
 
 from pydantic import BaseModel, Field
 
@@ -16,7 +16,7 @@ class Provider(BaseModel):
     display_name: str
     type: str
     config: dict[str, dict] = Field(default_factory=dict)
-    details: dict[str, dict] | None = None
+    details: dict[str, Any] | None = None
     can_notify: bool
     # TODO: consider making it strongly typed for UI validations
     notify_params: list[str] | None = None
