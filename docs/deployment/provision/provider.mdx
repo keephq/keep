@@ -8,11 +8,17 @@ Provider provisioning in Keep allows you to set up and manage data providers dyn
 
 ### Configuring Providers
 
-To provision providers and deduplication rules for them, set the `KEEP_PROVIDERS` environment variable. This can be done in two ways:
-1. Directly with a JSON string containing the providers configurations.
-2. With the path to a JSON file that contains the providers configurations.
+To provision providers and deduplication rules for them, we can configure via the environment variable. This can be done in two ways:
+1. Using `KEEP_PROVIDERS` environment variable which either contains a JSON string or a path to a JSON file that contains the providers configurations.
+2. Using `KEEP_PROVIDERS_DIRECTORY` environment variable which contains a path to a directory that contains the providers configurations (configured via YAML files). This is the recommended approach.
 
-<Tip>Please note: Deduplication rules are not mandatory for provider distribution. See the Clickhouse example.</Tip>
+<Note>
+Keep does not allow to use both `KEEP_PROVIDERS` and `KEEP_PROVIDERS_DIRECTORY` environment variables at the same time.
+</Note>
+
+<Tip>Please note: Deduplication rules are not mandatory for provider distribution.</Tip>
+
+### Providers provisioning using KEEP_PROVIDERS
 
 Providers provisioning JSON example:
 ```json
@@ -56,6 +62,38 @@ Spin up Keep with this `KEEP_PROVIDERS` value:
 KEEP_PROVIDERS={"keepVictoriaMetrics":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort": 1234}},"keepClickhouse1":{"type":"clickhouse","authentication":{"host":"http://localhost","port":"4321","username":"keep","password":"1234","database":"keepdb"}}}
 ```
 
+### Providers provisioning using KEEP_PROVIDERS_DIRECTORY
+
+Specify the path to the directory containing the providers configurations:
+
+```bash
+# ENV
+KEEP_PROVIDERS_DIRECTORY=/path/to/providers
+```
+
+The directory should contain YAML files with the providers configurations.
+
+Example of a provider configuration YAML file:
+
+```yaml
+name: keepVictoriaMetrics
+type: victoriametrics
+authentication:
+  VMAlertHost: http://localhost
+  VMAlertPort: 1234
+  deduplication_rules:
+    deduplication_rule_name_example_1:
+      description: deduplication rule name example 1
+      fingerprint_fields:
+        - fingerprint
+        - source
+        - service
+      full_deduplication: true
+      ignore_fields:
+        - name
+        - lastReceived
+```
+
 ### Supported Providers
 
 Keep supports a wide range of provider types. Each provider type has its own specific configuration requirements.
@@ -63,6 +101,8 @@ To see the full list of supported providers and their detailed configuration opt
 
 
 ### Update Provisioned Providers
+
+#### Using KEEP_PROVIDERS
 
 Provider configurations can be updated dynamically by changing the `KEEP_PROVIDERS` environment variable.
 
@@ -74,3 +114,14 @@ The high-level provisioning mechanism:
 1. Keep reads the `KEEP_PROVIDERS` value.
 2. Keep checks if there are any provisioned providers that are no longer in the `KEEP_PROVIDERS` value, and deletes them.
 3. Keep installs all providers from the `KEEP_PROVIDERS` value.
+
+#### Using KEEP_PROVIDERS_DIRECTORY
+
+Provider configurations can be updated dynamically by changing the YAML files in the `KEEP_PROVIDERS_DIRECTORY` directory.
+
+On every restart, Keep reads the YAML files in the `KEEP_PROVIDERS_DIRECTORY` directory and determines which providers need to be added or removed.
+
+The high-level provisioning mechanism:
+1. Keep reads the YAML files in the `KEEP_PROVIDERS_DIRECTORY` directory.
+2. Keep checks if there are any provisioned providers that are no longer in the YAML files, and deletes them.
+3. Keep installs all providers from the YAML files.
