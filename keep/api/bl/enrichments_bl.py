@@ -11,11 +11,13 @@ import chevron
 import json5
 from fastapi import HTTPException
 from sqlalchemy import func
+from sqlalchemy_utils import UUIDType
 from sqlmodel import Session, select
 
 from keep.api.core.config import config
 from keep.api.core.db import batch_enrich
-from keep.api.core.db import enrich_entity as enrich_alert_db
+from keep.api.core.db import enrich_entity as enrich_alert_db, get_last_alert_by_fingerprint, \
+    enrich_alerts_with_incidents, is_all_alerts_resolved
 from keep.api.core.db import (
     get_alert_by_event_id,
     get_enrichment_with_session,
@@ -35,8 +37,10 @@ from keep.api.models.db.enrichment_event import (
     EnrichmentType,
 )
 from keep.api.models.db.extraction import ExtractionRule
+from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.db.mapping import MappingRule
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.api.models.db.rule import ResolveOn
 
 
 def is_valid_uuid(uuid_str):
@@ -670,7 +674,42 @@ class EnrichmentsBl:
             action_callee,
             action_description,
             audit_enabled=audit_enabled,
+            session=self.db_session
         )
+
+    def disposable_enrich_entity(
+        self,
+        fingerprint: str,
+        enrichments: dict,
+        action_type: ActionType,
+        action_callee: str,
+        action_description: str,
+        should_exist=True,
+        force=False,
+        audit_enabled=True,
+    ):
+
+        common_kwargs = {
+            "enrichments": enrichments,
+            "action_type": action_type,
+            "action_callee": action_callee,
+            "action_description": action_description,
+            "should_exist": should_exist,
+            "force": force,
+        }
+
+        self.enrich_entity(fingerprint=fingerprint, dispose_on_new_alert=True, audit_enabled=audit_enabled, **common_kwargs)
+
+        last_alert = get_last_alert_by_fingerprint(
+            self.tenant_id, fingerprint, session=self.db_session
+        )
+        # Create instance-wide enrichment for history
+        # For better database-native UUID support
+        alert_id = UUIDType(binary=False).process_bind_param(
+            last_alert.alert_id, self.db_session.bind.dialect
+        )
+        self.enrich_entity(fingerprint=alert_id, audit_enabled=False, **common_kwargs)
+
 
     def enrich_entity(
         self,
@@ -910,3 +949,15 @@ class EnrichmentsBl:
                     "message": message,
                 },
             )
+
+    def check_incident_resolution(self, alert):
+        enrich_alerts_with_incidents(tenant_id=self.tenant_id, alerts=alert, session=self.db_session)
+        self.db_session.expire_on_commit = False
+        for incident in alert[0]._incidents:
+            if (
+                incident.resolve_on == ResolveOn.ALL.value
+                and is_all_alerts_resolved(incident=incident, session=self.db_session)
+            ):
+                incident.status = IncidentStatus.RESOLVED.value
+                self.db_session.add(incident)
+            self.db_session.commit()
