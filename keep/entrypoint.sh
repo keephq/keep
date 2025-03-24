@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Exit immediately if a command exits with a non-zero status
 set -e
@@ -43,7 +43,7 @@ else
     gunicorn \
         --bind "0.0.0.0:$ARQ_WORKER_PORT" \
         --workers $KEEP_WORKERS \
-        --worker-class "keep.api.arq_worker_gunicorn.ARQWorker" \
+        --worker-class "keep.api.arq_worker_gunicorn.ARQGunicornWorker" \
         --timeout $ARQ_WORKER_TIMEOUT \
         --log-level $LOG_LEVEL \
         --access-logfile - \
