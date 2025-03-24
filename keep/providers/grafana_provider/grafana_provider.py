@@ -4,6 +4,8 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 
 import dataclasses
 import datetime
+import hashlib
+import json
 import logging
 import time
 
@@ -207,6 +209,55 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         return GrafanaAlertFormatDescription.schema()
 
     @staticmethod
+    def get_service(alert: dict) -> str:
+        """
+        Get service from alert.
+        """
+        labels = alert.get("labels", {})
+        return alert.get("service", labels.get("service", "unknown"))
+
+    @staticmethod
+    def calculate_fingerprint(alert: dict) -> str:
+        """
+        Calculate fingerprint for alert.
+        """
+        labels = alert.get("labels", {})
+        fingerprint = labels.get("fingerprint", "")
+        if fingerprint:
+            logger.debug("Fingerprint provided in alert")
+            return fingerprint
+
+        fingerprint_string = None
+        if not labels:
+            logger.warning(
+                "No labels found in alert will use old behaviour",
+                extra={
+                    "labels": labels,
+                },
+            )
+        else:
+            try:
+                fingerprint_string = json.dumps(labels)
+            except Exception:
+                logger.exception(
+                    "Failed to calculate fingerprint",
+                    extra={
+                        "labels": labels,
+                    },
+                )
+
+        # from some reason, the fingerprint is not provided in the alert + no labels or failed to calculate
+        if not fingerprint_string:
+            # old behavior
+            service = GrafanaProvider._get_service(alert)
+            fingerprint_string = alert.get(
+                "fingerprint", alert.get("alertname", "") + service
+            )
+
+        fingerprint = hashlib.sha256(fingerprint_string.encode()).hexdigest()
+        return fingerprint
+
+    @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
@@ -228,8 +279,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
             severity = GrafanaProvider.SEVERITIES_MAP.get(
                 labels.get("severity"), AlertSeverity.INFO
             )
-            service = alert.get("service", "unknown")
-            fingerprint = alert.get("fingerprint", alert.get("alertname", "") + service)
+            fingerprint = GrafanaProvider.calculate_fingerprint(alert)
             environment = labels.get(
                 "deployment_environment", labels.get("environment", "unknown")
             )
