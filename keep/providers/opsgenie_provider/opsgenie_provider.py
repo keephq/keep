@@ -274,6 +274,20 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
         Args:
             kwargs (dict): The providers with context
         """
+        if kwargs and "type" in kwargs and kwargs["type"] == "close_alert":
+            # Create an incident
+            alert_id = kwargs.get("alert_id")
+            if not alert_id:
+                self.logger.error("alert_id is required to close an alert")
+                return
+            self.logger.info(
+                "Closing Opsgenie alert", extra={"alert_id": kwargs["alert_id"]}
+            )
+            return self.close_alert(
+                alert_id=alert_id,
+            )
+
+        # default, backward compatibility behavior
         return self._create_alert(
             user,
             note,

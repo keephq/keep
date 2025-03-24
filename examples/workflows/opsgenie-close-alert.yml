@@ -1,0 +1,22 @@
+workflow:
+  id: opsgenie-alert-closer
+  name: OpsGenie Alert Closer
+  description: Closes OpsGenie alerts for resolved Coralogix alerts.
+triggers:
+  - type: manual
+  - type: alert
+    filters:
+      - key: source
+        value: coralogix
+      - key: status
+        value: resolved
+actions:
+  - name: create-alert
+    provider:
+      config: "{{ providers.opsgenie }}"
+      type: opsgenie
+      # run only if we have an opsgenie alert id
+      if: "'{{ alert.opsgenie_alert_id }}'"
+      with:
+        type: close_alert
+        alert_id: "{{ alert.opsgenie_alert_id }}"
