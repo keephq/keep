@@ -326,6 +326,12 @@
         </a>
   </td>
   <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/thousandeyes-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/thousandeyes-icon.png" alt="SumoLogic"/><br/>
+          ThousandEyes
+        </a>
+  </td>
+  <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/uptimekuma-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/uptimekuma-icon.png" alt="UptimeKuma"/><br/>
           UptimeKuma
@@ -337,14 +343,14 @@
           VictoriaLogs
         </a>
   </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/victoriametrics-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/victoriametrics-icon.png" alt="VictoriaMetrics"/><br/>
           VictoriaMetrics
         </a>
   </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/wazuh-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/wazuh-icon.png" alt="Wazuh"/><br/>
