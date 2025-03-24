@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import time
 import uuid
 from typing import Any, Dict, List
@@ -8,6 +9,10 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
+from keep.api.alert_deduplicator.deduplication_rules_provisioning import (
+    provision_deduplication_rules,
+)
+from keep.api.core.config import config
 from keep.api.core.db import (
     engine,
     get_all_provisioned_providers,
@@ -18,10 +23,10 @@ from keep.api.models.db.provider import Provider, ProviderExecutionLog
 from keep.api.models.provider import Provider as ProviderModel
 from keep.contextmanager.contextmanager import ContextManager
 from keep.event_subscriber.event_subscriber import EventSubscriber
+from keep.functions import cyaml
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
-from keep.api.core.config import config
 
 logger = logging.getLogger(__name__)
 
@@ -369,48 +374,172 @@ class ProvidersService:
         return provider is not None
 
     @staticmethod
-    def provision_providers_from_env(tenant_id: str):
-        # avoid circular import
-        from keep.parser.parser import Parser
+    def provision_providers(tenant_id: str):
+        """
+        Provision providers from a directory or env variable.
 
-        parser = Parser()
-        context_manager = ContextManager(tenant_id=tenant_id)
-        parser._parse_providers_from_env(context_manager)
-        env_providers = context_manager.providers_context
+        Args:
+            tenant_id (str): The tenant ID.
+        """
+        logger = logging.getLogger(__name__)
 
-        # first, remove any provisioned providers that are not in the env
-        prev_provisioned_providers = get_all_provisioned_providers(tenant_id)
-        for provider in prev_provisioned_providers:
-            if provider.name not in env_providers:
-                with Session(engine) as session:
-                    logger.info(f"Deleting provider {provider.name}")
-                    ProvidersService.delete_provider(
-                        tenant_id, provider.id, session, allow_provisioned=True
+        provisioned_providers_dir = os.environ.get("KEEP_PROVIDERS_DIRECTORY")
+        provisioned_providers_json = os.environ.get("KEEP_PROVIDERS")
+
+        if not (provisioned_providers_dir or provisioned_providers_json):
+            logger.info("No providers for provisioning found")
+            return
+
+        if (
+            provisioned_providers_dir is not None
+            and provisioned_providers_json is not None
+        ):
+            raise Exception(
+                "Providers provisioned via env var and directory at the same time. Please choose one."
+            )
+
+        if provisioned_providers_dir is not None and not os.path.isdir(
+            provisioned_providers_dir
+        ):
+            raise FileNotFoundError(
+                f"Directory {provisioned_providers_dir} does not exist"
+            )
+
+        # Get all existing provisioned providers
+        provisioned_providers = get_all_provisioned_providers(tenant_id)
+
+        ### Provisioning from env var
+        if provisioned_providers_json is not None:
+            # Avoid circular import
+            from keep.parser.parser import Parser
+
+            parser = Parser()
+            context_manager = ContextManager(tenant_id=tenant_id)
+            parser._parse_providers_from_env(context_manager)
+            env_providers = context_manager.providers_context
+
+            # Un-provisioning other providers.
+            for provider in provisioned_providers:
+                if provider.name not in env_providers:
+                    with Session(engine) as session:
+                        logger.info(f"Deleting provider {provider.name}")
+                        ProvidersService.delete_provider(
+                            tenant_id, provider.id, session, allow_provisioned=True
+                        )
+                        logger.info(f"Provider {provider.name} deleted")
+
+            for provider_name, provider_config in env_providers.items():
+                logger.info(f"Provisioning provider {provider_name}")
+                if ProvidersService.is_provider_installed(tenant_id, provider_name):
+                    logger.info(f"Provider {provider_name} already installed")
+                    continue
+
+                logger.info(f"Installing provider {provider_name}")
+                try:
+                    ProvidersService.install_provider(
+                        tenant_id=tenant_id,
+                        installed_by="system",
+                        provider_id=provider_config["type"],
+                        provider_name=provider_name,
+                        provider_type=provider_config["type"],
+                        provider_config=provider_config["authentication"],
+                        provisioned=True,
+                        validate_scopes=False,
                     )
-                    logger.info(f"Provider {provider.name} deleted")
+                    logger.info(f"Provider {provider_name} provisioned successfully")
+                except Exception as e:
+                    logger.error(
+                        "Error provisioning provider from env var",
+                        extra={"exception": e},
+                    )
 
-        for provider_name, provider_config in env_providers.items():
-            logger.info(f"Provisioning provider {provider_name}")
-            # if its already installed, skip
-            if ProvidersService.is_provider_installed(tenant_id, provider_name):
-                logger.info(f"Provider {provider_name} already installed")
-                continue
-            logger.info(f"Installing provider {provider_name}")
-            try:
-                ProvidersService.install_provider(
-                    tenant_id=tenant_id,
-                    installed_by="system",
-                    provider_id=provider_config["type"],
-                    provider_name=provider_name,
-                    provider_type=provider_config["type"],
-                    provider_config=provider_config["authentication"],
-                    provisioned=True,
-                    validate_scopes=False,
-                )
-                logger.info(f"Provider {provider_name} provisioned")
-            except Exception:
-                logger.exception(f"Failed to provision provider {provider_name}")
-                continue
+        ### Provisioning from the directory
+        if provisioned_providers_dir is not None:
+            installed_providers = []
+            for file in os.listdir(provisioned_providers_dir):
+                if file.endswith((".yaml", ".yml")):
+                    logger.info(f"Provisioning provider from {file}")
+                    provider_path = os.path.join(provisioned_providers_dir, file)
+
+                    try:
+                        with open(provider_path, "r") as yaml_file:
+                            provider_yaml = cyaml.safe_load(yaml_file.read())
+                            provider_name = provider_yaml["name"]
+                            provider_type = provider_yaml["type"]
+                            provider_config = provider_yaml.get("authentication", {})
+
+                            # Skip if already installed
+                            if ProvidersService.is_provider_installed(
+                                tenant_id, provider_name
+                            ):
+                                logger.info(
+                                    f"Provider {provider_name} already installed"
+                                )
+                                # Add to installed providers list. This is necessary, otherwise the provider
+                                # will be un-provisioned on the process un-provisioning outdated providers.
+                                installed_providers.append(provider_name)
+                                continue
+
+                            logger.info(f"Installing provider {provider_name}")
+                            ProvidersService.install_provider(
+                                tenant_id=tenant_id,
+                                installed_by="system",
+                                provider_id=provider_type,
+                                provider_name=provider_name,
+                                provider_type=provider_type,
+                                provider_config=provider_config,
+                                provisioned=True,
+                                validate_scopes=False,
+                            )
+                            logger.info(
+                                f"Provider {provider_name} provisioned successfully"
+                            )
+                            installed_providers.append(provider_name)
+
+                            # Configure deduplication rules
+                            deduplication_rules = provider_yaml.get(
+                                "deduplication_rules", {}
+                            )
+                            deduplication_rules_dict: dict[str, dict] = {}
+                            if deduplication_rules:
+                                logger.info(
+                                    f"Provisioning deduplication rules for provider {provider_name}"
+                                )
+                                for (
+                                    rule_name,
+                                    rule_config,
+                                ) in deduplication_rules.items():
+                                    logger.info(
+                                        f"Provisioning deduplication rule {rule_name}"
+                                    )
+                                    rule_config["name"] = rule_name
+                                    rule_config["provider_name"] = provider_name
+                                    rule_config["provider_type"] = provider_type
+                                    deduplication_rules_dict[rule_name] = rule_config
+
+                            # Provision deduplication rules
+                            provision_deduplication_rules(
+                                deduplication_rules_dict, tenant_id
+                            )
+                    except Exception as e:
+                        logger.error(
+                            "Error provisioning provider from directory",
+                            extra={"exception": e},
+                        )
+
+            # Un-provisioning other providers.
+            for provider in provisioned_providers:
+                if provider.name not in installed_providers:
+                    with Session(engine) as session:
+                        logger.info(
+                            f"Deprovisioning provider {provider.name} as its file no longer exists or is outside the providers directory"
+                        )
+                        ProvidersService.delete_provider(
+                            tenant_id, provider.id, session, allow_provisioned=True
+                        )
+                        logger.info(
+                            f"Provider {provider.name} deprovisioned successfully"
+                        )
 
     @staticmethod
     def get_provider_logs(
