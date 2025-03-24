@@ -18,20 +18,42 @@ python "$SCRIPT_DIR/server_jobs_bg.py" &
     echo "Failed to build providers cache, skipping"
 }
 
-# Execute the CMD provided in the Dockerfile or as arguments
-
 # Check for REDIS env variable == true
 if [ "$REDIS" != "true" ]; then
-    # just run gunicorn
+    # Just run gunicorn for the API
     exec "$@"
-# else, we want differnt workers for API and for processing
+# else, we want different workers for API and for processing
 else
     echo "Running with Redis"
+
+    # In production, always use Gunicorn for ARQ workers
     # default number of workers is two
     KEEP_WORKERS=${KEEP_WORKERS:-2}
-    echo "KEEP_WORKERS: $KEEP_WORKERS"
-    # Run gunicorn with the specified workers
-    LOG_LEVEL=DEBUG KEEP_WORKERS=${KEEP_WORKERS} REDIS=true python -m keep.api.arq_worker &
-    echo "Running gunicorn"
+    ARQ_WORKER_PORT=${ARQ_WORKER_PORT:-8001}
+    ARQ_WORKER_TIMEOUT=${ARQ_WORKER_TIMEOUT:-120}
+    LOG_LEVEL=${LOG_LEVEL:-INFO}
+
+    echo "Starting ARQ workers under Gunicorn (workers: $KEEP_WORKERS)"
+
+    # Run Gunicorn directly for ARQ workers
+    PYTHONPATH=$PYTHONPATH \
+    REDIS=true \
+    KEEP_WORKERS=$KEEP_WORKERS \
+    LOG_LEVEL=$LOG_LEVEL \
+    gunicorn \
+        --bind "0.0.0.0:$ARQ_WORKER_PORT" \
+        --workers $KEEP_WORKERS \
+        --worker-class "keep.api.arq_worker_gunicorn.ARQWorker" \
+        --timeout $ARQ_WORKER_TIMEOUT \
+        --log-level $LOG_LEVEL \
+        --access-logfile - \
+        --error-logfile - \
+        --name "arq_worker" \
+        "keep.api.arq_worker_gunicorn:create_app()" &
+
+    # Give ARQ workers time to start up
+    sleep 2
+
+    echo "Running API gunicorn"
     exec "$@"
 fi

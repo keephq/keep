@@ -98,7 +98,7 @@ async def process_event_in_worker(
         fingerprint=fingerprint,
         api_key_name=api_key_name,
         trace_id=trace_id,
-        event=event,  # This was missing in your error
+        event=event,
         notify_client=notify_client,
         timestamp_forced=timestamp_forced,
     )
@@ -133,7 +133,9 @@ async def startup(ctx):
 
 async def shutdown(ctx):
     """ARQ worker shutdown callback"""
-    pass
+    # Clean up any resources if needed
+    if "pool" in ctx:
+        ctx["pool"].shutdown(wait=True)
 
 
 def at_every_x_minutes(x: int, start: int = 0, end: int = 59):
@@ -256,15 +258,25 @@ def run_worker_process(queue_name: str, worker_index: int):
     asyncio.run(start_worker_instance(queue_name, worker_index))
 
 
-async def start_workers():
+async def start_workers(use_gunicorn=False):
     """
     Start the ARQ workers based on configuration with multi-process support.
+
+    Args:
+        use_gunicorn: If True, return early as workers will be managed by Gunicorn
     """
     logger.info("Disposing existing DB connections")
     dispose_session()
 
     if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_NONE:
         logger.info("No task pools configured to run")
+        return
+
+    # If using Gunicorn, we don't need to manage processes here
+    if use_gunicorn:
+        logger.info(
+            "Workers will be managed by Gunicorn, skipping direct process creation"
+        )
         return
 
     try:
@@ -318,24 +330,33 @@ async def start_workers():
         raise
 
 
-async def run_workers():
+async def run_workers(use_gunicorn=False):
     """
     Main entry point for running workers with error handling.
+
+    Args:
+        use_gunicorn: If True, workers will be managed by Gunicorn
     """
     try:
         logger.info("Starting Workers")
         # if log leve is debug:
         if config("LOG_LEVEL", default="INFO") == "DEBUG":
             logger.info("Applying ARQ debug patches")
-            from .arq_worker_debug_patch import (
-                apply_arq_debug_patches,
-                patch_process_event,
-            )
+            try:
+                from .arq_worker_debug_patch import (
+                    apply_arq_debug_patches,
+                    patch_process_event,
+                )
 
-            apply_arq_debug_patches()
-            patch_process_event()
-            logger.info("ARQ debug patches applied")
-        await start_workers()
+                apply_arq_debug_patches()
+                patch_process_event()
+                logger.info("ARQ debug patches applied")
+            except ImportError:
+                logger.warning(
+                    "Could not import ARQ debug patches, continuing without them"
+                )
+
+        await start_workers(use_gunicorn=use_gunicorn)
 
         logger.info("Workers finished")
     except KeyboardInterrupt:
@@ -346,6 +367,17 @@ async def run_workers():
 
 
 if __name__ == "__main__":
+    # Check if we're using Gunicorn
+    use_gunicorn = config("USE_GUNICORN", cast=bool, default=False)
+
+    if use_gunicorn:
+        logger.info(
+            "Configured to use Gunicorn, please run arq_worker_gunicorn.py instead"
+        )
+        import sys
+
+        sys.exit(0)
+
     logger.info(f"Starting ARQ workers with task pool: {KEEP_ARQ_TASK_POOL}")
     worker_count = config("KEEP_WORKERS", cast=int, default=1)
     logger.info(f"Worker process count: {worker_count}")
