@@ -21,6 +21,7 @@ import { useIncidents } from "utils/hooks/useIncidents";
 import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
+import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 
 interface CreateIncidentWithAIModalProps {
   isOpen: boolean;
@@ -372,7 +373,10 @@ const CreateIncidentWithAIModal = ({
                       {activeAlert.name || "Unnamed Alert"}
                     </div>
                     <div className="w-2/3 break-words whitespace-normal text-gray-600">
-                      {activeAlert.description || "No description"}
+                      <FormattedContent
+                        content={activeAlert.description || "No description"}
+                        format={activeAlert.description_format}
+                      />
                     </div>
                     <div className="w-1/12 break-words">
                       <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-sm">

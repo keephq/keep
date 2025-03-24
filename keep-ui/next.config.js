@@ -1,13 +1,29 @@
 const { withSentryConfig } = require("@sentry/nextjs");
 
-const isWithTurbo = process.env.NEXT_TURBO === "true";
 const isSentryDisabled =
   process.env.SENTRY_DISABLED === "true" ||
   process.env.NODE_ENV === "development";
 
+// Turbopack doesn't support dynamic imports yet, so we need to fallback to CDN for development
+// Checking NODE_ENV because in the future we may use turbopack in production as well
+const turbopackAliases =
+  process.env.NODE_ENV === "development"
+    ? {
+        "./MonacoEditor": "@/shared/ui/MonacoEditor/index.turbopack.ts",
+      }
+    : {};
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  devIndicators: {
+    position: "bottom-right",
+  },
+  experimental: {
+    turbo: {
+      resolveAlias: turbopackAliases,
+    },
+  },
   webpack: (
     config,
     { buildId, dev, isServer, defaultLoaders, nextRuntime, webpack }
@@ -50,6 +66,7 @@ const nextConfig = {
         message: /Critical dependency/,
       },
     ];
+
     return config;
   },
   // @auth/core is ESM-only and jest fails to transpile it.
@@ -81,14 +98,16 @@ const nextConfig = {
         protocol: "https",
         hostname: "cdn.prod.website-files.com",
       },
+      // Cloudflare Image Delivery
+      {
+        protocol: "https",
+        hostname: "imagedelivery.net",
+      },
     ],
   },
-  // compiler is not supported in turbo mode
-  compiler: isWithTurbo
-    ? undefined
-    : {
-        removeConsole: false,
-      },
+  compiler: {
+    removeConsole: false,
+  },
   output: "standalone",
   productionBrowserSourceMaps: !isSentryDisabled,
   async redirects() {

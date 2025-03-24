@@ -21,7 +21,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
 } from "@heroicons/react/16/solid";
-import { useMappings } from "@/utils/hooks/useMappingRules";
+import { useMappingRule, useMappings } from "@/utils/hooks/useMappingRules";
 
 interface Pagination {
   limit: number;
@@ -38,8 +38,7 @@ export default function MappingExecutionsPage(props: {
   });
   const [isDataPreviewExpanded, setIsDataPreviewExpanded] = useState(false);
 
-  const { data: mappings } = useMappings();
-  const rule = mappings?.find((m) => m.id === parseInt(params.rule_id));
+  const { data: rule } = useMappingRule(parseInt(params.rule_id));
 
   const { executions, totalCount, isLoading } = useEnrichmentEvents({
     ruleId: params.rule_id,

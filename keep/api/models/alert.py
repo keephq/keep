@@ -72,6 +72,7 @@ class AlertDto(BaseModel):
     severity: AlertSeverity
     lastReceived: str
     firingStartTime: str | None = None
+    firingCounter: int = 0
     environment: str = "undefined"
     isFullDuplicate: bool | None = False
     isPartialDuplicate: bool | None = False
@@ -81,6 +82,7 @@ class AlertDto(BaseModel):
     apiKeyRef: str | None = None
     message: str | None = None
     description: str | None = None
+    description_format: str | None = None  # Can be 'markdown' or 'html'
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
     event_id: str | None = None  # Database alert id
     url: AnyHttpUrl | None = None
@@ -218,6 +220,15 @@ class AlertDto(BaseModel):
         )
         return dismissed
 
+    @validator("description_format")
+    def validate_description_format(cls, description_format):
+        if description_format is None:
+            return None
+        valid_formats = ["markdown", "html"]
+        if description_format not in valid_formats:
+            raise ValueError(f"description_format must be one of {valid_formats}")
+        return description_format
+
     @root_validator(pre=True)
     def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         # Check and set id:
@@ -344,6 +355,11 @@ class EnrichAlertNoteRequestBody(BaseModel):
 class EnrichAlertRequestBody(BaseModel):
     enrichments: dict[str, str]
     fingerprint: str
+
+
+class BatchEnrichAlertRequestBody(BaseModel):
+    enrichments: dict[str, str]
+    fingerprints: list[str]
 
 
 class UnEnrichAlertRequestBody(BaseModel):

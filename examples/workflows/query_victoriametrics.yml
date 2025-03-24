@@ -1,7 +1,7 @@
 workflow:
-  id: query-victoriametrics
-  name: victoriametrics
-  description: victoriametrics
+  id: victoriametrics-threshold-monitor
+  name: VictoriaMetrics Threshold Monitor
+  description: Monitors VictoriaMetrics metrics with threshold-based alerts, sending notifications to both Slack and Ntfy.
   triggers:
     - type: manual
   steps:

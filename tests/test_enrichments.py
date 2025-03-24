@@ -1,5 +1,6 @@
 # test_enrichments.py
 import time
+from datetime import datetime
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -8,7 +9,8 @@ from sqlalchemy import text
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.action_type import ActionType
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.db.alert import Alert
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.topology import TopologyService
@@ -817,3 +819,45 @@ def test_disposable_enrichment_and_alert_history(
     statuses = [entry["status"] for entry in history_entries]
     assert "acknowledged" in statuses, "Acknowledged state missing in history"
     assert "firing" in statuses, "Firing state missing in history"
+
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+@pytest.mark.parametrize("elastic_client", [False, True], indirect=True)
+def test_batch_enrichment(db_session, client, test_app, create_alert, elastic_client):
+    for i in range(10):
+        create_alert(
+            f"alert-test-{i}",
+            AlertStatus.FIRING,
+            datetime.utcnow(),
+            {},
+        )
+
+    alerts = db_session.query(Alert).all()
+
+    fingerprints = [a.fingerprint for a in alerts]
+
+    response = client.post(
+        "/alerts/batch_enrich",
+        headers={"x-api-key": "some-key"},
+        json={
+            "fingerprints": fingerprints,
+            "enrichments": {
+                "status": "acknowledged",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status":"ok"}
+
+    time.sleep(1)
+
+    # 3. get the alert with the new status
+    response = client.get(
+        "/preset/feed/alerts",
+        headers={"x-api-key": "some-key"},
+    )
+    alerts = response.json()
+
+    assert len(alerts) == 10
+    assert [a["status"] for a in alerts] == ["acknowledged"] * 10

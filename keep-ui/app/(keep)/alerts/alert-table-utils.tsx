@@ -6,6 +6,7 @@ import {
   VisibilityState,
   createColumnHelper,
   Cell,
+  AccessorKeyColumnDef,
 } from "@tanstack/react-table";
 import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
@@ -45,6 +46,11 @@ import {
 } from "./alert-table-time-format";
 import { useIncidents } from "@/utils/hooks/useIncidents";
 import { useExpandedRows } from "utils/hooks/useExpandedRows";
+import {
+  ColumnRenameMapping,
+  getColumnDisplayName,
+} from "./alert-table-column-rename";
+import _ from "lodash";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -130,8 +136,8 @@ export const getRowClassName = (
     expanded
       ? "[&>td]:p-3"
       : rowStyle === "default"
-      ? "[&>td]:px-0.5 [&>td]:py-0"
-      : "[&>td]:p-2",
+        ? "[&>td]:px-0.5 [&>td]:py-0"
+        : "[&>td]:p-2",
     "hover:bg-orange-100"
   );
 };
@@ -189,6 +195,8 @@ interface GenerateAlertTableColsArg {
   setChangeStatusAlert?: (alert: AlertDto) => void;
   presetName: string;
   presetNoisy?: boolean;
+  MenuComponent?: (alert: AlertDto) => React.ReactNode;
+  extraColumns?: AccessorKeyColumnDef<AlertDto, boolean | undefined>[];
 }
 
 export const useAlertTableCols = (
@@ -203,6 +211,8 @@ export const useAlertTableCols = (
     setChangeStatusAlert,
     presetName,
     presetNoisy = false,
+    MenuComponent,
+    extraColumns = [],
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
@@ -219,6 +229,10 @@ export const useAlertTableCols = (
   const { data: configData } = useConfig();
   // check if noisy alerts are enabled
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
+  const [columnRenameMapping] = useLocalStorage<ColumnRenameMapping>(
+    `column-rename-mapping-${presetName}`,
+    {}
+  );
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.accessor(
@@ -238,7 +252,7 @@ export const useAlertTableCols = (
       },
       {
         id: colName,
-        header: colName,
+        header: getColumnDisplayName(colName, colName, columnRenameMapping),
         minSize: 100,
         enableGrouping: true,
         getGroupingValue: (row) => {
@@ -308,7 +322,7 @@ export const useAlertTableCols = (
                   const incident = incidents?.items.find(
                     (incident) => incident.id === incidentId
                   );
-                  if (!incident) return <></>;
+                  if (!incident) return null;
                   const title =
                     incident.user_generated_name || incident.ai_generated_name;
                   return (
@@ -482,19 +496,12 @@ export const useAlertTableCols = (
       maxSize: 20,
       size: 20, // Add explicit size to maintain consistency
       enableSorting: false,
-      enableGrouping: true,
       getGroupingValue: (row) => row.source,
       enableResizing: false,
       cell: (context) => {
-        const row = context.row;
-
         return (
           <div>
-            {(context.getValue() ?? []).map((source, index) => {
-              let imagePath = `/icons/${source}-icon.png`;
-              if (source.includes("@")) {
-                imagePath = "/icons/mailgun-icon.png";
-              }
+            {context.getValue().map((source, index) => {
               return (
                 <DynamicImageProviderIcon
                   className={clsx(
@@ -509,7 +516,8 @@ export const useAlertTableCols = (
                   width={24}
                   title={source}
                   providerType={source}
-                  src={imagePath}
+                  src={`/icons/${source}-icon.png`}
+                  id={`${source}-icon-${index}`}
                 />
               );
             })}
@@ -524,7 +532,7 @@ export const useAlertTableCols = (
     // Name column butted up against source
     columnHelper.accessor("name", {
       id: "name",
-      header: "Name",
+      header: getColumnDisplayName("name", "Name", columnRenameMapping),
       enableGrouping: true,
       enableResizing: true,
       getGroupingValue: (row) => row.name,
@@ -558,7 +566,11 @@ export const useAlertTableCols = (
 
     columnHelper.accessor("description", {
       id: "description",
-      header: "Description",
+      header: getColumnDisplayName(
+        "description",
+        "Description",
+        columnRenameMapping
+      ),
       enableGrouping: true,
       // Increase default minSize to give description more space
       minSize: 200,
@@ -597,7 +609,11 @@ export const useAlertTableCols = (
     }),
     columnHelper.accessor("lastReceived", {
       id: "lastReceived",
-      header: "Last Received",
+      header: getColumnDisplayName(
+        "lastReceived",
+        "Last Received",
+        columnRenameMapping
+      ),
       filterFn: isDateWithinRange,
       minSize: 80,
       maxSize: 80,
@@ -616,7 +632,7 @@ export const useAlertTableCols = (
     }),
     columnHelper.accessor("assignee", {
       id: "assignee",
-      header: "Assignee",
+      header: getColumnDisplayName("assignee", "Assignee", columnRenameMapping),
       enableGrouping: true,
       getGroupingValue: (row) => row.assignee,
       minSize: 100,
@@ -649,22 +665,26 @@ export const useAlertTableCols = (
       ),
     }),
     ...filteredAndGeneratedCols,
+    ...extraColumns,
     ...((isMenuDisplayed
       ? [
           columnHelper.display({
             id: "alertMenu",
             minSize: 120,
-            cell: (context) => (
-              <AlertMenu
-                presetName={presetName.toLowerCase()}
-                alert={context.row.original}
-                setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-                setDismissModalAlert={setDismissModalAlert}
-                setChangeStatusAlert={setChangeStatusAlert}
-                setTicketModalAlert={setTicketModalAlert}
-                setNoteModalAlert={setNoteModalAlert}
-              />
-            ),
+            cell: (context) =>
+              MenuComponent ? (
+                MenuComponent(context.row.original)
+              ) : (
+                <AlertMenu
+                  presetName={presetName.toLowerCase()}
+                  alert={context.row.original}
+                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+                  setDismissModalAlert={setDismissModalAlert}
+                  setChangeStatusAlert={setChangeStatusAlert}
+                  setTicketModalAlert={setTicketModalAlert}
+                  setNoteModalAlert={setNoteModalAlert}
+                />
+              ),
             meta: {
               tdClassName: "p-0 md:p-2",
               thClassName: "p-0 md:p-2",

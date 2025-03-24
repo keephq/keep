@@ -60,6 +60,20 @@ class IncidentStatus(enum.Enum):
     # Incident was removed
     DELETED = "deleted"
 
+    @classmethod
+    def get_active(cls, return_values=False) -> List[str | enum.Enum]:
+        statuses = [cls.FIRING, cls.ACKNOWLEDGED]
+        if return_values:
+            return [s.value for s in statuses]
+        return statuses
+
+    @classmethod
+    def get_closed(cls, return_values=False) -> List[str | enum.Enum]:
+        statuses = [cls.RESOLVED, cls.MERGED, cls.DELETED]
+        if return_values:
+            return [s.value for s in statuses]
+        return statuses
+
 
 class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -69,8 +83,8 @@ class Incident(SQLModel, table=True):
     # Auto-incrementing number per tenant
     running_number: Optional[int] = Field(default=None)
 
-    user_generated_name: str | None
-    ai_generated_name: str | None
+    user_generated_name: str | None = Field(sa_column=Column(TEXT))
+    ai_generated_name: str | None = Field(sa_column=Column(TEXT))
 
     user_summary: str = Field(sa_column=Column(TEXT))
     generated_summary: str = Field(sa_column=Column(TEXT))

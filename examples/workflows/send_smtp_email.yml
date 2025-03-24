@@ -1,17 +1,19 @@
-id: send-smtp-email
-description: send hello via SMTP
-triggers:
-  - type: manual
+workflow:
+  id: smtp-email-sender
+  name: SMTP Email Sender
+  description: Sends customized email notifications through SMTP with configurable sender, recipient, and message content.
+  triggers:
+    - type: manual
 
-actions:
-  - name: send-email
-    provider:
-      type: smtp
-      config: "{{ providers.smtp }}"
-      with:
-        from_email: "your_email@gmail.com"
-        from_name: "Workflow user"
-        to_email:
-          - "matvey@keephq.dev"
-        subject: "Hello from Keep workflow!"
-        body: "Hello! This is a test email from Keep workflow."
+  actions:
+    - name: send-email
+      provider:
+        type: smtp
+        config: "{{ providers.smtp }}"
+        with:
+          from_email: "your_email@gmail.com"
+          from_name: "Workflow user"
+          to_email:
+            - "matvey@keephq.dev"
+          subject: "Hello from Keep workflow!"
+          body: "Hello! This is a test email from Keep workflow."

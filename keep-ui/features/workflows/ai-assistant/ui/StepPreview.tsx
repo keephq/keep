@@ -3,17 +3,11 @@ import clsx from "clsx";
 import Image from "next/image";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 import { normalizeStepType } from "../../builder/lib/utils";
-// Monaco Editor - do not load from CDN (to support on-prem)
-// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
-import * as monaco from "monaco-editor";
-import { loader } from "@monaco-editor/react";
-loader.config({ monaco });
-import { Editor } from "@monaco-editor/react";
 import { stringify } from "yaml";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
 import { getYamlFromStep } from "../lib/utils";
 import { WF_DEBUG_INFO } from "../../builder/ui/debug-settings";
-import { JsonCard } from "@/shared/ui";
+import { JsonCard, MonacoEditor } from "@/shared/ui";
 
 function getStepIconUrl(data: V2Step | V2StepTrigger) {
   const { type } = data || {};
@@ -72,7 +66,7 @@ export const StepPreview = ({
               height: Math.min(yaml?.split("\n").length * 20 + 8, 192),
             }}
           >
-            <Editor
+            <MonacoEditor
               value={yaml}
               language="yaml"
               theme="vs-light"

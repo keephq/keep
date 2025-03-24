@@ -3,22 +3,9 @@ import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { showErrorToast } from "@/shared/ui";
 import { Definition } from "@/entities/workflows/model/types";
-import { stringify } from "yaml";
 import { useCallback } from "react";
-import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
 import { KeepApiError } from "@/shared/api/KeepApiError";
-
-function getBodyFromStringOrDefinitionOrObject(
-  definition: Definition | string | Record<string, unknown>
-) {
-  if (typeof definition === "string") {
-    return definition;
-  }
-  if (typeof definition === "object" && "workflow" in definition) {
-    return stringify(definition);
-  }
-  return stringify(getYamlWorkflowDefinition(definition as Definition));
-}
+import { getBodyFromStringOrDefinitionOrObject } from "../lib/yaml-utils";
 
 type UseWorkflowActionsReturn = {
   uploadWorkflowFiles: (files: FileList) => Promise<string[]>;

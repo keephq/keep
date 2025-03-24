@@ -1,7 +1,9 @@
 """add pulling_enabled
+
 Revision ID: 8438f041ee0e
 Revises: 83c1020be97d
 Create Date: 2024-10-22 10:38:29.857284
+
 """
 
 import sqlalchemy as sa
