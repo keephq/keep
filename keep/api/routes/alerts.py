@@ -691,15 +691,10 @@ async def receive_event(
     # If provider_name is provided, try to get provider_id from it
     if provider_name and not provider_id:
         provider = get_provider_by_name(authenticated_entity.tenant_id, provider_name)
-        if not provider:
+        if not provider or provider.type != provider_type:
             raise HTTPException(
                 status_code=404,
                 detail=f"Provider with name '{provider_name}' not found",
-            )
-        if provider.type != provider_type:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Provider name '{provider_name}' is for type '{provider.type}', not '{provider_type}'",
             )
 
         provider_id = provider.id
