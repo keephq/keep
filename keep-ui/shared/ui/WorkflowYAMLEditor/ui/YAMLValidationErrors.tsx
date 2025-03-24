@@ -29,7 +29,7 @@ function validateYAML(
 
     // Check each step's validity
     for (const step of definition.sequence) {
-      const errors = validateStepPure(
+      const stepErrors = validateStepPure(
         step,
         providers,
         installedProviders,
@@ -37,14 +37,14 @@ function validateYAML(
       );
       if (step.componentType === "switch") {
         [...step.branches.true, ...step.branches.false].forEach((branch) => {
-          const errors = validateStepPure(
+          const branchErrors = validateStepPure(
             branch,
             providers,
             installedProviders,
             definition
           );
-          if (errors.length > 0) {
-            errors.forEach(([error, type]) => {
+          if (branchErrors.length > 0) {
+            branchErrors.forEach(([error, type]) => {
               validationErrors.push([branch.name || branch.id, error, type]);
             });
             isValid = false;
@@ -53,22 +53,22 @@ function validateYAML(
       }
       if (step.componentType === "container") {
         step.sequence.forEach((s) => {
-          const errors = validateStepPure(
+          const sequenceErrors = validateStepPure(
             s,
             providers,
             installedProviders,
             definition
           );
-          if (errors.length > 0) {
-            errors.forEach(([error, type]) => {
+          if (sequenceErrors.length > 0) {
+            sequenceErrors.forEach(([error, type]) => {
               validationErrors.push([s.name || s.id, error, type]);
             });
             isValid = false;
           }
         });
       }
-      if (errors.length > 0) {
-        errors.forEach(([error, type]) => {
+      if (stepErrors.length > 0) {
+        stepErrors.forEach(([error, type]) => {
           validationErrors.push([step.name || step.id, error, type]);
         });
         isValid = false;

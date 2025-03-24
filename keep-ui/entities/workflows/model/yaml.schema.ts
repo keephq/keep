@@ -71,6 +71,12 @@ function getYamlProviderSchema(provider: Provider, type: "step" | "action") {
     "enrich_incident",
   ];
 
+  if (validKeys.length === 0) {
+    throw new Error(
+      `No valid keys found for provider ${provider.type} in ${type} mode`
+    );
+  }
+
   // @ts-ignore
   const validKeysSchema = z.enum(validKeys);
 

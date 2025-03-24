@@ -105,7 +105,6 @@ export function getCurrentPath(document: Document, absolutePosition: number) {
             }
           }
         });
-        // Path should be reversed as we're traversing from the node up to the root
         return visit.BREAK;
       }
     },

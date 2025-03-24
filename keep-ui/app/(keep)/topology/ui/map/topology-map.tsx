@@ -61,9 +61,14 @@ import { getNodesAndEdgesFromTopologyData } from "@/app/(keep)/topology/ui/map/g
 import { useIncidents } from "@/utils/hooks/useIncidents";
 import { EdgeBase, Connection } from "@xyflow/system";
 import { AddEditNodeSidePanel } from "./AddEditNodeSidePanel";
-import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { DropdownMenu, EmptyStateCard, ErrorComponent } from "@/shared/ui";
+import {
+  DropdownMenu,
+  EmptyStateCard,
+  ErrorComponent,
+  showErrorToast,
+  showSuccessToast,
+} from "@/shared/ui";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { TbTopologyRing } from "react-icons/tb";
@@ -176,11 +181,11 @@ export function TopologyMap({
         method: "POST",
         body: formData,
       });
-      toast.success("Topology imported Successfully!");
+      showSuccessToast("Topology imported Successfully!");
       mutateApplications();
       mutateTopologyData();
     } catch (error) {
-      toast.error(`Error uploading file: ${error}`);
+      showErrorToast(error, "Error uploading file");
     }
   };
 
@@ -215,7 +220,7 @@ export function TopologyMap({
             contentType: "application/x-yaml",
           });
         } catch (error) {
-          console.log(error);
+          showErrorToast(error, "Error exporting topology");
         }
       },
     },
@@ -274,7 +279,8 @@ export function TopologyMap({
         } catch (error) {
           const edgeIdToRevert = `xy-edge__${sourceService.id}right-${targetService.id}left`;
           setEdges((eds) => eds.filter((e) => e.id !== edgeIdToRevert));
-          toast.error(
+          showErrorToast(
+            error,
             `Error while adding connection from ${params.source} to ${params.target}: ${error}`
           );
         }
@@ -315,8 +321,9 @@ export function TopologyMap({
         } catch (error) {
           setEdges((eds) => eds.filter((e) => e.id !== oldEdge.id));
           setEdges((eds) => addEdge(oldEdge, eds));
-          toast.error(
-            `Error while adding (re)connection from ${newConnection.source} to ${newConnection.target}: ${error}`
+          showErrorToast(
+            error,
+            `Error while adding (re)connection from ${newConnection.source} to ${newConnection.target}`
           );
         }
       }
@@ -353,8 +360,9 @@ export function TopologyMap({
           // setEdges((eds) => eds.filter((e) => e.id !== edge.id));
         } catch (error) {
           setEdges((eds) => addEdge(edge, eds));
-          toast.error(
-            `Failed to delete connection from ${edge.source} to ${edge.target}: ${error}`
+          showErrorToast(
+            error,
+            `Failed to delete connection from ${edge.source} to ${edge.target}`
           );
         }
       }

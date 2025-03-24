@@ -1,4 +1,12 @@
-import { parseDocument, Document, YAMLMap } from "yaml";
+import {
+  parseDocument,
+  Document,
+  Node,
+  isMap,
+  isSeq,
+  isNode,
+  isScalar,
+} from "yaml";
 import { z } from "zod";
 import { ZodIssue } from "zod-validation-error";
 
@@ -23,7 +31,7 @@ export interface ValidationResult<T> {
 }
 
 function getParentField(path: (string | number)[]) {
-  const reversedPath = path.toReversed();
+  const reversedPath = path.slice().reverse();
   if (typeof reversedPath[0] === "string") {
     return reversedPath[0];
   }
@@ -153,28 +161,34 @@ export function validateYamlString<T>(
  * @param path Path to the node
  * @returns The node at the specified path or undefined
  */
-function getNodeAtPath(doc: Document, path: (string | number)[]): any {
+function getNodeAtPath(doc: Document, path: (string | number)[]) {
   if (!path || path.length === 0) return doc.contents;
 
-  let current: any = doc.contents;
+  let current: Node | null = doc.contents;
 
   for (const segment of path) {
-    if (current instanceof YAMLMap) {
+    if (isMap(current)) {
       // For objects
       const pair = current.items.find(
-        (item) => item.key && item.key.value === segment
+        (item) =>
+          item.key &&
+          isNode(item.key) &&
+          isScalar(item.key) &&
+          item.key.value === segment
       );
-      if (!pair) return undefined;
-      current = pair.value;
-    } else if (Array.isArray(current?.items)) {
+      if (!pair) {
+        return null;
+      }
+      current = pair.value as Node;
+    } else if (isSeq(current)) {
       // For arrays
       if (typeof segment === "number" && segment < current.items.length) {
-        current = current.items[segment];
+        current = current.items[segment] as Node;
       } else {
-        return undefined;
+        return null;
       }
     } else {
-      return undefined;
+      return null;
     }
   }
 
@@ -195,7 +209,8 @@ function findLineAndColumn(
 
   const lines = text.substring(0, position).split("\n");
   const line = lines.length;
-  const col = lines[lines.length - 1].length + 1;
+  const tabWidth = 2;
+  const col = lines[lines.length - 1].length + tabWidth;
 
   return { line, col };
 }

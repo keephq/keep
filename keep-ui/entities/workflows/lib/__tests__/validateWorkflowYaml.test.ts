@@ -80,19 +80,19 @@ describe("validateWorkflowYaml", () => {
     expect(result.errors).toEqual(
       expect.arrayContaining([
         {
-          col: 3,
+          col: 4,
           line: 2,
           message: "'id' field is required in 'workflow'",
           path: ["workflow", "id"],
         },
         {
-          col: 7,
+          col: 8,
           line: 5,
           message: "'name' field is required in 'steps entries'",
           path: ["workflow", "steps", 0, "name"],
         },
         {
-          col: 3,
+          col: 4,
           line: 2,
           message: "'triggers' field is required in 'workflow'",
           path: ["workflow", "triggers"],
@@ -159,7 +159,7 @@ describe("validateWorkflowYaml", () => {
           path: ["workflow", "steps", 0, "condition", 0],
           message: "Invalid input",
           line: 14,
-          col: 11,
+          col: 12,
         },
       ])
     );
@@ -228,7 +228,7 @@ describe("validateWorkflowYaml", () => {
     expect(result.errors).toEqual(
       expect.arrayContaining([
         {
-          col: 9,
+          col: 10,
           line: 9,
           message: "'type' field is required in 'provider'",
           path: ["workflow", "steps", 0, "provider", "type"],
