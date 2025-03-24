@@ -511,13 +511,13 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                     for sub in subscriptions
                 )
                 if not already_subscribed:
-                    if self.authentication_config.protocol == "http":
+                    if self.authentication_config.protocol == "https":
                         url_with_api_key = keep_api_url.replace(
-                            "https://", f"http://api_key:{api_key}@"
+                            "https://", f"https://api_key:{api_key}@"
                         )
                     else:
                         url_with_api_key = keep_api_url.replace(
-                            "http://", f"https://api_key:{api_key}@"
+                            "http://", f"http://api_key:{api_key}@"
                         )
                     self.logger.info("Subscribing to topic %s...", topic)
                     sns_client.subscribe(
