@@ -952,10 +952,11 @@ class EnrichmentsBl:
 
     def check_incident_resolution(self, alert):
         enrich_alerts_with_incidents(tenant_id=self.tenant_id, alerts=alert, session=self.db_session)
+        self.db_session.expire_on_commit = False
         for incident in alert[0]._incidents:
             if (
-                    incident.resolve_on == ResolveOn.ALL.value
-                    and is_all_alerts_resolved(incident=incident, session=self.db_session)
+                incident.resolve_on == ResolveOn.ALL.value
+                and is_all_alerts_resolved(incident=incident, session=self.db_session)
             ):
                 incident.status = IncidentStatus.RESOLVED.value
                 self.db_session.add(incident)
