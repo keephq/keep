@@ -46,8 +46,9 @@ async def run_arq_worker(worker_id, number_of_errors_before_restart=0):
     try:
         queue_name = determine_queue_name()
     except ValueError as e:
-        logger.error(str(e))
-        return
+        # gunicorn will restart the worker if it exits with a non-zero code
+        logger.exception(f"Invalid task pool configuration: {e}")
+        os._exit(1)
 
     # Apply debug patches if needed
     if config("LOG_LEVEL", default="INFO") == "DEBUG":
