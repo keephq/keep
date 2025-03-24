@@ -142,27 +142,15 @@ class BaseCelToSqlProvider:
     def get_order_by_exp(self, sort_by_cel_field: str) -> str:
         fields_to_sort_by = []
         metadata = self.properties_metadata.get_property_metadata(sort_by_cel_field)
-        is_json = isinstance(metadata.field_mappings[0], JsonFieldMapping)
-
-        for item in metadata.field_mappings:
-            if isinstance(item, JsonFieldMapping):
-                fields_to_sort_by.append(
-                    self.json_extract_as_text(item.json_prop, item.prop_in_json)
-                )
-            elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-                fields_to_sort_by.append(item.map_to)
+        fields_to_sort_by = [
+            self._get_order_by_field(item, metadata.data_type)
+            for item in metadata.field_mappings
+        ]
 
         if len(fields_to_sort_by) > 1:
-            order_by_exp = self.coalesce(
-                [self.cast(item, str) for item in fields_to_sort_by]
-            )
+            order_by_exp = self.coalesce(fields_to_sort_by)
         else:
             order_by_exp = fields_to_sort_by[0]
-
-        if is_json and metadata.data_type is not str and metadata.data_type is not None:
-            order_by_exp = self.cast(
-                expression_to_cast=order_by_exp, to_type=metadata.data_type, force=True
-            )
 
         return order_by_exp
 
@@ -171,6 +159,11 @@ class BaseCelToSqlProvider:
             return self.__literal_proc(value)
 
         return f"'{str(value)}'"
+
+    def _get_order_by_field(self, field_mapping, data_type: type) -> str:
+        raise NotImplementedError(
+            "Order by field is not implemented. Must be implemented in the child class."
+        )
 
     def _get_default_value_for_type(self, type: type) -> str:
         if type is str or type is NoneType:
@@ -212,9 +205,6 @@ class BaseCelToSqlProvider:
         raise NotImplementedError(
             f"{type(abstract_node).__name__} node type is not supported yet"
         )
-
-    def json_extract(self, column: str, path: str) -> str:
-        raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
 
     def json_extract_as_text(self, column: str, path: str) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")

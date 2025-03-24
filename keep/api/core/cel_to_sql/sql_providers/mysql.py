@@ -1,11 +1,15 @@
 from datetime import datetime
 from typing import List
 from keep.api.core.cel_to_sql.ast_nodes import ConstantNode
+from keep.api.core.cel_to_sql.properties_metadata import (
+    JsonFieldMapping,
+    SimpleFieldMapping,
+)
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 class CelToMySqlProvider(BaseCelToSqlProvider):
     def json_extract_as_text(self, column: str, path: str) -> str:
-        return f"JSON_UNQUOTE(JSON_EXTRACT({column}, '$.{path}'))"
+        return f"JSON_UNQUOTE({self._json_extract(column, path)})"
 
     def cast(self, expression_to_cast: str, to_type, force=False):
         if to_type is bool:
@@ -34,6 +38,20 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
             return f"CAST({expression_to_cast} AS DOUBLE)"
         else:
             return expression_to_cast
+
+    def _json_extract(self, column: str, path: str) -> str:
+        return f"JSON_EXTRACT({column}, '$.{path}')"
+
+    def _get_order_by_field(self, field_mapping, data_type: type):
+        if isinstance(field_mapping, JsonFieldMapping):
+            # just json_extract is used because it correctly sorts by numbers and strings
+            return self._json_extract(
+                field_mapping.json_prop, field_mapping.prop_in_json
+            )
+        elif isinstance(field_mapping, SimpleFieldMapping):
+            return field_mapping.map_to
+
+        raise ValueError(f"Unsupported field mapping type: {type(field_mapping)}")
 
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):
