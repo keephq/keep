@@ -111,14 +111,11 @@ def enrich_with_providers_info(deduplication_rules: list[dict[str,any]], tenant_
     """
 
     installed_providers = ProvidersFactory.get_installed_providers(tenant_id)
-    linked_providers = ProvidersFactory.get_linked_providers(tenant_id)
-    all_providers = installed_providers + linked_providers
-    all_providers_dict = {f"{provider.type}_{provider.display_name}": provider for provider in all_providers}
+    installed_providers_dict = {provider.details.get("name"): provider for provider in installed_providers}
 
     for rule_name, rule in deduplication_rules.items():
-        print('f')
-        provider_dict_key = f"{rule.get('provider_type')}_{rule.get('provider_name')}"
-        provider = all_providers_dict.get(provider_dict_key)
+        logger.info(f"Enriching deduplication rule: {rule_name}")
+        provider = installed_providers_dict.get(rule.get("provider_name"))
         rule["provider_id"] = provider.id
         rule["provider_type"] = provider.type
 

@@ -31,23 +31,33 @@ from keep.api.models.incident import IncidentSorting
 logger = logging.getLogger(__name__)
 
 incident_field_configurations = [
-    FieldMappingConfiguration("name", ["user_generated_name", "ai_generated_name"]),
-    FieldMappingConfiguration("summary", ["user_summary", "generated_summary"]),
-    FieldMappingConfiguration("assignee", "assignee"),
-    FieldMappingConfiguration("severity", "severity"),
-    FieldMappingConfiguration("status", "status"),
-    FieldMappingConfiguration("creation_time", "creation_time"),
-    FieldMappingConfiguration("start_time", "start_time"),
-    FieldMappingConfiguration("end_time", "end_time"),
-    FieldMappingConfiguration("last_seen_time", "last_seen_time"),
-    FieldMappingConfiguration("is_predicted", "is_predicted"),
-    FieldMappingConfiguration("is_candidate", "is_candidate"),
-    FieldMappingConfiguration("is_visible", "is_visible"),
-    FieldMappingConfiguration("alerts_count", "alerts_count"),
-    FieldMappingConfiguration("merged_at", "merged_at"),
-    FieldMappingConfiguration("merged_by", "merged_by"),
-    FieldMappingConfiguration("hasLinkedIncident", "incident_has_linked_incident"),
-    FieldMappingConfiguration("alert.providerType", "incident_alert_provider_type"),
+    FieldMappingConfiguration(
+        map_from_pattern="name", map_to=["user_generated_name", "ai_generated_name"]
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="summary", map_to=["user_summary", "generated_summary"]
+    ),
+    FieldMappingConfiguration(map_from_pattern="assignee", map_to="assignee"),
+    FieldMappingConfiguration(map_from_pattern="severity", map_to="severity"),
+    FieldMappingConfiguration(map_from_pattern="status", map_to="status"),
+    FieldMappingConfiguration(map_from_pattern="creation_time", map_to="creation_time"),
+    FieldMappingConfiguration(map_from_pattern="start_time", map_to="start_time"),
+    FieldMappingConfiguration(map_from_pattern="end_time", map_to="end_time"),
+    FieldMappingConfiguration(
+        map_from_pattern="last_seen_time", map_to="last_seen_time"
+    ),
+    FieldMappingConfiguration(map_from_pattern="is_predicted", map_to="is_predicted"),
+    FieldMappingConfiguration(map_from_pattern="is_candidate", map_to="is_candidate"),
+    FieldMappingConfiguration(map_from_pattern="is_visible", map_to="is_visible"),
+    FieldMappingConfiguration(map_from_pattern="alerts_count", map_to="alerts_count"),
+    FieldMappingConfiguration(map_from_pattern="merged_at", map_to="merged_at"),
+    FieldMappingConfiguration(map_from_pattern="merged_by", map_to="merged_by"),
+    FieldMappingConfiguration(
+        map_from_pattern="hasLinkedIncident", map_to="incident_has_linked_incident"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="alert.providerType", map_to="incident_alert_provider_type"
+    ),
     FieldMappingConfiguration(
         map_from_pattern="alert.*",
         map_to=["JSON(alert_enrichments).*", "JSON(alert_event).*"],

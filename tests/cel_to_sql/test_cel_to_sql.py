@@ -11,13 +11,21 @@ from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect 
 )
 
 fake_field_configurations = [
-    FieldMappingConfiguration("name", ["user_generated_name", "ai_generated_name"]),
-    FieldMappingConfiguration("summary", ["user_summary", "generated_summary"]),
-    FieldMappingConfiguration("created_at", "created_at"),
     FieldMappingConfiguration(
-        "severity", "severity", ["info", "low", "medium", "high", "critical"]
+        map_from_pattern="name", map_to=["user_generated_name", "ai_generated_name"]
     ),
-    FieldMappingConfiguration("alert.provider_type", "incident_alert_provider_type"),
+    FieldMappingConfiguration(
+        map_from_pattern="summary", map_to=["user_summary", "generated_summary"]
+    ),
+    FieldMappingConfiguration(map_from_pattern="created_at", map_to="created_at"),
+    FieldMappingConfiguration(
+        map_from_pattern="severity",
+        map_to="severity",
+        enum_values=["info", "low", "medium", "high", "critical"],
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="alert.provider_type", map_to="incident_alert_provider_type"
+    ),
     FieldMappingConfiguration(
         map_from_pattern="alert.tags.*",
         map_to=["JSON(alert_event).tagsContainer.*"],

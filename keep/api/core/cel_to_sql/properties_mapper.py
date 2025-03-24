@@ -29,10 +29,18 @@ class JsonPropertyAccessNode(PropertyAccessNode):
         property_to_extract (str): The specific property to extract from the JSON object.
         method_access_node (MethodAccessNode): The method access node used for extraction. (*.contains, *.startsWith, etc)
     """
-    def __init__(self, json_property_name: str, property_to_extract: str, method_access_node: MethodAccessNode):
+    def __init__(
+        self,
+        json_property_name: str,
+        property_to_extract: str,
+        method_access_node: MethodAccessNode,
+        data_type: type,
+    ):
         super().__init__(f"JSON({json_property_name}).{property_to_extract}", method_access_node)
         self.json_property_name = json_property_name
         self.property_to_extract = property_to_extract
+        self.data_type = data_type
+
 
 class MultipleFieldsNode(Node):
     """
@@ -223,7 +231,7 @@ class PropertiesMapper:
             for mapping in property_metadata.field_mappings:
                 method_access_node = member_access_node.get_method_access_node().copy()
                 current_node_result = self._create_property_access_node(
-                    mapping, method_access_node
+                    mapping, property_metadata.data_type, method_access_node
                 )
 
                 if result is None:
@@ -333,12 +341,23 @@ class PropertiesMapper:
 
         return comparison_node
 
-    def _create_property_access_node(self, mapping, method_access_node: MethodAccessNode) -> Node:
+    def _create_property_access_node(
+        self, mapping, data_type: type, method_access_node: MethodAccessNode
+    ) -> Node:
         if isinstance(mapping, JsonFieldMapping):
-            return JsonPropertyAccessNode(mapping.json_prop, mapping.prop_in_json, method_access_node)
+            return JsonPropertyAccessNode(
+                json_property_name=mapping.json_prop,
+                property_to_extract=mapping.prop_in_json,
+                method_access_node=method_access_node,
+                data_type=data_type,
+            )
 
         if isinstance(mapping, SimpleFieldMapping):
-            return PropertyAccessNode(mapping.map_to, method_access_node)
+            return PropertyAccessNode(
+                member_name=mapping.map_to,
+                value=method_access_node,
+                data_type=data_type,
+            )
 
         raise NotImplementedError(f"Mapping type {type(mapping).__name__} is not supported yet")
 
@@ -357,7 +376,9 @@ class PropertiesMapper:
         result = []
 
         for mapping in property_metadata.field_mappings:
-            property_access_node = self._create_property_access_node(mapping, None)
+            property_access_node = self._create_property_access_node(
+                mapping, property_metadata.data_type, None
+            )
             result.append(property_access_node)
         return (
             MultipleFieldsNode(result) if len(result) > 1 else result[0]
