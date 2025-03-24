@@ -341,9 +341,9 @@ class WorkflowManager:
                     # Lastly, if the workflow should run, add it to the scheduler
                     self.logger.info("Adding workflow to run")
 
-                    # SHAHAR: this is
+                    # SHAHAR: TODO - finish redis implementation
                     # if REDIS is enabled, add the workflow to the queue
-                    # TODO: redis
+
                     """
                     if os.environ.get("REDIS", "false").lower() == "true":
                         try:
