@@ -18,10 +18,8 @@ from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 
 from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, MultipleFieldsNode, PropertiesMapper, PropertiesMappingException
 from keep.api.core.cel_to_sql.properties_metadata import (
-    JsonFieldMapping,
     PropertiesMetadata,
     PropertyMetadataInfo,
-    SimpleFieldMapping,
 )
 from celpy import CELParseError
 
