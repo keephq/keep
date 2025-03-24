@@ -54,7 +54,7 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
                 field_mapping.json_prop, field_mapping.prop_in_json
             )
 
-            if data_type is not str and not None:
+            if data_type is not str and data_type is not None:
                 return self.cast(json_exp, data_type)
 
             return json_exp
