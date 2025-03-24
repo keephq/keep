@@ -237,6 +237,9 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
             )
         else:
             try:
+                logger.info(
+                    "No fingerprint in alert, calculating fingerprint by labels"
+                )
                 fingerprint_string = json.dumps(labels)
             except Exception:
                 logger.exception(
