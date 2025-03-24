@@ -21,19 +21,19 @@ Providers provisioning JSON example:
     "type": "victoriametrics",
     "authentication": {
       "VMAlertHost": "http://localhost",
-      "VMAlertPort": 1234,
-      "deduplication_rules": {
-        "deduplication rule name example 1": {
-          "description": "deduplication rule name example 1",
-          "fingerprint_fields": ["fingerprint", "source", "service"],
-          "full_deduplication": true,
-          "ignore_fields": ["name", "lastReceived"]
-        },
-        "deduplication rule name example 2": {
-          "description": "deduplication rule name example 2",
-          "fingerprint_fields": ["fingerprint", "source", "service"],
-          "full_deduplication": false,
-        }
+      "VMAlertPort": 1234
+    },
+    "deduplication_rules": {
+      "deduplication rule name example 1": {
+        "description": "deduplication rule name example 1",
+        "fingerprint_fields": ["fingerprint", "source", "service"],
+        "full_deduplication": true,
+        "ignore_fields": ["name", "lastReceived"]
+      },
+      "deduplication rule name example 2": {
+        "description": "deduplication rule name example 2",
+        "fingerprint_fields": ["fingerprint", "source", "service"],
+        "full_deduplication": false,
       }
     }
   },
