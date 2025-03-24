@@ -46,6 +46,7 @@ export interface AlertDto {
   source: string[];
   message?: string;
   description?: string;
+  description_format?: "markdown" | "html" | null;
   severity?: Severity;
   url?: string;
   imageUrl?: string;
