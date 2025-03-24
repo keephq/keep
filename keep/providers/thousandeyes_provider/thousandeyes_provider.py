@@ -132,38 +132,69 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
                 headers=self._generate_auth_headers()
             )
 
-            self.logger.info("Ezhil:", response.json())
-
             response.raise_for_status()
             if response.status_code == 200:
                 alerts = response.json().get("alerts", [])
-                return [
-                  AlertDto(
-                    id=alert.get("id"),
-                    alertId=alert.get("alertId"),
-                    name=alert.get("id"),
-                    description=alert.get("id"),
-                    ruleId=alert.get("ruleId"),
-                    alertRuleId=alert.get("alertRuleId"),
-                    state=alert.get("state", "Unable to fetch state"),
-                    alertState=alert.get("alertState", "Unable to fetch alert state"),
-                    dateStart=alert.get("dateStart"),
-                    startDate=alert.get("startDate"),
-                    startedAt=alert.get("startDate"),
-                    lastReceived=alert.get("startDate"),
-                    alertType=alert.get("alertType", "Unable to fetch alert type"),
-                    severity=ThousandeyesProvider.SEVERITY_MAP.get(alert.get("alertSeverity"), AlertSeverity.INFO),
-                    status=ThousandeyesProvider.STATUS_MAP.get(alert.get("alertSeverity"), AlertStatus.PENDING),
-                    violationCount=alert.get("violationCount", "Unable to fetch violation count"),
-                    duration=alert.get("duration", "Unable to fetch duration"),
-                    apiLinks=alert.get("apiLinks", []),
-                    permalink=alert.get("permalink", "Unable to fetch permalink"),
-                    suppressed=alert.get("suppressed", "Unable to fetch suppressed"),
-                    meta=alert.get("meta", {}),
-                    links=alert.get("links", {}),
-                    source=["thousandeyes"]
-                  ) for alert in alerts
-                ]
+
+                alertDtos = []
+
+                for alert in alerts:
+                    id = alert.get("id")
+                    alertId = alert.get("alertId")
+                    name = alert.get("id")
+                    description = alert.get("id")
+                    ruleId = alert.get("ruleId")
+                    alertRuleId = alert.get("alertRuleId")
+                    state = alert.get("state", "Unable to fetch state")
+                    alertState = alert.get("alertState", "Unable to fetch alert state")
+                    dateStart = alert.get("dateStart")
+                    startDate = alert.get("startDate")
+                    startedAt = alert.get("startDate")
+                    lastReceived = alert.get("startDate")
+                    alertType = alert.get("alertType", "Unable to fetch alert type")
+                    severity = ThousandeyesProvider.SEVERITY_MAP.get(alert.get("alertSeverity"), AlertSeverity.INFO)
+                    status = ThousandeyesProvider.STATUS_MAP.get(alert.get("alertSeverity"), AlertStatus.PENDING)
+                    violationCount = alert.get("violationCount", "Unable to fetch violation count")
+                    duration = alert.get("duration", "Unable to fetch duration")
+                    apiLinks = alert.get("apiLinks", [])
+                    url = apiLinks[0].get("href", "http://unable-to-fetch-url") if apiLinks else "http://unable-to-fetch-url"
+                    url2 = apiLinks[1].get("href", "http://unable-to-fetch-url") if len(apiLinks) > 1 else "http://unable-to-fetch-url"
+                    permalink = alert.get("permalink", "Unable to fetch permalink")
+                    suppressed = alert.get("suppressed", "Unable to fetch suppressed")
+                    meta = alert.get("meta", {})
+                    links = alert.get("_links", {})
+
+                    alertDto = AlertDto(
+                        id=id,
+                        alertId=alertId,
+                        name=name,
+                        description=description,
+                        ruleId=ruleId,
+                        alertRuleId=alertRuleId,
+                        state=state,
+                        alertState=alertState,
+                        dateStart=dateStart,
+                        startDate=startDate,
+                        startedAt=startedAt,
+                        lastReceived=lastReceived,
+                        alertType=alertType,
+                        severity=severity,
+                        status=status,
+                        violationCount=violationCount,
+                        duration=duration,
+                        apiLinks=apiLinks,
+                        url=url,
+                        url2=url2,
+                        permalink=permalink,
+                        suppressed=suppressed,
+                        meta=meta,
+                        links=links,
+                        source=["thousandeyes"]
+                    )
+
+                    alertDtos.append(alertDto)
+
+                return alertDtos
             
         except Exception as e:
             self.logger.exception("Error while getting alerts")
@@ -179,36 +210,71 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
 
         alertData = event.get("alert", {})
 
+        id = event.get("eventId")
+        description = alertData.get("ruleExpression", "Unable to fetch description")
+        severity_value = alertData.get("severity", "info").lower()
+        severity = ThousandeyesProvider.SEVERITY_MAP.get(severity_value, AlertSeverity.INFO)
+        status = ThousandeyesProvider.STATUS_MAP.get(severity_value, AlertStatus.PENDING)
+        name = alertData.get("ruleName", "Unable to fetch test name")
+        dateStartZoned = alertData.get("dateStartZoned", "Unable to fetch date start zoned")
+        agentId = alertData.get("agent", {}).get("agentId", "Unable to fetch agent id")
+        ipAddress = alertData.get("ipAddress", "Unable to fetch ip address")
+        agentName = alertData.get("agentName", "Unable to fetch agent name")
+        ruleExpression = alertData.get("ruleExpression", "Unable to fetch rule expression")
+        alert_type = alertData.get("type", "Unable to fetch alert type")
+        ruleAid = alertData.get("ruleAid", "Unable to fetch rule aid")
+        hostname = alertData.get("hostname", "Unable to fetch hostname")
+        dateStart = alertData.get("dateStart", "Unable to fetch date start")
+        ruleName = alertData.get("ruleName", "Unable to fetch rule name")
+        ruleId = alertData.get("ruleId", "Unable to fetch rule id")
+        alertId = alertData.get("alertId", "Unable to fetch alert id")
+        eventType = event.get("eventType", "Unable to fetch event type")
+        apiLinks = alertData.get("apiLinks", [])
+        url = apiLinks[0].get("href", "http://unable-to-fetch-url") if apiLinks else "http://unable-to-fetch-url"
+        url2 = apiLinks[1].get("href", "http://unable-to-fetch-url") if len(apiLinks) > 1 else "http://unable-to-fetch-url"
+        testLabels = alertData.get("testLabels", [])
+        active = alertData.get("active", "Unable to fetch active")
+        dateEnd = alertData.get("dateEnd", "Unable to fetch date end")
+        agents = alertData.get("agents", [])
+        testTargetsDescription = alertData.get("testTargetsDescription", [])
+        violationCount = alertData.get("violationCount", "Unable to fetch violation count")
+        dateEndZoned = alertData.get("dateEndZoned", "Unable to fetch date end zoned")
+        testId = alertData.get("testId", "Unable to fetch test id")
+        permalink = alertData.get("permalink", "Unable to fetch permalink")
+        testName = alertData.get("testName", "Unable to fetch test name")
+
         alert = AlertDto(
-            id=event.get("eventId"),
-            description=alertData.get("ruleExpression", "Unable to fetch description"),
-            severity=ThousandeyesProvider.SEVERITY_MAP.get(alertData.get("severity").lower(), AlertSeverity.INFO),
-            status=ThousandeyesProvider.STATUS_MAP.get(alertData.get("severity").lower(), AlertStatus.PENDING),
-            name=alertData.get("ruleName", "Unable to fetch test name"),
-            dateStartZoned=alertData.get("dateStartZoned", "Unable to fetch date start zoned"),
-            agentId=alertData.get("agentId", "Unable to fetch agent id"),
-            ipAddress=alertData.get("ipAddress", "Unable to fetch ip address"),
-            agentName=alertData.get("agentName", "Unable to fetch agent name"),
-            ruleExpression=alertData.get("ruleExpression", "Unable to fetch rule expression"),
-            alert_type=alertData.get("type", "Unable to fetch alert type"),
-            ruleAid=alertData.get("ruleAid", "Unable to fetch rule aid"),
-            hostname=alertData.get("hostname", "Unable to fetch hostname"),
-            dateStart=alertData.get("dateStart", "Unable to fetch date start"),
-            ruleName=alertData.get("ruleName", "Unable to fetch rule name"),
-            ruleId=alertData.get("ruleId", "Unable to fetch rule id"),
-            alertId=alertData.get("alertId", "Unable to fetch alert id"),
-            eventType=event.get("eventType", "Unable to fetch event type"),
-            apiLinks=event.get("apiLinks", []),
-            testLabels=event.get("testLabels", []),
-            active=event.get("active", "Unable to fetch active"),
-            dateEnd=event.get("dateEnd", "Unable to fetch date end"),
-            agents=event.get("agents", []),
-            testTargetsDescription=event.get("testTargetsDescription", []),
-            violationCount=event.get("violationCount", "Unable to fetch violation count"),
-            dateEndZoned=event.get("dateEndZoned", "Unable to fetch date end zoned"),
-            testId=event.get("testId", "Unable to fetch test id"),
-            permalink=event.get("permalink", "Unable to fetch permalink"),
-            testName=event.get("testName", "Unable to fetch test name"),
+            id=id,
+            description=description,
+            severity=severity,
+            status=status,
+            name=name,
+            dateStartZoned=dateStartZoned,
+            agentId=agentId,
+            ipAddress=ipAddress,
+            agentName=agentName,
+            ruleExpression=ruleExpression,
+            alert_type=alert_type,
+            ruleAid=ruleAid,
+            hostname=hostname,
+            dateStart=dateStart,
+            ruleName=ruleName,
+            ruleId=ruleId,
+            alertId=alertId,
+            eventType=eventType,
+            apiLinks=apiLinks,
+            url=url,
+            url2=url2,
+            testLabels=testLabels,
+            active=active,
+            dateEnd=dateEnd,
+            agents=agents,
+            testTargetsDescription=testTargetsDescription,
+            violationCount=violationCount,
+            dateEndZoned=dateEndZoned,
+            testId=testId,
+            permalink=permalink,
+            testName=testName,
             source=["thousandeyes"]
         )
 
