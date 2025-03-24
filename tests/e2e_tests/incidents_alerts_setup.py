@@ -234,7 +234,6 @@ def upload_alerts():
         )
         resp.raise_for_status()
         assert resp.json().get("status", "failed") == "ok"
-        print()
 
     return query_alerts(limit=1000, offset=0)
 

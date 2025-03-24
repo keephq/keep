@@ -167,13 +167,6 @@ def test_filter_by_static_facet(
     value = test_case["value"]
     current_alerts = setup_test_data
 
-    for alert in current_alerts:
-        if "Enriched" in alert["name"]:
-            # this is a workaround due to a bug in the backend
-            # that does not overwrite default fields with enrichment fields
-            # but facets work correctly
-            alert["status"] = "enriched status"
-
     init_test(browser, current_alerts, max_retries=3)
     # Give the page a moment to process redirects
     browser.wait_for_timeout(500)
