@@ -40,9 +40,9 @@ from keep.api.core.db import (
 )
 from keep.api.core.db import get_error_alerts as get_error_alerts_db
 from keep.api.core.db import (
-    get_last_alert_by_fingerprint,
     get_last_alerts,
     get_last_alerts_by_fingerprints,
+    get_provider_by_name,
     get_session,
     is_all_alerts_resolved,
 )
@@ -651,6 +651,7 @@ async def receive_event(
     provider_type: str,
     request: Request,
     provider_id: str | None = None,
+    provider_name: str | None = None,
     fingerprint: str | None = None,
     event=Depends(extract_generic_body),
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -685,6 +686,18 @@ async def receive_event(
     logger.debug("Parsing event raw body")
     event = provider_class.parse_event_raw_body(event)
     logger.debug("Parsed event raw body", extra={"time": time.time() - t})
+
+    # If provider_name is provided, try to get provider_id from it
+    if provider_name and not provider_id:
+        provider = get_provider_by_name(authenticated_entity.tenant_id, provider_name)
+        if not provider or provider.type != provider_type:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Provider with name '{provider_name}' not found",
+            )
+
+        provider_id = provider.id
+
     if REDIS:
         redis: ArqRedis = await get_pool()
         job = await redis.enqueue_job(
@@ -753,6 +766,7 @@ def enrich_alert_note(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])  # also NOC
     ),
+    session: Session = Depends(get_session),
 ) -> dict[str, str]:
     logger.info("Enriching alert note", extra={"fingerprint": enrich_data.fingerprint})
     enriched_data = EnrichAlertRequestBody(
@@ -763,6 +777,7 @@ def enrich_alert_note(
         enriched_data,
         authenticated_entity=authenticated_entity,
         dispose_on_new_alert=True,
+        session=session,
     )
 
 
@@ -945,11 +960,9 @@ def enrich_alert(
 
 def _enrich_alert(
     enrich_data: EnrichAlertRequestBody,
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:alert"])
-    ),
-    dispose_on_new_alert: Optional[bool] = False,
-    session: Optional[Session] = None,
+    authenticated_entity: AuthenticatedEntity,
+    session: Session,
+    dispose_on_new_alert: bool = False,
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -972,33 +985,19 @@ def _enrich_alert(
         )
 
         enrichments = deepcopy(enrich_data.enrichments)
-        enrichement_bl.enrich_entity(
-            fingerprint=enrich_data.fingerprint,
-            enrichments=enrichments,
-            action_type=action_type,
-            action_callee=authenticated_entity.email,
-            action_description=action_description,
-            dispose_on_new_alert=dispose_on_new_alert,
-        )
-        last_alert = get_last_alert_by_fingerprint(
-            authenticated_entity.tenant_id, enrich_data.fingerprint, session=session
-        )
+
+        enrichment_kwargs = {
+            "fingerprint": enrich_data.fingerprint,
+            "enrichments": enrichments,
+            "action_type": action_type,
+            "action_callee": authenticated_entity.email,
+            "action_description": action_description,
+        }
+
         if dispose_on_new_alert:
-            # Create instance-wide enrichment for history
-
-            # For better database-native UUID support
-            alert_id = UUIDType(binary=False).process_bind_param(
-                last_alert.alert_id, session.bind.dialect
-            )
-
-            enrichement_bl.enrich_entity(
-                fingerprint=alert_id,
-                enrichments=enrich_data.enrichments,
-                action_type=action_type,
-                action_callee=authenticated_entity.email,
-                action_description=action_description,
-                audit_enabled=False,
-            )
+            enrichement_bl.disposable_enrich_entity(**enrichment_kwargs)
+        else:
+            enrichement_bl.enrich_entity(**enrichment_kwargs)
 
         # get the alert with the new enrichment
         alert = get_alerts_by_fingerprint(
@@ -1047,17 +1046,8 @@ def _enrich_alert(
                 tenant_id=tenant_id, events=[enriched_alerts_dto[0]]
             )
 
-        # @tb add "and session" cuz I saw AttributeError: 'NoneType' object has no attribute 'add'"
-        if should_check_incidents_resolution and session:
-            enrich_alerts_with_incidents(tenant_id=tenant_id, alerts=alert)
-            for incident in alert[0]._incidents:
-                if (
-                    incident.resolve_on == ResolveOn.ALL.value
-                    and is_all_alerts_resolved(incident=incident, session=session)
-                ):
-                    incident.status = IncidentStatus.RESOLVED.value
-                    session.add(incident)
-                session.commit()
+        if should_check_incidents_resolution:
+            enrichement_bl.check_incident_resolution(alert)
 
         return {"status": "ok"}
 
