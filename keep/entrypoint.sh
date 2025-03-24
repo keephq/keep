@@ -51,9 +51,22 @@ else
         --name "arq_worker" \
         "keep.api.arq_worker_gunicorn:create_app()" &
 
+    KEEP_ARQ_PID=$!
+
     # Give ARQ workers time to start up
     sleep 2
 
     echo "Running API gunicorn"
-    exec "$@"
+    exec "$@" &
+
+    KEEP_API_PID=$!
+
+    # Wait for any to exit
+    wait -n $KEEP_ARQ_PID $KEEP_API_PID
+
+    # One exited — kill the other
+    kill $KEEP_ARQ_PID $KEEP_API_PID 2>/dev/null || true
+
+    # Exit to trigger container restart
+    exit 1
 fi
