@@ -1,3 +1,4 @@
+import re
 from typing import Any
 import celpy.celparser
 import lark
@@ -16,6 +17,30 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     PropertyAccessNode,
     UnaryNode,
 )
+
+# Matches such strings:
+# '2025-03-23T15:42:00'
+# '2025-03-23T15:42:00Z'
+# '2025-03-23T15:42:00.123Z'
+# '2025-03-23T15:42:00+02:00'
+# '2025-03-23T15:42:00.456-05:30'
+iso_regex = re.compile(
+    r"^(\d{4})-(\d{2})-(\d{2})"  # Date: YYYY-MM-DD
+    r"T"  # T separator
+    r"(\d{2}):(\d{2}):(\d{2})"  # Time: hh:mm:ss
+    r"(?:\.(\d+))?"  # Optional fractional seconds
+    r"(?:Z|[+-]\d{2}:\d{2})?$"  # Optional timezone (Z or ±hh:mm)
+)
+
+# Matches such strings:
+# '2025-03-23 15:42:00'
+# '1999-01-01 00:00:00'
+# '2025-01-20'
+datetime_regex = re.compile(
+    r"^(\d{4})-(\d{2})-(\d{2})"  # Date: YYYY-MM-DD
+    r"(?:\s(\d{2}):(\d{2}):(\d{2}))?$"  # Optional time: HH:MM:SS
+)
+
 
 class CelToAstConverter(lark.visitors.Visitor_Recursive):
     """Dump a CEL AST creating a close approximation to the original source."""
@@ -332,8 +357,4 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             return False
 
     def is_date(self, value: str) -> bool:
-        try:
-            parse(value)
-            return True
-        except ValueError:
-            return False
+        return iso_regex.match(value) or datetime_regex.match(value)
