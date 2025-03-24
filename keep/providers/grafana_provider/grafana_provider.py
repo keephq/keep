@@ -249,7 +249,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         # from some reason, the fingerprint is not provided in the alert + no labels or failed to calculate
         if not fingerprint_string:
             # old behavior
-            service = GrafanaProvider._get_service(alert)
+            service = GrafanaProvider.get_service(alert)
             fingerprint_string = alert.get(
                 "fingerprint", alert.get("alertname", "") + service
             )
