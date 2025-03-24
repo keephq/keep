@@ -21,8 +21,20 @@ import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 // NOTE: IT IS IMPORTANT TO IMPORT FROM THE SHARED UI DIRECTORY, because import will be replaced for turbopack
 import { MonacoYAMLEditor } from "@/shared/ui";
 import "./WorkflowYAMLEditor.css";
+import clsx from "clsx";
+import {
+  ExclamationCircleIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
+
+type YamlValidationError = {
+  message: string;
+  severity: "error" | "warning";
+  lineNumber: number;
+  column: number;
+};
 interface Props {
   workflowRaw: string;
   workflowId?: string;
@@ -120,6 +132,36 @@ export const WorkflowYAMLEditor = ({
     },
     [executionLogs, executionStatus]
   );
+
+  const [validationErrors, setValidationErrors] = useState<
+    YamlValidationError[]
+  >([]);
+  const handleMarkersChanged = (
+    monacoInstance: typeof import("monaco-editor"),
+    resource: any
+  ) => {
+    const errors = [];
+    const markers = monacoInstance.editor.getModelMarkers({ resource });
+    for (const marker of markers) {
+      let severityString = "";
+      if (marker.severity === monacoInstance.MarkerSeverity.Hint) {
+        continue;
+      }
+      if (marker.severity === monacoInstance.MarkerSeverity.Warning) {
+        severityString = "warning";
+      }
+      if (marker.severity === monacoInstance.MarkerSeverity.Error) {
+        severityString = "error";
+      }
+      errors.push({
+        message: marker.message,
+        severity: severityString as "error" | "warning",
+        lineNumber: marker.startLineNumber,
+        column: marker.startColumn,
+      });
+    }
+    setValidationErrors(errors);
+  };
 
   // TODO: move logs decoration to helper function or separate component
   const handleEditorDidMount = (
@@ -409,6 +451,10 @@ export const WorkflowYAMLEditor = ({
       };
     }
 
+    monacoInstance.editor.onDidChangeMarkers((resources) => {
+      handleMarkersChanged(monacoInstance, resources[0]);
+    });
+
     setIsEditorMounted(true);
   };
 
@@ -543,6 +589,33 @@ export const WorkflowYAMLEditor = ({
             schemas={schemas}
           />
         </Suspense>
+      </div>
+      <div className="flex flex-col bg-white z-10">
+        {validationErrors.map((error) => (
+          <div
+            key={error.message}
+            className={clsx(
+              "text-sm cursor-pointer hover:underline flex items-start gap-1 px-4 py-1",
+              error.severity === "error" ? "bg-red-100" : "bg-yellow-100"
+            )}
+            onClick={() => {
+              if (!editorRef.current) return;
+              editorRef.current.setPosition({
+                lineNumber: error.lineNumber,
+                column: error.column,
+              });
+            }}
+          >
+            {error.severity === "error" ? (
+              <ExclamationCircleIcon className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+            ) : (
+              <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+            )}
+            <span className="text-sm">
+              {error.column}:{error.lineNumber} {error.message}
+            </span>
+          </div>
+        ))}
       </div>
       <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200">
         <span className="text-sm text-gray-500">{filename}.yaml</span>
