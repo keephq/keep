@@ -50,9 +50,15 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
 
     def _get_order_by_field(self, field_mapping, data_type: type):
         if isinstance(field_mapping, JsonFieldMapping):
-            return self.json_extract_as_text(
+            json_exp = self.json_extract_as_text(
                 field_mapping.json_prop, field_mapping.prop_in_json
             )
+
+            if data_type is not str and not None:
+                return self.cast(json_exp, data_type)
+
+            return json_exp
+
         elif isinstance(field_mapping, SimpleFieldMapping):
             return field_mapping.map_to
 
