@@ -1,8 +1,6 @@
 import asyncio
 import functools
 import logging
-import multiprocessing
-import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 from uuid import uuid4
@@ -21,12 +19,9 @@ from keep.api.consts import (
     KEEP_ARQ_TASK_POOL,
     KEEP_ARQ_TASK_POOL_ALL,
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
-    KEEP_ARQ_TASK_POOL_NONE,
 )
 from keep.api.core.config import config
-from keep.api.core.db import dispose_session
 from keep.api.tasks.process_event_task import process_event
-from keep.workflowmanager.workflowmanager import WorkflowManager
 
 # Load environment variables
 load_dotenv(find_dotenv())
@@ -198,7 +193,7 @@ def get_arq_worker(queue_name: str) -> Worker:
     return worker
 
 
-async def safe_run_worker(worker: Worker):
+async def safe_run_worker(worker: Worker, number_of_errors_before_restart=0):
     """
     Run a worker with automatic reconnection in case of Redis connection errors.
 
@@ -206,6 +201,7 @@ async def safe_run_worker(worker: Worker):
         worker: The ARQ worker to run
     """
     try:
+        number_of_errors = 0
         while True:
             try:
                 await worker.async_run()
@@ -213,172 +209,35 @@ async def safe_run_worker(worker: Worker):
                 # happens on shutdown, fine
                 pass
             except redis.exceptions.ConnectionError:
+                number_of_errors += 1
+                # we want to raise an exception if we have too many errors
+                if (
+                    number_of_errors_before_restart
+                    and number_of_errors >= number_of_errors_before_restart
+                ):
+                    logger.error(
+                        f"Worker encountered {number_of_errors} errors, restarting..."
+                    )
+                    raise
                 logger.exception("Failed to connect to Redis... Retry in 3 seconds")
                 await asyncio.sleep(3)
                 continue
+            except Exception:
+                number_of_errors += 1
+                # we want to raise an exception if we have too many errors
+                if (
+                    number_of_errors_before_restart
+                    and number_of_errors >= number_of_errors_before_restart
+                ):
+                    logger.error(
+                        f"Worker encountered {number_of_errors} errors, restarting..."
+                    )
+                    raise
+                # o.w: log the error and continue
+                logger.exception("Worker error")
+                await asyncio.sleep(3)
+                continue
+
             break
     finally:
         await worker.close()
-
-
-async def start_worker_instance(queue_name: str, worker_index: int):
-    """
-    Start a single worker instance.
-
-    Args:
-        queue_name: The queue to listen to
-        worker_index: Index of this worker for logging purposes
-    """
-    logger.info(f"Starting worker {worker_index} for queue {queue_name}")
-    worker = get_arq_worker(queue_name)
-    # start the workflow manager
-    # For now - we must also start the workflow scheduler since its coupled with process workers
-    # TODO (very important): refactor the workflow scheduler to be independent of the workers
-    # and to work with REDIS
-    logger.info("Starting Workflow Manager")
-    wf_manager = WorkflowManager.get_instance()
-    await wf_manager.start()
-    logger.info("Workflow Manager started")
-    await safe_run_worker(worker)
-    logger.info(f"Worker {worker_index} finished")
-
-
-def run_worker_process(queue_name: str, worker_index: int):
-    """
-    Run a worker in a separate process.
-
-    Args:
-        queue_name: The queue to listen to
-        worker_index: Index of this worker for logging purposes
-    """
-    logger.info(f"Worker process {worker_index} starting")
-    dispose_session()  # Dispose any existing DB connections in the child process
-    pid = os.getpid()
-    logger.info(f"Worker process {worker_index} started with PID: {pid}")
-    asyncio.run(start_worker_instance(queue_name, worker_index))
-
-
-async def start_workers(use_gunicorn=False):
-    """
-    Start the ARQ workers based on configuration with multi-process support.
-
-    Args:
-        use_gunicorn: If True, return early as workers will be managed by Gunicorn
-    """
-    logger.info("Disposing existing DB connections")
-    dispose_session()
-
-    if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_NONE:
-        logger.info("No task pools configured to run")
-        return
-
-    # If using Gunicorn, we don't need to manage processes here
-    if use_gunicorn:
-        logger.info(
-            "Workers will be managed by Gunicorn, skipping direct process creation"
-        )
-        return
-
-    try:
-        # Get the number of worker processes to spawn from environment variable
-        worker_count = config("KEEP_WORKERS", cast=int, default=1)
-        logger.info(
-            f"Starting {worker_count} worker processes with task pool: {KEEP_ARQ_TASK_POOL}"
-        )
-
-        processes = []
-
-        if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL:
-            logger.info("Starting all task pools")
-
-            # Spawn worker processes for basic queue
-            for i in range(worker_count):
-                logger.info(f"Starting worker process {i}")
-                process = multiprocessing.Process(
-                    target=run_worker_process,
-                    args=(KEEP_ARQ_QUEUE_BASIC, i),
-                    daemon=True,
-                )
-                process.start()
-                processes.append(process)
-                logger.info(f"Worker process {i} started")
-
-        elif KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_BASIC_PROCESSING:
-            logger.info("Starting Basic Processing task pool")
-
-            # Spawn worker processes for basic queue
-            for i in range(worker_count):
-                logger.info(f"Starting worker process {i}")
-                process = multiprocessing.Process(
-                    target=run_worker_process,
-                    args=(KEEP_ARQ_QUEUE_BASIC, i),
-                    daemon=True,
-                )
-                process.start()
-                processes.append(process)
-                logger.info(f"Worker process {i} started")
-
-        else:
-            raise ValueError(f"Invalid task pool: {KEEP_ARQ_TASK_POOL}")
-
-        # Wait for all processes to complete
-        for process in processes:
-            process.join()
-
-    except Exception as e:
-        logger.exception(f"Failed to start ARQ workers: {e}")
-        raise
-
-
-async def run_workers(use_gunicorn=False):
-    """
-    Main entry point for running workers with error handling.
-
-    Args:
-        use_gunicorn: If True, workers will be managed by Gunicorn
-    """
-    try:
-        logger.info("Starting Workers")
-        # if log leve is debug:
-        if config("LOG_LEVEL", default="INFO") == "DEBUG":
-            logger.info("Applying ARQ debug patches")
-            try:
-                from .arq_worker_debug_patch import (
-                    apply_arq_debug_patches,
-                    patch_process_event,
-                )
-
-                apply_arq_debug_patches()
-                patch_process_event()
-                logger.info("ARQ debug patches applied")
-            except ImportError:
-                logger.warning(
-                    "Could not import ARQ debug patches, continuing without them"
-                )
-
-        await start_workers(use_gunicorn=use_gunicorn)
-
-        logger.info("Workers finished")
-    except KeyboardInterrupt:
-        logger.info("Workers shutting down due to keyboard interrupt")
-    except Exception as e:
-        logger.exception(f"Workers failed with exception: {e}")
-        raise
-
-
-if __name__ == "__main__":
-    # Check if we're using Gunicorn
-    use_gunicorn = config("USE_GUNICORN", cast=bool, default=False)
-
-    if use_gunicorn:
-        logger.info(
-            "Configured to use Gunicorn, please run arq_worker_gunicorn.py instead"
-        )
-        import sys
-
-        sys.exit(0)
-
-    logger.info(f"Starting ARQ workers with task pool: {KEEP_ARQ_TASK_POOL}")
-    worker_count = config("KEEP_WORKERS", cast=int, default=1)
-    logger.info(f"Worker process count: {worker_count}")
-    asyncio.run(run_workers())
