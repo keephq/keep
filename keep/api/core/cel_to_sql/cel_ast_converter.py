@@ -357,7 +357,4 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             return False
 
     def is_date(self, value: str) -> bool:
-        if iso_regex.match(value) or datetime_regex.match(value):
-            return True
-
-        return False
+        return iso_regex.match(value) or datetime_regex.match(value)
