@@ -304,7 +304,6 @@ def add_alert(
     )
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    # TODO: secrets convention from config?
     provider_config = secret_manager.read_secret(
         f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
     )
