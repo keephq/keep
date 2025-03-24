@@ -1,26 +1,34 @@
 "use client";
 
 import { useEffect } from "react";
-import { Editor, EditorProps, type Monaco } from "@monaco-editor/react";
 import { configureMonacoYaml, MonacoYaml } from "monaco-yaml";
-import { loader } from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
+import type { EditorProps, Monaco } from "@monaco-editor/react";
+import { MonacoEditor } from "@/shared/ui";
 
-// Loading these workers only works with webpack. Turbopack does not support it.
+// Loading these workers from NPM only works with webpack. Turbopack does not support import(`${url}`), which is used in monaco-editor and monaco-yaml.
+// For development, we can use the workers from the local dist folder or CDN. TODO: figure out how to do this in Turbopack.
 self.MonacoEnvironment = {
   getWorker(_, label) {
+    console.log("getWorker", label);
     switch (label) {
       case "yaml":
         return new Worker(new URL("monaco-yaml/yaml.worker", import.meta.url));
-      default:
+      case "json":
+        return new Worker(
+          new URL(
+            "monaco-editor/esm/vs/language/json/json.worker",
+            import.meta.url
+          )
+        );
+      case "editorWorkerService":
         return new Worker(
           new URL("monaco-editor/esm/vs/editor/editor.worker", import.meta.url)
         );
+      default:
+        throw new Error(`Unknown label ${label}`);
     }
   },
 };
-
-loader.config({ monaco });
 
 // In the docs, it is stated that there should only be one monaco yaml instance configured at a time
 let monacoYamlInstance: MonacoYaml | undefined;
@@ -61,7 +69,7 @@ export function MonacoYAMLEditor({ schemas, ...props }: YamlEditorProps) {
   };
 
   return (
-    <Editor
+    <MonacoEditor
       defaultLanguage="yaml"
       beforeMount={handleEditorBeforeMount}
       {...props}
