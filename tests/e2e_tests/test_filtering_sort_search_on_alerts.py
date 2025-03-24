@@ -264,6 +264,7 @@ def test_search_by_cel(
     predicate = test_case["predicate"]
     alert_property_name = test_case["alert_property_name"]
     current_alerts = setup_test_data
+    browser.wait_for_timeout(3000)
     print(current_alerts)
     init_test(browser, current_alerts)
     search_input = browser.locator(
