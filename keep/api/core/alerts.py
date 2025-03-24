@@ -9,9 +9,7 @@ from sqlmodel import Session, text
 
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
-    JsonFieldMapping,
     PropertiesMetadata,
-    SimpleFieldMapping,
     remap_fields_configurations,
 )
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
@@ -39,17 +37,32 @@ logger = logging.getLogger(__name__)
 alerts_hard_limit = int(os.environ.get("KEEP_LAST_ALERTS_LIMIT", 50000))
 
 alert_field_configurations = [
-    FieldMappingConfiguration("source", "filter_provider_type"),
-    FieldMappingConfiguration("providerId", "filter_provider_id"),
-    FieldMappingConfiguration("providerType", "filter_provider_type"),
-    FieldMappingConfiguration("timestamp", "filter_timestamp"),
-    FieldMappingConfiguration("fingerprint", "filter_fingerprint"),
-    FieldMappingConfiguration("startedAt", "startedAt"),
+    FieldMappingConfiguration(
+        map_from_pattern="source", map_to="filter_provider_type", data_type=str
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="providerId", map_to="filter_provider_id", data_type=str
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="providerType", map_to="filter_provider_type", data_type=str
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="timestamp",
+        map_to="filter_timestamp",
+        data_type=datetime.datetime,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="fingerprint", map_to="filter_fingerprint", data_type=str
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="startedAt", map_to="startedAt", data_type=datetime.datetime
+    ),
     FieldMappingConfiguration(
         map_from_pattern="incident.id",
         map_to=[
             "filter_incident_id",
         ],
+        data_type=str,
     ),
     FieldMappingConfiguration(
         map_from_pattern="incident.name",
@@ -57,6 +70,7 @@ alert_field_configurations = [
             "filter_incident_user_generated_name",
             "filter_incident_ai_generated_name",
         ],
+        data_type=str,
     ),
     FieldMappingConfiguration(
         map_from_pattern="severity",
@@ -71,6 +85,7 @@ alert_field_configurations = [
                 key=lambda s: s.order,
             )
         ],
+        data_type=str,
     ),
     FieldMappingConfiguration(
         map_from_pattern="lastReceived",
@@ -78,6 +93,7 @@ alert_field_configurations = [
             "JSON(filter_alert_enrichment_json).*",
             "JSON(filter_alert_event_json).*",
         ],
+        data_type=datetime.datetime,
     ),
     FieldMappingConfiguration(
         map_from_pattern="status",
@@ -86,6 +102,15 @@ alert_field_configurations = [
             "JSON(filter_alert_event_json).*",
         ],
         enum_values=list(reversed([item.value for _, item in enumerate(AlertStatus)])),
+        data_type=str,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="firingCounter",
+        map_to=[
+            "JSON(filter_alert_enrichment_json).*",
+            "JSON(filter_alert_event_json).*",
+        ],
+        data_type=int,
     ),
     FieldMappingConfiguration(
         map_from_pattern="*",
@@ -93,6 +118,7 @@ alert_field_configurations = [
             "JSON(filter_alert_enrichment_json).*",
             "JSON(filter_alert_event_json).*",
         ],
+        data_type=str,
     ),
 ]
 alias_column_mapping = {
@@ -310,25 +336,7 @@ def build_alerts_query(
         sort_by = "timestamp"
         sort_dir = "desc"
 
-    group_by_exp = []
-    metadata = remapped_properties_metadata.get_property_metadata(sort_by)
-
-    for item in metadata.field_mappings:
-        if isinstance(item, JsonFieldMapping):
-            group_by_exp.append(
-                cel_to_sql_instance.json_extract_as_text(
-                    item.json_prop, item.prop_in_json
-                )
-            )
-        elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-            group_by_exp.append(item.map_to)
-
-    if len(group_by_exp) > 1:
-        order_by_field = cel_to_sql_instance.coalesce(
-            [cel_to_sql_instance.cast(item, str) for item in group_by_exp]
-        )
-    else:
-        order_by_field = group_by_exp[0]
+    sort_by_exp = cel_to_sql_instance.get_order_by_exp(sort_by)
 
     built_query_result = __build_query_for_filtering_v2(
         tenant_id,
@@ -336,7 +344,7 @@ def build_alerts_query(
             Alert,
             AlertEnrichment,
             LastAlert.first_timestamp.label("startedAt"),
-            literal_column(order_by_field),
+            literal_column(sort_by_exp),
         ],
         cel=cel,
     )
@@ -345,16 +353,16 @@ def build_alerts_query(
 
     if fetch_incidents:
         if sort_dir == "desc":
-            query = query.order_by(desc(text(order_by_field)), Alert.id)
+            query = query.order_by(desc(text(sort_by_exp)), Alert.id)
         else:
-            query = query.order_by(asc(text(order_by_field)), Alert.id)
+            query = query.order_by(asc(text(sort_by_exp)), Alert.id)
 
-        query = query.distinct(text(order_by_field), Alert.id)
+        query = query.distinct(text(sort_by_exp), Alert.id)
     else:
         if sort_dir == "desc":
-            query = query.order_by(desc(text(order_by_field)))
+            query = query.order_by(desc(text(sort_by_exp)))
         else:
-            query = query.order_by(asc(text(order_by_field)))
+            query = query.order_by(asc(text(sort_by_exp)))
 
     if limit is not None:
         query = query.limit(limit)
@@ -396,6 +404,7 @@ def query_last_alerts(
             data_query = build_alerts_query(
                 tenant_id, cel, sort_by, sort_dir, limit, offset
             )
+
             alerts_with_start = session.execute(data_query).all()
         except OperationalError as e:
             logger.warning(f"Failed to query alerts for CEL '{cel}': {e}")
