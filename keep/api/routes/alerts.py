@@ -29,12 +29,12 @@ from keep.api.core.alerts import (
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.config import config
-from keep.api.core.db import dismiss_error_alerts as dismiss_error_alerts_db, get_last_alerts_by_fingerprints, \
-    get_alerts_by_ids
+from keep.api.core.db import dismiss_error_alerts as dismiss_error_alerts_db
 from keep.api.core.db import enrich_alerts_with_incidents
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
+    get_alerts_by_ids,
     get_alerts_metrics_by_provider,
     get_enrichment,
 )
@@ -42,6 +42,8 @@ from keep.api.core.db import get_error_alerts as get_error_alerts_db
 from keep.api.core.db import (
     get_last_alert_by_fingerprint,
     get_last_alerts,
+    get_last_alerts_by_fingerprints,
+    get_provider_by_name,
     get_session,
     is_all_alerts_resolved,
 )
@@ -53,11 +55,12 @@ from keep.api.models.alert import (
     AlertDto,
     AlertErrorDto,
     AlertStatus,
+    BatchEnrichAlertRequestBody,
     DeleteRequestBody,
     DismissAlertRequest,
     EnrichAlertNoteRequestBody,
     EnrichAlertRequestBody,
-    UnEnrichAlertRequestBody, BatchEnrichAlertRequestBody,
+    UnEnrichAlertRequestBody,
 )
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.incident import IncidentStatus
@@ -649,6 +652,7 @@ async def receive_event(
     provider_type: str,
     request: Request,
     provider_id: str | None = None,
+    provider_name: str | None = None,
     fingerprint: str | None = None,
     event=Depends(extract_generic_body),
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -683,6 +687,18 @@ async def receive_event(
     logger.debug("Parsing event raw body")
     event = provider_class.parse_event_raw_body(event)
     logger.debug("Parsed event raw body", extra={"time": time.time() - t})
+
+    # If provider_name is provided, try to get provider_id from it
+    if provider_name and not provider_id:
+        provider = get_provider_by_name(authenticated_entity.tenant_id, provider_name)
+        if not provider or provider.type != provider_type:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Provider with name '{provider_name}' not found",
+            )
+
+        provider_id = provider.id
+
     if REDIS:
         redis: ArqRedis = await get_pool()
         job = await redis.enqueue_job(
@@ -787,7 +803,10 @@ def batch_enrich_alerts(
         },
     )
 
-    if "dismissed" in enrich_data.enrichments and enrich_data.enrichments["dismissed"].lower() == "true":
+    if (
+        "dismissed" in enrich_data.enrichments
+        and enrich_data.enrichments["dismissed"].lower() == "true"
+    ):
         enrich_data.enrichments["status"] = AlertStatus.SUPPRESSED.value
 
     try:
@@ -820,11 +839,14 @@ def batch_enrich_alerts(
 
         if dispose_on_new_alert:
             # Create instance-wide enrichment for history
-            
+
             # For better database-native UUID support
-            formatted_alert_ids = [UUIDType(binary=False).process_bind_param(
-                alert_id, session.bind.dialect
-            ) for alert_id in alert_ids]
+            formatted_alert_ids = [
+                UUIDType(binary=False).process_bind_param(
+                    alert_id, session.bind.dialect
+                )
+                for alert_id in alert_ids
+            ]
 
             enrichment_bl.batch_enrich(
                 fingerprint=formatted_alert_ids,
@@ -874,7 +896,8 @@ def batch_enrich_alerts(
         if should_run_workflow:
             workflow_manager = WorkflowManager.get_instance()
             workflow_manager.insert_events(
-                tenant_id=tenant_id, events=enriched_alerts_dto,
+                tenant_id=tenant_id,
+                events=enriched_alerts_dto,
             )
 
         # @tb add "and session" cuz I saw AttributeError: 'NoneType' object has no attribute 'add'"
@@ -883,8 +906,8 @@ def batch_enrich_alerts(
             for alert in alerts:
                 for incident in alert._incidents:
                     if (
-                            incident.resolve_on == ResolveOn.ALL.value
-                            and is_all_alerts_resolved(incident=incident, session=session)
+                        incident.resolve_on == ResolveOn.ALL.value
+                        and is_all_alerts_resolved(incident=incident, session=session)
                     ):
                         incident.status = IncidentStatus.RESOLVED.value
                         session.add(incident)
