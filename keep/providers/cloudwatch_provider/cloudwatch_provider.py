@@ -520,7 +520,7 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                     # for self-hosted Keep, sometimes api_key should be disabled
                     if self.disable_api_key:
                         self.logger.info("API key is disabled, using the url as is")
-                        url_with_api_key = keep_api_url
+                        url_with_api_key = keep_api_url + "&tenant_id=" + tenant_id
                     else:
                         if self.authentication_config.protocol == "https":
                             url_with_api_key = keep_api_url.replace(
