@@ -21,6 +21,7 @@ import { CodeBracketIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import { ResizableColumns } from "@/shared/ui";
 import { WorkflowBuilderChatSafe } from "@/features/workflows/ai-assistant";
+import { debounce } from "lodash";
 
 interface Props {
   loadedYamlFileContents: string | null;
@@ -54,6 +55,7 @@ export function WorkflowBuilder({
     initializeWorkflow,
     setProviders,
     setInstalledProviders,
+    updateFromYamlString,
   } = useWorkflowStore();
   const router = useRouter();
 
@@ -223,23 +225,16 @@ export function WorkflowBuilder({
     );
   }
 
-  const YamlEditor = () => {
-    if (!workflowYaml) {
-      return <Skeleton className="w-full h-full" />;
-    }
-    return (
-      <WorkflowYAMLEditor
-        // TODO: do not re-render editor on every workflowYaml change, handle updates inside the editor
-        key={workflowYaml}
-        workflowRaw={workflowYaml}
-        filename={workflowId ?? "workflow"}
-        workflowId={workflowId}
-        // TODO: support write for not yet deployed workflows
-        readOnly={!workflowId}
-        data-testid="wf-builder-yaml-editor"
-      />
-    );
-  };
+  const handleYamlChange = useMemo(
+    () =>
+      debounce((yamlString: string | undefined) => {
+        if (!yamlString) {
+          return;
+        }
+        updateFromYamlString(yamlString);
+      }, 1000),
+    [updateFromYamlString]
+  );
 
   return (
     <ResizableColumns initialLeftWidth={leftColumnMode !== null ? 33 : 0}>
@@ -249,7 +244,13 @@ export function WorkflowBuilder({
             leftColumnMode === "yaml" ? "visible h-full" : "hidden"
           )}
         >
-          <YamlEditor />
+          <WorkflowYAMLEditor
+            workflowYamlString={workflowYaml ?? ""}
+            filename={workflowId ?? "workflow"}
+            workflowId={workflowId}
+            data-testid="wf-builder-yaml-editor"
+            onChange={handleYamlChange}
+          />
         </div>
         <div
           className={clsx(

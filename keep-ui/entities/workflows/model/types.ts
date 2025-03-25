@@ -463,4 +463,5 @@ export interface WorkflowState extends WorkflowStateValues {
   onConnect: (connection: any) => void;
   onDragOver: (event: React.DragEvent) => void;
   onDrop: (event: DragEvent, screenToFlowPosition: any) => void;
+  updateFromYamlString: (yamlString: string) => void;
 }

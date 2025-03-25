@@ -26,6 +26,7 @@ import { WorkflowYAMLEditor } from "@/shared/ui";
 import Skeleton from "react-loading-skeleton";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useWorkflowDetail } from "@/utils/hooks/useWorkflowDetail";
+import { WorkflowYAMLEditorStandalone } from "@/shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditorStandalone";
 
 export default function WorkflowDetailPage({
   params,
@@ -130,12 +131,9 @@ export default function WorkflowDetailPage({
               <Skeleton className="w-full h-full" />
             ) : (
               <Card className="h-[calc(100vh-12rem)] p-0">
-                <WorkflowYAMLEditor
-                  standalone
-                  key={workflow.workflow_raw!}
-                  workflowRaw={workflow.workflow_raw!}
-                  filename={workflow.id ?? "workflow"}
+                <WorkflowYAMLEditorStandalone
                   workflowId={workflow.id}
+                  yamlString={workflow.workflow_raw!}
                   data-testid="wf-detail-yaml-editor"
                 />
               </Card>

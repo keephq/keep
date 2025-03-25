@@ -33,7 +33,10 @@ import {
 } from "@/entities/workflows";
 import { validateStepPure, validateGlobalPure } from "./validation";
 import { getLayoutedWorkflowElements } from "../lib/getLayoutedWorkflowElements";
-import { wrapDefinitionV2 } from "@/entities/workflows/lib/parser";
+import {
+  parseWorkflow,
+  wrapDefinitionV2,
+} from "@/entities/workflows/lib/parser";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 import { ZodError } from "zod";
 import { fromError } from "zod-validation-error";
@@ -380,6 +383,28 @@ export const useWorkflowStore = create<WorkflowState>()(
         });
         get().updateDefinition();
       }
+    },
+    updateFromYamlString: (yamlString: string) => {
+      set({
+        definition: wrapDefinitionV2({
+          // todo: do not change node ids, maybe use determenistic ids
+          ...parseWorkflow(yamlString, get().providers ?? []),
+          isValid: true,
+        }),
+      });
+      set({
+        changes: get().changes + 1,
+        lastChangedAt: Date.now(),
+      });
+      initializeWorkflow(
+        get().workflowId,
+        {
+          providers: get().providers ?? [],
+          installedProviders: get().installedProviders ?? [],
+        },
+        set,
+        get
+      );
     },
     updateDefinition: () => {
       // Immediately update definition with new properties
@@ -771,6 +796,11 @@ function initializeWorkflow(
   set: StoreSet,
   get: StoreGet
 ) {
+  const isUpdatingExistingState = get().workflowId === workflowId;
+  const currentSelectedNode = get().selectedNode;
+  const currentSelectedNodeStepName = get().nodes.find(
+    (node) => node.id === currentSelectedNode
+  )?.data?.name;
   const definition = get().definition;
   if (definition === null) {
     throw new Error("Definition should be set before initializing workflow");
@@ -803,9 +833,15 @@ function initializeWorkflow(
   ];
   const initialPosition = { x: 0, y: 50 };
   let { nodes, edges } = processWorkflowV2(fullSequence, initialPosition, true);
+  let newSelectedNodeId = null;
+  if (isUpdatingExistingState && currentSelectedNode) {
+    newSelectedNodeId =
+      nodes.find((node) => node.data.name === currentSelectedNodeStepName)
+        ?.id ?? null;
+  }
   set({
     workflowId,
-    selectedNode: null,
+    selectedNode: newSelectedNodeId,
     isLayouted: false,
     nodes,
     edges,
@@ -817,7 +853,7 @@ function initializeWorkflow(
     isInitialized: true,
     isDeployed: workflowId !== null,
     // If it's a new workflow (workflowId = null), we want to open the editor because metadata fields in there
-    editorOpen: !workflowId,
+    editorOpen: !workflowId || (isUpdatingExistingState && get().editorOpen),
   });
   get().onLayout({ direction: "DOWN" });
   get().updateDefinition();

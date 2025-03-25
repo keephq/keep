@@ -349,5 +349,5 @@ export function WorkflowYAMLEditorWithLogs({
     }
   }, [executionLogs, executionStatus]);
 
-  return <WorkflowYAMLEditor onDidMount={handleEditorDidMount} {...props} />;
+  return <WorkflowYAMLEditor onMount={handleEditorDidMount} {...props} />;
 }

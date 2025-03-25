@@ -1,7 +1,6 @@
 import {
   Button,
   Callout,
-  Icon,
   Select,
   SelectItem,
   Subtitle,
@@ -14,12 +13,7 @@ import {
 } from "@tremor/react";
 import { KeyIcon } from "@heroicons/react/20/solid";
 import { Provider } from "@/shared/api/providers";
-import {
-  BackspaceIcon,
-  PencilIcon,
-  PlusIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
+import { PencilIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import {
   ExclamationCircleIcon,
   CheckCircleIcon,
@@ -576,28 +570,36 @@ type ActionOrStepProperties =
   | V2ActionStep["properties"];
 
 export function StepEditorV2() {
-  const { selectedNode, getNodeById } = useWorkflowStore();
+  const { selectedNode } = useWorkflowStore();
+  // Using selector here to get updated node data on yaml change
+  const selectedNodeData = useWorkflowStore(
+    (state) =>
+      state.nodes.find((node) => node.id === selectedNode)?.data ?? null
+  );
+
   const nodeData = useMemo(() => {
     if (!selectedNode) {
       return null;
     }
-    const node = getNodeById(selectedNode);
     if (
-      !node ||
-      node.data.componentType === "condition-assert__end" ||
-      node.data.componentType === "condition-threshold__end"
+      !selectedNodeData ||
+      selectedNodeData.componentType === "condition-assert__end" ||
+      selectedNodeData.componentType === "condition-threshold__end"
     ) {
       return null;
     }
 
-    const parsedNode = NodeDataStepSchema.parse(node.data);
+    const parsedNode = NodeDataStepSchema.safeParse(selectedNodeData);
+    if (!parsedNode.success) {
+      console.error(parsedNode.error);
+    }
     return {
-      type: parsedNode.type,
-      componentType: parsedNode.componentType,
-      name: parsedNode.name,
-      properties: parsedNode.properties,
+      type: selectedNodeData.type,
+      componentType: selectedNodeData.componentType,
+      name: selectedNodeData.name,
+      properties: selectedNodeData.properties,
     };
-  }, [selectedNode]);
+  }, [selectedNode, selectedNodeData]);
 
   if (!nodeData) {
     // If the node is not a step, action, condition or foreach, don't render anything

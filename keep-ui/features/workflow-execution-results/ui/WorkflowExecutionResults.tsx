@@ -194,7 +194,7 @@ export function WorkflowExecutionResultsInternal({
       content: (
         <div className="h-[calc(100vh-220px)]">
           <WorkflowYAMLEditorWithLogs
-            workflowRaw={workflowRaw ?? ""}
+            workflowYamlString={workflowRaw ?? ""}
             workflowId={workflowId}
             executionLogs={logs}
             executionStatus={status}

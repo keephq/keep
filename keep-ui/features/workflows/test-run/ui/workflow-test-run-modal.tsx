@@ -93,6 +93,10 @@ export function WorkflowTestRunModal({
       });
   };
 
+  if (!testRunModalOpen) {
+    return null;
+  }
+
   return (
     <Modal
       isOpen={testRunModalOpen}
