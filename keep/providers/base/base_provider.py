@@ -264,35 +264,35 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.logger.info("Enriching alert", extra={"fingerprint": fingerprint})
         try:
             enrichments_bl = EnrichmentsBl(self.context_manager.tenant_id)
-            enrichment_string = ""
-            for key, value in _enrichments.items():
-                enrichment_string += f"{key}={value}, "
-            # remove the last comma
-            enrichment_string = enrichment_string[:-2]
+            enrichment_string = ", ".join([f"{key}={value}" for key, value in _enrichments.items()])
+            disposable_enrichment_string = ", ".join([f"{key}={value}" for key, value in disposable_enrichments.items()])
+
+            common_kwargs = {
+                "fingerprint": fingerprint,
+                "action_type": ActionType.WORKFLOW_ENRICH,
+                "action_callee": "system",
+                "audit_enabled": audit_enabled,
+            }
+
             # enrich the alert with _enrichments
             enrichments_bl.enrich_entity(
-                fingerprint,
-                _enrichments,
-                action_type=ActionType.WORKFLOW_ENRICH,  # shahar: todo: should be specific, good enough for now
-                action_callee="system",
+                enrichments=_enrichments,
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
-                audit_enabled=audit_enabled,
+                **common_kwargs
             )
+
             # enrich with disposable enrichments
-            enrichment_string = ""
-            for key, value in disposable_enrichments.items():
-                enrichment_string += f"{key}={value}, "
-            # remove the last comma
-            enrichment_string = enrichment_string[:-2]
-            enrichments_bl.enrich_entity(
-                fingerprint,
-                disposable_enrichments,
-                action_type=ActionType.WORKFLOW_ENRICH,
-                action_callee="system",
-                action_description=f"Workflow enriched the alert with {enrichment_string}",
-                dispose_on_new_alert=True,
-                audit_enabled=audit_enabled,
+            enrichments_bl.disposable_enrich_entity(
+                enrichments=disposable_enrichments,
+                action_description=f"Workflow enriched the alert with {disposable_enrichment_string}",
+                **common_kwargs
             )
+
+            should_check_incidents_resolution = (_enrichments.get("status", None) == "resolved"
+                                                 or disposable_enrichments.get("status", None) == "resolved")
+
+            if event and should_check_incidents_resolution:
+                enrichments_bl.check_incident_resolution(event)
 
         except Exception as e:
             self.logger.error(
