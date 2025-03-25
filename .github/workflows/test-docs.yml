@@ -52,6 +52,10 @@ jobs:
           cd scripts;
           poetry run python ./docs_get_providers_list.py --validate    
 
+      - name: Validate snippets for providers
+        run: |
+          poetry run python ./scripts/docs_render_provider_snippets.py --validate  
+
       - name: Install deps and validate docs
         run: |
           npm i -g mintlify;
