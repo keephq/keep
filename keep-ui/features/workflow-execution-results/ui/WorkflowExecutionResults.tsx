@@ -12,12 +12,12 @@ import {
   isWorkflowExecution,
 } from "@/shared/api/workflow-executions";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { WorkflowYAMLEditor } from "@/shared/ui";
 import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
 import { setFavicon } from "@/shared/ui/utils/favicon";
 import { EmptyStateCard, ResizableColumns } from "@/shared/ui";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
+import { WorkflowYAMLEditorWithLogs } from "@/shared/ui/WorkflowYAMLEditorWithLogs";
 
 const convertWorkflowStatusToFaviconStatus = (
   status: WorkflowExecutionDetail["status"]
@@ -193,7 +193,7 @@ export function WorkflowExecutionResultsInternal({
       name: "Workflow Definition",
       content: (
         <div className="h-[calc(100vh-220px)]">
-          <WorkflowYAMLEditor
+          <WorkflowYAMLEditorWithLogs
             workflowRaw={workflowRaw ?? ""}
             workflowId={workflowId}
             executionLogs={logs}

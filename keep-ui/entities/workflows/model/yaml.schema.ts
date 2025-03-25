@@ -69,10 +69,10 @@ function getYamlProviderSchema(provider: Provider, type: "step" | "action") {
       : provider.notify_params || []),
     "enrich_alert",
     "enrich_incident",
-  ];
+  ].filter((key) => key !== "kwargs");
 
   if (validKeys.length === 0) {
-    throw new Error(
+    console.warn(
       `No valid keys found for provider ${provider.type} in ${type} mode`
     );
   }
@@ -80,35 +80,34 @@ function getYamlProviderSchema(provider: Provider, type: "step" | "action") {
   // @ts-ignore
   const validKeysSchema = z.enum(validKeys);
 
+  const withSchema = z.record(
+    validKeysSchema,
+    z.union([
+      z.string(),
+      z.number(),
+      z.boolean(),
+      z.record(z.string(), z.any()),
+      z.object({}),
+      z.array(z.any()),
+    ])
+  );
+
   return YamlProviderSchema.extend({
     type: z.literal(provider.type),
-    with: z.record(
-      validKeysSchema,
-      z.union([
-        z.string(),
-        z.number(),
-        z.boolean(),
-        z.object({}),
-        z.array(z.any()),
-      ])
-    ),
+    with: withSchema,
   });
 }
 
 export function getYamlWorkflowDefinitionSchema(providers: Provider[]) {
   const providerStepSchemas = providers
-    .filter(
-      (provider) => provider.query_params && provider.query_params.length > 0
-    )
+    .filter((provider) => provider.can_query)
     .map((provider) => getYamlProviderSchema(provider, "step"));
   const stepSchema = YamlStepOrActionSchema.extend({
     // @ts-ignore TODO: fix type inference
     provider: z.discriminatedUnion("type", providerStepSchemas),
   });
   const providerActionSchemas = providers
-    .filter(
-      (provider) => provider.notify_params && provider.notify_params.length > 0
-    )
+    .filter((provider) => provider.can_notify)
     .map((provider) => getYamlProviderSchema(provider, "action"));
   const actionSchema = YamlStepOrActionSchema.extend({
     // @ts-ignore TODO: fix type inference

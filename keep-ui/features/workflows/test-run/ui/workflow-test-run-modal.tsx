@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useWorkflowStore } from "@/entities/workflows";
+import { DefinitionV2, useWorkflowStore } from "@/entities/workflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
 import { useState } from "react";
@@ -12,8 +12,15 @@ import { getBodyFromStringOrDefinitionOrObject } from "@/entities/workflows/lib/
 import { Callout } from "@tremor/react";
 
 // It listens for the runRequestCount and triggers the test run of the workflow, opening the modal with the results.
-export function WorkflowTestRunModal({ workflowId }: { workflowId: string }) {
-  const { definition, runRequestCount } = useWorkflowStore();
+export function WorkflowTestRunModal({
+  workflowId,
+  definition,
+  runRequestCount,
+}: {
+  workflowId: string;
+  definition: DefinitionV2 | null;
+  runRequestCount: number;
+}) {
   const api = useApi();
   const [testRunModalOpen, setTestRunModalOpen] = useState(false);
   const [workflowExecutionId, setWorkflowExecutionId] = useState<string | null>(

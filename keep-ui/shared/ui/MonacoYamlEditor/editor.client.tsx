@@ -51,7 +51,11 @@ type MonacoYamlEditorProps = {
  * This is a custom editor component that uses 'monaco-yaml' to provide YAML language support.
  * It is used to edit YAML files.
  */
-export function MonacoYAMLEditor({ schemas, ...props }: MonacoYamlEditorProps) {
+export function MonacoYAMLEditor({
+  schemas,
+  onValidate,
+  ...props
+}: MonacoYamlEditorProps) {
   useEffect(() => {
     if (schemas) {
       monacoYamlInstance?.update({
@@ -67,9 +71,9 @@ export function MonacoYAMLEditor({ schemas, ...props }: MonacoYamlEditorProps) {
   useEffect(() => {
     loader
       .init()
-      .then((monaco) => {
+      .then((monacoInstance) => {
         if (!monacoYamlInstance) {
-          monacoYamlInstance = configureMonacoYaml(monaco, {
+          monacoYamlInstance = configureMonacoYaml(monacoInstance, {
             hover: true,
             completion: true,
             validate: true,

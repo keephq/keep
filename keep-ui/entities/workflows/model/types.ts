@@ -1,6 +1,6 @@
 import { Edge, Node } from "@xyflow/react";
 import { Workflow } from "@/shared/api/workflows";
-import { z } from "zod";
+import { optional, z } from "zod";
 import { Provider } from "@/shared/api/providers";
 
 const ManualTriggerValueSchema = z.literal("true");
@@ -79,6 +79,22 @@ const EnrichIncidentSchema = z.array(
   })
 );
 
+const WithSchema = z
+  .object({
+    enrich_alert: EnrichAlertSchema.optional(),
+    enrich_incident: EnrichIncidentSchema.optional(),
+  })
+  .catchall(
+    z.union([
+      z.string(),
+      z.number(),
+      z.boolean(),
+      z.record(z.string(), z.any()),
+      z.object({}),
+      z.array(z.any()),
+    ])
+  );
+
 export const V2ActionSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -89,21 +105,7 @@ export const V2ActionSchema = z.object({
     config: z.string().optional(),
     if: z.string().optional(),
     vars: z.record(z.string(), z.string()).optional(),
-    with: z
-      .object({
-        enrich_alert: EnrichAlertSchema.optional(),
-        enrich_incident: EnrichIncidentSchema.optional(),
-      })
-      .catchall(
-        z.union([
-          z.string(),
-          z.number(),
-          z.boolean(),
-          z.object({}),
-          z.array(z.any()),
-        ])
-      )
-      .optional(),
+    with: WithSchema.optional(),
   }),
 });
 
@@ -119,22 +121,7 @@ export const V2StepStepSchema = z.object({
     config: z.string().optional(),
     vars: z.record(z.string(), z.string()).optional(),
     if: z.string().optional(),
-    with: z
-      .object({
-        enrich_alert: EnrichAlertSchema.optional(),
-        enrich_incident: EnrichIncidentSchema.optional(),
-      })
-      .catchall(
-        z.union([
-          z.string(),
-          z.number(),
-          z.boolean(),
-          z.record(z.string(), z.any()),
-          z.object({}),
-          z.array(z.any()),
-        ])
-      )
-      .optional(),
+    with: WithSchema.optional(),
   }),
 });
 

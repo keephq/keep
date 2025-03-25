@@ -7,64 +7,66 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { type editor } from "monaco-editor";
+import type { editor } from "monaco-editor";
 import { Download, Copy, Check, Save } from "lucide-react";
 import { Button } from "@tremor/react";
-import { LogEntry } from "@/shared/api/workflow-executions";
-import { getStepStatus } from "@/shared/lib/logs-utils";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
-import { parseDocument, Document } from "yaml";
 import { useWorkflowJsonSchema } from "@/entities/workflows/model/useWorkflowJsonSchema";
 import { KeepLoader } from "../../KeepLoader/KeepLoader";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 // NOTE: IT IS IMPORTANT TO IMPORT FROM THE SHARED UI DIRECTORY, because import will be replaced for turbopack
 import { MonacoYAMLEditor } from "@/shared/ui";
-import "./WorkflowYAMLEditor.css";
+import { YamlValidationError } from "../types";
+import { WorkflowYAMLValidationErrors } from "./WorkflowYAMLValidationErrors";
+import { WorkflowYamlEditorHeader } from "./WorkflowYamlEditorHeader";
 import clsx from "clsx";
-import {
-  ExclamationCircleIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline";
+import { WorkflowTestRunModal } from "@/features/workflows/test-run/ui/workflow-test-run-modal";
+import { DefinitionV2 } from "@/entities/workflows";
+import { wrapDefinitionV2 } from "@/entities/workflows/lib/parser";
+import { parseWorkflow } from "@/entities/workflows/lib/parser";
+import { useProviders } from "@/utils/hooks/useProviders";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
 
-type YamlValidationError = {
-  message: string;
-  severity: "error" | "warning";
-  lineNumber: number;
-  column: number;
-};
-interface Props {
+// Copied from monaco-editor/esm/vs/editor/editor.api.d.ts because we can't import with turbopack
+enum MarkerSeverity {
+  Hint = 1,
+  Info = 2,
+  Warning = 4,
+  Error = 8,
+}
+
+export interface WorkflowYAMLEditorProps {
   workflowRaw: string;
   workflowId?: string;
   filename?: string;
-  executionLogs?: LogEntry[] | null;
-  executionStatus?: string;
-  hoveredStep?: string | null;
-  setHoveredStep?: (step: string | null) => void;
-  selectedStep?: string | null;
-  setSelectedStep?: (step: string | null) => void;
   readOnly?: boolean;
+  standalone?: boolean;
   "data-testid"?: string;
+  onDidMount?: (
+    editor: editor.IStandaloneCodeEditor,
+    monacoInstance: typeof import("monaco-editor")
+  ) => void;
 }
 
 export const WorkflowYAMLEditor = ({
   workflowRaw,
   filename = "workflow",
   workflowId,
-  executionLogs,
-  executionStatus,
-  hoveredStep,
-  setHoveredStep,
-  selectedStep,
-  setSelectedStep,
   readOnly = false,
+  standalone = false,
   "data-testid": dataTestId = "yaml-editor",
-}: Props) => {
+  onDidMount,
+}: WorkflowYAMLEditorProps) => {
+  const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const [validationErrors, setValidationErrors] = useState<
+    YamlValidationError[] | null
+  >(null);
   const { updateWorkflow } = useWorkflowActions();
-
+  const [lastDeployedAt, setLastDeployedAt] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const workflowJsonSchema = useWorkflowJsonSchema();
   const schemas = useMemo(() => {
     return [
@@ -76,91 +78,65 @@ export const WorkflowYAMLEditor = ({
     ];
   }, [workflowJsonSchema]);
 
-  const findStepNameForPosition = (
-    lineNumber: number,
-    model: editor.ITextModel
-  ): string | null => {
-    let currentLine = lineNumber;
-    let currentIndent = -1;
-
-    while (currentLine > 0) {
-      const line = model.getLineContent(currentLine);
-      const indent = line.search(/\S/);
-      const trimmedLine = line.trim();
-
-      // If we find a line with less indentation than our current tracking,
-      // we've moved out of the current step block
-      if (indent !== -1 && (currentIndent === -1 || indent < currentIndent)) {
-        const nameMatch = trimmedLine.match(/^- name:\s*(.+)/);
-        if (nameMatch) {
-          return nameMatch[1].trim();
-        }
-        currentIndent = indent;
-      }
-
-      currentLine--;
-    }
-    return null;
-  };
-
-  const stepDecorationsRef = useRef<string[]>([]);
-  const hoverDecorationsRef = useRef<string[]>([]);
   const [isEditorMounted, setIsEditorMounted] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
-  const yamlDocumentRef = useRef<Document | null>(null);
+  const [definition, setDefinition] = useState<DefinitionV2 | null>(null);
+  const [runRequestCount, setRunRequestCount] = useState(0);
 
-  function parseYamlToRef(yamlString: string) {
-    try {
-      const yamlDocument = parseDocument(yamlString);
-      yamlDocumentRef.current = yamlDocument;
-    } catch (error) {
-      console.error("Failed to parse YAML:", error);
-    }
-  }
+  const { data: { providers } = {} } = useProviders();
 
-  const getStatus = useCallback(
-    (name: string, isAction: boolean = false) => {
-      if (!executionLogs || !executionStatus) {
-        return "pending";
+  const parseYamlToDefinition = useCallback(
+    (yamlString: string) => {
+      try {
+        setDefinition(
+          wrapDefinitionV2({
+            ...parseWorkflow(yamlString, providers ?? []),
+            isValid: true,
+          })
+        );
+      } catch (error) {
+        console.error("Failed to parse YAML:", error);
       }
-      if (executionStatus === "in_progress") {
-        return "in_progress";
-      }
-      return getStepStatus(name, isAction, executionLogs);
     },
-    [executionLogs, executionStatus]
+    [providers]
   );
 
-  const [validationErrors, setValidationErrors] = useState<
-    YamlValidationError[]
-  >([]);
   const handleMarkersChanged = (
-    monacoInstance: typeof import("monaco-editor"),
-    resource: any
+    markers: editor.IMarker[] | editor.IMarkerData[]
   ) => {
     const errors = [];
-    const markers = monacoInstance.editor.getModelMarkers({ resource });
     for (const marker of markers) {
       let severityString = "";
-      if (marker.severity === monacoInstance.MarkerSeverity.Hint) {
+      if (marker.severity === MarkerSeverity.Hint) {
         continue;
       }
-      if (marker.severity === monacoInstance.MarkerSeverity.Warning) {
+      if (marker.severity === MarkerSeverity.Warning) {
         severityString = "warning";
       }
-      if (marker.severity === monacoInstance.MarkerSeverity.Error) {
+      if (marker.severity === MarkerSeverity.Error) {
         severityString = "error";
+      }
+      if (marker.severity === MarkerSeverity.Info) {
+        severityString = "info";
       }
       errors.push({
         message: marker.message,
-        severity: severityString as "error" | "warning",
+        severity: severityString as "error" | "warning" | "info",
         lineNumber: marker.startLineNumber,
         column: marker.startColumn,
       });
     }
     setValidationErrors(errors);
+  };
+
+  const handleContentChange = (value: string | undefined) => {
+    if (!value) {
+      return;
+    }
+    setHasChanges(value !== originalContent);
+    parseYamlToDefinition(value);
   };
 
   // TODO: move logs decoration to helper function or separate component
@@ -169,291 +145,28 @@ export const WorkflowYAMLEditor = ({
     monacoInstance: typeof import("monaco-editor")
   ) => {
     editorRef.current = editor;
+    monacoRef.current = monacoInstance;
 
-    const updateStepDecorations = () => {
-      if (!editor) return;
-
-      const model = editor.getModel();
-      if (!model) return;
-
-      const content = model.getValue();
-      const lines = content.split("\n");
-      const decorations: editor.IModelDeltaDecoration[] = [];
-
-      let isInActions = false;
-      let currentName: string | null = null;
-      let stepStartLine = -1;
-      let indentLevel = -1;
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const trimmedLine = line.trim();
-        const currentIndent = line.search(/\S/);
-
-        if (trimmedLine === "actions:") {
-          isInActions = true;
-        } else if (trimmedLine === "steps:") {
-          isInActions = false;
-        }
-
-        if (trimmedLine.startsWith("- name:")) {
-          if (stepStartLine !== -1 && currentName) {
-            const status = getStatus(currentName, isInActions);
-            decorations.push({
-              range: new monacoInstance.Range(stepStartLine + 1, 1, i, 1),
-              options: {
-                isWholeLine: true,
-                className: `workflow-step ${status}`,
-              },
-            });
-          }
-
-          currentName = trimmedLine.split("name:")[1].trim();
-          stepStartLine = i;
-          indentLevel = currentIndent;
-
-          if (currentName) {
-            const status = getStatus(currentName, isInActions);
-            decorations.push({
-              range: new monacoInstance.Range(i + 1, 1, i + 1, 1),
-              options: {
-                glyphMarginClassName: `status-indicator ${status}`,
-                glyphMarginHoverMessage: { value: `Status: ${status}` },
-              },
-            });
-          }
-        } else if (
-          currentIndent <= indentLevel &&
-          trimmedLine.startsWith("-")
-        ) {
-          if (stepStartLine !== -1 && currentName) {
-            const status = getStatus(currentName, isInActions);
-            decorations.push({
-              range: new monacoInstance.Range(stepStartLine + 1, 1, i, 1),
-              options: {
-                isWholeLine: true,
-                className: `workflow-step ${status}`,
-              },
-            });
-          }
-
-          currentName = null;
-          stepStartLine = -1;
-          indentLevel = -1;
-        }
-      }
-
-      // Handle the last step
-      if (stepStartLine !== -1 && currentName) {
-        const status = getStatus(currentName, isInActions);
-        decorations.push({
-          range: new monacoInstance.Range(
-            stepStartLine + 1,
-            1,
-            lines.length,
-            1
-          ),
-          options: {
-            isWholeLine: true,
-            className: `workflow-step ${status}`,
-          },
-        });
-      }
-
-      stepDecorationsRef.current = editor.deltaDecorations(
-        stepDecorationsRef.current,
-        decorations
-      );
-    };
-
-    const updateHoverDecorations = (
-      stepNameToHover: string | null | undefined
-    ) => {
-      if (!editor || !stepNameToHover) return;
-
-      const model = editor.getModel();
-      if (!model) return;
-
-      const content = model.getValue();
-      const lines = content.split("\n");
-      const hoverDecorations: editor.IModelDeltaDecoration[] = [];
-
-      let currentName: string | null = null;
-      let stepStartLine = -1;
-      let indentLevel = -1;
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const trimmedLine = line.trim();
-        const currentIndent = line.search(/\S/);
-
-        if (trimmedLine.startsWith("- name:")) {
-          if (currentName === stepNameToHover) {
-            const status = getStatus(currentName, false);
-            hoverDecorations.push({
-              range: new monacoInstance.Range(stepStartLine + 1, 1, i, 1),
-              options: {
-                isWholeLine: true,
-                className: `workflow-step ${status} hovered`,
-              },
-            });
-          }
-
-          currentName = trimmedLine.split("name:")[1].trim();
-          stepStartLine = i;
-          indentLevel = currentIndent;
-        } else if (
-          currentIndent <= indentLevel &&
-          trimmedLine.startsWith("-")
-        ) {
-          if (currentName === stepNameToHover) {
-            const status = getStatus(currentName, false);
-
-            hoverDecorations.push({
-              range: new monacoInstance.Range(stepStartLine + 1, 1, i, 1),
-              options: {
-                isWholeLine: true,
-                className: `workflow-step ${status} hovered`,
-              },
-            });
-          }
-
-          currentName = null;
-          stepStartLine = -1;
-          indentLevel = -1;
-        }
-      }
-
-      // Handle the last step
-      if (stepStartLine !== -1 && currentName === stepNameToHover) {
-        const status = getStatus(currentName, false);
-        hoverDecorations.push({
-          range: new monacoInstance.Range(
-            stepStartLine + 1,
-            1,
-            lines.length,
-            1
-          ),
-          options: {
-            isWholeLine: true,
-            className: `workflow-step ${status} hovered`,
-          },
-        });
-      }
-
-      hoverDecorationsRef.current = editor.deltaDecorations(
-        hoverDecorationsRef.current,
-        hoverDecorations
-      );
-    };
-
-    if (!readOnly) {
-      // Enable the glyph margin for status indicators
-      editor.updateOptions({
-        glyphMargin: true,
-      });
-
-      editor.onDidChangeModelContent(() => {
-        const currentContent = editor.getValue();
-        setHasChanges(currentContent !== originalContent);
-        parseYamlToRef(currentContent);
-      });
-
-      const model = editor?.getModel();
-      if (model) {
-        parseYamlToRef(model.getValue());
-      }
-    }
-
-    if (readOnly) {
-      // Enable the glyph margin for status indicators
-      editor.updateOptions({
-        glyphMargin: true,
-      });
-
-      // Initial decoration update
-      updateStepDecorations();
-
-      // Update step decorations when content changes
-      editor.onDidChangeModelContent(() => {
-        updateStepDecorations();
-        updateHoverDecorations(hoveredStep);
-      });
-
-      // Watch for hover step changes and update decorations
-      const disposable = editor.onDidChangeModelContent(() => {
-        updateStepDecorations();
-        updateHoverDecorations(hoveredStep);
-      });
-
-      editor.onMouseMove((e) => {
-        if (!setHoveredStep) return;
-
-        const target = e.target;
-        if (target.type !== monacoInstance.editor.MouseTargetType.CONTENT_TEXT)
-          return;
-
-        const position = target.position;
-        if (!position) return;
-
-        const model = editor.getModel();
-        if (!model) return;
-
-        const stepName = findStepNameForPosition(position.lineNumber, model);
-        if (stepName !== hoveredStep) {
-          setHoveredStep(stepName);
-          updateHoverDecorations(stepName);
-        }
-      });
-
-      editor.onMouseLeave(() => {
-        if (setHoveredStep) {
-          setHoveredStep(null);
-          // Clear hover decorations
-          updateHoverDecorations(null);
-        }
-      });
-
-      // Handle click for step selection
-      editor.onMouseDown((e) => {
-        if (!setSelectedStep) return;
-
-        const position = e.target.position;
-        if (!position) return;
-
-        const model = editor.getModel();
-        if (!model) return;
-
-        let currentLine = position.lineNumber;
-        while (currentLine > 0) {
-          const line = model.getLineContent(currentLine);
-          const match = line.match(/- name:\s*(.+)/);
-          if (match) {
-            const stepName = match[1].trim();
-            // if already selected, deselect
-            if (selectedStep === stepName) {
-              setSelectedStep(null);
-              break;
-            }
-            setSelectedStep(stepName);
-            break;
-          }
-          currentLine--;
-        }
-      });
-
-      // Initial update
-      updateStepDecorations();
-
-      // Watch for hoveredStep changes
-      return () => {
-        disposable.dispose();
-      };
-    }
-
-    monacoInstance.editor.onDidChangeMarkers((resources) => {
-      handleMarkersChanged(monacoInstance, resources[0]);
+    editor.updateOptions({
+      glyphMargin: true,
     });
+
+    const model = editor?.getModel();
+    if (model) {
+      parseYamlToDefinition(model.getValue());
+    }
+
+    if (onDidMount) {
+      onDidMount(editor, monacoInstance);
+    }
+
+    // Monkey patching to set the initial markers
+    // https://github.com/suren-atoyan/monaco-react/issues/70#issuecomment-760389748
+    const setModelMarkers = monacoInstance.editor.setModelMarkers;
+    monacoInstance.editor.setModelMarkers = function (model, owner, markers) {
+      setModelMarkers.call(monacoInstance.editor, model, owner, markers);
+      handleMarkersChanged(markers);
+    };
 
     setIsEditorMounted(true);
   };
@@ -470,7 +183,7 @@ export const WorkflowYAMLEditor = ({
       console.error("Workflow ID is required to save the workflow");
       return;
     }
-
+    setIsSaving(true);
     const content = editorRef.current.getValue();
     try {
       // sending the yaml string to the backend
@@ -481,6 +194,9 @@ export const WorkflowYAMLEditor = ({
       setHasChanges(false);
     } catch (err) {
       console.error("Failed to save workflow:", err);
+    } finally {
+      setLastDeployedAt(Date.now());
+      setIsSaving(false);
     }
   };
 
@@ -522,107 +238,129 @@ export const WorkflowYAMLEditor = ({
     wordWrapColumn: 80,
     wrappingIndent: "indent",
     theme: "vs-light",
+    quickSuggestions: {
+      other: true,
+      comments: false,
+      strings: true,
+    },
+    formatOnType: true,
   };
 
   return (
-    <div
-      className="w-full h-full flex flex-col"
-      data-testid={dataTestId + "-container"}
-    >
+    <>
       <div
-        className="relative flex-1 min-h-0 p-1"
-        style={{ height: "calc(100vh - 300px)" }}
+        className="w-full h-full flex flex-col relative"
+        data-testid={dataTestId + "-container"}
       >
-        <div className="absolute right-2 top-2 z-10 flex gap-2">
-          {!readOnly && (
+        {!readOnly && standalone && (
+          <WorkflowYamlEditorHeader
+            workflowId={workflowId}
+            isInitialized={isEditorMounted}
+            lastDeployedAt={lastDeployedAt}
+            isValid={validationErrors?.length === 0}
+            isSaving={isSaving}
+            hasChanges={hasChanges}
+            onRun={() => {
+              setRunRequestCount((prev) => prev + 1);
+            }}
+            onSave={handleSaveWorkflow}
+          />
+        )}
+        <div
+          className="flex-1 min-h-0"
+          style={{ height: "calc(100vh - 300px)" }}
+        >
+          <div
+            className={clsx(
+              "absolute right-6 z-10 flex gap-2",
+              // compensate for the header height, we can't use position: relative, because editor uses position sticky
+              standalone ? "top-16" : "top-2"
+            )}
+          >
+            {!readOnly && !standalone && (
+              <Button
+                color="orange"
+                size="sm"
+                className="h-8 px-2 bg-white"
+                onClick={handleSaveWorkflow}
+                variant="secondary"
+                disabled={!hasChanges}
+                data-testid="save-yaml-button"
+              >
+                <Save className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               color="orange"
               size="sm"
               className="h-8 px-2 bg-white"
-              onClick={handleSaveWorkflow}
+              onClick={copyToClipboard}
               variant="secondary"
-              disabled={!hasChanges}
-              data-testid="save-yaml-button"
+              data-testid="copy-yaml-button"
+              disabled={!isEditorMounted}
             >
-              <Save className="h-4 w-4" />
+              {isCopied ? (
+                <Check className="h-4 w-4 text-green-500" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
             </Button>
-          )}
-          <Button
-            color="orange"
-            size="sm"
-            className="h-8 px-2 bg-white"
-            onClick={copyToClipboard}
-            variant="secondary"
-            data-testid="copy-yaml-button"
-            disabled={!isEditorMounted}
-          >
-            {isCopied ? (
-              <Check className="h-4 w-4 text-green-500" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-          </Button>
-          <Button
-            color="orange"
-            size="sm"
-            className="h-8 px-2 bg-white"
-            onClick={downloadYaml}
-            variant="secondary"
-            data-testid="download-yaml-button"
-            disabled={!isEditorMounted}
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-        </div>
-        <Suspense
-          fallback={<KeepLoader loadingText="Loading YAML editor..." />}
-        >
-          <MonacoYAMLEditor
-            height="100%"
-            className="workflow-yaml-editor"
-            wrapperProps={{ "data-testid": dataTestId }}
-            defaultValue={getOrderedWorkflowYamlString(workflowRaw)}
-            onMount={handleEditorDidMount}
-            options={editorOptions}
-            loading={<KeepLoader loadingText="Loading YAML editor..." />}
-            theme="light"
-            schemas={schemas}
-          />
-        </Suspense>
-      </div>
-      <div className="flex flex-col bg-white z-10">
-        {validationErrors.map((error) => (
-          <div
-            key={error.message}
-            className={clsx(
-              "text-sm cursor-pointer hover:underline flex items-start gap-1 px-4 py-1",
-              error.severity === "error" ? "bg-red-100" : "bg-yellow-100"
-            )}
-            onClick={() => {
-              if (!editorRef.current) return;
-              editorRef.current.setPosition({
-                lineNumber: error.lineNumber,
-                column: error.column,
-              });
-            }}
-          >
-            {error.severity === "error" ? (
-              <ExclamationCircleIcon className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-            ) : (
-              <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
-            )}
-            <span className="text-sm">
-              {error.column}:{error.lineNumber} {error.message}
-            </span>
+            <Button
+              color="orange"
+              size="sm"
+              className="h-8 px-2 bg-white"
+              onClick={downloadYaml}
+              variant="secondary"
+              data-testid="download-yaml-button"
+              disabled={!isEditorMounted}
+            >
+              <Download className="h-4 w-4" />
+            </Button>
           </div>
-        ))}
+          <Suspense
+            fallback={<KeepLoader loadingText="Loading YAML editor..." />}
+          >
+            <MonacoYAMLEditor
+              height="100%"
+              className="[&_.monaco-editor]:outline-none [&_.decorationsOverviewRuler]:z-2"
+              wrapperProps={{ "data-testid": dataTestId }}
+              defaultValue={getOrderedWorkflowYamlString(workflowRaw)}
+              onMount={handleEditorDidMount}
+              onChange={handleContentChange}
+              options={editorOptions}
+              loading={<KeepLoader loadingText="Loading YAML editor..." />}
+              theme="light"
+              schemas={schemas}
+            />
+          </Suspense>
+        </div>
+        <WorkflowYAMLValidationErrors
+          isMounted={isEditorMounted}
+          validationErrors={validationErrors}
+          onErrorClick={(error) => {
+            if (!editorRef.current) {
+              return;
+            }
+            editorRef.current.setPosition({
+              lineNumber: error.lineNumber,
+              column: error.column,
+            });
+            editorRef.current.focus();
+            editorRef.current.revealLineInCenter(error.lineNumber);
+          }}
+        />
+        <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200">
+          <span className="text-sm text-gray-500">{filename}.yaml</span>
+          {workflowId && (
+            <span className="text-sm text-gray-500">{workflowId}</span>
+          )}
+        </div>
       </div>
-      <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200">
-        <span className="text-sm text-gray-500">{filename}.yaml</span>
-        {workflowId && (
-          <span className="text-sm text-gray-500">{workflowId}</span>
-        )}
-      </div>
-    </div>
+      <WorkflowTestRunModal
+        workflowId={workflowId ?? ""}
+        definition={definition}
+        runRequestCount={runRequestCount}
+      />
+    </>
   );
 };

@@ -53,6 +53,7 @@ type MonacoYamlEditorProps = {
  */
 export function MonacoYAMLEditorTurbopack({
   schemas,
+  onValidate,
   ...props
 }: MonacoYamlEditorProps) {
   const [error, setError] = useState<Error | null>(null);
@@ -69,9 +70,9 @@ export function MonacoYAMLEditorTurbopack({
   useEffect(() => {
     loader
       .init()
-      .then((monaco) => {
+      .then((monacoInstance) => {
         if (!monacoYamlInstance) {
-          monacoYamlInstance = configureMonacoYaml(monaco, {
+          monacoYamlInstance = configureMonacoYaml(monacoInstance, {
             hover: true,
             completion: true,
             validate: true,

@@ -17,6 +17,7 @@ import { WorkflowEnabledSwitch } from "@/features/workflows/enable-disable";
 import { WorkflowSyncStatus } from "@/app/(keep)/workflows/[workflow_id]/workflow-sync-status";
 import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 import clsx from "clsx";
+import { useWorkflowEditorChangesSaved } from "@/entities/workflows/model/workflow-store";
 
 export interface WorkflowBuilderWidgetProps {
   workflowRaw: string | undefined;
@@ -38,11 +39,15 @@ export function WorkflowBuilderWidget({
     triggerRun,
     updateV2Properties,
     isInitialized,
+    lastDeployedAt,
     isEditorSyncedWithNodes,
     canDeploy,
     isSaving,
     v2Properties,
+    definition,
+    runRequestCount,
   } = useWorkflowStore();
+  const isChangesSaved = useWorkflowEditorChangesSaved();
 
   const isValid = useWorkflowStore((state) => !!state.definition?.isValid);
 
@@ -103,7 +108,11 @@ export function WorkflowBuilderWidget({
             <Title className={clsx(workflowId ? "mx-2" : "mx-0")}>
               {workflowId ? "Edit" : "New"} Workflow
             </Title>
-            <WorkflowSyncStatus />
+            <WorkflowSyncStatus
+              isInitialized={isInitialized}
+              lastDeployedAt={lastDeployedAt}
+              isChangesSaved={isChangesSaved}
+            />
           </div>
           <div className="flex gap-2">
             {!workflowRaw && (
@@ -168,7 +177,6 @@ export function WorkflowBuilderWidget({
               color="orange"
               size="md"
               className="min-w-28 relative disabled:opacity-70"
-              icon={ArrowUpOnSquareIcon}
               disabled={!canDeploy || isSaving || !isEditorSyncedWithNodes}
               onClick={() => triggerSave()}
               data-testid="wf-builder-main-save-deploy-button"
@@ -184,7 +192,11 @@ export function WorkflowBuilderWidget({
           standalone={standalone}
         />
       </main>
-      <WorkflowTestRunModal workflowId={workflowId ?? ""} />
+      <WorkflowTestRunModal
+        workflowId={workflowId ?? ""}
+        definition={definition}
+        runRequestCount={runRequestCount}
+      />
       <WorkflowMetadataModal
         isOpen={isEditModalOpen}
         workflow={{

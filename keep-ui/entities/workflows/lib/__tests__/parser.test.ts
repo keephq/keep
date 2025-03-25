@@ -93,6 +93,16 @@ workflow:
   owners: []
   services: []
   steps:
+    - name: gcp-monitoring-step
+      provider:
+        type: gcp-monitoring
+        config: "{{ providers.gcp-monitoring }}"
+        with:
+          filter: resource.type = 'gke_container'
+          page_size: 1000
+          project: "{{ alert.projectId }}"
+          raw: true
+          timedelta_in_days: 1
     - name: victoriametrics-step
       provider:
         type: victoriametrics
@@ -101,6 +111,15 @@ workflow:
           query: avg(rate(process_cpu_seconds_total))
           queryType: query
   actions:
+    - name: trigger-slack-gcp
+      foreach: "{{ steps.gcp-monitoring-step.results.data.result }}"
+      if: "{{ foreach.value.1 }} > 0.0040"
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+        with:
+          message: "Result: {{ foreach.value.1 }} is greater than 0.0040! 🚨"
+          channel: channel-id
     - name: trigger-slack1
       condition:
         - name: threshold-condition
@@ -313,13 +332,16 @@ workflow:
         mockProviders
       );
 
-      expect(result.sequence).toHaveLength(2);
-      expect(result.sequence[1].type).toBe("condition-threshold");
-      expect(result.sequence[1].branches.true).toHaveLength(3);
-      expect(result.sequence[1].branches.false).toHaveLength(0);
-      expect(result.sequence[1].branches.true[0].type).toBe("action-slack");
-      expect(result.sequence[1].branches.true[1].type).toBe("action-slack");
-      expect(result.sequence[1].branches.true[2].type).toBe("action-ntfy");
+      expect(result.sequence).toHaveLength(4);
+      console.log(result.sequence);
+      expect(result.sequence[1].type).toBe("step-victoriametrics");
+      expect(result.sequence[2].type).toBe("foreach");
+      expect(result.sequence[3].type).toBe("condition-threshold");
+      expect(result.sequence[3].branches.true).toHaveLength(3);
+      expect(result.sequence[3].branches.false).toHaveLength(0);
+      expect(result.sequence[3].branches.true[0].type).toBe("action-slack");
+      expect(result.sequence[3].branches.true[1].type).toBe("action-slack");
+      expect(result.sequence[3].branches.true[2].type).toBe("action-ntfy");
     });
 
     it("should parse a workflow with foreach", () => {

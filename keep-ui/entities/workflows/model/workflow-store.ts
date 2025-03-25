@@ -826,8 +826,7 @@ function initializeWorkflow(
 export function useWorkflowEditorChangesSaved() {
   const { lastChangedAt, lastDeployedAt, isEditorSyncedWithNodes, isDeployed } =
     useWorkflowStore();
-  const isDeployedAndUntouched =
-    lastDeployedAt === null && lastChangedAt === null && isDeployed;
+  const isDeployedAndUntouched = lastChangedAt === null && isDeployed;
   const isDeployedAndChangesSaved =
     lastDeployedAt !== null &&
     lastChangedAt !== null &&

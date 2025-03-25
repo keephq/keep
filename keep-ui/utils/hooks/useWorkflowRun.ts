@@ -29,6 +29,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
       (workflowProvider) => !isProviderInstalled(workflowProvider, providers)
     )
     .map((provider) => provider.type);
+  const uniqueNotInstalledProviders = [...new Set(notInstalledProviders)];
 
   const allProvidersInstalled = notInstalledProviders.length === 0;
 
@@ -45,7 +46,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
 
   const getDisabledTooltip = () => {
     if (!allProvidersInstalled)
-      return `Not all providers are installed: ${notInstalledProviders.join(
+      return `Not all providers are installed: ${uniqueNotInstalledProviders.join(
         ", "
       )}`;
     if (!hasManualTrigger) return "No manual trigger available.";

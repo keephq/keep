@@ -78,10 +78,6 @@
   font-size: 12px;
 }
 
-.workflow-yaml-editor .monaco-editor {
-  outline: none;
-}
-
 /* Editor container styles */
 .workflow-yaml-editor .monaco-editor .margin {
   margin-left: 8px !important;

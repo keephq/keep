@@ -131,6 +131,7 @@ export default function WorkflowDetailPage({
             ) : (
               <Card className="h-[calc(100vh-12rem)] p-0">
                 <WorkflowYAMLEditor
+                  standalone
                   key={workflow.workflow_raw!}
                   workflowRaw={workflow.workflow_raw!}
                   filename={workflow.id ?? "workflow"}
