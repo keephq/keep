@@ -21,6 +21,7 @@ import clsx from "clsx";
 import { ResizableColumns } from "@/shared/ui";
 import { WorkflowBuilderChatSafe } from "@/features/workflows/ai-assistant";
 import { debounce } from "lodash";
+import { getOrderedWorkflowYamlStringFromJSON } from "@/entities/workflows/lib/yaml-utils";
 
 interface Props {
   loadedYamlFileContents: string | null;
@@ -146,7 +147,9 @@ export function WorkflowBuilder({
     if (!definition?.value) {
       return null;
     }
-    return stringify({ workflow: getYamlWorkflowDefinition(definition.value) });
+    return getOrderedWorkflowYamlStringFromJSON({
+      workflow: getYamlWorkflowDefinition(definition.value),
+    });
   }, [definition?.value]);
 
   // TODO: move to workflow initialization or somewhere upper

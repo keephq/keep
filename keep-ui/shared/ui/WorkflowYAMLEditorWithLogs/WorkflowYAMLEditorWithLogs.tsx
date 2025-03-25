@@ -5,9 +5,10 @@ import {
   WorkflowYAMLEditor,
   WorkflowYAMLEditorProps,
 } from "../WorkflowYAMLEditor/ui/WorkflowYAMLEditor";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { getStepStatus } from "@/shared/lib/logs-utils";
 import "./WorkflowYAMLEditorWithLogs.css";
+import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 
 interface WorkflowYAMLEditorWithLogsProps extends WorkflowYAMLEditorProps {
   executionLogs: LogEntry[] | null | undefined;
@@ -25,12 +26,17 @@ export function WorkflowYAMLEditorWithLogs({
   setHoveredStep,
   selectedStep,
   setSelectedStep,
+  workflowYamlString,
   ...props
 }: WorkflowYAMLEditorWithLogsProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
   const stepDecorationsRef = useRef<string[]>([]);
   const hoverDecorationsRef = useRef<string[]>([]);
+
+  const orderedWorkflowYamlString = useMemo(() => {
+    return getOrderedWorkflowYamlString(workflowYamlString);
+  }, [workflowYamlString]);
 
   const findStepNameForPosition = (
     lineNumber: number,
@@ -349,5 +355,11 @@ export function WorkflowYAMLEditorWithLogs({
     }
   }, [executionLogs, executionStatus]);
 
-  return <WorkflowYAMLEditor onMount={handleEditorDidMount} {...props} />;
+  return (
+    <WorkflowYAMLEditor
+      onMount={handleEditorDidMount}
+      workflowYamlString={orderedWorkflowYamlString}
+      {...props}
+    />
+  );
 }

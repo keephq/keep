@@ -18,14 +18,19 @@ const YAML_STRINGIFY_OPTIONS = {
 };
 
 export function getOrderedWorkflowYamlString(yamlString: string) {
-  const content = yamlString.startsWith('"')
-    ? JSON.parse(yamlString)
-    : yamlString;
-  const doc = parseDocument(content);
+  try {
+    const content = yamlString.startsWith('"')
+      ? JSON.parse(yamlString)
+      : yamlString;
+    const doc = parseDocument(content);
 
-  orderDocument(doc);
+    orderDocument(doc);
 
-  return doc.toString(YAML_STRINGIFY_OPTIONS);
+    return doc.toString(YAML_STRINGIFY_OPTIONS);
+  } catch (error) {
+    console.error("Error ordering workflow yaml", error);
+    return yamlString;
+  }
 }
 
 /**
