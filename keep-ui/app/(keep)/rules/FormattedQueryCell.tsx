@@ -19,10 +19,7 @@ export const FormattedQueryCell = ({ query }: FormattedQueryCellProps) => {
 
   // tb: this is a patch to make it work, needs refactor
   const anyCombinator = query.rules.some((rule) => "combinator" in rule);
-  console.log({
-    displayedRules,
-    rulesInTooltip,
-  });
+
   function renderRules(
     rules: RuleGroupArray<
       RuleGroupType<RuleType<string, string, any, string>, string>,
@@ -89,11 +86,11 @@ export const FormattedQueryCell = ({ query }: FormattedQueryCellProps) => {
                 </span>
               </Tooltip.Trigger>
               <Tooltip.Portal>
-                <Tooltip.Content className="TooltipContent" sideOffset={5}>
+                <Tooltip.Content sideOffset={5}>
                   <div className="bg-white invert-dark-mode dark:bg-gray-50 border-gray-200 p-2 rounded inline-flex items-center">
                     {renderRules(rulesInTooltip)}
                   </div>
-                  <Tooltip.Arrow className="TooltipArrow" />
+                  <Tooltip.Arrow />
                 </Tooltip.Content>
               </Tooltip.Portal>
             </Tooltip.Root>
