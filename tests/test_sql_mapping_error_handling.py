@@ -136,7 +136,7 @@ def test_enrichment_bl_fallback_on_error(
     """Test that EnrichmentsBl falls back when MappingRuleMatcher fails."""
     # Set up a mock that will raise an exception when get_matching_row is called
     with patch(
-        "keep.api.core.cel_to_sql.mapping_rule_matcher.MappingRuleMatcher.get_matching_row",
+        "keep.api.bl.mapping_rule_matcher.MappingRuleMatcher.get_matching_row",
         side_effect=Exception("Matcher error"),
     ):
         # Create an instance of EnrichmentsBl
@@ -234,7 +234,7 @@ def test_multi_level_enrichment_fallback(db_session: Session, alert_dto_multi_le
 
     # Set up a mock that will raise an exception when get_matching_rows_multi_level is called
     with patch(
-        "keep.api.core.cel_to_sql.mapping_rule_matcher.MappingRuleMatcher.get_matching_rows_multi_level",
+        "keep.api.bl.mapping_rule_matcher.MappingRuleMatcher.get_matching_rows_multi_level",
         side_effect=Exception("Matcher error"),
     ):
         # Create an instance of EnrichmentsBl
