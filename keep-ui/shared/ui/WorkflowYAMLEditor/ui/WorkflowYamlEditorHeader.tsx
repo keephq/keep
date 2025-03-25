@@ -44,7 +44,7 @@ export function WorkflowYamlEditorHeader({
           icon={PlayIcon}
           disabled={!isValid}
           onClick={onRun}
-          data-testid="wf-builder-main-test-run-button"
+          data-testid="wf-yaml-editor-test-run-button"
         >
           Test Run
         </Button>
@@ -54,7 +54,7 @@ export function WorkflowYamlEditorHeader({
           className="min-w-28 relative disabled:opacity-70"
           disabled={!hasChanges || isSaving}
           onClick={onSave}
-          data-testid="wf-builder-main-save-deploy-button"
+          data-testid="wf-yaml-editor-save-button"
         >
           {isSaving ? "Saving..." : "Save"}
         </Button>

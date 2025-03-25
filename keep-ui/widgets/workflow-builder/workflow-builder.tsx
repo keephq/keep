@@ -280,7 +280,7 @@ export function WorkflowBuilder({
                 <button
                   className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md text-orange-500"
                   onClick={() => setLeftColumnMode(null)}
-                  data-testid="wf-close-editor-button"
+                  data-testid="wf-close-yaml-editor-button"
                   title="Hide YAML editor"
                 >
                   <CodeBracketIcon className="size-5" />

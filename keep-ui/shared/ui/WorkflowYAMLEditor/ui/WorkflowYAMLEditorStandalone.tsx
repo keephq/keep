@@ -18,6 +18,7 @@ export function WorkflowYAMLEditorStandalone({
 }: {
   workflowId: string;
   yamlString: string;
+  "data-testid"?: string;
 }) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
@@ -122,10 +123,10 @@ export function WorkflowYAMLEditorStandalone({
           workflowYamlString={yamlString}
           filename={workflowId ?? "workflow"}
           workflowId={workflowId}
-          data-testid="wf-detail-yaml-editor"
           onMount={handleEditorDidMount}
           onChange={handleContentChange}
           onValidationErrors={setValidationErrors}
+          data-testid="wf-yaml-editor"
         />
       </div>
       <WorkflowTestRunModal
