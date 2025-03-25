@@ -99,3 +99,5 @@ export function MonacoYAMLEditorTurbopack({
 
   return <Editor defaultLanguage="yaml" loading={Loader} {...props} />;
 }
+// mv keep-ui/shared/ui/MonacoYAMLEditor keep-ui/shared/ui/MonacoYAMLEditor_temp && git rm --cached -r keep-ui/shared/ui/MonacoYAMLEditor 2>/dev/null || true
+// mv keep-ui/shared/ui/MonacoYAMLEditor_temp keep-ui/shared/ui/MonacoYAMLEditor && git add keep-ui/shared/ui/MonacoYAMLEditor/*
