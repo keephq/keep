@@ -93,24 +93,12 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
     return DEFAULT_CORRELATION_FORM_VALUES;
   }, [selectedRule]);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const onCorrelationClick = () => {
-    setIsSidebarOpen(true);
-  };
+  const [isRuleCreation, setIsRuleCreation] = useState(false);
 
   const onCloseCorrelation = () => {
-    setIsSidebarOpen(false);
+    setIsRuleCreation(false);
     router.replace("/rules");
   };
-
-  useEffect(() => {
-    if (selectedRule) {
-      onCorrelationClick();
-    } else {
-      router.replace("/rules");
-    }
-  }, [selectedRule, router]);
 
   const CORRELATION_TABLE_COLS = useMemo(
     () => [
@@ -197,7 +185,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
           color="orange"
           size="md"
           variant="primary"
-          onClick={() => onCorrelationClick()}
+          onClick={() => setIsRuleCreation(true)}
           icon={PlusIcon}
         >
           Create correlation
@@ -241,11 +229,13 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
           </TableBody>
         </Table>
       </Card>
-      <CorrelationSidebar
-        isOpen={isSidebarOpen}
-        toggle={onCloseCorrelation}
-        defaultValue={correlationFormFromRule}
-      />
+      {(isRuleCreation || !!selectedRule) && (
+        <CorrelationSidebar
+          isOpen={true}
+          toggle={onCloseCorrelation}
+          defaultValue={correlationFormFromRule}
+        />
+      )}
     </div>
   );
 };
