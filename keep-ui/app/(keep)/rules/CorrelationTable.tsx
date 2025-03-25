@@ -30,6 +30,7 @@ import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
 import { CorrelationFormType } from "./CorrelationSidebar/types";
 import { PageSubtitle, PageTitle } from "@/shared/ui";
 import { PlusIcon } from "@heroicons/react/20/solid";
+import { GroupedByCell } from "./GroupedByCel";
 
 const TIMEFRAME_UNITS_FROM_SECONDS = {
   seconds: (amount: number) => amount,
@@ -115,13 +116,29 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
     () => [
       columnHelper.accessor("name", {
         header: "Correlation Name",
+        cell: (context) => {
+          return (
+            <div
+              title={context.getValue()}
+              className="max-w-40 overflow-hidden overflow-ellipsis"
+            >
+              {context.getValue()}
+            </div>
+          );
+        },
       }),
       columnHelper.accessor("incident_name_template", {
         header: "Incident Name Template",
         cell: (context) => {
           const template = context.getValue();
           return template ? (
-            <Badge color="orange">{template}</Badge>
+            <Badge title={context.getValue() as string} color="orange">
+              {
+                <div className="max-w-40 md:max-w-60 2xl:max-w-96 overflow-hidden overflow-ellipsis">
+                  {template}
+                </div>
+              }
+            </Badge>
           ) : (
             <Badge color="gray">default</Badge>
           );
@@ -142,17 +159,9 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
       }),
       columnHelper.accessor("grouping_criteria", {
         header: "Grouped by",
-        cell: (context) =>
-          context.getValue().map((group, index) => (
-            <>
-              <Badge color="orange" key={group}>
-                {group}
-              </Badge>
-              {context.getValue().length !== index + 1 && (
-                <Icon icon={PlusIcon} size="xs" color="slate" />
-              )}
-            </>
-          )),
+        cell: (context) => (
+          <GroupedByCell fields={context.getValue()}></GroupedByCell>
+        ),
       }),
       columnHelper.accessor("incidents", {
         header: "Incidents",
