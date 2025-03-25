@@ -49,6 +49,8 @@ import {
   getToolboxConfiguration,
 } from "@/features/workflows/builder/lib/utils";
 import { Provider } from "@/shared/api/providers";
+import { parseWorkflowYamlStringToJSON } from "../lib/yaml-utils";
+import { YamlWorkflowDefinitionSchema } from "./yaml.schema";
 
 class KeepWorkflowStoreError extends Error {
   constructor(message: string) {
@@ -387,6 +389,14 @@ export const useWorkflowStore = create<WorkflowState>()(
       }
     },
     updateFromYamlString: (yamlString: string) => {
+      // we do not update nodes if the yaml is invalid
+      try {
+        const json = parseWorkflowYamlStringToJSON(yamlString);
+        const parsed = YamlWorkflowDefinitionSchema.parse(json);
+      } catch (error) {
+        console.error(error, "Invalid YAML: fix the validation errors");
+        return;
+      }
       set({
         definition: wrapDefinitionV2({
           // todo: do not change node ids, maybe use determenistic ids

@@ -95,7 +95,8 @@ export function getYamlWorkflowDefinitionSchema(providers: Provider[]) {
       description: z.string().min(1),
       owners: z.array(z.string()).optional(),
       services: z.array(z.string()).optional(),
-      steps: z.array(stepSchema).min(1),
+      // optional will be replace on postProcess
+      steps: z.array(stepSchema).optional(),
       actions: z.array(actionSchema).optional(),
       triggers: z.array(TriggerSchema).min(1),
       consts: z.record(z.string(), z.string()).optional(),

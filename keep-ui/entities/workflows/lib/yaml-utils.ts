@@ -1,7 +1,6 @@
 import {
   parseDocument,
   Document,
-  YAMLMap,
   Pair,
   Scalar,
   visit,
