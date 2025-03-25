@@ -1,0 +1,91 @@
+---
+title: 'ThousandEyes'
+sidebarTitle: 'ThousandEyes Provider'
+description: 'ThousandEyes allows you to receive alerts from ThousandEyes using API endpoints as well as webhooks'
+---
+
+## Authentication Parameters
+
+The ThousandEyes provider requires the following authentication parameters:
+
+- `OAuth2 Bearer Token`: The OAuth2 bearer token for the ThousandEyes account. This is required for the ThousandEyes provider.
+
+## Connecting ThousandEyes to Keep
+
+1. Go to [ThousandEyes Dashboard](https://app.thousandeyes.com/dashboard)
+
+2. Click on `Manage` in the left sidebar and select `Account Settings`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/thousandeyes-provider_1.png" />
+</Frame>
+
+3. Select `Users and Roles` in the Account Settings
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/thousandeyes-provider_2.png" />
+</Frame>
+
+4. Under `User API Tokens`, you can create OAuth Bearer Token
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/thousandeyes-provider_3.png" />
+</Frame>
+
+5. Copy the generated token. This will be used as the `OAuth2 Bearer Token` in the provider settings.
+
+## Webhooks Integration
+
+1. Open [ThousandEyes Dashboard](https://app.thousandeyes.com/dashboard) and click on `Network & App Synthetics` in the left sidebar and select `Agent Settings`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/thousandeyes-provider_4.png" />
+</Frame>
+
+2. Go to `Notifications` under `Enterprise Agents` and click on `Notifications`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/thousandeyes-provider_5.png" />
+</Frame>
+
+3. Go to `Notifications` and create new webhook notification.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/thousandeyes-provider_6.png" />
+</Frame>
+
+4. Give it a name and set the url as [https://api.keephq.dev/alerts/event/thousandeyes?api_key=your-api-key](https://api.keephq.dev/alerts/event/thousandeyes?api_key=your-api-key)
+
+5. Select `Auth Type` as None and `Add New Webhook`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/thousandeyes-provider_7.png" />
+</Frame>
+
+6. Go to Keep dashboard and click on the profile icon in the botton left corner and click `Settings`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-1.png" />
+</Frame>
+
+7. Select `Users and Access` tab and then select `API Keys` tab and create a new API key.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-2.png" />
+</Frame>
+
+8. Give name and select the role as `webhook` and click on `Create API Key`.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-3.png" />
+</Frame>
+
+9. Copy the API key and paste it in the webhook URL.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/keep-apikey-4.png" />
+</Frame>
+
+## Useful Links
+
+- [ThousandEyes](https://www.thousandeyes.com/)
