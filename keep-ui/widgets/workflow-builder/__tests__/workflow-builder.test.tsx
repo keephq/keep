@@ -133,6 +133,7 @@ const mockStore: WorkflowState = {
   selectedEdge: null,
   isLayouted: false,
   changes: 0,
+  isDeployed: false,
   validationErrors: {},
   triggerSave: jest.fn(),
   triggerRun: jest.fn(),
@@ -167,6 +168,7 @@ const mockStore: WorkflowState = {
   onNodesChange: jest.fn(),
   onEdgesChange: jest.fn(),
   onLayout: jest.fn(),
+  updateFromYamlString: jest.fn(),
 };
 
 const mockedUseWorkflowStore = jest.fn(() => mockStore);
@@ -252,7 +254,7 @@ describe("WorkflowBuilder", () => {
         workflowId="test-workflow"
         providers={[mockProvider]}
         installedProviders={[mockProvider]}
-        loadedAlertFile={null}
+        loadedYamlFileContents={null}
       />
     );
 
@@ -281,7 +283,7 @@ describe("WorkflowBuilder", () => {
         workflowId="test-workflow"
         providers={[mockProvider]}
         installedProviders={[mockProvider]}
-        loadedAlertFile={null}
+        loadedYamlFileContents={null}
       />
     );
 

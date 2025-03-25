@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { IncidentEventEnum } from "./types";
+import { IncidentEventEnum, WithSchema } from "./schema";
 import { Provider } from "@/shared/api/providers";
 
 const ManualTriggerSchema = z.object({
@@ -28,37 +28,10 @@ const TriggerSchema = z.union([
   IncidentTriggerSchema,
 ]);
 
-const EnrichAlertSchema = z.array(
-  z.object({
-    key: z.string(),
-    value: z.string(),
-  })
-);
-
-const EnrichIncidentSchema = z.array(
-  z.object({
-    key: z.string(),
-    value: z.string(),
-  })
-);
-
 const YamlProviderSchema = z.object({
   type: z.string(),
   config: z.string(),
-  with: z
-    .object({
-      enrich_alert: EnrichAlertSchema.optional(),
-      enrich_incident: EnrichIncidentSchema.optional(),
-    })
-    .catchall(
-      z.union([
-        z.string(),
-        z.number(),
-        z.boolean(),
-        z.object({}),
-        z.array(z.any()),
-      ])
-    ),
+  with: WithSchema,
 });
 
 function getYamlProviderSchema(provider: Provider, type: "step" | "action") {
@@ -80,6 +53,7 @@ function getYamlProviderSchema(provider: Provider, type: "step" | "action") {
   // @ts-ignore
   const validKeysSchema = z.enum(validKeys);
 
+  // todo: find a way to merge record and enrich_alert/enrich_incident (objects)
   const withSchema = z.record(
     validKeysSchema,
     z.union([

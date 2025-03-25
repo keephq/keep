@@ -21,7 +21,6 @@ import {
 import React, { useCallback, useMemo, useState } from "react";
 import { useWorkflowStore } from "@/entities/workflows";
 import {
-  NodeDataStepSchema,
   V2ActionStep,
   V2Properties,
   V2StepConditionAssert,
@@ -29,6 +28,7 @@ import {
   V2StepForeach,
   V2StepStep,
 } from "@/entities/workflows/model/types";
+import { NodeDataStepSchema } from "@/entities/workflows/model/schema";
 import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
 import debounce from "lodash.debounce";
 import { TestRunStepForm } from "./StepTest";

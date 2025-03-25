@@ -10,7 +10,8 @@
     "dev:webpack": "next dev -p 3000",
     "lint": "next lint",
     "start": "next start",
-    "test": "jest"
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@auth/core": "^0.38.0",
