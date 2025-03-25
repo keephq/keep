@@ -10,7 +10,7 @@ from sqlalchemy import and_, desc, distinct, func
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.core.db import (
     IncidentSorting,
-    add_alerts_to_incident_by_incident_id,
+    add_alerts_to_incident,
     create_incident_from_dict,
     get_alert_by_event_id,
     get_alerts_data_for_incident,
@@ -87,8 +87,8 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     assert len(incident_alerts) == 0
     assert total_incident_alerts == 0
 
-    add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident.id, [a.fingerprint for a in alerts]
+    add_alerts_to_incident(
+        SINGLE_TENANT_UUID, incident, [a.fingerprint for a in alerts]
     )
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
@@ -119,9 +119,9 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     # Testing unique fingerprints
     more_alerts_with_same_fingerprints = setup_stress_alerts_no_elastic(10)
 
-    add_alerts_to_incident_by_incident_id(
+    add_alerts_to_incident(
         SINGLE_TENANT_UUID,
-        incident.id,
+        incident,
         [a.fingerprint for a in more_alerts_with_same_fingerprints],
     )
 
@@ -277,8 +277,8 @@ def test_get_last_incidents(db_session, create_alert):
         )
         alert2 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
 
-        add_alerts_to_incident_by_incident_id(
-            SINGLE_TENANT_UUID, incident.id, [alert.fingerprint, alert2.fingerprint]
+        add_alerts_to_incident(
+            SINGLE_TENANT_UUID, incident, [alert.fingerprint, alert2.fingerprint]
         )
 
     incidents_candidates, incidents_candidates_count = get_last_incidents(
@@ -381,8 +381,8 @@ def test_incident_status_change(
         "keep", {"name": "test", "description": "test"}
     )
 
-    add_alerts_to_incident_by_incident_id(
-        "keep", incident.id, [a.fingerprint for a in alerts], session=db_session
+    add_alerts_to_incident(
+        "keep", incident, [a.fingerprint for a in alerts], session=db_session
     )
 
     incident = get_incident_by_id(
@@ -484,8 +484,8 @@ def test_incident_status_change_manual_alert_enrichment(
             "user_summary": "Test Incident Summary",
         },
     )
-    add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident.id, [alert.fingerprint], session=db_session
+    add_alerts_to_incident(
+        SINGLE_TENANT_UUID, incident, [alert.fingerprint], session=db_session
     )
 
     # Ensure incident has one firing alert
@@ -624,8 +624,8 @@ def test_add_alerts_with_same_fingerprint_to_incident(db_session, create_alert):
     assert len(incident_alerts) == 0
     assert total_incident_alerts == 0
 
-    add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident.id, [fp1_alerts[0].fingerprint]
+    add_alerts_to_incident(
+        SINGLE_TENANT_UUID, incident, [fp1_alerts[0].fingerprint]
     )
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
@@ -687,8 +687,8 @@ def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elasti
         {"severity": AlertSeverity.INFO.value},
     )
     alerts_1 = db_session.query(Alert).all()
-    add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident_1.id, [a.fingerprint for a in alerts_1]
+    add_alerts_to_incident(
+        SINGLE_TENANT_UUID, incident_1, [a.fingerprint for a in alerts_1]
     )
     incident_2 = create_incident_from_dict(
         SINGLE_TENANT_UUID,
@@ -718,8 +718,8 @@ def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elasti
     alerts_2 = (
         db_session.query(Alert).filter(Alert.fingerprint.startswith("fp20")).all()
     )
-    add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident_2.id, [a.fingerprint for a in alerts_2]
+    add_alerts_to_incident(
+        SINGLE_TENANT_UUID, incident_2, [a.fingerprint for a in alerts_2]
     )
     incident_3 = create_incident_from_dict(
         SINGLE_TENANT_UUID,
@@ -749,8 +749,8 @@ def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elasti
     alerts_3 = (
         db_session.query(Alert).filter(Alert.fingerprint.startswith("fp30")).all()
     )
-    add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident_3.id, [a.fingerprint for a in alerts_3]
+    add_alerts_to_incident(
+        SINGLE_TENANT_UUID, incident_3, [a.fingerprint for a in alerts_3]
     )
 
     # before merge
@@ -813,8 +813,8 @@ def test_merge_incidents_app(
     alerts_1 = (
         db_session.query(Alert).filter(Alert.fingerprint.startswith("alert-1-")).all()
     )
-    add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident_1.id, [a.id for a in alerts_1]
+    add_alerts_to_incident(
+        SINGLE_TENANT_UUID, incident_1, [a.id for a in alerts_1]
     )
     incident_2 = create_incident_from_dict(
         SINGLE_TENANT_UUID,
@@ -833,16 +833,16 @@ def test_merge_incidents_app(
     alerts_2 = (
         db_session.query(Alert).filter(Alert.fingerprint.startswith("alert-2-")).all()
     )
-    add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident_2.id, [a.id for a in alerts_2]
+    add_alerts_to_incident(
+        SINGLE_TENANT_UUID, incident_2, [a.id for a in alerts_2]
     )
     incident_3 = create_incident_from_dict(
         SINGLE_TENANT_UUID,
         {"user_generated_name": "test-3", "user_summary": "test-3"},
     )
     alerts_3 = setup_stress_alerts_no_elastic(50)
-    add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident_3.id, [a.id for a in alerts_3]
+    add_alerts_to_incident(
+        SINGLE_TENANT_UUID, incident_3, [a.id for a in alerts_3]
     )
     empty_incident = create_incident_from_dict(
         SINGLE_TENANT_UUID, {"user_generated_name": "test-4", "user_summary": "test-4"}
@@ -933,8 +933,8 @@ async def test_split_incident(db_session, create_alert):
     )
 
     alerts = db_session.query(Alert).all()
-    add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident_source.id, [a.fingerprint for a in alerts]
+    add_alerts_to_incident(
+        SINGLE_TENANT_UUID, incident_source, [a.fingerprint for a in alerts]
     )
 
     # Create destination incident
@@ -1022,9 +1022,9 @@ def test_split_incident_app(db_session, client, test_app, create_alert):
         SINGLE_TENANT_UUID,
         {"user_generated_name": "Source incident", "user_summary": "Source incident"},
     )
-    add_alerts_to_incident_by_incident_id(
+    add_alerts_to_incident(
         SINGLE_TENANT_UUID,
-        incident_1.id,
+        incident_1,
         [a.fingerprint for a in alerts],
         session=db_session,
     )
@@ -1109,11 +1109,11 @@ def test_cross_tenant_exposure_issue_2768(db_session, create_alert):
         db_session.query(Alert).filter(Alert.tenant_id == "tenant_2").first()
     )
 
-    add_alerts_to_incident_by_incident_id(
-        "tenant_1", incident_tenant_1.id, [alert_tenant_1.fingerprint]
+    add_alerts_to_incident(
+        "tenant_1", incident_tenant_1, [alert_tenant_1.fingerprint]
     )
-    add_alerts_to_incident_by_incident_id(
-        "tenant_2", incident_tenant_2.id, [alert_tenant_2.fingerprint]
+    add_alerts_to_incident(
+        "tenant_2", incident_tenant_2, [alert_tenant_2.fingerprint]
     )
 
     incident_tenant_1 = get_incident_by_id("tenant_1", incident_tenant_1.id)
@@ -1687,8 +1687,8 @@ async def test_incident_timestamps_based_on_alert_last_received(
             "user_summary": "Test incident",
         },
     )
-    add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident.id, [alert.fingerprint for alert in alerts]
+    add_alerts_to_incident(
+        SINGLE_TENANT_UUID, incident, [alert.fingerprint for alert in alerts]
     )
 
     # Refresh incident data
@@ -1726,8 +1726,8 @@ def test_incident_auto_resolve_without_rule( db_session, create_alert):
     alerts = db_session.query(Alert).all()
     assert len(alerts) == 1
 
-    add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident.id, [alerts[0].fingerprint], session=db_session
+    add_alerts_to_incident(
+        SINGLE_TENANT_UUID, incident, [alerts[0].fingerprint], session=db_session
     )
 
     db_session.refresh(incident)
@@ -1775,8 +1775,8 @@ def test_incident_auto_resolve_only_if_active(db_session, create_alert):
     assert len(alerts) == 1
 
     for incident in [firing_incident, acknowledged_incident, resolved_incident, deleted_incident, merged_incident]:
-        add_alerts_to_incident_by_incident_id(
-            SINGLE_TENANT_UUID, incident.id, [alerts[0].fingerprint], session=db_session
+        add_alerts_to_incident(
+            SINGLE_TENANT_UUID, incident, [alerts[0].fingerprint], session=db_session
         )
 
     with patch("keep.api.tasks.process_event_task.IncidentBl.resolve_incident_if_require") as incident_bl_mock:
