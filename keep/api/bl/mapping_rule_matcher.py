@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import text
@@ -22,6 +23,7 @@ class MappingRuleMatcher:
             dialect_name: Database dialect name
             session: SQLAlchemy session
         """
+        self.logger = logging.getLogger(__name__)
         self.dialect_name = dialect_name
         self.session = session
 
@@ -44,47 +46,46 @@ class MappingRuleMatcher:
         conditions = []
         params = {}
 
-        # Build SQL conditions from matchers
-        for i, and_group in enumerate(rule.matchers):
-            and_conditions = []
-
-            for j, attr in enumerate(and_group):
-                attr_value = alert_values.get(attr)
-                if attr_value is not None:
-                    param_name = f"val_{i}_{j}"
-
-                    # Handle different value types
-                    if isinstance(attr_value, str):
-                        # String comparison with wildcard support
-                        and_conditions.append(
-                            f"(rows->>'{attr}' = :{param_name} OR rows->>'{attr}' = '*')"
-                        )
-                        params[param_name] = attr_value
-                    elif isinstance(attr_value, (int, float, bool)):
-                        # For numeric or boolean values
-                        and_conditions.append(
-                            f"(rows->>'{attr}' = :{param_name} OR rows->>'{attr}' = '*')"
-                        )
-                        params[param_name] = str(
-                            attr_value
-                        )  # Convert to string for JSON text comparison
-                    else:
-                        # For complex types, convert to JSON string
-                        and_conditions.append(
-                            f"(rows->>'{attr}' = :{param_name} OR rows->>'{attr}' = '*')"
-                        )
-                        params[param_name] = json.dumps(attr_value)
-
-            if and_conditions:
-                conditions.append(f"({' AND '.join(and_conditions)})")
-
-        if not conditions:
-            return None
-
         params["rule_id"] = rule.id
 
         # Build the query based on the dialect
         if self.dialect_name == "postgresql":
+            # Build SQL conditions from matchers
+            for i, and_group in enumerate(rule.matchers):
+                and_conditions = []
+
+                for j, attr in enumerate(and_group):
+                    attr_value = alert_values.get(attr)
+                    if attr_value is not None:
+                        param_name = f"val_{i}_{j}"
+
+                        # Handle different value types
+                        if isinstance(attr_value, str):
+                            # String comparison with wildcard support
+                            and_conditions.append(
+                                f"(rows->>'{attr}' = :{param_name} OR rows->>'{attr}' = '*')"
+                            )
+                            params[param_name] = attr_value
+                        elif isinstance(attr_value, (int, float, bool)):
+                            # For numeric or boolean values
+                            and_conditions.append(
+                                f"(rows->>'{attr}' = :{param_name} OR rows->>'{attr}' = '*')"
+                            )
+                            params[param_name] = str(
+                                attr_value
+                            )  # Convert to string for JSON text comparison
+                        else:
+                            # For complex types, convert to JSON string
+                            and_conditions.append(
+                                f"(rows->>'{attr}' = :{param_name} OR rows->>'{attr}' = '*')"
+                            )
+                            params[param_name] = json.dumps(attr_value)
+
+                if and_conditions:
+                    conditions.append(f"({' AND '.join(and_conditions)})")
+
+            if not conditions:
+                return None
             # PostgreSQL version
             query = f"""
             SELECT rows::jsonb
@@ -97,16 +98,57 @@ class MappingRuleMatcher:
             LIMIT 1
             """
         elif self.dialect_name == "mysql":
-            # MySQL version
+            # MySQL version with proper JSON_TABLE syntax
+            mysql_conditions = []
+
+            for i, and_group in enumerate(rule.matchers):
+                and_conditions = []
+
+                for j, attr in enumerate(and_group):
+                    attr_value = alert_values.get(attr)
+                    if attr_value is not None:
+                        param_name = f"val_{i}_{j}"
+
+                        # Build condition using JSON_EXTRACT for MySQL
+                        # Handle the @@ syntax by replacing with . and wrapping in quotes
+                        json_attr = attr
+                        if "@@" in json_attr:
+                            json_attr = json_attr.replace("@@", ".")
+                            json_attr = f'"{json_attr}"'
+                        else:
+                            json_attr = json_attr
+
+                        if isinstance(attr_value, str):
+                            and_conditions.append(
+                                f"""(JSON_EXTRACT(jt.json_object, '$.{json_attr}') = :{param_name}
+                                OR JSON_EXTRACT(jt.json_object, '$.{json_attr}') = '"*"')"""
+                            )
+                        elif isinstance(attr_value, (int, float)):
+                            and_conditions.append(
+                                f"""(CAST(JSON_EXTRACT(jt.json_object, '$.{json_attr}') AS CHAR) = :{param_name}
+                                OR JSON_EXTRACT(jt.json_object, '$.{json_attr}') = '"*"')"""
+                            )
+                        else:
+                            and_conditions.append(
+                                f"""(JSON_EXTRACT(jt.json_object, '$.{json_attr}') = :{param_name}
+                                OR JSON_EXTRACT(jt.json_object, '$.{json_attr}') = '"*"')"""
+                            )
+
+                if and_conditions:
+                    mysql_conditions.append(f"({' AND '.join(and_conditions)})")
+
             query = f"""
-            SELECT rows
-            FROM JSON_TABLE(
-                (SELECT rows FROM mappingrule WHERE id = :rule_id),
+            SELECT jt.json_object
+            FROM mappingrule,
+            JSON_TABLE(
+                mappingrule.rows,
                 '$[*]' COLUMNS (
-                    rows JSON PATH '$'
+                    sequence_number FOR ORDINALITY,
+                    json_object JSON PATH '$'
                 )
-            ) AS expanded_rows
-            WHERE {' OR '.join(conditions)}
+            ) AS jt
+            WHERE mappingrule.id = :rule_id
+            AND ({' OR '.join(mysql_conditions)})
             LIMIT 1
             """
         elif self.dialect_name == "sqlite":
@@ -130,11 +172,18 @@ class MappingRuleMatcher:
 
                         params[param_name] = attr_value
 
+                        # Escape quotes and handle @@ for SQLite
+                        attr_for_json = attr
+                        if "@@" in attr_for_json:
+                            attr_for_json = attr_for_json.replace("@@", ".")
+                        # Escape quotes for SQLite JSON path
+                        attr_for_json = attr_for_json.replace('"', '""')
+
                         # Build condition to check if the attribute matches or if there's a wildcard
                         and_conditions.append(
                             f"""
-                            json_extract(row_data, '$."{attr}"') = :{param_name}
-                            OR json_extract(row_data, '$."{attr}"') = '*'
+                            json_extract(row_data, '$."{attr_for_json}"') = :{param_name}
+                            OR json_extract(row_data, '$."{attr_for_json}"') = '*'
                         """
                         )
 
@@ -171,7 +220,15 @@ class MappingRuleMatcher:
                     result_dict = json.loads(result_dict)
                 return result_dict
             return None
-        except Exception:
+        except Exception as e:
+            self.logger.exception(
+                f"Failed to query {self.dialect_name} for mapping rule {rule.id} due to {e}, falling back.",
+                extra={
+                    "tenant_id": rule.tenant_id,
+                    "rule_id": rule.id,
+                    "rule_name": rule.name,
+                },
+            )
             # Fallback to in-memory implementation
             return self._fallback_get_matching_row(rule, alert_values)
 
@@ -230,24 +287,37 @@ class MappingRuleMatcher:
             WHERE rows->>'{key}' IN ({in_clause})
             """
         elif self.dialect_name == "mysql":
-            # MySQL version
+            # MySQL version with proper JSON_TABLE syntax for multi-level matching
             in_clause = ", ".join(placeholder_list)
+
+            # Handle the @@ syntax by replacing with . and wrapping in quotes
+            json_key = key
+            if "@@" in json_key:
+                json_key = json_key.replace("@@", ".")
+                json_key = f'"{json_key}"'
+
             query = f"""
-            SELECT rows
-            FROM JSON_TABLE(
-                (SELECT rows FROM mappingrule WHERE id = :rule_id),
+            SELECT jt.json_object
+            FROM mappingrule,
+            JSON_TABLE(
+                mappingrule.rows,
                 '$[*]' COLUMNS (
-                    rows JSON PATH '$'
+                    sequence_number FOR ORDINALITY,
+                    json_object JSON PATH '$'
                 )
-            ) AS expanded_rows
-            WHERE rows->>'{key}' IN ({in_clause})
+            ) AS jt
+            WHERE mappingrule.id = :rule_id
+            AND JSON_UNQUOTE(JSON_EXTRACT(jt.json_object, '$.{json_key}')) IN ({in_clause})
             """
         elif self.dialect_name == "sqlite":
             # SQLite version using json_each
             in_clause = ", ".join(placeholder_list)
 
-            # Handle escaping in key for json_extract
-            json_key = key.replace('"', '""')  # Escape quotes for SQLite JSON path
+            # Handle @@ and escaping in key for json_extract
+            json_key = key
+            if "@@" in json_key:
+                json_key = json_key.replace("@@", ".")
+            json_key = json_key.replace('"', '""')  # Escape quotes for SQLite JSON path
 
             query = f"""
             WITH flattened AS (
@@ -289,7 +359,15 @@ class MappingRuleMatcher:
                     result[match_key] = match_data
 
             return result
-        except Exception:
+        except Exception as e:
+            self.logger.exception(
+                f"Failed to query multi-level {self.dialect_name} for mapping rule {rule.id} due to {e}, falling back.",
+                extra={
+                    "tenant_id": rule.tenant_id,
+                    "rule_id": rule.id,
+                    "rule_name": rule.name,
+                },
+            )
             # Fallback to Python implementation
             return self._fallback_get_matching_rows_multi_level(rule, key, values)
 
@@ -397,4 +475,13 @@ class MappingRuleMatcher:
 
         if value is None or pattern is None:
             return False
+
+        # Add start and end anchors to pattern to ensure exact match
+        if isinstance(pattern, str) and isinstance(value, str):
+            # Only add anchors if they're not already there
+            if not pattern.startswith("^"):
+                pattern = f"^{pattern}"
+            if not pattern.endswith("$"):
+                pattern = f"{pattern}$"
+
         return re.search(pattern, value) is not None
