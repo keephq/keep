@@ -54,6 +54,8 @@ jobs:
 
       - name: Validate snippets for providers
         run: |
+          poetry install jinja2;
+          poetry install docstring_parser;
           poetry run python ./scripts/docs_render_provider_snippets.py --validate  
 
       - name: Install deps and validate docs
