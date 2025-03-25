@@ -500,11 +500,12 @@ class ProvidersService:
                             deduplication_rules = provider_yaml.get(
                                 "deduplication_rules", {}
                             )
-                            deduplication_rules_dict: dict[str, dict] = {}
                             if deduplication_rules:
                                 logger.info(
                                     f"Provisioning deduplication rules for provider {provider_name}"
                                 )
+
+                                deduplication_rules_dict: dict[str, dict] = {}
                                 for (
                                     rule_name,
                                     rule_config,
@@ -517,10 +518,11 @@ class ProvidersService:
                                     rule_config["provider_type"] = provider_type
                                     deduplication_rules_dict[rule_name] = rule_config
 
-                            # Provision deduplication rules
-                            provision_deduplication_rules(
-                                deduplication_rules_dict, tenant_id
-                            )
+                                # Provision deduplication rules
+                                provision_deduplication_rules(
+                                    deduplication_rules=deduplication_rules_dict,
+                                    tenant_id=tenant_id,
+                                )
                     except Exception as e:
                         logger.error(
                             "Error provisioning provider from directory",
