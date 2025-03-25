@@ -288,7 +288,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 **common_kwargs
             )
 
-            should_check_incidents_resolution = enrichments.get("status", None) == "resolved"
+            should_check_incidents_resolution = (_enrichments.get("status", None) == "resolved"
+                                                 or disposable_enrichments.get("status", None) == "resolved")
 
             if event and should_check_incidents_resolution:
                 enrichments_bl.check_incident_resolution(event)
