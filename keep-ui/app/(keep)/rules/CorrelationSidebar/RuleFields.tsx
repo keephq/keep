@@ -74,6 +74,8 @@ const Field = ({
   }, [avaliableFields]);
 
   const onValueChange = (selectedValue: string) => {
+    selectedValue = selectedValue || ""; // prevent null values
+
     if (searchValue.length) {
       const doesSearchedValueExistInFields = fields.some(
         ({ name }) =>
