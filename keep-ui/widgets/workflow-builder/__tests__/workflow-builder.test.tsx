@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { WorkflowBuilder } from "../workflow-builder";
 import { WorkflowState } from "@/entities/workflows";
+import { InternalConfig } from "@/types/internal-config";
 
 // Mock next-auth
 jest.mock("next-auth/react", () => ({
@@ -169,12 +170,42 @@ const mockStore: WorkflowState = {
   onEdgesChange: jest.fn(),
   onLayout: jest.fn(),
   updateFromYamlString: jest.fn(),
+  setSecrets: jest.fn(),
+  validateDefinition: jest.fn(),
+  secrets: {},
 };
 
 const mockedUseWorkflowStore = jest.fn(() => mockStore);
 
 jest.mock("@/entities/workflows", () => ({
   useWorkflowStore: () => mockedUseWorkflowStore(),
+}));
+
+const mockConfig: InternalConfig = {
+  API_URL: "http://localhost:8000",
+  API_URL_CLIENT: "http://localhost:8000",
+  AUTH_TYPE: "test",
+  PUSHER_DISABLED: false,
+  PUSHER_HOST: "localhost",
+  PUSHER_PORT: 6001,
+  PUSHER_APP_KEY: "test",
+  PUSHER_CLUSTER: "test",
+  POSTHOG_KEY: "test",
+  POSTHOG_HOST: "localhost",
+  POSTHOG_DISABLED: "true",
+  READ_ONLY: false,
+  OPEN_AI_API_KEY_SET: false,
+  NOISY_ALERTS_ENABLED: false,
+  FRIGADE_DISABLED: "false",
+  KEEP_DOCS_URL: "https://docs.keephq.dev",
+  KEEP_CONTACT_US_URL: "https://docs.keephq.dev/slack",
+  SENTRY_DISABLED: "true",
+};
+
+jest.mock("@/utils/hooks/useConfig", () => ({
+  useConfig: () => ({
+    data: mockConfig,
+  }),
 }));
 
 const mockProvider = {
