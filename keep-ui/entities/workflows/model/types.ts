@@ -171,9 +171,10 @@ export type ToolboxConfiguration = {
   )[];
 };
 
-export type ProvidersConfiguration = {
+export type InitializationConfiguration = {
   providers: Provider[];
   installedProviders: Provider[];
+  secrets: Record<string, string>;
 };
 
 export interface WorkflowStateValues {
@@ -187,6 +188,7 @@ export interface WorkflowStateValues {
   toolboxConfiguration: ToolboxConfiguration | null;
   providers: Provider[] | null;
   installedProviders: Provider[] | null;
+  secrets: Record<string, string> | null;
   isLayouted: boolean;
   isInitialized: boolean;
 
@@ -229,6 +231,7 @@ export interface WorkflowState extends WorkflowStateValues {
   ) => string | null;
   setProviders: (providers: Provider[]) => void;
   setInstalledProviders: (providers: Provider[]) => void;
+  setSecrets: (secrets: Record<string, string>) => void;
   setEditorOpen: (open: boolean) => void;
   updateSelectedNodeData: (key: string, value: any) => void;
   updateV2Properties: (properties: Record<string, any>) => void;
@@ -252,7 +255,7 @@ export interface WorkflowState extends WorkflowStateValues {
   }) => void;
   initializeWorkflow: (
     workflowId: string | null,
-    { providers, installedProviders }: ProvidersConfiguration
+    { providers, installedProviders, secrets }: InitializationConfiguration
   ) => void;
   updateDefinition: () => void;
   // Deprecated
@@ -260,4 +263,9 @@ export interface WorkflowState extends WorkflowStateValues {
   onDragOver: (event: React.DragEvent) => void;
   onDrop: (event: DragEvent, screenToFlowPosition: any) => void;
   updateFromYamlString: (yamlString: string) => void;
+  validateDefinition: (definition: Definition) => {
+    isValid: boolean;
+    validationErrors: Record<string, string>;
+    canDeploy: boolean;
+  };
 }

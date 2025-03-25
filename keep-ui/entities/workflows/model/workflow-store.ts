@@ -28,8 +28,8 @@ import {
   V2StepTrigger,
   V2StepTemplate,
   V2StepTriggerSchema,
-  ProvidersConfiguration,
   WorkflowProperties,
+  InitializationConfiguration,
 } from "@/entities/workflows";
 import { validateStepPure, validateGlobalPure } from "./validation";
 import { getLayoutedWorkflowElements } from "../lib/getLayoutedWorkflowElements";
@@ -283,6 +283,7 @@ const defaultState: WorkflowStateValues = {
   toolboxConfiguration: null,
   providers: null,
   installedProviders: null,
+  secrets: {},
   isInitialized: false,
   isLayouted: false,
   selectedEdge: null,
@@ -360,6 +361,7 @@ export const useWorkflowStore = create<WorkflowState>()(
     setProviders: (providers: Provider[]) => set({ providers }),
     setInstalledProviders: (installedProviders: Provider[]) =>
       set({ installedProviders }),
+    setSecrets: (secrets: Record<string, string>) => set({ secrets }),
     setEditorOpen: (open) => set({ editorOpen: open }),
     updateSelectedNodeData: (key, value) => {
       const currentSelectedNode = get().selectedNode;
@@ -401,6 +403,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         {
           providers: get().providers ?? [],
           installedProviders: get().installedProviders ?? [],
+          secrets: get().secrets ?? {},
         },
         set,
         get
@@ -416,13 +419,28 @@ export const useWorkflowStore = create<WorkflowState>()(
           properties: get().v2Properties,
         });
 
-      // Use validators to check if the workflow is valid
-      let isValid = true;
-      const validationErrors: Record<string, string> = {};
       const definition: Definition = {
         sequence,
         properties: newProperties as WorkflowProperties,
       };
+
+      const { isValid, validationErrors, canDeploy } =
+        get().validateDefinition(definition);
+
+      set({
+        definition: wrapDefinitionV2({
+          ...definition,
+          isValid,
+        }),
+        validationErrors,
+        canDeploy,
+        isEditorSyncedWithNodes: true,
+      });
+    },
+    validateDefinition: (definition: Definition) => {
+      // Use validators to check if the workflow is valid
+      let isValid = true;
+      const validationErrors: Record<string, string> = {};
 
       const result = validateGlobalPure(definition);
       if (result) {
@@ -433,11 +451,12 @@ export const useWorkflowStore = create<WorkflowState>()(
       }
 
       // Check each step's validity
-      for (const step of sequence) {
+      for (const step of definition.sequence) {
         const errors = validateStepPure(
           step,
           get().providers ?? [],
           get().installedProviders ?? [],
+          get().secrets ?? {},
           definition
         );
         if (step.componentType === "switch") {
@@ -446,6 +465,7 @@ export const useWorkflowStore = create<WorkflowState>()(
               branch,
               get().providers ?? [],
               get().installedProviders ?? [],
+              get().secrets ?? {},
               definition
             );
             if (errors.length > 0) {
@@ -460,6 +480,7 @@ export const useWorkflowStore = create<WorkflowState>()(
               s,
               get().providers ?? [],
               get().installedProviders ?? [],
+              get().secrets ?? {},
               definition
             );
             if (errors.length > 0) {
@@ -483,15 +504,7 @@ export const useWorkflowStore = create<WorkflowState>()(
             !error.includes("provider") && !error.startsWith("Variable:")
         ).length === 0;
 
-      set({
-        definition: wrapDefinitionV2({
-          ...definition,
-          isValid,
-        }),
-        validationErrors,
-        canDeploy,
-        isEditorSyncedWithNodes: true,
-      });
+      return { isValid, validationErrors, canDeploy };
     },
     updateV2Properties: (properties) => {
       const updatedProperties = { ...get().v2Properties, ...properties };
@@ -738,11 +751,11 @@ export const useWorkflowStore = create<WorkflowState>()(
     }) => onLayout(params, set, get),
     initializeWorkflow: (
       workflowId: string | null,
-      { providers, installedProviders }: ProvidersConfiguration
+      { providers, installedProviders, secrets }: InitializationConfiguration
     ) =>
       initializeWorkflow(
         workflowId,
-        { providers, installedProviders },
+        { providers, installedProviders, secrets },
         set,
         get
       ),
@@ -792,7 +805,7 @@ function onLayout(
 
 function initializeWorkflow(
   workflowId: string | null,
-  { providers, installedProviders }: ProvidersConfiguration,
+  { providers, installedProviders, secrets }: InitializationConfiguration,
   set: StoreSet,
   get: StoreGet
 ) {
@@ -848,6 +861,7 @@ function initializeWorkflow(
     v2Properties: { ...(parsedWorkflow?.properties ?? {}), name },
     providers,
     installedProviders,
+    secrets,
     toolboxConfiguration,
     isLoading: false,
     isInitialized: true,

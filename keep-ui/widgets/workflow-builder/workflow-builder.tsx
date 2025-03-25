@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@tremor/react";
 import { Provider } from "@/shared/api/providers";
-import { stringify } from "yaml";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import ReactFlowBuilder from "@/features/workflows/builder/ui/ReactFlowBuilder";
@@ -22,6 +21,7 @@ import { ResizableColumns } from "@/shared/ui";
 import { WorkflowBuilderChatSafe } from "@/features/workflows/ai-assistant";
 import { debounce } from "lodash";
 import { getOrderedWorkflowYamlStringFromJSON } from "@/entities/workflows/lib/yaml-utils";
+import { useWorkflowSecrets } from "@/utils/hooks/useWorkflowSecrets";
 
 interface Props {
   loadedYamlFileContents: string | null;
@@ -40,6 +40,9 @@ export function WorkflowBuilder({
 }: Props) {
   const { createWorkflow, updateWorkflow } = useWorkflowActions();
   const {
+    getSecrets: { data: workflowSecrets },
+  } = useWorkflowSecrets(workflowId ?? null);
+  const {
     // Definition
     definition,
     setDefinition,
@@ -55,6 +58,7 @@ export function WorkflowBuilder({
     initializeWorkflow,
     setProviders,
     setInstalledProviders,
+    setSecrets,
     updateFromYamlString,
   } = useWorkflowStore();
   const router = useRouter();
@@ -75,6 +79,13 @@ export function WorkflowBuilder({
     [providers, installedProviders]
   );
 
+  useEffect(
+    function syncSecrets() {
+      setSecrets(workflowSecrets ?? {});
+    },
+    [workflowSecrets]
+  );
+
   // TODO: move to workflow initialization
   useEffect(
     function updateDefinitionFromInput() {
@@ -90,6 +101,7 @@ export function WorkflowBuilder({
           initializeWorkflow(workflowId ?? null, {
             providers,
             installedProviders: installedProviders ?? [],
+            secrets: workflowSecrets ?? {},
           });
         } else if (loadedYamlFileContents == null) {
           const alertUuid = uuidv4();
@@ -118,6 +130,7 @@ export function WorkflowBuilder({
           initializeWorkflow(workflowId ?? null, {
             providers,
             installedProviders: installedProviders ?? [],
+            secrets: workflowSecrets ?? {},
           });
         } else {
           const parsedDefinition = parseWorkflow(
@@ -133,6 +146,7 @@ export function WorkflowBuilder({
           initializeWorkflow(workflowId ?? null, {
             providers,
             installedProviders: installedProviders ?? [],
+            secrets: workflowSecrets ?? {},
           });
         }
       } catch (error) {

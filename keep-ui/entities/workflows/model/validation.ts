@@ -21,7 +21,8 @@ function extractMustacheValue(mustacheString: string): string {
 export const validateMustacheVariableName = (
   variableName: string,
   currentStep: V2Step,
-  definition: Definition
+  definition: Definition,
+  secrets: Record<string, string>
 ) => {
   const cleanedVariableName = extractMustacheValue(variableName);
   const parts = cleanedVariableName.split(".");
@@ -34,6 +35,16 @@ export const validateMustacheVariableName = (
   }
   if (parts[0] === "incident") {
     // todo: validate incident properties
+    return null;
+  }
+  if (parts[0] === "secrets") {
+    const secretName = parts[1];
+    if (!secretName) {
+      return `Variable: '${variableName}' - To access a secret, you need to specify the secret name.`;
+    }
+    if (!secrets[secretName]) {
+      return `Variable: '${variableName}' - Secret '${secretName}' not found.`;
+    }
     return null;
   }
   if (parts[0] === "steps") {
@@ -88,7 +99,8 @@ export const validateMustacheVariableName = (
 export const validateAllMustacheVariablesInString = (
   string: string,
   currentStep: V2Step,
-  definition: Definition
+  definition: Definition,
+  secrets: Record<string, string>
 ) => {
   const regex = /\{\{([^}]+)\}\}/g;
   const matches = string.match(regex);
@@ -97,7 +109,12 @@ export const validateAllMustacheVariablesInString = (
   }
   const errors: string[] = [];
   matches.forEach((match) => {
-    const error = validateMustacheVariableName(match, currentStep, definition);
+    const error = validateMustacheVariableName(
+      match,
+      currentStep,
+      definition,
+      secrets
+    );
     if (error) {
       errors.push(error);
     }
@@ -232,10 +249,11 @@ export function validateStepPure(
   step: V2Step,
   providers: Provider[],
   installedProviders: Provider[],
+  secrets: Record<string, string>,
   definition: Definition
 ): ValidationError[] {
   const validationErrors: ValidationError[] = [];
-  // todo: validate `enrich_alert` and `enrich_incident`
+  // todo: validate `enrich_alert` and `enrich_incident` shape
   if (
     (step.componentType === "task" || step.componentType === "container") &&
     step.properties.if
@@ -243,7 +261,8 @@ export function validateStepPure(
     const variableErrors = validateAllMustacheVariablesInString(
       step.properties.if,
       step,
-      definition
+      definition,
+      secrets
     );
     variableErrors.forEach((error) => {
       validationErrors.push([error, "warning"]);
@@ -254,7 +273,8 @@ export function validateStepPure(
     const variableErrors = validateAllMustacheVariablesInString(
       values.join(","),
       step,
-      definition
+      definition,
+      secrets
     );
     variableErrors.forEach((error) => {
       validationErrors.push([error, "warning"]);
@@ -267,7 +287,8 @@ export function validateStepPure(
     const variableErrors = validateAllMustacheVariablesInString(
       values.join(","),
       step,
-      definition
+      definition,
+      secrets
     );
     variableErrors.forEach((error) => {
       validationErrors.push([error, "warning"]);
@@ -284,7 +305,8 @@ export function validateStepPure(
       const variableErrorsValue = validateAllMustacheVariablesInString(
         step.properties.value,
         step,
-        definition
+        definition,
+        secrets
       );
       variableErrorsValue.forEach((error) => {
         validationErrors.push([error, "warning"]);
@@ -298,7 +320,8 @@ export function validateStepPure(
       const variableErrorsCompareTo = validateAllMustacheVariablesInString(
         step.properties.compare_to,
         step,
-        definition
+        definition,
+        secrets
       );
       variableErrorsCompareTo.forEach((error) => {
         validationErrors.push([error, "warning"]);
@@ -311,7 +334,8 @@ export function validateStepPure(
       const variableErrors = validateAllMustacheVariablesInString(
         step.properties.assert,
         step,
-        definition
+        definition,
+        secrets
       );
       variableErrors.forEach((error) => {
         validationErrors.push([error, "warning"]);
@@ -356,7 +380,8 @@ export function validateStepPure(
         const variableErrors = validateAllMustacheVariablesInString(
           value,
           step,
-          definition
+          definition,
+          secrets
         );
         variableErrors.forEach((error) => {
           validationErrors.push([error, "warning"]);
@@ -371,7 +396,8 @@ export function validateStepPure(
     const variableErrors = validateAllMustacheVariablesInString(
       step.properties.value,
       step,
-      definition
+      definition,
+      secrets
     );
     variableErrors.forEach((error) => {
       validationErrors.push([error, "warning"]);
