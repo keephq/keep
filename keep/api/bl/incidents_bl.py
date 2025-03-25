@@ -15,7 +15,7 @@ from sqlmodel import Session
 from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import (
-    add_alerts_to_incident_by_incident_id,
+    add_alerts_to_incident,
     add_audit,
     create_incident_from_dto,
     delete_incident_by_id,
@@ -132,12 +132,20 @@ class IncidentBl:
                 "alert_fingerprints": alert_fingerprints,
             },
         )
-        incident = get_incident_by_id(tenant_id=self.tenant_id, incident_id=incident_id)
+        incident = get_incident_by_id(
+            tenant_id=self.tenant_id,
+            incident_id=incident_id,
+            session=self.session
+        )
         if not incident:
             raise HTTPException(status_code=404, detail="Incident not found")
 
-        add_alerts_to_incident_by_incident_id(
-            self.tenant_id, incident_id, alert_fingerprints, is_created_by_ai
+        add_alerts_to_incident(
+            self.tenant_id,
+            incident,
+            alert_fingerprints,
+            is_created_by_ai,
+            session=self.session
         )
         self.logger.info(
             "Alerts added to incident",
