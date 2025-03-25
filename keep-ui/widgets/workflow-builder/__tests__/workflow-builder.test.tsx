@@ -71,14 +71,6 @@ jest.mock("@/entities/workflows/model/useWorkflowActions", () => ({
   }),
 }));
 
-jest.mock("@/utils/hooks/useWorkflowSecrets", () => ({
-  useWorkflowSecrets: () => ({
-    getSecrets: {
-      data: {},
-    },
-  }),
-}));
-
 // Mock store
 const mockStore: WorkflowState = {
   definition: {
