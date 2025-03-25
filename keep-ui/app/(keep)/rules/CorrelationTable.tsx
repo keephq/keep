@@ -120,7 +120,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
           return (
             <div
               title={context.getValue()}
-              className="max-w-40 overflow-hidden overflow-ellipsis"
+              className="max-w-28 md:max-w-40 overflow-hidden overflow-ellipsis"
             >
               {context.getValue()}
             </div>
