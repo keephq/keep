@@ -134,7 +134,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
           return template ? (
             <Badge title={context.getValue() as string} color="orange">
               {
-                <div className="max-w-40 md:max-w-60 2xl:max-w-96 overflow-hidden overflow-ellipsis">
+                <div className="max-w-28 md:max-w-40 2xl:max-w-96 overflow-hidden overflow-ellipsis">
                   {template}
                 </div>
               }
