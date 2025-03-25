@@ -51,19 +51,17 @@ type MonacoYamlEditorProps = {
  * This is a custom editor component that uses 'monaco-yaml' to provide YAML language support.
  * It is used to edit YAML files.
  */
-export function MonacoYAMLEditor({
-  schemas,
-  onValidate,
-  ...props
-}: MonacoYamlEditorProps) {
+export function MonacoYAMLEditor({ schemas, ...props }: MonacoYamlEditorProps) {
+  const [isMonacoInitialized, setIsMonacoInitialized] = useState(false);
+
   useEffect(() => {
-    if (schemas) {
+    if (schemas && isMonacoInitialized) {
       monacoYamlInstance?.update({
         enableSchemaRequest: false,
         schemas,
       });
     }
-  }, [schemas]);
+  }, [schemas, isMonacoInitialized]);
 
   const { data: config } = useConfig();
   const [error, setError] = useState<Error | null>(null);
@@ -82,6 +80,7 @@ export function MonacoYAMLEditor({
             schemas: schemas ?? undefined,
           });
         }
+        setIsMonacoInitialized(true);
       })
       .catch((error: Error) => {
         setError(error);
@@ -96,7 +95,11 @@ export function MonacoYAMLEditor({
         description={
           <>
             This should not happen. Please contact us on Slack
-            <a href={config.KEEP_CONTACT_US_URL} target="_blank">
+            <a
+              href={config.KEEP_CONTACT_US_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               {config.KEEP_CONTACT_US_URL}
             </a>
           </>

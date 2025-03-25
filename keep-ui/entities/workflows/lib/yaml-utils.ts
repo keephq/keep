@@ -67,25 +67,23 @@ function orderDocument(doc: Document) {
     if (!workflowSeq || !isMap(workflowSeq)) {
       throw new Error("Workflow section not found");
     }
-    if (isMap(workflowSeq)) {
-      workflowSeq.items.sort((a: Pair, b: Pair) => {
-        const aKey = (a.key as Scalar).value as string;
-        const bKey = (b.key as Scalar).value as string;
-        const aIndex = fieldsOrder.indexOf(aKey);
-        const bIndex = fieldsOrder.indexOf(bKey);
+    workflowSeq.items.sort((a: Pair, b: Pair) => {
+      const aKey = (a.key as Scalar).value as string;
+      const bKey = (b.key as Scalar).value as string;
+      const aIndex = fieldsOrder.indexOf(aKey);
+      const bIndex = fieldsOrder.indexOf(bKey);
 
-        // If both keys are known, sort by their order
-        if (aIndex !== -1 && bIndex !== -1) {
-          return aIndex - bIndex;
-        }
-        // If only a is known, it comes first
-        if (aIndex !== -1) return -1;
-        // If only b is known, it comes first
-        if (bIndex !== -1) return 1;
-        // If both are unknown, maintain original order
-        return 0;
-      });
-    }
+      // If both keys are known, sort by their order
+      if (aIndex !== -1 && bIndex !== -1) {
+        return aIndex - bIndex;
+      }
+      // If only a is known, it comes first
+      if (aIndex !== -1) return -1;
+      // If only b is known, it comes first
+      if (bIndex !== -1) return 1;
+      // If both are unknown, maintain original order
+      return 0;
+    });
 
     // Order steps
     const steps = workflowSeq.get("steps");

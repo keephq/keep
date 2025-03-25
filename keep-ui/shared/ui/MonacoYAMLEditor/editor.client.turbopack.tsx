@@ -53,19 +53,19 @@ type MonacoYamlEditorProps = {
  */
 export function MonacoYAMLEditorTurbopack({
   schemas,
-  onValidate,
   ...props
 }: MonacoYamlEditorProps) {
   const [error, setError] = useState<Error | null>(null);
+  const [isMonacoInitialized, setIsMonacoInitialized] = useState(false);
 
   useEffect(() => {
-    if (schemas) {
+    if (schemas && isMonacoInitialized) {
       monacoYamlInstance?.update({
         enableSchemaRequest: false,
         schemas,
       });
     }
-  }, [schemas]);
+  }, [schemas, isMonacoInitialized]);
 
   useEffect(() => {
     loader
@@ -81,6 +81,7 @@ export function MonacoYAMLEditorTurbopack({
             schemas: schemas ?? undefined,
           });
         }
+        setIsMonacoInitialized(true);
       })
       .catch((error: Error) => {
         setError(error);

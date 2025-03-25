@@ -193,7 +193,7 @@ export function WorkflowBuilderWidget({
         />
       </main>
       <WorkflowTestRunModal
-        workflowId={workflowId ?? ""}
+        workflowId={workflowId ?? null}
         definition={definition}
         runRequestCount={runRequestCount}
       />

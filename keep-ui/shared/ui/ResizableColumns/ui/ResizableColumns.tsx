@@ -10,7 +10,7 @@ interface ResizableColumnsProps {
   rightChildClassName?: string;
 }
 
-export const ResizableColumns = memo(
+const ResizableColumns = memo(
   ({
     initialLeftWidth = 50,
     leftChildClassName,
@@ -92,3 +92,7 @@ export const ResizableColumns = memo(
     );
   }
 );
+
+ResizableColumns.displayName = "ResizableColumns";
+
+export { ResizableColumns };

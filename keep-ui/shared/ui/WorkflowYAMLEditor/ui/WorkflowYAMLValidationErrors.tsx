@@ -1,5 +1,5 @@
 import { Loader2Icon } from "lucide-react";
-import { YamlValidationError } from "../types";
+import { YamlValidationError } from "../model/types";
 import {
   CheckCircleIcon,
   InformationCircleIcon,
@@ -41,8 +41,15 @@ export function WorkflowYAMLValidationErrors({
   }
   const highestSeverity = validationErrors.reduce(
     (acc: string | null, error) => {
-      if (error.severity === "error") return "error";
-      if (error.severity === "warning" && acc !== "error") return "warning";
+      if (error.severity === "error") {
+        return "error";
+      }
+      if (error.severity === "warning" && acc !== "error") {
+        return "warning";
+      }
+      if (error.severity === "info" && acc !== "error" && acc !== "warning") {
+        return "info";
+      }
       return acc;
     },
     null
@@ -81,12 +88,14 @@ export function WorkflowYAMLValidationErrors({
         className="flex flex-col"
         data-testid="wf-yaml-editor-validation-errors-list"
       >
-        {validationErrors.map((error) => (
+        {validationErrors.map((error, index) => (
           <div
-            key={`${error.lineNumber}-${error.column}-${error.message}`}
+            key={`${error.lineNumber}-${error.column}-${error.message}-${index}`}
             className={clsx(
               "text-sm cursor-pointer hover:underline flex items-start gap-1 px-4 py-1",
-              error.severity === "error" ? "bg-red-100" : "bg-yellow-100"
+              highestSeverity === "error" && "bg-red-100",
+              highestSeverity === "warning" && "bg-yellow-100",
+              highestSeverity === "info" && "bg-blue-100"
             )}
             onClick={() => onErrorClick?.(error)}
           >

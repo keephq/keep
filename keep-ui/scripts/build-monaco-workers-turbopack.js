@@ -10,7 +10,7 @@ const publicWorkerDir = path.resolve(__dirname, "../public/monaco-workers");
 const versionFilePath = path.resolve(publicWorkerDir, "version.json");
 
 console.log(
-  "You're running dev server with turbopack, so we're need to build the monaco workers"
+  "You're running dev server with turbopack, so we need to build the monaco workers"
 );
 
 if (fs.existsSync(versionFilePath)) {

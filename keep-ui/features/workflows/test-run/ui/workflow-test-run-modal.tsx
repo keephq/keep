@@ -17,7 +17,7 @@ export function WorkflowTestRunModal({
   definition,
   runRequestCount,
 }: {
-  workflowId: string;
+  workflowId: string | null;
   definition: DefinitionV2 | null;
   runRequestCount: number;
 }) {

@@ -1,28 +1,21 @@
 "use client";
 
-import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, useMemo, useRef, useState } from "react";
 import type { editor, Uri } from "monaco-editor";
 import { Download, Copy, Check } from "lucide-react";
 import { Button } from "@tremor/react";
 import { useWorkflowJsonSchema } from "@/entities/workflows/model/useWorkflowJsonSchema";
 import { KeepLoader } from "../../KeepLoader/KeepLoader";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
-import { YamlValidationError } from "../types";
+import { YamlValidationError } from "../model/types";
 import { WorkflowYAMLValidationErrors } from "./WorkflowYAMLValidationErrors";
 import clsx from "clsx";
 
 // NOTE: IT IS IMPORTANT TO IMPORT FROM THE SHARED UI DIRECTORY, because import will be replaced for turbopack
 import { MonacoYAMLEditor } from "@/shared/ui";
+import { getSeverityString, MarkerSeverity } from "../lib/utils";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
-
-// Copied from monaco-editor/esm/vs/editor/editor.api.d.ts because we can't import with turbopack
-enum MarkerSeverity {
-  Hint = 1,
-  Info = 2,
-  Warning = 4,
-  Error = 8,
-}
 
 export interface WorkflowYAMLEditorProps {
   workflowYamlString: string;
@@ -77,22 +70,12 @@ export const WorkflowYAMLEditor = ({
     }
     const errors = [];
     for (const marker of markers) {
-      let severityString = "";
       if (marker.severity === MarkerSeverity.Hint) {
         continue;
       }
-      if (marker.severity === MarkerSeverity.Warning) {
-        severityString = "warning";
-      }
-      if (marker.severity === MarkerSeverity.Error) {
-        severityString = "error";
-      }
-      if (marker.severity === MarkerSeverity.Info) {
-        severityString = "info";
-      }
       errors.push({
         message: marker.message,
-        severity: severityString as "error" | "warning" | "info",
+        severity: getSeverityString(marker.severity),
         lineNumber: marker.startLineNumber,
         column: marker.startColumn,
       });

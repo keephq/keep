@@ -10,7 +10,7 @@ import { WorkflowTestRunModal } from "@/features/workflows/test-run/ui/workflow-
 import { WorkflowYamlEditorHeader } from "./WorkflowYamlEditorHeader";
 import { useState } from "react";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
-import { YamlValidationError } from "../types";
+import { YamlValidationError } from "../model/types";
 
 export function WorkflowYAMLEditorStandalone({
   workflowId,
@@ -43,6 +43,7 @@ export function WorkflowYAMLEditorStandalone({
         setDefinition(
           wrapDefinitionV2({
             ...parseWorkflow(yamlString, providers ?? []),
+            // isValid is not used in the standalone editor, so we set it to true
             isValid: true,
           })
         );
@@ -131,7 +132,7 @@ export function WorkflowYAMLEditorStandalone({
         />
       </div>
       <WorkflowTestRunModal
-        workflowId={workflowId ?? ""}
+        workflowId={workflowId}
         definition={definition}
         runRequestCount={runRequestCount}
       />

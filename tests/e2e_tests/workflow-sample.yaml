@@ -19,7 +19,7 @@ workflow:
         config: "{{ providers.clickhouse }}"
         type: clickhouse
         with:
-          query: "SELECT * FROM logs_table ORDER BY timestamp DESC LIMIT 1; (this value is not quoted)"
+          query: "SELECT * FROM logs_table ORDER BY timestamp DESC LIMIT 1; -- this value is not quoted"
           single_row: "True"
           enrich_alert:
             - key: customer_name

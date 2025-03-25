@@ -4,7 +4,7 @@ import { Button, Title } from "@tremor/react";
 import clsx from "clsx";
 
 interface WorkflowYamlEditorHeaderProps {
-  workflowId: string | undefined;
+  workflowId: string | null;
   isInitialized: boolean;
   lastDeployedAt: number | null;
   isValid: boolean;
