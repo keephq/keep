@@ -81,17 +81,17 @@ type: victoriametrics
 authentication:
   VMAlertHost: http://localhost
   VMAlertPort: 1234
-  deduplication_rules:
-    deduplication_rule_name_example_1:
-      description: deduplication rule name example 1
-      fingerprint_fields:
-        - fingerprint
-        - source
-        - service
-      full_deduplication: true
-      ignore_fields:
-        - name
-        - lastReceived
+deduplication_rules:
+  deduplication_rule_name_example_1:
+    description: deduplication rule name example 1
+    fingerprint_fields:
+      - fingerprint
+      - source
+      - service
+    full_deduplication: true
+    ignore_fields:
+      - name
+      - lastReceived
 ```
 
 ### Supported Providers
