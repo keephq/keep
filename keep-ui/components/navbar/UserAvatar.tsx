@@ -24,7 +24,7 @@ export default function UserAvatar({ image, name, size = "sm", email }: Props) {
   })(size);
   return image ? (
     <Image
-      className={clsx("rounded-full inline", sizeClass)}
+      className={clsx("rounded-full inline invert-dark-mode", sizeClass)}
       src={image}
       alt="user avatar"
       width={sizeValue}
