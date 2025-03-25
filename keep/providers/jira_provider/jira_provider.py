@@ -426,6 +426,17 @@ class JiraProvider(BaseProvider):
     ):
         """
         Notify jira by creating an issue.
+        Args:
+            summary (str): The summary of the issue.
+            description (str): The description of the issue.
+            issue_type (str): The type of the issue.
+            project_key (str): The project key of the issue.
+            board_name (str): The board name of the issue.
+            issue_id (str): The issue id of the issue.
+            labels (List[str]): The labels of the issue.
+            components (List[str]): The components of the issue.
+            custom_fields (dict): The custom fields of the issue.
+            kwargs (dict): The providers with context
         """
         issue_type = issue_type if issue_type else kwargs.get("issuetype", "Task")
         if labels and isinstance(labels, str):
@@ -487,7 +498,8 @@ class JiraProvider(BaseProvider):
         https://developer.atlassian.com/cloud/jira/software/rest/api-group-board/#api-rest-agile-1-0-board-boardid-issue-get
 
         Args:
-            kwargs (dict): The providers with context
+            ticket_id (str): The ticket id of the issue, optional.
+            board_id (str): The board id of the issue.
         """
         if not ticket_id:
             request_url = f"{self.jira_host}/rest/agile/1.0/board/{board_id}/issue"

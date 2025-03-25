@@ -1,0 +1,31 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_key**: Google AI API Key (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query gemini
+      provider: gemini
+      config: "{{ provider.my_provider_name }}"
+      with:
+        prompt: {value}  
+        model: {value}  
+        max_tokens: {value}  
+        structured_output_format: {value}  
+```
+
+
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).

@@ -1,0 +1,31 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **user**: Snowflake user (required: True, sensitive: False)
+- **account**: Snowflake account (required: True, sensitive: False)
+- **pkey**: Snowflake private key (required: True, sensitive: True)
+- **pkey_passphrase**: Snowflake password (required: False, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query snowflake
+      provider: snowflake
+      config: "{{ provider.my_provider_name }}"
+      with:
+        query: {value}  # query to execute
+```
+
+
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).

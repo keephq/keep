@@ -1,0 +1,39 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **region**: AWS region (required: True, sensitive: False)
+- **access_key**: AWS access key (Leave empty if using IAM role at EC2) (required: False, sensitive: True)
+- **access_key_secret**: AWS access key secret (Leave empty if using IAM role at EC2) (required: False, sensitive: True)
+- **session_token**: AWS Session Token (required: False, sensitive: True)
+- **cloudwatch_sns_topic**: AWS Cloudwatch SNS Topic [ARN or name] (required: False, sensitive: False)
+- **protocol**: Protocol to use for the webhook (required: True, sensitive: False)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query cloudwatch
+      provider: cloudwatch
+      config: "{{ provider.my_provider_name }}"
+      with:
+        log_group: {value}  
+        log_groups: {value}  
+        remove_ptr_from_results: {value}  
+        query: {value}  
+        hours: {value}  
+```
+
+
+
+
+
+Check the following workflow examples:
+- [retrieve_cloudwatch_logs.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/retrieve_cloudwatch_logs.yaml)
+- [slack_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/slack_basic.yml)

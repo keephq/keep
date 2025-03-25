@@ -1,0 +1,32 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **bot_token**: Telegram Bot Token (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query telegram
+      provider: telegram
+      config: "{{ provider.my_provider_name }}"
+      with:
+        chat_id: {value}  # Unique identifier for the target chat or username of the target channel
+        message: {value}  # Message to be sent
+        parse_mode: {value}  # Mode for parsing entities in the message text, could be "markdown" or "html"
+```
+
+
+
+
+Check the following workflow examples:
+- [telegram_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/telegram_basic.yml)
+- [send-message-telegram-with-htmlmd.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/send-message-telegram-with-htmlmd.yaml)

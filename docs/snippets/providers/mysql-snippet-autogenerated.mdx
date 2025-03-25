@@ -1,0 +1,54 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **username**: MySQL username (required: True, sensitive: False)
+- **password**: MySQL password (required: True, sensitive: True)
+- **host**: MySQL hostname (required: True, sensitive: False)
+- **database**: MySQL database name (required: False, sensitive: False)
+- **port**: MySQL port (required: False, sensitive: False)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query mysql
+      provider: mysql
+      config: "{{ provider.my_provider_name }}"
+      with:
+        query: {value}  # Query to execute
+        as_dict: {value}  # If True, returns the results as a list of dictionaries
+        single_row: {value}  # If True, returns only the first row of the results
+        # Arguments will me passed to the query.format(**kwargs)
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query mysql
+      provider: mysql
+      config: "{{ provider.my_provider_name }}"
+      with:
+        query: {value}  # Query to execute
+        as_dict: {value}  # If True, returns the results as a list of dictionaries
+        single_row: {value}  # If True, returns only the first row of the results
+        # Arguments will me passed to the query.format(**kwargs)
+```
+
+
+
+
+Check the following workflow examples:
+- [raw_sql_query_datetime.yml](https://github.com/keephq/keep/blob/main/examples/workflows/raw_sql_query_datetime.yml)
+- [conditionally_run_if_ai_says_so.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/conditionally_run_if_ai_says_so.yaml)
+- [slack-message-reaction.yml](https://github.com/keephq/keep/blob/main/examples/workflows/slack-message-reaction.yml)
+- [create_alerts_from_mysql.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_alerts_from_mysql.yml)
+- [blogpost.yml](https://github.com/keephq/keep/blob/main/examples/workflows/blogpost.yml)
+- [simple_http_request_ntfy.yml](https://github.com/keephq/keep/blob/main/examples/workflows/simple_http_request_ntfy.yml)

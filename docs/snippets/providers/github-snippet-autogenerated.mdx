@@ -1,0 +1,51 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **access_token**: GitHub Access Token (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query github
+      provider: github
+      config: "{{ provider.my_provider_name }}"
+      with:
+        repository: {value}  
+        previous_stars_count: {value}  
+        last_stargazer: {value}  
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query github
+      provider: github
+      config: "{{ provider.my_provider_name }}"
+      with:
+        run_action: {value}  # The action to run.
+        workflow: {value}  # The workflow to run.
+        repo_name: {value}  # The repository name.
+        repo_owner: {value}  # The repository owner.
+        ref: {value}  # The ref to use.
+        inputs: {value}  # The inputs to use.
+```
+
+
+
+
+Check the following workflow examples:
+- [new_github_stars.yml](https://github.com/keephq/keep/blob/main/examples/workflows/new_github_stars.yml)
+- [update_workflows_from_http.yml](https://github.com/keephq/keep/blob/main/examples/workflows/update_workflows_from_http.yml)
+- [dd.yml](https://github.com/keephq/keep/blob/main/examples/workflows/dd.yml)
+- [db_disk_space.yml](https://github.com/keephq/keep/blob/main/examples/workflows/db_disk_space.yml)
+- [keep_semantic_alert_example_datadog.yml](https://github.com/keephq/keep/blob/main/examples/workflows/keep_semantic_alert_example_datadog.yml)
+- [run_github_action.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/run_github_action.yaml)

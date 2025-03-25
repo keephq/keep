@@ -1,0 +1,34 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_token**: Axiom API Token (required: True, sensitive: True)
+- **organization_id**: Axiom Organization ID (required: False, sensitive: False)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query axiom
+      provider: axiom
+      config: "{{ provider.my_provider_name }}"
+      with:
+        dataset: {value}  
+        datasets_api_url: {value}  
+        organization_id: {value}  
+        startTime: {value}  
+        endTime: {value}  
+        query: {value}  # command to execute
+```
+
+
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).

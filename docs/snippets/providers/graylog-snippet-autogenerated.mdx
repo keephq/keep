@@ -1,0 +1,30 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **graylog_user_name**: Username (required: True, sensitive: False)
+- **graylog_access_token**: Graylog Access Token (required: True, sensitive: True)
+- **deployment_url**: Deployment Url (required: True, sensitive: False)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query graylog
+      provider: graylog
+      config: "{{ provider.my_provider_name }}"
+      with:
+        events_search_parameters: {value}  
+```
+
+
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).

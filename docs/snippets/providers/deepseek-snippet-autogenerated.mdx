@@ -1,0 +1,33 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_key**: DeepSeek API Key (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query deepseek
+      provider: deepseek
+      config: "{{ provider.my_provider_name }}"
+      with:
+        prompt: {value}  # The user query.
+        model: {value}  # The model to use for the query.
+        max_tokens: {value}  # The maximum number of tokens to generate.
+        system_prompt: {value}  # The system prompt to use.
+        structured_output_format: {value}  # The structured output format.
+```
+
+
+
+
+
+Check the following workflow example:
+- [enrich_using_structured_output_from_deepseek.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/enrich_using_structured_output_from_deepseek.yaml)

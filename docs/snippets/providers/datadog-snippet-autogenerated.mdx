@@ -1,0 +1,36 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_key**: Datadog Api Key (required: True, sensitive: True)
+- **app_key**: Datadog App Key (required: True, sensitive: True)
+- **domain**: Datadog API domain (required: False, sensitive: False)
+- **environment**: Topology environment name (required: False, sensitive: False)
+- **oauth_token**: For OAuth flow (required: False, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query datadog
+      provider: datadog
+      config: "{{ provider.my_provider_name }}"
+      with:
+        query: {value}  
+        timeframe: {value}  
+        query_type: {value}  
+```
+
+
+
+
+
+Check the following workflow examples:
+- [dd.yml](https://github.com/keephq/keep/blob/main/examples/workflows/dd.yml)
+- [keep_semantic_alert_example_datadog.yml](https://github.com/keephq/keep/blob/main/examples/workflows/keep_semantic_alert_example_datadog.yml)

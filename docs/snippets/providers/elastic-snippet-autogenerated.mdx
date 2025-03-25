@@ -1,0 +1,37 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **host**: Elasticsearch host (required: False, sensitive: False)
+- **cloud_id**: Elasticsearch cloud id (required: False, sensitive: False)
+- **verify**: Enable SSL verification (required: False, sensitive: False)
+- **api_key**: Elasticsearch API Key (required: False, sensitive: True)
+- **username**: Elasticsearch username (required: False, sensitive: False)
+- **password**: Elasticsearch password (required: False, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query elastic
+      provider: elastic
+      config: "{{ provider.my_provider_name }}"
+      with:
+        query: {value}  # The body of the query
+        index: {value}  # The index to search in
+```
+
+
+
+
+
+Check the following workflow examples:
+- [create_alerts_from_elastic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_alerts_from_elastic.yml)
+- [elastic_enrich_example.yml](https://github.com/keephq/keep/blob/main/examples/workflows/elastic_enrich_example.yml)
+- [elastic_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/elastic_basic.yml)

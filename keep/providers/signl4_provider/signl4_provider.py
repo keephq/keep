@@ -106,7 +106,16 @@ class Signl4Provider(BaseProvider):
             Alert / Incident is created via the SIGNL4 Webhook API (https://connect.signl4.com/webhook/docs/index.html).
 
         Args:
-            kwargs (dict): The providers with context
+            title (str): Alert title.
+            message (str): Alert message.
+            user (str): User name.
+            s4_external_id (str): External ID.
+            s4_status (S4Status): Alert status.
+            s4_service (str): Service name.
+            s4_location (str): Location.
+            s4_alerting_scenario (S4AlertingScenario): Alerting scenario.
+            s4_filtering (bool): Filtering.
+            **kwargs (dict): Additional alert data.
         """
 
         # Alert data

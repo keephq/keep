@@ -1,0 +1,42 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_token**: Linear API Token (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query linear
+      provider: linear
+      config: "{{ provider.my_provider_name }}"
+      with:
+        team_name: {value}  
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query linear
+      provider: linear
+      config: "{{ provider.my_provider_name }}"
+      with:
+        team_name: {value}  
+        project_name: {value}  
+        title: {value}  
+        description: {value}  
+        priority: {value}  
+```
+
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).
