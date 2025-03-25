@@ -91,13 +91,13 @@ export function getYamlWorkflowDefinitionSchema(providers: Provider[]) {
     workflow: z.object({
       id: z.string(),
       disabled: z.boolean().optional(),
-      description: z.string().optional(),
+      name: z.string().min(1),
+      description: z.string().min(1),
       owners: z.array(z.string()).optional(),
       services: z.array(z.string()).optional(),
       steps: z.array(stepSchema).min(1),
       actions: z.array(actionSchema).optional(),
       triggers: z.array(TriggerSchema).min(1),
-      name: z.string().optional(),
       consts: z.record(z.string(), z.string()).optional(),
     }),
   });

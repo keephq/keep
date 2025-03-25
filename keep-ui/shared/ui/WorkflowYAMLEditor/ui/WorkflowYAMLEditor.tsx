@@ -169,7 +169,7 @@ export const WorkflowYAMLEditor = ({
   return (
     <>
       <div
-        className="w-full h-full flex flex-col relative"
+        className="w-full h-full flex flex-col relative min-h-0"
         data-testid={dataTestId + "-container"}
       >
         <div

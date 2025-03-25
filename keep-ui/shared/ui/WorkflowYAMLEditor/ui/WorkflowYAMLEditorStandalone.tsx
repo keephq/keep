@@ -15,6 +15,7 @@ import { YamlValidationError } from "../types";
 export function WorkflowYAMLEditorStandalone({
   workflowId,
   yamlString,
+  "data-testid": dataTestId = "wf-yaml-standalone-editor",
 }: {
   workflowId: string;
   yamlString: string;
@@ -126,7 +127,7 @@ export function WorkflowYAMLEditorStandalone({
           onMount={handleEditorDidMount}
           onChange={handleContentChange}
           onValidationErrors={setValidationErrors}
-          data-testid="wf-yaml-editor"
+          data-testid={dataTestId}
         />
       </div>
       <WorkflowTestRunModal

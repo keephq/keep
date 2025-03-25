@@ -10,7 +10,6 @@ import { useWorkflowStore } from "@/entities/workflows";
 import { showErrorToast, KeepLoader } from "@/shared/ui";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { WorkflowYAMLEditor } from "@/shared/ui";
-import Skeleton from "react-loading-skeleton";
 import {
   getWorkflowDefinition,
   getYamlWorkflowDefinition,
