@@ -538,16 +538,9 @@ def test_monaco_editor_npm(browser: Page):
         save_failure_artifacts(browser, log_entries)
         raise
 
-def test_yaml_editor_validation(browser: Page):
+def test_yaml_editor_yaml_valid(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
-
-    def get_workflow_yaml(file_name):
-        file_path = os.path.join(os.path.dirname(__file__), file_name)
-        with open(file_path, "r") as file:
-            return file.read()
-
-    invalid_workflow_yaml = get_workflow_yaml("workflow-invalid-sample.yaml")
 
     try:
         init_e2e_test(browser, next_url="/signin")
@@ -560,30 +553,34 @@ def test_yaml_editor_validation(browser: Page):
         browser.get_by_role("tab", name="YAML Definition").click()
         yaml_editor = browser.get_by_test_id("wf-detail-yaml-editor-container")
         expect(yaml_editor).to_be_visible()
-        yaml_editor.locator(".monaco-editor").nth(0).click()
-        browser.keyboard.press("Meta+KeyA")
-        browser.keyboard.press("Backspace")
-        browser.keyboard.type("invalid yaml")
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-summary").first).to_contain_text("1 validation error")
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('1:1 Incorrect type. Expected "WorkflowSchema"')
-        browser.evaluate(
-            """
-            text => navigator.clipboard.writeText(text)
-            """, 
-            invalid_workflow_yaml
-        )
-        browser.keyboard.press("Meta+KeyA")
-        browser.keyboard.press("Backspace")
-        browser.keyboard.press("Meta+V")
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-summary").first).to_contain_text("8 validation errors")
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('3:9 String is shorter than the minimum length of 1.')
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('4:16 String is shorter than the minimum length of 1.')
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('11:10 Array has too few items. Expected 1 or more.')
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('13:7 Missing property "provider".')
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('15:7 Property provider_invalid_prop is not allowed.')
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('27:11 Value is not accepted. Valid values: "message", "blocks", "channel", "slack_timestamp", "thread_timestamp", "attachments", "username", "notification_type", "enrich_alert", "enrich_incident".')
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('32:7 Property enrich_incident is not allowed.')
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('29:7 Property enrich_alert is not allowed.')
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-no-errors").first).to_be_visible()
+    except Exception:
+        save_failure_artifacts(browser, log_entries)
+        raise
+
+def test_yaml_editor_yaml_invalid(browser: Page):
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+
+    try:
+        init_e2e_test(browser, next_url="/signin")
+        browser.get_by_role("link", name="Workflows").click()
+        browser.get_by_role("button", name="Upload Workflows").click()
+        file_input = browser.locator("#workflowFile")
+        file_input.set_input_files("./tests/e2e_tests/workflow-invalid-sample.yaml")
+        browser.get_by_role("button", name="Upload")
+        browser.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        browser.get_by_role("tab", name="YAML Definition").click()
+        yaml_editor = browser.get_by_test_id("wf-detail-yaml-editor-container")
+        expect(yaml_editor).to_be_visible()
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-summary").first).to_contain_text("7 validation errors")
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('String is shorter than the minimum length of 1.')
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Array has too few items. Expected 1 or more.')
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Missing property "provider".')
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Property provider_invalid_prop is not allowed.')
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Value is not accepted. Valid values: "message", "blocks", "channel", "slack_timestamp", "thread_timestamp", "attachments", "username", "notification_type", "enrich_alert", "enrich_incident".')
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Property enrich_incident is not allowed.')
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Property enrich_alert is not allowed.')
 
     except Exception:
         save_failure_artifacts(browser, log_entries)

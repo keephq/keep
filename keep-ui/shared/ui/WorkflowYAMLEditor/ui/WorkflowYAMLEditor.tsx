@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import type { editor } from "monaco-editor";
+import type { editor, Uri } from "monaco-editor";
 import { Download, Copy, Check } from "lucide-react";
 import { Button } from "@tremor/react";
 import { useWorkflowJsonSchema } from "@/entities/workflows/model/useWorkflowJsonSchema";
@@ -68,8 +68,13 @@ export const WorkflowYAMLEditor = ({
   const [isCopied, setIsCopied] = useState(false);
 
   const handleMarkersChanged = (
+    modelUri: Uri,
     markers: editor.IMarker[] | editor.IMarkerData[]
   ) => {
+    const editorUri = editorRef.current!.getModel()?.uri;
+    if (modelUri.path !== editorUri?.path) {
+      return;
+    }
     const errors = [];
     for (const marker of markers) {
       let severityString = "";
@@ -114,7 +119,7 @@ export const WorkflowYAMLEditor = ({
     const setModelMarkers = monacoInstance.editor.setModelMarkers;
     monacoInstance.editor.setModelMarkers = function (model, owner, markers) {
       setModelMarkers.call(monacoInstance.editor, model, owner, markers);
-      handleMarkersChanged(markers);
+      handleMarkersChanged(model.uri, markers);
     };
 
     setIsEditorMounted(true);

@@ -70,9 +70,21 @@ function orderDocument(doc: Document) {
     }
     if (isMap(workflowSeq)) {
       workflowSeq.items.sort((a: Pair, b: Pair) => {
-        const aIndex = fieldsOrder.indexOf((a.key as Scalar).value as string);
-        const bIndex = fieldsOrder.indexOf((b.key as Scalar).value as string);
-        return aIndex - bIndex;
+        const aKey = (a.key as Scalar).value as string;
+        const bKey = (b.key as Scalar).value as string;
+        const aIndex = fieldsOrder.indexOf(aKey);
+        const bIndex = fieldsOrder.indexOf(bKey);
+
+        // If both keys are known, sort by their order
+        if (aIndex !== -1 && bIndex !== -1) {
+          return aIndex - bIndex;
+        }
+        // If only a is known, it comes first
+        if (aIndex !== -1) return -1;
+        // If only b is known, it comes first
+        if (bIndex !== -1) return 1;
+        // If both are unknown, maintain original order
+        return 0;
       });
     }
 
@@ -82,26 +94,42 @@ function orderDocument(doc: Document) {
       steps.items.forEach((step) => {
         if (isMap(step)) {
           step.items.sort((a: Pair, b: Pair) => {
-            const aIndex = stepFieldsOrder.indexOf(
-              (a.key as Scalar).value as string
-            );
-            const bIndex = stepFieldsOrder.indexOf(
-              (b.key as Scalar).value as string
-            );
-            return aIndex - bIndex;
+            const aKey = (a.key as Scalar).value as string;
+            const bKey = (b.key as Scalar).value as string;
+            const aIndex = stepFieldsOrder.indexOf(aKey);
+            const bIndex = stepFieldsOrder.indexOf(bKey);
+
+            // If both keys are known, sort by their order
+            if (aIndex !== -1 && bIndex !== -1) {
+              return aIndex - bIndex;
+            }
+            // If only a is known, it comes first
+            if (aIndex !== -1) return -1;
+            // If only b is known, it comes first
+            if (bIndex !== -1) return 1;
+            // If both are unknown, maintain original order
+            return 0;
           });
 
           // Order provider fields
           const provider = step.get("provider");
           if (provider && isMap(provider)) {
             provider.items.sort((a: Pair, b: Pair) => {
-              const aIndex = providerFieldsOrder.indexOf(
-                (a.key as Scalar).value as string
-              );
-              const bIndex = providerFieldsOrder.indexOf(
-                (b.key as Scalar).value as string
-              );
-              return aIndex - bIndex;
+              const aKey = (a.key as Scalar).value as string;
+              const bKey = (b.key as Scalar).value as string;
+              const aIndex = providerFieldsOrder.indexOf(aKey);
+              const bIndex = providerFieldsOrder.indexOf(bKey);
+
+              // If both keys are known, sort by their order
+              if (aIndex !== -1 && bIndex !== -1) {
+                return aIndex - bIndex;
+              }
+              // If only a is known, it comes first
+              if (aIndex !== -1) return -1;
+              // If only b is known, it comes first
+              if (bIndex !== -1) return 1;
+              // If both are unknown, maintain original order
+              return 0;
             });
           }
         }
@@ -114,26 +142,42 @@ function orderDocument(doc: Document) {
       actions.items.forEach((action) => {
         if (isMap(action)) {
           action.items.sort((a: Pair, b: Pair) => {
-            const aIndex = stepFieldsOrder.indexOf(
-              (a.key as Scalar).value as string
-            );
-            const bIndex = stepFieldsOrder.indexOf(
-              (b.key as Scalar).value as string
-            );
-            return aIndex - bIndex;
+            const aKey = (a.key as Scalar).value as string;
+            const bKey = (b.key as Scalar).value as string;
+            const aIndex = stepFieldsOrder.indexOf(aKey);
+            const bIndex = stepFieldsOrder.indexOf(bKey);
+
+            // If both keys are known, sort by their order
+            if (aIndex !== -1 && bIndex !== -1) {
+              return aIndex - bIndex;
+            }
+            // If only a is known, it comes first
+            if (aIndex !== -1) return -1;
+            // If only b is known, it comes first
+            if (bIndex !== -1) return 1;
+            // If both are unknown, maintain original order
+            return 0;
           });
 
           // Order provider fields in actions
           const provider = action.get("provider");
           if (provider && isMap(provider)) {
             provider.items.sort((a: Pair, b: Pair) => {
-              const aIndex = providerFieldsOrder.indexOf(
-                (a.key as Scalar).value as string
-              );
-              const bIndex = providerFieldsOrder.indexOf(
-                (b.key as Scalar).value as string
-              );
-              return aIndex - bIndex;
+              const aKey = (a.key as Scalar).value as string;
+              const bKey = (b.key as Scalar).value as string;
+              const aIndex = providerFieldsOrder.indexOf(aKey);
+              const bIndex = providerFieldsOrder.indexOf(bKey);
+
+              // If both keys are known, sort by their order
+              if (aIndex !== -1 && bIndex !== -1) {
+                return aIndex - bIndex;
+              }
+              // If only a is known, it comes first
+              if (aIndex !== -1) return -1;
+              // If only b is known, it comes first
+              if (bIndex !== -1) return 1;
+              // If both are unknown, maintain original order
+              return 0;
             });
           }
         }
