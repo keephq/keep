@@ -11,6 +11,14 @@ html {
  * Taken from https://dev.to/jochemstoel/re-add-dark-mode-to-any-website-with-just-a-few-lines-of-code-phl
  * TODO: use proper tailwind/css-variables solution
  */
+
+/* This class is useful in cases where you need to revert dark-mode,
+so that this content looks like light mode when dark mode is on, and vise versa.
+For example, tooltip, that should look different from main content */
+.invert-dark-mode {
+  filter: invert(100%) hue-rotate(180deg) contrast(100%) !important;
+}
+
 html.workaround-dark {
   filter: invert(100%) hue-rotate(180deg) contrast(80%) !important;
   background: #fff;
