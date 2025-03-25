@@ -333,7 +333,6 @@ workflow:
       );
 
       expect(result.sequence).toHaveLength(4);
-      console.log(result.sequence);
       expect(result.sequence[1].type).toBe("step-victoriametrics");
       expect(result.sequence[2].type).toBe("foreach");
       expect(result.sequence[3].type).toBe("condition-threshold");

@@ -8,6 +8,7 @@ import {
   isPair,
   isSeq,
   stringify,
+  isMap,
 } from "yaml";
 import { Definition } from "../model/types";
 import { getYamlWorkflowDefinition } from "./parser";
@@ -52,20 +53,92 @@ function orderDocument(doc: Document) {
     "steps",
     "actions",
   ];
-  const stepFieldsOrder = ["name", "foreach", "if", "provider", "with"];
-  const providerFieldsOrder = ["config", "type", "with"];
-  // TODO: sort step props and provider props according to the order of the fields
+  const stepFieldsOrder = [
+    "name",
+    "foreach",
+    "if",
+    "condition",
+    "provider",
+    "with",
+  ];
+  const providerFieldsOrder = ["type", "config", "with"];
+
   try {
     const workflowSeq = doc.get("workflow");
-    if (!workflowSeq || !(workflowSeq instanceof YAMLMap)) {
+    if (!workflowSeq || !isMap(workflowSeq)) {
       throw new Error("Workflow section not found");
     }
-    workflowSeq.items.sort((a: Pair, b: Pair) => {
-      // TODO: sort according to the order of the sections
-      const aIndex = fieldsOrder.indexOf((a.key as Scalar).value as string);
-      const bIndex = fieldsOrder.indexOf((b.key as Scalar).value as string);
-      return aIndex > bIndex ? 1 : -1;
-    });
+    if (isMap(workflowSeq)) {
+      workflowSeq.items.sort((a: Pair, b: Pair) => {
+        const aIndex = fieldsOrder.indexOf((a.key as Scalar).value as string);
+        const bIndex = fieldsOrder.indexOf((b.key as Scalar).value as string);
+        return aIndex - bIndex;
+      });
+    }
+
+    // Order steps
+    const steps = workflowSeq.get("steps");
+    if (steps && isSeq(steps)) {
+      steps.items.forEach((step) => {
+        if (isMap(step)) {
+          step.items.sort((a: Pair, b: Pair) => {
+            const aIndex = stepFieldsOrder.indexOf(
+              (a.key as Scalar).value as string
+            );
+            const bIndex = stepFieldsOrder.indexOf(
+              (b.key as Scalar).value as string
+            );
+            return aIndex - bIndex;
+          });
+
+          // Order provider fields
+          const provider = step.get("provider");
+          if (provider && isMap(provider)) {
+            provider.items.sort((a: Pair, b: Pair) => {
+              const aIndex = providerFieldsOrder.indexOf(
+                (a.key as Scalar).value as string
+              );
+              const bIndex = providerFieldsOrder.indexOf(
+                (b.key as Scalar).value as string
+              );
+              return aIndex - bIndex;
+            });
+          }
+        }
+      });
+    }
+
+    // Order actions
+    const actions = workflowSeq.get("actions");
+    if (actions && isSeq(actions)) {
+      actions.items.forEach((action) => {
+        if (isMap(action)) {
+          action.items.sort((a: Pair, b: Pair) => {
+            const aIndex = stepFieldsOrder.indexOf(
+              (a.key as Scalar).value as string
+            );
+            const bIndex = stepFieldsOrder.indexOf(
+              (b.key as Scalar).value as string
+            );
+            return aIndex - bIndex;
+          });
+
+          // Order provider fields in actions
+          const provider = action.get("provider");
+          if (provider && isMap(provider)) {
+            provider.items.sort((a: Pair, b: Pair) => {
+              const aIndex = providerFieldsOrder.indexOf(
+                (a.key as Scalar).value as string
+              );
+              const bIndex = providerFieldsOrder.indexOf(
+                (b.key as Scalar).value as string
+              );
+              return aIndex - bIndex;
+            });
+          }
+        }
+      });
+    }
   } catch (error) {
     console.error("Error reordering workflow sections", error);
   }
