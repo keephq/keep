@@ -11,9 +11,9 @@ from keep.providers.providers_factory import ProvidersFactory
 KEEP_UI_URL = "http://localhost:3000"
 
 
-def trigger_alert(provider_name, tenant_id=None):
+def trigger_alert(provider_name):
     provider = ProvidersFactory.get_provider_class(provider_name)
-    token = get_token(tenant_id)
+    token = get_token()
     requests.post(
         f"http://localhost:8080/alerts/event/{provider_name}",
         headers={
@@ -129,7 +129,7 @@ def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=
     page.on("requestfailed", log_request_failed)
 
     if not tenant_id:
-        tenant_id = get_pid_tenant()
+        tenant_id = "keep" + str(os.getpid())
 
     url = f"{KEEP_UI_URL}{next_url}?tenantId={tenant_id}"
     print("Going to URL: ", url)
@@ -212,16 +212,12 @@ def take_screenshot(page):
     # Save screenshot
     page.screenshot(path=current_test_name + ".png")
 
-def get_pid_tenant():
-    pid = os.getpid()
-    return "keep" + str(pid)
 
-def get_token(tenant_id=None):
-    if tenant_id is None:
-        tenant_id = get_pid_tenant()
+def get_token():
+    pid = os.getpid()
     return json.dumps(
         {
-            "tenant_id": tenant_id,
+            "tenant_id": "keep" + str(pid),
             "user_id": "keep-user-for-no-auth-purposes",
         }
     )

@@ -1,9 +1,10 @@
 import inspect
 import json
+import os
 import random
 import time
 import uuid
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Generator
 from unittest.mock import Mock, patch
 
@@ -15,7 +16,7 @@ from pytest_docker.plugin import get_docker_services
 from sqlalchemy import event, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from sqlmodel import Session, create_engine
+from sqlmodel import Session, SQLModel, create_engine
 from starlette_context import context, request_cycle_context
 
 # This import is required to create the tables
@@ -30,7 +31,6 @@ from keep.api.models.db.workflow import *
 from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.contextmanager.contextmanager import ContextManager
-from tests.e2e_tests.utils import get_pid_tenant
 
 original_request = requests.Session.request  # noqa
 load_dotenv(find_dotenv())
@@ -546,7 +546,7 @@ def browser():
     from playwright.sync_api import sync_playwright
 
     try:
-        tenant_id = get_pid_tenant()
+        tenant_id = f"keep{os.getpid()}"
         print("Creating tenant - ", tenant_id)
         resp = requests.post(
             "http://localhost:8080/tenant",

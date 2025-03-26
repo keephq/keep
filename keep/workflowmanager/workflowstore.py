@@ -22,11 +22,12 @@ from keep.api.core.db import (
     get_workflows_with_last_execution,
 )
 from keep.api.core.workflows import get_workflows_with_last_executions_v2
-from keep.api.models.db.workflow import Workflow as WorkflowModel, Workflow
+from keep.api.models.db.workflow import Workflow as WorkflowModel
 from keep.api.models.workflow import ProviderDTO
 from keep.functions import cyaml
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
+from keep.workflowmanager.workflow import Workflow
 
 
 class WorkflowStore:
@@ -544,7 +545,7 @@ class WorkflowStore:
         return results
 
     def get_workflow_meta_data(
-        self, tenant_id: str, workflow: Workflow, installed_providers_by_type: dict
+        self, tenant_id: str, workflow: dict, installed_providers_by_type: dict
     ):
         providers_dto = []
         triggers = []

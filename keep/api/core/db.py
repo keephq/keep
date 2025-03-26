@@ -746,7 +746,7 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         #   and then we can remove the [:511] from here
         workflow_execution.error = error[:511] if error else None
         execution_time = (
-            datetime.now(tz=timezone.utc) - workflow_execution.started
+            datetime.utcnow() - workflow_execution.started
         ).total_seconds()
         workflow_execution.execution_time = int(execution_time)
         # TODO: logs

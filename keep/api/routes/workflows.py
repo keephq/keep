@@ -14,9 +14,9 @@ from fastapi import (
     Request,
     Response,
     UploadFile,
-    status as fastapi_status,
+    status,
 )
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from opentelemetry import trace
 from sqlmodel import Session
 
@@ -46,7 +46,7 @@ from keep.api.models.workflow import (
     WorkflowExecutionDTO,
     WorkflowExecutionLogsDTO,
     WorkflowRunResponseDTO,
-    WorkflowToAlertExecutionDTO, WorkflowRawDto,
+    WorkflowToAlertExecutionDTO,
 )
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import WorkflowExecutionsPaginatedResultsDto
@@ -267,7 +267,7 @@ def query_workflows(
         # create the workflow DTO
         try:
             workflow_raw = cyaml.safe_load(workflow.workflow_raw)
-            is_alert_rule_workflow = WorkflowStore.is_alert_rule_workflow(workflow_raw)
+            is_alert_rule_worfklow = WorkflowStore.is_alert_rule_workflow(workflow_raw)
             # very big width to avoid line breaks
             workflow_raw = cyaml.dump(workflow_raw, width=99999)
             workflow_dto = WorkflowDTO(
@@ -289,7 +289,7 @@ def query_workflows(
                 last_execution_started=last_execution_started,
                 disabled=workflow.is_disabled,
                 provisioned=workflow.provisioned,
-                alertRule=is_alert_rule_workflow,
+                alertRule=is_alert_rule_worfklow,
             )
         except Exception as e:
             logger.error(f"Error creating workflow DTO: {e}")
@@ -492,7 +492,7 @@ async def run_workflow_from_definition(
     try:
         event = get_event_from_body(body, tenant_id)
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
-            workflow.id, tenant_id, created_by, event, workflow=workflow, test_run=True
+            workflow.workflow_id, tenant_id, created_by, event, workflow=workflow, test_run=True
         )
     except Exception as e:
         logger.exception(
@@ -518,7 +518,7 @@ async def __get_workflow_raw_data(request: Request | None, file: UploadFile | No
         else:
             workflow_raw_data = await request.body()
         workflow_data = cyaml.safe_load(workflow_raw_data)
-        # backward compatibility
+        # backward comptability
         if "alert" in workflow_data:
             workflow_data = workflow_data.pop("alert")
         #
@@ -532,7 +532,7 @@ async def __get_workflow_raw_data(request: Request | None, file: UploadFile | No
 
 
 @router.post(
-    "", description="Create or update a workflow", status_code=fastapi_status.HTTP_201_CREATED
+    "", description="Create or update a workflow", status_code=status.HTTP_201_CREATED
 )
 async def create_workflow(
     file: UploadFile,
@@ -598,7 +598,7 @@ def get_workflow_executions_by_alert_fingerprint(
 @router.post(
     "/json",
     description="Create or update a workflow",
-    status_code=fastapi_status.HTTP_201_CREATED,
+    status_code=status.HTTP_201_CREATED,
 )
 async def create_workflow_from_body(
     request: Request,
@@ -673,7 +673,7 @@ def get_random_workflow_templates(
 @router.put(
     "/{workflow_id}",
     description="Update a workflow",
-    status_code=fastapi_status.HTTP_201_CREATED,
+    status_code=status.HTTP_201_CREATED,
 )
 async def update_workflow_by_id(
     workflow_id: str,
@@ -689,7 +689,8 @@ async def update_workflow_by_id(
     Args:
         workflow_id (str): The workflow ID
         request (Request): The FastAPI Request object
-        authenticated_entity (AuthenticatedEntity): The authenticated entity
+        file (UploadFile, optional): File if was uploaded via file. Defaults to File(...).
+        tenant_id (str, optional): The tenant ID. Defaults to Depends(verify_bearer_token).
         session (Session, optional): DB Session object injected via DI. Defaults to Depends(get_session).
 
     Raises:
@@ -713,7 +714,7 @@ async def update_workflow_by_id(
 
     workflow_raw_data = await __get_workflow_raw_data(request, None)
     parser = Parser()
-    workflow_interval = parser.parse_interval(workflow_raw_data)
+    workflow_interval = parser.parse_interval(workflow)
     # In case the workflow name changed to empty string, keep the old name
     if workflow_raw_data.get("name") != "":
         workflow_from_db.name = workflow_raw_data.get("name")
@@ -738,11 +739,16 @@ def get_raw_workflow_by_id(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
-) -> WorkflowRawDto:
+) -> str:
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
-    return WorkflowRawDto(
-            workflow_raw=workflowstore.get_raw_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    return JSONResponse(
+        status_code=200,
+        content={
+            "workflow_raw": workflowstore.get_raw_workflow(
+                tenant_id=tenant_id, workflow_id=workflow_id
+            )
+        },
     )
 
 
@@ -1039,7 +1045,7 @@ def write_workflow_secret(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:secrets"])
     ),
-) -> Response:
+) -> dict:
     """
     Write or update multiple secrets for a workflow in a single entry.
     If a secret already exists, it updates only the changed keys.
@@ -1111,7 +1117,7 @@ def delete_workflow_secret(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:secrets"])
     ),
-) -> Response:
+) -> dict:
     """
     Delete a specific secret key inside the workflow's secrets entry.
     If the key exists, it is removed, but other secrets remain.
