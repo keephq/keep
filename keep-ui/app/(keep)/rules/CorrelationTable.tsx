@@ -30,6 +30,7 @@ import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
 import { CorrelationFormType } from "./CorrelationSidebar/types";
 import { PageSubtitle, PageTitle } from "@/shared/ui";
 import { PlusIcon } from "@heroicons/react/20/solid";
+import { GroupedByCell } from "./GroupedByCel";
 
 const TIMEFRAME_UNITS_FROM_SECONDS = {
   seconds: (amount: number) => amount,
@@ -92,36 +93,40 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
     return DEFAULT_CORRELATION_FORM_VALUES;
   }, [selectedRule]);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const onCorrelationClick = () => {
-    setIsSidebarOpen(true);
-  };
+  const [isRuleCreation, setIsRuleCreation] = useState(false);
 
   const onCloseCorrelation = () => {
-    setIsSidebarOpen(false);
+    setIsRuleCreation(false);
     router.replace("/rules");
   };
-
-  useEffect(() => {
-    if (selectedRule) {
-      onCorrelationClick();
-    } else {
-      router.replace("/rules");
-    }
-  }, [selectedRule, router]);
 
   const CORRELATION_TABLE_COLS = useMemo(
     () => [
       columnHelper.accessor("name", {
         header: "Correlation Name",
+        cell: (context) => {
+          return (
+            <div
+              title={context.getValue()}
+              className="max-w-28 md:max-w-40 overflow-hidden overflow-ellipsis"
+            >
+              {context.getValue()}
+            </div>
+          );
+        },
       }),
       columnHelper.accessor("incident_name_template", {
         header: "Incident Name Template",
         cell: (context) => {
           const template = context.getValue();
           return template ? (
-            <Badge color="orange">{template}</Badge>
+            <Badge title={context.getValue() as string} color="orange">
+              {
+                <div className="max-w-28 md:max-w-40 2xl:max-w-96 overflow-hidden overflow-ellipsis">
+                  {template}
+                </div>
+              }
+            </Badge>
           ) : (
             <Badge color="gray">default</Badge>
           );
@@ -142,17 +147,9 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
       }),
       columnHelper.accessor("grouping_criteria", {
         header: "Grouped by",
-        cell: (context) =>
-          context.getValue().map((group, index) => (
-            <>
-              <Badge color="orange" key={group}>
-                {group}
-              </Badge>
-              {context.getValue().length !== index + 1 && (
-                <Icon icon={PlusIcon} size="xs" color="slate" />
-              )}
-            </>
-          )),
+        cell: (context) => (
+          <GroupedByCell fields={context.getValue()}></GroupedByCell>
+        ),
       }),
       columnHelper.accessor("incidents", {
         header: "Incidents",
@@ -188,7 +185,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
           color="orange"
           size="md"
           variant="primary"
-          onClick={() => onCorrelationClick()}
+          onClick={() => setIsRuleCreation(true)}
           icon={PlusIcon}
         >
           Create correlation
@@ -232,11 +229,13 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
           </TableBody>
         </Table>
       </Card>
-      <CorrelationSidebar
-        isOpen={isSidebarOpen}
-        toggle={onCloseCorrelation}
-        defaultValue={correlationFormFromRule}
-      />
+      {(isRuleCreation || !!selectedRule) && (
+        <CorrelationSidebar
+          isOpen={true}
+          toggle={onCloseCorrelation}
+          defaultValue={correlationFormFromRule}
+        />
+      )}
     </div>
   );
 };

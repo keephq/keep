@@ -146,7 +146,9 @@ const DrawerBody = React.forwardRef<
   HTMLDivElement,
   React.ComponentPropsWithoutRef<"div">
 >(({ className, ...props }, ref) => {
-  return <div ref={ref} className={cx("flex-1", className)} {...props} />;
+  return (
+    <div ref={ref} className={cx("flex-1 min-h-0", className)} {...props} />
+  );
 });
 DrawerBody.displayName = "Drawer.Body";
 

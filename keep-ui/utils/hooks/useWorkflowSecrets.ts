@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import useSWR from "swr";
 
-export function useSecrets(workflowId: string) {
+export function useWorkflowSecrets(workflowId: string | null) {
   const api = useApi();
   const [error, setError] = useState<string>("");
 
   const getSecrets = useSWR<{ [key: string]: string }>(
-    api.isReady() ? `/workflows/${workflowId}/secrets` : null,
+    api.isReady() && workflowId ? `/workflows/${workflowId}/secrets` : null,
     (url: string) => api.get(url)
   );
 

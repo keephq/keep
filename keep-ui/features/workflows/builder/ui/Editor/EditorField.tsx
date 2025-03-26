@@ -2,7 +2,12 @@ import { Text, TextareaProps, TextInputProps } from "@tremor/react";
 import { Textarea, TextInput } from "@/components/ui";
 import React from "react";
 
-export function EditorField({ name, value, ...rest }: TextInputProps) {
+export function EditorField({
+  name,
+  value,
+  asTextarea,
+  ...rest
+}: TextInputProps & { asTextarea?: boolean }) {
   if (name === "code") {
     return (
       <div>
@@ -11,6 +16,20 @@ export function EditorField({ name, value, ...rest }: TextInputProps) {
           id={name}
           placeholder={name}
           className="mb-2.5 min-h-[100px] text-xs font-mono"
+          value={value || ""}
+          {...(rest as TextareaProps)}
+        />
+      </div>
+    );
+  }
+  if (asTextarea) {
+    return (
+      <div>
+        <Text className="capitalize mb-1.5">{name}</Text>
+        <Textarea
+          id={name}
+          placeholder={name}
+          className="mb-2.5 min-h-[100px] text-xs"
           value={value || ""}
           {...(rest as TextareaProps)}
         />
