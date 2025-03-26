@@ -19,10 +19,10 @@ actions:
       provider: mattermost
       config: "{{ provider.my_provider_name }}"
       with:
-        message: {value}  
-        attachments: {value}  
-        channel: {value}  
-        kwargs: {value}  # The providers with context```
+        message: {value}  # The content of the message.
+        attachments: {value}  # The attachments of the message.
+        channel: {value}  # The channel to send the message
+```
 
 
 

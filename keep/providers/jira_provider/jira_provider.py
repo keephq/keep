@@ -436,7 +436,6 @@ class JiraProvider(BaseProvider):
             labels (List[str]): The labels of the issue.
             components (List[str]): The components of the issue.
             custom_fields (dict): The custom fields of the issue.
-            kwargs (dict): The providers with context
         """
         issue_type = issue_type if issue_type else kwargs.get("issuetype", "Task")
         if labels and isinstance(labels, str):

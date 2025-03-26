@@ -20,15 +20,15 @@ actions:
       provider: slack
       config: "{{ provider.my_provider_name }}"
       with:
-        message: {value}  
-        blocks: {value}  
-        channel: {value}  
-        slack_timestamp: {value}  
-        thread_timestamp: {value}  
-        attachments: {value}  
-        username: {value}  
-        notification_type: {value}  
-        kwargs: {value}  # The providers with context```
+        message: {value}  # The content of the message.
+        blocks: {value}  # The blocks of the message.
+        channel: {value}  # The channel to send the message
+        slack_timestamp: {value}  # The timestamp of the message to update
+        thread_timestamp: {value}  # The timestamp of the thread to send the message
+        attachments: {value}  # The attachments of the message.
+        username: {value}  # The username of the message.
+        notification_type: {value}  # The type of notification.
+```
 
 
 
