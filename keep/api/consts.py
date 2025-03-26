@@ -34,7 +34,6 @@ STATIC_PRESETS = {
 # to split the tasks between the workers.
 ###
 
-KEEP_ARQ_TASK_POOL_NONE = "none"  # Arq workers explicitly disabled for this service
 KEEP_ARQ_TASK_POOL_ALL = "all"  # All arq workers enabled for this service
 KEEP_ARQ_TASK_POOL_BASIC_PROCESSING = "basic_processing"  # Everything except AI
 # Define queues for different task types
@@ -46,7 +45,7 @@ REDIS = os.environ.get("REDIS", "false") == "true"
 if REDIS:
     KEEP_ARQ_TASK_POOL = os.environ.get("KEEP_ARQ_TASK_POOL", KEEP_ARQ_TASK_POOL_ALL)
 else:
-    KEEP_ARQ_TASK_POOL = os.environ.get("KEEP_ARQ_TASK_POOL", KEEP_ARQ_TASK_POOL_NONE)
+    KEEP_ARQ_TASK_POOL = os.environ.get("KEEP_ARQ_TASK_POOL", None)
 
-if KEEP_ARQ_TASK_POOL != KEEP_ARQ_TASK_POOL_NONE and not REDIS:
+if KEEP_ARQ_TASK_POOL != None and not REDIS:
     raise Exception("Starting the ARQ worker, but REDIS is not enabled.")

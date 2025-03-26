@@ -16,7 +16,6 @@ from keep.api.consts import (
     KEEP_ARQ_TASK_POOL,
     KEEP_ARQ_TASK_POOL_ALL,
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
-    KEEP_ARQ_TASK_POOL_NONE,
 )
 from keep.api.core.config import config
 from keep.api.core.db import dispose_session
@@ -335,7 +334,7 @@ def create_app():
     logger.info("Creating ARQ worker WSGI app")
 
     # Verify task pool
-    if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_NONE:
+    if not KEEP_ARQ_TASK_POOL:
         logger.warning("No task pools configured to run")
 
     # Simple WSGI app that just returns a status message
