@@ -7,6 +7,8 @@ import threading
 import time
 
 from dotenv import find_dotenv, load_dotenv
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from gunicorn.workers.base import Worker
 
 import keep.api.logging
@@ -338,14 +340,20 @@ def create_app():
     if not KEEP_ARQ_TASK_POOL:
         logger.warning("No task pools configured to run")
 
-    # Simple WSGI app that just returns a status message
-    def app(environ, start_response):
+    # Simple FastAPI app that just returns a status message
+    app = FastAPI(
+        title="Keep ARQ Worker",
+        description="Rest API powering https://platform.keephq.dev and friends 🏄‍♀️",
+    )
+
+    @app.get("/")
+    def get_status(body: dict = None):
         data = b"ARQ Worker Running\n"
-        start_response(
-            "200 OK",
-            [("Content-Type", "text/plain"), ("Content-Length", str(len(data)))],
+        return JSONResponse(
+            content=data,
+            status_code=200,
+            headers={"Content-Type": "text/plain"},
         )
-        return [data]
 
     if config("KEEP_OTEL_ENABLED", default="true", cast=bool):
         keep.api.observability.setup(app)
@@ -358,6 +366,7 @@ if __name__ == "__main__":
     logger.info("Running ARQ worker standalone (without Gunicorn)")
     try:
         # Set a default worker ID for standalone execution
+        app = create_app()
         worker_id = 0
         asyncio.run(run_arq_worker(worker_id))
     except KeyboardInterrupt:
