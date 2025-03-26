@@ -723,6 +723,7 @@ async def update_workflow_by_id(
     workflow_from_db.is_disabled = workflow.get("disabled", False)
     workflow_from_db.workflow_raw = cyaml.dump(workflow, width=99999)
     workflow_from_db.last_updated = datetime.datetime.now()
+    workflow_from_db.revision += 1
     session.add(workflow_from_db)
     session.commit()
     session.refresh(workflow_from_db)
