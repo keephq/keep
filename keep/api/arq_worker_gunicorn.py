@@ -30,7 +30,12 @@ logger = logging.getLogger(__name__)
 
 def determine_queue_name():
     """Determine the queue name based on task pool configuration"""
-    if KEEP_ARQ_TASK_POOL in [
+    # this is the same behavior as in the original arq_worker.py
+    # but from some reason if returns None so we "duplicate the logic here"
+    if not KEEP_ARQ_TASK_POOL:
+        return KEEP_ARQ_TASK_POOL_ALL
+
+    elif KEEP_ARQ_TASK_POOL in [
         KEEP_ARQ_TASK_POOL_ALL,
         KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
     ]:

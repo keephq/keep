@@ -32,6 +32,10 @@ logger = logging.getLogger(__name__)
 all_tasks_for_the_worker = []
 
 if KEEP_ARQ_TASK_POOL in [KEEP_ARQ_TASK_POOL_ALL, KEEP_ARQ_TASK_POOL_BASIC_PROCESSING]:
+    logger.info(
+        "Enabling basic processing tasks for the worker",
+        extra={"task_pool": KEEP_ARQ_TASK_POOL},
+    )
     all_tasks_for_the_worker += [
         ("keep.api.tasks.process_event_task.async_process_event", KEEP_ARQ_QUEUE_BASIC),
         (

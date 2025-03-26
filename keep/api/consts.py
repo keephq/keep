@@ -42,13 +42,11 @@ KEEP_ARQ_QUEUE_BASIC = "basic_processing"
 KEEP_ARQ_QUEUE_WORKFLOWS = "workflows"
 
 REDIS = os.environ.get("REDIS", "false") == "true"
-KEEP_ARQ_TASK_POOL = os.environ.get("KEEP_ARQ_TASK_POOL", None)
 
-if KEEP_ARQ_TASK_POOL is None:
-    if REDIS:
-        KEEP_ARQ_TASK_POOL = KEEP_ARQ_TASK_POOL_ALL
-    else:
-        KEEP_ARQ_TASK_POOL = KEEP_ARQ_TASK_POOL_NONE
+if REDIS:
+    KEEP_ARQ_TASK_POOL = os.environ.get("KEEP_ARQ_TASK_POOL", KEEP_ARQ_TASK_POOL_ALL)
+else:
+    KEEP_ARQ_TASK_POOL = os.environ.get("KEEP_ARQ_TASK_POOL", KEEP_ARQ_TASK_POOL_NONE)
 
 if KEEP_ARQ_TASK_POOL != KEEP_ARQ_TASK_POOL_NONE and not REDIS:
     raise Exception("Starting the ARQ worker, but REDIS is not enabled.")
