@@ -735,7 +735,7 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
                 extra={
                     "tenant_id": tenant_id,
                     "workflow_id": workflow_id,
-                    "execution_id": execution_id,
+                    "workflow_execution_id": execution_id,
                 },
             )
             raise ValueError("Execution not found")
@@ -756,7 +756,7 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
             extra={
                 "tenant_id": tenant_id,
                 "workflow_id": workflow_id,
-                "execution_id": execution_id,
+                "workflow_execution_id": execution_id,
                 "execution_time": execution_time,
             },
         )
