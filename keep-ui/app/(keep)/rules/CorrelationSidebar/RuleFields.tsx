@@ -106,51 +106,52 @@ const Field = ({
 
   return (
     <div key={ruleField.id}>
-      <div className="flex items-start gap-x-2">
-        <SearchSelect
-          defaultValue={ruleField.field}
-          onValueChange={onValueChange}
-          onSearchValueChange={setSearchValue}
-          enableClear={false}
-          required
-        >
-          {fields.map((field) => (
-            <SearchSelectItem key={field.name} value={field.name}>
-              {field.label}
-            </SearchSelectItem>
-          ))}
-          {searchValue.trim() && (
-            <SearchSelectItem value={searchValue}>
-              {searchValue}
-            </SearchSelectItem>
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0 grid grid-cols-3 gap-2">
+          <SearchSelect
+            defaultValue={ruleField.field}
+            onValueChange={onValueChange}
+            onSearchValueChange={setSearchValue}
+            enableClear={false}
+            required
+          >
+            {fields.map((field) => (
+              <SearchSelectItem key={field.name} value={field.name}>
+                {field.label}
+              </SearchSelectItem>
+            ))}
+            {searchValue.trim() && (
+              <SearchSelectItem value={searchValue}>
+                {searchValue}
+              </SearchSelectItem>
+            )}
+          </SearchSelect>
+          <Select
+            className="[&_ul]:max-h-96"
+            defaultValue={ruleField.operator}
+            onValueChange={onOperatorSelect}
+            required
+          >
+            {DEFAULT_OPERATORS.map((operator) => (
+              <SelectItem key={operator.name} value={operator.name}>
+                {operator.label}
+              </SelectItem>
+            ))}
+          </Select>
+          {isValueEnabled && (
+            <div>
+              <TextInput
+                onValueChange={(newValue) => onFieldChange("value", newValue)}
+                defaultValue={ruleField.value}
+                required
+                error={!ruleField.value}
+                errorMessage={
+                  ruleField.value ? undefined : "Rule value is required"
+                }
+              />
+            </div>
           )}
-        </SearchSelect>
-        <Select
-          className="[&_ul]:max-h-96"
-          defaultValue={ruleField.operator}
-          onValueChange={onOperatorSelect}
-          required
-        >
-          {DEFAULT_OPERATORS.map((operator) => (
-            <SelectItem key={operator.name} value={operator.name}>
-              {operator.label}
-            </SelectItem>
-          ))}
-        </Select>
-        {isValueEnabled && (
-          <div>
-            <TextInput
-              onValueChange={(newValue) => onFieldChange("value", newValue)}
-              defaultValue={ruleField.value}
-              required
-              error={!ruleField.value}
-              errorMessage={
-                ruleField.value ? undefined : "Rule value is required"
-              }
-            />
-          </div>
-        )}
-
+        </div>
         <Button
           className="mt-2"
           onClick={onRemoveFieldClick}

@@ -171,7 +171,7 @@ export const CorrelationSidebarBody = ({
             </div>
             <CorrelationGroups />
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col border-t-2">
             {alertsFound.length > 0 && (
               <AlertsFoundBadge
                 alertsFound={alertsFound}
