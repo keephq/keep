@@ -1588,7 +1588,10 @@ def get_last_alerts(
         for alert_data in alerts_with_start:
             alert = alert_data[0]
             startedAt = alert_data[1]
-            alert.event["startedAt"] = str(startedAt)
+            if not alert.event.get("startedAt"):
+                alert.event["startedAt"] = str(startedAt)
+            else:
+                alert.event["firstTimestamp"] = str(startedAt)
             alert.event["event_id"] = str(alert.id)
 
             if with_incidents:
