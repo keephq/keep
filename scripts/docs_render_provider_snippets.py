@@ -173,6 +173,9 @@ def search_provider_mentions_in_examples(provider) -> dict[(str, str)]:
             if provider not in provider_mentions:
                 provider_mentions[file_name] = []
             provider_mentions[file_name].append(example)
+            
+    #ordered dict is needed for repeatability
+    provider_mentions = dict(sorted(provider_mentions.items()))
 
     return provider_mentions
 
