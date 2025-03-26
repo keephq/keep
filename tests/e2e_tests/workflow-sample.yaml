@@ -13,19 +13,7 @@ workflow:
   name: test_add_upload_workflow_with_alert_trigger
   owners: []
   services: []
-  steps:
-    - name: bash-echo-enrich
-      provider:
-        config: "{{ providers.default-bash }}"
-        type: bash
-        with:
-          command: "echo 'Hello, world! Enriching alert and incident with customer_name: john_doe'"
-          enrich_alert:
-            - key: customer_name
-              value: john_doe
-          enrich_incident:
-            - key: customer_name
-              value: john_doe
+  steps: []
   triggers:
     - filters:
         - key: source
