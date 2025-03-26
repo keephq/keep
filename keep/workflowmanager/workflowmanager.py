@@ -40,6 +40,10 @@ class WorkflowManager:
         self.scheduler = WorkflowScheduler(self)
         self.workflow_store = WorkflowStore()
         self.started = False
+        # this is to enqueue the workflows in the REDIS queue
+        # SHAHAR: todo - finish the REDIS implementation
+        # self.loop = None
+        # self.redis = config("REDIS", default="false").lower() == "true"
 
     async def start(self):
         """Runs the workflow manager in server mode"""
@@ -54,6 +58,7 @@ class WorkflowManager:
         """Stops the workflow manager"""
         if not self.started:
             return
+
         self.scheduler.stop()
         self.started = False
         # Clear the scheduler reference
@@ -336,6 +341,54 @@ class WorkflowManager:
                         continue
                     # Lastly, if the workflow should run, add it to the scheduler
                     self.logger.info("Adding workflow to run")
+
+                    # SHAHAR: TODO - finish redis implementation
+                    # if REDIS is enabled, add the workflow to the queue
+
+                    """
+                    if os.environ.get("REDIS", "false").lower() == "true":
+                        try:
+                            self.logger.info("Adding workflow to REDIS")
+                            from arq import ArqRedis
+                            from keep.api.arq_pool import get_pool
+                            from keep.api.consts import KEEP_ARQ_QUEUE_WORKFLOWS
+
+                            # We need to run this asynchronously
+                            async def enqueue_workflow():
+                                redis: ArqRedis = await get_pool()
+                                job = await redis.enqueue_job(
+                                    "run_workflow_in_worker",  # You'll need to create this function
+                                    tenant_id,
+                                    str(workflow_model.id),  # Convert UUID to string if needed
+                                    "alert",  # triggered_by
+                                    event,  # Pass the event
+                                    _queue_name=KEEP_ARQ_QUEUE_WORKFLOWS,
+                                )
+                                self.logger.info(
+                                    "Enqueued workflow job",
+                                    extra={
+                                        "job_id": job.job_id,
+                                        "workflow_id": workflow_model.id,
+                                        "tenant_id": tenant_id,
+                                        "queue": KEEP_ARQ_QUEUE_WORKFLOWS,
+                                    },
+                                )
+
+                            # Execute the async function
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            job_id = loop.run_until_complete(enqueue_workflow())
+                            self.logger.info("Job enqueued", extra={"job_id": job_id})
+                        except Exception as e:
+                            self.logger.error(
+                                "Failed to enqueue workflow job",
+                                extra={
+                                    "exception": str(e),
+                                    "workflow_id": workflow_model.id,
+                                    "tenant_id": tenant_id,
+                                },
+                            )
+                    """
                     with self.scheduler.lock:
                         self.scheduler.workflows_to_run.append(
                             {
@@ -432,9 +485,7 @@ class WorkflowManager:
             )
 
     @timing_histogram(workflow_execution_duration)
-    def _run_workflow(
-        self, workflow: Workflow, workflow_execution_id: str
-    ):
+    def _run_workflow(self, workflow: Workflow, workflow_execution_id: str):
         self.logger.debug(f"Running workflow {workflow.workflow_id}")
         threading.current_thread().workflow_debug = workflow.workflow_debug
         threading.current_thread().workflow_id = workflow.workflow_id
