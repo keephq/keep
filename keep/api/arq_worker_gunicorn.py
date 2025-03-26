@@ -346,6 +346,9 @@ def create_app():
         )
         return [data]
 
+    if config("KEEP_OTEL_ENABLED", default="true", cast=bool):
+        keep.api.observability.setup(app)
+
     return app
 
 
