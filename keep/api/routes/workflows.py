@@ -45,6 +45,7 @@ from keep.api.models.workflow import (
     WorkflowDTO,
     WorkflowExecutionDTO,
     WorkflowExecutionLogsDTO,
+    WorkflowRawDto,
     WorkflowRunResponseDTO,
     WorkflowToAlertExecutionDTO,
 )
@@ -267,7 +268,7 @@ def query_workflows(
         # create the workflow DTO
         try:
             workflow_raw = cyaml.safe_load(workflow.workflow_raw)
-            is_alert_rule_worfklow = WorkflowStore.is_alert_rule_workflow(workflow_raw)
+            is_alert_rule_workflow = WorkflowStore.is_alert_rule_workflow(workflow_raw)
             # very big width to avoid line breaks
             workflow_raw = cyaml.dump(workflow_raw, width=99999)
             workflow_dto = WorkflowDTO(
@@ -289,7 +290,7 @@ def query_workflows(
                 last_execution_started=last_execution_started,
                 disabled=workflow.is_disabled,
                 provisioned=workflow.provisioned,
-                alertRule=is_alert_rule_worfklow,
+                alertRule=is_alert_rule_workflow,
             )
         except Exception as e:
             logger.error(f"Error creating workflow DTO: {e}")
@@ -518,7 +519,7 @@ async def __get_workflow_raw_data(request: Request | None, file: UploadFile | No
         else:
             workflow_raw_data = await request.body()
         workflow_data = cyaml.safe_load(workflow_raw_data)
-        # backward comptability
+        # backward compatibility
         if "alert" in workflow_data:
             workflow_data = workflow_data.pop("alert")
         #
@@ -739,16 +740,13 @@ def get_raw_workflow_by_id(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
-) -> str:
+) -> WorkflowRawDto:
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
-    return JSONResponse(
-        status_code=200,
-        content={
-            "workflow_raw": workflowstore.get_raw_workflow(
-                tenant_id=tenant_id, workflow_id=workflow_id
-            )
-        },
+    return WorkflowRawDto(
+        workflow_raw=workflowstore.get_raw_workflow(
+            tenant_id=tenant_id, workflow_id=workflow_id
+        )
     )
 
 
@@ -1045,7 +1043,7 @@ def write_workflow_secret(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:secrets"])
     ),
-) -> dict:
+) -> Response:
     """
     Write or update multiple secrets for a workflow in a single entry.
     If a secret already exists, it updates only the changed keys.
@@ -1117,7 +1115,7 @@ def delete_workflow_secret(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:secrets"])
     ),
-) -> dict:
+) -> Response:
     """
     Delete a specific secret key inside the workflow's secrets entry.
     If the key exists, it is removed, but other secrets remain.
