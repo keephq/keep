@@ -4,6 +4,7 @@ import logging
 import logging.config
 import logging.handlers
 import os
+import sys
 import threading
 import uuid
 from datetime import datetime
@@ -25,6 +26,32 @@ KEEP_STORE_WORKFLOW_LOGS = (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def get_gunicorn_log_level():
+    """
+    Check for --log-level flag in gunicorn command line arguments
+    Returns the log level or None if not found
+    """
+    log_level = None
+    try:
+        for i, arg in enumerate(sys.argv):
+            if arg == "--log-level" and i + 1 < len(sys.argv):
+                log_level = sys.argv[i + 1].upper()
+                break
+            elif arg.startswith("--log-level="):
+                log_level = arg.split("=", 1)[1].upper()
+                break
+    except Exception:
+        pass
+
+    # Validate the log level
+    valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    if log_level in valid_levels:
+        return log_level
+
+    # o/w, use Keep's log level
+    return LOG_LEVEL
 
 
 class WorkflowContextFilter(logging.Filter):
@@ -368,13 +395,13 @@ CONFIG = {
         },
         "uvicorn.access": {  # Add uvicorn.access logger configuration
             "handlers": ["uvicorn_access"],
-            "level": "INFO",
+            "level": get_gunicorn_log_level(),
             "propagate": False,
         },
         "uvicorn.error": {  # Add uvicorn.error logger configuration
             "()": "CustomizedUvicornLogger",  # Use custom logger class
             "handlers": ["default"],
-            "level": "INFO",
+            "level": get_gunicorn_log_level(),
             "propagate": False,
         },
         "opentelemetry.context": {
