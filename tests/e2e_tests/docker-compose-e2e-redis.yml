@@ -1,4 +1,3 @@
-
 services:
   keep-frontend:
     extends:
