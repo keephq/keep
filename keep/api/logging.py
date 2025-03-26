@@ -278,10 +278,33 @@ class DevTerminalFormatter(logging.Formatter):
         return f"{message} {extra_info}"
 
 
+def get_worker_type():
+    """Determine if this is a uvicorn or arq worker"""
+    import sys
+
+    # Check command line arguments or process name to identify worker type
+    if any("arq" in arg.lower() for arg in sys.argv):
+        return "arqworker"
+    elif any("uvicorn" in arg.lower() for arg in sys.argv):
+        return "uvicorn"
+    else:
+        return None
+
+
+# Set this as a global variable during initialization
+WORKER_TYPE = get_worker_type()
+
+
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
     def __init__(self, *args, rename_fields=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.rename_fields = rename_fields if RUNNING_IN_CLOUD_RUN else {}
+
+    def add_fields(self, log_record, record, message_dict):
+        super().add_fields(log_record, record, message_dict)
+        # Add worker type to all logs
+        if WORKER_TYPE:
+            log_record["worker_type"] = getattr(record, "worker_type", WORKER_TYPE)
 
 
 CONFIG = {
@@ -290,7 +313,7 @@ CONFIG = {
     "formatters": {
         "json": {
             "()": CustomJsonFormatter,
-            "fmt": "%(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(otelTraceID)s %(otelSpanID)s %(otelTraceSampled)s %(otelServiceName)s %(threadName)s %(process)s %(module)s",
+            "fmt": "%(worker_type) %(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(otelTraceID)s %(otelSpanID)s %(otelTraceSampled)s %(otelServiceName)s %(threadName)s %(process)s %(module)s",
             "rename_fields": {
                 "levelname": "severity",
                 "asctime": "timestamp",

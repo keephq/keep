@@ -29,15 +29,17 @@ from keep.api.core.alerts import (
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.config import config
+from keep.api.core.db import dismiss_error_alerts as dismiss_error_alerts_db
+from keep.api.core.db import enrich_alerts_with_incidents
+from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
-    get_error_alerts as get_error_alerts_db,
-    get_alert_audit as get_alert_audit_db,
-    dismiss_error_alerts as dismiss_error_alerts_db,
-    enrich_alerts_with_incidents,
     get_alerts_by_fingerprint,
     get_alerts_by_ids,
     get_alerts_metrics_by_provider,
     get_enrichment,
+)
+from keep.api.core.db import get_error_alerts as get_error_alerts_db
+from keep.api.core.db import (
     get_last_alerts,
     get_last_alerts_by_fingerprints,
     get_provider_by_name,
@@ -58,7 +60,6 @@ from keep.api.models.alert import (
     EnrichAlertNoteRequestBody,
     EnrichAlertRequestBody,
     UnEnrichAlertRequestBody,
-
 )
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.incident import IncidentStatus
@@ -581,7 +582,7 @@ async def receive_generic_event(
     if REDIS:
         redis: ArqRedis = await get_pool()
         job = await redis.enqueue_job(
-            "async_process_event",
+            "process_event_in_worker",
             authenticated_entity.tenant_id,
             None,
             provider_id,
@@ -700,7 +701,7 @@ async def receive_event(
     if REDIS:
         redis: ArqRedis = await get_pool()
         job = await redis.enqueue_job(
-            "async_process_event",
+            "process_event_in_worker",
             authenticated_entity.tenant_id,
             provider_type,
             provider_id,
@@ -776,7 +777,7 @@ def enrich_alert_note(
         enriched_data,
         authenticated_entity=authenticated_entity,
         dispose_on_new_alert=True,
-        session=session
+        session=session,
     )
 
 
