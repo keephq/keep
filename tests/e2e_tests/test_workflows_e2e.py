@@ -139,17 +139,17 @@ def test_add_upload_workflow_with_alert_trigger(browser: Page):
         file_input = browser.locator("#workflowFile")
         file_input.set_input_files("./tests/e2e_tests/workflow-sample.yaml")
         browser.get_by_role("button", name="Upload")
+        # new behavior: is redirecting to the detail page of the workflow, so we need to go back to the list page
         browser.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
         trigger_alert("prometheus")
         browser.wait_for_timeout(2000)
-        # new behavior: is redirecting to the detail page of the workflow, so we need to go back to the list page
         browser.goto("http://localhost:3000/workflows")
+        # wait for prometheus to fire an alert and workflow to run
+        browser.reload()
         workflow_card = browser.locator(
             "[data-testid^='workflow-tile-']",
             has_text="9b3664f4-b248-4eda-8cc7-e69bc5a8bd92",
         )
-        # wait for prometheus to fire an alert and workflow to run
-        browser.reload()
         expect(workflow_card).not_to_contain_text("No data available")
     except Exception:
         save_failure_artifacts(browser, log_entries)
