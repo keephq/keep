@@ -415,7 +415,10 @@ def query_last_alerts(
         for alert_data in alerts_with_start:
             alert: Alert = alert_data[0]
             alert.alert_enrichment = alert_data[1]
-            alert.event["startedAt"] = str(alert_data[2])
+            if not alert.event.get("startedAt"):
+                alert.event["startedAt"] = str(alert_data[2])
+            else:
+                alert.event["firstTimestamp"] = str(alert_data[2])
             alert.event["event_id"] = str(alert.id)
             alerts.append(alert)
 
