@@ -29,13 +29,17 @@ class Workflow(SQLModel, table=True):
 
 
 def get_status_column():
-    backend = (
-        sqlalchemy.engine.url.make_url(
-            os.environ.get("DATABASE_CONNECTION_STRING")
-        ).get_backend_name()
-        if os.environ.get("DATABASE_CONNECTION_STRING")
-        else None
-    )
+    try:
+        db_connection_string = os.environ.get(
+            "DATABASE_CONNECTION_STRING", os.environ.get("DB_CONNECTION_NAME")
+        )
+        backend = (
+            sqlalchemy.engine.url.make_url(db_connection_string).get_backend_name()
+            if db_connection_string
+            else None
+        )
+    except Exception:
+        return sqlalchemy.text("status(255)")
     return (
         sqlalchemy.text("status(255)")
         if backend == "mysql"
@@ -62,7 +66,9 @@ class WorkflowExecution(SQLModel, table=True):
     )
 
     id: str = Field(default=None, primary_key=True)
-    workflow_id: str = Field(foreign_key="workflow.id", default="test") # default=test for test runs, which are not associated with a workflow
+    workflow_id: str = Field(
+        foreign_key="workflow.id", default="test"
+    )  # default=test for test runs, which are not associated with a workflow
     tenant_id: str = Field(foreign_key="tenant.id")
     started: datetime = Field(default_factory=datetime.utcnow, index=True)
     triggered_by: str = Field(sa_column=Column(TEXT))
