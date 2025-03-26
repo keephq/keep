@@ -49,9 +49,8 @@ class WorkflowDTO(BaseModel):
         id = cyaml.safe_load(self.workflow_raw).get("id")
         return id
 
-    # noinspection PyMethodParameters
     @validator("workflow_raw", pre=False, always=True)
-    def manipulate_raw(cls, raw, values):
+    def manipulate_raw(self, raw, values):
         """We want to control the "sort" of a workflow when it gets to the front:
             1. id
             2. desc
