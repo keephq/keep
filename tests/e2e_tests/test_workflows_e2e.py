@@ -148,7 +148,7 @@ def test_add_upload_workflow_with_alert_trigger(browser: Page):
         browser.reload()
         workflow_card = browser.locator(
             "[data-testid^='workflow-tile-']",
-            has_text="9b3664f4-b248-4eda-8cc7-e69bc5a8bd92",
+            has_text="test_add_upload_workflow_with_alert_trigger",
         )
         expect(workflow_card).not_to_contain_text("No data available")
     except Exception:
@@ -162,13 +162,13 @@ def test_monaco_editor_npm(browser: Page):
     setup_console_listener(browser, log_entries)
     try:
         init_e2e_test(browser, next_url="/signin")
-        browser.route("**/*", lambda route, request: 
+        browser.route("**/*", lambda route, request:
             route.abort() if not request.url.startswith("http://localhost") else route.continue_()
         )
         browser.get_by_role("link", name="Workflows").click()
         browser.get_by_role("button", name="Upload Workflows").click()
         file_input = browser.locator("#workflowFile")
-        file_input.set_input_files("./tests/e2e_tests/workflow-sample.yaml")
+        file_input.set_input_files("./tests/e2e_tests/workflow-sample-npm.yaml")
         browser.get_by_role("button", name="Upload")
         browser.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
         browser.get_by_role("tab", name="YAML Definition").click()
@@ -187,7 +187,7 @@ def test_yaml_editor_yaml_valid(browser: Page):
         browser.get_by_role("link", name="Workflows").click()
         browser.get_by_role("button", name="Upload Workflows").click()
         file_input = browser.locator("#workflowFile")
-        file_input.set_input_files("./tests/e2e_tests/workflow-sample.yaml")
+        file_input.set_input_files("./tests/e2e_tests/workflow-valid-sample.yaml")
         browser.get_by_role("button", name="Upload")
         browser.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
         browser.get_by_role("tab", name="YAML Definition").click()

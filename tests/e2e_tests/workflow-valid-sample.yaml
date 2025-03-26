@@ -7,10 +7,10 @@ workflow:
         with:
           message: "{{alert.payload.summary}}"
   consts: {}
-  description: playwright_test_add_upload_workflow_with_alert_trigger
+  description: playwright_test_test_yaml_editor_yaml_valid
   disabled: false
-  id: test_add_upload_workflow_with_alert_trigger
-  name: test_add_upload_workflow_with_alert_trigger
+  id: test_yaml_editor_yaml_valid
+  name: test_yaml_editor_yaml_valid
   owners: []
   services: []
   steps:

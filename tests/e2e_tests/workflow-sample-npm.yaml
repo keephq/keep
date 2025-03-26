@@ -7,10 +7,10 @@ workflow:
         with:
           message: "{{alert.payload.summary}}"
   consts: {}
-  description: playwright_test_add_upload_workflow_with_alert_trigger
+  description: playwright_test_monaco_editor_npm
   disabled: false
-  id: test_add_upload_workflow_with_alert_trigger
-  name: test_add_upload_workflow_with_alert_trigger
+  id: test_monaco_editor_npm
+  name: test_monaco_editor_npm
   owners: []
   services: []
   steps:
