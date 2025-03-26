@@ -46,6 +46,3 @@ if REDIS:
     KEEP_ARQ_TASK_POOL = os.environ.get("KEEP_ARQ_TASK_POOL", KEEP_ARQ_TASK_POOL_ALL)
 else:
     KEEP_ARQ_TASK_POOL = os.environ.get("KEEP_ARQ_TASK_POOL", None)
-
-if KEEP_ARQ_TASK_POOL != None and not REDIS:
-    raise Exception("Starting the ARQ worker, but REDIS is not enabled.")
