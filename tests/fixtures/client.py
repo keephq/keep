@@ -11,43 +11,55 @@ from keep.api.models.db.tenant import TenantApiKey
 
 @pytest.fixture
 def test_app(monkeypatch, request):
-    monkeypatch.setenv("KEEP_USE_LIMITER", "false")
-    # Check if request.param is a dict or a string
-    if isinstance(request.param, dict):
-        # Set environment variables based on the provided dictionary
-        for key, value in request.param.items():
-            monkeypatch.setenv(key, str(value))
-    else:
-        # Old behavior for string parameters
-        auth_type = request.param
-        monkeypatch.setenv("AUTH_TYPE", auth_type)
-        monkeypatch.setenv("KEEP_JWT_SECRET", "somesecret")
+    # Store original setup_logging function
+    import keep.api.logging
 
-        if auth_type == "MULTI_TENANT":
-            monkeypatch.setenv("AUTH0_DOMAIN", "https://auth0domain.com")
+    original_setup_logging = keep.api.logging.setup_logging
 
-    # Clear and reload modules to ensure environment changes are reflected
-    for module in list(sys.modules):
-        if module.startswith("keep.api.routes"):
-            del sys.modules[module]
+    # Replace with no-op function to prevent threading issues
+    keep.api.logging.setup_logging = lambda: None
 
-        # this is a fucking bug in db patching ffs it ruined my saturday
-        elif module.startswith("keep.providers.providers_service"):
-            importlib.reload(sys.modules[module])
+    try:
+        monkeypatch.setenv("KEEP_USE_LIMITER", "false")
+        # Check if request.param is a dict or a string
+        if isinstance(request.param, dict):
+            # Set environment variables based on the provided dictionary
+            for key, value in request.param.items():
+                monkeypatch.setenv(key, str(value))
+        else:
+            # Old behavior for string parameters
+            auth_type = request.param
+            monkeypatch.setenv("AUTH_TYPE", auth_type)
+            monkeypatch.setenv("KEEP_JWT_SECRET", "somesecret")
 
-    if "keep.api.api" in sys.modules:
-        importlib.reload(sys.modules["keep.api.api"])
+            if auth_type == "MULTI_TENANT":
+                monkeypatch.setenv("AUTH0_DOMAIN", "https://auth0domain.com")
 
-    if "keep.api.config" in sys.modules:
-        importlib.reload(sys.modules["keep.api.config"])
+        # Clear and reload modules to ensure environment changes are reflected
+        for module in list(sys.modules):
+            if module.startswith("keep.api.routes"):
+                del sys.modules[module]
 
-    # Import and return the app instance
-    from keep.api.api import get_app
-    from keep.api.config import provision_resources
+            # Bug in db patching
+            elif module.startswith("keep.providers.providers_service"):
+                importlib.reload(sys.modules[module])
 
-    provision_resources()
-    app = get_app()
-    return app
+        if "keep.api.api" in sys.modules:
+            importlib.reload(sys.modules["keep.api.api"])
+
+        if "keep.api.config" in sys.modules:
+            importlib.reload(sys.modules["keep.api.config"])
+
+        # Import and return the app instance
+        from keep.api.api import get_app
+        from keep.api.config import provision_resources
+
+        provision_resources()
+        app = get_app()
+        return app
+    finally:
+        # Restore the original setup_logging function
+        keep.api.logging.setup_logging = original_setup_logging
 
 
 # Fixture for TestClient using the test_app fixture
