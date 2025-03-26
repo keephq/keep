@@ -84,31 +84,13 @@ export default function CreateOrEditMapping({
       setIsMultiLevel(editRule.is_multi_level ?? false);
       setNewPropertyName(editRule.new_property_name ?? "");
       setPrefixToRemove(editRule.prefix_to_remove ?? "");
-      setParsedData(editRule.rows);
+      setParsedData(
+        editRule.type === "topology" ? topologyData! : editRule.rows
+      );
     }
-  }, [editRule]);
-
+  }, [editRule, topologyData]);
   /** This is everything related with the uploaded CSV file */
   const [parsedData, setParsedData] = useState<any[] | null>(null);
-  const attributes = useMemo(() => {
-    if (parsedData) {
-      return Object.keys(parsedData[0]);
-    }
-
-    // If we are in the editMode then we need to generate attributes i.e. [selectedAttributes + matchers]
-    if (editRule) {
-      return Object.keys(editRule.rows[0]);
-    }
-    return [];
-  }, [parsedData, editRule]);
-  const { readString } = usePapaParse();
-
-  const handleFileReset = () => {
-    if (inputFile.current) {
-      inputFile.current.value = "";
-    }
-    setCsvText("");
-  };
 
   const updateMappingType = (index: number) => {
     setTabIndex(index);
@@ -121,6 +103,27 @@ export default function CreateOrEditMapping({
       setMappingType("topology");
       setAttributeGroups([["service"]]);
     }
+  };
+
+  const attributes = useMemo(() => {
+    if (parsedData) {
+      return Object.keys(parsedData[0]);
+    }
+
+    // If we are in the editMode then we need to generate attributes i.e. [selectedAttributes + matchers]
+    if (editRule) {
+      return Object.keys(editRule.rows?.[0] ?? {});
+    }
+
+    return [];
+  }, [parsedData, editRule]);
+  const { readString } = usePapaParse();
+
+  const handleFileReset = () => {
+    if (inputFile.current) {
+      inputFile.current.value = "";
+    }
+    setCsvText("");
   };
 
   const readFile = (event: ChangeEvent<HTMLInputElement>) => {
@@ -232,7 +235,7 @@ export default function CreateOrEditMapping({
   };
 
   useEffect(() => {
-    if (mappingType === "topology") {
+    if (mappingType === "topology" && !editMode) {
       setAttributeGroups([["service"]]);
     }
   }, [mappingType]);
@@ -396,7 +399,7 @@ export default function CreateOrEditMapping({
         </TabGroup>
       </div>
 
-      {parsedData && (
+      {parsedData && mappingType !== "topology" && (
         <div className="mt-4">
           <Badge color="green">CSV Data Loaded Successfully</Badge>
           <Text className="text-xs text-gray-500 mt-1">
@@ -465,7 +468,6 @@ export default function CreateOrEditMapping({
                   isMultiLevel ? "Select Single Attribute" : "Select Attributes"
                 }
                 className="max-w-96"
-                disabled={mappingType === "topology"}
               >
                 {attributes?.map((attribute) => (
                   <MultiSelectItem key={attribute} value={attribute}>
