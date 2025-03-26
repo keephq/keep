@@ -173,8 +173,8 @@ def search_provider_mentions_in_examples(provider) -> dict[(str, str)]:
             if provider not in provider_mentions:
                 provider_mentions[file_name] = []
             provider_mentions[file_name].append(example)
-            
-    #ordered dict is needed for repeatability
+
+    # ordered dict is needed for repeatability
     provider_mentions = dict(sorted(provider_mentions.items()))
 
     return provider_mentions
@@ -221,7 +221,7 @@ steps:
     - name: Query {{ provider_name }}
       provider: {{ provider_name }}
       config: {% raw %}"{{ provider.my_provider_name }}"{% endraw %}
-      with:
+      {% if provider_data["_query"].items()|length > 0 %}with:{% endif %}
         {% for arg, description in provider_data["_query"].items() -%}
         {% if arg == "**kwargs" -%}# {{ description }}{% else -%}
         {{ arg }}: {value}  {% if description != "" %}# {{ description }}{% endif %}{% endif %}{% if not loop.last %}
@@ -235,7 +235,7 @@ actions:
     - name: Query {{ provider_name }}
       provider: {{ provider_name }}
       config: {% raw %}"{{ provider.my_provider_name }}"{% endraw %}
-      with:
+      {% if provider_data["_notify"].items()|length > 0%}with:{% endif %}
         {% for arg, description in provider_data["_notify"].items() -%}
         {% if arg == "**kwargs" -%}# {{ description }}{% else -%}
         {{ arg }}: {value}  {% if description != "" %}# {{ description }}{% endif %}{% endif %}{% if not loop.last %}
@@ -251,8 +251,10 @@ Check the following workflow example{% if example_workflows.items()|length > 1 %
 - [{{ example_name }}](https://github.com/keephq/keep/blob/main/{{ example }})
 {% endfor -%}
 {% endfor -%}
-{% else %}
+{% else -%}
+{% if "_notify" in provider_data or "_query" in provider_data -%}
 If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).
+{% endif -%}
 {% endif -%}
 """
 
