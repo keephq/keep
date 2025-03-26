@@ -10,6 +10,7 @@ from dotenv import find_dotenv, load_dotenv
 from gunicorn.workers.base import Worker
 
 import keep.api.logging
+import keep.api.observability
 from keep.api.arq_worker import get_arq_worker, safe_run_worker
 from keep.api.consts import (
     KEEP_ARQ_QUEUE_BASIC,
