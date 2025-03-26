@@ -8,7 +8,8 @@ from keep.api.core.cel_to_sql.properties_metadata import (
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 class CelToMySqlProvider(BaseCelToSqlProvider):
-    def json_extract_as_text(self, column: str, path: str) -> str:
+
+    def json_extract_as_text(self, column: str, path: list[str]) -> str:
         return f"JSON_UNQUOTE({self._json_extract(column, path)})"
 
     def cast(self, expression_to_cast: str, to_type, force=False):
@@ -39,8 +40,9 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         else:
             return expression_to_cast
 
-    def _json_extract(self, column: str, path: str) -> str:
-        return f"JSON_EXTRACT({column}, '$.{path}')"
+    def _json_extract(self, column: str, path: list[str]) -> str:
+        property_path_str = ".".join([f"{item}" for item in path])
+        return f"JSON_EXTRACT({column}, '$.{property_path_str}')"
 
     def _get_order_by_field(self, field_mapping, data_type: type):
         if isinstance(field_mapping, JsonFieldMapping):

@@ -222,14 +222,15 @@ class PropertyAccessNode(MemberAccessNode):
 
         return member_access_node is not None
 
-    def get_property_path(self) -> str:
-        if isinstance(self.value, IndexAccessNode):
-            return f"{self.member_name}{self.value.get_property_path()}"
+    def get_property_path(self) -> list[str]:
+        if isinstance(self.value, PropertyAccessNode) or isinstance(
+            self.value, IndexAccessNode
+        ):
+            return [self.member_name] + (
+                self.value.get_property_path() if self.value else []
+            )
 
-        if isinstance(self.value, PropertyAccessNode):
-            return f"{self.member_name}.{self.value.get_property_path()}"
-
-        return self.member_name
+        return [self.member_name]
 
     def get_method_access_node(self) -> MethodAccessNode:
         if isinstance(self.value, MethodAccessNode):
@@ -265,11 +266,10 @@ class IndexAccessNode(PropertyAccessNode):
     def __init__(self, member_name: str, value: Any):
         super().__init__(member_name, value)
 
-    def get_property_path(self) -> str:
-        if isinstance(self.value, MethodAccessNode):
-            return f"[{str(self.member_name)}].{self.value.get_property_path()}"
-        
-        return f"[{str(self.member_name)}]"
-
     def __str__(self):
         return f"[{self.member_name}]"
+
+    def get_property_path(self) -> list[str]:
+        return [self.member_name] + (
+            self.value.get_property_path() if self.value else []
+        )

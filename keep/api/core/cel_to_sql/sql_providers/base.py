@@ -204,7 +204,7 @@ class BaseCelToSqlProvider:
             f"{type(abstract_node).__name__} node type is not supported yet"
         )
 
-    def json_extract_as_text(self, column: str, path: str) -> str:
+    def json_extract_as_text(self, column: str, path: list[str]) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
 
     def coalesce(self, args: List[str]) -> str:
@@ -380,7 +380,9 @@ class BaseCelToSqlProvider:
         if (isinstance(property_access_node, JsonPropertyAccessNode)):
             return self.json_extract_as_text(property_access_node.json_property_name, property_access_node.property_to_extract)
 
-        return property_access_node.get_property_path()
+        return ".".join(
+            [f"{item}" for item in property_access_node.get_property_path()]
+        )
 
     def _visit_index_property(self, property_path: str) -> str:
         raise NotImplementedError("Index property is not supported yet")
