@@ -136,9 +136,6 @@ export const CorrelationSidebarBody = ({
           >
             <Icon color="gray" icon={IoMdClose} size="sm" />
           </Button>
-          <br />
-          NOTE: Rules will be applied only to new alerts. Historical data will
-          be ignored.
         </Callout>
       )}
       {isNoteShown && (

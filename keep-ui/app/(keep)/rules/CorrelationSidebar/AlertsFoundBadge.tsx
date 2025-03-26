@@ -31,12 +31,18 @@ export const AlertsFoundBadge = ({
     );
   }
 
+  function getNotFoundText() {
+    if (role === "ruleCondition") {
+      return "No alerts were found with this condition. Please try something else.";
+    }
+
+    return "No alerts were found with these correlation rule conditions. Please try something else.";
+  }
+
   if (alertsFound.length === 0) {
     return (
       <Badge className="mt-3 w-full" color="gray">
-        {isLoading
-          ? "Getting your alerts..."
-          : "No alerts were found with this condition. Please try something else."}
+        {isLoading ? "Getting your alerts..." : getNotFoundText()}
       </Badge>
     );
   }
