@@ -53,8 +53,8 @@ workflow:
   steps:
     - name: clickhouse-step
       provider:
-        config: "{{ providers.clickhouse }}"
         type: clickhouse
+        config: "{{ providers.clickhouse }}"
         with:
           query: "SELECT * FROM logs_table ORDER BY timestamp DESC LIMIT 1;"
           single_row: "True"
@@ -63,8 +63,8 @@ workflow:
     - name: ntfy-action
       if: "'{{ steps.clickhouse-step.results.level }}' == 'ERROR'"
       provider:
-        config: "{{ providers.ntfy }}"
         type: ntfy
+        config: "{{ providers.ntfy }}"
         with:
           message: "Error in clickhouse logs_table: {{ steps.clickhouse-step.results.level }}"
           topic: clickhouse
@@ -72,8 +72,8 @@ workflow:
     - name: slack-action
       if: "'{{ steps.clickhouse-step.results.level }}' == 'ERROR'"
       provider:
-        config: "{{ providers.slack }}"
         type: slack
+        config: "{{ providers.slack }}"
         with:
           message: "Error in clickhouse logs_table: {{ steps.clickhouse-step.results.level }}"
 `;
@@ -89,8 +89,8 @@ workflow:
   steps:
     - name: clickhouse-observability-urls
       provider:
-        config: "{{ providers.clickhouse }}"
         type: clickhouse
+        config: "{{ providers.clickhouse }}"
         with:
           query: |
             SELECT Url, Status FROM "observability"."Urls"

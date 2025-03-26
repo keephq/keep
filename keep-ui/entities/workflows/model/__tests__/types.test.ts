@@ -4,7 +4,7 @@ import {
   V2StepForeachSchema,
   V2StepStepSchema,
   V2StepConditionAssertSchema,
-} from "../types";
+} from "@/entities/workflows/model/schema";
 import {
   conditionThresholdTemplate,
   foreachTemplate,
@@ -221,14 +221,15 @@ describe("V2StepStepSchema", () => {
           enrich_incident: [{ key: "incident_key", value: "incident_value" }],
           body: {
             key: "value",
-          }
+          },
         },
       },
     };
 
-    expect(V2StepStepSchema.parse(bodyStep).properties.with?.body).toEqual({key: "value"});
+    expect(V2StepStepSchema.parse(bodyStep).properties.with?.body).toEqual({
+      key: "value",
+    });
   });
-
 });
 
 describe("V2StepConditionAssertSchema", () => {
