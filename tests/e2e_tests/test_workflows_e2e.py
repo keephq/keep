@@ -141,6 +141,7 @@ def test_add_upload_workflow_with_alert_trigger(browser: Page):
         browser.get_by_role("button", name="Upload")
         # new behavior: is redirecting to the detail page of the workflow, so we need to go back to the list page
         browser.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        browser.wait_for_timeout(500)
         trigger_alert("prometheus")
         browser.wait_for_timeout(2000)
         browser.goto("http://localhost:3000/workflows")
