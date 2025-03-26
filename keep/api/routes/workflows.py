@@ -324,7 +324,7 @@ def get_event_from_body(body: dict, tenant_id: str):
     event_class = (
         AlertDto if body.get("type", "alert") == "alert" else IncidentDto
     )
-
+    
     # Handle UI triggered events
     event_body["id"] = event_body.get("fingerprint", "manual-run")
     event_body["name"] = event_body.get("fingerprint", "manual-run")
@@ -508,9 +508,7 @@ async def run_workflow_from_definition(
     )
 
 
-async def __get_workflow_raw_data(request: Request | None, file: UploadFile | None) -> dict:
-    if not request and not file:
-        raise HTTPException(status_code=400, detail="Nor file nor request provided")
+async def __get_workflow_raw_data(request: Request, file: UploadFile | None) -> dict:
     try:
         # we support both File upload (from frontend) or raw yaml (e.g. curl)
         if file:
@@ -542,17 +540,17 @@ async def create_workflow(
 ) -> WorkflowCreateOrUpdateDTO:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
-    workflow_raw_data = await __get_workflow_raw_data(request=None, file=file)
+    workflow = await __get_workflow_raw_data(request=None, file=file)
     workflowstore = WorkflowStore()
     # Create the workflow
     try:
         workflow = workflowstore.create_workflow(
-            tenant_id=tenant_id, created_by=created_by, workflow=workflow_raw_data
+            tenant_id=tenant_id, created_by=created_by, workflow=workflow
         )
     except Exception:
         logger.exception(
             "Failed to create workflow",
-            extra={"tenant_id": tenant_id, "workflow_raw_data": workflow_raw_data},
+            extra={"tenant_id": tenant_id, "workflow": workflow},
         )
         raise HTTPException(
             status_code=400,
@@ -608,17 +606,17 @@ async def create_workflow_from_body(
 ) -> WorkflowCreateOrUpdateDTO:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
-    workflow_raw_data = await __get_workflow_raw_data(request, None)
+    workflow = await __get_workflow_raw_data(request, None)
     workflowstore = WorkflowStore()
     # Create the workflow
     try:
         workflow = workflowstore.create_workflow(
-            tenant_id=tenant_id, created_by=created_by, workflow=workflow_raw_data
+            tenant_id=tenant_id, created_by=created_by, workflow=workflow
         )
     except Exception:
         logger.exception(
             "Failed to create workflow",
-            extra={"tenant_id": tenant_id, "workflow_raw_data": workflow_raw_data},
+            extra={"tenant_id": tenant_id, "workflow": workflow},
         )
         raise HTTPException(
             status_code=400,
@@ -712,18 +710,18 @@ async def update_workflow_by_id(
     if workflow_from_db.provisioned:
         raise HTTPException(403, detail="Cannot update a provisioned workflow")
 
-    workflow_raw_data = await __get_workflow_raw_data(request, None)
+    workflow = await __get_workflow_raw_data(request, None)
     parser = Parser()
     workflow_interval = parser.parse_interval(workflow)
     # In case the workflow name changed to empty string, keep the old name
-    if workflow_raw_data.get("name") != "":
-        workflow_from_db.name = workflow_raw_data.get("name")
+    if workflow.get("name") != "":
+        workflow_from_db.name = workflow.get("name")
     else:
-        workflow_raw_data["name"] = workflow_from_db.name
-    workflow_from_db.description = workflow_raw_data.get("description")
+        workflow["name"] = workflow_from_db.name
+    workflow_from_db.description = workflow.get("description")
     workflow_from_db.interval = workflow_interval
-    workflow_from_db.is_disabled = workflow_raw_data.get("disabled", False)
-    workflow_from_db.workflow_raw = cyaml.dump(workflow_raw_data, width=99999)
+    workflow_from_db.is_disabled = workflow.get("disabled", False)
+    workflow_from_db.workflow_raw = cyaml.dump(workflow, width=99999)
     workflow_from_db.last_updated = datetime.datetime.now()
     workflow_from_db.revision += 1
     session.add(workflow_from_db)
@@ -916,7 +914,7 @@ def delete_workflow_by_id(
     workflowstore = WorkflowStore()
     workflowstore.delete_workflow(workflow_id=workflow_id, tenant_id=tenant_id)
     return {"workflow_id": workflow_id, "status": "deleted"}
-
+    
 
 @router.get("/runs/{workflow_execution_id}")
 @router.get(
