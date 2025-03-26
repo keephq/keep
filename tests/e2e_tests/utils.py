@@ -4,6 +4,7 @@ import sys
 
 import requests
 from playwright.sync_api import Page, expect
+from datetime import datetime
 
 from keep.providers.providers_factory import ProvidersFactory
 
@@ -277,3 +278,15 @@ def get_current_test_name():
         print("THIS SHOULD NEVER HAPPEN")
         current_test_name += sys._getframe().f_code.co_name
     return current_test_name
+
+# todo: replace with `setup_page_logging` fixture
+def setup_console_listener(page, log_entries):
+    """Set up console listener to capture logs."""
+    page.on(
+        "console",
+        lambda msg: (
+            log_entries.append(
+                f"{datetime.now()}: {msg.text}, location: {msg.location}"
+            )
+        ),
+    )

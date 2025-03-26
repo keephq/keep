@@ -175,6 +175,7 @@ class WorkflowManager:
                     )
                     continue
                 workflow = self._get_workflow_from_store(tenant_id, workflow_model)
+                # FIX: this will fail silently if error in the workflow provider configuration
                 if workflow is None:
                     continue
 

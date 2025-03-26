@@ -14,13 +14,12 @@ workflow:
   owners: []
   services: []
   steps:
-    - name: clickhouse-step
+    - name: bash-echo-enrich
       provider:
-        config: "{{ providers.clickhouse }}"
-        type: clickhouse
+        config: "{{ providers.default-bash }}"
+        type: bash
         with:
-          query: "SELECT * FROM logs_table ORDER BY timestamp DESC LIMIT 1; -- this value is not quoted"
-          single_row: "True"
+          command: "echo 'Hello, world! Enriching alert and incident with customer_name: john_doe'"
           enrich_alert:
             - key: customer_name
               value: john_doe
