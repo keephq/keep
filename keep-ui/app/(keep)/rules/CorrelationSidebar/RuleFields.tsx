@@ -327,7 +327,11 @@ export const RuleFields = ({
           </Button>
         </div>
 
-        <AlertsFoundBadge alertsFound={alertsFound} isLoading={isLoading} />
+        <AlertsFoundBadge
+          alertsFound={alertsFound}
+          isLoading={isLoading}
+          role={"ruleCondition"}
+        />
       </div>
     </div>
   );

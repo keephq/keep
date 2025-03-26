@@ -5,14 +5,32 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 type AlertsFoundBadgeProps = {
   alertsFound: AlertDto[];
   isLoading: boolean;
-  vertical?: boolean;
+  role: "ruleCondition" | "correlationRuleConditions";
 };
 
 export const AlertsFoundBadge = ({
   alertsFound,
   isLoading,
-  vertical = false,
+  role,
 }: AlertsFoundBadgeProps) => {
+  function renderFoundAlertsText() {
+    if (role === "ruleCondition") {
+      return (
+        <>
+          {alertsFound.length} alert{alertsFound.length > 1 ? "s" : ""} were
+          found matching this condition
+        </>
+      );
+    }
+
+    return (
+      <>
+        {alertsFound.length} alert{alertsFound.length > 1 ? "s" : ""} were found
+        matching correlation rule conditions
+      </>
+    );
+  }
+
   if (alertsFound.length === 0) {
     return (
       <Badge className="mt-3 w-full" color="gray">
@@ -30,14 +48,10 @@ export const AlertsFoundBadge = ({
 
   return (
     <Badge className="mt-3 w-full" color="teal">
-      <span
-        className={`flex items-center justify-center flex-wrap ${
-          vertical ? "mt-2 mb-2 gap-y-3 gap-x-2" : ""
-        }`}
-      >
+      <span className={"flex items-center justify-center flex-wrap"}>
         {images.map((source, index) => (
           <DynamicImageProviderIcon
-            className={`inline-block ${index == 0 || vertical ? "" : "-ml-2"}`}
+            className={"inline-block -ml-2"}
             key={source}
             alt={source}
             height={24}
@@ -46,11 +60,7 @@ export const AlertsFoundBadge = ({
             src={`/icons/${source}-icon.png`}
           />
         ))}
-        {vertical && <span className="basis-full"></span>}
-        <span className="ml-4">
-          {alertsFound.length} alert{alertsFound.length > 1 ? "s" : ""} were
-          found{vertical ? <br /> : " "}matching this condition
-        </span>
+        <span className="ml-4">{renderFoundAlertsText()}</span>
       </span>
     </Badge>
   );
