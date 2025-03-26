@@ -49,7 +49,7 @@ export const AlertsFoundBadge = ({
         {vertical && <span className="basis-full"></span>}
         <span className="ml-4">
           {alertsFound.length} alert{alertsFound.length > 1 ? "s" : ""} were
-          found{vertical && <br />}matching this condition
+          found{vertical ? <br /> : " "}matching this condition
         </span>
       </span>
     </Badge>
