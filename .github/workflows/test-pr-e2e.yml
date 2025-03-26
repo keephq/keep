@@ -583,7 +583,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4.4.3
         with:
-          name: test-artifacts-my-artifacts-${{ matrix.db_type }}
+          name: test-artifacts-db-${{ matrix.db_type }}-redis-${{ matrix.redis_enabled }}
           path: |
             playwright_dump_*.html
             playwright_dump_*.png
