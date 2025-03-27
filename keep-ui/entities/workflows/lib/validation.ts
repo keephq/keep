@@ -1,6 +1,6 @@
 import { Provider } from "@/shared/api/providers";
-import { Definition, V2Step } from "./types";
-import { getWithParams } from "../lib/parser";
+import { Definition, V2Step } from "../model/types";
+import { getWithParams } from "./parser";
 
 export type ValidationResult = [string, string];
 export type ValidationError = [string, "error" | "warning"];

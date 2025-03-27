@@ -53,7 +53,9 @@ def build_facets_data_query(
     union_queries = []
 
     for facet in facets:
-        metadata = properties_metadata.get_property_metadata(facet.property_path)
+        metadata = properties_metadata.get_property_metadata_for_str(
+            facet.property_path
+        )
         facet_value = []
 
         for item in metadata.field_mappings:
@@ -125,7 +127,7 @@ def get_facet_options(
     valid_facets = []
 
     for facet in facets:
-        if properties_metadata.get_property_metadata(facet.property_path):
+        if properties_metadata.get_property_metadata_for_str(facet.property_path):
             valid_facets.append(facet)
             continue
 
@@ -161,7 +163,7 @@ def get_facet_options(
                 grouped_by_id_dict[facet_data.facet_id].append(facet_data)
 
             for facet in facets:
-                property_mapping = properties_metadata.get_property_metadata(
+                property_mapping = properties_metadata.get_property_metadata_for_str(
                     facet.property_path
                 )
                 result_dict.setdefault(facet.id, [])

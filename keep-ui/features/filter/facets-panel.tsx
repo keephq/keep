@@ -113,7 +113,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   const facetsConfigIdBased = useMemo(() => {
     const result: FacetsConfig = {};
 
-    if (facets) {
+    if (facets && Array.isArray(facets)) {
       facets.forEach((facet) => {
         const facetConfig = facetsConfig?.[facet.name];
         const sortCallback =
@@ -177,6 +177,10 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
 
   useEffect(() => {
     const facetOptionQueries: FacetOptionsQueries = {};
+
+    if (!facets || !Array.isArray(facets)) {
+      return;
+    }
 
     facets.forEach((facet) => {
       const otherFacets = facets.filter((f) => f.id !== facet.id);

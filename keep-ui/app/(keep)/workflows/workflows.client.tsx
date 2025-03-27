@@ -8,22 +8,23 @@ import {
   useRef,
   useState,
 } from "react";
-import { Subtitle, Button } from "@tremor/react";
-import {
-  ArrowUpOnSquareStackIcon,
-  PlusCircleIcon,
-} from "@heroicons/react/24/outline";
+import { Button } from "@tremor/react";
+import { ArrowUpOnSquareStackIcon } from "@heroicons/react/24/outline";
 import { EmptyStateCard, KeepLoader, PageTitle } from "@/shared/ui";
 import WorkflowsEmptyState from "./noworkflows";
 import WorkflowTile from "./workflow-tile";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
-import { WorkflowTemplates } from "./mockworkflows";
-import { useApi } from "@/shared/lib/hooks/useApi";
+import { WorkflowTemplates } from "./workflows-templates";
 import { Input, ErrorComponent } from "@/shared/ui";
 import { Textarea } from "@/components/ui";
-import { useWorkflowsV2, WorkflowsQuery } from "utils/hooks/useWorkflowsV2";
+import {
+  DEFAULT_WORKFLOWS_PAGINATION,
+  DEFAULT_WORKFLOWS_QUERY,
+  useWorkflowsV2,
+  WorkflowsQuery,
+} from "@/entities/workflows/model/useWorkflowsV2";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { PageSubtitle } from "@/shared/ui/PageSubtitle";
 import { PlusIcon } from "@heroicons/react/20/solid";
@@ -42,6 +43,7 @@ import { Pagination, SearchInput } from "@/features/filter";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import { InitialFacetsData } from "@/features/filter/api";
 import { v4 as uuidV4 } from "uuid";
+import { PaginationState } from "@/features/filter/pagination";
 
 const EXAMPLE_WORKFLOW_DEFINITIONS = {
   slack: `
@@ -89,7 +91,7 @@ const AssigneeLabel = ({ email }: { email: string }) => {
   return user ? user.name : email;
 };
 
-export default function WorkflowsPage({
+export function WorkflowsPage({
   initialFacetsData,
 }: {
   initialFacetsData?: InitialFacetsData;
@@ -103,12 +105,11 @@ export default function WorkflowsPage({
   );
   const [filterCel, setFilterCel] = useState<string | null>(null);
   const [searchedValue, setSearchedValue] = useState<string | null>(null);
-  const [paginationState, setPaginationState] = useState<{
-    offset: number;
-    limit: number;
-  } | null>(null);
-  const [workflowsQuery, setWorkflowsQuery] = useState<WorkflowsQuery | null>(
-    null
+  const [paginationState, setPaginationState] = useState<PaginationState>(
+    DEFAULT_WORKFLOWS_PAGINATION
+  );
+  const [workflowsQuery, setWorkflowsQuery] = useState<WorkflowsQuery>(
+    DEFAULT_WORKFLOWS_QUERY
   );
 
   const searchCel = useMemo(() => {
@@ -120,16 +121,12 @@ export default function WorkflowsPage({
   }, [searchedValue]);
 
   useEffect(() => {
-    if (!paginationState) {
-      return;
-    }
-
-    const celList = [searchCel, filterCel].filter((cel) => cel);
+    const celList = [searchCel, filterCel].filter((cel) => !!cel);
     const cel = celList.join(" && ");
     const query: WorkflowsQuery = {
       cel,
-      limit: paginationState?.limit,
-      offset: paginationState?.offset,
+      limit: paginationState.limit,
+      offset: paginationState.offset,
       sortBy: "created_at",
       sortDir: "desc",
     };
@@ -245,7 +242,7 @@ export default function WorkflowsPage({
     return (
       <>
         <div className="flex items-center h-full w-full">
-          <div className="flex flex-col justify-center items-center w-full p-4">
+          <div className="flex flex-col justify-center items-center w-full">
             <EmptyStateCard
               title="No workflows to display matching your filter"
               icon={FunnelIcon}
@@ -268,7 +265,7 @@ export default function WorkflowsPage({
     return (
       <>
         <div className="flex items-center h-full w-full">
-          <div className="flex flex-col justify-center items-center w-full p-4">
+          <div className="flex flex-col justify-center items-center w-full">
             <EmptyStateCard
               title="No workflows to display matching your search"
               icon={MagnifyingGlassIcon}
@@ -289,13 +286,14 @@ export default function WorkflowsPage({
 
   function renderData() {
     return (
-      <>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
-          {filteredWorkflows?.map((workflow) => (
-            <WorkflowTile key={workflow.id} workflow={workflow} />
-          ))}
-        </div>
-      </>
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4"
+        data-testid="workflow-list"
+      >
+        {filteredWorkflows?.map((workflow) => (
+          <WorkflowTile key={workflow.id} workflow={workflow} />
+        ))}
+      </div>
     );
   }
 
@@ -356,21 +354,15 @@ export default function WorkflowsPage({
 
   return (
     <>
-      <main className="flex flex-col gap-8">
+      <main className="flex flex-col gap-12">
         <div className="flex flex-col gap-6">
           <div className="flex justify-between items-end">
             <div>
-              <PageTitle>My Workflows</PageTitle>
+              <PageTitle>Workflows</PageTitle>
               <PageSubtitle>
-                Automate your alert management with workflows
+                Automate alert management with workflows
               </PageSubtitle>
             </div>
-            <SearchInput
-              className="flex-1 mx-4"
-              placeholder="Search workflows"
-              value={searchedValue as string}
-              onValueChange={setSearchedValue}
-            />
             <div className="flex gap-2">
               <Button
                 color="orange"
@@ -398,39 +390,50 @@ export default function WorkflowsPage({
           {isEmptyState ? (
             <WorkflowsEmptyState />
           ) : (
-            <div className="flex gap-4">
-              <FacetsPanelServerSide
-                entityName={"workflows"}
-                facetsConfig={facetsConfig}
-                facetOptionsCel={searchCel}
-                usePropertyPathsSuggestions={true}
-                clearFiltersToken={clearFiltersToken}
-                initialFacetsData={initialFacetsData}
-                onCelChange={(cel) => setFilterCel(cel)}
+            <div className="flex flex-col gap-6">
+              <SearchInput
+                className="flex-1"
+                placeholder="Search workflows"
+                value={searchedValue as string}
+                onValueChange={setSearchedValue}
               />
+              <div className="flex gap-6">
+                <FacetsPanelServerSide
+                  entityName={"workflows"}
+                  facetsConfig={facetsConfig}
+                  facetOptionsCel={searchCel}
+                  usePropertyPathsSuggestions={true}
+                  clearFiltersToken={clearFiltersToken}
+                  initialFacetsData={initialFacetsData}
+                  onCelChange={(cel) => setFilterCel(cel)}
+                />
 
-              <div className="flex flex-col flex-1 relative">
-                {isFirstLoading && (
-                  <div className="flex items-center justify-center h-96 w-full">
-                    <KeepLoader includeMinHeight={false} />
+                <div className="flex flex-col flex-1 relative">
+                  {isFirstLoading && (
+                    <div className="flex items-center justify-center h-96 w-full">
+                      <KeepLoader
+                        includeMinHeight={false}
+                        data-testid="keep-loader"
+                      />
+                    </div>
+                  )}
+                  {!isFirstLoading && (
+                    <>
+                      {showFilterEmptyState && renderFilterEmptyState()}
+                      {showSearchEmptyState && renderSearchEmptyState()}
+                      {!isTableEmpty && renderData()}
+                    </>
+                  )}
+                  <div className={`mt-4 ${isFirstLoading ? "hidden" : ""}`}>
+                    <Pagination
+                      totalCount={filteredWorkflowsCount ?? 0}
+                      isRefreshAllowed={false}
+                      isRefreshing={false}
+                      pageSizeOptions={[12, 24, 48]}
+                      onRefresh={() => {}}
+                      onStateChange={setPaginationStateCallback}
+                    />
                   </div>
-                )}
-                {!isFirstLoading && (
-                  <>
-                    {showFilterEmptyState && renderFilterEmptyState()}
-                    {showSearchEmptyState && renderSearchEmptyState()}
-                    {!isTableEmpty && renderData()}
-                  </>
-                )}
-                <div className={`mt-4 ${isFirstLoading ? "hidden" : ""}`}>
-                  <Pagination
-                    totalCount={filteredWorkflowsCount}
-                    isRefreshAllowed={false}
-                    isRefreshing={false}
-                    pageSizeOptions={[12, 24, 48]}
-                    onRefresh={() => {}}
-                    onStateChange={setPaginationStateCallback}
-                  />
                 </div>
               </div>
             </div>

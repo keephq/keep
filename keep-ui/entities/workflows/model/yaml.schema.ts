@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { EnrichKeyValueSchema, IncidentEventEnum, WithSchema } from "./schema";
 import { Provider } from "@/shared/api/providers";
-import { checkProviderNeedsInstallation } from "./validation";
+import { checkProviderNeedsInstallation } from "../lib/validation";
 
 const mockProvider: Provider = {
   id: "mock",

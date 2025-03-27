@@ -22,10 +22,9 @@ import WorkflowSecrets from "./workflow-secrets";
 import { useConfig } from "utils/hooks/useConfig";
 import { AiOutlineSwap } from "react-icons/ai";
 import { ErrorComponent, TabNavigationLink } from "@/shared/ui";
-import { WorkflowYAMLEditor } from "@/shared/ui";
 import Skeleton from "react-loading-skeleton";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useWorkflowDetail } from "@/utils/hooks/useWorkflowDetail";
+import { useWorkflowDetail } from "@/entities/workflows/model/useWorkflowDetail";
 import { WorkflowYAMLEditorStandalone } from "@/shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditorStandalone";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 
@@ -128,14 +127,14 @@ export default function WorkflowDetailPage({
             )}
           </TabPanel>
           <TabPanel>
-            {!workflow ? (
+            {!workflow || !workflow.workflow_raw ? (
               <Skeleton className="w-full h-full" />
             ) : (
               <Card className="h-[calc(100vh-12rem)] p-0">
                 <WorkflowYAMLEditorStandalone
                   workflowId={workflow.id}
                   yamlString={getOrderedWorkflowYamlString(
-                    workflow.workflow_raw!
+                    workflow.workflow_raw
                   )}
                   data-testid="wf-detail-yaml-editor"
                 />

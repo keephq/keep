@@ -32,7 +32,7 @@ import { NodeDataStepSchema } from "@/entities/workflows/model/schema";
 import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
 import debounce from "lodash.debounce";
 import { TestRunStepForm } from "./StepTest";
-import { checkProviderNeedsInstallation } from "@/entities/workflows/model/validation";
+import { checkProviderNeedsInstallation } from "@/entities/workflows/lib/validation";
 import { EditorField } from "@/features/workflows/builder/ui/Editor/EditorField";
 import { useProviders } from "@/utils/hooks/useProviders";
 import ProviderForm from "@/app/(keep)/providers/provider-form";

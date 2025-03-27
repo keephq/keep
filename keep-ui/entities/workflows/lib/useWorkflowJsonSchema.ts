@@ -1,8 +1,8 @@
 import { useProviders } from "@/utils/hooks/useProviders";
-import { getYamlWorkflowDefinitionSchema } from "./yaml.schema";
+import { getYamlWorkflowDefinitionSchema } from "../model/yaml.schema";
 import { useMemo } from "react";
 import zodToJsonSchema, { PostProcessCallback } from "zod-to-json-schema";
-import { YamlWorkflowDefinitionSchema } from "./yaml.schema";
+import { YamlWorkflowDefinitionSchema } from "../model/yaml.schema";
 
 const makeRequiredEitherStepsOrActions: PostProcessCallback = (
   // The original output produced by the package itself:

@@ -32,11 +32,11 @@ export function MonacoEditorNPM(props: EditorProps) {
           <>
             This should not happen. Please contact us on Slack
             <a
-              href={config.KEEP_CONTACT_US_URL}
+              href={config?.KEEP_CONTACT_US_URL}
               target="_blank"
               rel="noopener noreferrer"
             >
-              {config.KEEP_CONTACT_US_URL}
+              {config?.KEEP_CONTACT_US_URL}
             </a>
           </>
         }
