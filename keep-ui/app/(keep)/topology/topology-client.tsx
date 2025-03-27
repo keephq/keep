@@ -30,6 +30,7 @@ export function TopologyPageClient({
   const api = useApi();
 
   const handlePullTopology = async (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     try {
       await pullTopology(api);
@@ -57,20 +58,16 @@ export function TopologyPageClient({
       <TabList className="mb-2">
         <Tab
           className="items-center"
-          icon={() => {
-            return (
-              <Icon
-                icon={ArrowPathIcon}
-                className="h-4 w-4 mr-2.5"
-                onClick={handlePullTopology}
-                tooltip="Pull latest topology"
-              />
-            );
-          }}
         >
           Topology Map
         </Tab>
         <Tab className="items-center">Applications</Tab>
+        <Tab
+          className="items-center"
+          icon={ArrowPathIcon}
+          onClick={handlePullTopology}
+        >
+          Pull from providers</Tab>
       </TabList>
       <TabPanels className="flex-1 flex flex-col">
         <TabPanel className="h-[calc(100vh-10rem)]">

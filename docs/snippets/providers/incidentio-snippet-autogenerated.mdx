@@ -1,0 +1,27 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **incidentIoApiKey**: IncidentIO's API_KEY (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query incidentio
+      provider: incidentio
+      config: "{{ provider.my_provider_name }}"
+      with:
+        incident_id: {value}  
+```
+
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).

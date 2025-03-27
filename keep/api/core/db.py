@@ -735,7 +735,7 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
                 extra={
                     "tenant_id": tenant_id,
                     "workflow_id": workflow_id,
-                    "execution_id": execution_id,
+                    "workflow_execution_id": execution_id,
                 },
             )
             raise ValueError("Execution not found")
@@ -745,11 +745,21 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         #   we need to fix it in the future, create a migration that increases the size of the error field
         #   and then we can remove the [:511] from here
         workflow_execution.error = error[:511] if error else None
-        workflow_execution.execution_time = (
+        execution_time = (
             datetime.utcnow() - workflow_execution.started
         ).total_seconds()
+        workflow_execution.execution_time = int(execution_time)
         # TODO: logs
         session.commit()
+        logger.info(
+            f"Finished workflow execution {execution_id} for workflow {workflow_id} with status {status}",
+            extra={
+                "tenant_id": tenant_id,
+                "workflow_id": workflow_id,
+                "workflow_execution_id": execution_id,
+                "execution_time": execution_time,
+            },
+        )
 
 
 def get_workflow_executions(
@@ -1588,7 +1598,10 @@ def get_last_alerts(
         for alert_data in alerts_with_start:
             alert = alert_data[0]
             startedAt = alert_data[1]
-            alert.event["startedAt"] = str(startedAt)
+            if not alert.event.get("startedAt"):
+                alert.event["startedAt"] = str(startedAt)
+            else:
+                alert.event["firstTimestamp"] = str(startedAt)
             alert.event["event_id"] = str(alert.id)
 
             if with_incidents:

@@ -47,12 +47,16 @@ jobs:
       - name: Install dependencies using poetry
         run: poetry install --no-interaction --no-root --with dev
   
-      - name: Validate docs for providers
+      - name: Validate docs/providers/overview.mdx
         run: |
           cd scripts;
           poetry run python ./docs_get_providers_list.py --validate    
 
-      - name: Install deps and validate docs
+      - name: Validate snippets for providers
+        run: |
+          poetry run python ./scripts/docs_render_provider_snippets.py --validate  
+
+      - name: Validate broken links and navigation
         run: |
           npm i -g mintlify;
           

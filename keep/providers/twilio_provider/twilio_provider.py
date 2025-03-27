@@ -118,7 +118,10 @@ class TwilioProvider(BaseProvider):
         self, message_body: str = "", to_phone_number: str = "", **kwargs: dict
     ):
         """
-        Notify alert with twilio SMS
+        Send an SMS notification using Twilio API.
+        Args:
+            message_body (str, optional): The content of the SMS message to be sent. Defaults to "".
+            to_phone_number (str, optional): The recipient's phone number. Defaults to "".
         """
         # extract the required params
         self.logger.debug("Notifying alert SMS via Twilio")

@@ -52,6 +52,7 @@ const notInstalledProvider: Provider = {
 const mockProvidersConfiguration = {
   providers: [mockProvider, notInstalledProvider],
   installedProviders: [mockProvider],
+  secrets: {},
 };
 
 describe("useWorkflowStore", () => {
