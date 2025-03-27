@@ -130,15 +130,14 @@ alert_field_configurations = [
     ),
 ]
 field_configurations_with_alert_prefix = []
-for item in alert_field_configurations.copy().reverse():
-    alert_field_configurations.insert(
-        0,
+for item in alert_field_configurations:
+    field_configurations_with_alert_prefix.append(
         FieldMappingConfiguration(
             map_from_pattern=f"alert.{item.map_from_pattern}",
             map_to=item.map_to,
             data_type=item.data_type,
             enum_values=item.enum_values,
-        ),
+        )
     )
 alert_field_configurations = (
     field_configurations_with_alert_prefix + alert_field_configurations
