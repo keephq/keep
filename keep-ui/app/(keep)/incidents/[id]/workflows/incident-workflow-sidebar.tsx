@@ -7,9 +7,8 @@ import {
   getTriggerIcon,
   extractTriggerValue,
 } from "@/app/(keep)/workflows/[workflow_id]/workflow-execution-table";
-import { useWorkflowExecution } from "utils/hooks/useWorkflowExecutions";
 import { WorkflowExecutionDetail } from "@/shared/api/workflow-executions";
-
+import { useWorkflowExecutionDetail } from "@/entities/workflow-executions/model/useWorkflowExecutionDetail";
 interface IncidentWorkflowSidebarProps {
   isOpen: boolean;
   toggle: VoidFunction;
@@ -21,7 +20,7 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
   toggle,
   selectedExecution,
 }) => {
-  const { data: workflowExecutionData } = useWorkflowExecution(
+  const { data: workflowExecutionData } = useWorkflowExecutionDetail(
     selectedExecution.workflow_id,
     selectedExecution.id
   );
@@ -100,7 +99,7 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
                       Triggered By
                     </Text>
                     <Button
-                      className="px-3 py-0.5 bg-white text-black rounded-xl border-2 border-gray-400 inline-flex items-center gap-2 font-bold hover:bg-white border-gray-400"
+                      className="px-3 py-0.5 bg-white text-black rounded-xl border-2 inline-flex items-center gap-2 font-bold hover:bg-white border-gray-400"
                       variant="secondary"
                       tooltip={selectedExecution.triggered_by ?? ""}
                       icon={getTriggerIcon(

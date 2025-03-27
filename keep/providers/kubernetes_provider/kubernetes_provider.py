@@ -115,6 +115,9 @@ class KubernetesProvider(BaseProvider):
     def _query(self, command_type: str, **kwargs):
         """
         Query Kubernetes resources.
+        Args:
+            command_type (str): The type of query to perform. Supported queries are get_logs, get_events, get_pods, get_node_pressure, and get_pvc.
+            **kwargs: Additional arguments for the query.
         """
         api_client = self.__create_k8s_client()
 
@@ -134,6 +137,9 @@ class KubernetesProvider(BaseProvider):
     def _notify(self, action: str, **kwargs):
         """
         Perform actions on Kubernetes resources.
+        Args:
+            action (str): The action to perform. Supported actions are rollout_restart and restart_pod.
+            **kwargs: Additional arguments for the action.
         """
         if action == "rollout_restart":
             return self.__rollout_restart(**kwargs)

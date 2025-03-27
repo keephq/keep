@@ -1,4 +1,4 @@
-import { useWorkflowExecutionsV2 } from "@/utils/hooks/useWorkflowExecutions";
+import { useWorkflowExecutionsV2 } from "@/entities/workflow-executions/model/useWorkflowExecutionsV2";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Callout, Title, Card } from "@tremor/react";
 import { useSearchParams } from "next/navigation";
@@ -9,7 +9,7 @@ import { TableFilters } from "./table-filters";
 import { ExecutionTable } from "./workflow-execution-table";
 import { WorkflowOverviewSkeleton } from "./workflow-overview-skeleton";
 import { WorkflowProviders } from "./workflow-providers";
-import { WorkflowSteps } from "../mockworkflows";
+import { WorkflowSteps } from "../workflows-templates";
 import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 interface Pagination {
   limit: number;
@@ -145,7 +145,9 @@ export default function WorkflowOverview({
           </Card>
           <Card>
             <Title>Providers</Title>
-            {_workflow && <WorkflowProviders workflow={_workflow} />}
+            {_workflow && _workflow.providers && (
+              <WorkflowProviders workflow={_workflow} />
+            )}
           </Card>
           <h1 className="text-xl font-bold mt-4">Execution History</h1>
           <TableFilters workflowId={data.workflow.id} />
