@@ -2,7 +2,9 @@ import { AlertToWorkflowExecution } from "@/entities/alerts/model";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 
-// should be removed in favor of useWorkflowExecutionsV2?
+/**
+ * @deprecated Use useWorkflowExecutionsV2 instead.
+ */
 export const useWorkflowExecutions = (
   options: SWRConfiguration = {
     revalidateOnFocus: false,

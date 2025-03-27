@@ -38,6 +38,7 @@ describe("useWorkflowsV2", () => {
 
     await waitFor(() => {
       expect(result.current.isLoading).toEqual(false);
+      expect(result.current.totalCount).toEqual(1);
       expect(result.current.workflows).toEqual([mockWorkflow]);
     });
   });

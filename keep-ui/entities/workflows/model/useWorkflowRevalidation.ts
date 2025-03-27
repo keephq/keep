@@ -1,6 +1,6 @@
 // src/shared/lib/hooks/useWorkflowRevalidation.ts
 import { useCallback } from "react";
-import { workflowKeys } from "../lib/workflowKeys";
+import { workflowKeys } from "./workflowKeys";
 import { useSWRConfig } from "swr";
 
 /**

@@ -1,4 +1,4 @@
-import { WorkflowsQuery } from "../model/useWorkflowsV2";
+import { WorkflowsQuery } from "./useWorkflowsV2";
 
 export const workflowKeys = {
   all: "workflows",
@@ -12,7 +12,7 @@ export const workflowKeys = {
       query.sortBy,
       query.sortDir,
     ]
-      .filter(Boolean)
+      .filter((p) => p !== undefined && p !== null)
       .join("::"),
   detail: (id: string) => [workflowKeys.all, "detail", id].join("::"),
   getListMatcher: () => (key: any) =>

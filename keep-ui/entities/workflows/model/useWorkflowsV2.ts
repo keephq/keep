@@ -1,7 +1,7 @@
 import useSWR, { SWRConfiguration } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { PaginatedWorkflowsResults } from "@/shared/api/workflows";
-import { workflowKeys } from "../lib/workflowKeys";
+import { workflowKeys } from "./workflowKeys";
 
 export const DEFAULT_WORKFLOWS_PAGINATION = {
   offset: 0,

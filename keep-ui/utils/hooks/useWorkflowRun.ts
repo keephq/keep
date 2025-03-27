@@ -100,11 +100,11 @@ export const useWorkflowRun = (workflow: Workflow) => {
         return;
       }
       setIsRunning(true);
-      const result = await api.post(`/workflows/${workflow?.id}/run`, payload);
-      revalidateForWorkflow(workflow?.id);
+      const result = await api.post(`/workflows/${workflow.id}/run`, payload);
+      revalidateForWorkflow(workflow.id);
 
       const { workflow_execution_id } = result;
-      router.push(`/workflows/${workflow?.id}/runs/${workflow_execution_id}`);
+      router.push(`/workflows/${workflow.id}/runs/${workflow_execution_id}`);
     } catch (error) {
       showErrorToast(error, "Failed to start workflow");
     } finally {

@@ -99,6 +99,7 @@ export default function WorkflowMenu({
           }}
           disabled={provisioned}
           title={provisioned ? "Cannot delete a provisioned workflow" : ""}
+          data-testid="wf-menu-delete-button"
         />
       </DropdownMenu.Menu>
     </div>

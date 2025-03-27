@@ -1,7 +1,7 @@
 import useSWR from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { Workflow } from "@/shared/api/workflows";
-import { workflowKeys } from "../lib/workflowKeys";
+import { workflowKeys } from "./workflowKeys";
 
 export function useWorkflowDetail(workflowId: string, initialData?: Workflow) {
   const api = useApi();

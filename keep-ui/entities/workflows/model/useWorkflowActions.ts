@@ -5,7 +5,7 @@ import { Definition } from "@/entities/workflows/model/types";
 import { useCallback } from "react";
 import { KeepApiError } from "@/shared/api/KeepApiError";
 import { getBodyFromStringOrDefinitionOrObject } from "../lib/yaml-utils";
-import { useWorkflowRevalidation } from "./useWorkflowsRevalidation";
+import { useWorkflowRevalidation } from "./useWorkflowRevalidation";
 
 type DeleteOptions = {
   skipConfirmation?: boolean;

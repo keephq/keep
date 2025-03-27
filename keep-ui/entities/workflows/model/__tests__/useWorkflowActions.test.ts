@@ -1,9 +1,9 @@
 import { renderHook } from "@testing-library/react";
-import { useWorkflowActions } from "../useWorkflowActions";
-import { useWorkflowRevalidation } from "../useWorkflowsRevalidation";
+import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
+import { useWorkflowRevalidation } from "@/entities/workflows/model/useWorkflowRevalidation";
 import { useApi } from "@/shared/lib/hooks/useApi";
 
-jest.mock("../useWorkflowsRevalidation");
+jest.mock("@/entities/workflows/model/useWorkflowRevalidation");
 jest.mock("@/shared/lib/hooks/useApi");
 
 describe("useWorkflowActions", () => {

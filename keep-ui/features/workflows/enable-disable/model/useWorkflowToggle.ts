@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
-import { useWorkflowRevalidation } from "@/entities/workflows/model/useWorkflowsRevalidation";
+import { useWorkflowRevalidation } from "@/entities/workflows/model/useWorkflowRevalidation";
 
 export const useToggleWorkflow = (workflowId: string) => {
   const api = useApi();
