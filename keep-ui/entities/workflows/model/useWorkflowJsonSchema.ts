@@ -24,15 +24,15 @@ const makeRequiredEitherStepsOrActions: PostProcessCallback = (
     // @ts-ignore
     jsonSchema.anyOf = [
       {
-        required: ["actions"],
-        properties: {
-          actions: { minItems: 1 },
-        },
-      },
-      {
         required: ["steps"],
         properties: {
           steps: { minItems: 1 },
+        },
+      },
+      {
+        required: ["actions"],
+        properties: {
+          actions: { minItems: 1 },
         },
       },
     ];
