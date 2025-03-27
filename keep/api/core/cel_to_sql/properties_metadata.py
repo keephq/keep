@@ -144,7 +144,7 @@ class PropertiesMetadata:
             template_prop = match.group(1)
         else:
             # otherwise, the template prop is the prop_path itself
-            template_prop = prop_path
+            template_prop = prop_path_str
 
         for item in map_to:
             match = re.match(r"JSON\(([^)]+)\)", item)
