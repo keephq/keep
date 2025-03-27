@@ -4,9 +4,12 @@ import { useProviders } from "./useProviders";
 import { Filter, Workflow } from "@/shared/api/workflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
-import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { isProviderInstalled } from "@/shared/lib/provider-utils";
+import { useWorkflowExecutionsRevalidation } from "@/entities/workflow-executions/model/useWorkflowExecutionsRevalidation";
 
+const noop = () => {};
+
+// TODO: refactor this whole thing to be more intuitive and easier to test
 export const useWorkflowRun = (workflow: Workflow) => {
   const api = useApi();
   const router = useRouter();
@@ -15,13 +18,18 @@ export const useWorkflowRun = (workflow: Workflow) => {
   let message = "";
   const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
   const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
-  const revalidateMultiple = useRevalidateMultiple();
-
+  const { revalidateForWorkflow } = useWorkflowExecutionsRevalidation();
   const { data: providersData } = useProviders();
   const providers = providersData?.providers ?? [];
 
   if (!workflow) {
-    return {};
+    return {
+      handleRunClick: noop,
+      isRunning: false,
+      getTriggerModalProps: null,
+      isRunButtonDisabled: false,
+      message: "",
+    };
   }
 
   const notInstalledProviders = workflow?.providers
@@ -93,7 +101,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
       }
       setIsRunning(true);
       const result = await api.post(`/workflows/${workflow?.id}/run`, payload);
-      revalidateMultiple([`/workflows/${workflow?.id}/runs`]);
+      revalidateForWorkflow(workflow?.id);
 
       const { workflow_execution_id } = result;
       router.push(`/workflows/${workflow?.id}/runs/${workflow_execution_id}`);

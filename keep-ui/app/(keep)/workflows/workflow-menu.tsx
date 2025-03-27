@@ -13,7 +13,7 @@ import { DropdownMenu } from "@/shared/ui";
 
 interface WorkflowMenuProps {
   onDelete?: () => Promise<void>;
-  onRun?: () => Promise<void>;
+  onRun?: () => void;
   onView?: () => void;
   onDownload?: () => void;
   onBuilder?: () => void;

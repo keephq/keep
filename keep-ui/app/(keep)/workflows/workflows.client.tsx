@@ -8,21 +8,20 @@ import {
   useRef,
   useState,
 } from "react";
-import { Subtitle, Button } from "@tremor/react";
-import {
-  ArrowUpOnSquareStackIcon,
-  PlusCircleIcon,
-} from "@heroicons/react/24/outline";
+import { Button } from "@tremor/react";
+import { ArrowUpOnSquareStackIcon } from "@heroicons/react/24/outline";
 import { EmptyStateCard, KeepLoader, PageTitle } from "@/shared/ui";
 import WorkflowsEmptyState from "./noworkflows";
 import WorkflowTile from "./workflow-tile";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
-import { WorkflowTemplates } from "./mockworkflows";
+import { WorkflowTemplates } from "./workflows-templates";
 import { Input, ErrorComponent } from "@/shared/ui";
 import { Textarea } from "@/components/ui";
 import {
+  DEFAULT_WORKFLOWS_PAGINATION,
+  DEFAULT_WORKFLOWS_QUERY,
   useWorkflowsV2,
   WorkflowsQuery,
 } from "@/entities/workflows/model/useWorkflowsV2";
@@ -90,18 +89,6 @@ type ExampleWorkflowKey = keyof typeof EXAMPLE_WORKFLOW_DEFINITIONS;
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
-};
-
-const DEFAULT_WORKFLOWS_PAGINATION = {
-  offset: 0,
-  limit: 12,
-};
-
-const DEFAULT_WORKFLOWS_QUERY = {
-  cel: "",
-  ...DEFAULT_WORKFLOWS_PAGINATION,
-  sortBy: "created_at",
-  sortDir: "desc" as const,
 };
 
 export function WorkflowsPage({
@@ -299,13 +286,14 @@ export function WorkflowsPage({
 
   function renderData() {
     return (
-      <>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
-          {filteredWorkflows?.map((workflow) => (
-            <WorkflowTile key={workflow.id} workflow={workflow} />
-          ))}
-        </div>
-      </>
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4"
+        data-testid="workflow-list"
+      >
+        {filteredWorkflows?.map((workflow) => (
+          <WorkflowTile key={workflow.id} workflow={workflow} />
+        ))}
+      </div>
     );
   }
 
@@ -423,7 +411,10 @@ export function WorkflowsPage({
                 <div className="flex flex-col flex-1 relative">
                   {isFirstLoading && (
                     <div className="flex items-center justify-center h-96 w-full">
-                      <KeepLoader includeMinHeight={false} />
+                      <KeepLoader
+                        includeMinHeight={false}
+                        data-testid="keep-loader"
+                      />
                     </div>
                   )}
                   {!isFirstLoading && (
@@ -435,7 +426,7 @@ export function WorkflowsPage({
                   )}
                   <div className={`mt-4 ${isFirstLoading ? "hidden" : ""}`}>
                     <Pagination
-                      totalCount={filteredWorkflowsCount}
+                      totalCount={filteredWorkflowsCount ?? 0}
                       isRefreshAllowed={false}
                       isRefreshing={false}
                       pageSizeOptions={[12, 24, 48]}
