@@ -735,7 +735,7 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
                 extra={
                     "tenant_id": tenant_id,
                     "workflow_id": workflow_id,
-                    "execution_id": execution_id,
+                    "workflow_execution_id": execution_id,
                 },
             )
             raise ValueError("Execution not found")
@@ -745,11 +745,21 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         #   we need to fix it in the future, create a migration that increases the size of the error field
         #   and then we can remove the [:511] from here
         workflow_execution.error = error[:511] if error else None
-        workflow_execution.execution_time = (
+        execution_time = (
             datetime.utcnow() - workflow_execution.started
         ).total_seconds()
+        workflow_execution.execution_time = int(execution_time)
         # TODO: logs
         session.commit()
+        logger.info(
+            f"Finished workflow execution {execution_id} for workflow {workflow_id} with status {status}",
+            extra={
+                "tenant_id": tenant_id,
+                "workflow_id": workflow_id,
+                "workflow_execution_id": execution_id,
+                "execution_time": execution_time,
+            },
+        )
 
 
 def get_workflow_executions(
@@ -1588,7 +1598,10 @@ def get_last_alerts(
         for alert_data in alerts_with_start:
             alert = alert_data[0]
             startedAt = alert_data[1]
-            alert.event["startedAt"] = str(startedAt)
+            if not alert.event.get("startedAt"):
+                alert.event["startedAt"] = str(startedAt)
+            else:
+                alert.event["firstTimestamp"] = str(startedAt)
             alert.event["event_id"] = str(alert.id)
 
             if with_incidents:
@@ -3963,29 +3976,6 @@ def get_alerts_data_for_incident(
         }
 
 
-def add_alerts_to_incident_by_incident_id(
-    tenant_id: str,
-    incident_id: str | UUID,
-    fingerprints: List[str],
-    is_created_by_ai: bool = False,
-    session: Optional[Session] = None,
-) -> Optional[Incident]:
-    if isinstance(incident_id, str):
-        incident_id = __convert_to_uuid(incident_id)
-    with existed_or_new_session(session) as session:
-        query = select(Incident).where(
-            Incident.tenant_id == tenant_id,
-            Incident.id == incident_id,
-        )
-        incident = session.exec(query).first()
-
-        if not incident:
-            return None
-        return add_alerts_to_incident(
-            tenant_id, incident, fingerprints, is_created_by_ai, session
-        )
-
-
 @retry_on_deadlock
 def add_alerts_to_incident(
     tenant_id: str,
@@ -4007,7 +3997,6 @@ def add_alerts_to_incident(
         with session.no_autoflush:
 
             # Use a set for faster membership checks
-
             existing_fingerprints = set(
                 session.exec(
                     select(LastAlert.fingerprint)
@@ -4061,29 +4050,6 @@ def add_alerts_to_incident(
                 tenant_id, new_fingerprints, session
             )
 
-            incident.sources = list(
-                set(incident.sources if incident.sources else [])
-                | set(alerts_data_for_incident["sources"])
-            )
-            incident.affected_services = list(
-                set(incident.affected_services if incident.affected_services else [])
-                | set(alerts_data_for_incident["services"])
-            )
-            if not incident.forced_severity:
-                # If incident has alerts already, use the max severity between existing and new alerts,
-                # otherwise use the new alerts max severity
-                incident.severity = (
-                    max(
-                        incident.severity,
-                        alerts_data_for_incident["max_severity"].order,
-                    )
-                    if incident.alerts_count
-                    else alerts_data_for_incident["max_severity"].order
-                )
-            if not override_count:
-                incident.alerts_count += alerts_data_for_incident["count"]
-            else:
-                incident.alerts_count = alerts_data_for_incident["count"]
             alert_to_incident_entries = [
                 LastAlertToIncident(
                     fingerprint=str(fingerprint),  # it may sometime be UUID...
@@ -4105,6 +4071,31 @@ def add_alerts_to_incident(
                     )
                     session.flush()
             session.commit()
+
+            incident.sources = list(
+                set(incident.sources if incident.sources else [])
+                | set(alerts_data_for_incident["sources"])
+            )
+            incident.affected_services = list(
+                set(incident.affected_services if incident.affected_services else [])
+                | set(alerts_data_for_incident["services"])
+            )
+            if not incident.forced_severity:
+                # If incident has alerts already, use the max severity between existing and new alerts,
+                # otherwise use the new alerts max severity
+                incident.severity = (
+                    max(
+                        incident.severity,
+                        alerts_data_for_incident["max_severity"].order,
+                    )
+                    if incident.alerts_count
+                    else alerts_data_for_incident["max_severity"].order
+                )
+
+            if not override_count:
+                incident.alerts_count += alerts_data_for_incident["count"]
+            else:
+                incident.alerts_count = alerts_data_for_incident["count"]
 
             last_received_field = get_json_extract_field(
                 session, Alert.event, "lastReceived"

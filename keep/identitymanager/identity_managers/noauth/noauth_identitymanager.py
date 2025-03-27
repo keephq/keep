@@ -22,6 +22,8 @@ class NoAuthIdentityManager(BaseIdentityManager):
         @app.post("/tenant")
         def tenant(body: dict):
             tenant_id = body.get("tenant_id")
+            if tenant_id is None:
+                raise Exception("Tenant ID is required")
             create_single_tenant_for_e2e(tenant_id)
             return {"message": "Tenant created"}
 

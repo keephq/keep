@@ -1,6 +1,5 @@
 import React from "react";
 import Modal from "@/components/ui/Modal";
-import { useApi } from "@/shared/lib/hooks/useApi";
 import {
   Badge,
   BarChart,
@@ -23,8 +22,6 @@ const ProviderHealthResultsModal = ({
   isOpen,
   healthResults,
 }: ProviderHealthResultsModalProps) => {
-  const api = useApi();
-
   const handleModalClose = () => {
     handleClose();
   };

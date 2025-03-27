@@ -170,6 +170,10 @@ class AuthVerifierBase:
                 )
 
         api_key = self._extract_api_key(request, api_key, authorization)
+        # HACK for cloudwatch without api key for self hosted deployments
+        if isinstance(api_key, AuthenticatedEntity):
+            return api_key
+
         if api_key:
             self.logger.debug("Attempting to authenticate with API key")
             try:
@@ -241,12 +245,28 @@ class AuthVerifierBase:
         self.logger.debug("Extracting API key")
         api_key = api_key or request.query_params.get("api_key", None)
         if not api_key:
+            # A special treatment for CloudWatch SNS Confirmation requests
             if (
                 not authorization
                 and "Amazon Simple Notification Service Agent"
                 in request.headers.get("user-agent", "")
             ):
+
                 self.logger.warning("Got an SNS request without any auth")
+                allow_unauth = config("KEEP_CLOUDWATCH_DISABLE_API_KEY", default=False)
+                if allow_unauth and request.url.path.endswith(
+                    "/alerts/event/cloudwatch"
+                ):
+                    tenant_id = request.query_params.get("tenant_id", "keep")
+                    self.logger.info(
+                        f"Allowing unauthenticated access for tenant: {tenant_id} for CloudWatch"
+                    )
+                    return AuthenticatedEntity(
+                        tenant_id=tenant_id,
+                        email="system",
+                        api_key_name="webhook",
+                        role="webhook",
+                    )
                 raise HTTPException(
                     status_code=401,
                     headers={"WWW-Authenticate": "Basic"},

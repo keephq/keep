@@ -20,6 +20,7 @@
 # docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml down --volumes
 
 import os
+
 import random
 import re
 import string
@@ -35,6 +36,7 @@ from tests.e2e_tests.utils import (
     init_e2e_test,
     install_webhook_provider,
     save_failure_artifacts,
+    setup_console_listener,
     trigger_alert,
 )
 
@@ -50,18 +52,6 @@ from tests.e2e_tests.utils import (
 #    - Spin up the environment using docker-compose.
 #    - Run "playwright codegen localhost:3000" (unset DYLD_LIBRARY_PATH)
 #    - Copy the generated code to a new test function.
-
-
-def setup_console_listener(page, log_entries):
-    """Set up console listener to capture logs."""
-    page.on(
-        "console",
-        lambda msg: (
-            log_entries.append(
-                f"{datetime.now()}: {msg.text}, location: {msg.location}"
-            )
-        ),
-    )
 
 
 def test_sanity(browser: Page):  # browser is actually a page object
@@ -298,6 +288,82 @@ def test_provider_validation(browser: Page, setup_page_logging, failure_artifact
         raise
 
 
+def test_provider_deletion(browser: Page):
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
+    try:
+
+        # Checking deletion after Creation
+        init_e2e_test(browser, next_url="/signin")
+        browser.get_by_role("link", name="Providers").hover()
+        browser.get_by_role("link", name="Providers").click()
+        install_webhook_provider(
+            browser=browser,
+            provider_name=provider_name,
+            webhook_url="http://keep-backend:8080",
+            webhook_action="GET",
+        )
+        browser.wait_for_timeout(500)
+        assert_connected_provider_count(
+            browser=browser,
+            provider_type="Webhook",
+            provider_name=provider_name,
+            provider_count=1,
+        )
+        delete_provider(
+            browser=browser, provider_type="Webhook", provider_name=provider_name
+        )
+        assert_connected_provider_count(
+            browser=browser,
+            provider_type="Webhook",
+            provider_name=provider_name,
+            provider_count=0,
+        )
+
+        # Checking deletion after Creation + Updation
+        install_webhook_provider(
+            browser=browser,
+            provider_name=provider_name,
+            webhook_url="http://keep-backend:8080",
+            webhook_action="GET",
+        )
+        browser.wait_for_timeout(500)
+        assert_connected_provider_count(
+            browser=browser,
+            provider_type="Webhook",
+            provider_name=provider_name,
+            provider_count=1,
+        )
+        # Updating provider
+        browser.locator(
+            f"button:has-text('Webhook'):has-text('Connected'):has-text('{provider_name}')"
+        ).click()
+        browser.get_by_placeholder("Enter url").clear()
+        browser.get_by_placeholder("Enter url").fill("https://this_is_UwU")
+
+        browser.get_by_role("button", name="Update", exact=True).click()
+        browser.wait_for_timeout(500)
+        # Refreshing the scope
+        browser.get_by_role("button", name="Refresh", exact=True).click()
+        browser.wait_for_timeout(500)
+        assert_scope_text_count(
+            browser=browser, contains_text="HTTPSConnectionPool", count=1
+        )
+        browser.mouse.click(10, 10)
+        delete_provider(
+            browser=browser, provider_type="Webhook", provider_name=provider_name
+        )
+        assert_connected_provider_count(
+            browser=browser,
+            provider_type="Webhook",
+            provider_name=provider_name,
+            provider_count=0,
+        )
+    except Exception:
+        save_failure_artifacts(browser, log_entries)
+        raise
+
 def test_add_workflow(browser: Page, setup_page_logging, failure_artifacts):
     """
     Test to add a workflow node
@@ -415,6 +481,7 @@ def test_paste_workflow_yaml_quotes_preserved(browser: Page):
         raise
 
 
+
 def test_add_upload_workflow_with_alert_trigger(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
@@ -426,14 +493,17 @@ def test_add_upload_workflow_with_alert_trigger(browser: Page):
         file_input = browser.locator("#workflowFile")
         file_input.set_input_files("./tests/e2e_tests/workflow-sample.yaml")
         browser.get_by_role("button", name="Upload")
+        # new behavior: is redirecting to the detail page of the workflow, so we need to go back to the list page
+        browser.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
         browser.wait_for_timeout(500)
         trigger_alert("prometheus")
         browser.wait_for_timeout(2000)
-        # new behavior: is redirecting to the detail page of the workflow, so we need to go back to the list page
         browser.goto("http://localhost:3000/workflows")
+        # wait for prometheus to fire an alert and workflow to run
+        browser.reload()
         workflow_card = browser.locator(
             "[data-testid^='workflow-tile-']",
-            has_text="9b3664f4-b248-4eda-8cc7-e69bc5a8bd92",
+            has_text="test_add_upload_workflow_with_alert_trigger",
         )
         expect(workflow_card).not_to_contain_text("No data available")
     except Exception:
@@ -441,99 +511,71 @@ def test_add_upload_workflow_with_alert_trigger(browser: Page):
         raise
 
 
-def test_provider_deletion(browser: Page):
-    log_entries = []
-    setup_console_listener(browser, log_entries)
-    provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
-    try:
-
-        # Checking deletion after Creation
-        init_e2e_test(browser, next_url="/signin")
-        browser.get_by_role("link", name="Providers").hover()
-        browser.get_by_role("link", name="Providers").click()
-        install_webhook_provider(
-            browser=browser,
-            provider_name=provider_name,
-            webhook_url="http://keep-backend:8080",
-            webhook_action="GET",
-        )
-        browser.wait_for_timeout(500)
-        assert_connected_provider_count(
-            browser=browser,
-            provider_type="Webhook",
-            provider_name=provider_name,
-            provider_count=1,
-        )
-        delete_provider(
-            browser=browser, provider_type="Webhook", provider_name=provider_name
-        )
-        assert_connected_provider_count(
-            browser=browser,
-            provider_type="Webhook",
-            provider_name=provider_name,
-            provider_count=0,
-        )
-
-        # Checking deletion after Creation + Updation
-        install_webhook_provider(
-            browser=browser,
-            provider_name=provider_name,
-            webhook_url="http://keep-backend:8080",
-            webhook_action="GET",
-        )
-        browser.wait_for_timeout(500)
-        assert_connected_provider_count(
-            browser=browser,
-            provider_type="Webhook",
-            provider_name=provider_name,
-            provider_count=1,
-        )
-        # Updating provider
-        browser.locator(
-            f"button:has-text('Webhook'):has-text('Connected'):has-text('{provider_name}')"
-        ).click()
-        browser.get_by_placeholder("Enter url").clear()
-        browser.get_by_placeholder("Enter url").fill("https://this_is_UwU")
-
-        browser.get_by_role("button", name="Update", exact=True).click()
-        browser.wait_for_timeout(500)
-        # Refreshing the scope
-        browser.get_by_role("button", name="Refresh", exact=True).click()
-        browser.wait_for_timeout(500)
-        assert_scope_text_count(
-            browser=browser, contains_text="HTTPSConnectionPool", count=1
-        )
-        browser.mouse.click(10, 10)
-        delete_provider(
-            browser=browser, provider_type="Webhook", provider_name=provider_name
-        )
-        assert_connected_provider_count(
-            browser=browser,
-            provider_type="Webhook",
-            provider_name=provider_name,
-            provider_count=0,
-        )
-    except Exception:
-        save_failure_artifacts(browser, log_entries)
-        raise
 
 def test_monaco_editor_npm(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
         init_e2e_test(browser, next_url="/signin")
-        browser.route("**/*", lambda route, request: 
+        browser.route("**/*", lambda route, request:
             route.abort() if not request.url.startswith("http://localhost") else route.continue_()
         )
         browser.get_by_role("link", name="Workflows").click()
         browser.get_by_role("button", name="Upload Workflows").click()
         file_input = browser.locator("#workflowFile")
-        file_input.set_input_files("./tests/e2e_tests/workflow-sample.yaml")
+        file_input.set_input_files("./tests/e2e_tests/workflow-sample-npm.yaml")
         browser.get_by_role("button", name="Upload")
         browser.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
         browser.get_by_role("tab", name="YAML Definition").click()
         editor_container = browser.get_by_test_id("wf-detail-yaml-editor-container")
         expect(editor_container).not_to_contain_text("Error loading Monaco Editor from CDN")
+    except Exception:
+        save_failure_artifacts(browser, log_entries)
+        raise
+
+def test_yaml_editor_yaml_valid(browser: Page):
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+
+    try:
+        init_e2e_test(browser, next_url="/signin")
+        browser.get_by_role("link", name="Workflows").click()
+        browser.get_by_role("button", name="Upload Workflows").click()
+        file_input = browser.locator("#workflowFile")
+        file_input.set_input_files("./tests/e2e_tests/workflow-valid-sample.yaml")
+        browser.get_by_role("button", name="Upload")
+        browser.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        browser.get_by_role("tab", name="YAML Definition").click()
+        yaml_editor = browser.get_by_test_id("wf-detail-yaml-editor-container")
+        expect(yaml_editor).to_be_visible()
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-no-errors").first).to_be_visible()
+    except Exception:
+        save_failure_artifacts(browser, log_entries)
+        raise
+
+def test_yaml_editor_yaml_invalid(browser: Page):
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+
+    try:
+        init_e2e_test(browser, next_url="/signin")
+        browser.get_by_role("link", name="Workflows").click()
+        browser.get_by_role("button", name="Upload Workflows").click()
+        file_input = browser.locator("#workflowFile")
+        file_input.set_input_files("./tests/e2e_tests/workflow-invalid-sample.yaml")
+        browser.get_by_role("button", name="Upload")
+        browser.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        browser.get_by_role("tab", name="YAML Definition").click()
+        yaml_editor = browser.get_by_test_id("wf-detail-yaml-editor-container")
+        expect(yaml_editor).to_be_visible()
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-summary").first).to_contain_text("6 validation errors")
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('String is shorter than the minimum length of 1.')
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Missing property "provider".')
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Property provider_invalid_prop is not allowed.')
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Value is not accepted. Valid values: "message", "blocks", "channel", "slack_timestamp", "thread_timestamp", "attachments", "username", "notification_type", "enrich_alert", "enrich_incident".')
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Property enrich_incident is not allowed.')
+        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Property enrich_alert is not allowed.')
+
     except Exception:
         save_failure_artifacts(browser, log_entries)
         raise
