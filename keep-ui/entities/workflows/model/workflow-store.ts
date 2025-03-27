@@ -50,7 +50,7 @@ import {
 } from "@/features/workflows/builder/lib/utils";
 import { Provider } from "@/shared/api/providers";
 import { parseWorkflowYamlStringToJSON } from "../lib/yaml-utils";
-import { LooseYamlWorkflowDefinitionSchema } from "./yaml.schema";
+import { getYamlWorkflowDefinitionSchema } from "./yaml.schema";
 
 class KeepWorkflowStoreError extends Error {
   constructor(message: string) {
@@ -285,6 +285,7 @@ const defaultState: WorkflowStateValues = {
   toolboxConfiguration: null,
   providers: null,
   installedProviders: null,
+  yamlSchema: null,
   secrets: {},
   isInitialized: false,
   isLayouted: false,
@@ -360,7 +361,13 @@ export const useWorkflowStore = create<WorkflowState>()(
         return null;
       }
     },
-    setProviders: (providers: Provider[]) => set({ providers }),
+    setProviders: (providers: Provider[]) => {
+      set({
+        providers,
+        yamlSchema: getYamlWorkflowDefinitionSchema(providers),
+        toolboxConfiguration: getToolboxConfiguration(providers),
+      });
+    },
     setInstalledProviders: (installedProviders: Provider[]) =>
       set({ installedProviders }),
     setSecrets: (secrets: Record<string, string>) => set({ secrets }),
@@ -391,7 +398,7 @@ export const useWorkflowStore = create<WorkflowState>()(
     updateFromYamlString: (yamlString: string) => {
       try {
         const json = parseWorkflowYamlStringToJSON(yamlString);
-        const parsed = LooseYamlWorkflowDefinitionSchema.parse(json);
+        const parsed = get().yamlSchema?.parse(json);
       } catch (error) {
         if (error instanceof ZodError) {
           console.error("Failed to validate against Zod schema", error);
@@ -837,6 +844,9 @@ function initializeWorkflow(
   const name = parsedWorkflow?.properties?.name;
 
   const toolboxConfiguration = getToolboxConfiguration(providers);
+  const yamlSchema = getYamlWorkflowDefinitionSchema(providers, {
+    partial: true,
+  });
 
   const fullSequence = [
     {
@@ -875,6 +885,7 @@ function initializeWorkflow(
     v2Properties: { ...(parsedWorkflow?.properties ?? {}), name },
     providers,
     installedProviders,
+    yamlSchema,
     secrets,
     toolboxConfiguration,
     isLoading: false,
