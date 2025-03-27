@@ -16,4 +16,7 @@ export interface MappingRule {
   matchers: string[][];
   rows: { [key: string]: any }[];
   attributes?: string[];
+  is_multi_level?: boolean;
+  new_property_name?: string;
+  prefix_to_remove?: string;
 }

@@ -12,4 +12,6 @@ export type CorrelationFormType = {
   query: RuleGroupType;
   incidentNameTemplate: string;
   incidentPrefix: string;
+  multiLevel: boolean;
+  multiLevelPropertyName?: string;
 };

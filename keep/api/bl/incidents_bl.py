@@ -15,7 +15,7 @@ from sqlmodel import Session
 from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import (
-    add_alerts_to_incident_by_incident_id,
+    add_alerts_to_incident,
     add_audit,
     create_incident_from_dto,
     delete_incident_by_id,
@@ -132,12 +132,20 @@ class IncidentBl:
                 "alert_fingerprints": alert_fingerprints,
             },
         )
-        incident = get_incident_by_id(tenant_id=self.tenant_id, incident_id=incident_id)
+        incident = get_incident_by_id(
+            tenant_id=self.tenant_id,
+            incident_id=incident_id,
+            session=self.session
+        )
         if not incident:
             raise HTTPException(status_code=404, detail="Incident not found")
 
-        add_alerts_to_incident_by_incident_id(
-            self.tenant_id, incident_id, alert_fingerprints, is_created_by_ai
+        add_alerts_to_incident(
+            self.tenant_id,
+            incident,
+            alert_fingerprints,
+            is_created_by_ai,
+            session=self.session
         )
         self.logger.info(
             "Alerts added to incident",
@@ -438,19 +446,21 @@ class IncidentBl:
             should_resolve = True
 
         incident_id = incident.id
-        for attempt in range(max_retries):
-            try:
-                if should_resolve:
+
+        if should_resolve:
+            for attempt in range(max_retries):
+                try:
                     incident.status = IncidentStatus.RESOLVED.value
-                self.session.add(incident)
-                self.session.commit()
-            except StaleDataError as ex:
-                if "expected to update" in ex.args[0]:
-                    self.logger.info(
-                        f"Phantom read detected while updating incident `{incident_id}`, retry #{attempt}"
-                    )
-                    self.session.rollback()
-                    continue
+                    self.session.add(incident)
+                    self.session.commit()
+                    break
+                except StaleDataError as ex:
+                    if "expected to update" in ex.args[0]:
+                        self.logger.info(
+                            f"Phantom read detected while updating incident `{incident_id}`, retry #{attempt}"
+                        )
+                        self.session.rollback()
+                        continue
 
         return incident
 

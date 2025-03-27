@@ -190,9 +190,9 @@ export const usePollIncidents = (
   paused: boolean = false
 ) => {
   const { bind, unbind } = useWebsocket();
-  const [incidentChangeToken, setIncidentChangeToken] = useState<string | null>(
-    null
-  );
+  const [incidentChangeToken, setIncidentChangeToken] = useState<
+    string | undefined
+  >(undefined);
   const handleIncoming = useCallback(
     (data: any) => {
       mutateIncidents();

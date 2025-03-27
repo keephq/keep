@@ -15,13 +15,18 @@ class JsonFieldMapping:
 
 
 class PropertyMetadataInfo:
+
     def __init__(
         self,
+        field_name: str,
         field_mappings: list[SimpleFieldMapping | JsonFieldMapping],
         enum_values: list[str],
+        data_type: type = None,
     ):
+        self.field_name = field_name
         self.field_mappings = field_mappings
         self.enum_values = enum_values
+        self.data_type = data_type
 
 
 class FieldMappingConfiguration:
@@ -30,11 +35,45 @@ class FieldMappingConfiguration:
         self,
         map_from_pattern: str,
         map_to: list[str] | str,
+        data_type: type = None,
         enum_values: list[str] = None,
     ):
         self.map_from_pattern = map_from_pattern
         self.enum_values = enum_values
-        self.map_to = map_to
+        self.data_type = data_type
+        self.map_to: list[str] = map_to if isinstance(map_to, list) else [map_to]
+
+
+def remap_fields_configurations(
+    mapping_rules: dict[str, str], field_configurations: list[FieldMappingConfiguration]
+) -> list[FieldMappingConfiguration]:
+    """
+    Remaps the 'map_to' fields in the given field configurations based on the provided mapping rules.
+
+    Args:
+        mapping_rules (dict[str, str]): A dictionary where keys are the patterns to be replaced and values are the new patterns.
+        field_configurations (list[FieldMappingConfiguration]): A list of FieldMappingConfiguration objects to be remapped.
+
+    Returns:
+        list[FieldMappingConfiguration]: A new list of FieldMappingConfiguration objects with updated 'map_to' fields.
+    """
+    result: list[FieldMappingConfiguration] = [
+        FieldMappingConfiguration(
+            map_from_pattern=item.map_from_pattern,
+            map_to=item.map_to,
+            enum_values=item.enum_values,
+            data_type=item.data_type,
+        )
+        for item in field_configurations
+    ]
+
+    for map_from, map_to in mapping_rules.items():
+        for field_config in result:
+            field_config.map_to = [
+                item.replace(map_from, map_to) for item in field_config.map_to
+            ]
+
+    return result
 
 
 class PropertiesMetadata:
@@ -87,19 +126,19 @@ class PropertiesMetadata:
             template_prop = prop_path
 
         for item in map_to:
-            splitted = item.split(".")
-            match = re.match(r"JSON\(([^)]+)\).*", splitted[0])
+            match = re.match(r"JSON\(([^)]+)\)", item)
 
             # If first element is a JSON mapping (JSON(event).tagsContainer.*)
             # we extract JSON column (event) and replace * with prop_in_json
             if match:
+                json_prop = match.group(1)
+                splitted = item.replace(f"JSON({json_prop})", "").split(".")
                 prop_in_json_list = [spl for spl in splitted]
                 if "*" in splitted:
                     prop_in_json_list[splitted.index("*")] = template_prop
                 else:
                     prop_in_json_list.append(template_prop)
 
-                json_prop = match.group(1)
                 field_mappings.append(
                     JsonFieldMapping(
                         json_prop=json_prop,
@@ -110,11 +149,14 @@ class PropertiesMetadata:
                 )
                 continue
 
+            splitted = item.split(".")
             field_mappings.append(SimpleFieldMapping(item))
 
         return PropertyMetadataInfo(
+            field_name=prop_path,
             field_mappings=field_mappings,
             enum_values=field_mapping_config.enum_values,
+            data_type=field_mapping_config.data_type,
         )
 
     def __find_mapping_configuration(self, prop_path: str):

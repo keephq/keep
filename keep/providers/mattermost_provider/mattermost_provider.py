@@ -52,7 +52,9 @@ class MattermostProvider(BaseProvider):
         https://docs.mattermost.com/developer/webhooks-incoming.html
 
         Args:
-            kwargs (dict): The providers with context
+            message (str): The content of the message.
+            attachments (list): The attachments of the message.
+            channel (str): The channel to send the message
         """
         self.logger.info("Notifying alert message to Mattermost")
         if not message:

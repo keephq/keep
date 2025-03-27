@@ -1,6 +1,7 @@
 workflow:
-  id: on-severity-change
-  description: demonstrates how to trigger a workflow when severity changes, and show available options
+  id: severity-change-monitor
+  name: Severity Change Monitor
+  description: Tracks alert severity changes and provides detailed notifications about severity level transitions.
   triggers:
     - type: alert
       severity_changed: true

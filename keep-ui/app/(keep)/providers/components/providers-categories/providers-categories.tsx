@@ -19,6 +19,7 @@ export const ProvidersCategories = () => {
     "Collaboration",
     "CRM",
     "Queues",
+    "Orchestration",
     "Coming Soon",
     "Others",
   ];

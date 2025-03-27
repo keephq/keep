@@ -1,7 +1,7 @@
 workflow:
-  id: create-new-incident-grafana-incident
-  name: Create new incident
-  description: Creating new incident on Grafana Incident
+  id: grafana-incident-creator
+  name: Grafana Incident Creator
+  description: Creates and manages incidents in Grafana Incident with customizable severity and status.
   disabled: false
   triggers:
     - type: manual

@@ -1,7 +1,6 @@
 import enum
 import hashlib
 import logging
-import queue
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -274,73 +273,8 @@ class WorkflowScheduler:
 
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
-    def handle_workflow_test(self, workflow, tenant_id, triggered_by_user):
-        workflow_execution_id = self._get_unique_execution_number()
-
-        self.logger.info(
-            "Adding workflow to run",
-            extra={
-                "workflow_id": workflow.workflow_id,
-                "workflow_execution_id": workflow_execution_id,
-                "tenant_id": tenant_id,
-                "triggered_by": "manual",
-                "triggered_by_user": triggered_by_user,
-            },
-        )
-
-        result_queue = queue.Queue()
-
-        def run_workflow_wrapper(
-            run_workflow, workflow, workflow_execution_id, test_run, result_queue
-        ):
-            try:
-                errors, results = run_workflow(
-                    workflow, workflow_execution_id, test_run
-                )
-                result_queue.put((errors, results))
-            except Exception as e:
-                print(f"Exception in workflow: {e}")
-                # errors are expected to be a list of strings, so we wrap it
-                result_queue.put(([str(e)], None))
-
-        future = self.executor.submit(
-            run_workflow_wrapper,
-            self.workflow_manager._run_workflow,
-            workflow,
-            workflow_execution_id,
-            True,
-            result_queue,
-        )
-        future.result()  # Wait for completion
-        errors, results = result_queue.get()
-
-        status = "success"
-        error = None
-        if errors is not None and any(errors):
-            error = "\n".join(str(e) for e in errors)
-            status = "error"
-
-        self.logger.info(
-            "Workflow test complete",
-            extra={
-                "workflow_id": workflow.workflow_id,
-                "workflow_execution_id": workflow_execution_id,
-                "tenant_id": tenant_id,
-                "status": status,
-                "error": error,
-                "results": results,
-            },
-        )
-
-        return {
-            "workflow_execution_id": workflow_execution_id,
-            "status": status,
-            "error": error,
-            "results": results,
-        }
-
     def handle_manual_event_workflow(
-        self, workflow_id, tenant_id, triggered_by_user, event: [AlertDto | IncidentDto]
+        self, workflow_id, tenant_id, triggered_by_user, event: AlertDto | IncidentDto, workflow: Workflow = None, test_run: bool = False
     ):
         self.logger.info(f"Running manual event workflow {workflow_id}...")
         try:
@@ -364,16 +298,19 @@ class WorkflowScheduler:
                 fingerprint=fingerprint,
                 event_id=event_id,
                 event_type=event_type,
+                test_run=test_run,
             )
             self.logger.info(f"Workflow execution id: {workflow_execution_id}")
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
         except Exception as e:
             self.logger.error(f"WTF: error creating workflow execution: {e}")
             raise e
+
         self.logger.info(
-            "Adding workflow to run",
+            f"Adding workflow to run {'(test)' if test_run else ''}",
             extra={
                 "workflow_id": workflow_id,
+                "by_definition": workflow is not None,
                 "workflow_execution_id": workflow_execution_id,
                 "tenant_id": tenant_id,
                 "triggered_by": "manual",
@@ -385,12 +322,14 @@ class WorkflowScheduler:
             self.workflows_to_run.append(
                 {
                     "workflow_id": workflow_id,
+                    "workflow": workflow,
                     "workflow_execution_id": workflow_execution_id,
                     "tenant_id": tenant_id,
                     "triggered_by": "manual",
                     "triggered_by_user": triggered_by_user,
                     "event": event,
                     "retry": True,
+                    "test_run": test_run,
                 }
             )
         return workflow_execution_id

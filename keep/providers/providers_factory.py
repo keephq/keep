@@ -19,6 +19,7 @@ from keep.api.core.db import (
     get_consumer_providers,
     get_installed_providers,
     get_linked_providers,
+    get_provider_by_type_and_id,
 )
 from keep.api.models.alert import DeduplicationRuleDto
 from keep.api.models.provider import Provider
@@ -540,8 +541,11 @@ class ProvidersFactory:
     ) -> dict:
         context_manager = context_manager or ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+        provider_from_db = get_provider_by_type_and_id(
+            tenant_id=tenant_id, provider_id=provider_id, provider_type=provider_type
+        )
         return secret_manager.read_secret(
-            secret_name=f"{tenant_id}_{provider_type}_{provider_id}",
+            secret_name=provider_from_db.configuration_key,
             is_json=True,
         )
 

@@ -49,6 +49,7 @@ const SortableHeaderCell = ({
             {/* Custom styled vertical line separator */}
             <div className="w-px h-5 mx-2 bg-gray-400"></div>
             <Icon
+              data-testid={"sort-direction-" + column.id}
               className="cursor-pointer"
               size="xs"
               color="neutral"
@@ -85,7 +86,7 @@ export const IncidentTableComponent = (props: Props) => {
   const { table } = props;
 
   return (
-    <Table>
+    <Table data-testid="incidents-table">
       <TableHead>
         {table.getHeaderGroups().map((headerGroup, index) => (
           <TableRow

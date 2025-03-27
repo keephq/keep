@@ -42,8 +42,11 @@ def build_facets_data_query(
         sqlalchemy.sql.Selectable: A SQLAlchemy selectable object representing the constructed query.
     """
     instance = get_cel_to_sql_provider(properties_metadata)
-    base_query = base_query.filter(
-        text(instance.convert_to_sql_str(facet_options_query.cel))
+    base_query = (
+        select(text("*"))
+        .select_from(base_query)
+        .filter(text(instance.convert_to_sql_str(facet_options_query.cel)))
+        .cte("base_filtered_query")
     )
 
     # Main Query: JSON Extraction and Counting
@@ -139,7 +142,6 @@ def get_facet_options(
                     properties_metadata=properties_metadata,
                     facet_options_query=facet_options_query,
                 )
-
                 data = session.exec(db_query).all()
             except OperationalError as e:
                 logger.warning(

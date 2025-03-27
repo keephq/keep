@@ -17,6 +17,7 @@ import boto3
 import pydantic
 import requests
 
+from keep.api.core.config import config as keep_config
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
@@ -175,6 +176,11 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         super().__init__(context_manager, provider_id, config)
         self.aws_client_type = None
         self._client = None
+        self.disable_api_key = keep_config(
+            "KEEP_CLOUDWATCH_DISABLE_API_KEY", default=False
+        )
+        if self.disable_api_key:
+            self.logger.info("API key is disabled for CloudWatch provider")
 
     def validate_scopes(self):
         # init the scopes as False
@@ -511,14 +517,20 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                     for sub in subscriptions
                 )
                 if not already_subscribed:
-                    if self.authentication_config.protocol == "http":
-                        url_with_api_key = keep_api_url.replace(
-                            "https://", f"http://api_key:{api_key}@"
-                        )
+                    # for self-hosted Keep, sometimes api_key should be disabled
+                    if self.disable_api_key:
+                        self.logger.info("API key is disabled, using the url as is")
+                        url_with_api_key = keep_api_url + "&tenant_id=" + tenant_id
                     else:
-                        url_with_api_key = keep_api_url.replace(
-                            "http://", f"https://api_key:{api_key}@"
-                        )
+                        if self.authentication_config.protocol == "https":
+                            url_with_api_key = keep_api_url.replace(
+                                "https://", f"https://api_key:{api_key}@"
+                            )
+                        else:
+                            url_with_api_key = keep_api_url.replace(
+                                "http://", f"http://api_key:{api_key}@"
+                            )
+
                     self.logger.info("Subscribing to topic %s...", topic)
                     sns_client.subscribe(
                         TopicArn=topic,

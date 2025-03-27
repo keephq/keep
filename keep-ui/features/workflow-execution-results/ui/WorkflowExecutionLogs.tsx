@@ -1,4 +1,3 @@
-import Loading from "@/app/(keep)/loading";
 import {
   LogEntry,
   WorkflowExecutionDetail,
@@ -18,13 +17,7 @@ import {
 import { parseISO, differenceInSeconds, formatDistance } from "date-fns";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-
-// Monaco Editor - do not load from CDN (to support on-prem)
-// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
-import * as monaco from "monaco-editor";
-import { loader } from "@monaco-editor/react";
-loader.config({ monaco });
-import Editor from "@monaco-editor/react";
+import { MonacoEditor } from "@/shared/ui";
 
 function getStepIcon(status: string) {
   switch (status) {
@@ -203,7 +196,7 @@ function LogGroupAccordion({
                       ),
                     }}
                   >
-                    <Editor
+                    <MonacoEditor
                       value={JSON.stringify(result, null, 2)}
                       language="json"
                       theme="vs-light"
@@ -235,6 +228,7 @@ export function WorkflowExecutionLogs({
   checks,
   hoveredStep,
   selectedStep,
+  isLoading,
 }: {
   logs: LogEntry[] | null;
   results: Record<string, any> | null;
@@ -242,6 +236,7 @@ export function WorkflowExecutionLogs({
   checks: number;
   hoveredStep: string | null;
   selectedStep: string | null;
+  isLoading: boolean;
 }) {
   const groupedLogs = useMemo(() => {
     if (!logs) {
@@ -331,7 +326,7 @@ export function WorkflowExecutionLogs({
   return (
     <Card className="flex flex-col overflow-hidden p-2">
       <div className="flex-1 overflow-auto">
-        {status === "in_progress" ? (
+        {isLoading ? (
           <div>
             {Array.from({ length: 6 }).map((_, index) => (
               <div key={index} className="flex gap-2 h-10">
@@ -343,10 +338,12 @@ export function WorkflowExecutionLogs({
                 </div>
               </div>
             ))}
-            <p>
-              The workflow is in progress, will check again in one second (times
-              checked: {checks})
-            </p>
+            {status === "in_progress" && (
+              <p>
+                The workflow is in progress, will check again in one second
+                (times checked: {checks})
+              </p>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-1">

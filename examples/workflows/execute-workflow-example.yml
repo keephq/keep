@@ -1,10 +1,11 @@
-id: execute-workflow-example
-description: a Slack message with button that triggers a workflow - use with slack_basic.yml
+workflow:
+  id: slack-workflow-trigger
+  name: Slack Interactive Workflow Trigger
+  description: Creates an interactive Slack message with a button that can trigger another workflow, demonstrating workflow chaining through Slack interactions.
 disabled: false
 triggers:
   - type: manual
 consts: {}
-name: Trigger workflow from Slack message
 owners: []
 services: []
 steps: []

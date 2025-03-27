@@ -142,10 +142,12 @@
         {
           "group": "Supported Providers",
           "pages": [
+            "providers/documentation/airflow-provider",
             "providers/documentation/aks-provider",
             "providers/documentation/amazonsqs-provider",
             "providers/documentation/anthropic-provider",
             "providers/documentation/appdynamics-provider",
+            "providers/documentation/asana-provider",
             "providers/documentation/s3-provider",
             "providers/documentation/argocd-provider",
             "providers/documentation/auth0-provider",
@@ -245,6 +247,7 @@
             "providers/documentation/teams-provider",
             "providers/documentation/telegram-provider",
             "providers/documentation/template",
+            "providers/documentation/thousandeyes-provider",
             "providers/documentation/trello-provider",
             "providers/documentation/twilio-provider",
             "providers/documentation/uptimekuma-provider",

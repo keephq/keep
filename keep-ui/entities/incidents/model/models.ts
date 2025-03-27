@@ -80,6 +80,7 @@ export interface IncidentCandidateDto {
   id: string;
   name: string;
   description: string;
+  description_format?: "markdown" | "html" | null;
   severity: string;
   confidence_score: number;
   confidence_explanation: string;

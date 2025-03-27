@@ -11,6 +11,7 @@ import {
   TableRow,
   Icon,
   Button,
+  Callout,
 } from "@tremor/react";
 import { Provider } from "@/shared/api/providers";
 import {
@@ -30,6 +31,9 @@ const ProviderFormScopes = ({
   refreshLoading: boolean;
   onRevalidate: () => void;
 }) => {
+  var invalidScopesPresent = Object.values(validatedScopes).some(
+    (scope) => scope !== true && scope !== undefined
+  );
   return (
     <Accordion className="mb-5" defaultOpen={true}>
       <AccordionHeader>Scopes</AccordionHeader>
@@ -46,6 +50,13 @@ const ProviderFormScopes = ({
             Refresh
           </Button>
         )}
+        {provider.installed && invalidScopesPresent && <Callout
+          title="Installed With Missing Scopes"
+          className="mt-5"
+          color="gray"
+        >
+          Provider is installed. Ignore missing scopes if you don&apos;t need related features.
+        </Callout>}
         <Table className="mt-5">
           <TableHead>
             <TableRow>

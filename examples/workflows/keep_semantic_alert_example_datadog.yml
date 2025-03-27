@@ -1,6 +1,10 @@
 # AUTO GENERATED
 # Alert that was created with Keep semantic layer
 # Prompt: can you write an alert spec that triggers when a service has more than 0.01% error rate in datadog for more than an hour?
+workflow:
+  id: service-error-rate-monitor
+  name: Service Error Rate Monitor
+  description: Monitors service error rates through Datadog metrics, triggering alerts when error rate exceeds 0.01% for over an hour with Slack notifications.
 alert:
   id: service-error-rate
   description: Check if the service has more than 0.01% error rate for more than an hour
@@ -10,21 +14,21 @@ alert:
   services:
     - my-service
   steps:
-  - name: check-error-rate
-    provider:
-      type: datadog
-      config: "{{ providers.datadog }}"
-      with:
-        query: "sum:my_service.errors{*}.as_count() / sum:my_service.requests{*}.as_count() * 100"
-        timeframe: "1h"
+    - name: check-error-rate
+      provider:
+        type: datadog
+        config: "{{ providers.datadog }}"
+        with:
+          query: "sum:my_service.errors{*}.as_count() / sum:my_service.requests{*}.as_count() * 100"
+          timeframe: "1h"
   actions:
     - name: notify-slack
       condition:
-      - name: threshold-condition
-        type: threshold
-        value: "{{ steps.check-error-rate.results }}"
-        compare_to: 0.01
-        operator: ">"
+        - name: threshold-condition
+          type: threshold
+          value: "{{ steps.check-error-rate.results }}"
+          compare_to: 0.01
+          operator: ">"
       provider:
         type: slack
         config: "{{ providers.slack-demo }}"

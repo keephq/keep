@@ -83,6 +83,38 @@ def calculated_start_firing_time(
         return alert.lastReceived
 
 
+def calculated_firing_counter(
+    alert: AlertDto, previous_alert: AlertDto | list[AlertDto]
+) -> int:
+    """
+    Calculate the firing counter of an alert based on the previous alert.
+
+    Args:
+        alert (AlertDto): The alert to calculate the firing counter for.
+        previous_alert (AlertDto): The previous alert.
+
+    Returns:
+        int: The calculated firing counter.
+    """
+    # if its an acknowledged alert, the firing counter is 0
+
+    if alert.status == AlertStatus.ACKNOWLEDGED.value:
+        return 0
+
+    # if this is the first alert, the firing counter is 1
+    if not previous_alert:
+        return 1
+    elif isinstance(previous_alert, list):
+        previous_alert = previous_alert[0]
+
+    if previous_alert.status == AlertStatus.ACKNOWLEDGED.value:
+        return 1
+
+    # else, increment counter if the previous alert was firing
+    # NOTE: firingCounter -> 0 only if acknowledged
+    return previous_alert.firingCounter + 1
+
+
 def convert_db_alerts_to_dto_alerts(
     alerts: list[Alert | tuple[Alert, LastAlertToIncident]],
     with_incidents: bool = False,
@@ -146,6 +178,10 @@ def convert_db_alerts_to_dto_alerts(
                     continue
 
                 alert_dto.event_id = str(alert.id)
+
+                # if the alert is acknowledged, the firing counter is 0
+                if alert_dto.status == AlertStatus.ACKNOWLEDGED.value:
+                    alert_dto.firingCounter = 0
 
                 # enrich provider id when it's possible
                 if alert_dto.providerId is None:

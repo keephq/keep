@@ -29,10 +29,18 @@ class JsonPropertyAccessNode(PropertyAccessNode):
         property_to_extract (str): The specific property to extract from the JSON object.
         method_access_node (MethodAccessNode): The method access node used for extraction. (*.contains, *.startsWith, etc)
     """
-    def __init__(self, json_property_name: str, property_to_extract: str, method_access_node: MethodAccessNode):
+    def __init__(
+        self,
+        json_property_name: str,
+        property_to_extract: str,
+        method_access_node: MethodAccessNode,
+        data_type: type,
+    ):
         super().__init__(f"JSON({json_property_name}).{property_to_extract}", method_access_node)
         self.json_property_name = json_property_name
         self.property_to_extract = property_to_extract
+        self.data_type = data_type
+
 
 class MultipleFieldsNode(Node):
     """
@@ -65,28 +73,44 @@ class PropertiesMapper:
     Methods:
         __init__(properties_metadata: PropertiesMetadata):
             Initializes the PropertiesMapper with the given properties metadata.
-        map_props_in_ast(abstract_node: Node) -> Node:
+        map_props_in_ast(abstract_node: Node) -> tuple[Node, list[PropertyMetadataInfo]]:
             Maps properties in the given AST node based on the properties metadata.
-        __visit_comparison_node(comparison_node: ComparisonNode) -> Node:
+        __visit_nodes(abstract_node: Node, involved_fields: list[PropertyMetadataInfo]) -> Node:
+            Recursively visits and processes nodes in the AST, mapping properties as needed.
+        __visit_comparison_node(comparison_node: ComparisonNode, involved_fields: list[PropertyMetadataInfo]) -> Node:
             Visits and processes a comparison node, mapping properties as needed.
-        _visit_member_access_node(member_access_node: MemberAccessNode) -> Node:
+        _visit_member_access_node(member_access_node: MemberAccessNode, involved_fields: list[PropertyMetadataInfo]) -> Node:
             Visits and processes a member access node, mapping properties as needed.
+        _modify_comparison_node_based_on_mapping(comparison_node: ComparisonNode, mapping: PropertyMetadataInfo) -> Node:
+            Modifies a comparison node based on the provided property metadata mapping.
         _create_property_access_node(mapping, method_access_node: MethodAccessNode) -> Node:
             Creates a property access node based on the given mapping and method access node.
+        _map_property(property_access_node: PropertyAccessNode) -> tuple[MultipleFieldsNode, PropertyMetadataInfo]:
+            Maps a property access node to its corresponding database fields based on the metadata.
     """
     def __init__(self, properties_metadata: PropertiesMetadata):
         self.properties_metadata = properties_metadata
 
-    def map_props_in_ast(self, abstract_node: Node) -> Node:
-        return self.__visit_nodes(abstract_node)
+    def map_props_in_ast(
+        self, abstract_node: Node
+    ) -> tuple[Node, list[PropertyMetadataInfo]]:
+        involved_fields = list[PropertyMetadataInfo]()
+        mapped_ast = self.__visit_nodes(abstract_node, involved_fields)
+        distinct_involved_fields = {
+            field.field_name: field for field in involved_fields
+        }
+        involved_fields = [value for _, value in distinct_involved_fields.items()]
+        return mapped_ast, involved_fields
 
-    def __visit_nodes(self, abstract_node: Node) -> Node:
+    def __visit_nodes(
+        self, abstract_node: Node, involved_fields: list[PropertyMetadataInfo]
+    ) -> Node:
         if isinstance(abstract_node, ParenthesisNode):
-            return self.map_props_in_ast(abstract_node.expression)
+            return self.__visit_nodes(abstract_node.expression, involved_fields)
 
         if isinstance(abstract_node, LogicalNode):
-            left = self.map_props_in_ast(abstract_node.left)
-            right = self.map_props_in_ast(abstract_node.right)
+            left = self.__visit_nodes(abstract_node.left, involved_fields)
+            right = self.__visit_nodes(abstract_node.right, involved_fields)
 
             if left is None:
                 return right
@@ -101,18 +125,21 @@ class PropertiesMapper:
             )
 
         if isinstance(abstract_node, ComparisonNode):
-            return self.__visit_comparison_node(abstract_node)
+            return self.__visit_comparison_node(abstract_node, involved_fields)
 
         if isinstance(abstract_node, MemberAccessNode):
-            return self._visit_member_access_node(abstract_node)
+            return self._visit_member_access_node(abstract_node, involved_fields)
 
         if isinstance(abstract_node, UnaryNode):
-            operand = self.map_props_in_ast(abstract_node.operand)
+            operand = self.__visit_nodes(abstract_node.operand, involved_fields)
 
             if operand is None:
                 return UnaryNode(abstract_node.operator, ConstantNode(True))
 
-            return UnaryNode(abstract_node.operator, self.map_props_in_ast(abstract_node.operand))
+            return UnaryNode(
+                abstract_node.operator,
+                self.__visit_nodes(abstract_node.operand, involved_fields),
+            )
 
         if isinstance(abstract_node, ConstantNode):
             return abstract_node
@@ -121,13 +148,18 @@ class PropertiesMapper:
             f"{type(abstract_node).__name__} node type is not supported yet"
         )
 
-    def __visit_comparison_node(self, comparison_node: ComparisonNode) -> Node:
+    def __visit_comparison_node(
+        self,
+        comparison_node: ComparisonNode,
+        involved_fields: list[PropertyMetadataInfo],
+    ) -> Node:
         if not isinstance(comparison_node.first_operand, PropertyAccessNode):
             return comparison_node
 
         first_operand, property_metadata = self._map_property(
             comparison_node.first_operand
         )
+        involved_fields.append(property_metadata)
         comparison_node = ComparisonNode(
             first_operand,
             comparison_node.operator,
@@ -137,7 +169,11 @@ class PropertiesMapper:
             comparison_node, property_metadata
         )
 
-    def _visit_member_access_node(self, member_access_node: MemberAccessNode) -> Node:
+    def _visit_member_access_node(
+        self,
+        member_access_node: MemberAccessNode,
+        involved_fields: list[PropertyMetadataInfo],
+    ) -> Node:
         if (
             isinstance(member_access_node, PropertyAccessNode)
             and not member_access_node.is_function_call()
@@ -145,7 +181,8 @@ class PropertiesMapper:
             # in case expression is just property access node
             # it will behave like !!property in JS
             # converting queried property to boolean and evaluate as boolean
-            mapped_prop, _ = self._map_property(member_access_node)
+            mapped_prop, property_metadata = self._map_property(member_access_node)
+            involved_fields.append(property_metadata)
             return LogicalNode(
                 left=ComparisonNode(
                     mapped_prop,
@@ -189,12 +226,12 @@ class PropertiesMapper:
                     f'Missing mapping configuration for property "{member_access_node.get_property_path()}" '
                     f'while processing the comparison node: "{member_access_node}".'
                 )
-
+            involved_fields.append(property_metadata)
             result = None
             for mapping in property_metadata.field_mappings:
                 method_access_node = member_access_node.get_method_access_node().copy()
                 current_node_result = self._create_property_access_node(
-                    mapping, method_access_node
+                    mapping, property_metadata.data_type, method_access_node
                 )
 
                 if result is None:
@@ -304,12 +341,23 @@ class PropertiesMapper:
 
         return comparison_node
 
-    def _create_property_access_node(self, mapping, method_access_node: MethodAccessNode) -> Node:
+    def _create_property_access_node(
+        self, mapping, data_type: type, method_access_node: MethodAccessNode
+    ) -> Node:
         if isinstance(mapping, JsonFieldMapping):
-            return JsonPropertyAccessNode(mapping.json_prop, mapping.prop_in_json, method_access_node)
+            return JsonPropertyAccessNode(
+                json_property_name=mapping.json_prop,
+                property_to_extract=mapping.prop_in_json,
+                method_access_node=method_access_node,
+                data_type=data_type,
+            )
 
         if isinstance(mapping, SimpleFieldMapping):
-            return PropertyAccessNode(mapping.map_to, method_access_node)
+            return PropertyAccessNode(
+                member_name=mapping.map_to,
+                value=method_access_node,
+                data_type=data_type,
+            )
 
         raise NotImplementedError(f"Mapping type {type(mapping).__name__} is not supported yet")
 
@@ -328,7 +376,9 @@ class PropertiesMapper:
         result = []
 
         for mapping in property_metadata.field_mappings:
-            property_access_node = self._create_property_access_node(mapping, None)
+            property_access_node = self._create_property_access_node(
+                mapping, property_metadata.data_type, None
+            )
             result.append(property_access_node)
         return (
             MultipleFieldsNode(result) if len(result) > 1 else result[0]

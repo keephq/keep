@@ -1,19 +1,19 @@
-import { useWorkflowStore } from "@/entities/workflows";
 import { CloudIcon, ExclamationTriangleIcon } from "@heroicons/react/20/solid";
 import { Tooltip } from "@/shared/ui";
 import { useEffect } from "react";
-import TimeAgo, { Formatter } from "react-timeago";
+import TimeAgo from "react-timeago";
 
-export function WorkflowSyncStatus() {
-  const {
-    lastChangedAt,
-    lastDeployedAt,
-    isEditorSyncedWithNodes,
-    isInitialized,
-  } = useWorkflowStore();
-  const isChangesSaved =
-    isEditorSyncedWithNodes && lastDeployedAt >= lastChangedAt;
+interface WorkflowSyncStatusProps {
+  isInitialized: boolean;
+  lastDeployedAt: number | null;
+  isChangesSaved: boolean;
+}
 
+export function WorkflowSyncStatus({
+  isInitialized,
+  lastDeployedAt,
+  isChangesSaved,
+}: WorkflowSyncStatusProps) {
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       if (!isChangesSaved) {

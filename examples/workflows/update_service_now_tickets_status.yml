@@ -1,6 +1,7 @@
 workflow:
-  id: servicenow
-  description: update the ticket status every minute
+  id: servicenow-ticket-sync
+  name: ServiceNow Ticket Sync
+  description: Synchronizes ServiceNow ticket statuses with Keep alerts and maintains bidirectional state tracking.
   triggers:
     - type: manual
   steps:
@@ -11,8 +12,8 @@ workflow:
         # get all the alerts with sys_id (means that ticket exists for them)
         with:
           filters:
-          - key: ticket_type
-            value: servicenow
+            - key: ticket_type
+              value: servicenow
   actions:
     # update the tickets
     - name: update-ticket
@@ -25,5 +26,5 @@ workflow:
           table_name: "{{ foreach.value.alert_enrichment.enrichments.table_name }}"
           fingerprint: "{{ foreach.value.alert_fingerprint }}"
           enrich_alert:
-          - key: ticket_status
-            value: results.state
+            - key: ticket_status
+              value: results.state

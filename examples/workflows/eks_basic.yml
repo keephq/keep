@@ -1,6 +1,7 @@
 workflow:
-  id: eks-example
-  description: eks-example
+  id: eks-pod-status-monitor
+  name: EKS Pod Status Monitor
+  description: Monitors and reports the status of all pods in an EKS cluster, including their names, namespaces, and current phases.
   triggers:
     - type: manual
   steps:

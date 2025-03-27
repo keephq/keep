@@ -1,12 +1,12 @@
 workflow:
-  id: sa_pipeline_status_alert
-  description: gpu_test
+  id: tiered-alert-notification-system
+  name: Tiered Alert Notification System
+  description: Implements a sophisticated multi-tier alert notification system with escalating notifications to email and Slack based on alert duration.
   triggers:
     - type: alert
       filters:
         - key: source
           value: "openobserve"
-  name: gpu_test
 
   # consts block for email_template and slack_message
   consts:

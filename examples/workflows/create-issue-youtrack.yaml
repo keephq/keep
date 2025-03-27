@@ -1,7 +1,7 @@
 workflow:
-  id: create-issue-youtrack
-  name: Create issue in YouTrack
-  description: You can create a new issue in YouTrack
+  id: youtrack-issue-creator
+  name: YouTrack Issue Creator
+  description: Creates standardized issues in YouTrack with predefined templates and fields.
   disabled: false
   triggers:
     - type: manual

@@ -55,7 +55,11 @@ class ZendutyProvider(BaseProvider):
         https://github.com/Zenduty/zenduty-python-sdk
 
         Args:
-            kwargs (dict): The providers with context
+            title (str): Title of the incident
+            summary (str): Summary of the incident
+            service (str): Service ID in Zenduty
+            user (str): User ID in Zenduty
+            policy (str): Policy ID in Zenduty
         """
         self.logger.debug("Notifying incident to Zenduty")
 

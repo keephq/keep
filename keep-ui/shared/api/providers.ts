@@ -75,6 +75,7 @@ export type TProviderCategory =
   | "Collaboration"
   | "CRM"
   | "Queues"
+  | "Orchestration"
   | "Coming Soon"
   | "Others";
 

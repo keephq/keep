@@ -152,7 +152,14 @@ class SlackProvider(BaseProvider):
         https://api.slack.com/messaging/webhooks
 
         Args:
-            kwargs (dict): The providers with context
+            message (str): The content of the message.
+            blocks (list): The blocks of the message.
+            channel (str): The channel to send the message
+            slack_timestamp (str): The timestamp of the message to update
+            thread_timestamp (str): The timestamp of the thread to send the message
+            attachments (list): The attachments of the message.
+            username (str): The username of the message.
+            notification_type (str): The type of notification.
         """
         if notification_type == "reaction":
             return self._notify_reaction(

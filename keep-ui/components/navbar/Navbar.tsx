@@ -12,10 +12,11 @@ import "./Navbar.css";
 
 export default async function NavbarInner() {
   const session = await auth();
+
   return (
     <>
-      <Menu>
-        <Search />
+      <Menu session={session}>
+        <Search session={session} />
         <div className="pt-4 space-y-4 flex-1 overflow-auto scrollable-menu-shadow">
           <IncidentsLinks session={session} />
           <AlertsLinks session={session} />

@@ -71,7 +71,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const { isLoading: isAsyncLoading, totalCount: feedAlertsTotalCount } =
     useLastAlerts({
       cel: shouldShowFeed ? undefined : "",
-      limit: 20,
+      limit: 0,
       offset: 0,
     });
 

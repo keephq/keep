@@ -1,6 +1,7 @@
 workflow:
-  id: zoom-example
-  description: zoom-example
+  id: zoom-warroom-creator
+  name: Zoom War Room Creator
+  description: Creates Zoom war room meetings for alerts with automatic recording and Slack notification containing join links.
   triggers:
     - type: manual
   actions:

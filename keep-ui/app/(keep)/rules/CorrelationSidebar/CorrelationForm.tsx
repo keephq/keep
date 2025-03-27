@@ -14,6 +14,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import React from "react";
 import { CorrelationFormType } from "./types";
+import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
 
 type CorrelationFormProps = {
   alertsFound: AlertDto[];
@@ -27,17 +28,27 @@ export const CorrelationForm = ({
   const {
     control,
     register,
+    watch,
     formState: { errors, isSubmitted },
   } = useFormContext<CorrelationFormType>();
+
+  const { data: tenantConfiguration } = useTenantConfiguration();
 
   const getNestedKeys = (obj: any, prefix = ""): string[] => {
     return Object.entries(obj).reduce<string[]>((acc, [key, value]) => {
       const newKey = prefix ? `${prefix}.${key}` : key;
       if (value && typeof value === "object" && !Array.isArray(value)) {
-        return [...acc, ...getNestedKeys(value, newKey)];
+        return [...acc, newKey, ...getNestedKeys(value, newKey)];
       }
       return [...acc, newKey];
     }, []);
+  };
+
+  const getMultiLevelKeys = (obj: AlertDto, groupBy: string): string[] => {
+    if (!obj || !groupBy) return [];
+    const objAsAny = obj as any;
+    const key = Object.keys(objAsAny[groupBy])[0];
+    return Object.keys(objAsAny[groupBy][key]);
   };
 
   const keys = [
@@ -273,6 +284,62 @@ export const CorrelationForm = ({
           <Text>Created incidents require manual approve</Text>
         </label>
       </div>
+      {tenantConfiguration?.["multi_level_enabled"] && (
+        <div className="flex items-center space-x-2">
+          <Controller
+            control={control}
+            name="multiLevel"
+            render={({ field: { value, onChange } }) => (
+              <Switch
+                color="orange"
+                id="multiLevelCorrelation"
+                onChange={onChange}
+                checked={value}
+              />
+            )}
+          />
+
+          <label
+            htmlFor="multiLevelCorrelation"
+            className="text-sm text-gray-500"
+          >
+            <Text>Multi-level correlation</Text>
+          </label>
+        </div>
+      )}
+      {watch("multiLevel") && tenantConfiguration?.["multi_level_enabled"] && (
+        <div>
+          <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong flex items-center">
+            Multi-level property name
+            <span className="text-red-500 ml-1">*</span>
+            <Button
+              className="cursor-default ml-2"
+              type="button"
+              tooltip="The property name to use for the multi-level correlation. For example, if the property name is 'host', the correlation will be 'host1, host2'."
+              icon={QuestionMarkCircleIcon}
+              size="xs"
+              variant="light"
+              color="slate"
+            />
+          </label>
+          <Controller
+            control={control}
+            name="multiLevelPropertyName"
+            render={({ field: { value, onChange } }) => (
+              <Select value={value} onValueChange={onChange} className="mt-2">
+                {getMultiLevelKeys(
+                  alertsFound[0],
+                  watch("groupedAttributes")[0]
+                ).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {key}
+                  </SelectItem>
+                ))}
+              </Select>
+            )}
+          />
+        </div>
+      )}
     </div>
   );
 };

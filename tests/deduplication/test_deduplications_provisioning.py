@@ -23,7 +23,7 @@ def setup(monkeypatch):
                 }
             }
         },
-        "Linked Grafana provider": {
+        "Installed Grafana provider": {
             "type": "grafana",
             "deduplication_rules": {
                 "fake new deduplication rule": {
@@ -38,30 +38,39 @@ def setup(monkeypatch):
     deduplication_rules_in_db = [
         AlertDeduplicationRule(
             id=UUID("f3a2b76c8430491da71684de9cf257ab"),
+            tenant_id="fake_tenant_id",
             name="provisioned fake existing deduplication rule",
             description="provisioned fake existing deduplication rule description",
             provider_id="edc4d65d53204cefb511321be98f748e",
             provider_type="prometheus",
+            last_updated_by="system",
+            created_by="system",
             fingerprint_fields=["fingerprint", "source", "service"],
             full_deduplication=False,
             is_provisioned=True,
         ),
         AlertDeduplicationRule(
             id=UUID("a5d8f32b6c7049efb913c21da7e845fd"),
+            tenant_id="fake_tenant_id",
             name="provisioned fake deduplication rule to delete",
             description="fake new deduplication rule description",
             provider_id="a1b2c3d4e5f64789ab1234567890abcd",
             provider_type="grafana",
+            last_updated_by="system",
+            created_by="system",
             fingerprint_fields=["fingerprint"],
             full_deduplication=False,
             is_provisioned=True,
         ),
         AlertDeduplicationRule(
             id=UUID("c7e3d28f95104b6a8f12dc45eb7639fa"),
+            tenant_id="fake_tenant_id",
             name="not provisioned fake deduplication rule",
             description="not provisioned fake deduplication rule",
             provider_id="a1b2c3d4e5f64789ab1234567890abcd",
             provider_type="grafana",
+            last_updated_by="user",
+            created_by="user",
             fingerprint_fields=["fingerprint"],
             full_deduplication=False,
             is_provisioned=False,
@@ -70,31 +79,35 @@ def setup(monkeypatch):
     installed_providers = [
         Provider(
             id="edc4d65d53204cefb511321be98f748e",
-            name="Installed Prometheus provider",
-            display_name="Installed Prometheus provider",
+            display_name="Prometheus",
             type="prometheus",
-            enabled=True,
+            details={"name": "Installed Prometheus provider"},
             can_query=True,
             can_notify=True,
         ),
         Provider(
             id="p2b2c3d4e5f64789ab1234567890abcd",
-            name="Installed Prometheus provider second",
-            display_name="Installed Prometheus provider",
+            display_name="Prometheus",
             type="prometheus",
-            enabled=True,
+            details={"name": "Installed Prometheus provider second"},
             can_query=True,
             can_notify=True,
         ),
+        Provider(
+            id="a1b2c3d4e5f64789ab1234567890abcd",
+            display_name="Grafana",
+            type="grafana",
+            details={"name": "Installed Grafana provider"},
+            can_query=True,
+            can_notify=True,
+        )
     ]
 
     linked_providers = [
         Provider(
-            id="a1b2c3d4e5f64789ab1234567890abcd",
-            name="Linked Grafana provider",
-            display_name="Linked Grafana provider",
+            id="abcda1b2c3d4e5f64789ab1234567890",
+            display_name="Grafana",
             type="grafana",
-            enabled=True,
             can_query=True,
             can_notify=True,
         )
@@ -168,7 +181,7 @@ def test_provisioning_of_existing_rule(setup):
         rule_id=str(UUID("f3a2b76c8430491da71684de9cf257ab")),
         name="provisioned fake existing deduplication rule",
         description="new description",
-        provider_id="p2b2c3d4e5f64789ab1234567890abcd",
+        provider_id="edc4d65d53204cefb511321be98f748e",
         provider_type="prometheus",
         last_updated_by="system",
         enabled=True,

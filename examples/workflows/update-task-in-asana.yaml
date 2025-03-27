@@ -1,0 +1,20 @@
+workflow:
+  id: update-task-in-asana
+  name: Update task in asana
+  description: asana
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps:
+    - name: asana-step
+      provider:
+        type: asana
+        config: "{{ providers.asana }}"
+        with:
+          task_id: 1209749862246975
+          completed: true
+          name: "done: updated the task"
+  actions: []

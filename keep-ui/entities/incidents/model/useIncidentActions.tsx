@@ -42,7 +42,8 @@ type UseIncidentActionsValue = {
   confirmPredictedIncident: (incidentId: string) => Promise<void>;
   unlinkAlertsFromIncident: (
     incidentId: string,
-    alertFingerprints: string[]
+    alertFingerprints: string[],
+    mutate?: () => void
   ) => Promise<void>;
   splitIncidentAlerts: (
     incidentId: string,
@@ -234,8 +235,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
         mutateIncidentsList();
         toast.success("Incidents deleted successfully");
         return true;
-      }
-      catch (error) {
+      } catch (error) {
         showErrorToast(error, "Failed to delete incidents");
         return false;
       }
@@ -310,6 +310,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
     async (
       incidentId: string,
       alertFingerprints: string[],
+      mutate?: () => void,
       {
         skipConfirmation = false,
       }: {
@@ -339,8 +340,12 @@ export function useIncidentActions(): UseIncidentActionsValue {
           `/incidents/${incidentId}/alerts`,
           alertFingerprints
         );
-        mutateIncidentsList();
-        mutateIncident(incidentId);
+        if (mutate !== undefined) {
+          await mutate();
+        } else {
+          await mutateIncidentsList();
+          await mutateIncident(incidentId);
+        }
         toast.success("Alerts unlinked from incident successfully");
         return result;
       } catch (error) {

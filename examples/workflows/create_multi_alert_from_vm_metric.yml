@@ -1,10 +1,10 @@
 workflow:
   # Unique identifier for this workflow
-  id: query-victoriametrics-multi
+  id: multi-service-cpu-monitor
   # Display name shown in the UI
-  name: victoriametrics-multi-alert-example
+  name: Multi-Service CPU Monitor
   # Brief description of what this workflow does
-  description: victoriametrics
+  description: Creates separate alerts for different services based on VictoriaMetrics CPU metrics with customizable thresholds.
   triggers:
     # This workflow can be triggered manually from the UI
     - type: manual

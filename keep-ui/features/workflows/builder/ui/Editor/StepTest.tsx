@@ -1,19 +1,14 @@
 import { Button, TextInput } from "@/components/ui";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { JsonCard } from "@/shared/ui";
+import { JsonCard, MonacoEditor } from "@/shared/ui";
 import { Callout, Text } from "@tremor/react";
 import { useMemo, useState } from "react";
 import { EditorLayout } from "./StepEditor";
-// Monaco Editor - do not load from CDN (to support on-prem)
-// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
-import * as monaco from "monaco-editor";
-import { loader } from "@monaco-editor/react";
-loader.config({ monaco });
-import { Editor } from "@monaco-editor/react";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { useCopilotChat } from "@copilotkit/react-core";
 import { Role } from "@copilotkit/runtime-client-gql";
 import { TextMessage } from "@copilotkit/runtime-client-gql";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 export function useTestStep() {
   const api = useApi();
@@ -44,6 +39,7 @@ const WFDebugWithAI = ({
   errors: { [key: string]: string };
   description: string;
 }) => {
+  // careful, useCopilotChat may not be available if user has not set an OpenAI API key
   const { appendMessage } = useCopilotChat();
   return (
     <Button
@@ -74,11 +70,11 @@ const WFDebugWithAIButton = ({
   errors: { [key: string]: string };
   description: string;
 }) => {
-  try {
-    return <WFDebugWithAI errors={errors} description={description} />;
-  } catch (e) {
+  const { data: config } = useConfig();
+  if (!config?.OPEN_AI_API_KEY_SET) {
     return null;
   }
+  return <WFDebugWithAI errors={errors} description={description} />;
 };
 
 const variablesRegex = /{{[\s]*.*?[\s]*}}/g;
@@ -150,8 +146,8 @@ export function TestRunStepForm({
               typeof value === "object"
                 ? JSON.parse(result)
                 : typeof value === "number"
-                ? Number(result)
-                : result,
+                  ? Number(result)
+                  : result,
             ];
           } catch {
             return [key, result];
@@ -257,7 +253,7 @@ export function TestRunStepForm({
                   ),
                 }}
               >
-                <Editor
+                <MonacoEditor
                   value={JSON.stringify(result, null, 2)}
                   language="json"
                   theme="vs-light"
@@ -305,6 +301,7 @@ export function TestRunStepForm({
           className="w-full"
           color="orange"
           disabled={isLoading || isDisabled}
+          data-testid="wf-editor-step-test-run-button"
         >
           {isLoading ? "Running..." : "Test Run"}
         </Button>

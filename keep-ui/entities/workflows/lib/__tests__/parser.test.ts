@@ -3,17 +3,17 @@ import {
   getYamlWorkflowDefinition,
   getYamlActionFromAction,
   getYamlStepFromStep,
+  getYamlConditionFromStep,
 } from "../parser";
 import { Provider } from "@/shared/api/providers";
+import { Definition, V2StepForeach } from "@/entities/workflows";
 import {
-  Definition,
-  V2StepForeach,
-  V2StepConditionThreshold,
-} from "@/entities/workflows";
-import {
+  YamlAssertCondition,
   YamlStepOrAction,
+  YamlThresholdCondition,
   YamlWorkflowDefinition,
 } from "@/entities/workflows/model/yaml.types";
+import { getOrderedWorkflowYamlStringFromJSON } from "../yaml-utils";
 
 const mockProviders: Provider[] = [
   {
@@ -80,6 +80,74 @@ const mockProviders: Provider[] = [
     health: true,
   },
 ];
+
+const workflowWithConditionsAndAliases = `
+workflow:
+  id: query-victoriametrics
+  name: victoriametrics
+  description: victoriametrics
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps:
+    - name: gcp-monitoring-step
+      provider:
+        type: gcp-monitoring
+        config: "{{ providers.gcp-monitoring }}"
+        with:
+          filter: resource.type = 'gke_container'
+          page_size: 1000
+          project: "{{ alert.projectId }}"
+          raw: true
+          timedelta_in_days: 1
+    - name: victoriametrics-step
+      provider:
+        type: victoriametrics
+        config: "{{ providers.victoriametrics }}"
+        with:
+          query: avg(rate(process_cpu_seconds_total))
+          queryType: query
+  actions:
+    - name: trigger-slack-gcp
+      foreach: "{{ steps.gcp-monitoring-step.results.data.result }}"
+      if: "{{ foreach.value.1 }} > 0.0040"
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+        with:
+          message: "Result: {{ foreach.value.1 }} is greater than 0.0040! 🚨"
+          channel: channel-id
+    - name: trigger-slack1
+      condition:
+        - name: threshold-condition
+          type: threshold
+          alias: A
+          value: "{{ steps.victoriametrics-step.results.data.result.0.value.1 }}"
+          compare_to: 0.005
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+        with:
+          message: "Result: {{ steps.victoriametrics-step.results.data.result.0.value.1 }} is greater than 0.0040! 🚨"
+    - name: trigger-slack2
+      if: "{{ A }}"
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+        with:
+          message: "Result: {{ steps.victoriametrics-step.results.data.result.0.value.1 }} is greater than 0.0040! 🚨"
+    - name: trigger-ntfy
+      if: "{{ A }}"
+      provider:
+        type: ntfy
+        config: "{{ providers.ntfy }}"
+        with:
+          message: "Result: {{ steps.victoriametrics-step.results.data.result.0.value.1 }} is greater than 0.0040! 🚨"
+          topic: ezhil
+`;
 
 describe("Workflow Parser", () => {
   describe("getYamlStepFromStep", () => {
@@ -166,6 +234,62 @@ describe("Workflow Parser", () => {
     });
   });
 
+  describe("getYamlConditionFromStep", () => {
+    it("should convert a V2StepConditionThreshold to a YamlThresholdCondition", () => {
+      const conditionStep = {
+        id: "condition-1",
+        name: "threshold-condition",
+        type: "condition-threshold" as const,
+        componentType: "switch" as const,
+        properties: {
+          value: "{{ steps.clickhouse-step.results.level }}",
+          compare_to: "ERROR",
+        },
+        alias: "error-check",
+        branches: {
+          true: [],
+          false: [],
+        },
+      };
+
+      const result = getYamlConditionFromStep(
+        conditionStep
+      ) as YamlThresholdCondition;
+
+      expect(result.type).toBe("threshold");
+      expect(result.value).toBe("{{ steps.clickhouse-step.results.level }}");
+      expect(result.compare_to).toBe("ERROR");
+      expect(result.alias).toBe("error-check");
+    });
+
+    it("should convert a V2StepConditionAssert to a YamlAssertCondition", () => {
+      const conditionStep = {
+        id: "condition-1",
+        name: "assert-condition",
+        type: "condition-assert" as const,
+        componentType: "switch" as const,
+        properties: {
+          assert: "{{ steps.clickhouse-step.results.level }} == 'ERROR'",
+        },
+        alias: "error-check",
+        branches: {
+          true: [],
+          false: [],
+        },
+      };
+
+      const result = getYamlConditionFromStep(
+        conditionStep
+      ) as YamlAssertCondition;
+
+      expect(result.type).toBe("assert");
+      expect(result.assert).toBe(
+        "{{ steps.clickhouse-step.results.level }} == 'ERROR'"
+      );
+      expect(result.alias).toBe("error-check");
+    });
+  });
+
   describe("parseWorkflow", () => {
     it("should parse a simple workflow with steps and actions", () => {
       const workflowYaml = `
@@ -203,43 +327,20 @@ workflow:
     });
 
     it("should parse a workflow with conditions", () => {
-      const workflowYaml = `
-workflow:
-  id: test-workflow
-  name: Test Workflow
-  description: Test Description
-  disabled: false
-  consts: {}
-  steps:
-    - name: clickhouse-step
-      provider:
-        config: "{{ providers.clickhouse }}"
-        type: clickhouse
-        with:
-          query: "SELECT * FROM test"
-          single_row: "True"
-  actions:
-    - name: ntfy-action
-      condition:
-        - type: threshold
-          name: error-check
-          value: "{{ steps.clickhouse-step.results.level }}"
-          compare_to: "ERROR"
-      provider:
-        config: "{{ providers.ntfy }}"
-        type: ntfy
-        with:
-          message: "Error detected"
-          topic: errors
-`;
+      const result = parseWorkflow(
+        workflowWithConditionsAndAliases,
+        mockProviders
+      );
 
-      const result = parseWorkflow(workflowYaml, mockProviders);
-
-      expect(result.sequence).toHaveLength(2);
-      expect(result.sequence[1].type).toBe("condition-threshold");
-      expect(
-        (result.sequence[1] as V2StepConditionThreshold).branches.true[0].type
-      ).toBe("action-ntfy");
+      expect(result.sequence).toHaveLength(4);
+      expect(result.sequence[1].type).toBe("step-victoriametrics");
+      expect(result.sequence[2].type).toBe("foreach");
+      expect(result.sequence[3].type).toBe("condition-threshold");
+      expect(result.sequence[3].branches.true).toHaveLength(3);
+      expect(result.sequence[3].branches.false).toHaveLength(0);
+      expect(result.sequence[3].branches.true[0].type).toBe("action-slack");
+      expect(result.sequence[3].branches.true[1].type).toBe("action-slack");
+      expect(result.sequence[3].branches.true[2].type).toBe("action-ntfy");
     });
 
     it("should parse a workflow with foreach", () => {
@@ -464,6 +565,19 @@ workflow:
       const condition = action.condition!;
       expect(condition).toBeDefined();
       expect(condition[0].type).toBe("threshold");
+    });
+  });
+
+  describe("round trip should not change the workflow", () => {
+    it("should not change the workflow", () => {
+      const workflowYaml = workflowWithConditionsAndAliases;
+      const result = parseWorkflow(workflowYaml, mockProviders);
+      const resultYamlObject = {
+        workflow: getYamlWorkflowDefinition(result),
+      };
+      const resultYamlString =
+        getOrderedWorkflowYamlStringFromJSON(resultYamlObject);
+      expect(resultYamlString.trim()).toEqual(workflowYaml.trim());
     });
   });
 });

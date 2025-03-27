@@ -41,6 +41,7 @@ export default function AlertDismissModal({
   const [selectedTab, setSelectedTab] = useState<number>(0);
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
   const [showError, setShowError] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const revalidateMultiple = useRevalidateMultiple();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
@@ -82,23 +83,22 @@ export default function AlertDismissModal({
       return;
     }
 
+    setIsLoading(true);
+
     const dismissUntil =
       selectedTab === 0 ? null : selectedDateTime?.toISOString();
-    const requests = alerts.map((alert: AlertDto) => {
-      const requestData = {
+
+    const requestData = {
         enrichments: {
-          fingerprint: alert.fingerprint,
-          dismissed: !alert.dismissed,
+          dismissed: !alerts[0]?.dismissed,
           note: dismissComment,
           dismissUntil: dismissUntil || "",
         },
-        fingerprint: alert.fingerprint,
+        fingerprints: alerts.map( (alert: AlertDto) => alert.fingerprint),
       };
-      return api.post(`/alerts/enrich`, requestData);
-    });
 
     try {
-      const responses = await Promise.all(requests);
+      await api.post(`/alerts/batch_enrich`, requestData);
       toast.success(`${alerts.length} alerts dismissed successfully!`, {
         position: "top-right",
       });
@@ -108,6 +108,7 @@ export default function AlertDismissModal({
       showErrorToast(error, "Failed to dismiss alerts");
     } finally {
       clearAndClose();
+      setIsLoading(false);
     }
   };
 
@@ -211,7 +212,7 @@ export default function AlertDismissModal({
             <Button variant="secondary" color="orange" onClick={clearAndClose}>
               Cancel
             </Button>
-            <Button onClick={handleDismissChange} color="orange">
+            <Button onClick={handleDismissChange} color="orange" loading={isLoading}>
               Dismiss
             </Button>
           </div>

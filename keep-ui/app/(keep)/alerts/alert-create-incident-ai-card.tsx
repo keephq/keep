@@ -24,6 +24,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { AlertDto } from "@/entities/alerts/model";
 import { IncidentCandidateDto } from "@/entities/incidents/model";
+import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 
 interface IncidentCardProps {
   incident: IncidentCandidateDto;
@@ -89,13 +90,18 @@ const DraggableAlertRow: React.FC<DraggableAlertRowProps> = ({
       style={style}
       {...attributes}
       {...listeners}
-      className={`${isDragging ? "bg-gray-50" : ""} hover:bg-gray-50 transition-colors`}
+      className={`${
+        isDragging ? "bg-gray-50" : ""
+      } hover:bg-gray-50 transition-colors`}
     >
       <TableCell className="w-1/6 break-words">
         {alert.name || "Unnamed Alert"}
       </TableCell>
       <TableCell className="w-2/3 break-words whitespace-normal">
-        {alert.description || "No description"}
+        <FormattedContent
+          content={alert.description || "No description"}
+          format={alert.description_format}
+        />
       </TableCell>
       <TableCell className="w-1/12 break-words">
         {alert.severity || "N/A"}
@@ -204,7 +210,10 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
           <Title>{editedIncident.name || "Unnamed Incident"}</Title>
           <Subtitle className="mt-2">Description</Subtitle>
           <Text className="mt-2">
-            {editedIncident.description || "No description"}
+            <FormattedContent
+              content={editedIncident.description || "No description"}
+              format={editedIncident.description_format}
+            />
           </Text>
           <Subtitle className="mt-2">Severity</Subtitle>
           <Badge color="orange">{editedIncident.severity || "N/A"}</Badge>

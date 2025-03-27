@@ -1,5 +1,7 @@
-id: 6bc7c72e-ab3d-4913-84dd-08b9323195ae
-description: Teams Adaptive Cards Example
+workflow:
+  id: teams-adaptive-card-notifier
+  name: Teams Adaptive Card Notifier
+  description: Sends customized Microsoft Teams notifications using Adaptive Cards with dynamic alert information and formatted sections.
 disabled: false
 triggers:
   - type: manual
@@ -8,7 +10,6 @@ triggers:
         value: r".*"
     type: alert
 consts: {}
-name: Keep Teams Adaptive Cards
 owners: []
 services: []
 steps: []

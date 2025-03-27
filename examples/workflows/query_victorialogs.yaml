@@ -1,7 +1,7 @@
 workflow:
-  id: fc4167b8-f6ee-4ae2-ab4a-f16f3e92a660
-  name: Query VictoriaLogs
-  description: This is a sample workflow to query VictoriaLogs
+  id: victorialogs-stats-analyzer
+  name: VictoriaLogs Stats Analyzer
+  description: Analyzes VictoriaLogs data with statistical queries to track log level distributions and patterns.
   disabled: false
   triggers:
     - type: manual

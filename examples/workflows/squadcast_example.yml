@@ -1,15 +1,16 @@
 workflow:
-  id: squadcast
-  description: squadcast
+  id: squadcast-incident-creator
+  name: SquadCast Incident Creator
+  description: Creates SquadCast incidents from alerts with customizable messages and additional context data.
   triggers:
     - type: alert
   actions:
     - name: create-incident
       provider:
-          config: "{{ providers.squadcast }}"
-          type: squadcast
-          with:
-            additional_json: '{{ alert }}'
-            description: TEST
-            message: '{{ alert.name }}-test'
-            notify_type: incident
+        config: "{{ providers.squadcast }}"
+        type: squadcast
+        with:
+          additional_json: "{{ alert }}"
+          description: TEST
+          message: "{{ alert.name }}-test"
+          notify_type: incident

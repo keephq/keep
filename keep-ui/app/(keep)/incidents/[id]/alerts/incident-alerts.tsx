@@ -10,22 +10,19 @@ import type { RowSelectionState } from "@tanstack/react-table";
 import {
   Button,
   Card,
-  Icon,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TableHeaderCell,
   TableRow,
 } from "@tremor/react";
-import { AlertDto } from "@/entities/alerts/model";
+import { AlertDto, severityMapping } from "@/entities/alerts/model";
 import {
   useIncidentAlerts,
   usePollIncidentAlerts,
 } from "utils/hooks/useIncidents";
-import { AlertName } from "@/entities/alerts/ui";
-import React, { useEffect, useMemo, useState } from "react";
-import type { IncidentDto } from "@/entities/incidents/model";
+import React, { useEffect, useState } from "react";
+import { IncidentDto, useIncidentActions } from "@/entities/incidents/model";
 import {
   EmptyStateCard,
   getCommonPinningStylesAndClassNames,
@@ -33,20 +30,19 @@ import {
 } from "@/shared/ui";
 import { useRouter } from "next/navigation";
 import {
-  TableIndeterminateCheckbox,
   TablePagination,
-  TableSeverityCell,
-} from "@/shared/ui";
-import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
-import TimeAgo from "react-timeago";
+  } from "@/shared/ui";
 import clsx from "clsx";
 import { IncidentAlertsTableBodySkeleton } from "./incident-alert-table-body-skeleton";
 import { IncidentAlertsActions } from "./incident-alert-actions";
-import { DynamicImageProviderIcon } from "@/components/ui";
 import { ViewAlertModal } from "@/app/(keep)/alerts/ViewAlertModal";
 import { IncidentAlertActionTray } from "./incident-alert-action-tray";
-import { useApi } from "@/shared/lib/hooks/useApi";
 import { BellAlertIcon } from "@heroicons/react/24/outline";
+import { AlertsTableBody } from "@/app/(keep)/alerts/alerts-table-body";
+import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
+import {
+  useAlertTableCols,
+} from "@/app/(keep)/alerts/alert-table-utils";
 interface Props {
   incident: IncidentDto;
 }
@@ -69,8 +65,6 @@ export default function IncidentAlerts({ incident }: Props) {
     pageSize: 20,
   });
 
-  const api = useApi();
-
   const {
     data: alerts,
     isLoading: _alertsLoading,
@@ -80,6 +74,18 @@ export default function IncidentAlerts({ incident }: Props) {
     incident.id,
     alertsPagination.limit,
     alertsPagination.offset
+  );
+  const { unlinkAlertsFromIncident } = useIncidentActions();
+
+  const [theme, setTheme] = useLocalStorage(
+    "alert-table-theme",
+    Object.values(severityMapping).reduce<{ [key: string]: string }>(
+      (acc, severity) => {
+        acc[severity] = "bg-white";
+        return acc;
+      },
+      {}
+    )
   );
 
   // TODO: Load data on server side
@@ -106,175 +112,85 @@ export default function IncidentAlerts({ incident }: Props) {
 
   // Add new state for the ViewAlertModal
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>(null);
-
-  const columns = useMemo(
-    () => [
-      columnHelper.display({
-        id: "severity",
-        header: () => <></>,
-        cell: (context) => (
-          <TableSeverityCell
-            severity={context.row.original.severity as unknown as UISeverity}
-          />
-        ),
-        size: 4,
-        minSize: 4,
-        maxSize: 4,
-        meta: {
-          tdClassName: "p-0",
-          thClassName: "p-0",
-        },
-      }),
-      columnHelper.display({
-        id: "selected",
-        minSize: 32,
-        maxSize: 32,
-        header: (context) => (
-          <TableIndeterminateCheckbox
-            checked={context.table.getIsAllRowsSelected()}
-            indeterminate={context.table.getIsSomeRowsSelected()}
-            onChange={context.table.getToggleAllRowsSelectedHandler()}
-          />
-        ),
-        cell: (context) => (
-          <TableIndeterminateCheckbox
-            checked={context.row.getIsSelected()}
-            indeterminate={context.row.getIsSomeSelected()}
-            onChange={context.row.getToggleSelectedHandler()}
-          />
-        ),
-      }),
-      columnHelper.display({
-        id: "name",
-        header: "Name",
-        minSize: 100,
-        cell: (context) => (
-          <div className="max-w-[300px] group relative">
-            <AlertName alert={context.row.original} />
-          </div>
-        ),
-      }),
-      columnHelper.accessor("description", {
-        id: "description",
-        header: "Description",
-        minSize: 100,
-        cell: (context) => (
-          <div title={context.getValue()}>
-            <div className="truncate whitespace-pre-wrap line-clamp-3">
-              {context.getValue()}
-            </div>
-          </div>
-        ),
-      }),
-      columnHelper.accessor("status", {
-        id: "status",
-        minSize: 100,
-        header: "Status",
-        cell: (context) => (
-          <span className="flex items-center gap-1 capitalize">
-            <Icon
-              icon={getStatusIcon(context.getValue())}
-              size="sm"
-              color={getStatusColor(context.getValue())}
-              className="!p-0"
-            />
-            {context.getValue()}
-          </span>
-        ),
-      }),
-      columnHelper.accessor("is_created_by_ai", {
-        id: "is_created_by_ai",
-        header: "Correlation",
-        minSize: 50,
-        cell: (context) => {
-          if (isTopologyIncident) {
-            return <div title="Correlated with topology">🌐 Topology</div>;
-          }
-          return (
-            <>
-              {context.getValue() ? (
-                <div title="Correlated with AI">🤖 AI</div>
-              ) : (
-                <div title="Correlated manually">👨‍💻 Manually</div>
-              )}
-            </>
-          );
-        },
-      }),
-      columnHelper.accessor("lastReceived", {
-        id: "lastReceived",
-        header: "Last Event Time",
-        minSize: 100,
-        // data is a ISO string
-        cell: (context) => <TimeAgo date={context.getValue()} />,
-      }),
-      columnHelper.accessor("source", {
-        id: "source",
-        header: "Source",
-        maxSize: 100,
-        cell: (context) =>
-          (context.getValue() ?? []).map((source, index) => (
-            <DynamicImageProviderIcon
-              className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
-              key={`source-${source}-${index}`}
-              alt={source}
-              height={24}
-              width={24}
-              title={source}
-              src={`/icons/${source}-icon.png`}
-            />
-          )),
-      }),
-      columnHelper.display({
-        id: "actions",
-        header: "",
-        maxSize: 110,
-        cell: (context) => (
-          <div className="opacity-0 group-hover/row:opacity-100">
-            <IncidentAlertActionTray
-              alert={context.row.original}
-              onViewAlert={setViewAlertModal}
-              onUnlink={(alert) => {
-                if (!incident.is_candidate) {
-                  if (confirm("Are you sure you want to unlink this alert?")) {
-                    api
-                      .post(`/incidents/${incident.id}/unlink`, {
-                        fingerprints: [alert.fingerprint],
-                      })
-                      .then(() => {
-                        mutateAlerts();
-                      });
-                  }
-                }
-              }}
-              isCandidate={!incident.is_candidate}
-            />
-          </div>
-        ),
-        meta: {
-          tdClassName: "w-[110px] p-0",
-        },
-      }),
-    ],
-    [incident.id, incident.is_candidate, api, mutateAlerts]
-  );
-
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+  const extraColumns = [
+    columnHelper.accessor("is_created_by_ai", {
+      id: "is_created_by_ai",
+      header: "Correlation",
+      minSize: 50,
+      cell: (context) => {
+        if (isTopologyIncident) {
+          return <div title="Correlated with topology">🌐 Topology</div>;
+        }
+        return (
+          <>
+            {context.getValue() ? (
+              <div title="Correlated with AI">🤖 AI</div>
+            ) : (
+              <div title="Correlated manually">👨‍💻 Manually</div>
+            )}
+          </>
+        );
+      },
+    }),
+  ];
+
+  const MenuComponent = (alert: AlertDto) => {
+    return (
+      <div className="opacity-0 group-hover/row:opacity-100">
+        <IncidentAlertActionTray
+          alert={alert}
+          onViewAlert={setViewAlertModal}
+          onUnlink={async (alert) => {
+            if (!incident.is_candidate) {
+              await unlinkAlertsFromIncident(
+                incident.id,
+                [alert.fingerprint],
+                mutateAlerts
+              );
+            }
+          }}
+          isCandidate={incident.is_candidate}
+        />
+      </div>
+    );
+  };
+
+  const alertTableColumns = useAlertTableCols({
+    isCheckboxDisplayed: true,
+    isMenuDisplayed: true,
+    presetName: "incident-alerts",
+    presetNoisy: false,
+    MenuComponent: MenuComponent,
+    extraColumns: extraColumns,
+  });
 
   const table = useReactTable({
     data: alerts?.items ?? [],
-    columns: columns,
+    columns: alertTableColumns,
     rowCount: alerts?.count ?? 0,
     getRowId: (row) => row.fingerprint,
     onRowSelectionChange: setRowSelection,
     state: {
+      columnOrder: [
+        "severity",
+        "checkbox",
+        "status",
+        "source",
+        "name",
+        "description",
+        "is_created_by_ai",
+      ],
+      columnVisibility: { extraPayload: false, assignee: false },
+      columnPinning: {
+        left: ["severity", "checkbox", "status", "source", "name"],
+        right: ["alertMenu"],
+      },
       rowSelection,
       pagination,
-      columnPinning: {
-        left: ["severity", "selected", "name"],
-        right: ["actions"],
-      },
     },
+
     onPaginationChange: setTablePagination,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
@@ -317,7 +233,6 @@ export default function IncidentAlerts({ incident }: Props) {
   }
 
   const selectedFingerprints = Object.keys(rowSelection);
-
 
   function renderRows() {
     // This trick handles cases when rows have duplicated ids
@@ -405,7 +320,15 @@ export default function IncidentAlerts({ incident }: Props) {
             ))}
           </TableHead>
           {alerts && alerts?.items?.length > 0 && (
-            <TableBody>{renderRows()}</TableBody>
+            // <TableBody>{renderRows()}</TableBody>
+            <AlertsTableBody
+              table={table}
+              showSkeleton={false}
+              theme={theme}
+              onRowClick={() => {}}
+              lastViewedAlert={null}
+              presetName={"incident-alerts"}
+            />
           )}
           {isLoading && (
             <IncidentAlertsTableBodySkeleton

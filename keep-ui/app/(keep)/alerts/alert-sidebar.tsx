@@ -14,6 +14,7 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 import { useProviders } from "@/utils/hooks/useProviders";
 import AlertMenu from "./alert-menu";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -133,9 +134,10 @@ const AlertSidebar = ({
                   </p>
                   <p>
                     <FieldHeader>Description</FieldHeader>
-                    <pre className="whitespace-pre-wrap">
-                      {alert.description}
-                    </pre>
+                    <FormattedContent
+                      content={alert.description}
+                      format={alert.description_format}
+                    />
                   </p>
                   <p>
                     <FieldHeader className="flex items-center gap-1">

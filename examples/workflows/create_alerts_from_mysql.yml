@@ -1,6 +1,7 @@
 workflow:
-  id: create-alerts-from-mysql
-  description: Create alerts from MySQL
+  id: mysql-alert-sync
+  name: MySQL Alert Sync
+  description: Synchronizes alerts from a MySQL database into Keep, with configurable intervals and data mapping.
   triggers:
     # run manually (debugging)
     - type: manual

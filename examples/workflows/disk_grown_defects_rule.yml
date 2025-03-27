@@ -1,9 +1,12 @@
-
 # Alert description: this alert will trigger if the disk defects is over 50%, 40% or 30%.
 # Alert breakdown:
 # 1. Read the disk status from postgres (select * from disk)
 # 2. For each disk, check if the disk defects is over 50% (major), 40% (medium) or 30% (minor).
 # 3. If the disk defects is over the threshold, insert a new row to the alert table with the disk name and the disk defects.
+workflow:
+  id: disk-defect-tracker
+  name: Disk Defect Tracker
+  description: Monitors disk defects and creates tiered alerts in PostgreSQL based on defect percentage thresholds.
 alert:
   id: DiskGrownDefectsRule
   steps:
@@ -19,7 +22,7 @@ alert:
       condition:
         - name: threshold-condition
           type: threshold
-          value:  " {{ foreach.value[13] }} " # disk defect is the 13th column
+          value: " {{ foreach.value[13] }} " # disk defect is the 13th column
           compare_to: 50, 40, 30
           level: major, medium, minor
       provider:
@@ -36,4 +39,4 @@ providers:
       username: "{{ env.POSTGRES_USER }}"
       password: "{{ env.POSTGRES_PASSWORD }}"
       database: "{{ env.POSTGRES_DATABASE }}"
-      host:  "{{ env.POSTGRES_HOST }}"
+      host: "{{ env.POSTGRES_HOST }}"

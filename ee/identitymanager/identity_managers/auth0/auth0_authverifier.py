@@ -42,6 +42,14 @@ class Auth0AuthVerifier(AuthVerifierBase):
         with tracer.start_as_current_span("verify_bearer_token"):
             if not token:
                 raise HTTPException(status_code=401, detail="No token provided 👈")
+
+            # more than one tenant support
+            if token.startswith("keepActiveTenant"):
+                active_tenant, token = token.split("&")
+                active_tenant = active_tenant.split("=")[1]
+            else:
+                active_tenant = None
+
             try:
                 jwt_signing_key = jwks_client.get_signing_key_from_jwt(token).key
                 payload = jwt.decode(
@@ -52,7 +60,24 @@ class Auth0AuthVerifier(AuthVerifierBase):
                     issuer=self.issuer,
                     leeway=60,
                 )
-                tenant_id = payload.get("keep_tenant_id")
+                # if active_tenant is set, we must verify its in the token
+                if active_tenant:
+                    active_tenant_found = False
+                    for tenant in payload.get("keep_tenant_ids", []):
+                        if tenant.get("tenant_id") == active_tenant:
+                            active_tenant_found = True
+                            break
+                    if not active_tenant_found:
+                        self.logger.warning(
+                            "Someone tries to use a token with a tenant that is not in the token"
+                        )
+                        raise HTTPException(
+                            status_code=401,
+                            detail="Token does not contain the active tenant",
+                        )
+                    tenant_id = active_tenant
+                else:
+                    tenant_id = payload.get("keep_tenant_id")
                 role_name = payload.get(
                     "keep_role", AdminRole.get_name()
                 )  # default to admin for backwards compatibility

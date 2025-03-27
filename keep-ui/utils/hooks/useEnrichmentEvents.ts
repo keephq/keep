@@ -3,7 +3,7 @@ import useSWR, { SWRConfiguration } from "swr";
 import {
   EnrichmentEvent,
   EnrichmentEventWithLogs,
-  PaginatedMappingExecutionDto,
+  PaginatedEnrichmentExecutionDto,
 } from "@/shared/api/enrichment-events";
 
 interface UseEnrichmentEventsOptions {
@@ -24,7 +24,7 @@ export function useEnrichmentEvents({
   const api = useApi();
 
   const { data, error, isLoading, mutate } =
-    useSWR<PaginatedMappingExecutionDto>(
+    useSWR<PaginatedEnrichmentExecutionDto>(
       api.isReady()
         ? `/${type}/${ruleId}/executions?limit=${limit}&offset=${offset}`
         : null,

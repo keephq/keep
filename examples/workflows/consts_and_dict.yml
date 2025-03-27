@@ -1,6 +1,7 @@
 workflow:
-  id: example-consts-and-dict
-  description: example-consts-and-dict
+  id: severity-mapping-example
+  name: Severity Mapping Example
+  description: Demonstrates how to use constant mappings to standardize alert severity levels.
   triggers:
     - type: manual
 

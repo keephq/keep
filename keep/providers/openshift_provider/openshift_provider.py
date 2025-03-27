@@ -20,7 +20,7 @@ class OpenshiftProviderAuthConfig:
             "description": "The openshift api server url",
             "required": True,
             "sensitive": False,
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         },
     )
     token: str = dataclasses.field(
@@ -38,7 +38,7 @@ class OpenshiftProviderAuthConfig:
             "description": "Skip TLS verification",
             "required": False,
             "sensitive": False,
-            "type": "switch"
+            "type": "switch",
         },
     )
 
@@ -115,7 +115,13 @@ class OpenshiftProvider(BaseProvider):
         return scopes
 
     def _notify(self, kind: str, name: str, project_name: str):
-        """Rollout restart the specified kind."""
+        """
+        Rollout restart the specified kind.
+        Args:
+            kind: The kind of object to restart. Could be deployments, statefulset, daemonset.
+            name: The name of the object to restart
+            project_name: The project name where the object is located
+        """
         client = self.__get_ocp_client()
         client.project_name = project_name
         self.logger.info(

@@ -12,17 +12,18 @@ from sqlmodel import Session
 
 from keep.api.core.config import config
 from keep.api.core.db import get_session
+from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.alert import AlertDto
 from keep.api.models.smtp import SMTPSettings
 from keep.api.models.webhook import WebhookSettings
 from keep.api.utils.tenant_utils import (
+    APIKeyException,
     create_api_key,
     get_api_key,
     get_api_keys,
     get_api_keys_secret,
     get_or_create_api_key,
     update_api_key_internal,
-    APIKeyException,
 )
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -388,3 +389,15 @@ async def get_sso_settings(
         }
     else:
         return {"sso": False}
+
+
+@router.get("/tenant/configuration")
+def get_tenant_configuration(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:settings"])
+    ),
+) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+    tenant_configuration = TenantConfiguration()
+    config_value = tenant_configuration.get_configuration(tenant_id=tenant_id)
+    return JSONResponse(status_code=200, content=config_value)

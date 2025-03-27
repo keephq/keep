@@ -37,6 +37,10 @@ class MappingRule(SQLModel, table=True):
     )  # max_length=204800)
     updated_by: Optional[str] = Field(max_length=255, default=None)
     last_updated_at: datetime = Field(default_factory=datetime.utcnow)
+    # Multi-level mapping fields
+    is_multi_level: bool = Field(default=False)
+    new_property_name: Optional[str] = Field(max_length=255)
+    prefix_to_remove: Optional[str] = Field(max_length=255)
 
 
 class MappRuleDtoBase(BaseModel):
@@ -46,6 +50,23 @@ class MappRuleDtoBase(BaseModel):
     priority: int = 0
     matchers: list[list[str]]
     type: Literal["csv", "topology"] = "csv"
+    is_multi_level: bool = False
+    new_property_name: Optional[str] = None
+    prefix_to_remove: Optional[str] = None
+
+    @validator("new_property_name")
+    def validate_new_property_name(cls, v, values):
+        if values.get("is_multi_level") and not v:
+            raise ValueError(
+                "new_property_name is required when is_multi_level is True"
+            )
+        return v
+
+    @validator("matchers")
+    def validate_matchers(cls, v, values):
+        if values.get("is_multi_level") and len(v) > 1:
+            raise ValueError("Multi-level mapping can only have one matcher group")
+        return v
 
 
 class MappingRuleDtoOut(MappRuleDtoBase, extra="ignore"):

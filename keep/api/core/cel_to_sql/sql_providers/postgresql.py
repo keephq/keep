@@ -2,6 +2,10 @@ from datetime import datetime
 from types import NoneType
 from typing import List
 from keep.api.core.cel_to_sql.ast_nodes import ConstantNode
+from keep.api.core.cel_to_sql.properties_metadata import (
+    JsonFieldMapping,
+    SimpleFieldMapping,
+)
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 
@@ -20,7 +24,7 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
 
         return f"COALESCE({', '.join(args)})"
 
-    def cast(self, expression_to_cast: str, to_type):
+    def cast(self, expression_to_cast: str, to_type, force=False):
         if to_type is str:
             to_type_str = "TEXT"
         elif to_type is int or to_type is float:
@@ -43,6 +47,22 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
             return date_exp
 
         return super()._visit_constant_node(value)
+
+    def _get_order_by_field(self, field_mapping, data_type: type):
+        if isinstance(field_mapping, JsonFieldMapping):
+            json_exp = self.json_extract_as_text(
+                field_mapping.json_prop, field_mapping.prop_in_json
+            )
+
+            if data_type is not str and data_type is not None:
+                return self.cast(json_exp, data_type)
+
+            return json_exp
+
+        elif isinstance(field_mapping, SimpleFieldMapping):
+            return field_mapping.map_to
+
+        raise ValueError(f"Unsupported field mapping type: {type(field_mapping)}")
 
     def _visit_contains_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
