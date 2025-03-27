@@ -3,7 +3,7 @@ import { Definition, V2Step } from "./types";
 import { getWithParams } from "../lib/parser";
 
 export type ValidationResult = [string, string];
-
+export type ValidationError = [string, "error" | "warning"];
 /**
  * Extracts the trimmed value from mustache syntax by removing curly brackets.
  *
@@ -21,7 +21,8 @@ function extractMustacheValue(mustacheString: string): string {
 export const validateMustacheVariableName = (
   variableName: string,
   currentStep: V2Step,
-  definition: Definition
+  definition: Definition,
+  secrets: Record<string, string>
 ) => {
   const cleanedVariableName = extractMustacheValue(variableName);
   const parts = cleanedVariableName.split(".");
@@ -34,6 +35,16 @@ export const validateMustacheVariableName = (
   }
   if (parts[0] === "incident") {
     // todo: validate incident properties
+    return null;
+  }
+  if (parts[0] === "secrets") {
+    const secretName = parts[1];
+    if (!secretName) {
+      return `Variable: '${variableName}' - To access a secret, you need to specify the secret name.`;
+    }
+    if (!secrets[secretName]) {
+      return `Variable: '${variableName}' - Secret '${secretName}' not found.`;
+    }
     return null;
   }
   if (parts[0] === "steps") {
@@ -88,16 +99,22 @@ export const validateMustacheVariableName = (
 export const validateAllMustacheVariablesInString = (
   string: string,
   currentStep: V2Step,
-  definition: Definition
+  definition: Definition,
+  secrets: Record<string, string>
 ) => {
   const regex = /\{\{([^}]+)\}\}/g;
   const matches = string.match(regex);
   if (!matches) {
-    return null;
+    return [];
   }
   const errors: string[] = [];
   matches.forEach((match) => {
-    const error = validateMustacheVariableName(match, currentStep, definition);
+    const error = validateMustacheVariableName(
+      match,
+      currentStep,
+      definition,
+      secrets
+    );
     if (error) {
       errors.push(error);
     }
@@ -232,9 +249,11 @@ export function validateStepPure(
   step: V2Step,
   providers: Provider[],
   installedProviders: Provider[],
+  secrets: Record<string, string>,
   definition: Definition
-): string | null {
-  // todo: validate `enrich_alert` and `enrich_incident`
+): ValidationError[] {
+  const validationErrors: ValidationError[] = [];
+  // todo: validate `enrich_alert` and `enrich_incident` shape
   if (
     (step.componentType === "task" || step.componentType === "container") &&
     step.properties.if
@@ -242,52 +261,85 @@ export function validateStepPure(
     const variableErrors = validateAllMustacheVariablesInString(
       step.properties.if,
       step,
-      definition
+      definition,
+      secrets
     );
-    if (variableErrors) {
-      return variableErrors[0];
-    }
+    variableErrors.forEach((error) => {
+      validationErrors.push([error, "warning"]);
+    });
+  }
+  if (step.componentType === "task" && step.properties.with?.enrich_alert) {
+    const values = step.properties.with.enrich_alert.map((item) => item.value);
+    const variableErrors = validateAllMustacheVariablesInString(
+      values.join(","),
+      step,
+      definition,
+      secrets
+    );
+    variableErrors.forEach((error) => {
+      validationErrors.push([error, "warning"]);
+    });
+  }
+  if (step.componentType === "task" && step.properties.with?.enrich_incident) {
+    const values = step.properties.with.enrich_incident.map(
+      (item) => item.value
+    );
+    const variableErrors = validateAllMustacheVariablesInString(
+      values.join(","),
+      step,
+      definition,
+      secrets
+    );
+    variableErrors.forEach((error) => {
+      validationErrors.push([error, "warning"]);
+    });
   }
   if (step.componentType === "switch") {
     if (!step.name) {
-      return "Condition name cannot be empty.";
+      validationErrors.push(["Condition name cannot be empty.", "error"]);
     }
     if (step.type === "condition-threshold") {
       if (!step.properties.value) {
-        return "Condition value cannot be empty.";
+        validationErrors.push(["Condition value cannot be empty.", "error"]);
       }
       const variableErrorsValue = validateAllMustacheVariablesInString(
         step.properties.value,
         step,
-        definition
+        definition,
+        secrets
       );
-      if (variableErrorsValue) {
-        return variableErrorsValue[0];
-      }
+      variableErrorsValue.forEach((error) => {
+        validationErrors.push([error, "warning"]);
+      });
       if (!step.properties.compare_to) {
-        return "Condition compare to cannot be empty.";
+        validationErrors.push([
+          "Condition compare to cannot be empty.",
+          "error",
+        ]);
       }
       const variableErrorsCompareTo = validateAllMustacheVariablesInString(
         step.properties.compare_to,
         step,
-        definition
+        definition,
+        secrets
       );
-      if (variableErrorsCompareTo) {
-        return variableErrorsCompareTo[0];
-      }
+      variableErrorsCompareTo.forEach((error) => {
+        validationErrors.push([error, "warning"]);
+      });
     }
     if (step.type === "condition-assert") {
       if (!step.properties.assert) {
-        return "Condition assert cannot be empty.";
+        validationErrors.push(["Condition assert cannot be empty.", "error"]);
       }
       const variableErrors = validateAllMustacheVariablesInString(
         step.properties.assert,
         step,
-        definition
+        definition,
+        secrets
       );
-      if (variableErrors) {
-        return variableErrors[0];
-      }
+      variableErrors.forEach((error) => {
+        validationErrors.push([error, "warning"]);
+      });
     }
     const branches = step.branches || {
       true: [],
@@ -295,13 +347,15 @@ export function validateStepPure(
     };
     const conditionHasActions = branches.true.length > 0;
     if (!conditionHasActions) {
-      return "Conditions true branch must contain at least one step or action.";
+      validationErrors.push([
+        "Conditions true branch must contain at least one step or action.",
+        "error",
+      ]);
     }
-    return null;
   }
   if (step.componentType === "task") {
     if (!step.name) {
-      return "Step name cannot be empty.";
+      validationErrors.push(["Step name cannot be empty.", "error"]);
     }
     const providerType = step.type.split("-")[1];
     const providerConfig = (step.properties.config || "").trim();
@@ -312,41 +366,42 @@ export function validateStepPure(
       installedProviders
     );
     if (providerError) {
-      return providerError;
+      validationErrors.push([providerError, "warning"]);
     }
     const withParams = getWithParams(step);
     const isAnyParamConfigured = Object.values(withParams || {}).some(
       (value) => String(value).length > 0
     );
     if (!isAnyParamConfigured) {
-      return "No parameters configured";
+      validationErrors.push(["No parameters configured", "error"]);
     }
     for (const [key, value] of Object.entries(withParams)) {
       if (typeof value === "string") {
         const variableErrors = validateAllMustacheVariablesInString(
           value,
           step,
-          definition
+          definition,
+          secrets
         );
-        if (variableErrors) {
-          return variableErrors[0];
-        }
+        variableErrors.forEach((error) => {
+          validationErrors.push([error, "warning"]);
+        });
       }
     }
-    return null;
   }
   if (step.componentType === "container" && step.type === "foreach") {
     if (!step.properties.value) {
-      const variableErrors = validateAllMustacheVariablesInString(
-        step.properties.value,
-        step,
-        definition
-      );
-      if (variableErrors) {
-        return variableErrors[0];
-      }
-      return "Foreach value cannot be empty.";
+      validationErrors.push(["Foreach value cannot be empty.", "error"]);
     }
+    const variableErrors = validateAllMustacheVariablesInString(
+      step.properties.value,
+      step,
+      definition,
+      secrets
+    );
+    variableErrors.forEach((error) => {
+      validationErrors.push([error, "warning"]);
+    });
   }
-  return null;
+  return validationErrors;
 }

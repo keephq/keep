@@ -543,7 +543,7 @@ class WorkflowStore:
         return results
 
     def get_workflow_meta_data(
-        self, tenant_id: str, workflow: dict, installed_providers_by_type: dict
+        self, tenant_id: str, workflow: WorkflowModel, installed_providers_by_type: dict
     ):
         providers_dto = []
         triggers = []
