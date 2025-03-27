@@ -3,22 +3,12 @@ OpensearchProvider is a class that provides a way to read data from AWS Opensear
 """
 
 import dataclasses
-import datetime
-import hashlib
-import json
-import logging
-import os
-import time
-import typing
 from typing import List
-from urllib.parse import urlparse, urljoin, urlencode
+from urllib.parse import urljoin, urlencode
 
-import boto3
 import pydantic
 import requests
 
-from keep.api.core.config import config as keep_config
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -68,17 +58,17 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
     PROVIDER_SCOPES = [
         ProviderScope(
             name="aoss:ReadDocument",
-            description="Required to retrieve information about alarms.",
-            documentation_url="https://docs.aws.amazon.com/Amazonopensearch/latest/APIReference/API_DescribeAlarms.html",
+            description="Required to query.",
+            documentation_url="https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-genref.html#serverless-operations",
             mandatory=True,
-            alias="Describe Alarms",
+            alias="Read Access",
         ),
         ProviderScope(
             name="aoss:WriteDocument",
-            description="Required to retrieve information about alarms.",
-            documentation_url="https://docs.aws.amazon.com/Amazonopensearch/latest/APIReference/API_DescribeAlarms.html",
+            description="Required to save documents.",
+            documentation_url="https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-genref.html#serverless-operations",
             mandatory=True,
-            alias="Describe Alarms",
+            alias="Write Access",
         ),
     ]
 
@@ -147,7 +137,7 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
         pass
 
     def validate_config(self):
-        self.authentication_config = OpensearchProviderAuthConfig(
+        self.authentication_config = OpensearchserverlessProviderAuthConfig(
             **self.config.authentication
         )
 
