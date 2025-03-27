@@ -6,7 +6,6 @@ import {
   ArrowUpOnSquareIcon,
   PencilIcon,
   PlayIcon,
-  PlusIcon,
 } from "@heroicons/react/20/solid";
 import { WorkflowBuilderCard } from "./workflow-builder-card";
 import { showErrorToast } from "@/shared/ui";
@@ -54,15 +53,6 @@ export function WorkflowBuilderWidget({
   function loadWorkflow() {
     if (fileInputRef.current) {
       fileInputRef.current.click();
-    }
-  }
-
-  function createNewWorkflow() {
-    const confirmed = confirm(
-      "Are you sure you want to create a new workflow?"
-    );
-    if (confirmed) {
-      window.location.reload();
     }
   }
 
@@ -120,24 +110,13 @@ export function WorkflowBuilderWidget({
                 <Button
                   color="orange"
                   size="md"
-                  onClick={createNewWorkflow}
-                  icon={PlusIcon}
-                  className="min-w-28"
-                  variant="secondary"
-                  disabled={!isInitialized}
-                >
-                  New
-                </Button>
-                <Button
-                  color="orange"
-                  size="md"
                   onClick={loadWorkflow}
                   className="min-w-28"
                   variant="secondary"
                   icon={ArrowUpOnSquareIcon}
                   disabled={!isInitialized}
                 >
-                  Load
+                  Import from YAML
                 </Button>
                 <input
                   type="file"
