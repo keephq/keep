@@ -19,7 +19,7 @@ import { CodeBracketIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import { ResizableColumns } from "@/shared/ui";
 import { WorkflowBuilderChatSafe } from "@/features/workflows/ai-assistant";
-import { debounce } from "lodash";
+import debounce from "lodash.debounce";
 import { getOrderedWorkflowYamlStringFromJSON } from "@/entities/workflows/lib/yaml-utils";
 import { useWorkflowSecrets } from "@/utils/hooks/useWorkflowSecrets";
 
@@ -121,12 +121,11 @@ export function WorkflowBuilder({
             [],
             triggers
           );
-          setDefinition(
-            wrapDefinitionV2({
-              ...definition,
-              isValid: true,
-            })
-          );
+          const wrappedDefinition = wrapDefinitionV2({
+            ...definition,
+            isValid: true,
+          });
+          setDefinition(wrappedDefinition);
           initializeWorkflow(workflowId ?? null, {
             providers,
             installedProviders: installedProviders ?? [],
@@ -233,14 +232,6 @@ export function WorkflowBuilder({
     [reset]
   );
 
-  if (isLoading) {
-    return (
-      <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
-        <KeepLoader loadingText="Loading workflow..." />
-      </Card>
-    );
-  }
-
   const handleYamlChange = useMemo(
     () =>
       debounce((yamlString: string | undefined) => {
@@ -251,6 +242,22 @@ export function WorkflowBuilder({
       }, 1000),
     [updateFromYamlString]
   );
+
+  const handleYamlSave = useCallback(
+    (value: string) => {
+      updateFromYamlString(value);
+      saveWorkflow();
+    },
+    [saveWorkflow, updateFromYamlString]
+  );
+
+  if (isLoading) {
+    return (
+      <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
+        <KeepLoader loadingText="Loading workflow..." />
+      </Card>
+    );
+  }
 
   return (
     <ResizableColumns initialLeftWidth={leftColumnMode !== null ? 33 : 0}>

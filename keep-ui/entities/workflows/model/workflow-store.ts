@@ -50,7 +50,7 @@ import {
 } from "@/features/workflows/builder/lib/utils";
 import { Provider } from "@/shared/api/providers";
 import { parseWorkflowYamlStringToJSON } from "../lib/yaml-utils";
-import { YamlWorkflowDefinitionSchema } from "./yaml.schema";
+import { LooseYamlWorkflowDefinitionSchema } from "./yaml.schema";
 
 class KeepWorkflowStoreError extends Error {
   constructor(message: string) {
@@ -389,12 +389,16 @@ export const useWorkflowStore = create<WorkflowState>()(
       }
     },
     updateFromYamlString: (yamlString: string) => {
-      // we do not update nodes if the yaml is invalid
       try {
         const json = parseWorkflowYamlStringToJSON(yamlString);
-        const parsed = YamlWorkflowDefinitionSchema.parse(json);
+        const parsed = LooseYamlWorkflowDefinitionSchema.parse(json);
       } catch (error) {
-        console.error(error, "Invalid YAML: fix the validation errors");
+        if (error instanceof ZodError) {
+          console.error("Failed to validate against Zod schema", error);
+        } else {
+          console.error("Failed to parse YAML", error);
+        }
+        // we do not update nodes if the yaml is invalid or cannot be parsed
         return;
       }
       set({
