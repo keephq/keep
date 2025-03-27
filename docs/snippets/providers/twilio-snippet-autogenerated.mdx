@@ -1,0 +1,30 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **account_sid**: Twilio Account SID (required: True, sensitive: False)
+- **api_token**: Twilio API Token (required: True, sensitive: True)
+- **from_phone_number**: Twilio Phone Number (required: True, sensitive: False)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query twilio
+      provider: twilio
+      config: "{{ provider.my_provider_name }}"
+      with:
+        message_body: {value}  # The content of the SMS message to be sent. Defaults to "".
+        to_phone_number: {value}  # The recipient's phone number. Defaults to "".
+```
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).

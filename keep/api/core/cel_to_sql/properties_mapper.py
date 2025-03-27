@@ -32,7 +32,7 @@ class JsonPropertyAccessNode(PropertyAccessNode):
     def __init__(
         self,
         json_property_name: str,
-        property_to_extract: str,
+        property_to_extract: list[str],
         method_access_node: MethodAccessNode,
         data_type: type,
     ):

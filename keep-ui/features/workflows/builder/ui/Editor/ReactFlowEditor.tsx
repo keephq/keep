@@ -1,9 +1,5 @@
-import { useEffect, useRef, useMemo } from "react";
-import {
-  useWorkflowStore,
-  V2ActionOrStep,
-  V2StepSchema,
-} from "@/entities/workflows";
+import { useEffect, useRef } from "react";
+import { useWorkflowStore } from "@/entities/workflows";
 import { StepEditorV2 } from "./StepEditor";
 import { Divider } from "@tremor/react";
 import clsx from "clsx";
@@ -15,7 +11,7 @@ import { WorkflowStatus } from "../workflow-status";
 import { triggerTypes } from "../../lib/utils";
 
 const ReactFlowEditor = () => {
-  const { selectedNode, selectedEdge, setEditorOpen, getNodeById, editorOpen } =
+  const { selectedNode, selectedEdge, setEditorOpen, editorOpen } =
     useWorkflowStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const dividerRef = useRef<HTMLDivElement>(null);

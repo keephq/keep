@@ -32,7 +32,6 @@ export const getCommonPinningStylesAndClassNames = (
       right: isPinned === "right" ? `${column.getAfter("right")}px` : undefined,
       width: column.getSize(),
       animationTimeline: "scroll(inline)",
-      zIndex,
     },
     className: clsx(
       "bg-tremor-background",

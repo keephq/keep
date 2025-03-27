@@ -684,12 +684,24 @@ class PagerdutyProvider(
         **kwargs: dict,
     ):
         """
-        Create a PagerDuty alert.
-            Alert/Incident is created either via the Events API or the Incidents API.
-            See https://community.pagerduty.com/forum/t/create-incident-using-python/3596/3 for more information
+        Create a PagerDuty alert or incident.
+        For events API, uses Events API v2. For incidents, uses REST API v2.
+        See: https://developer.pagerduty.com/docs/ZG9jOjQ1NzA0NTc-overview
 
         Args:
-            kwargs (dict): The providers with context
+            title (str): Title of the alert or incident
+            dedup (str | None): String used to deduplicate alerts for events API, max 255 chars
+            service_id (str): ID of the service for incidents
+            body (dict): Body of the incident as per https://developer.pagerduty.com/api-reference/a7d81b0e9200f-create-an-incident#request-body
+            requester (str): Email of the user requesting the incident creation
+            incident_id (str | None): Key to identify the incident. UUID generated if not provided
+            priority (str | None): Priority reference ID for incidents
+            event_type (str | None): Event type for events API (trigger/acknowledge/resolve)
+            severity (str | None): Severity for events API (critical/error/warning/info)
+            source (str): Source field for events API
+            status (str): Status for incident updates (resolved/acknowledged)
+            resolution (str): Resolution note for resolved incidents
+            kwargs (dict): Additional event/incident fields
         """
         if self.authentication_config.routing_key:
             return self._send_alert(

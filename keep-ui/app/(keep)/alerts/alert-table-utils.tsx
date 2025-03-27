@@ -136,8 +136,8 @@ export const getRowClassName = (
     expanded
       ? "[&>td]:p-3"
       : rowStyle === "default"
-        ? "[&>td]:px-0.5 [&>td]:py-0"
-        : "[&>td]:p-2",
+      ? "[&>td]:px-0.5 [&>td]:py-0"
+      : "[&>td]:p-2",
     "hover:bg-orange-100"
   );
 };
@@ -468,9 +468,9 @@ export const useAlertTableCols = (
       header: () => <></>, // Empty header like source column
       enableGrouping: true,
       getGroupingValue: (row) => row.status,
-      maxSize: 12,
-      minSize: 12,
-      size: 12,
+      maxSize: 16,
+      minSize: 16,
+      size: 16,
       enableResizing: false,
       cell: (context) => (
         <div className="flex items-center justify-center">
@@ -478,8 +478,8 @@ export const useAlertTableCols = (
             icon={getStatusIcon(context.getValue())}
             size="sm"
             color={getStatusColor(context.getValue())}
-            className="!p-0"
-            title={context.getValue()} // Add title for tooltip on hover
+            className="!p-0 h-32px w-32px"
+            tooltip={context.getValue()}
           />
         </div>
       ),
@@ -492,22 +492,22 @@ export const useAlertTableCols = (
     columnHelper.accessor("source", {
       id: "source",
       header: () => <></>,
-      minSize: 20,
-      maxSize: 20,
-      size: 20, // Add explicit size to maintain consistency
+      minSize: 24,
+      maxSize: 24,
+      size: 24, // Fixed size that won't change
       enableSorting: false,
       getGroupingValue: (row) => row.source,
       enableResizing: false,
       cell: (context) => {
         return (
-          <div>
+          <div className="flex items-center justify-center w-[24px] h-[24px]">
             {context.getValue().map((source, index) => {
               return (
                 <DynamicImageProviderIcon
                   className={clsx(
                     "inline-block",
-                    // Fixed size regardless of expanded state
-                    "size-5 xl:size-6",
+                    // Use fixed pixel sizes instead of responsive sizing
+                    "size-6",
                     index == 0 ? "" : "-ml-2"
                   )}
                   key={source}
@@ -525,8 +525,8 @@ export const useAlertTableCols = (
         );
       },
       meta: {
-        tdClassName: "!p-1 w-8 !box-border", // Enforce consistent width
-        thClassName: "!p-1 w-8 !box-border",
+        tdClassName: "!p-1 w-10 !box-border !flex-none", // Force fixed width with flex-none
+        thClassName: "!p-1 w-10 !box-border !flex-none",
       },
     }),
     // Name column butted up against source

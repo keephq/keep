@@ -13,7 +13,7 @@ import { DropdownMenu } from "@/shared/ui";
 
 interface WorkflowMenuProps {
   onDelete?: () => Promise<void>;
-  onRun?: () => Promise<void>;
+  onRun?: () => void;
   onView?: () => void;
   onDownload?: () => void;
   onBuilder?: () => void;
@@ -37,7 +37,7 @@ export default function WorkflowMenu({
   isDisabled,
 }: WorkflowMenuProps) {
   return (
-    <div className="js-dont-propagate">
+    <div className="js-dont-propagate" data-testid="workflow-menu">
       <DropdownMenu.Menu icon={EllipsisHorizontalIcon} label="">
         <DropdownMenu.Item
           icon={PlayIcon}
@@ -99,6 +99,7 @@ export default function WorkflowMenu({
           }}
           disabled={provisioned}
           title={provisioned ? "Cannot delete a provisioned workflow" : ""}
+          data-testid="wf-menu-delete-button"
         />
       </DropdownMenu.Menu>
     </div>

@@ -55,6 +55,10 @@ export const CorrelationSidebarBody = ({
     "correlation-callout",
     true
   );
+  const [isNoteShown, setIsNoteShown] = useLocalStorage(
+    "correlation-note-callout",
+    true
+  );
 
   const onCorrelationFormSubmit: SubmitHandler<CorrelationFormType> = async (
     correlationFormData
@@ -105,7 +109,7 @@ export const CorrelationSidebarBody = ({
   };
 
   return (
-    <div className="space-y-4 flex flex-col flex-1 p-4">
+    <div className="space-y-4 flex flex-col flex-1 p-4 min-h-0">
       {isCalloutShown && (
         <Callout
           className="relative"
@@ -134,37 +138,49 @@ export const CorrelationSidebarBody = ({
           </Button>
         </Callout>
       )}
+      {isNoteShown && (
+        <Callout
+          className="relative"
+          title="NOTE: Rules will be applied only to new alerts. Historical data will
+          be ignored."
+          color="orange"
+        >
+          <Button
+            className="absolute top-0 right-0"
+            onClick={() => setIsNoteShown(false)}
+            variant="light"
+          >
+            <Icon color="gray" icon={IoMdClose} size="sm" />
+          </Button>
+        </Callout>
+      )}
       <FormProvider {...methods}>
-        <form onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}>
-          <div className="mb-10">
-            <CorrelationForm alertsFound={alertsFound} isLoading={isLoading} />
-          </div>
-          <div className="grid grid-cols-3 gap-x-10 flex-1">
+        <form
+          className="flex flex-col flex-1 min-h-0"
+          onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}
+        >
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="mb-10">
+              <CorrelationForm
+                alertsFound={alertsFound}
+                isLoading={isLoading}
+              />
+            </div>
             <CorrelationGroups />
-
-            <div
-              className="flex flex-col items-center justify-between gap-5 py-5"
-              id="total-results"
-            >
-              <div className="grow justify-center flex">
-                {alertsFound.length > 0 && (
-                  <AlertsFoundBadge
-                    alertsFound={alertsFound}
-                    isLoading={false}
-                    vertical={true}
-                  />
-                )}
-              </div>
-              <span className="text-xs">
-                Rules will be applied only to new alerts. Historical data will
-                be ignored
-              </span>
-              <div className="flex justify-end w-full">
-                <CorrelationSubmission
-                  toggle={toggle}
-                  timeframeInSeconds={timeframeInSeconds}
-                />
-              </div>
+          </div>
+          <div className="flex flex-col border-t-2">
+            {alertsFound.length > 0 && (
+              <AlertsFoundBadge
+                alertsFound={alertsFound}
+                isLoading={false}
+                role={"correlationRuleConditions"}
+              />
+            )}
+            <div className="flex justify-end w-full pt-4">
+              <CorrelationSubmission
+                toggle={toggle}
+                timeframeInSeconds={timeframeInSeconds}
+              />
             </div>
           </div>
         </form>

@@ -9,7 +9,7 @@ class SimpleFieldMapping:
 
 class JsonFieldMapping:
 
-    def __init__(self, json_prop: str, prop_in_json: str):
+    def __init__(self, json_prop: str, prop_in_json: list[str]):
         self.json_prop = json_prop
         self.prop_in_json = prop_in_json
 
@@ -90,18 +90,39 @@ class PropertiesMetadata:
             If the property path matches a known field or a wildcard pattern, it returns the corresponding mappings.
             Supports JSON type mappings and simple field mappings.
     """
-    def __init__(self, fields_mapping_configurations: list[FieldMappingConfiguration]):
+    def __init__(
+        self, fields_mapping_configurations: list[FieldMappingConfiguration], foo=False
+    ):
         self.wildcard_configurations: dict[FieldMappingConfiguration] = {}
         self.known_configurations: dict[FieldMappingConfiguration] = {}
         for field_mapping in fields_mapping_configurations:
+            new_field_mapping_config = FieldMappingConfiguration(
+                map_from_pattern=self.__get_property_path_str(
+                    self.__extract_fields(field_mapping.map_from_pattern)
+                ),
+                map_to=field_mapping.map_to,
+                data_type=field_mapping.data_type,
+                enum_values=field_mapping.enum_values,
+            )
+
             if '*' in field_mapping.map_from_pattern:
-                self.wildcard_configurations[field_mapping.map_from_pattern] = field_mapping
+                self.wildcard_configurations[
+                    new_field_mapping_config.map_from_pattern
+                ] = new_field_mapping_config
                 continue
 
-            self.known_configurations[field_mapping.map_from_pattern] = field_mapping
+            self.known_configurations[new_field_mapping_config.map_from_pattern] = (
+                new_field_mapping_config
+            )
 
-    def get_property_metadata(self, prop_path: str) -> PropertyMetadataInfo:
-        field_mapping_config, mapping_key = self.__find_mapping_configuration(prop_path)
+    def get_property_metadata_for_str(self, prop_path_str: str) -> PropertyMetadataInfo:
+        return self.get_property_metadata(self.__extract_fields(prop_path_str))
+
+    def get_property_metadata(self, prop_path: list[str]) -> PropertyMetadataInfo:
+        prop_path_str = self.__get_property_path_str(prop_path)
+        field_mapping_config, mapping_key = self.__find_mapping_configuration(
+            prop_path_str
+        )
 
         if not field_mapping_config:
             return None
@@ -119,11 +140,11 @@ class PropertiesMetadata:
             # if mapping_key is a wildcard pattern (alert.*), extract the template prop (alert)
             regex_pattern = re.escape(mapping_key).replace(r"\*", r"(.*)")
             regex = re.compile(f"^{regex_pattern}$")
-            match = regex.match(prop_path)
+            match = regex.match(prop_path_str)
             template_prop = match.group(1)
         else:
             # otherwise, the template prop is the prop_path itself
-            template_prop = prop_path
+            template_prop = prop_path_str
 
         for item in map_to:
             match = re.match(r"JSON\(([^)]+)\)", item)
@@ -142,8 +163,8 @@ class PropertiesMetadata:
                 field_mappings.append(
                     JsonFieldMapping(
                         json_prop=json_prop,
-                        prop_in_json=".".join(
-                            prop_in_json_list[1:]
+                        prop_in_json=self.__extract_fields(
+                            ".".join(prop_in_json_list[1:])
                         ),  # skip JSON column and take the rest
                     )
                 )
@@ -153,13 +174,52 @@ class PropertiesMetadata:
             field_mappings.append(SimpleFieldMapping(item))
 
         return PropertyMetadataInfo(
-            field_name=prop_path,
+            field_name=prop_path_str,
             field_mappings=field_mappings,
             enum_values=field_mapping_config.enum_values,
             data_type=field_mapping_config.data_type,
         )
 
-    def __find_mapping_configuration(self, prop_path: str):
+    def __extract_fields(self, property_path_str):
+        """
+        Extracts fields from a property path string.
+
+        This method takes a property path string and extracts individual fields
+        from it. The property path string can contain fields separated by dots
+        or enclosed in square brackets.
+
+        Args:
+            property_path_str (str): The property path string to extract fields from.
+
+        Returns:
+            list: A list of extracted fields as strings.
+        """
+        pattern = re.compile(r"\[([^\[\]]+)\]|([^.]+)")
+        matches = pattern.findall(property_path_str)
+        return [m[0] or m[1] for m in matches]
+
+    def __get_property_path_str(self, prop_path: list[str]) -> str:
+        """
+        Converts a list of property path components into a single string,
+        ensuring that components with special characters are enclosed in square brackets.
+
+        Args:
+            prop_path (list[str]): A list of strings representing the property path components.
+
+        Returns:
+            str: A single string representing the property path, with special characters handled appropriately.
+        """
+        result = []
+
+        for item in prop_path:
+            if re.search(r"[^a-zA-Z0-9*]", item):
+                result.append(f"[{item}]")
+            else:
+                result.append(item)
+
+        return ".".join(result)
+
+    def __find_mapping_configuration(self, prop_path_str: str):
         """
         Find the mapping configuration for a given property path.
 
@@ -176,14 +236,14 @@ class PropertiesMetadata:
         field_mapping_config: FieldMappingConfiguration = None
         mapping_key = None
 
-        if prop_path in self.known_configurations:
-            field_mapping_config = self.known_configurations[prop_path]
-            mapping_key = prop_path
+        if prop_path_str in self.known_configurations:
+            field_mapping_config = self.known_configurations[prop_path_str]
+            mapping_key = prop_path_str
 
         # If no direct mapping is found, check for wildcard patterns in known fields
         if not field_mapping_config:
             for pattern, field_mapping_config_from_dict in self.wildcard_configurations.items():
-                if fnmatch.fnmatch(prop_path, pattern):
+                if fnmatch.fnmatch(prop_path_str, pattern):
                     field_mapping_config = field_mapping_config_from_dict
                     mapping_key = pattern
                     break

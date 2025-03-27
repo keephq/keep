@@ -1,0 +1,48 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **username**: Clickhouse username (required: True, sensitive: False)
+- **password**: Clickhouse password (required: True, sensitive: True)
+- **host**: Clickhouse hostname (required: True, sensitive: False)
+- **port**: Clickhouse port (required: True, sensitive: False)
+- **database**: Clickhouse database name (required: False, sensitive: False)
+- **protocol**: Protocol ('clickhouses' for SSL, 'clickhouse' for no SSL, 'http' or 'https') (required: True, sensitive: False)
+- **verify**: Enable SSL verification (required: False, sensitive: False)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query clickhouse
+      provider: clickhouse
+      config: "{{ provider.my_provider_name }}"
+      with:
+        query: {value}  
+        single_row: {value}  
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query clickhouse
+      provider: clickhouse
+      config: "{{ provider.my_provider_name }}"
+      with:
+        query: {value}  
+        single_row: {value}  
+```
+
+
+
+
+Check the following workflow examples:
+- [clickhouse_multiquery.yml](https://github.com/keephq/keep/blob/main/examples/workflows/clickhouse_multiquery.yml)
+- [query_clickhouse.yml](https://github.com/keephq/keep/blob/main/examples/workflows/query_clickhouse.yml)

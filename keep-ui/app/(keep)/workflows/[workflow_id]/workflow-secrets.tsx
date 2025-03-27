@@ -4,13 +4,13 @@ import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { EyeOff, Eye } from "lucide-react";
 import { GenericTable } from "@/components/table/GenericTable";
 import { DisplayColumnDef } from "@tanstack/react-table";
-import { useSecrets } from "@/utils/hooks/useWorkFlowSecrets";
+import { useWorkflowSecrets } from "@/utils/hooks/useWorkflowSecrets";
 import { Button } from "@/components/ui";
 import { Input } from "@/shared/ui";
 
 const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
   const { getSecrets, error, addOrUpdateSecret, deleteSecret } =
-    useSecrets(workflowId);
+    useWorkflowSecrets(workflowId);
   const [newSecret, setNewSecret] = useState({ name: "", value: "" });
   const [showValues, setShowValues] = useState<Record<string, boolean>>({});
   const { data: secrets, mutate: mutateSecrets } = getSecrets;

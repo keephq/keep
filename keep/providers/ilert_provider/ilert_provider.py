@@ -49,7 +49,7 @@ class IlertProviderAuthConfig:
             "required": False,
             "description": "ILert API host",
             "hint": "https://api.ilert.com/api",
-            "validation": "https_url"
+            "validation": "https_url",
         },
         default="https://api.ilert.com/api",
     )
@@ -120,16 +120,20 @@ class IlertProvider(BaseProvider):
                         headers={
                             "Authorization": self.authentication_config.ilert_token
                         },
-                        timeout=10
+                        timeout=10,
                     )
                     res.raise_for_status()
                     data = res.json()
-                    if data['role'] not in ["USER", "ADMIN"]:
-                        warning_msg = f"User role '{data['role']}' has limited permissions"
+                    if data["role"] not in ["USER", "ADMIN"]:
+                        warning_msg = (
+                            f"User role '{data['role']}' has limited permissions"
+                        )
                         self.logger.warning(warning_msg)
                         scopes[scope.name] = warning_msg
                     else:
-                        self.logger.debug(f"Write permission validated successfully for role: {data['role']}")
+                        self.logger.debug(
+                            f"Write permission validated successfully for role: {data['role']}"
+                        )
                         scopes[scope.name] = True
             except Exception as e:
                 self.logger.warning(
@@ -354,6 +358,23 @@ class IlertProvider(BaseProvider):
         custom_details: dict = {},
         **kwargs: dict,
     ):
+        """
+        Notify ilert about an incident or event.
+        Args:
+            _type: Type of notification ('incident' or 'event') - determines which endpoint is used
+            summary: A brief summary of the incident (required for new incidents)
+            status: Current status of the incident (INVESTIGATING, RESOLVED, MONITORING, IDENTIFIED)
+            message: Detailed message describing the incident (default: empty string)
+            affectedServices: JSON string of affected services and their statuses (default: "[]")
+            id: ID of incident to update (use "0" to create a new incident)
+            event_type: Type of event to post (ALERT, ACCEPT, RESOLVE)
+            details: Detailed information about the event
+            alert_key: Unique key for event deduplication
+            priority: Priority level of the event (HIGH, LOW)
+            images: List of image URLs to include with the event
+            links: List of related links to include with the event
+            custom_details: Custom key-value pairs for additional context
+        """
         self.logger.info("Notifying ilert", extra=locals())
         if _type == "incident":
             return self.__create_or_update_incident(

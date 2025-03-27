@@ -96,6 +96,16 @@ class GithubProvider(BaseProvider):
         )
 
     def _notify(self, **kwargs):
+        """
+        Notify the provider.
+        Args:
+            run_action (str): The action to run.
+            workflow (str): The workflow to run.
+            repo_name (str): The repository name.
+            repo_owner (str): The repository owner.
+            ref (str): The ref to use.
+            inputs (dict): The inputs to use.
+        """
         if "run_action" in kwargs:
             workflow_name = kwargs.get("workflow")
             repo_name = kwargs.get("repo_name")

@@ -1,0 +1,61 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **webhook_url**: Slack Webhook Url (required: True, sensitive: True)
+- **access_token**: For access token installation flow, use Keep UI (required: False, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query slack
+      provider: slack
+      config: "{{ provider.my_provider_name }}"
+      with:
+        message: {value}  # The content of the message.
+        blocks: {value}  # The blocks of the message.
+        channel: {value}  # The channel to send the message
+        slack_timestamp: {value}  # The timestamp of the message to update
+        thread_timestamp: {value}  # The timestamp of the thread to send the message
+        attachments: {value}  # The attachments of the message.
+        username: {value}  # The username of the message.
+        notification_type: {value}  # The type of notification.
+```
+
+
+
+
+Check the following workflow examples:
+- [consts_and_vars.yml](https://github.com/keephq/keep/blob/main/examples/workflows/consts_and_vars.yml)
+- [create_jira_ticket_upon_alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_jira_ticket_upon_alerts.yml)
+- [db_disk_space.yml](https://github.com/keephq/keep/blob/main/examples/workflows/db_disk_space.yml)
+- [dd.yml](https://github.com/keephq/keep/blob/main/examples/workflows/dd.yml)
+- [elastic_enrich_example.yml](https://github.com/keephq/keep/blob/main/examples/workflows/elastic_enrich_example.yml)
+- [execute-workflow-example.yml](https://github.com/keephq/keep/blob/main/examples/workflows/execute-workflow-example.yml)
+- [failed-to-login-workflow.yml](https://github.com/keephq/keep/blob/main/examples/workflows/failed-to-login-workflow.yml)
+- [gcp_logging_open_ai.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/gcp_logging_open_ai.yaml)
+- [http_example.yml](https://github.com/keephq/keep/blob/main/examples/workflows/http_example.yml)
+- [ifelse.yml](https://github.com/keephq/keep/blob/main/examples/workflows/ifelse.yml)
+- [keep_semantic_alert_example_datadog.yml](https://github.com/keephq/keep/blob/main/examples/workflows/keep_semantic_alert_example_datadog.yml)
+- [kubernetes.yml](https://github.com/keephq/keep/blob/main/examples/workflows/kubernetes.yml)
+- [new_auth0_users.yml](https://github.com/keephq/keep/blob/main/examples/workflows/new_auth0_users.yml)
+- [new_github_stars.yml](https://github.com/keephq/keep/blob/main/examples/workflows/new_github_stars.yml)
+- [opsgenie_open_alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opsgenie_open_alerts.yml)
+- [query_clickhouse.yml](https://github.com/keephq/keep/blob/main/examples/workflows/query_clickhouse.yml)
+- [query_victoriametrics.yml](https://github.com/keephq/keep/blob/main/examples/workflows/query_victoriametrics.yml)
+- [raw_sql_query_datetime.yml](https://github.com/keephq/keep/blob/main/examples/workflows/raw_sql_query_datetime.yml)
+- [slack-message-reaction.yml](https://github.com/keephq/keep/blob/main/examples/workflows/slack-message-reaction.yml)
+- [slack_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/slack_basic.yml)
+- [slack_basic_interval.yml](https://github.com/keephq/keep/blob/main/examples/workflows/slack_basic_interval.yml)
+- [trello_new_card_alert.yml](https://github.com/keephq/keep/blob/main/examples/workflows/trello_new_card_alert.yml)
+- [workflow_only_first_time_example.yml](https://github.com/keephq/keep/blob/main/examples/workflows/workflow_only_first_time_example.yml)
+- [workflow_start_example.yml](https://github.com/keephq/keep/blob/main/examples/workflows/workflow_start_example.yml)
+- [zoom_example.yml](https://github.com/keephq/keep/blob/main/examples/workflows/zoom_example.yml)

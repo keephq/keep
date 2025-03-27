@@ -4,15 +4,16 @@ import sys
 
 import requests
 from playwright.sync_api import Page, expect
+from datetime import datetime
 
 from keep.providers.providers_factory import ProvidersFactory
 
 KEEP_UI_URL = "http://localhost:3000"
 
 
-def trigger_alert(provider_name):
+def trigger_alert(provider_name, tenant_id=None):
     provider = ProvidersFactory.get_provider_class(provider_name)
-    token = get_token()
+    token = get_token(tenant_id)
     requests.post(
         f"http://localhost:8080/alerts/event/{provider_name}",
         headers={
@@ -128,7 +129,7 @@ def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=
     page.on("requestfailed", log_request_failed)
 
     if not tenant_id:
-        tenant_id = "keep" + str(os.getpid())
+        tenant_id = get_pid_tenant()
 
     url = f"{KEEP_UI_URL}{next_url}?tenantId={tenant_id}"
     print("Going to URL: ", url)
@@ -211,12 +212,16 @@ def take_screenshot(page):
     # Save screenshot
     page.screenshot(path=current_test_name + ".png")
 
-
-def get_token():
+def get_pid_tenant():
     pid = os.getpid()
+    return "keep" + str(pid)
+
+def get_token(tenant_id=None):
+    if tenant_id is None:
+        tenant_id = get_pid_tenant()
     return json.dumps(
         {
-            "tenant_id": "keep" + str(pid),
+            "tenant_id": tenant_id,
             "user_id": "keep-user-for-no-auth-purposes",
         }
     )
@@ -277,3 +282,15 @@ def get_current_test_name():
         print("THIS SHOULD NEVER HAPPEN")
         current_test_name += sys._getframe().f_code.co_name
     return current_test_name
+
+# todo: replace with `setup_page_logging` fixture
+def setup_console_listener(page, log_entries):
+    """Set up console listener to capture logs."""
+    page.on(
+        "console",
+        lambda msg: (
+            log_entries.append(
+                f"{datetime.now()}: {msg.text}, location: {msg.location}"
+            )
+        ),
+    )

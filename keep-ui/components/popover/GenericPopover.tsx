@@ -1,6 +1,12 @@
 import React, { useRef } from "react";
 import { Popover } from "@headlessui/react";
-import { arrow, FloatingArrow, offset, useFloating } from "@floating-ui/react";
+import {
+  arrow,
+  flip,
+  FloatingArrow,
+  offset,
+  useFloating,
+} from "@floating-ui/react";
 import { Button } from "@tremor/react";
 import { IconType } from "react-icons";
 
@@ -29,6 +35,7 @@ const GenericPopover: React.FC<PopoverProps> = ({
     placement: "bottom-end",
     middleware: [
       offset({ mainAxis: 10 }),
+      flip(),
       arrow({
         element: arrowRef,
       }),

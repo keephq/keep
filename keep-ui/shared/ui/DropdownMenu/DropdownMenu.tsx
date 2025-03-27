@@ -158,6 +158,7 @@ const MenuComponent = React.forwardRef<
         data-open={isOpen ? "" : undefined}
         data-nested={isNested ? "" : undefined}
         data-focus-inside={hasFocusInside ? "" : undefined}
+        data-testid="dropdown-menu-button"
         className={clsx(
           isNested ? "DropdownMenuItem" : "DropdownMenuButton",
           "group",
@@ -217,6 +218,7 @@ const MenuComponent = React.forwardRef<
                   className="DropdownMenu"
                   style={floatingStyles}
                   {...getFloatingProps()}
+                  data-testid="dropdown-menu-list"
                 >
                   {children}
                 </div>

@@ -1,5 +1,5 @@
 import React from "react";
-import WorkflowsPage from "./workflows.client";
+import { WorkflowsPage } from "./workflows.client";
 import { FacetDto } from "@/features/filter";
 import { createServerApiClient } from "@/shared/api/server";
 import { getInitialFacets } from "@/features/filter/api";

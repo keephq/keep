@@ -109,6 +109,11 @@ class MysqlProvider(BaseProvider):
         """
         For MySQL there is no difference if we're querying data or we want to make an impact.
         This will allow using the provider in actions as well as steps.
+        Args:
+            query (str): Query to execute
+            as_dict (bool): If True, returns the results as a list of dictionaries
+            single_row (bool): If True, returns only the first row of the results
+            **kwargs: Arguments will me passed to the query.format(**kwargs)
         """
         return self._query(**kwargs)
 
@@ -117,6 +122,11 @@ class MysqlProvider(BaseProvider):
     ) -> list | tuple:
         """
         Executes a query against the MySQL database.
+        Args:
+            query (str): Query to execute
+            as_dict (bool): If True, returns the results as a list of dictionaries
+            single_row (bool): If True, returns only the first row of the results
+            **kwargs: Arguments will me passed to the query.format(**kwargs)
 
         Returns:
             list | tuple: list of results or single result if single_row is True

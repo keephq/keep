@@ -30,7 +30,7 @@ import { ElementType } from "react";
 import { Button, DynamicImageProviderIcon } from "@/components/ui";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { clsx } from "clsx";
-import { useWorkflowExecutions } from "@/utils/hooks/useWorkflowExecutions";
+import { useWorkflowExecutions } from "@/entities/workflow-executions/model/useWorkflowExecutions";
 import { ViewedAlert } from "./alert-table";
 import { format } from "date-fns";
 import { TbCodeDots, TbTicket } from "react-icons/tb";
@@ -378,15 +378,15 @@ export default function AlertMenu({
                 relevantWorkflowExecution.workflow_status === "success"
                   ? CheckCircleIcon
                   : relevantWorkflowExecution.workflow_status === "error"
-                  ? XCircleIcon
-                  : ClockIcon
+                    ? XCircleIcon
+                    : ClockIcon
               }
               className={`w-4 h-4 ${
                 relevantWorkflowExecution.workflow_status === "success"
                   ? "text-green-500"
                   : relevantWorkflowExecution.workflow_status === "error"
-                  ? "text-red-500"
-                  : "text-gray-500"
+                    ? "text-red-500"
+                    : "text-gray-500"
               }`}
             />
           )}

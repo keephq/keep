@@ -1,0 +1,43 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_server**: The kubernetes api server url (required: True, sensitive: False)
+- **token**: Bearer token to access kubernetes (required: True, sensitive: True)
+- **insecure**: Skip TLS verification (required: False, sensitive: False)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query kubernetes
+      provider: kubernetes
+      config: "{{ provider.my_provider_name }}"
+      with:
+        command_type: {value}  # The type of query to perform. Supported queries are get_logs, get_events, get_pods, get_node_pressure, and get_pvc.
+        # Additional arguments for the query.
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query kubernetes
+      provider: kubernetes
+      config: "{{ provider.my_provider_name }}"
+      with:
+        action: {value}  # The action to perform. Supported actions are rollout_restart and restart_pod.
+        # Additional arguments for the action.
+```
+
+
+
+
+Check the following workflow example:
+- [kubernetes.yml](https://github.com/keephq/keep/blob/main/examples/workflows/kubernetes.yml)

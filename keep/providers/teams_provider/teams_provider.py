@@ -66,11 +66,11 @@ class TeamsProvider(BaseProvider):
 
         Args:
             message (str): The message to send
-            typeCard (str): Type of card to send ("MessageCard" or "message" for Adaptive Cards)
-            themeColor (str): Color theme for MessageCard
-            sections (list): Sections for MessageCard or Adaptive Card content
-            attachments (list): Attachments for Adaptive Card
-            **kwargs (dict): Additional arguments
+            typeCard (str): The card type. Can be "MessageCard" (legacy) or "message" (for Adaptive Cards). Default is "message"
+            themeColor (str): Hexadecimal color (only used with MessageCard type)
+            sections (list): For MessageCard: Array of custom information sections. For Adaptive Cards: Array of card elements following the Adaptive Card schema. Can be provided as a JSON string or array.
+            attachments (list): Custom attachments array for Adaptive Cards (overrides default attachment structure). Can be provided as a JSON string or array.
+            schema (str): Schema URL for Adaptive Cards. Default is "http://adaptivecards.io/schemas/adaptive-card.json"
         """
         self.logger.debug("Notifying alert message to Teams")
         webhook_url = self.authentication_config.webhook_url

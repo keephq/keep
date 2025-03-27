@@ -9,7 +9,7 @@ class Tenant(SQLModel, table=True):
     # uuid
     id: str = Field(primary_key=True)
     name: str
-    configuration: dict = Field(sa_column=Column(JSON))
+    configuration: dict | None = Field(sa_column=Column(JSON), default=None)
     installations: List["TenantInstallation"] = Relationship(back_populates="tenant")
 
 

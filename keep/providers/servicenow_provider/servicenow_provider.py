@@ -189,6 +189,14 @@ class ServicenowProvider(BaseTopologyProvider):
         sysparm_offset: int = 0,
         **kwargs: dict,
     ):
+        """
+        Query ServiceNow for records.
+        Args:
+            table_name (str): The name of the table to query.
+            incident_id (str): The incident ID to query.
+            sysparm_limit (int): The maximum number of records to return.
+            sysparm_offset (int): The offset to start from.
+        """
         request_url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         auth = (
@@ -369,7 +377,14 @@ class ServicenowProvider(BaseTopologyProvider):
         pass
 
     def _notify(self, table_name: str, payload: dict = {}, **kwargs: dict):
-        # Create ticket
+        """
+        Create a ticket in ServiceNow.
+        Args:
+            table_name (str): The name of the table to create the ticket in.
+            payload (dict): The ticket payload.
+            ticket_id (str): The ticket ID (optional to update a ticket).
+            fingerprint (str): The fingerprint of the ticket (optional to update a ticket).
+        """
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         auth = (
             (

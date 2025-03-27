@@ -488,7 +488,7 @@ class GkeProvider(BaseProvider):
 
         Args:
             command_type: Type of query to execute
-            **kwargs: Additional arguments for the query
+            **kwargs: Additional arguments will be passed to the query method
 
         Returns:
             Query results based on command type

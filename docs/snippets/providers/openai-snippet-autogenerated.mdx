@@ -1,0 +1,36 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_key**: OpenAI Platform API Key (required: True, sensitive: True)
+- **organization_id**: OpenAI Platform Organization ID (required: False, sensitive: False)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query openai
+      provider: openai
+      config: "{{ provider.my_provider_name }}"
+      with:
+        prompt: {value}  
+        model: {value}  
+        max_tokens: {value}  
+        structured_output_format: {value}  
+```
+
+
+
+
+
+Check the following workflow examples:
+- [conditionally_run_if_ai_says_so.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/conditionally_run_if_ai_says_so.yaml)
+- [enrich_using_structured_output_from_openai.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/enrich_using_structured_output_from_openai.yaml)
+- [gcp_logging_open_ai.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/gcp_logging_open_ai.yaml)
+- [update-incident-grafana-incident.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/update-incident-grafana-incident.yaml)

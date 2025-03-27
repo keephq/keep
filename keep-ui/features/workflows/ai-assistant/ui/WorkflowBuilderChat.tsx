@@ -3,18 +3,20 @@ import { Provider } from "@/shared/api/providers";
 import {
   DefinitionV2,
   IncidentEvent,
-  IncidentEventEnum,
   ToolboxConfiguration,
-  V2ActionSchema,
   V2ActionStep,
   V2Step,
   V2StepCondition,
-  V2StepConditionSchema,
   V2StepStep,
-  V2StepStepSchema,
   V2StepTrigger,
-  V2StepTriggerSchema,
 } from "@/entities/workflows/model/types";
+import {
+  IncidentEventEnum,
+  V2ActionSchema,
+  V2StepConditionSchema,
+  V2StepStepSchema,
+  V2StepTriggerSchema,
+} from "@/entities/workflows/model/schema";
 import {
   CopilotChat,
   CopilotKitCSSProperties,

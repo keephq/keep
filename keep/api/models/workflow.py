@@ -46,8 +46,8 @@ class WorkflowDTO(BaseModel):
 
     @property
     def workflow_raw_id(self):
-        id = cyaml.safe_load(self.workflow_raw).get("id")
-        return id
+        workflow_id = cyaml.safe_load(self.workflow_raw).get("id")
+        return workflow_id
 
     @validator("workflow_raw", pre=False, always=True)
     def manipulate_raw(cls, raw, values):
@@ -128,5 +128,8 @@ class WorkflowCreateOrUpdateDTO(BaseModel):
 
 class WorkflowRunResponseDTO(BaseModel):
     workflow_execution_id: str
+
+class WorkflowRawDto(BaseModel):
+    workflow_raw: str
 
 # trigger CI. TODO: remove this

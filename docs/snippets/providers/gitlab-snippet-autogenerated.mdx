@@ -1,0 +1,32 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **host**: GitLab Host (required: True, sensitive: False)
+- **personal_access_token**: GitLab Personal Access Token (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query gitlab
+      provider: gitlab
+      config: "{{ provider.my_provider_name }}"
+      with:
+        id: {value}  
+        title: {value}  
+        description: {value}  
+        labels: {value}  
+        issue_type: {value}  
+```
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).

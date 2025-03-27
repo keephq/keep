@@ -13,19 +13,22 @@ from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
+
 @pydantic.dataclasses.dataclass
 class AsanaProviderAuthConfig:
     """
     Asana Provider Auth Config.
     """
+
     pat_token: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "Personal Access Token for Asana.",
             "sensitive": True,
-            "documentation_url": "https://developers.asana.com/docs/personal-access-token"
+            "documentation_url": "https://developers.asana.com/docs/personal-access-token",
         }
     )
+
 
 class AsanaProvider(BaseProvider):
     """
@@ -38,7 +41,7 @@ class AsanaProvider(BaseProvider):
         ProviderScope(
             name="authenticated",
             description="User is authenticated to Asana.",
-            mandatory=True
+            mandatory=True,
         )
     ]
 
@@ -46,7 +49,7 @@ class AsanaProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Asana"
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -59,15 +62,17 @@ class AsanaProvider(BaseProvider):
         url = "https://app.asana.com/api/1.0/projects"
 
         try:
-          response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers)
 
-          if response.status_code != 200:
-              response.raise_for_status()
+            if response.status_code != 200:
+                response.raise_for_status()
 
-          self.logger.info("Successfully validated scopes", extra={"response": response.json()})
+            self.logger.info(
+                "Successfully validated scopes", extra={"response": response.json()}
+            )
 
-          return {"authenticated": True}
-        
+            return {"authenticated": True}
+
         except Exception as e:
             self.logger.exception("Failed to validate scopes", extra={"exception": e})
             return {"authenticated": str(e)}
@@ -82,23 +87,17 @@ class AsanaProvider(BaseProvider):
 
     def dispose(self):
         pass
-        
+
     def _generate_auth_headers(self):
         """
         Generate the authentication headers for the provider.
         """
         return {
             "Authorization": f"Bearer {self.authentication_config.pat_token}",
-            "Accept": "application/json"
+            "Accept": "application/json",
         }
-    
 
-    def _create_task(
-            self,
-            name: str,
-            projects: typing.List[str],
-            **kwargs: dict
-    ):
+    def _create_task(self, name: str, projects: typing.List[str], **kwargs: dict):
         """
         Create a task in Asana.
         """
@@ -106,13 +105,7 @@ class AsanaProvider(BaseProvider):
         headers = self._generate_auth_headers()
         url = "https://app.asana.com/api/1.0/tasks"
 
-        payload = {
-            "data": {
-                "projects": projects,
-                "name": name,
-                **kwargs
-            }
-        }
+        payload = {"data": {"projects": projects, "name": name, **kwargs}}
 
         try:
             response = requests.post(url, headers=headers, json=payload)
@@ -120,19 +113,17 @@ class AsanaProvider(BaseProvider):
             if response.status_code != 201:
                 response.raise_for_status()
 
-            self.logger.info("Successfully created task", extra={"response": response.json()})
+            self.logger.info(
+                "Successfully created task", extra={"response": response.json()}
+            )
 
             return response.json()["data"]
-        
+
         except Exception as e:
             self.logger.exception("Failed to create task", extra={"exception": e})
             raise ProviderException(str(e))
-        
-    def _update_task(
-            self,
-            task_id: str,
-            **kwargs: dict
-    ):
+
+    def _update_task(self, task_id: str, **kwargs: dict):
         """
         Update a task in Asana.
         """
@@ -140,11 +131,7 @@ class AsanaProvider(BaseProvider):
         headers = self._generate_auth_headers()
         url = f"https://app.asana.com/api/1.0/tasks/{task_id}"
 
-        payload = {
-            "data": {
-                **kwargs
-            }
-        }
+        payload = {"data": {**kwargs}}
 
         try:
             response = requests.put(url, headers=headers, json=payload)
@@ -152,25 +139,35 @@ class AsanaProvider(BaseProvider):
             if response.status_code != 200:
                 response.raise_for_status()
 
-            self.logger.info("Successfully updated task", extra={"response": response.json()})
+            self.logger.info(
+                "Successfully updated task", extra={"response": response.json()}
+            )
 
             return response.json()["data"]
-        
+
         except Exception as e:
             self.logger.exception("Failed to update task", extra={"exception": e})
             raise ProviderException(str(e))
-        
+
     def _notify(self, name: str, projects: typing.List[str], **kwargs: dict):
         """
         Create task in Asana.
+        Args:
+            name (str): Task Name.
+            projects (List[str]): List of Project IDs.
+            **kwargs (dict): Apart from the above parameters, you can also provide few other parameters. Refer to the [Asana API documentation](https://developers.asana.com/docs/update-a-task) for more details.
         """
         return self._create_task(name, projects, **kwargs)
-    
+
     def _query(self, task_id: str, **kwargs: dict):
         """
         Query tasks in Asana.
+        Args:
+            task_id (str): Task ID.
+            **kwargs (dict): Apart from the above parameters, you can also provide few other parameters. Refer to the [Asana API documentation](https://developers.asana.com/docs/update-a-task) for more details.
         """
         return self._update_task(task_id, **kwargs)
+
 
 if __name__ == "__main__":
     import logging
@@ -186,10 +183,7 @@ if __name__ == "__main__":
     pat_token = os.getenv("ASANA_PAT_TOKEN")
 
     config = ProviderConfig(
-        description="Asana Provider",
-        authentication={
-            "pat_token": pat_token
-        }
+        description="Asana Provider", authentication={"pat_token": pat_token}
     )
 
     provider = AsanaProvider(context_manager, "asana_provider", config)

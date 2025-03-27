@@ -17,8 +17,6 @@ export function NodeTriggerIcon({ nodeData }: { nodeData: NodeData }) {
       return <ClockIcon className="size-8" />;
     case "alert": {
       const alertSource = nodeData.properties?.source;
-      console.log(alertSource);
-      console.log(nodeData);
       if (alertSource) {
         return (
           <DynamicImageProviderIcon

@@ -1,0 +1,34 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **service_account_json**: A service account JSON with logging viewer role (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query gcpmonitoring
+      provider: gcpmonitoring
+      config: "{{ provider.my_provider_name }}"
+      with:
+        filter: {value}  
+        timedelta_in_days: {value}  
+        page_size: {value}  
+        raw: {value}  
+        project: {value}  
+```
+
+
+
+
+
+Check the following workflow examples:
+- [gcp_logging_open_ai.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/gcp_logging_open_ai.yaml)
+- [slack-message-reaction.yml](https://github.com/keephq/keep/blob/main/examples/workflows/slack-message-reaction.yml)

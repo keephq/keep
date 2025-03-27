@@ -1,0 +1,32 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **service_account_json**: The service account JSON with container.viewer role (required: True, sensitive: True)
+- **cluster_name**: The name of the cluster (required: True, sensitive: False)
+- **region**: The GKE cluster region (required: False, sensitive: False)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query gke
+      provider: gke
+      config: "{{ provider.my_provider_name }}"
+      with:
+        command_type: {value}  # Type of query to execute
+        # Additional arguments will be passed to the query method
+```
+
+
+
+
+
+Check the following workflow example:
+- [gke.yml](https://github.com/keephq/keep/blob/main/examples/workflows/gke.yml)

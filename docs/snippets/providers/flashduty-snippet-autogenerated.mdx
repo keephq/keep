@@ -1,0 +1,33 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **integration_key**: Flashduty integration key (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query flashduty
+      provider: flashduty
+      config: "{{ provider.my_provider_name }}"
+      with:
+        title: {value}  # The title of the incident
+        event_status: {value}  # The status of the incident, one of: Info, Warning, Critical, Ok
+        description: {value}  # The description of the incident
+        alert_key: {value}  # Alert identifier, used to update or automatically recover existing alerts. If you're reporting a recovery event, this value must exist.
+        labels: {value}  # The labels of the incident
+```
+
+
+
+
+Check the following workflow example:
+- [flashduty_example.yml](https://github.com/keephq/keep/blob/main/examples/workflows/flashduty_example.yml)

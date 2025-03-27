@@ -56,7 +56,8 @@ class DiscordProvider(BaseProvider):
         https://discord.com/developers/docs/resources/webhook
 
         Args:
-            kwargs (dict): The providers with context
+            content (str): The content of the message.
+            components (list): The components of the message.
         """
         self.logger.debug("Notifying alert message to Discord")
         webhook_url = self.authentication_config.webhook_url

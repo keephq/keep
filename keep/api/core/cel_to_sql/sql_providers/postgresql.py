@@ -10,8 +10,9 @@ from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 
 class CelToPostgreSqlProvider(BaseCelToSqlProvider):
-    def json_extract_as_text(self, column: str, path: str) -> str:
-        all_columns = [column] + [f"'{item}'" for item in path.split(".")]
+
+    def json_extract_as_text(self, column: str, path: list[str]) -> str:
+        all_columns = [column] + [f"'{item}'" for item in path]
 
         json_property_path = " -> ".join(all_columns[:-1])
         return f"({json_property_path}) ->> {all_columns[-1]}"  # (json_column -> 'labels' -> tags) ->> 'service'

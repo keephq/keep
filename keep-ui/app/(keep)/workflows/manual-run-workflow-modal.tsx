@@ -1,7 +1,6 @@
 import { Button, Text, Title } from "@tremor/react";
 
 import Modal from "@/components/ui/Modal";
-import { useWorkflows } from "utils/hooks/useWorkflows";
 import { useState } from "react";
 import { toast } from "react-toastify";
 import { IncidentDto } from "@/entities/incidents/model";
@@ -13,7 +12,7 @@ import { components, OptionProps } from "react-select";
 import { FilterOptionOption } from "react-select/dist/declarations/src/filters";
 import { WorkflowTriggerBadge } from "@/entities/workflows/ui/WorkflowTriggerBadge";
 import Link from "next/link";
-
+import { useWorkflows } from "@/entities/workflows/model/useWorkflows";
 interface Props {
   alert?: AlertDto | null | undefined;
   incident?: IncidentDto | null | undefined;

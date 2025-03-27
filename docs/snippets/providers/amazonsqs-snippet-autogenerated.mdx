@@ -1,0 +1,32 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **region_name**: Region name (required: True, sensitive: False)
+- **sqs_queue_url**: SQS Queue URL (required: True, sensitive: False)
+- **access_key_id**: Access Key Id (Leave empty if using IAM role at EC2) (required: False, sensitive: False)
+- **secret_access_key**: Secret access key (Leave empty if using IAM role at EC2) (required: False, sensitive: False)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query amazonsqs
+      provider: amazonsqs
+      config: "{{ provider.my_provider_name }}"
+      with:
+        message: {value}  
+        group_id: {value}  
+        dedup_id: {value}  
+```
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).

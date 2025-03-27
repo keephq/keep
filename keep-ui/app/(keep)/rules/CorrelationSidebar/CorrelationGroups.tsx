@@ -9,7 +9,7 @@ export const CorrelationGroups = () => {
   const { control } = useFormContext<CorrelationFormType>();
 
   return (
-    <div className="col-span-2">
+    <div>
       <div className="flex justify-between items-center">
         <p className="text-tremor-default font-medium text-tremor-content-strong mb-2">
           Add filters

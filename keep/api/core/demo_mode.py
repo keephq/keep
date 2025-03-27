@@ -390,12 +390,45 @@ def perform_demo_ai(keep_api_key, keep_api_url):
             )
             response.raise_for_status()
 
+number_of_errors_before_restart = 10
+async def safe_run_async_worker(worker, *args, **kwargs):
+    number_of_errors = 0
+    while True:
+        logger.info(
+            f"Starting worker {worker.__name__}",
+            extra={
+                "args_": args,
+                "kwargs_": kwargs,
+            }
+        )
+        try:
+            await worker(*args, **kwargs)
+        except asyncio.CancelledError:  # pragma: no cover
+            # happens on shutdown, fine
+            pass
+        except Exception:
+            number_of_errors += 1
+            # we want to raise an exception if we have too many errors
+            if (
+                number_of_errors_before_restart
+                and number_of_errors >= number_of_errors_before_restart
+            ):
+                logger.error(
+                    f"Worker encountered {number_of_errors} errors, restarting...",
+                    exc_info=True,
+                )
+                raise
+            # o.w: log the error and continue
+            logger.exception("Demo worker error")
+            await asyncio.sleep(3)
+            continue
+        break
 
 def simulate_alerts(*args, **kwargs):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.create_task(simulate_alerts_worker(0, kwargs.get("keep_api_key"), 0))
-    loop.create_task(simulate_alerts_async(*args, **kwargs))
+    loop.create_task(safe_run_async_worker(simulate_alerts_worker, worker_id=0, keep_api_key=kwargs.get("keep_api_key"), rps=0))
+    loop.create_task(safe_run_async_worker(simulate_alerts_async, *args, **kwargs))
     loop.run_forever()
 
 

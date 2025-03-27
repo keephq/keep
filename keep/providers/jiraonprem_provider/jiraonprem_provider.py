@@ -26,7 +26,7 @@ class JiraonpremProviderAuthConfig:
             "description": "Jira Host",
             "sensitive": False,
             "hint": "jira.onprem.com",
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         }
     )
 
@@ -559,7 +559,8 @@ class JiraonpremProvider(BaseProvider):
         https://developer.atlassian.com/cloud/jira/software/rest/api-group-board/#api-rest-agile-1-0-board-boardid-issue-get
 
         Args:
-            kwargs (dict): The providers with context
+            ticket_id (str): The ticket id.
+            board_id (str): The board id.
         """
         if not ticket_id:
             request_url = (
