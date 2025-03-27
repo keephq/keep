@@ -217,6 +217,11 @@ function validateProviderConfig(
   providers: Provider[],
   installedProviders: Provider[]
 ) {
+  if (providerType === "mock") {
+    // Mock provider is always installed and doesn't need configuration
+    return null;
+  }
+
   const providerObject = providers?.find((p) => p.type === providerType);
 
   if (!providerObject) {
