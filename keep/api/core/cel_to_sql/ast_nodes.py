@@ -270,6 +270,11 @@ class IndexAccessNode(PropertyAccessNode):
         return f"[{self.member_name}]"
 
     def get_property_path(self) -> list[str]:
-        return [self.member_name] + (
-            self.value.get_property_path() if self.value else []
-        )
+        if isinstance(self.value, PropertyAccessNode) or isinstance(
+            self.value, IndexAccessNode
+        ):
+            return [self.member_name] + (
+                self.value.get_property_path() if self.value else []
+            )
+
+        return [self.member_name]

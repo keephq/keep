@@ -139,7 +139,9 @@ class BaseCelToSqlProvider:
 
     def get_order_by_exp(self, sort_by_cel_field: str) -> str:
         fields_to_sort_by = []
-        metadata = self.properties_metadata.get_property_metadata(sort_by_cel_field)
+        metadata = self.properties_metadata.get_property_metadata_for_str(
+            sort_by_cel_field
+        )
         fields_to_sort_by = [
             self._get_order_by_field(item, metadata.data_type)
             for item in metadata.field_mappings
