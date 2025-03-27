@@ -544,6 +544,11 @@ class ProvidersFactory:
         provider_from_db = get_provider_by_type_and_id(
             tenant_id=tenant_id, provider_id=provider_id, provider_type=provider_type
         )
+        logger.info(
+            f"Getting provider secret for provider id: {provider_from_db.id},"
+            " configuration key: {provider_from_db.configuration_key},"
+            " secret manager type: {secret_manager.__class__.__name__}"
+        )
         return secret_manager.read_secret(
             secret_name=provider_from_db.configuration_key,
             is_json=True,
