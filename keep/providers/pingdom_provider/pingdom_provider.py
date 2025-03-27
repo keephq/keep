@@ -116,9 +116,23 @@ class PingdomProvider(BaseProvider):
                 None,
             )
             # map severity and status to keep's format
-            status = PingdomProvider.STATUS_MAP.get(
-                alert.get("status"), AlertStatus.FIRING
-            )
+            description = alert.get("messagefull")
+            status = alert.get("messageshort")
+            if status not in PingdomProvider.STATUS_MAP.keys():
+                self.logger.warning(
+                    f"Unknown status {status} for alert {alert.get('id')}"
+                )
+                if "UP" in description:
+                    status = "up"
+                elif "DOWN" in description:
+                    status = "down"
+                else:
+                    self.logger.warning(
+                        f"Unknown status {status} for alert {alert.get('id')}"
+                    )
+                    status = "down"
+
+            status = PingdomProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
             # its N/A but maybe in the future we will have it
             severity = PingdomProvider.SEVERITIES_MAP.get(
                 alert.get("severity"), AlertSeverity.INFO
@@ -138,7 +152,7 @@ class PingdomProvider(BaseProvider):
                 severity=severity,
                 status=status,
                 lastReceived=last_received,
-                description=alert.get("messagefull"),
+                description=description,
                 charged=alert.get("charged"),
                 source=["pingdom"],
                 username=alert.get("username"),
