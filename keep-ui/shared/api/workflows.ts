@@ -119,6 +119,13 @@ export type WorkflowTemplate = {
   workflow_raw_id: string;
 };
 
+export type PaginatedWorkflowsResults = {
+  count: number;
+  results: Workflow[];
+  limit: number;
+  offset: number;
+};
+
 export async function getWorkflow(api: ApiClient, id: string) {
   return await api.get<Workflow>(`/workflows/${id}`);
 }

@@ -116,13 +116,34 @@ class PingdomProvider(BaseProvider):
                 None,
             )
             # map severity and status to keep's format
-            status = PingdomProvider.STATUS_MAP.get(
-                alert.get("status"), AlertStatus.FIRING
-            )
+            description = alert.get("messagefull")
+            status = alert.get("messageshort")
+            if status not in PingdomProvider.STATUS_MAP.keys():
+                self.logger.warning(
+                    f"Unknown status {status} for alert {alert.get('id')}"
+                )
+                if "UP" in description:
+                    status = "up"
+                elif "DOWN" in description:
+                    status = "down"
+                else:
+                    self.logger.warning(
+                        f"Unknown status {status} for alert {alert.get('id')}"
+                    )
+                    status = "down"
+
+            status = PingdomProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
             # its N/A but maybe in the future we will have it
             severity = PingdomProvider.SEVERITIES_MAP.get(
                 alert.get("severity"), AlertSeverity.INFO
             )
+
+            if "time" in alert:
+                last_received = datetime.datetime.fromtimestamp(
+                    alert.get("time"), tz=datetime.timezone.utc
+                ).isoformat()
+            else:
+                last_received = datetime.datetime.now().isoformat()
 
             alert_dto = AlertDto(
                 id=alert.get("checkid"),
@@ -130,13 +151,14 @@ class PingdomProvider(BaseProvider):
                 name=check_name,
                 severity=severity,
                 status=status,
-                lastReceived=datetime.datetime.now().isoformat(),
-                description=alert.get("messagefull"),
+                lastReceived=last_received,
+                description=description,
                 charged=alert.get("charged"),
                 source=["pingdom"],
                 username=alert.get("username"),
                 userid=alert.get("userid"),
                 via=alert.get("via"),
+                alert=alert,  # keep the original alert
             )
             alerts_dtos.append(alert_dto)
 
@@ -149,14 +171,27 @@ class PingdomProvider(BaseProvider):
         # https://pingdom.com/resources/webhooks/#Examples-of-webhook-JSON-output-for-uptime-checks
 
         # map severity and status to keep's format
+        status = PingdomProvider.STATUS_MAP.get(
+            event.get("current_state"), AlertStatus.FIRING
+        )
+        # its N/A but maybe in the future we will have it
+        severity = PingdomProvider.SEVERITIES_MAP.get(
+            event.get("importance_level"), AlertSeverity.INFO
+        )
+        if "time" in event:
+            last_received = datetime.datetime.fromtimestamp(
+                event.get("time"), tz=datetime.timezone.utc
+            ).isoformat()
+        else:
+            last_received = datetime.datetime.now().isoformat()
 
         alert = AlertDto(
             id=event.get("check_id"),
             fingerprint=str(event.get("check_id")),
             name=event.get("check_name"),
-            status=event.get("current_state"),
-            severity=event.get("importance_level", None),
-            lastReceived=datetime.datetime.now().isoformat(),
+            status=status,
+            severity=severity,
+            lastReceived=last_received,
             description=event.get("long_description"),
             source=["pingdom"],
             check_params=event.get("check_params", {}),
@@ -170,6 +205,7 @@ class PingdomProvider(BaseProvider):
             custom_message=event.get("custom_message", None),
             first_probe=event.get("first_probe", None),
             second_probe=event.get("second_probe", None),
+            alert=event,  # keep the original alert
         )
         return alert
 

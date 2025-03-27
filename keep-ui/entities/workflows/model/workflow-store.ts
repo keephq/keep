@@ -31,7 +31,7 @@ import {
   WorkflowProperties,
   InitializationConfiguration,
 } from "@/entities/workflows";
-import { validateStepPure, validateGlobalPure } from "./validation";
+import { validateStepPure, validateGlobalPure } from "../lib/validation";
 import { getLayoutedWorkflowElements } from "../lib/getLayoutedWorkflowElements";
 import {
   parseWorkflow,

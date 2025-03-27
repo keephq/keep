@@ -546,8 +546,8 @@ class ProvidersFactory:
         )
         logger.info(
             f"Getting provider secret for provider id: {provider_from_db.id},"
-            " configuration key: {provider_from_db.configuration_key},"
-            " secret manager type: {secret_manager.__class__.__name__}"
+            f" configuration key: {provider_from_db.configuration_key},"
+            f" secret manager type: {secret_manager.__class__.__name__}"
         )
         return secret_manager.read_secret(
             secret_name=provider_from_db.configuration_key,
