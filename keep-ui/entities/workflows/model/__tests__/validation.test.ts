@@ -250,7 +250,7 @@ describe("validateStepPure", () => {
       mockInstalledProviders,
       mockDefinition
     );
-    expect(result).toBeNull();
+    expect(result).toEqual([]);
   });
 
   it("should validate a switch step with valid conditions", () => {
@@ -286,7 +286,7 @@ describe("validateStepPure", () => {
       mockInstalledProviders,
       mockDefinition
     );
-    expect(result).toBeNull();
+    expect(result).toEqual([]);
   });
 
   it("should validate a foreach step with valid configuration", () => {
@@ -307,7 +307,7 @@ describe("validateStepPure", () => {
       mockInstalledProviders,
       mockDefinition
     );
-    expect(result).toBeNull();
+    expect(result).toEqual([]);
   });
 
   it("should detect missing provider configuration", () => {
@@ -332,7 +332,7 @@ describe("validateStepPure", () => {
       mockInstalledProviders,
       mockDefinition
     );
-    expect(result).toBe("No test provider selected");
+    expect(result).toEqual([["No test provider selected", "warning"]]);
   });
 
   it("should detect uninstalled provider", () => {
@@ -357,9 +357,12 @@ describe("validateStepPure", () => {
       mockInstalledProviders,
       mockDefinition
     );
-    expect(result).toBe(
-      "The 'uninstalled-config' test provider is not installed. Please install it before executing this workflow."
-    );
+    expect(result).toEqual([
+      [
+        "The 'uninstalled-config' test provider is not installed. Please install it before executing this workflow.",
+        "warning",
+      ],
+    ]);
   });
 });
 

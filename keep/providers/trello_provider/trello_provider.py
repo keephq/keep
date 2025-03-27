@@ -57,7 +57,8 @@ class TrelloProvider(BaseProvider):
         https://api.slack.com/messaging/webhooks
 
         Args:
-            kwargs (dict): The providers with context
+            board_id (str): Trello board ID
+            filter (str): Trello action filter
         """
         self.logger.debug("Fetching data from Trello")
 

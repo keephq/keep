@@ -222,6 +222,21 @@ class PagertreeProvider(BaseProvider):
         destination_account_user_ids: list[str] = [],
         **kwargs: dict,
     ):
+        """
+        Sends an alert or incident to PagerTree
+        Args:
+            title: Title of the alert.
+            urgency: low|medium|high|critical
+            incident: True if the alert is an incident
+            severities: SEV-1|SEV-2|SEV-3|SEV-4|SEV-5|SEV_UNKNOWN
+            incident_message: Message to be displayed in the incident
+            description: UTF-8 string of custom message for alert. Shown in incident description
+            status: alert status to send
+            destination_team_ids: destination team_ids to send alert to
+            destination_router_ids: destination router_ids to send alert to
+            destination_account_user_ids: destination account_users_ids to send alert to
+            **kwargs: Additional parameters to be passed
+        """
         if (
             len(destination_team_ids)
             + len(destination_router_ids)

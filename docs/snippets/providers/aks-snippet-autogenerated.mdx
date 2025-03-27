@@ -1,0 +1,34 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **subscription_id**: The azure subscription id (required: True, sensitive: True)
+- **client_id**: The azure client id (required: True, sensitive: True)
+- **client_secret**: The azure client secret (required: True, sensitive: True)
+- **tenant_id**: The azure tenant id (required: True, sensitive: True)
+- **resource_group_name**: The azure aks resource group name (required: True, sensitive: True)
+- **resource_name**: The azure aks cluster name (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query aks
+      provider: aks
+      config: "{{ provider.my_provider_name }}"
+      with:
+        command_type: {value}  # The command type to operate on the k8s cluster (`get_pods`, `get_pvc`, `get_node_pressure`).
+```
+
+
+
+
+
+Check the following workflow example:
+- [aks_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/aks_basic.yml)

@@ -278,6 +278,9 @@ class IncidentmanagerProvider(BaseProvider):
         return all_alerts
 
     def _query(self, **kwargs: dict) -> dict:
+        """
+        Query AWS Incident Manager to get all incidents
+        """
 
         ssm_incident_client = self.__generate_client("ssm-incidents")
         all_records = []
