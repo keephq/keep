@@ -41,7 +41,7 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
             return expression_to_cast
 
     def _json_extract(self, column: str, path: list[str]) -> str:
-        property_path_str = ".".join([f"{item}" for item in path])
+        property_path_str = ".".join([f'"{item}"' for item in path])
         return f"JSON_EXTRACT({column}, '$.{property_path_str}')"
 
     def _get_order_by_field(self, field_mapping, data_type: type):

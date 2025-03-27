@@ -12,7 +12,7 @@ from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 class CelToSqliteProvider(BaseCelToSqlProvider):
 
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
-        property_path_str = ".".join([f"{item}" for item in path])
+        property_path_str = ".".join([f'"{item}"' for item in path])
         return f"json_extract({column}, '$.{property_path_str}')"
 
     def coalesce(self, args):
