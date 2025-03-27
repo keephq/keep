@@ -1,0 +1,37 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **smtp_server**: SMTP Server Address (required: True, sensitive: False)
+- **smtp_port**: SMTP port (required: True, sensitive: False)
+- **encryption**: SMTP encryption (required: True, sensitive: False)
+- **smtp_username**: SMTP username (required: False, sensitive: False)
+- **smtp_password**: SMTP password (required: False, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query smtp
+      provider: smtp
+      config: "{{ provider.my_provider_name }}"
+      with:
+        from_email: {value}  
+        from_name: {value}  
+        to_email: {value}  
+        subject: {value}  
+        body: {value}  
+```
+
+
+
+
+Check the following workflow example:
+- [send_smtp_email.yml](https://github.com/keephq/keep/blob/main/examples/workflows/send_smtp_email.yml)

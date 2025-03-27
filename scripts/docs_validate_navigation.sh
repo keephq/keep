@@ -61,7 +61,7 @@ while IFS= read -r -d '' file; do
         echo "\"$relative_path\","
         is_missing=1
     fi
-done < <(find . -mindepth 2 -type f -name "*.mdx" -print0 | sort -z)
+done < <(find . -mindepth 2 -type f -name "*.mdx" ! -path "*snippet*" -print0 | sort -z)
 
 if [[ $is_missing -ne 0 ]]; then
     echo "🔴🔴🔴 👆 those files are missing in docs/mint.json. That's a file responsible for rendering docs navigation."

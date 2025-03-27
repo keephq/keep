@@ -52,7 +52,7 @@ export function WorkflowExecutionResults({
 
   const { data: executionData, error: executionError } = useSWR(
     api.isReady() && workflowExecutionId
-      ? `/workflows/${workflowId}/runs/${workflowExecutionId}`
+      ? `/workflows/${workflowId ? `${workflowId}/` : ""}runs/${workflowExecutionId}`
       : null,
     async (url) => {
       const fetchedData = await api.get(url);
@@ -238,7 +238,7 @@ export function WorkflowExecutionResultsInternal({
       )}
       <ResizableColumns initialLeftWidth={50}>
         <div className="pr-2">
-          {logs ? (
+          {logs && logs.length > 0 ? (
             <Card className="p-0 overflow-hidden">
               <WorkflowExecutionLogs
                 logs={logs ?? null}

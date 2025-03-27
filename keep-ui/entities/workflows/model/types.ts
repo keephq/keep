@@ -208,6 +208,8 @@ export interface WorkflowStateValues {
   editorOpen: boolean;
   saveRequestCount: number;
   runRequestCount: number;
+
+  yamlSchema: z.ZodSchema | null;
 }
 
 export interface WorkflowState extends WorkflowStateValues {

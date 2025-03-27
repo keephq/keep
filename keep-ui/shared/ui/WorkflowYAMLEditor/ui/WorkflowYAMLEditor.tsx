@@ -29,6 +29,7 @@ export interface WorkflowYAMLEditorProps {
   ) => void;
   onChange?: (value: string | undefined) => void;
   onValidationErrors?: (errors: YamlValidationError[]) => void;
+  onSave?: (value: string) => void;
 }
 
 export const WorkflowYAMLEditor = ({
@@ -39,6 +40,7 @@ export const WorkflowYAMLEditor = ({
   "data-testid": dataTestId = "yaml-editor",
   onMount,
   onChange,
+  onSave,
   onValidationErrors,
 }: WorkflowYAMLEditorProps) => {
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
@@ -175,7 +177,7 @@ export const WorkflowYAMLEditor = ({
               disabled={!isEditorMounted}
             >
               {isCopied ? (
-                <Check className="h-4 w-4 text-green-500" />
+                <Check className="h-4 w-4" />
               ) : (
                 <Copy className="h-4 w-4" />
               )}
@@ -191,6 +193,18 @@ export const WorkflowYAMLEditor = ({
             >
               <Download className="h-4 w-4" />
             </Button>
+            {!readOnly && onSave ? (
+              <Button
+                color="orange"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => onSave(editorRef.current?.getValue() ?? "")}
+                variant="primary"
+                data-testid="save-yaml-button"
+              >
+                Save
+              </Button>
+            ) : null}
           </div>
           <Suspense
             fallback={<KeepLoader loadingText="Loading YAML editor..." />}

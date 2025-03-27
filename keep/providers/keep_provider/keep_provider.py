@@ -66,6 +66,13 @@ class KeepProvider(BaseProvider):
     def _query(self, filters=None, version=1, distinct=True, time_delta=1, **kwargs):
         """
         Query Keep for alerts.
+        Args:
+            filter: filter to query Keep
+            filters: filters to query Keep (only for version 1)
+            version: version of Keep API
+            distinct: if True, return only distinct alerts
+            time_delta: time delta in days to query Keep
+            timerange: timerange dict to calculate time delta
         """
         self.logger.info(
             "Querying Keep for alerts",
@@ -585,6 +592,12 @@ class KeepProvider(BaseProvider):
         self.logger.info("Deleted all workflows")
 
     def _notify(self, **kwargs):
+        """
+        Notify alerts or update workflow
+        Args:
+            delete_all_other_workflows: if True, delete all other workflows
+            workflow_to_update_yaml: workflow yaml to update
+        """
         if "workflow_full_sync" in kwargs or "delete_all_other_workflows" in kwargs:
             # We need DB id, not user id for the workflow, so getting it from the wf execution.
             workflow_store = WorkflowStore()

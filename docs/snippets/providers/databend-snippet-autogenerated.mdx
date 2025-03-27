@@ -1,0 +1,31 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **host_url**: Databend host_url (required: True, sensitive: False)
+- **username**: Databend username (required: True, sensitive: False)
+- **password**: Databend password (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query databend
+      provider: databend
+      config: "{{ provider.my_provider_name }}"
+      with:
+        query: {value}  
+```
+
+
+
+
+
+Check the following workflow example:
+- [query-databend.yml](https://github.com/keephq/keep/blob/main/examples/workflows/query-databend.yml)
