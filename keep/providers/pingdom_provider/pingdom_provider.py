@@ -126,7 +126,7 @@ class PingdomProvider(BaseProvider):
 
             alert_dto = AlertDto(
                 id=alert.get("checkid"),
-                fingerprint=alert.get("checkid"),
+                fingerprint=str(alert.get("checkid")),
                 name=check_name,
                 severity=severity,
                 status=status,
@@ -152,7 +152,7 @@ class PingdomProvider(BaseProvider):
 
         alert = AlertDto(
             id=event.get("check_id"),
-            fingerprint=event.get("check_id"),
+            fingerprint=str(event.get("check_id")),
             name=event.get("check_name"),
             status=event.get("current_state"),
             severity=event.get("importance_level", None),
