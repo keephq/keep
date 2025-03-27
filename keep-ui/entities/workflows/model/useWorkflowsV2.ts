@@ -1,6 +1,19 @@
-import useSWR, { mutate, SWRConfiguration } from "swr";
+import useSWR, { SWRConfiguration } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { Workflow } from "@/shared/api/workflows";
+import { PaginatedWorkflowsResults } from "@/shared/api/workflows";
+import { workflowKeys } from "./workflowKeys";
+
+export const DEFAULT_WORKFLOWS_PAGINATION = {
+  offset: 0,
+  limit: 12,
+};
+
+export const DEFAULT_WORKFLOWS_QUERY = {
+  cel: "",
+  ...DEFAULT_WORKFLOWS_PAGINATION,
+  sortBy: "created_at",
+  sortDir: "desc" as const,
+};
 
 export interface WorkflowsQuery {
   cel?: string;
@@ -10,12 +23,13 @@ export interface WorkflowsQuery {
   sortDir?: "asc" | "desc";
 }
 
+const requestUrl = "/workflows/query?is_v2=true";
+
 export function useWorkflowsV2(
   workflowsQuery: WorkflowsQuery | null,
   swrConfig?: SWRConfiguration
 ) {
   const api = useApi();
-  let requestUrl = "/workflows/query?is_v2=true";
 
   const queryToPost = workflowsQuery
     ? {
@@ -36,36 +50,18 @@ export function useWorkflowsV2(
     : {};
 
   const cacheKey =
-    api.isReady() && workflowsQuery
-      ? [
-          requestUrl,
-          queryToPost.cel,
-          queryToPost.limit,
-          queryToPost.offset,
-          queryToPost.sort_by,
-          queryToPost.sort_dir,
-        ]
-          .filter(Boolean)
-          .join("::")
-      : null;
+    api.isReady() && workflowsQuery ? workflowKeys.list(queryToPost) : null;
 
-    const { data, error, isLoading } = useSWR<any>(
-      api.isReady() && workflowsQuery ? cacheKey : null,
-      () => api.post(requestUrl, queryToPost),
-      swrConfig
-    );
-
-    const mutateWorkflows = () => {
-      return mutate(
-        (key) => typeof key === "string" && key.split("::")[0] === requestUrl
-      );
-    };
+  const { data, error, isLoading } = useSWR<PaginatedWorkflowsResults>(
+    cacheKey,
+    () => api.post(requestUrl, queryToPost),
+    swrConfig
+  );
 
   return {
-    workflows: data?.results as Workflow[],
+    workflows: data?.results,
     totalCount: data?.count,
     isLoading: isLoading || !data,
     error,
-    mutateWorkflows,
   };
 }

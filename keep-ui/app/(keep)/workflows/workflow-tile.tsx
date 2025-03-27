@@ -22,7 +22,7 @@ import WorkflowGraph from "./workflow-graph";
 import Modal from "@/components/ui/Modal";
 import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import { useToggleWorkflow } from "utils/hooks/useWorkflowToggle";
+import { useToggleWorkflow } from "@/features/workflows/enable-disable/model";
 import "./workflow-tile.css";
 import { WorkflowTriggerBadge } from "@/entities/workflows/ui/WorkflowTriggerBadge";
 import Link from "next/link";
@@ -204,20 +204,18 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           </div>
         </Link>
         <div className="absolute top-4 right-4">
-          {!!handleRunClick && (
-            <WorkflowMenu
-              onDelete={handleDeleteClick}
-              onRun={handleRunClick}
-              onDownload={handleDownloadClick}
-              onView={handleViewClick}
-              onBuilder={handleBuilderClick}
-              onToggleState={toggleWorkflow}
-              isDisabled={workflow.disabled}
-              runButtonToolTip={message}
-              isRunButtonDisabled={!!isRunButtonDisabled}
-              provisioned={workflow.provisioned}
-            />
-          )}
+          <WorkflowMenu
+            onDelete={handleDeleteClick}
+            onRun={handleRunClick}
+            onDownload={handleDownloadClick}
+            onView={handleViewClick}
+            onBuilder={handleBuilderClick}
+            onToggleState={toggleWorkflow}
+            isDisabled={workflow.disabled}
+            runButtonToolTip={message}
+            isRunButtonDisabled={!!isRunButtonDisabled}
+            provisioned={workflow.provisioned}
+          />
         </div>
       </Card>
 

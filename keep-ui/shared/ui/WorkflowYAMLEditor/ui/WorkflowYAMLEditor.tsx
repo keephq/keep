@@ -4,7 +4,7 @@ import React, { Suspense, useMemo, useRef, useState } from "react";
 import type { editor, Uri } from "monaco-editor";
 import { Download, Copy, Check } from "lucide-react";
 import { Button } from "@tremor/react";
-import { useWorkflowJsonSchema } from "@/entities/workflows/model/useWorkflowJsonSchema";
+import { useWorkflowJsonSchema } from "@/entities/workflows/lib/useWorkflowJsonSchema";
 import { KeepLoader } from "../../KeepLoader/KeepLoader";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { YamlValidationError } from "../model/types";
