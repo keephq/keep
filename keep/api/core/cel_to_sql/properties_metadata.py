@@ -115,6 +115,9 @@ class PropertiesMetadata:
                 new_field_mapping_config
             )
 
+    def get_property_metadata_for_str(self, prop_path_str: str) -> PropertyMetadataInfo:
+        return self.get_property_metadata(self.__extract_fields(prop_path_str))
+
     def get_property_metadata(self, prop_path: list[str]) -> PropertyMetadataInfo:
         prop_path_str = self.__get_property_path_str(prop_path)
         field_mapping_config, mapping_key = self.__find_mapping_configuration(
