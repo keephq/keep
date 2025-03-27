@@ -121,6 +121,23 @@ alert_field_configurations = [
         data_type=str,
     ),
 ]
+
+# Copies the same configuration as above, but adds the "alert." prefix to each entry in map_from_pattern.
+# This allows users to write queries using dictionary-style field access, like:
+#   alert['some_attribute'] == 'value'
+field_configurations_with_alert_prefix = []
+for item in alert_field_configurations:
+    field_configurations_with_alert_prefix.append(
+        FieldMappingConfiguration(
+            map_from_pattern=f"alert.{item.map_from_pattern}",
+            map_to=item.map_to,
+            data_type=item.data_type,
+            enum_values=item.enum_values,
+        )
+    )
+alert_field_configurations = (
+    field_configurations_with_alert_prefix + alert_field_configurations
+)
 alias_column_mapping = {
     "filter_timestamp": "lastalert.timestamp",
     "filter_provider_id": "alert.provider_id",
