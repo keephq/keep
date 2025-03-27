@@ -52,7 +52,7 @@ export function WorkflowExecutionResults({
 
   const { data: executionData, error: executionError } = useSWR(
     api.isReady() && workflowExecutionId
-      ? `/workflows/${workflowId}/runs/${workflowExecutionId}`
+      ? `/workflows/${workflowId ? `${workflowId}/` : ""}runs/${workflowExecutionId}`
       : null,
     async (url) => {
       const fetchedData = await api.get(url);
