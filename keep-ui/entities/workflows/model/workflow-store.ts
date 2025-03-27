@@ -28,12 +28,15 @@ import {
   V2StepTrigger,
   V2StepTemplate,
   V2StepTriggerSchema,
-  ProvidersConfiguration,
   WorkflowProperties,
+  InitializationConfiguration,
 } from "@/entities/workflows";
 import { validateStepPure, validateGlobalPure } from "./validation";
 import { getLayoutedWorkflowElements } from "../lib/getLayoutedWorkflowElements";
-import { wrapDefinitionV2 } from "@/entities/workflows/lib/parser";
+import {
+  parseWorkflow,
+  wrapDefinitionV2,
+} from "@/entities/workflows/lib/parser";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 import { ZodError } from "zod";
 import { fromError } from "zod-validation-error";
@@ -46,6 +49,8 @@ import {
   getToolboxConfiguration,
 } from "@/features/workflows/builder/lib/utils";
 import { Provider } from "@/shared/api/providers";
+import { parseWorkflowYamlStringToJSON } from "../lib/yaml-utils";
+import { getYamlWorkflowDefinitionSchema } from "./yaml.schema";
 
 class KeepWorkflowStoreError extends Error {
   constructor(message: string) {
@@ -280,6 +285,8 @@ const defaultState: WorkflowStateValues = {
   toolboxConfiguration: null,
   providers: null,
   installedProviders: null,
+  yamlSchema: null,
+  secrets: {},
   isInitialized: false,
   isLayouted: false,
   selectedEdge: null,
@@ -354,9 +361,16 @@ export const useWorkflowStore = create<WorkflowState>()(
         return null;
       }
     },
-    setProviders: (providers: Provider[]) => set({ providers }),
+    setProviders: (providers: Provider[]) => {
+      set({
+        providers,
+        yamlSchema: getYamlWorkflowDefinitionSchema(providers),
+        toolboxConfiguration: getToolboxConfiguration(providers),
+      });
+    },
     setInstalledProviders: (installedProviders: Provider[]) =>
       set({ installedProviders }),
+    setSecrets: (secrets: Record<string, string>) => set({ secrets }),
     setEditorOpen: (open) => set({ editorOpen: open }),
     updateSelectedNodeData: (key, value) => {
       const currentSelectedNode = get().selectedNode;
@@ -381,6 +395,41 @@ export const useWorkflowStore = create<WorkflowState>()(
         get().updateDefinition();
       }
     },
+    updateFromYamlString: (yamlString: string) => {
+      try {
+        const json = parseWorkflowYamlStringToJSON(yamlString);
+        const parsed = get().yamlSchema?.parse(json);
+      } catch (error) {
+        if (error instanceof ZodError) {
+          console.error("Failed to validate against Zod schema", error);
+        } else {
+          console.error("Failed to parse YAML", error);
+        }
+        // we do not update nodes if the yaml is invalid or cannot be parsed
+        return;
+      }
+      set({
+        definition: wrapDefinitionV2({
+          // todo: do not change node ids, maybe use determenistic ids
+          ...parseWorkflow(yamlString, get().providers ?? []),
+          isValid: true,
+        }),
+      });
+      set({
+        changes: get().changes + 1,
+        lastChangedAt: Date.now(),
+      });
+      initializeWorkflow(
+        get().workflowId,
+        {
+          providers: get().providers ?? [],
+          installedProviders: get().installedProviders ?? [],
+          secrets: get().secrets ?? {},
+        },
+        set,
+        get
+      );
+    },
     updateDefinition: () => {
       // Immediately update definition with new properties
       const { nodes, edges } = get();
@@ -391,13 +440,28 @@ export const useWorkflowStore = create<WorkflowState>()(
           properties: get().v2Properties,
         });
 
-      // Use validators to check if the workflow is valid
-      let isValid = true;
-      const validationErrors: Record<string, string> = {};
       const definition: Definition = {
         sequence,
         properties: newProperties as WorkflowProperties,
       };
+
+      const { isValid, validationErrors, canDeploy } =
+        get().validateDefinition(definition);
+
+      set({
+        definition: wrapDefinitionV2({
+          ...definition,
+          isValid,
+        }),
+        validationErrors,
+        canDeploy,
+        isEditorSyncedWithNodes: true,
+      });
+    },
+    validateDefinition: (definition: Definition) => {
+      // Use validators to check if the workflow is valid
+      let isValid = true;
+      const validationErrors: Record<string, string> = {};
 
       const result = validateGlobalPure(definition);
       if (result) {
@@ -408,43 +472,46 @@ export const useWorkflowStore = create<WorkflowState>()(
       }
 
       // Check each step's validity
-      for (const step of sequence) {
-        const error = validateStepPure(
+      for (const step of definition.sequence) {
+        const errors = validateStepPure(
           step,
           get().providers ?? [],
           get().installedProviders ?? [],
+          get().secrets ?? {},
           definition
         );
         if (step.componentType === "switch") {
           [...step.branches.true, ...step.branches.false].forEach((branch) => {
-            const error = validateStepPure(
+            const errors = validateStepPure(
               branch,
               get().providers ?? [],
               get().installedProviders ?? [],
+              get().secrets ?? {},
               definition
             );
-            if (error) {
-              validationErrors[branch.name || branch.id] = error;
+            if (errors.length > 0) {
+              validationErrors[branch.name || branch.id] = errors[0][0];
               isValid = false;
             }
           });
         }
         if (step.componentType === "container") {
           step.sequence.forEach((s) => {
-            const error = validateStepPure(
+            const errors = validateStepPure(
               s,
               get().providers ?? [],
               get().installedProviders ?? [],
+              get().secrets ?? {},
               definition
             );
-            if (error) {
-              validationErrors[s.name || s.id] = error;
+            if (errors.length > 0) {
+              validationErrors[s.name || s.id] = errors[0][0];
               isValid = false;
             }
           });
         }
-        if (error) {
-          validationErrors[step.name || step.id] = error;
+        if (errors.length > 0) {
+          validationErrors[step.name || step.id] = errors[0][0];
           isValid = false;
         }
       }
@@ -458,15 +525,7 @@ export const useWorkflowStore = create<WorkflowState>()(
             !error.includes("provider") && !error.startsWith("Variable:")
         ).length === 0;
 
-      set({
-        definition: wrapDefinitionV2({
-          ...definition,
-          isValid,
-        }),
-        validationErrors,
-        canDeploy,
-        isEditorSyncedWithNodes: true,
-      });
+      return { isValid, validationErrors, canDeploy };
     },
     updateV2Properties: (properties) => {
       const updatedProperties = { ...get().v2Properties, ...properties };
@@ -713,11 +772,11 @@ export const useWorkflowStore = create<WorkflowState>()(
     }) => onLayout(params, set, get),
     initializeWorkflow: (
       workflowId: string | null,
-      { providers, installedProviders }: ProvidersConfiguration
+      { providers, installedProviders, secrets }: InitializationConfiguration
     ) =>
       initializeWorkflow(
         workflowId,
-        { providers, installedProviders },
+        { providers, installedProviders, secrets },
         set,
         get
       ),
@@ -767,10 +826,15 @@ function onLayout(
 
 function initializeWorkflow(
   workflowId: string | null,
-  { providers, installedProviders }: ProvidersConfiguration,
+  { providers, installedProviders, secrets }: InitializationConfiguration,
   set: StoreSet,
   get: StoreGet
 ) {
+  const isUpdatingExistingState = get().workflowId === workflowId;
+  const currentSelectedNode = get().selectedNode;
+  const currentSelectedNodeStepName = get().nodes.find(
+    (node) => node.id === currentSelectedNode
+  )?.data?.name;
   const definition = get().definition;
   if (definition === null) {
     throw new Error("Definition should be set before initializing workflow");
@@ -780,6 +844,9 @@ function initializeWorkflow(
   const name = parsedWorkflow?.properties?.name;
 
   const toolboxConfiguration = getToolboxConfiguration(providers);
+  const yamlSchema = getYamlWorkflowDefinitionSchema(providers, {
+    partial: true,
+  });
 
   const fullSequence = [
     {
@@ -803,21 +870,29 @@ function initializeWorkflow(
   ];
   const initialPosition = { x: 0, y: 50 };
   let { nodes, edges } = processWorkflowV2(fullSequence, initialPosition, true);
+  let newSelectedNodeId = null;
+  if (isUpdatingExistingState && currentSelectedNode) {
+    newSelectedNodeId =
+      nodes.find((node) => node.data.name === currentSelectedNodeStepName)
+        ?.id ?? null;
+  }
   set({
     workflowId,
-    selectedNode: null,
+    selectedNode: newSelectedNodeId,
     isLayouted: false,
     nodes,
     edges,
     v2Properties: { ...(parsedWorkflow?.properties ?? {}), name },
     providers,
     installedProviders,
+    yamlSchema,
+    secrets,
     toolboxConfiguration,
     isLoading: false,
     isInitialized: true,
     isDeployed: workflowId !== null,
     // If it's a new workflow (workflowId = null), we want to open the editor because metadata fields in there
-    editorOpen: !workflowId,
+    editorOpen: !workflowId || (isUpdatingExistingState && get().editorOpen),
   });
   get().onLayout({ direction: "DOWN" });
   get().updateDefinition();
@@ -826,8 +901,7 @@ function initializeWorkflow(
 export function useWorkflowEditorChangesSaved() {
   const { lastChangedAt, lastDeployedAt, isEditorSyncedWithNodes, isDeployed } =
     useWorkflowStore();
-  const isDeployedAndUntouched =
-    lastDeployedAt === null && lastChangedAt === null && isDeployed;
+  const isDeployedAndUntouched = lastChangedAt === null && isDeployed;
   const isDeployedAndChangesSaved =
     lastDeployedAt !== null &&
     lastChangedAt !== null &&

@@ -1,0 +1,37 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_token**: LinearB API Token (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query linearb
+      provider: linearb
+      config: "{{ provider.my_provider_name }}"
+      with:
+        incident_id: {value}  
+        http_url: {value}  
+        title: {value}  
+        teams: {value}  
+        repository_urls: {value}  
+        services: {value}  
+        started_at: {value}  
+        ended_at: {value}  
+        git_ref: {value}  
+        should_delete: {value}  
+        issued_at: {value}  
+```
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).
