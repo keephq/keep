@@ -113,14 +113,6 @@ alert_field_configurations = [
         data_type=int,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="alert.*",  # workaround mapping
-        map_to=[
-            "JSON(filter_alert_enrichment_json).*",
-            "JSON(filter_alert_event_json).*",
-        ],
-        data_type=str,
-    ),
-    FieldMappingConfiguration(
         map_from_pattern="*",
         map_to=[
             "JSON(filter_alert_enrichment_json).*",
@@ -129,6 +121,10 @@ alert_field_configurations = [
         data_type=str,
     ),
 ]
+
+# Copies the same configuration as above, but adds the "alert." prefix to each entry in map_from_pattern.
+# This allows users to write queries using dictionary-style field access, like:
+#   alert['some_attribute'] == 'value'
 field_configurations_with_alert_prefix = []
 for item in alert_field_configurations:
     field_configurations_with_alert_prefix.append(
