@@ -170,14 +170,21 @@ export function getYamlWorkflowDefinitionSchema(
   let actionSchema: z.ZodSchema = YamlStepOrActionSchema;
   // Only update schemas if there are providers
   if (providers.length) {
-    const providerStepSchemas = [mockProvider, ...providers]
+    const providersWithMock = [mockProvider, ...providers];
+    const uniqueProviders = providersWithMock.reduce((acc, provider) => {
+      if (!acc.find((p) => p.type === provider.type)) {
+        acc.push(provider);
+      }
+      return acc;
+    }, [] as Provider[]);
+    const providerStepSchemas = uniqueProviders
       .filter((provider) => provider.can_query)
       .map((provider) => getYamlProviderSchema(provider, "step"));
     stepSchema = YamlStepOrActionSchema.extend({
       // @ts-ignore TODO: fix type inference
       provider: z.discriminatedUnion("type", providerStepSchemas),
     });
-    const providerActionSchemas = [mockProvider, ...providers]
+    const providerActionSchemas = uniqueProviders
       .filter((provider) => provider.can_notify)
       .map((provider) => getYamlProviderSchema(provider, "action"));
     actionSchema = YamlStepOrActionSchema.extend({
