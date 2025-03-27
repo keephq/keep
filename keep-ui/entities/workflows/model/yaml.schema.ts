@@ -152,3 +152,18 @@ export const YamlWorkflowDefinitionSchema = z.object({
     consts: z.record(z.string(), z.string()).optional(),
   }),
 });
+
+export const LooseYamlWorkflowDefinitionSchema = z.object({
+  workflow: z.object({
+    id: z.string(),
+    disabled: z.boolean().optional(),
+    description: z.string().optional(),
+    owners: z.array(z.string()).optional(),
+    services: z.array(z.string()).optional(),
+    steps: z.array(YamlStepOrActionSchema).optional(),
+    actions: z.array(YamlStepOrActionSchema).optional(),
+    triggers: z.array(TriggerSchema).optional(),
+    name: z.string().optional(),
+    consts: z.record(z.string(), z.string()).optional(),
+  }),
+});
