@@ -47,6 +47,16 @@ html.workaround-dark {
 .Toastify {
   pointer-events: auto;
 }
+
+/* It makes the toast container */
+/* not block clicks on elements  */
+/* between open toasts */
+.Toastify__toast-container {
+  @apply pointer-events-none;
+}
+.Toastify__toast * {
+  @apply pointer-events-auto;
+}
 /* --- End of Radix UI / Tremor Hotfixes */
 
 .rules-tooltip [role="tooltip"] {
