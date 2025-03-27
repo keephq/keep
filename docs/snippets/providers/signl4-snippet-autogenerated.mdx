@@ -1,0 +1,38 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **signl4_integration_secret**: SIGNL4 integration or team secret (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query signl4
+      provider: signl4
+      config: "{{ provider.my_provider_name }}"
+      with:
+        title: {value}  # Alert title.
+        message: {value}  # Alert message.
+        user: {value}  # User name.
+        s4_external_id: {value}  # External ID.
+        s4_status: {value}  # Alert status.
+        s4_service: {value}  # Service name.
+        s4_location: {value}  # Location.
+        s4_alerting_scenario: {value}  # Alerting scenario.
+        s4_filtering: {value}  # Filtering.
+        # Additional alert data.
+```
+
+
+
+
+Check the following workflow example:
+- [signl4-alerting-workflow.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/signl4-alerting-workflow.yaml)

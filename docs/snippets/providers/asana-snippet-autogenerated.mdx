@@ -1,0 +1,43 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **pat_token**: Personal Access Token for Asana. (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query asana
+      provider: asana
+      config: "{{ provider.my_provider_name }}"
+      with:
+        task_id: {value}  # Task ID.
+        # Apart from the above parameters, you can also provide few other parameters. Refer to the [Asana API documentation](https://developers.asana.com/docs/update-a-task) for more details.
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query asana
+      provider: asana
+      config: "{{ provider.my_provider_name }}"
+      with:
+        name: {value}  # Task Name.
+        projects: {value}  # List of Project IDs.
+        # Apart from the above parameters, you can also provide few other parameters. Refer to the [Asana API documentation](https://developers.asana.com/docs/update-a-task) for more details.
+```
+
+
+
+
+Check the following workflow examples:
+- [create-task-in-asana.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/create-task-in-asana.yaml)
+- [update-task-in-asana.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/update-task-in-asana.yaml)

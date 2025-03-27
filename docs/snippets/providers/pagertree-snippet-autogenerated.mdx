@@ -1,0 +1,37 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_token**: Your pagertree APIToken (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query pagertree
+      provider: pagertree
+      config: "{{ provider.my_provider_name }}"
+      with:
+        title: {value}  # Title of the alert.
+        urgency: {value}  # low|medium|high|critical
+        incident: {value}  # True if the alert is an incident
+        severities: {value}  # SEV-1|SEV-2|SEV-3|SEV-4|SEV-5|SEV_UNKNOWN
+        incident_message: {value}  # Message to be displayed in the incident
+        description: {value}  # UTF-8 string of custom message for alert. Shown in incident description
+        status: {value}  # alert status to send
+        destination_team_ids: {value}  # destination team_ids to send alert to
+        destination_router_ids: {value}  # destination router_ids to send alert to
+        destination_account_user_ids: {value}  # destination account_users_ids to send alert to
+        # Additional parameters to be passed
+```
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).

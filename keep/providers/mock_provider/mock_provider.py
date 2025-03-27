@@ -1,6 +1,7 @@
 """
 MockProvider is a class that implements the BaseOutputProvider interface for Mock messages.
 """
+
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -17,6 +18,8 @@ class MockProvider(BaseProvider):
 
     def _query(self, **kwargs):
         """This is mock provider that just return the command output.
+        Args:
+            **kwargs: Just will return all parameters passed to it.
 
         Returns:
             _type_: _description_
@@ -25,7 +28,8 @@ class MockProvider(BaseProvider):
 
     def _notify(self, **kwargs):
         """This is mock provider that just return the command output.
-
+        Args:
+            **kwargs: Just will return all parameters passed to it.
         Returns:
             _type_: _description_
         """

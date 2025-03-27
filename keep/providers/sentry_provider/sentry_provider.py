@@ -124,6 +124,9 @@ class SentryProvider(BaseProvider):
     def _query(self, project: str, time: str = "14d", **kwargs: dict):
         """
         Query Sentry using the given query
+        Args:
+            project (str): project name
+            time (str): time range, for example: 14d
 
         Returns:
             list[tuple] | list[dict]: results of the query
