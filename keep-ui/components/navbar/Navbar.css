@@ -1,3 +1,137 @@
+/* Navbar.css */
 .scrollable-menu-shadow {
-  box-shadow: inset 0 -10px 10px -10px rgba(0, 0, 0, 0.1);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
+}
+
+.scrollable-menu-shadow::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollable-menu-shadow::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollable-menu-shadow::-webkit-scrollbar-thumb {
+  background-color: rgba(155, 155, 155, 0.5);
+  border-radius: 20px;
+}
+
+/* Logo styling */
+.sidebar-logo-section {
+  padding: 0.75rem 0;
+}
+
+/* Search section styling to match Datadog */
+.sidebar-search-section {
+  margin-bottom: 1rem;
+}
+
+/* Add styles for the minimized menu */
+[data-minimized="true"] .sidebar-section-title,
+[data-minimized="true"] .sidebar-link-text {
+  display: none;
+}
+
+/* When minimized, center the logo and reduce padding */
+[data-minimized="true"] .sidebar-logo-section {
+  padding: 0.5rem 0;
+}
+
+[data-minimized="true"] .sidebar-search-section {
+  display: none;
+}
+
+/* Make room for the sticky footer */
+.scrollable-menu-shadow {
+  padding-bottom: 70px; /* Adjust this value based on the height of your footer */
+}
+
+/* Active link styles */
+.sidebar-link-active {
+  background-color: #f97316; /* Orange color matching the brand */
+  color: white;
+  border-radius: 0.375rem;
+}
+
+/* For light mode */
+.sidebar-link-inactive {
+  color: #4a5568;
+}
+
+.sidebar-link-inactive:hover {
+  background-color: #f3f4f6;
+  border-radius: 0.375rem;
+}
+
+/* For dark mode */
+@media (prefers-color-scheme: dark) {
+  .sidebar-link-inactive {
+    color: #cbd5e0;
+  }
+
+  .sidebar-link-inactive:hover {
+    background-color: #2d3748;
+    border-radius: 0.375rem;
+  }
+}
+
+/* Minimize button styles */
+.minimize-button-container {
+  position: relative;
+  z-index: 10;
+  height: 100%;
+  margin-left: -1px; /* Adjust to overlap slightly */
+}
+
+.minimize-button {
+  position: relative;
+  top: 20px;
+  width: 16px;
+  height: 32px;
+  background-color: #e2e8f0;
+  border-radius: 0 4px 4px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+  border-left: none;
+}
+
+.minimize-button:hover {
+  color: #2d3748;
+}
+
+/* Dark mode version */
+@media (prefers-color-scheme: dark) {
+  .minimize-button {
+    background-color: #2d3748;
+    color: #a0aec0;
+    border-color: #2d3748;
+  }
+
+  .minimize-button:hover {
+    color: white;
+  }
+}
+
+/* Styles for the footer */
+.sidebar-footer {
+  background-color: inherit;
+  width: 100%;
+  padding: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sidebar-footer {
+    border-top-color: #2d3748;
+  }
+}
+
+/* Handle minimized state better */
+[data-minimized="true"] .sidebar-footer {
+  padding: 0.5rem;
 }

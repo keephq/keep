@@ -1,152 +1,179 @@
+// UserInfo.tsx
 "use client";
 
-import { Menu } from "@headlessui/react";
-import { LinkWithIcon } from "components/LinkWithIcon";
 import { Session } from "next-auth";
-import { useConfig } from "utils/hooks/useConfig";
-import { AuthType } from "@/utils/authenticationType";
+import Image from "next/image";
+import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import Link from "next/link";
-import { VscDebugDisconnect } from "react-icons/vsc";
-import { useFloating } from "@floating-ui/react";
-import { Subtitle } from "@tremor/react";
-import UserAvatar from "./UserAvatar";
-import * as Frigade from "@frigade/react";
-import { useState } from "react";
-import Onboarding from "./Onboarding";
-import { useSignOut } from "@/shared/lib/hooks/useSignOut";
-import { FaSlack } from "react-icons/fa";
+import { FiMessageSquare } from "react-icons/fi";
+import { Icon } from "@tremor/react";
+import { Menu, Transition } from "@headlessui/react";
+import { Fragment } from "react";
 import { ThemeControl } from "@/shared/ui";
+import { VscDebugDisconnect } from "react-icons/vsc";
+import { FaSlack } from "react-icons/fa";
 import { HiOutlineDocumentText } from "react-icons/hi2";
-import { useMounted } from "@/shared/lib/hooks/useMounted";
-import "./frigade-overrides.css";
-
-const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
-
-type UserDropdownProps = {
-  session: Session;
-};
-
-const UserDropdown = ({ session }: UserDropdownProps) => {
-  const { data: configData } = useConfig();
-  const signOut = useSignOut();
-  const { refs, floatingStyles } = useFloating({
-    placement: "right-end",
-    strategy: "fixed",
-  });
-
-  if (!session || !session.user) {
-    return null;
-  }
-  const { userRole, user } = session;
-  const { name, image, email } = user;
-
-  const isNoAuth = configData?.AUTH_TYPE === AuthType.NOAUTH;
-  return (
-    <Menu as="li" ref={refs.setReference} className="w-full">
-      <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300 group capitalize">
-        <span className="space-x-3 flex items-center w-full">
-          <UserAvatar image={image} name={name ?? email} />{" "}
-          <Subtitle className="truncate">{name ?? email}</Subtitle>
-        </span>
-      </Menu.Button>
-
-      <Menu.Items
-        className="w-48 ml-2 origin-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-10"
-        style={floatingStyles}
-        ref={refs.setFloating}
-        as="ul"
-      >
-        <div className="px-1 py-1 ">
-          {userRole !== "noc" && (
-            <li>
-              <Menu.Item
-                as={Link}
-                href="/settings"
-                className="ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
-              >
-                Settings
-              </Menu.Item>
-            </li>
-          )}
-          {!isNoAuth && (
-            <li>
-              <Menu.Item
-                as="button"
-                className="ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
-                onClick={signOut}
-              >
-                Sign out
-              </Menu.Item>
-            </li>
-          )}
-        </div>
-      </Menu.Items>
-    </Menu>
-  );
-};
+import { useConfig } from "utils/hooks/useConfig";
+import { Tooltip } from "@/shared/ui";
 
 type UserInfoProps = {
   session: Session | null;
 };
 
 export const UserInfo = ({ session }: UserInfoProps) => {
+  const [isMenuMinimized] = useLocalStorage<boolean>("menu-minimized", false);
   const { data: config } = useConfig();
-
   const docsUrl = config?.KEEP_DOCS_URL || "https://docs.keephq.dev";
-  const { flow } = Frigade.useFlow(ONBOARDING_FLOW_ID);
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-  const isMounted = useMounted();
+
+  if (!session) return null;
+
+  const userInitials = session.user?.name
+    ? session.user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+    : session.user?.email?.slice(0, 2) || "U";
 
   return (
-    <>
-      <ul className="space-y-2 p-2">
-        {isMounted &&
-          !config?.FRIGADE_DISABLED &&
-          flow?.isCompleted === false && (
-            <li>
-              <Frigade.ProgressBadge
-                className="get-started-badge"
-                flowId={ONBOARDING_FLOW_ID}
-                onClick={() => setIsOnboardingOpen(true)}
+    <div className={`px-2 py-2 ${isMenuMinimized ? "text-center" : ""}`}>
+      {/* First row: Providers link */}
+      <Link
+        href="/providers"
+        className="flex items-center text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md px-2 py-1.5 mb-2"
+      >
+        <Icon
+          icon={VscDebugDisconnect}
+          className={isMenuMinimized ? "" : "mr-2"}
+        />
+        {!isMenuMinimized && <span>Providers</span>}
+      </Link>
+
+      {/* Second row: User profile */}
+      <Menu as="div" className="relative mb-2">
+        <Menu.Button
+          className={`flex ${
+            isMenuMinimized ? "justify-center" : "items-center"
+          } w-full cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md py-1.5 px-2 transition-colors`}
+        >
+          <div className="flex-shrink-0">
+            {session.user?.image ? (
+              <Image
+                src={session.user.image}
+                alt="User"
+                width={32}
+                height={32}
+                className="rounded-full"
               />
-              <Onboarding
-                isOpen={isOnboardingOpen}
-                toggle={() => setIsOnboardingOpen(false)}
-                variables={{
-                  name: session?.user?.name ?? session?.user?.email,
-                }}
-              />
-            </li>
+            ) : (
+              <div className="h-8 w-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-medium">
+                {userInitials}
+              </div>
+            )}
+          </div>
+
+          {!isMenuMinimized && (
+            <div className="ml-3 truncate">
+              <div className="text-sm font-medium text-gray-700 dark:text-white truncate">
+                {session.user?.name || session.user?.email || "User"}
+              </div>
+              {session.user?.tenantIds && session.user.tenantIds.length > 0 && (
+                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {session.user.tenantIds.find(
+                    (t) => t.tenant_id === session.tenantId
+                  )?.tenant_name || ""}
+                </div>
+              )}
+            </div>
           )}
-        <li>
-          <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
-            Providers
-          </LinkWithIcon>
-        </li>
-        <li className="flex items-center gap-2">
-          <LinkWithIcon
-            icon={FaSlack}
+        </Menu.Button>
+
+        <Transition
+          as={Fragment}
+          enter="transition ease-out duration-100"
+          enterFrom="transform opacity-0 scale-95"
+          enterTo="transform opacity-100 scale-100"
+          leave="transition ease-in duration-75"
+          leaveFrom="transform opacity-100 scale-100"
+          leaveTo="transform opacity-0 scale-95"
+        >
+          <Menu.Items className="absolute right-0 bottom-full mb-1 w-48 origin-bottom-right rounded-md bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/5 focus:outline-none">
+            <div className="py-1">
+              <Menu.Item>
+                {({ active }) => (
+                  <Link
+                    href="/settings"
+                    className={`${
+                      active ? "bg-gray-100 dark:bg-gray-700" : ""
+                    } flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}
+                  >
+                    Settings
+                  </Link>
+                )}
+              </Menu.Item>
+              <Menu.Item>
+                {({ active }) => (
+                  <Link
+                    href="/api/auth/signout"
+                    className={`${
+                      active ? "bg-gray-100 dark:bg-gray-700" : ""
+                    } flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}
+                  >
+                    Sign out
+                  </Link>
+                )}
+              </Menu.Item>
+            </div>
+          </Menu.Items>
+        </Transition>
+      </Menu>
+
+      {/* Separator line */}
+      <div className="border-t border-gray-200 dark:border-gray-700 mb-2"></div>
+
+      {/* Bottom section with icons in DataDog style */}
+      <div className="flex items-center justify-around space-x-2">
+        <Tooltip content="Join our Slack community">
+          <Link
             href="https://slack.keephq.dev/"
-            className="w-auto pr-3.5"
             target="_blank"
+            className="flex flex-col items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors p-1"
+            aria-label="Slack"
           >
-            Slack
-          </LinkWithIcon>
-          <LinkWithIcon
-            icon={HiOutlineDocumentText}
-            iconClassName="w-4"
+            <Icon icon={FaSlack} className="w-6 h-6 mb-1" />
+            <span className="text-xs">Slack</span>
+          </Link>
+        </Tooltip>
+
+        <Tooltip content="Documentation">
+          <Link
             href={docsUrl}
-            className="w-auto px-3.5"
             target="_blank"
+            className="flex flex-col items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors p-1"
+            aria-label="Docs"
           >
-            Docs
-          </LinkWithIcon>
-        </li>
-        <div className="flex items-center justify-between">
-          {session && <UserDropdown session={session} />}
-          <ThemeControl className="text-sm size-10 flex items-center justify-center font-medium rounded-lg focus:ring focus:ring-orange-300 hover:!bg-stone-200/50" />
-        </div>
-      </ul>
-    </>
+            <Icon icon={HiOutlineDocumentText} className="w-6 h-6 mb-1" />
+            <span className="text-xs">Docs</span>
+          </Link>
+        </Tooltip>
+
+        <Tooltip content="Get support">
+          <Link
+            href="/support"
+            className="flex flex-col items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors p-1"
+            aria-label="Support"
+          >
+            <Icon icon={FiMessageSquare} className="w-6 h-6 mb-1" />
+            <span className="text-xs">Support</span>
+          </Link>
+        </Tooltip>
+
+        <Tooltip content="Toggle theme">
+          <button className="flex flex-col items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors p-1">
+            <ThemeControl className="w-6 h-6 mb-1 flex items-center justify-center" />
+            <span className="text-xs">Theme</span>
+          </button>
+        </Tooltip>
+      </div>
+    </div>
   );
 };
