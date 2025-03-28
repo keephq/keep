@@ -1,4 +1,3 @@
-// Menu.tsx
 "use client";
 
 import { ReactNode, useEffect } from "react";
@@ -31,9 +30,33 @@ type MenuButtonProps = {
 
 export const Menu = ({ children, session }: MenuButtonProps) => {
   const [isMenuMinimized, setIsMenuMinimized] = useLocalStorage<boolean>(
-    "menu-minimized",
+    "sidebar-minimized", // Changed from "menu-minimized" to match MinimizeMenuButton
     false
   );
+
+  // Listen for events from MinimizeMenuButton
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "sidebar-minimized") {
+        setIsMenuMinimized(e.newValue === "true");
+      }
+    };
+
+    // Custom event for same-tab communication
+    const handleCustomEvent = (e) => {
+      if (e.detail && e.detail.key === "sidebar-minimized") {
+        setIsMenuMinimized(e.detail.value === "true");
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("sidebarStateChange", handleCustomEvent);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("sidebarStateChange", handleCustomEvent);
+    };
+  }, [setIsMenuMinimized]);
 
   useHotkeys(
     "[",
@@ -41,8 +64,16 @@ export const Menu = ({ children, session }: MenuButtonProps) => {
       const newState = !isMenuMinimized;
       console.log(newState ? "Closing menu ([)" : "Opening menu ([)");
       setIsMenuMinimized(newState);
+
+      // Notify MinimizeMenuButton of the change
+      localStorage.setItem("sidebar-minimized", String(newState));
+      window.dispatchEvent(
+        new CustomEvent("sidebarStateChange", {
+          detail: { key: "sidebar-minimized", value: String(newState) },
+        })
+      );
     },
-    [isMenuMinimized]
+    [isMenuMinimized, setIsMenuMinimized]
   );
 
   return (

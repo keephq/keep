@@ -77,7 +77,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
 
   return (
     <>
-      <Disclosure as="div" className="space-y-1" defaultOpen>
+      <Disclosure as="div" className="space-y-0.5" defaultOpen>
         {({ open }) => (
           <>
             <Disclosure.Button className="w-full flex justify-between items-center px-2">
@@ -108,7 +108,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               />
             </Disclosure.Button>
 
-            <Disclosure.Panel as="ul" className="space-y-2 overflow-auto px-2">
+            <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-3">
               {shouldShowFeed && (
                 <li>
                   <LinkWithIcon
@@ -117,7 +117,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                     count={feedAlertsTotalCount}
                     testId="menu-alerts-feed"
                   >
-                    <Subtitle>Feed</Subtitle>
+                    <Subtitle className="text-xs">Feed</Subtitle>
                   </LinkWithIcon>
                 </li>
               )}

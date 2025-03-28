@@ -34,7 +34,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
   }
 
   return (
-    <Disclosure as="div" className="space-y-1" defaultOpen>
+    <Disclosure as="div" className="space-y-0.5" defaultOpen>
       <Disclosure.Button className="w-full flex justify-between items-center px-2">
         {({ open }) => (
           <>
@@ -48,14 +48,14 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
         )}
       </Disclosure.Button>
 
-      <Disclosure.Panel as="ul" className="space-y-2 px-2 relative">
-        <li className="relative">
+      <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-3">
+        <li>
           <LinkWithIcon
             href="/incidents"
             icon={MdFlashOn}
             count={incidents?.count}
           >
-            <Subtitle>Incidents</Subtitle>
+            <Subtitle className="text-xs">Incidents</Subtitle>
           </LinkWithIcon>
         </li>
       </Disclosure.Panel>

@@ -1,32 +1,41 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 
 export const MinimizeMenuButton = () => {
   const [isMinimized, setIsMinimized] = useState(false);
 
-  // Function to read the minimized state from localStorage
-  const readMinimizedState = useCallback(() => {
-    if (typeof window !== "undefined") {
-      const storedState = localStorage.getItem("sidebar-minimized");
-      return storedState === "true";
-    }
-    return false;
-  }, []);
-
   // Initialize state from localStorage on mount
   useEffect(() => {
-    const minimizedState = readMinimizedState();
-    setIsMinimized(minimizedState);
-
-    // Apply the minimized state to the document
-    if (minimizedState) {
-      document.body.setAttribute("data-minimized", "true");
-    } else {
-      document.body.removeAttribute("data-minimized");
+    if (typeof window !== "undefined") {
+      const storedState = localStorage.getItem("sidebar-minimized") === "true";
+      setIsMinimized(storedState);
     }
-  }, [readMinimizedState]);
+  }, []);
+
+  // Listen for external changes to the minimized state
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "sidebar-minimized") {
+        setIsMinimized(e.newValue === "true");
+      }
+    };
+
+    const handleCustomEvent = (e) => {
+      if (e.detail && e.detail.key === "sidebar-minimized") {
+        setIsMinimized(e.detail.value === "true");
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("sidebarStateChange", handleCustomEvent);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("sidebarStateChange", handleCustomEvent);
+    };
+  }, []);
 
   // Toggle minimized state
   const toggleMinimized = () => {
@@ -36,12 +45,12 @@ export const MinimizeMenuButton = () => {
     // Save to localStorage
     localStorage.setItem("sidebar-minimized", String(newState));
 
-    // Apply to document
-    if (newState) {
-      document.body.setAttribute("data-minimized", "true");
-    } else {
-      document.body.removeAttribute("data-minimized");
-    }
+    // Dispatch a custom event for other components to listen to
+    window.dispatchEvent(
+      new CustomEvent("sidebarStateChange", {
+        detail: { key: "sidebar-minimized", value: String(newState) },
+      })
+    );
   };
 
   return (

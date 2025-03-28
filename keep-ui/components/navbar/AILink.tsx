@@ -12,8 +12,8 @@ export const AILink = () => {
   const [newText, setNewText] = useState("AI Plugins");
 
   const mutateAILogs = (logs: any) => {
-    setNewText("AI iterated 🎉")
-  }
+    setNewText("AI iterated 🎉");
+  };
 
   usePollAILogs(mutateAILogs);
 
@@ -35,12 +35,8 @@ export const AILink = () => {
   }, [newText]);
 
   return (
-    <LinkWithIcon href="/ai" icon={RiSparkling2Line} className="w-full">
-      <div className="flex justify-between items-center w-full">
-        <Subtitle className="break-all">
-          {text}
-        </Subtitle>
-      </div>
+    <LinkWithIcon href="/ai" icon={RiSparkling2Line}>
+      <Subtitle className="text-xs">{text}</Subtitle>
     </LinkWithIcon>
   );
 };
