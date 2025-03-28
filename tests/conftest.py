@@ -728,6 +728,9 @@ def create_alert(db_session):
         fingerprint, status, timestamp, details=None, tenant_id=SINGLE_TENANT_UUID
     ):
         details = details or {}
+        if fingerprint and "fingerprint" not in details:
+            details["fingerprint"] = fingerprint
+
         random_name = "test-{}".format(fingerprint)
         process_event(
             ctx={"job_try": 1},
@@ -743,7 +746,6 @@ def create_alert(db_session):
             api_key_name="test",
             event={
                 "name": random_name,
-                "fingerprint": fingerprint,
                 "lastReceived": details.pop("lastReceived", timestamp.isoformat()),
                 "status": status.value,
                 **details,
