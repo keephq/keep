@@ -99,6 +99,7 @@ export function WorkflowBuilderWidget({
               {workflowId ? "Edit" : "New"} Workflow
             </Title>
             <WorkflowSyncStatus
+              workflowId={workflowId ?? null}
               isInitialized={isInitialized}
               lastDeployedAt={lastDeployedAt}
               isChangesSaved={isChangesSaved}

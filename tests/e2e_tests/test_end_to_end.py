@@ -400,6 +400,7 @@ def test_add_workflow(browser: Page, setup_page_logging, failure_artifacts):
         expect(page.get_by_test_id("wf-description")).to_contain_text(
             "Example workflow description"
         )
+        expect(page.get_by_test_id("wf-revision").first).to_contain_text("Revision 1")
     except Exception:
         save_failure_artifacts(page, log_entries)
         raise

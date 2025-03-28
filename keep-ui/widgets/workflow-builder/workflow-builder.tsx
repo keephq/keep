@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@tremor/react";
 import { Provider } from "@/shared/api/providers";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -214,23 +214,23 @@ export function WorkflowBuilder({
     router,
   ]);
 
+  const lastSaveRequestCount = useRef(saveRequestCount);
   // save workflow on "Deploy" button click
   useEffect(() => {
-    if (saveRequestCount) {
+    if (saveRequestCount && saveRequestCount !== lastSaveRequestCount.current) {
       saveWorkflow();
+      lastSaveRequestCount.current = saveRequestCount;
     }
     // ignore since we want the latest values, but to run effect only when triggerSave changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveRequestCount]);
 
-  useEffect(
-    function resetZustandStateOnUnMount() {
-      return () => {
-        reset();
-      };
-    },
-    [reset]
-  );
+  useEffect(function resetZustandStateOnUnMount() {
+    return () => {
+      console.log("resetting zustand state");
+      reset();
+    };
+  }, []);
 
   const handleYamlChange = useMemo(
     () =>
@@ -241,14 +241,6 @@ export function WorkflowBuilder({
         updateFromYamlString(yamlString);
       }, 1000),
     [updateFromYamlString]
-  );
-
-  const handleYamlSave = useCallback(
-    (value: string) => {
-      updateFromYamlString(value);
-      saveWorkflow();
-    },
-    [saveWorkflow, updateFromYamlString]
   );
 
   if (isLoading) {
