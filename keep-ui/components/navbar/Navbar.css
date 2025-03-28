@@ -78,18 +78,17 @@
 
 /* Minimize button styles */
 .minimize-button-container {
-  position: relative;
-  z-index: 10;
-  height: 100%;
-  margin-left: -1px; /* Adjust to overlap slightly */
+  position: absolute;
+  right: -8px; /* Adjust this value to align properly */
+  top: 20px;
+  z-index: 20;
 }
 
 .minimize-button {
   position: relative;
-  top: 20px;
   width: 16px;
   height: 32px;
-  background-color: #e2e8f0;
+  background-color: white; /* Match your main content background */
   border-radius: 0 4px 4px 0;
   display: flex;
   align-items: center;
@@ -134,4 +133,9 @@
 /* Handle minimized state better */
 [data-minimized="true"] .sidebar-footer {
   padding: 0.5rem;
+}
+
+.menu-container {
+  border-right: none !important;
+  box-shadow: none !important;
 }

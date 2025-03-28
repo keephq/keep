@@ -55,7 +55,9 @@ export const MinimizeMenuButton = () => {
 
   return (
     <button
-      className="minimize-button"
+      className={`absolute -right-1 top-2 w-4 h-8 bg-white dark:bg-gray-800 rounded-r flex items-center justify-center cursor-pointer text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 border-l-0 z-20 hover:text-gray-800 dark:hover:text-white ${
+        isMinimized ? "-right-4" : "-right-4"
+      }`}
       onClick={toggleMinimized}
       aria-label={isMinimized ? "Expand sidebar" : "Collapse sidebar"}
       title={isMinimized ? "Expand sidebar" : "Collapse sidebar"}

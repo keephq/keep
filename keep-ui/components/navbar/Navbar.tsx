@@ -16,20 +16,20 @@ export default async function NavbarInner() {
   return (
     <div className="flex h-full relative">
       <Menu session={session}>
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full overflow-hidden border-r-0">
           {/* Logo section with tenant switcher */}
-          <div className="sidebar-logo-section flex justify-center py-3">
+          <div className="flex justify-center py-3">
             <KeepLogo session={session} />
           </div>
 
           {/* Search section styled like Datadog */}
-          <div className="sidebar-search-section px-3 mb-4">
+          <div className="px-3 mb-4">
             <Search session={session} />
           </div>
 
           {/* Main navigation links */}
-          <div className="flex-1 overflow-auto scrollable-menu-shadow">
-            <div className="px-2 py-1 space-y-6">
+          <div className="flex-1 overflow-auto">
+            <div className="px-2 py-1 space-y-1">
               <IncidentsLinks session={session} />
               <AlertsLinks session={session} />
               <NoiseReductionLinks session={session} />
@@ -38,16 +38,14 @@ export default async function NavbarInner() {
           </div>
 
           {/* User info footer */}
-          <div className="sidebar-footer border-t border-gray-300 dark:border-gray-700 mt-auto">
+          <div className="border-t border-gray-300 dark:border-gray-700 mt-auto p-3">
             <UserInfo session={session} />
           </div>
         </div>
       </Menu>
 
-      {/* Position the minimize button directly adjacent to the menu */}
-      <div className="minimize-button-container">
-        <MinimizeMenuButton />
-      </div>
+      {/* Directly include the button without a container */}
+      <MinimizeMenuButton />
 
       <SetSentryUser session={session} />
     </div>

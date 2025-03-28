@@ -7,7 +7,7 @@ import { Popover, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 import { signIn } from "next-auth/react";
 import { Session } from "next-auth";
-import KeepPng from "../../keep.png";
+import KeepPng from "../../keeplogobw.png";
 
 interface KeepLogoProps {
   session?: Session | null;
@@ -59,12 +59,12 @@ export const KeepLogo = ({ session }: KeepLogoProps) => {
   if (!hasTenantSwitcher) {
     return (
       <Link href="/" className="flex items-center">
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2 shadow-sm flex justify-center items-center w-10 h-10">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2 shadow-sm flex justify-center items-center w-24 h-24">
           <Image
             src={KeepPng}
             alt="Keep Logo"
-            width={32}
-            height={32}
+            width={64}
+            height={64}
             className="object-contain"
           />
         </div>

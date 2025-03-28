@@ -15,13 +15,17 @@ import { FaSlack } from "react-icons/fa";
 import { HiOutlineDocumentText } from "react-icons/hi2";
 import { useConfig } from "utils/hooks/useConfig";
 import { Tooltip } from "@/shared/ui";
+import { Subtitle } from "@tremor/react";
 
 type UserInfoProps = {
   session: Session | null;
 };
 
 export const UserInfo = ({ session }: UserInfoProps) => {
-  const [isMenuMinimized] = useLocalStorage<boolean>("menu-minimized", false);
+  const [isMenuMinimized] = useLocalStorage<boolean>(
+    "sidebar-minimized",
+    false
+  );
   const { data: config } = useConfig();
   const docsUrl = config?.KEEP_DOCS_URL || "https://docs.keephq.dev";
 
@@ -35,25 +39,22 @@ export const UserInfo = ({ session }: UserInfoProps) => {
     : session.user?.email?.slice(0, 2) || "U";
 
   return (
-    <div className={`px-2 py-2 ${isMenuMinimized ? "text-center" : ""}`}>
+    <div className={`px-2 ${isMenuMinimized ? "text-center" : ""}`}>
       {/* First row: Providers link */}
       <Link
         href="/providers"
-        className="flex items-center text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md px-2 py-1.5 mb-2"
+        className="flex items-center text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md px-2 py-1 mb-1"
       >
-        <Icon
-          icon={VscDebugDisconnect}
-          className={isMenuMinimized ? "" : "mr-2"}
-        />
-        {!isMenuMinimized && <span>Providers</span>}
+        <Icon icon={VscDebugDisconnect} size="sm" />
+        {!isMenuMinimized && <Subtitle className="text-xs">Providers</Subtitle>}
       </Link>
 
       {/* Second row: User profile */}
-      <Menu as="div" className="relative mb-2">
+      <Menu as="div" className="relative mb-1">
         <Menu.Button
           className={`flex ${
             isMenuMinimized ? "justify-center" : "items-center"
-          } w-full cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md py-1.5 px-2 transition-colors`}
+          } w-full cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md py-1 px-2 transition-colors`}
         >
           <div className="flex-shrink-0">
             {session.user?.image ? (
@@ -65,15 +66,15 @@ export const UserInfo = ({ session }: UserInfoProps) => {
                 className="rounded-full"
               />
             ) : (
-              <div className="h-8 w-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-medium">
+              <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-medium">
                 {userInitials}
               </div>
             )}
           </div>
 
           {!isMenuMinimized && (
-            <div className="ml-3 truncate">
-              <div className="text-sm font-medium text-gray-700 dark:text-white truncate">
+            <div className="ml-2 truncate">
+              <div className="text-xs font-medium text-gray-700 dark:text-white truncate">
                 {session.user?.name || session.user?.email || "User"}
               </div>
               {session.user?.tenantIds && session.user.tenantIds.length > 0 && (
@@ -128,18 +129,18 @@ export const UserInfo = ({ session }: UserInfoProps) => {
       </Menu>
 
       {/* Separator line */}
-      <div className="border-t border-gray-200 dark:border-gray-700 mb-2"></div>
+      <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
 
       {/* Bottom section with icons in DataDog style */}
-      <div className="flex items-center justify-around space-x-2">
+      <div className="flex items-center justify-around space-x-1">
         <Tooltip content="Join our Slack community">
           <Link
             href="https://slack.keephq.dev/"
             target="_blank"
-            className="flex flex-col items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors p-1"
+            className="flex flex-col items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors p-0.5"
             aria-label="Slack"
           >
-            <Icon icon={FaSlack} className="w-6 h-6 mb-1" />
+            <Icon icon={FaSlack} className="w-4 h-4 mb-0.5" />
             <span className="text-xs">Slack</span>
           </Link>
         </Tooltip>
@@ -148,10 +149,10 @@ export const UserInfo = ({ session }: UserInfoProps) => {
           <Link
             href={docsUrl}
             target="_blank"
-            className="flex flex-col items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors p-1"
+            className="flex flex-col items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors p-0.5"
             aria-label="Docs"
           >
-            <Icon icon={HiOutlineDocumentText} className="w-6 h-6 mb-1" />
+            <Icon icon={HiOutlineDocumentText} className="w-4 h-4 mb-0.5" />
             <span className="text-xs">Docs</span>
           </Link>
         </Tooltip>
@@ -159,17 +160,17 @@ export const UserInfo = ({ session }: UserInfoProps) => {
         <Tooltip content="Get support">
           <Link
             href="/support"
-            className="flex flex-col items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors p-1"
+            className="flex flex-col items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors p-0.5"
             aria-label="Support"
           >
-            <Icon icon={FiMessageSquare} className="w-6 h-6 mb-1" />
+            <Icon icon={FiMessageSquare} className="w-4 h-4 mb-0.5" />
             <span className="text-xs">Support</span>
           </Link>
         </Tooltip>
 
         <Tooltip content="Toggle theme">
-          <button className="flex flex-col items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors p-1">
-            <ThemeControl className="w-6 h-6 mb-1 flex items-center justify-center" />
+          <button className="flex flex-col items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors p-0.5">
+            <ThemeControl className="w-4 h-4 mb-0.5 flex items-center justify-center" />
             <span className="text-xs">Theme</span>
           </button>
         </Tooltip>
