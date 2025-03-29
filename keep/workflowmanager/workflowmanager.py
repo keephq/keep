@@ -189,6 +189,19 @@ class WorkflowManager:
                     if not trigger.get("type") == "alert":
                         self.logger.debug("trigger type is not alert, skipping")
                         continue
+                    # Skipping suppressed alerts unless it's explicitly mentioned in the filter
+                    if event.status == "suppressed":
+                        if trigger.get("filters", []) == [
+                            {"key": "status", "value": "suppressed"}
+                        ]:
+                            self.logger.debug(
+                                f"event status is {event.status}, but filter is explicitly mentioning it so not skipping"
+                            )
+                        else:
+                            self.logger.debug(
+                                f"event status is {event.status}, skipping"
+                            )
+                            continue
                     should_run = True
                     # apply filters
                     for filter in trigger.get("filters", []):
