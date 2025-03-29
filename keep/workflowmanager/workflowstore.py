@@ -2,8 +2,8 @@ import io
 import logging
 import os
 import random
-from typing import Tuple
 import uuid
+from typing import Tuple
 
 import requests
 import validators
@@ -289,8 +289,6 @@ class WorkflowStore:
 
         Args:
             tenant_id (str): The tenant ID.
-            workflows_dir (str, optional): A directory containing workflow YAML files.
-                If not provided, it will be read from the WORKFLOWS_DIR environment variable.
 
         Returns:
             list[Workflow]: A list of provisioned Workflow objects.
@@ -310,7 +308,7 @@ class WorkflowStore:
             and provisioned_workflow_yaml is not None
         ):
             raise Exception(
-                "Workflows providioned via env var and directory at the same time. Please choose one."
+                "Workflows provisioned via env var and directory at the same time. Please choose one."
             )
 
         if provisioned_workflows_dir is not None and not os.path.isdir(

@@ -1,0 +1,11 @@
+name: airflow-prod
+type: airflow
+deduplication_rules:
+  airflow-prod-default:
+    description: "Default deduplication rule for Airflow Production"
+    fingerprint_fields:
+      - fingerprint
+    full_deduplication: true
+    ignore_fields:
+      - name
+      - lastReceived

@@ -1,0 +1,5 @@
+name: telegram-bot
+type: telegram
+authentication:
+  # Use environment variables to store sensitive information
+  bot_token: "${TELEGRAM_BOT_TOKEN}"
