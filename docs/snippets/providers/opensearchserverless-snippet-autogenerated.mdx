@@ -1,0 +1,43 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **domain_endpoint**: Domain endpoint (required: True, sensitive: False)
+- **region**: AWS region (required: True, sensitive: False)
+- **access_key**: AWS access key (required: True, sensitive: True)
+- **access_key_secret**: AWS access key secret (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query opensearchserverless
+      provider: opensearchserverless
+      config: "{{ provider.my_provider_name }}"
+      with:
+        query: {value}  
+        index: {value}  
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query opensearchserverless
+      provider: opensearchserverless
+      config: "{{ provider.my_provider_name }}"
+      with:
+        index: {value}  
+        document: {value}  
+        doc_id: {value}  
+```
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).
