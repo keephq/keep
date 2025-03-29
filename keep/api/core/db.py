@@ -40,7 +40,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy.orm import defer, joinedload, subqueryload
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
@@ -191,7 +191,9 @@ def create_workflow_execution(
 ) -> str:
     with Session(engine) as session:
         try:
-            workflow_execution_id = execution_id or (str(uuid4()) if not test_run else "test_" + str(uuid4()))
+            workflow_execution_id = execution_id or (
+                str(uuid4()) if not test_run else "test_" + str(uuid4())
+            )
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
             workflow_execution = WorkflowExecution(
@@ -238,11 +240,13 @@ def create_workflow_execution(
 
 
 def get_mapping_rule_by_id(
-    tenant_id: str, rule_id: str, session: Optional[Session] = None
+    tenant_id: str, rule_id: int, session: Optional[Session] = None
 ) -> MappingRule | None:
     with existed_or_new_session(session) as session:
-        query = select(MappingRule).where(
-            MappingRule.tenant_id == tenant_id, MappingRule.id == rule_id
+        query = (
+            select(MappingRule)
+            .where(MappingRule.tenant_id == tenant_id, MappingRule.id == rule_id)
+            .options(defer(MappingRule.rows))
         )
         return session.exec(query).first()
 
@@ -1718,6 +1722,7 @@ def get_alerts_by_ids(
         query = query.options(subqueryload(Alert.alert_enrichment))
         return session.exec(query).all()
 
+
 def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:
     # get the previous alert for a given fingerprint
     with Session(engine) as session:
@@ -2572,8 +2577,6 @@ def update_key_last_used(
                     continue
                 else:
                     raise
-
-
 
 
 def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
