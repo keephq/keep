@@ -55,7 +55,6 @@ class MondayProvider(BaseProvider):
     OAUTH2_URL = config("MONDAY_OAUTH2_URL", default=None)
     MONDAY_CLIENT_ID = config("MONDAY_CLIENT_ID", default=None)
     MONDAY_CLIENT_SECRET = config("MONDAY_CLIENT_SECRET", default=None)
-    MONDAY_SIGNING_SECRET = config("MONDAY_SIGNING_SECRET", default=None)
     PROVIDER_SCOPES = [
         ProviderScope(
             name="create_pulse",
