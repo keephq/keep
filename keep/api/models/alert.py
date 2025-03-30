@@ -149,6 +149,9 @@ class AlertDto(BaseModel):
 
     @validator("url", pre=True)
     def prepend_https(cls, url):
+        if isinstance(url, str) and len(url.split()) > 1:
+            # @kc: in some cases we receive string with url and other text, we want to strip the text and keep the url
+            return url.split()[0]
         if isinstance(url, str) and not url.startswith("http"):
             # @tb: in some cases we drop the event because of invalid url with no scheme
             # invalid or missing URL scheme (type=value_error.url.scheme)

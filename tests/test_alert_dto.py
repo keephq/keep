@@ -8,11 +8,12 @@ from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
 from tests.fixtures.client import client, test_app  # noqa
 
 
-def create_basic_alert(name, last_received):
+def create_basic_alert(name, last_received, **kwargs):
     """Helper function to create AlertDto with minimal fields"""
     return AlertDto(
         name=name,
         lastReceived=last_received,
+        **kwargs
     )
 
 
@@ -168,6 +169,14 @@ def test_alert_dto_invalid_timestamps():
                 raise
             # if no error, fail the test
             pytest.fail(f"Expected ValueError for timestamp {timestamp}")
+
+def test_alert_dto_strip_url():
+    input_correct_url_pairs = [
+        ("https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2 [lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down", "https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2")
+    ]
+    for input_url, correct_url in input_correct_url_pairs:
+        alert = create_basic_alert(name="Test Alert", last_received="1970-01-01T00:00:00.000Z", url=input_url)
+        assert alert.url == correct_url
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
