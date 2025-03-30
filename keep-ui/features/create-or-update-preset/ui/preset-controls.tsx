@@ -7,6 +7,8 @@ interface PresetControlsProps {
   setIsPrivate: (value: boolean) => void;
   isNoisy: boolean;
   setIsNoisy: (value: boolean) => void;
+  counterShowsFiringOnly: boolean;
+  setCounterShowsFiringOnly: (value: boolean) => void;
 }
 
 export const PresetControls: React.FC<PresetControlsProps> = ({
@@ -14,6 +16,8 @@ export const PresetControls: React.FC<PresetControlsProps> = ({
   setIsPrivate,
   isNoisy,
   setIsNoisy,
+  counterShowsFiringOnly,
+  setCounterShowsFiringOnly,
 }) => {
   return (
     <div className="mt-4">
@@ -49,6 +53,31 @@ export const PresetControls: React.FC<PresetControlsProps> = ({
           <Tooltip
             content={
               <>Noisy presets will trigger sound for every matching event</>
+            }
+            className="z-50"
+          >
+            <InformationCircleIcon className="w-4 h-4" />
+          </Tooltip>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="counterShowsFiringOnly"
+            checked={counterShowsFiringOnly}
+            onChange={() => setCounterShowsFiringOnly(!counterShowsFiringOnly)}
+            color="orange"
+          />
+          <label
+            htmlFor="counterShowsFiringOnly"
+            className="text-sm text-gray-500"
+          >
+            <Text>Counter shows firing alerts</Text>
+          </label>
+          <Tooltip
+            content={
+              <>
+                Indicates whether the counter in the navbar shows only firing
+                alerts or all matching alerts for this preset
+              </>
             }
             className="z-50"
           >
