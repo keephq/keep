@@ -17,6 +17,7 @@ import { usePresets } from "@/entities/presets/model/usePresets";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
 import clsx from "clsx";
 import { useAlerts } from "@/utils/hooks/useAlerts";
+import { extendCelWithDefaultFilter } from "./navbar-const";
 
 type AlertsLinksProps = {
   session: Session | null;
@@ -70,7 +71,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
 
   const { isLoading: isAsyncLoading, totalCount: feedAlertsTotalCount } =
     useLastAlerts({
-      cel: shouldShowFeed ? undefined : "",
+      cel: extendCelWithDefaultFilter(""),
       limit: 0,
       offset: 0,
     });

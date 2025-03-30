@@ -26,6 +26,7 @@ import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 import { usePresetPolling } from "@/entities/presets/model/usePresetPolling";
 import { useAlerts } from "@/utils/hooks/useAlerts";
+import { extendCelWithDefaultFilter } from "./navbar-const";
 
 type AlertPresetLinkProps = {
   preset: Preset;
@@ -45,7 +46,9 @@ export const AlertPresetLink = ({
   const { useLastAlerts } = useAlerts();
 
   const { totalCount } = useLastAlerts({
-    cel: preset.options.find((option) => option.label === "CEL")?.value || "",
+    cel: extendCelWithDefaultFilter(
+      preset.options.find((option) => option.label === "CEL")?.value || ""
+    ),
     limit: 0,
     offset: 0,
   });
