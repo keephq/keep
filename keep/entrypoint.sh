@@ -40,7 +40,6 @@ else
     REDIS=true \
     KEEP_WORKERS=$KEEP_WORKERS \
     LOG_LEVEL=$LOG_LEVEL \
-    SKIP_DB_CREATION=true \
     gunicorn \
         --bind "0.0.0.0:$ARQ_WORKER_PORT" \
         --workers $KEEP_WORKERS \
@@ -57,10 +56,12 @@ else
     KEEP_ARQ_PID=$!
 
     # Give ARQ workers time to start up
-    # Wait until migrations are done (use python requsts inline)
+    sleep 2
+
 
     echo "Running API gunicorn"
-    exec "$@" &
+    # migration will run from arq worker
+    SKIP_DB_CREATION=true exec "$@" &
 
     KEEP_API_PID=$!
 
