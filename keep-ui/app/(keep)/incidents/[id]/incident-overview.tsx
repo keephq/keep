@@ -20,6 +20,7 @@ import {
   SameIncidentField,
   FollowingIncidents,
 } from "@/features/same-incidents-in-the-past/";
+import { SparklesIcon } from "@heroicons/react/24/outline";
 import { StatusIcon } from "@/entities/incidents/ui/statuses";
 import clsx from "clsx";
 import { TbSparkles } from "react-icons/tb";
@@ -35,6 +36,7 @@ import { useRouter } from "next/navigation";
 import { RootCauseAnalysis } from "@/components/ui/RootCauseAnalysis";
 import { IncidentChangeSeveritySelect } from "@/features/change-incident-severity";
 import remarkGfm from "remark-gfm";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface Props {
   incident: IncidentDto;
@@ -56,6 +58,7 @@ function Summary({
   incident: IncidentDto;
 }) {
   const [generatedSummary, setGeneratedSummary] = useState("");
+  const { data: config } = useConfig();
   const { updateIncident } = useIncidentActions();
   const context = useCopilotContext();
   useCopilotReadable({
@@ -133,10 +136,11 @@ function Summary({
         variant="secondary"
         onClick={executeTask}
         className="mt-2.5"
-        disabled={generatingSummary}
+        disabled={generatingSummary || !config?.OPEN_AI_API_KEY_SET}
         loading={generatingSummary}
         icon={TbSparkles}
         size="xs"
+        tooltip={!config?.OPEN_AI_API_KEY_SET ? "AI is not configured" : "Generate AI summary"}
       >
         AI Summary
       </Button>
