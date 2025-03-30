@@ -112,7 +112,9 @@ export const Facet: React.FC<FacetProps> = ({
           facetOption.display_name
         )}
         isSelected={!facetState.has(facetOption.display_name)}
-        isSelectable={facetOption.matches_count > 0}
+        isSelectable={
+          facetOption.matches_count > 0 || !!facetConfig?.canHitEmptyState
+        }
         renderLabel={
           facetConfig?.renderOptionLabel
             ? () => facetConfig.renderOptionLabel!(facetOption)
