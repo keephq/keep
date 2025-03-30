@@ -73,7 +73,13 @@ export const AlertPresetLink = ({
 
   const renderBeforeCount = useCallback(() => {
     if (preset.counter_shows_firing_only) {
-      return <Icon className="p-0" size={"sm"} icon={FireIcon}></Icon>;
+      return (
+        <Icon
+          className="p-0 relative top-[1px]"
+          size={"xs"}
+          icon={FireIcon}
+        ></Icon>
+      );
     }
   }, [preset]);
 
