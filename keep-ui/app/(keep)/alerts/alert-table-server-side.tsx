@@ -343,7 +343,7 @@ export function AlertTableServerSide({
   useEffect(() => {
     onReload && onReload(alertsQueryRef.current as AlertsQuery);
   }, [alertsQuery, onReload]);
-
+  const [isShiftPressed, setIsShiftPressed] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
@@ -352,6 +352,28 @@ export function AlertTableServerSide({
   const leftPinnedColumns = noisyAlertsEnabled
     ? ["severity", "checkbox", "status", "source", "name", "noise"]
     : ["severity", "checkbox", "status", "source", "name"];
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Shift") {
+        setIsShiftPressed(true);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [setIsShiftPressed]);
+
+  useEffect(() => {
+    function handleKeyUp(e: KeyboardEvent) {
+      if (e.key === "Shift") {
+        setIsShiftPressed(false);
+      }
+    }
+
+    document.addEventListener("keyup", handleKeyUp);
+    return () => document.removeEventListener("keyup", handleKeyUp);
+  }, [setIsShiftPressed]);
 
   const table = useReactTable({
     getRowId: (row) => row.fingerprint,
@@ -400,6 +422,7 @@ export function AlertTableServerSide({
     pageCount: Math.ceil(alertsTotalCount / paginationState.pageSize),
     onPaginationChange: setPaginationState,
     onGroupingChange: setGrouping,
+    isMultiSortEvent: () => isShiftPressed,
   });
 
   const selectedAlertsFingerprints = Object.keys(table.getState().rowSelection);
