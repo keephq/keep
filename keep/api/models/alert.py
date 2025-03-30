@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import json
 import logging
+import urllib.parse
 import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, Optional
@@ -10,7 +11,6 @@ import pytz
 from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
 
 from keep.api.models.severity_base import SeverityBaseInterface
-from keep.api.utils.url_utils import encode_url
 
 if TYPE_CHECKING:
     pass
@@ -158,7 +158,7 @@ class AlertDto(BaseModel):
             # @tb: in some cases we drop the event because of invalid url with no scheme
             # invalid or missing URL scheme (type=value_error.url.scheme)
             url = f"https://{url}"
-        return encode_url(url)
+        return urllib.parse.quote(url, safe='/:?=&')
 
     @validator("lastReceived", pre=True, always=True)
     def validate_last_received(cls, last_received):
