@@ -25,8 +25,7 @@ import clsx from "clsx";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 import { usePresetPolling } from "@/entities/presets/model/usePresetPolling";
-import { useAlerts } from "@/utils/hooks/useAlerts";
-import { extendCelWithDefaultFilter } from "./navbar-const";
+import { usePresetAlertsCount } from "./hooks";
 
 type AlertPresetLinkProps = {
   preset: Preset;
@@ -43,15 +42,11 @@ export const AlertPresetLink = ({
 }: AlertPresetLinkProps) => {
   const href = `/alerts/${preset.name.toLowerCase()}`;
   const isActive = decodeURIComponent(pathname?.toLowerCase() || "") === href;
-  const { useLastAlerts } = useAlerts();
 
-  const { totalCount } = useLastAlerts({
-    cel: extendCelWithDefaultFilter(
-      preset.options.find((option) => option.label === "CEL")?.value || ""
-    ),
-    limit: 0,
-    offset: 0,
-  });
+  const { totalCount } = usePresetAlertsCount(
+    preset.options.find((option) => option.label === "CEL")?.value || "",
+    preset.counter_shows_firing_only
+  );
 
   const { listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({
