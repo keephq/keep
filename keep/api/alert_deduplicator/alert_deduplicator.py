@@ -493,7 +493,7 @@ class AlertDeduplicator:
                 provider = p
                 break
 
-        if not provider and provider_key:
+        if not str(provider) and provider_key:
             message = f"Provider {rule.provider_type} not found"
             if rule.provider_id:
                 message += f" with id {rule.provider_id}"

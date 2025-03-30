@@ -213,6 +213,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             # in case the foreach itself doesn't have a fingerprint, use the event fingerprint
             elif self.context_manager.event_context:
                 fingerprint = self.context_manager.event_context.fingerprint
+                event = self.context_manager.event_context
             else:
                 self.logger.warning(
                     "No fingerprint found for alert enrichment",
@@ -266,7 +267,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     else:
                         setattr(event, enrichment["key"], value)
             except Exception:
-                self.logger.error(
+                self.logger.exception(
                     f"Failed to enrich alert - enrichment: {enrichment}",
                     extra={"fingerprint": fingerprint, "provider": self.provider_id},
                 )
@@ -308,6 +309,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
             )
 
             if event and should_check_incidents_resolution:
+                if not isinstance(event, list):
+                    event = [event]
                 enrichments_bl.check_incident_resolution(event)
 
         except Exception as e:

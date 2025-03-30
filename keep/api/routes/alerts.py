@@ -68,7 +68,6 @@ from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.query import QueryDto
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.models.time_stamp import TimeStampFilter
-from keep.api.routes.preset import pull_data_from_providers
 from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
@@ -204,14 +203,6 @@ def query_alerts(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
 ):
-    # Gathering alerts may take a while and we don't care if it will finish before we return the response.
-    # In the worst case, gathered alerts will be pulled in the next request.
-    # This approach is not good. We should continuesly pull alerts without relying on whether request is done or not.
-    bg_tasks.add_task(
-        pull_data_from_providers,
-        authenticated_entity.tenant_id,
-        request.state.trace_id,
-    )
 
     tenant_id = authenticated_entity.tenant_id
     logger.info(

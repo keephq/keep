@@ -1,0 +1,33 @@
+workflow:
+  name: Deadlock Auto-resolve
+  description: Checks if retry was successful by insertId
+  disabled: false
+  triggers:
+    - type: alert
+      filters:
+        - key: source
+          value: gcpmonitoring
+        - key: name
+          value: Error Processing Event
+  steps:
+    - name: job_logs
+      provider:
+        type: gcpmonitoring
+        config: "{{ providers.gcpmonitoring }}"
+        with:
+          filter: resource.type = "cloud_run_revision" jsonPayload.job_id={{alert.jobId}}
+          timedelta_in_days: 7
+          project: "{{ alert.projectId }}"
+      id: job_logs
+    - name: console-step
+      foreach: "{{ steps.job_logs.results }}"
+      if: "{{ foreach.value.payload.message }} == 'Event processed'"
+      provider:
+        type: console
+        config: "{{ providers.default-console }}"
+        with:
+          message: "Event was processed eventually, so auto-resolving alert"
+          enrich_alert:
+            - key: status
+              value: resolved
+  actions: []

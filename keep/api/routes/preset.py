@@ -1,7 +1,5 @@
 import logging
-import os
 import uuid
-from datetime import datetime
 
 from fastapi import (
     APIRouter,
@@ -14,15 +12,10 @@ from fastapi import (
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from keep.api.consts import PROVIDER_PULL_INTERVAL_MINUTE, STATIC_PRESETS
+from keep.api.consts import STATIC_PRESETS
 from keep.api.core.db import get_db_preset_by_name
 from keep.api.core.db import get_presets as get_presets_db
-from keep.api.core.db import (
-    get_session,
-    update_preset_options,
-    update_provider_last_pull_time,
-)
-from keep.api.models.alert import AlertDto
+from keep.api.core.db import get_session, update_preset_options
 from keep.api.models.db.preset import (
     Preset,
     PresetDto,
@@ -32,170 +25,12 @@ from keep.api.models.db.preset import (
     TagDto,
 )
 from keep.api.models.time_stamp import TimeStampFilter, _get_time_stamp_filter
-from keep.api.tasks.process_event_task import process_event
-from keep.api.tasks.process_incident_task import process_incident
-from keep.api.tasks.process_topology_task import process_topology
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
-from keep.providers.base.base_provider import BaseIncidentProvider, BaseTopologyProvider
-from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-
-# SHAHAR: this function runs as background tasks as a seperate thread
-#         DO NOT ADD async HERE as it will run in the main thread and block the whole server
-def pull_data_from_providers(
-    tenant_id: str,
-    trace_id: str,
-) -> list[AlertDto]:
-    """
-    Pulls alerts from providers and record the to the DB.
-
-    "Get or create logics".
-    """
-    if os.environ.get("KEEP_PULL_DATA_ENABLED", "true") != "true":
-        logger.debug("Pull data from providers is disabled")
-        return
-
-    providers = ProvidersFactory.get_installed_providers(
-        tenant_id=tenant_id, include_details=False
-    )
-
-    logger.info(
-        "Pulling data from providers",
-        extra={
-            "tenant_id": tenant_id,
-            "trace_id": trace_id,
-            "providers_len": len(providers),
-        },
-    )
-
-    for provider in providers:
-        extra = {
-            "provider_type": provider.type,
-            "provider_id": provider.id,
-            "tenant_id": tenant_id,
-            "trace_id": trace_id,
-        }
-
-        if not provider.pulling_enabled:
-            logger.debug("Pulling is disabled for this provider", extra=extra)
-            continue
-
-        if provider.last_pull_time is not None:
-            now = datetime.now()
-            minutes_passed = (now - provider.last_pull_time).total_seconds() / 60
-            if minutes_passed <= PROVIDER_PULL_INTERVAL_MINUTE:
-                logger.info(
-                    "Skipping provider data pulling since not enough time has passed",
-                    extra={
-                        **extra,
-                        "minutes_passed": minutes_passed,
-                        "provider_last_pull_time": str(provider.last_pull_time),
-                    },
-                )
-                continue
-
-        try:
-            logger.info(
-                f"Pulling alerts from provider {provider.type} ({provider.id})",
-                extra=extra,
-            )
-            # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
-            update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
-
-            provider_class = ProvidersFactory.get_installed_provider(
-                tenant_id=tenant_id,
-                provider_id=provider.id,
-                provider_type=provider.type,
-            )
-            sorted_provider_alerts_by_fingerprint = (
-                provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
-            )
-            logger.info(
-                f"Pulling alerts from provider {provider.type} ({provider.id}) completed",
-                extra=extra,
-            )
-
-            # TODO: this should be moved somewhere else (@tb: too much logic in this function, wil handle it another time.)
-            if isinstance(provider_class, BaseIncidentProvider):
-                try:
-                    incidents = provider_class.get_incidents()
-                    process_incident(
-                        {},
-                        tenant_id=tenant_id,
-                        provider_id=provider.id,
-                        provider_type=provider.type,
-                        incidents=incidents,
-                        trace_id=trace_id,
-                    )
-                except NotImplementedError:
-                    logger.debug(
-                        f"Provider {provider.type} ({provider.id}) does not implement pulling incidents",
-                        extra=extra,
-                    )
-                except Exception:
-                    logger.exception(
-                        f"Unknown error pulling incidents from provider {provider.type} ({provider.id})",
-                        extra={**extra, "trace_id": trace_id},
-                    )
-            else:
-                logger.debug(
-                    f"Provider {provider.type} ({provider.id}) does not implement pulling incidents",
-                    extra=extra,
-                )
-
-            try:
-                if isinstance(provider_class, BaseTopologyProvider):
-                    logger.info("Pulling topology data", extra=extra)
-                    topology_data, _ = provider_class.pull_topology()
-                    logger.info(
-                        "Pulling topology data finished, processing",
-                        extra={**extra, "topology_length": len(topology_data)},
-                    )
-                    process_topology(
-                        tenant_id, topology_data, provider.id, provider.type
-                    )
-                    logger.info("Finished processing topology data", extra=extra)
-            except NotImplementedError:
-                logger.debug(
-                    f"Provider {provider.type} ({provider.id}) does not implement pulling topology data",
-                    extra=extra,
-                )
-            except Exception as e:
-                logger.exception(
-                    f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
-                    extra={**extra, "exception": str(e)},
-                )
-
-            for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
-                process_event(
-                    {},
-                    tenant_id,
-                    provider.type,
-                    provider.id,
-                    fingerprint,
-                    None,
-                    trace_id,
-                    alert,
-                    notify_client=False,
-                )
-        except Exception as e:
-            logger.exception(
-                f"Unknown error pulling from provider {provider.type} ({provider.id})",
-                extra={**extra, "exception": str(e)},
-            )
-    logger.info(
-        "Pulling data from providers completed",
-        extra={
-            "tenant_id": tenant_id,
-            "trace_id": trace_id,
-            "providers_len": len(providers),
-        },
-    )
 
 
 @router.get(
@@ -426,15 +261,6 @@ def get_preset_alerts(
         IdentityManagerFactory.get_auth_verifier(["read:presets"])
     ),
 ) -> list:
-
-    # Gathering alerts may take a while and we don't care if it will finish before we return the response.
-    # In the worst case, gathered alerts will be pulled in the next request.
-
-    bg_tasks.add_task(
-        pull_data_from_providers,
-        authenticated_entity.tenant_id,
-        request.state.trace_id,
-    )
 
     tenant_id = authenticated_entity.tenant_id
     logger.info(
