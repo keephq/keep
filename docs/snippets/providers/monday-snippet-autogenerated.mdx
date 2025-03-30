@@ -1,9 +1,11 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
 This provider requires authentication.
-- **api_token**: Personal API Token (required: True, sensitive: True)
+- **api_token**: Personal API Token (required: False, sensitive: True)
+- **access_token**: For access token installation flow, use Keep UI (required: False, sensitive: True)
+- **scopes**: Scopes from OAuth logic, comma separated (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
 - **create_pulse**: Create a new pulse  
@@ -23,10 +25,10 @@ actions:
       provider: monday
       config: "{{ provider.my_provider_name }}"
       with:
-        board_id: {value}  
-        group_id: {value}  
-        item_name: {value}  
-        column_values: {value}  
+        board_id: {value}
+        group_id: {value}
+        item_name: {value}
+        column_values: {value}
 ```
 
 
