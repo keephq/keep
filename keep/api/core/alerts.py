@@ -31,6 +31,7 @@ from keep.api.models.db.alert import (
 from keep.api.models.db.facet import FacetType
 from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
+from keep.api.models.query import QueryDto, SortOptionsDto
 
 logger = logging.getLogger(__name__)
 
@@ -276,10 +277,10 @@ def __build_query_for_filtering_v2(
             False,
         )
 
-    query = select(*select_args).select_from(LastAlert)
+    sql_query = select(*select_args).select_from(LastAlert)
 
     if fetch_alerts_data:
-        query = query.join(
+        sql_query = sql_query.join(
             Alert,
             and_(
                 Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id
@@ -293,7 +294,7 @@ def __build_query_for_filtering_v2(
         )
 
     if fetch_incidents:
-        query = query.outerjoin(
+        sql_query = sql_query.outerjoin(
             LastAlertToIncident,
             and_(
                 LastAlert.tenant_id == LastAlertToIncident.tenant_id,
@@ -308,21 +309,22 @@ def __build_query_for_filtering_v2(
             ),
         )
 
-    query = query.filter(LastAlert.tenant_id == tenant_id)
-    query = query.filter(LastAlert.timestamp >= get_threeshold_query(tenant_id))
+    sql_query = sql_query.filter(LastAlert.tenant_id == tenant_id)
+    sql_query = sql_query.filter(LastAlert.timestamp >= get_threeshold_query(tenant_id))
     involved_fields = []
 
     if sql_filter:
-        query = query.where(text(sql_filter))
+        sql_query = sql_query.where(text(sql_filter))
     return {
-        "query": query,
+        "query": sql_query,
         "involved_fields": involved_fields,
         "fetch_incidents": fetch_incidents,
     }
 
-def build_total_alerts_query(tenant_id, cel=None, limit=None):
-    fetch_incidents = cel and "incident." in cel
-    fetch_alerts_data = cel is not None or cel != ""
+
+def build_total_alerts_query(tenant_id, query: QueryDto):
+    fetch_incidents = query.cel and "incident." in query.cel
+    fetch_alerts_data = query.cel is not None or query.cel != ""
 
     count_funct = (
         func.count(func.distinct(LastAlert.alert_id))
@@ -331,30 +333,18 @@ def build_total_alerts_query(tenant_id, cel=None, limit=None):
     )
     built_query_result = __build_query_for_filtering_v2(
         tenant_id=tenant_id,
-        cel=cel,
+        cel=query.cel,
         select_args=[count_funct],
-        limit=limit,
+        limit=query.limit,
         fetch_alerts_data=fetch_alerts_data,
     )
 
     return built_query_result["query"]
 
 
-def build_alerts_query(
-    tenant_id,
-    cel=None,
-    sort_by=None,
-    sort_dir=None,
-    limit=None,
-    offset=None,
-):
+def build_alerts_query(tenant_id, query: QueryDto):
     cel_to_sql_instance = get_cel_to_sql_provider(remapped_properties_metadata)
-
-    if not sort_by:
-        sort_by = "timestamp"
-        sort_dir = "desc"
-
-    sort_by_exp = cel_to_sql_instance.get_order_by_exp(sort_by)
+    sort_by_exp = cel_to_sql_instance.get_order_by_exp(query.sort_by)
 
     built_query_result = __build_query_for_filtering_v2(
         tenant_id,
@@ -364,64 +354,77 @@ def build_alerts_query(
             LastAlert.first_timestamp.label("startedAt"),
             literal_column(sort_by_exp),
         ],
-        cel=cel,
+        cel=query.cel,
     )
-    query = built_query_result["query"]
+    sql_query = built_query_result["query"]
     fetch_incidents = built_query_result["fetch_incidents"]
 
     if fetch_incidents:
-        if sort_dir == "desc":
-            query = query.order_by(desc(text(sort_by_exp)), Alert.id)
+        if query.sort_dir == "desc":
+            sql_query = sql_query.order_by(desc(text(sort_by_exp)), Alert.id)
         else:
-            query = query.order_by(asc(text(sort_by_exp)), Alert.id)
+            sql_query = sql_query.order_by(asc(text(sort_by_exp)), Alert.id)
 
         query = query.distinct(text(sort_by_exp), Alert.id)
     else:
-        if sort_dir == "desc":
-            query = query.order_by(desc(text(sort_by_exp)))
+        if query.sort_dir == "desc":
+            sql_query = sql_query.order_by(desc(text(sort_by_exp)))
         else:
-            query = query.order_by(asc(text(sort_by_exp)))
+            sql_query = sql_query.order_by(asc(text(sort_by_exp)))
 
-    if limit is not None:
-        query = query.limit(limit)
+    if query.limit is not None:
+        sql_query = sql_query.limit(query.limit)
 
-    if offset is not None:
-        query = query.offset(offset)
+    if query.offset is not None:
+        sql_query = sql_query.offset(query.offset)
 
-    return query
+    return sql_query
 
 
-def query_last_alerts(
-    tenant_id, limit=1000, offset=0, cel=None, sort_by=None, sort_dir=None
-) -> Tuple[list[Alert], int]:
-    if limit is None:
-        limit = 1000
-    if offset is None:
-        offset = 0
+def query_last_alerts(tenant_id, query: QueryDto) -> Tuple[list[Alert], int]:
+    query_with_defaults = QueryDto(**query.dict())
+
+    if query_with_defaults.limit is None:
+        query_with_defaults.limit = 1000
+    if query_with_defaults.offset is None:
+        query_with_defaults.offset = 0
+    if not query_with_defaults.sort_by:
+        query_with_defaults.sort_by = "timestamp"
+        query_with_defaults.sort_dir = "desc"
+    if query_with_defaults.sort_by:
+        query_with_defaults.sort_options = [
+            SortOptionsDto(
+                sort_by=query_with_defaults.sort_by,
+                sort_dir=query_with_defaults.sort_dir,
+            )
+        ]
 
     with Session(engine) as session:
         # Shahar: this happens when the frontend query builder fails to build a query
-        if cel == "1 == 1":
+        if query_with_defaults.cel == "1 == 1":
             logger.warning("Failed to build query for alerts")
             cel = ""
         try:
             total_count_query = build_total_alerts_query(
-                tenant_id=tenant_id, cel=cel, limit=alerts_hard_limit
+                tenant_id=tenant_id, query=query
             )
             total_count = session.exec(total_count_query).one()[0]
 
-            if not limit:
+            if not query_with_defaults.limit:
                 return [], total_count
 
-            if offset >= alerts_hard_limit:
+            if query_with_defaults.offset >= alerts_hard_limit:
                 return [], total_count
 
-            if offset + limit > alerts_hard_limit:
-                limit = alerts_hard_limit - offset
+            if (
+                query_with_defaults.offset + query_with_defaults.limit
+                > alerts_hard_limit
+            ):
+                query_with_defaults.limit = (
+                    alerts_hard_limit - query_with_defaults.offset
+                )
 
-            data_query = build_alerts_query(
-                tenant_id, cel, sort_by, sort_dir, limit, offset
-            )
+            data_query = build_alerts_query(tenant_id, query)
 
             alerts_with_start = session.execute(data_query).all()
         except OperationalError as e:
