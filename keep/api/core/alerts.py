@@ -364,21 +364,15 @@ def build_alerts_query(tenant_id, query: QueryDto):
     )
     sql_query = built_query_result["query"]
     fetch_incidents = built_query_result["fetch_incidents"]
+    sql_query = sql_query.order_by(text(", ".join(sort_by_exp)))
 
     if fetch_incidents:
-        # if query.sort_dir == "desc":
-        #     sql_query = sql_query.order_by(desc(text(sort_by_exp)), Alert.id)
-        # else:
-        #     sql_query = sql_query.order_by(asc(text(sort_by_exp)), Alert.id)
+        distinct_columns = []
+        for column in query.sort_options:
+            distinct_columns.append(cel_to_sql_instance.get_field_exp(column.sort_by))
 
-        # query = query.distinct(text(sort_by_exp), Alert.id)
-        pass
-    else:
-        sql_query = sql_query.order_by(text(", ".join(sort_by_exp)))
-        # if query.sort_dir == "desc":
-        #     sql_query = sql_query.order_by(desc(text(sort_by_exp)))
-        # else:
-        #     sql_query = sql_query.order_by(asc(text(sort_by_exp)))
+        distinct_columns.append(Alert.id)
+        sql_query = sql_query.distinct(*distinct_columns)
 
     if query.limit is not None:
         sql_query = sql_query.limit(query.limit)
@@ -434,6 +428,13 @@ def query_last_alerts(tenant_id, query: QueryDto) -> Tuple[list[Alert], int]:
                 )
 
             data_query = build_alerts_query(tenant_id, query_with_defaults)
+
+            strq = str(
+                data_query.compile(
+                    compile_kwargs={"literal_binds": True}, dialect=session.bind.dialect
+                )
+            )
+            print(strq)
 
             alerts_with_start = session.execute(data_query).all()
         except OperationalError as e:
