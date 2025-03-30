@@ -166,25 +166,27 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
             "Keep";
 
           return (
-            <div className="flex items-center justify-between max-w-[320px]">
-              <span className="truncate lg:whitespace-normal">
+            <div className="flex flex-row items-center max-w-[320px]">
+              <span className="truncate lg:whitespace-normal flex-grow">
                 {info.row.original.description ||
                   `${providerName} deduplication rule`}
               </span>
-              {info.row.original.default ? (
-                <Badge color="gray" size="xs" className="ml-2">
-                  Default
-                </Badge>
-              ) : (
-                <Badge color="orange" size="xs" className="ml-2">
-                  Custom
-                </Badge>
-              )}
-              {info.row.original.full_deduplication && (
-                <Badge color="orange" size="xs" className="ml-2">
-                  Full Deduplication
-                </Badge>
-              )}
+              <div className="flex items-center ml-2">
+                {info.row.original.default ? (
+                  <Badge color="gray" size="xs" className="mx-1">
+                    Default
+                  </Badge>
+                ) : (
+                  <Badge color="orange" size="xs" className="mx-1">
+                    Custom
+                  </Badge>
+                )}
+                {info.row.original.full_deduplication && (
+                  <Badge color="orange" size="xs" className="ml-1">
+                    Full Deduplication
+                  </Badge>
+                )}
+              </div>
             </div>
           );
         },
