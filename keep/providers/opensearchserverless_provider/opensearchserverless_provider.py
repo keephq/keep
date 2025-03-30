@@ -1,11 +1,12 @@
 """
-OpensearchProvider is a class that provides a way to read data from AWS Opensearch.
+OpensearchProvider is a class that provides a way to read/add data from AWS Opensearch.
 """
 
 import dataclasses
 from typing import List
 from urllib.parse import urljoin, urlencode
 
+import boto3
 import pydantic
 import requests
 
@@ -57,6 +58,32 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
 
     PROVIDER_SCOPES = [
         ProviderScope(
+            name="iam:SimulatePrincipalPolicy",
+            description="Required to check if we have access to AOSS API.",
+            mandatory=True,
+            alias="Needed to test the access for next 3 scopes.",
+        ),
+        ProviderScope(
+            name="aoss:APIAccessAll",
+            description="Required to make API calls to OpenSearch Serverless. (Add from IAM console)",
+            mandatory=True,
+            alias="Access to make API calls to serverless",
+        ),
+        ProviderScope(
+            name="aoss:ListAccessPolicies",
+            description="Required to query.",
+            documentation_url="Needed to access all Data Access Policies. (Add from IAM console)",
+            mandatory=True,
+            alias="Needed to list all Data Access Policies.",
+        ),
+        ProviderScope(
+            name="aoss:GetAccessPolicy",
+            description="Required to query.",
+            documentation_url="Needed to check each policy for read and write scope. (Add from IAM console)",
+            mandatory=True,
+            alias="Policy read access",
+        ),
+        ProviderScope(
             name="aoss:ReadDocument",
             description="Required to query.",
             documentation_url="https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-genref.html#serverless-operations",
@@ -96,40 +123,77 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
 
         return url
 
+    def __generate_client(self, aws_client_type: str):
+        client = boto3.client(
+            aws_client_type,
+            aws_access_key_id=self.authentication_config.access_key,
+            aws_secret_access_key=self.authentication_config.access_key_secret,
+            region_name=self.authentication_config.region,
+        )
+        return client
+
     def validate_scopes(self):
-        scopes = {scope.name: False for scope in self.PROVIDER_SCOPES}
-        test_index = "keep-validation-index"
-        test_doc_id = "keep-test-doc"
-        test_doc = {"message": "Keep test doc"}
-
-        # Validate Write
+        scopes = {
+            scope.name: "Access needed to all previous scopes to continue"
+            for scope in self.PROVIDER_SCOPES
+        }
+        actions = scopes.keys()
         try:
-            res = self.__create_doc(test_index, test_doc_id, test_doc)
-            if res.status_code in [200, 201]:
-                scopes["aoss:WriteDocument"] = True
-                self.logger.info("Write permission validated successfully.")
-
-                # Clean up
-                delete_res = self.__delete_doc(test_index, test_doc_id)
-                if delete_res.status_code not in [200, 202]:
-                    self.logger.error(f"Failed to delete test doc: {delete_res.status_code} - {delete_res.text}")
-            elif res.status_code == 403:
-                self.logger.error("No permission for aoss:WriteDocument")
-            else:
-                self.logger.error(f"Unexpected response while testing write: {res.status_code}, {res.text}")
+            sts_client = self.__generate_client("sts")
+            identity = sts_client.get_caller_identity()["Arn"]
+            iam_client = self.__generate_client("iam")
+            results = iam_client.simulate_principal_policy(
+                PolicySourceArn=identity,
+                ActionNames=[
+                    "aoss:APIAccessAll",
+                    "aoss:ListAccessPolicies",
+                    "aoss:GetAccessPolicy",
+                ],
+            )
+            scopes["iam:SimulatePrincipalPolicy"] = True
         except Exception as e:
-            self.logger.error("Error while testing aoss:WriteDocument", extra={"exception": str(e)})
+            self.logger.error(e)
+            scopes = {s: str(e) for s in scopes.keys()}
+            return scopes
 
-        # Validate Read
+        all_allowed = True
+        for res in results["EvaluationResults"]:
+            if res["EvalActionName"] in actions:
+                all_allowed &= res["EvalDecision"] == "allowed"
+                scopes[res["EvalActionName"]] = (
+                    True
+                    if res["EvalDecision"] == "allowed"
+                    else f'{res["EvalActionName"]} is not allowed'
+                )
+
+        if not all_allowed:
+            self.logger.error(
+                "We don't have access to scopes needed to validate the rest"
+            )
+            return scopes
+
         try:
-            res = self.__get_doc(test_index, test_doc_id)
-            if res.status_code == 403:
-                self.logger.error("No permission for aoss:ReadDocument")
-            else:
-                scopes["aoss:ReadDocument"] = True
-                self.logger.info("Read permission validated successfully.")
+            left_to_validate = ["aoss:ReadDocument", "aoss:WriteDocument"]
+            aoss_client = self.__generate_client("opensearchserverless")
+            all_policies = aoss_client.list_access_policies(type="data")
+            for policy in all_policies["accessPolicySummaries"]:
+                curr_policy = aoss_client.get_access_policy(
+                    type="data", name=policy["name"]
+                )["accessPolicyDetail"]
+                for pol in curr_policy["policy"]:
+                    if identity in pol["Principal"]:
+                        for rule in pol["Rules"]:
+                            if rule["ResourceType"] == "index":
+                                for left in left_to_validate:
+                                    if left in rule["Permission"]:
+                                        scopes[left] = True
+                                    else:
+                                        scopes[left] = "No Access"
+
         except Exception as e:
-            self.logger.error("Error while testing aoss:ReadDocument", extra={"exception": str(e)})
+            for left in left_to_validate:
+                scopes[left] = str(e)
+            return scopes
 
         return scopes
 
@@ -162,33 +226,50 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
     def __get_doc(self, index, doc_id):
         url = self.__get_url([index, "_doc", doc_id])
         try:
-            response = requests.get(url, headers=self.__get_headers, auth=self.__get_auth)
+            response = requests.get(
+                url, headers=self.__get_headers, auth=self.__get_auth
+            )
             return response
         except Exception as e:
-            self.logger.error("Error while getting document", extra={"exception": str(e)})
+            self.logger.error(
+                "Error while getting document", extra={"exception": str(e)}
+            )
             raise
 
     def __create_doc(self, index, doc_id, doc):
         url = self.__get_url([index, "_doc", doc_id])
         try:
-            response = requests.put(url, headers=self.__get_headers, auth=self.__get_auth, json=doc)
+            response = requests.put(
+                url, headers=self.__get_headers, auth=self.__get_auth, json=doc
+            )
             return response
         except Exception as e:
-            self.logger.error("Error while creating document", extra={"exception": str(e)})
+            self.logger.error(
+                "Error while creating document", extra={"exception": str(e)}
+            )
             raise
 
     def __delete_doc(self, index, doc_id):
         url = self.__get_url([index, "_doc", doc_id])
         try:
-            response = requests.delete(url, headers=self.__get_headers, auth=self.__get_auth)
+            response = requests.delete(
+                url, headers=self.__get_headers, auth=self.__get_auth
+            )
             return response
         except Exception as e:
-            self.logger.error("Error while deleting document", extra={"exception": str(e)})
+            self.logger.error(
+                "Error while deleting document", extra={"exception": str(e)}
+            )
             raise
 
     def _query(self, query: dict, index: str):
         try:
-            response = requests.get(self.__get_url([index, "_search"]), json=query, headers=self.__get_headers, auth=self.__get_auth)
+            response = requests.get(
+                self.__get_url([index, "_search"]),
+                json=query,
+                headers=self.__get_headers,
+                auth=self.__get_auth,
+            )
             if response.status_code != 200:
                 raise Exception(response.text)
             x = response.json()
@@ -201,9 +282,14 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
         try:
             res = self.__create_doc(index, doc_id, document)
             if res.status_code not in [200, 201]:
-                raise Exception(f"Failed to notify. Status: {res.status_code}, Response: {res.text}")
+                raise Exception(
+                    f"Failed to notify. Status: {res.status_code}, Response: {res.text}"
+                )
             self.logger.info("Notification document sent to OpenSearch successfully.")
             return res.json()
         except Exception as e:
-            self.logger.error("Error while sending notification to OpenSearch", extra={"exception": str(e)})
+            self.logger.error(
+                "Error while sending notification to OpenSearch",
+                extra={"exception": str(e)},
+            )
             raise
