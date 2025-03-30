@@ -137,22 +137,28 @@ class BaseCelToSqlProvider:
         except NotImplementedError as e:
             raise CelToSqlException(f"Error while converting CEL expression tree to SQL: {str(e)}") from e
 
-    def get_order_by_exp(self, sort_by_cel_field: str) -> str:
-        fields_to_sort_by = []
-        metadata = self.properties_metadata.get_property_metadata_for_str(
-            sort_by_cel_field
-        )
-        fields_to_sort_by = [
-            self._get_order_by_field(item, metadata.data_type)
-            for item in metadata.field_mappings
-        ]
+    def get_order_by_exp(self, sort_options: list[tuple[str, str]]) -> list[str]:
+        sort_expressions: list[str] = []
 
-        if len(fields_to_sort_by) > 1:
-            order_by_exp = self.coalesce(fields_to_sort_by)
-        else:
-            order_by_exp = fields_to_sort_by[0]
+        for sort_option in sort_options:
+            sort_by, sort_dir = sort_option
+            fields_to_sort_by = []
+            metadata = self.properties_metadata.get_property_metadata_for_str(sort_by)
+            fields_to_sort_by = [
+                self._get_order_by_field(item, metadata.data_type)
+                for item in metadata.field_mappings
+            ]
 
-        return order_by_exp
+            if len(fields_to_sort_by) > 1:
+                order_by_exp = self.coalesce(fields_to_sort_by)
+            else:
+                order_by_exp = fields_to_sort_by[0]
+
+            sort_expressions.append(
+                f"{order_by_exp} {sort_dir == 'asc' and 'ASC' or 'DESC'}"
+            )
+
+        return sort_expressions
 
     def literal_proc(self, value: Any) -> str:
         if isinstance(value, str):

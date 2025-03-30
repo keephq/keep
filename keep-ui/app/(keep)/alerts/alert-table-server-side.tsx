@@ -326,8 +326,10 @@ export function AlertTableServerSide({
         cel: resultCel,
         offset,
         limit,
-        sortBy: sorting[0]?.id,
-        sortDirection: sorting[0]?.desc ? "DESC" : "ASC",
+        sortOptions: sorting.map((s) => ({
+          sortBy: s.id,
+          sortDirection: s.desc ? "DESC" : "ASC",
+        })),
       };
 
       alertsQueryRef.current = alertsQuery;

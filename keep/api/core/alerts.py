@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 import os
 from typing import Tuple
@@ -308,7 +309,7 @@ def __build_query_for_filtering_v2(
                 Incident.status == IncidentStatus.FIRING.value,
             ),
         )
-
+    sql_query.order_by()
     sql_query = sql_query.filter(LastAlert.tenant_id == tenant_id)
     sql_query = sql_query.filter(LastAlert.timestamp >= get_threeshold_query(tenant_id))
     involved_fields = []
@@ -344,7 +345,12 @@ def build_total_alerts_query(tenant_id, query: QueryDto):
 
 def build_alerts_query(tenant_id, query: QueryDto):
     cel_to_sql_instance = get_cel_to_sql_provider(remapped_properties_metadata)
-    sort_by_exp = cel_to_sql_instance.get_order_by_exp(query.sort_by)
+    sort_by_exp = cel_to_sql_instance.get_order_by_exp(
+        [
+            (sort_option.sort_by, sort_option.sort_dir)
+            for sort_option in query.sort_options
+        ]
+    )
 
     built_query_result = __build_query_for_filtering_v2(
         tenant_id,
@@ -352,25 +358,27 @@ def build_alerts_query(tenant_id, query: QueryDto):
             Alert,
             AlertEnrichment,
             LastAlert.first_timestamp.label("startedAt"),
-            literal_column(sort_by_exp),
-        ],
+        ]
+        + [text(column) for column in sort_by_exp],
         cel=query.cel,
     )
     sql_query = built_query_result["query"]
     fetch_incidents = built_query_result["fetch_incidents"]
 
     if fetch_incidents:
-        if query.sort_dir == "desc":
-            sql_query = sql_query.order_by(desc(text(sort_by_exp)), Alert.id)
-        else:
-            sql_query = sql_query.order_by(asc(text(sort_by_exp)), Alert.id)
+        # if query.sort_dir == "desc":
+        #     sql_query = sql_query.order_by(desc(text(sort_by_exp)), Alert.id)
+        # else:
+        #     sql_query = sql_query.order_by(asc(text(sort_by_exp)), Alert.id)
 
-        query = query.distinct(text(sort_by_exp), Alert.id)
+        # query = query.distinct(text(sort_by_exp), Alert.id)
+        pass
     else:
-        if query.sort_dir == "desc":
-            sql_query = sql_query.order_by(desc(text(sort_by_exp)))
-        else:
-            sql_query = sql_query.order_by(asc(text(sort_by_exp)))
+        sql_query = sql_query.order_by(text(", ".join(sort_by_exp)))
+        # if query.sort_dir == "desc":
+        #     sql_query = sql_query.order_by(desc(text(sort_by_exp)))
+        # else:
+        #     sql_query = sql_query.order_by(asc(text(sort_by_exp)))
 
     if query.limit is not None:
         sql_query = sql_query.limit(query.limit)
@@ -382,31 +390,32 @@ def build_alerts_query(tenant_id, query: QueryDto):
 
 
 def query_last_alerts(tenant_id, query: QueryDto) -> Tuple[list[Alert], int]:
-    query_with_defaults = QueryDto(**query.dict())
+    query_with_defaults = query.copy()
 
+    # Shahar: this happens when the frontend query builder fails to build a query
+    if query_with_defaults.cel == "1 == 1":
+        logger.warning("Failed to build query for alerts")
+        query_with_defaults.cel = ""
     if query_with_defaults.limit is None:
         query_with_defaults.limit = 1000
     if query_with_defaults.offset is None:
         query_with_defaults.offset = 0
-    if not query_with_defaults.sort_by:
-        query_with_defaults.sort_by = "timestamp"
-        query_with_defaults.sort_dir = "desc"
-    if query_with_defaults.sort_by:
+    if query_with_defaults.sort_by is not None:
         query_with_defaults.sort_options = [
             SortOptionsDto(
                 sort_by=query_with_defaults.sort_by,
                 sort_dir=query_with_defaults.sort_dir,
             )
         ]
+    if not query_with_defaults.sort_options:
+        query_with_defaults.sort_options = [
+            SortOptionsDto(sort_by="timestamp", sort_dir="desc")
+        ]
 
     with Session(engine) as session:
-        # Shahar: this happens when the frontend query builder fails to build a query
-        if query_with_defaults.cel == "1 == 1":
-            logger.warning("Failed to build query for alerts")
-            cel = ""
         try:
             total_count_query = build_total_alerts_query(
-                tenant_id=tenant_id, query=query
+                tenant_id=tenant_id, query=query_with_defaults
             )
             total_count = session.exec(total_count_query).one()[0]
 
@@ -424,11 +433,13 @@ def query_last_alerts(tenant_id, query: QueryDto) -> Tuple[list[Alert], int]:
                     alerts_hard_limit - query_with_defaults.offset
                 )
 
-            data_query = build_alerts_query(tenant_id, query)
+            data_query = build_alerts_query(tenant_id, query_with_defaults)
 
             alerts_with_start = session.execute(data_query).all()
         except OperationalError as e:
-            logger.warning(f"Failed to query alerts for CEL '{cel}': {e}")
+            logger.warning(
+                f"Failed to query alerts for query object '{json.dumps(query_with_defaults)}': {e}"
+            )
             return [], 0
 
         # Process results based on dialect
