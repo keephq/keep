@@ -86,7 +86,12 @@ def extract_provider_class_insights(
         file_path: Path to the Python file to analyze
     """
 
-    result = {"auth": {}}
+    result = {
+        "auth": {},
+        "provides_topology": False,
+        "provider_methods": {},
+        "provider_scopes": {},
+    }
 
     # Read the file content
     with open(file_path, "r") as file:
@@ -106,30 +111,6 @@ def extract_provider_class_insights(
                 auth_classes.append(node)
             else:
                 provider_classes.append(node)
-
-    # Process each provider class and its _notify and _query methods
-
-    for class_def in provider_classes:
-        for method_def in class_def.body:
-            if not isinstance(method_def, ast.FunctionDef):
-                continue
-            if method_def.name in ["_notify", "_query"]:
-                args = []
-                for arg in method_def.args.args:
-                    if arg.arg != "self":  # Skip 'self' parameter
-                        args.append(arg.arg)
-
-                result[method_def.name] = {arg: "" for arg in args}
-                # Extract docstring
-                docstring = ast.get_docstring(method_def)
-                if docstring:
-                    # Parse docstring using docstring_parser
-                    parsed_docstring = parse(docstring)
-
-                    # Extract parameter descriptions
-                    if parsed_docstring.params:
-                        for param in parsed_docstring.params:
-                            result[method_def.name][param.arg_name] = param.description
 
     # Process each auth class and its attributes
 
@@ -160,6 +141,119 @@ def extract_provider_class_insights(
                             "type": field_type,
                             "description": f"{description} (required: {required}, sensitive: {sensitive})",
                         }
+
+    # Process each provider class
+
+    for class_def in provider_classes:
+        for provider_property in class_def.body:
+
+            # Searching for the provider methods
+            if isinstance(provider_property, ast.Assign):
+                if provider_property.targets[0].id == "PROVIDER_SCOPES":
+                    if isinstance(provider_property.value, ast.List):
+                        for item in provider_property.value.elts:
+                            if isinstance(item, ast.Call):
+                                name = ""
+                                description = ""
+                                documentation_link = ""
+                                mandatory = False
+                                for keyword in item.keywords:
+                                    if keyword.arg == "name":
+                                        name = keyword.value.s
+                                    elif keyword.arg == "description":
+                                        description = keyword.value.s
+                                    elif keyword.arg == "documentation_url":
+                                        documentation_link = keyword.value.s
+                                    elif keyword.arg == "mandatory":
+                                        mandatory = keyword.value.s
+                                result["provider_scopes"][name] = {
+                                    "name": name,
+                                    "description": description,
+                                    "documentation_link": documentation_link,
+                                    "mandatory": mandatory,
+                                }
+                if provider_property.targets[0].id == "PROVIDER_METHODS":
+                    # Extract the dictionary from the assignment
+                    if isinstance(provider_property.value, ast.List):
+                        for item in provider_property.value.elts:
+                            if isinstance(item, ast.Call):
+                                # ProviderMethod data
+                                name = ""
+                                description = "No description."
+                                scopes = ["no additional scopes"]
+                                type_ = ""
+                                param_docstrings = {}
+                                for keyword in item.keywords:
+                                    if keyword.arg == "name":
+                                        name = keyword.value.s
+                                    elif keyword.arg == "description":
+                                        description = keyword.value.s
+                                    elif keyword.arg == "func_name":
+                                        func_name = keyword.value.s
+                                    elif keyword.arg == "scopes":
+                                        if isinstance(keyword.value, ast.List):
+                                            scopes = [e.s for e in keyword.value.elts]
+                                    elif keyword.arg == "type":
+                                        type_ = keyword.value.s
+
+                                for _provider_property in class_def.body:
+                                    if isinstance(_provider_property, ast.FunctionDef):
+                                        if _provider_property.name == func_name:
+                                            # Extract docstring
+                                            docstring = ast.get_docstring(
+                                                _provider_property
+                                            )
+                                            if docstring:
+                                                # Parse docstring using docstring_parser
+                                                parsed_docstring = parse(docstring)
+
+                                                # Extract parameter descriptions
+                                                if parsed_docstring.params:
+                                                    for (
+                                                        param
+                                                    ) in parsed_docstring.params:
+                                                        param_docstrings[
+                                                            param.arg_name
+                                                        ] = param.description
+
+                                result["provider_methods"][func_name] = {
+                                    "name": name,
+                                    "description": description,
+                                    "scopes": scopes,
+                                    "type": type_,
+                                    "params": param_docstrings,
+                                }
+
+            # Searching for _notify and _query methods
+            if isinstance(
+                provider_property, ast.FunctionDef
+            ) and provider_property.name in ["_notify", "_query"]:
+                args = []
+                for arg in provider_property.args.args:
+                    if arg.arg != "self":  # Skip 'self' parameter
+                        args.append(arg.arg)
+
+                result[provider_property.name] = {arg: "" for arg in args}
+                # Extract docstring
+                docstring = ast.get_docstring(provider_property)
+                if docstring:
+                    # Parse docstring using docstring_parser
+                    parsed_docstring = parse(docstring)
+
+                    # Extract parameter descriptions
+                    if parsed_docstring.params:
+                        for param in parsed_docstring.params:
+                            result[provider_property.name][
+                                param.arg_name
+                            ] = param.description
+
+            # Searching for the topology pulling
+            if (
+                isinstance(provider_property, ast.FunctionDef)
+                and provider_property.name == "pull_topology"
+            ):
+                result["provides_topology"] = True
+
     return result
 
 
@@ -214,8 +308,15 @@ Do not edit it manually, as it will be overwritten */}
 This provider requires authentication.
 {% for field, description in provider_data['auth'].items() -%}
 - **{{ field }}**: {{ description.description }}
+{% endfor -%}
+{% endif -%}
+{% if provider_data['provider_scopes'].items()|length == 0 %}{% else %}
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+{% for scope, scope_data in provider_data['provider_scopes'].items() -%}
+- **{{ scope }}**: {{ scope_data.description }} {% if scope_data.mandatory %}(mandatory){% endif %} {% if scope_data.documentation_link != "" %}([Documentation]({{ scope_data.documentation_link }})){% endif %}
 {% endfor %}
 {% endif %}
+
 ## In workflows
 {% if not "_query" in provider_data and not "_notify" in provider_data %}
 This provider can't be used as a "step" or "action" in workflows. If you want to use it, please let us know by creating an issue in the [GitHub repository](https://github.com/keephq/keep/issues).
@@ -263,6 +364,24 @@ Check the following workflow example{% if example_workflows.items()|length > 1 %
 {% if "_notify" in provider_data or "_query" in provider_data -%}
 If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).
 {% endif -%}
+{% endif -%}
+{% if provider_data["provides_topology"] %}
+
+## Topology
+This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology) 
+and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context 
+for [alerts](/alerts/sidebar#7-alert-topology-view) and [incidents](/overview#17-incident-topology).{% endif -%}
+{% if provider_data["provider_methods"].items()|length > 0 %}
+
+## Provider Methods
+The provider exposes the following [Provider Methods](/providers/provider-methods#via-ai-assistant). They are available in the [AI Assistant](/overview/ai-incident-assistant).
+
+{% for func_name, method in provider_data["provider_methods"].items() -%}
+- **{{ func_name }}** {{ method["description"] }} ({{ method["type"] }}, scopes: {{ method["scopes"]|join(", ") }})
+{% for arg, description in method["params"].items() %}
+    - `{{ arg }}`: {{ description }}{% endfor %}
+{% endfor -%}
+
 {% endif -%}
 """
 
