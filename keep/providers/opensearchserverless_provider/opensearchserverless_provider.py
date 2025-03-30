@@ -71,15 +71,13 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
         ),
         ProviderScope(
             name="aoss:ListAccessPolicies",
-            description="Required to query.",
-            documentation_url="Needed to access all Data Access Policies. (Add from IAM console)",
+            description="Required to access all Data Access Policies. (Add from IAM console)",
             mandatory=True,
             alias="Needed to list all Data Access Policies.",
         ),
         ProviderScope(
             name="aoss:GetAccessPolicy",
-            description="Required to query.",
-            documentation_url="Needed to check each policy for read and write scope. (Add from IAM console)",
+            description="Required to check each policy for read and write scope. (Add from IAM console)",
             mandatory=True,
             alias="Policy read access",
         ),
@@ -172,8 +170,8 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
             )
             return scopes
 
+        left_to_validate = ["aoss:ReadDocument", "aoss:WriteDocument"]
         try:
-            left_to_validate = ["aoss:ReadDocument", "aoss:WriteDocument"]
             aoss_client = self.__generate_client("opensearchserverless")
             all_policies = aoss_client.list_access_policies(type="data")
             for policy in all_policies["accessPolicySummaries"]:
