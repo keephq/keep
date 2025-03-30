@@ -128,9 +128,9 @@ const AlertSidebar = ({
                       providerType={alert.source![0]}
                       width={24}
                       height={24}
-                      className="inline-block w-6 h-6"
+                      className="inline-block w-6 h-6 mr-2"
                     />
-                    {providerName}
+                    <span>{providerName}</span>
                   </p>
                   <p>
                     <FieldHeader>Description</FieldHeader>
