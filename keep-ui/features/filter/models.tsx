@@ -1,4 +1,5 @@
 export interface FacetConfig {
+  canHitEmptyState?: boolean;
   uncheckedByDefaultOptionValues?: string[];
   renderOptionIcon?: (facetOption: FacetOptionDto) => JSX.Element | undefined;
   renderOptionLabel?: (
