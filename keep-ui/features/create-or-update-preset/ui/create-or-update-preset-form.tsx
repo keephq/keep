@@ -244,6 +244,7 @@ export function CreateOrUpdatePresetForm({
 
       <div className="flex justify-end space-x-2.5">
         <Button
+          type="button"
           size="lg"
           variant="secondary"
           color="orange"
@@ -253,6 +254,8 @@ export function CreateOrUpdatePresetForm({
           Close
         </Button>
         <Button
+          disabled={!presetName}
+          type="submit"
           size="lg"
           color="orange"
           variant="primary"
