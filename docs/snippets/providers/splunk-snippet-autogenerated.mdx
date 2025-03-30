@@ -8,6 +8,11 @@ This provider requires authentication.
 - **port**: Splunk Port (default is 8089) (required: False, sensitive: False)
 - **verify**: Enable SSL verification (required: False, sensitive: False)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **list_all_objects**: The user can get all the alerts (mandatory) 
+- **edit_own_objects**: The user can edit and add webhook to saved_searches (mandatory) 
+
+
 
 ## In workflows
 
