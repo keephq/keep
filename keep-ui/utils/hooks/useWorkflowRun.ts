@@ -30,7 +30,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
   useEffect(() => {
     if (workflow?.workflow_raw) {
       try {
-        const parsedWorkflow = yaml.load(workflow.workflow_raw);
+        const parsedWorkflow = yaml.load(workflow.workflow_raw) as any;
         const inputs = parsedWorkflow.workflow.inputs || [];
         setWorkflowInputs(inputs);
       } catch (error) {
