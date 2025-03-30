@@ -51,16 +51,6 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
 
         return f"CAST({expression_to_cast} as {to_type_str})"
 
-    def _get_order_by_field(self, field_mapping, data_type: type):
-        if isinstance(field_mapping, JsonFieldMapping):
-            return self.json_extract_as_text(
-                field_mapping.json_prop, field_mapping.prop_in_json
-            )
-        elif isinstance(field_mapping, SimpleFieldMapping):
-            return field_mapping.map_to
-
-        raise ValueError(f"Unsupported field mapping type: {type(field_mapping)}")
-
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):
             date_str = self.literal_proc(value.strftime("%Y-%m-%d %H:%M:%S"))

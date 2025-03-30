@@ -44,16 +44,29 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         property_path_str = ".".join([f'"{item}"' for item in path])
         return f"JSON_EXTRACT({column}, '$.{property_path_str}')"
 
-    def _get_order_by_field(self, field_mapping, data_type: type):
-        if isinstance(field_mapping, JsonFieldMapping):
-            # just json_extract is used because it correctly sorts by numbers and strings
-            return self._json_extract(
-                field_mapping.json_prop, field_mapping.prop_in_json
-            )
-        elif isinstance(field_mapping, SimpleFieldMapping):
-            return field_mapping.map_to
+    def _get_order_by_field(self, cel_sort_by: str):
+        """Overriden, because for MySql we need to just use JSON_EXTRACT wihout JSON_UNQOUTE to sorting work like expected"""
+        metadata = self.properties_metadata.get_property_metadata_for_str(cel_sort_by)
+        field_expressions = []
 
-        raise ValueError(f"Unsupported field mapping type: {type(field_mapping)}")
+        for field_mapping in metadata.field_mappings:
+            if isinstance(field_mapping, JsonFieldMapping):
+                field_expressions.append(
+                    self._json_extract(
+                        field_mapping.json_prop, field_mapping.prop_in_json
+                    )
+                )
+                continue
+            elif isinstance(field_mapping, SimpleFieldMapping):
+                field_expressions.append(field_mapping.map_to)
+                continue
+
+            raise ValueError(f"Unsupported field mapping type: {type(field_mapping)}")
+
+        if len(field_expressions) > 1:
+            return self.coalesce(field_expressions)
+        else:
+            return field_expressions[0]
 
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):

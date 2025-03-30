@@ -351,6 +351,10 @@ def build_alerts_query(tenant_id, query: QueryDto):
             for sort_option in query.sort_options
         ]
     )
+    distinct_columns = [
+        text(cel_to_sql_instance.get_field_exp(sort_option.sort_by))
+        for sort_option in query.sort_options
+    ]
 
     built_query_result = __build_query_for_filtering_v2(
         tenant_id,
@@ -359,7 +363,7 @@ def build_alerts_query(tenant_id, query: QueryDto):
             AlertEnrichment,
             LastAlert.first_timestamp.label("startedAt"),
         ]
-        + [text(column) for column in sort_by_exp],
+        + distinct_columns,
         cel=query.cel,
     )
     sql_query = built_query_result["query"]
@@ -367,12 +371,7 @@ def build_alerts_query(tenant_id, query: QueryDto):
     sql_query = sql_query.order_by(text(", ".join(sort_by_exp)))
 
     if fetch_incidents:
-        distinct_columns = []
-        for column in query.sort_options:
-            distinct_columns.append(cel_to_sql_instance.get_field_exp(column.sort_by))
-
-        distinct_columns.append(Alert.id)
-        sql_query = sql_query.distinct(*distinct_columns)
+        sql_query = sql_query.distinct(*(distinct_columns + [Alert.id]))
 
     if query.limit is not None:
         sql_query = sql_query.limit(query.limit)
