@@ -3,7 +3,10 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { Workflow } from "@/shared/api/workflows";
 import { workflowKeys } from "./workflowKeys";
 
-export function useWorkflowDetail(workflowId: string, initialData?: Workflow) {
+export function useWorkflowDetail(
+  workflowId: string | null,
+  initialData?: Workflow
+) {
   const api = useApi();
 
   const cacheKey =

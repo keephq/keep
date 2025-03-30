@@ -807,6 +807,7 @@ def get_workflow_by_id(
             workflow_raw=final_workflow_raw,
             last_updated=workflow.last_updated,
             disabled=workflow.is_disabled,
+            revision=workflow.revision,
         )
         return workflow_dto
     except cyaml.YAMLError:
@@ -891,6 +892,7 @@ def get_workflow_runs_by_id(
         workflow_raw=workflow.workflow_raw,
         last_updated=workflow.last_updated,
         disabled=workflow.is_disabled,
+        revision=workflow.revision,
     )
     return WorkflowExecutionsPaginatedResultsDto(
         limit=limit,
