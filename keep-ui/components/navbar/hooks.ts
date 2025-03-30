@@ -16,7 +16,10 @@ export const usePresetAlertsCount = (
   celList.push(presetCel);
 
   const { totalCount, isLoading } = useLastAlerts({
-    cel: celList.join(" && "),
+    cel: celList
+      .filter((cel) => !!cel)
+      .map((cel) => `(${cel})`)
+      .join(" && "),
     limit: 0,
     offset: 0,
   });
