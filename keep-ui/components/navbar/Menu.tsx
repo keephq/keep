@@ -88,7 +88,7 @@ export const Menu = ({ children, session }: MenuButtonProps) => {
 
           <aside
             className={`relative bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-white col-span-1 border-r border-gray-300 dark:border-gray-700 h-full hidden lg:block transition-all duration-200 ease-in-out overflow-hidden ${
-              isMenuMinimized ? "w-16" : "w-56"
+              isMenuMinimized ? "w-16" : "w-52"
             }`}
             data-minimized={isMenuMinimized}
           >

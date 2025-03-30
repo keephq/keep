@@ -48,7 +48,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
         )}
       </Disclosure.Button>
 
-      <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-3">
+      <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-1">
         <li>
           <LinkWithIcon
             href="/incidents"

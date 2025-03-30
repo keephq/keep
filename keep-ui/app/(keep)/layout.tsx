@@ -31,7 +31,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
 
   return (
     <html lang="en" className={`bg-gray-50 ${mulish.className}`}>
-      <body className="h-screen flex flex-col lg:grid lg:grid-cols-[auto_1fr] xl:grid-cols-[auto_1fr] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[64px_1fr] lg:has-[aside[data-minimized='false']]:grid-cols-[200px_1fr] gap-0">
+      <body className="h-screen flex flex-col lg:grid lg:grid-cols-[auto_1fr] xl:grid-cols-[auto_1fr] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[56px_1fr] lg:has-[aside[data-minimized='false']]:grid-cols-[192px_1fr] gap-0">
         {/* ThemeScript must be the first thing to avoid flickering */}
         <ThemeScript />
         <ConfigProvider config={config}>

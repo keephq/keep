@@ -38,7 +38,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
         )}
       </Disclosure.Button>
 
-      <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-3">
+      <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-1">
         <li>
           <LinkWithIcon href="/deduplication" icon={IoMdGitMerge}>
             <Subtitle className="text-xs">Deduplication</Subtitle>

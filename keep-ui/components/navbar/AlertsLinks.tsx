@@ -108,7 +108,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               />
             </Disclosure.Button>
 
-            <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-3">
+            <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-1">
               {shouldShowFeed && (
                 <li>
                   <LinkWithIcon

@@ -23,13 +23,13 @@ export default async function NavbarInner() {
           </div>
 
           {/* Search section styled like Datadog */}
-          <div className="px-3 mb-4">
+          <div className="px-3 mb-2 mt-2">
             <Search session={session} />
           </div>
 
           {/* Main navigation links */}
           <div className="flex-1 overflow-auto">
-            <div className="px-2 py-1 space-y-1">
+            <div className="py-1 space-y-1">
               <IncidentsLinks session={session} />
               <AlertsLinks session={session} />
               <NoiseReductionLinks session={session} />
