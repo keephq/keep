@@ -247,7 +247,7 @@ export default function ManualRunWorkflowModal({
         />
       ) : effectiveWorkflow ? (
         <div className="mt-4 text-center py-4">
-          <Text>This workflow doesn't require any inputs</Text>
+          <Text>This workflow does not require any inputs</Text>
         </div>
       ) : null}
 
