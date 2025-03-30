@@ -117,13 +117,13 @@ class AmazonsqsProvider(BaseProvider):
         ),
         ProviderScope(
             name="sqs::read",
-            description="Required privileges to receive alert from SQS",
+            description="Required privileges to receive alert from SQS. If you only want to give read scope to your key-secret pair the permission policy: AmazonSQSReadOnlyAccess.",
             mandatory=True,
             alias="Read Access",
         ),
         ProviderScope(
             name="sqs::write",
-            description="Required privileges to push messages to SQS",
+            description="Required privileges to push messages to SQS. If you only want to give read & write scope to your key-secret pair the permission policy: AmazonSQSFullAccess.",
             mandatory=False,
             alias="Write Access",
         ),

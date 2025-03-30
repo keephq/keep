@@ -6,9 +6,49 @@ This provider requires authentication.
 - **zabbix_frontend_url**: Zabbix Frontend URL (required: True, sensitive: False)
 - **auth_token**: Zabbix Auth Token (required: True, sensitive: True)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **problem.get**: The method allows to retrieve problems. (mandatory) ([Documentation](https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get))
+- **script.get**: The method allows to retrieve media types.  ([Documentation](https://www.zabbix.com/documentation/current/en/manual/api/reference/mediatype/get))
+- **script.update**: This method allows to update existing media types.  ([Documentation](https://www.zabbix.com/documentation/current/en/manual/api/reference/mediatype/update))
+- **script.create**: This method allows to create new media types.  ([Documentation](https://www.zabbix.com/documentation/current/en/manual/api/reference/mediatype/create))
+- **event.acknowledge**: This method allows to update events.  ([Documentation](https://www.zabbix.com/documentation/current/en/manual/api/reference/event/acknowledge))
+
+
 
 ## In workflows
 
 This provider can't be used as a "step" or "action" in workflows. If you want to use it, please let us know by creating an issue in the [GitHub repository](https://github.com/keephq/keep/issues).
 
 
+
+
+## Provider Methods
+The provider exposes the following [Provider Methods](/providers/provider-methods#via-ai-assistant). They are available in the [AI Assistant](/overview/ai-incident-assistant).
+
+- **close_problem** No description. (action, scopes: event.acknowledge)
+
+    - `id`: The problem id.
+- **change_severity** No description. (action, scopes: event.acknowledge)
+
+    - `id`: The problem id.
+    - `new_severity`: The new severity, can be one of the following: Not classified, Information, Warning, Average, High, Disaster
+- **surrpress_problem** No description. (action, scopes: event.acknowledge)
+
+    - `id`: The problem id.
+    - `suppress_until`: The datetime to suppress the problem until.
+- **unsurrpress_problem** No description. (action, scopes: event.acknowledge)
+
+    - `id`: The problem id.
+- **acknowledge_problem** No description. (action, scopes: event.acknowledge)
+
+    - `id`: The problem id.
+- **unacknowledge_problem** No description. (action, scopes: event.acknowledge)
+
+    - `id`: The problem id.
+- **add_message_to_problem** No description. (action, scopes: event.acknowledge)
+
+    - `id`: The problem id.
+    - `message_text`: The message text.
+- **get_problem_messages** No description. (view, scopes: problem.get)
+
+    - `id`: The problem id.
