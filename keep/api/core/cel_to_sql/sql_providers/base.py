@@ -18,8 +18,10 @@ from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 
 from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, MultipleFieldsNode, PropertiesMapper, PropertiesMappingException
 from keep.api.core.cel_to_sql.properties_metadata import (
+    JsonFieldMapping,
     PropertiesMetadata,
     PropertyMetadataInfo,
+    SimpleFieldMapping,
 )
 from celpy import CELParseError
 
@@ -159,6 +161,32 @@ class BaseCelToSqlProvider:
             )
 
         return sort_expressions
+
+    def get_field_exp(self, cel_field: str) -> str:
+        metadata = self.properties_metadata.get_property_metadata_for_str(cel_field)
+        field_expressions = [
+            self._get_order_by_field(item, metadata.data_type)
+            for item in metadata.field_mappings
+        ]
+
+        for field_mapping in metadata.field_mappings:
+            if isinstance(field_mapping, JsonFieldMapping):
+                field_expressions.append(
+                    self.json_extract_as_text(
+                        field_mapping.json_prop, field_mapping.prop_in_json
+                    )
+                )
+                continue
+            elif isinstance(field_mapping, SimpleFieldMapping):
+                field_expressions.append(field_mapping.map_to)
+                continue
+
+            raise ValueError(f"Unsupported field mapping type: {type(field_mapping)}")
+
+        if len(field_expressions) > 1:
+            return self.coalesce(field_expressions)
+        else:
+            return field_expressions[0]
 
     def literal_proc(self, value: Any) -> str:
         if isinstance(value, str):
