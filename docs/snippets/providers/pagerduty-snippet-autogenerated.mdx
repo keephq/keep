@@ -8,6 +8,13 @@ This provider requires authentication.
 - **oauth_data**: For oauth flow (required: False, sensitive: True)
 - **service_id**: Service Id (if provided, keep will only operate on this service) (required: False, sensitive: False)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **incidents_read**: Read incidents data. (mandatory) 
+- **incidents_write**: Write incidents.  
+- **webhook_subscriptions_read**: Read webhook data.  
+- **webhook_subscriptions_write**: Write webhooks.  
+
+
 
 ## In workflows
 
@@ -52,3 +59,9 @@ actions:
 
 Check the following workflow example:
 - [ifelse.yml](https://github.com/keephq/keep/blob/main/examples/workflows/ifelse.yml)
+
+
+## Topology
+This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology) 
+and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context 
+for [alerts](/alerts/sidebar#7-alert-topology-view) and [incidents](/overview#17-incident-topology).

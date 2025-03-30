@@ -6,6 +6,10 @@ This provider requires authentication.
 - **api_key**: SendGrid API key (required: True, sensitive: True)
 - **from_email**: From email address (required: True, sensitive: False)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **email.send**: Send emails using SendGrid (mandatory) ([Documentation](https://sendgrid.com/docs/API_Reference/api_v3.html))
+
+
 
 ## In workflows
 

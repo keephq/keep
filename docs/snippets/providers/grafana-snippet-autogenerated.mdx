@@ -7,6 +7,12 @@ This provider requires authentication.
 - **host**: Grafana host (required: True, sensitive: False)
 - **datasource_uid**: Datasource UID (required: False, sensitive: False)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **alert.rules:read**: Read Grafana alert rules in a folder and its subfolders. (mandatory) ([Documentation](https://grafana.com/docs/grafana/latest/administration/roles-and-permissions/access-control/custom-role-actions-scopes/))
+- **alert.provisioning:read**: Read all Grafana alert rules, notification policies, etc via provisioning API.  ([Documentation](https://grafana.com/docs/grafana/latest/administration/roles-and-permissions/access-control/custom-role-actions-scopes/))
+- **alert.provisioning:write**: Update all Grafana alert rules, notification policies, etc via provisioning API.  ([Documentation](https://grafana.com/docs/grafana/latest/administration/roles-and-permissions/access-control/custom-role-actions-scopes/))
+
+
 
 ## In workflows
 
@@ -19,3 +25,9 @@ Check the following workflow examples:
 - [create_service_now_ticket_upon_alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_service_now_ticket_upon_alerts.yml)
 - [query_grafana_loki.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/query_grafana_loki.yaml)
 - [update-incident-grafana-incident.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/update-incident-grafana-incident.yaml)
+
+
+## Topology
+This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology) 
+and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context 
+for [alerts](/alerts/sidebar#7-alert-topology-view) and [incidents](/overview#17-incident-topology).
