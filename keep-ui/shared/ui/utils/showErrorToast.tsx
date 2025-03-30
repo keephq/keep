@@ -1,11 +1,15 @@
 import { Link } from "@/components/ui";
 import { KeepApiError, KeepApiReadOnlyError } from "@/shared/api";
-import { toast, ToastOptions } from "react-toastify";
+import { toast, ToastOptions, ToastPosition } from "react-toastify";
 
 export function showErrorToast(
   error: unknown,
   customMessage?: React.ReactNode,
-  options?: ToastOptions
+  options: ToastOptions = {
+    position:
+      (process.env.PUBLIC_DEFAULT_TOAST_POSITION as ToastPosition) ??
+      "top-left",
+  }
 ) {
   if (error instanceof KeepApiReadOnlyError) {
     toast.warning(

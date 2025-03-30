@@ -66,6 +66,7 @@ export type Workflow = {
   last_executions?: LastWorkflowExecution[];
   provisioned?: boolean;
   alertRule?: boolean;
+  revision?: number;
 };
 
 export type MockProvider = {
