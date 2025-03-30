@@ -10,6 +10,7 @@ import pytz
 from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
 
 from keep.api.models.severity_base import SeverityBaseInterface
+from keep.api.utils.url_utils import encode_url
 
 if TYPE_CHECKING:
     pass
@@ -149,14 +150,15 @@ class AlertDto(BaseModel):
 
     @validator("url", pre=True)
     def prepend_https(cls, url):
-        if isinstance(url, str) and len(url.split()) > 1:
-            # @kc: in some cases we receive string with url and other text, we want to strip the text and keep the url
-            return url.split()[0]
-        if isinstance(url, str) and not url.startswith("http"):
+        if not isinstance(url, str):
+            return url
+
+        url = url.strip()
+        if not url.startswith("http"):
             # @tb: in some cases we drop the event because of invalid url with no scheme
             # invalid or missing URL scheme (type=value_error.url.scheme)
-            return f"https://{url}"
-        return url
+            url = f"https://{url}"
+        return encode_url(url)
 
     @validator("lastReceived", pre=True, always=True)
     def validate_last_received(cls, last_received):
