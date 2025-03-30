@@ -15,9 +15,9 @@ from sqlalchemy_utils import UUIDType
 from sqlmodel import Session, select
 
 from keep.api.core.config import config
-from keep.api.core.db import batch_enrich, get_incident_by_id, get_incidents_by_alert_fingerprint
+from keep.api.core.db import batch_enrich, get_incidents_by_alert_fingerprint
 from keep.api.core.db import enrich_entity as enrich_alert_db, get_last_alert_by_fingerprint, \
-    enrich_alerts_with_incidents, is_all_alerts_resolved
+    is_all_alerts_resolved
 from keep.api.core.db import (
     get_alert_by_event_id,
     get_enrichment_with_session,
