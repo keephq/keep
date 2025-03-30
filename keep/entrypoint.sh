@@ -49,6 +49,7 @@ else
         --access-logfile - \
         --error-logfile - \
         --name "arq_worker" \
+        -c "/venv/lib/python3.11/site-packages/keep/api/config.py" \
         "keep.api.arq_worker_gunicorn:create_app()" &
 
     KEEP_ARQ_PID=$!
