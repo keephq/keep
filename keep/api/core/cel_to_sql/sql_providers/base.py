@@ -139,20 +139,21 @@ class BaseCelToSqlProvider:
         except NotImplementedError as e:
             raise CelToSqlException(f"Error while converting CEL expression tree to SQL: {str(e)}") from e
 
-    def get_order_by_exp(self, sort_options: list[tuple[str, str]]) -> list[str]:
+    def get_order_by_expressions(self, sort_options: list[tuple[str, str]]) -> str:
         sort_expressions: list[str] = []
 
         for sort_option in sort_options:
             sort_by, sort_dir = sort_option
-            order_by_exp = self.get_field_exp(sort_by)
+            sort_dir = sort_dir.lower()
+            order_by_exp = self.get_field_expression(sort_by)
 
             sort_expressions.append(
                 f"{order_by_exp} {sort_dir == 'asc' and 'ASC' or 'DESC'}"
             )
 
-        return sort_expressions
+        return ", ".join(sort_expressions)
 
-    def get_field_exp(self, cel_field: str) -> str:
+    def get_field_expression(self, cel_field: str) -> str:
         metadata = self.properties_metadata.get_property_metadata_for_str(cel_field)
         field_expressions = []
 
@@ -182,7 +183,7 @@ class BaseCelToSqlProvider:
         return f"'{str(value)}'"
 
     def _get_order_by_field(self, cel_sort_by: str) -> str:
-        return self.get_field_exp(cel_sort_by)
+        return self.get_field_expression(cel_sort_by)
 
     def _get_default_value_for_type(self, type: type) -> str:
         if type is str or type is NoneType:

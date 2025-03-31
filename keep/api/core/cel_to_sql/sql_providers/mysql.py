@@ -44,6 +44,20 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         property_path_str = ".".join([f'"{item}"' for item in path])
         return f"JSON_EXTRACT({column}, '$.{property_path_str}')"
 
+    def get_order_by_expressions(self, sort_options: list[tuple[str, str]]) -> str:
+        sort_expressions: list[str] = []
+
+        for sort_option in sort_options:
+            sort_by, sort_dir = sort_option
+            sort_dir = sort_dir.lower()
+            order_by_exp = self._get_order_by_field(sort_by)
+
+            sort_expressions.append(
+                f"{order_by_exp} {sort_dir == 'asc' and 'ASC' or 'DESC'}"
+            )
+
+        return ", ".join(sort_expressions)
+
     def _get_order_by_field(self, cel_sort_by: str):
         """Overriden, because for MySql we need to just use JSON_EXTRACT wihout JSON_UNQOUTE to sorting work like expected"""
         metadata = self.properties_metadata.get_property_metadata_for_str(cel_sort_by)

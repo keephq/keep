@@ -41,7 +41,7 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
 
         return f"({expression_to_cast})::{to_type_str}"
 
-    def get_field_exp(self, cel_field):
+    def get_field_expression(self, cel_field):
         """
         Overriden, because for PostgreSql we need to cast columns to known data types (because every JSON operation returns just text).
         This is used in ordering to correctly order rows in accordance to their types and not lexicographically.

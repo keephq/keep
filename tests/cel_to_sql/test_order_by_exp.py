@@ -55,21 +55,27 @@ with open(
         field_ = item["field"]
         expected_sql_dialect_based: dict = item["expected_sql_dialect_based"]
         description_ = item["description"]
+        sort_direction_ = item["sort_direction"]
 
         for dialect_ in ["sqlite", "mysql", "postgresql"]:
             expected_sql_ = expected_sql_dialect_based.get(dialect_, "no_expected_sql")
-            dict_key = f"{dialect_}_{description_}"
-            testcases_dict[dict_key] = [dialect_, field_, expected_sql_]
+            dict_key = f"{dialect_}_{description_}_{sort_direction_}"
+            testcases_dict[dict_key] = [
+                dialect_,
+                field_,
+                expected_sql_,
+                sort_direction_,
+            ]
 
 
 @pytest.mark.parametrize("testcase_key", list(testcases_dict.keys()))
 def test_order_by_exp(testcase_key):
-    dialect_name, field, expected_sql = testcases_dict[testcase_key]
+    dialect_name, field, expected_sql, sort_direction = testcases_dict[testcase_key]
 
     if expected_sql == "no_expected_sql":
         pytest.fail("No expected order by expression for this dialect")
         pytest.skip("No expected order by expression for this dialect")
 
     instance = get_cel_to_sql_provider_for_dialect(dialect_name, properties_metadata)
-    actual_sql_filter = instance.get_order_by_exp(field)
+    actual_sql_filter = instance.get_order_by_expressions([(field, sort_direction)])
     assert actual_sql_filter == expected_sql
