@@ -46,6 +46,7 @@ function orderDocument(doc: Document) {
     "disabled",
     "debug",
     "triggers",
+    "inputs",
     "consts",
     "owners",
     "services",
