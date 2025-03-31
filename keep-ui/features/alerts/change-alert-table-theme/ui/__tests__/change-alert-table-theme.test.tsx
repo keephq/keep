@@ -7,6 +7,9 @@ import { predefinedThemes } from "../AlertTableThemeSelection";
 // Mock the useAlertTableTheme hook
 jest.mock("@/entities/alerts/model/useAlertTableTheme");
 
+// Get all theme names and their indices
+const themeEntries = Object.entries(predefinedThemes);
+
 describe("AlertTableThemeSelection", () => {
   const mockSetTheme = jest.fn();
   const mockOnClose = jest.fn();
@@ -21,18 +24,15 @@ describe("AlertTableThemeSelection", () => {
     });
   });
 
-  it("should apply correct theme when selecting different tabs and clicking apply", () => {
-    // Render component once
-    render(<AlertTableThemeSelection onClose={mockOnClose} />);
+  themeEntries.forEach(([themeName, theme], index) => {
+    it(`should apply ${themeName} theme correctly`, () => {
+      // Render component once
+      render(<AlertTableThemeSelection onClose={mockOnClose} />);
 
-    // Get the tab list and apply button
-    const tabList = screen.getByTestId("theme-tab-list");
-    const applyButton = screen.getByTestId("apply-theme-button");
+      // Get the tab list and apply button
+      const tabList = screen.getByTestId("theme-tab-list");
+      const applyButton = screen.getByTestId("apply-theme-button");
 
-    // Get all theme names and their indices
-    const themeEntries = Object.entries(predefinedThemes);
-
-    themeEntries.forEach(([themeName, theme], index) => {
       // Click the corresponding tab
       const tabs = tabList.querySelectorAll("button");
       fireEvent.click(tabs[index]);
