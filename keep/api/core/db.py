@@ -3551,6 +3551,28 @@ def enrich_alerts_with_incidents(
         return alerts
 
 
+def get_incidents_by_alert_fingerprint(tenant_id: str, fingerprint: str, session: Optional[Session] = None) -> List[Incident]:
+    with existed_or_new_session(session) as session:
+        alert_incidents = session.exec(
+            select(Incident)
+            .select_from(LastAlert)
+            .join(
+                LastAlertToIncident,
+                and_(
+                    LastAlertToIncident.tenant_id == LastAlert.tenant_id,
+                    LastAlertToIncident.fingerprint == LastAlert.fingerprint,
+                    LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                ),
+            )
+            .join(Incident, LastAlertToIncident.incident_id == Incident.id)
+            .where(
+                LastAlert.tenant_id == tenant_id,
+                LastAlertToIncident.fingerprint == fingerprint,
+            )
+        ).all()
+        return alert_incidents
+
+
 def get_last_incidents(
     tenant_id: str,
     limit: int = 25,
