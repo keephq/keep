@@ -36,8 +36,8 @@ def __get_conn() -> pymysql.connections.Connection:
             os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
             "pymysql",
             ip_type=os.environ.get("DB_IP_TYPE", "public"),
-            user="keep-api",
-            db="keepdb",
+            user=os.environ.get("DB_SERVICE_ACCOUNT", "keep-api"),
+            db=os.environ.get("DB_NAME", "keepdb"),
             enable_iam_auth=True,
         )
     return conn
@@ -81,7 +81,7 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
             password=access_token,
             host="127.0.0.1",
             port=3306,
-            database="keepdb",
+            database=os.environ.get("DB_NAME", "keepdb"),
         )
     return conn
 
