@@ -44,12 +44,10 @@ export function WorkflowYAMLEditorWithLogs({
   ): string | null => {
     let currentLine = lineNumber;
     let currentIndent = -1;
-
     while (currentLine > 0) {
       const line = model.getLineContent(currentLine);
       const indent = line.search(/\S/);
       const trimmedLine = line.trim();
-
       // If we find a line with less indentation than our current tracking,
       // we've moved out of the current step block
       if (indent !== -1 && (currentIndent === -1 || indent < currentIndent)) {
@@ -59,7 +57,6 @@ export function WorkflowYAMLEditorWithLogs({
         }
         currentIndent = indent;
       }
-
       currentLine--;
     }
     return null;
@@ -82,17 +79,15 @@ export function WorkflowYAMLEditorWithLogs({
     if (!editorRef.current || !monacoRef.current) {
       return;
     }
-
     const model = editorRef.current.getModel();
     if (!model) {
       return;
     }
-
     const content = model.getValue();
     const lines = content.split("\n");
     const decorations: editor.IModelDeltaDecoration[] = [];
-
     let isInActions = false;
+    let isInInputs = false;
     let currentName: string | null = null;
     let stepStartLine = -1;
     let indentLevel = -1;
@@ -102,13 +97,24 @@ export function WorkflowYAMLEditorWithLogs({
       const trimmedLine = line.trim();
       const currentIndent = line.search(/\S/);
 
+      // Check for section markers
       if (trimmedLine === "actions:") {
         isInActions = true;
+        isInInputs = false;
       } else if (trimmedLine === "steps:") {
         isInActions = false;
+        isInInputs = false;
+      } else if (trimmedLine === "inputs:") {
+        isInActions = false;
+        isInInputs = true;
       }
 
-      if (trimmedLine.startsWith("- name:")) {
+      // Only process step decorations for actions and steps, not for inputs
+      if (isInInputs) {
+        continue;
+      }
+
+      if (trimmedLine.startsWith("- name:") && !isInInputs) {
         if (stepStartLine !== -1 && currentName) {
           const status = getStatus(currentName, isInActions);
           decorations.push({
@@ -119,11 +125,9 @@ export function WorkflowYAMLEditorWithLogs({
             },
           });
         }
-
         currentName = trimmedLine.split("name:")[1].trim();
         stepStartLine = i;
         indentLevel = currentIndent;
-
         if (currentName) {
           const status = getStatus(currentName, isInActions);
           decorations.push({
@@ -134,7 +138,11 @@ export function WorkflowYAMLEditorWithLogs({
             },
           });
         }
-      } else if (currentIndent <= indentLevel && trimmedLine.startsWith("-")) {
+      } else if (
+        currentIndent <= indentLevel &&
+        trimmedLine.startsWith("-") &&
+        !isInInputs
+      ) {
         if (stepStartLine !== -1 && currentName) {
           const status = getStatus(currentName, isInActions);
           decorations.push({
@@ -145,7 +153,6 @@ export function WorkflowYAMLEditorWithLogs({
             },
           });
         }
-
         currentName = null;
         stepStartLine = -1;
         indentLevel = -1;
@@ -153,7 +160,7 @@ export function WorkflowYAMLEditorWithLogs({
     }
 
     // Handle the last step
-    if (stepStartLine !== -1 && currentName) {
+    if (stepStartLine !== -1 && currentName && !isInInputs) {
       const status = getStatus(currentName, isInActions);
       decorations.push({
         range: new monacoRef.current.Range(
@@ -180,16 +187,14 @@ export function WorkflowYAMLEditorWithLogs({
       if (!editorRef.current || !monacoRef.current || !stepNameToHover) {
         return;
       }
-
       const model = editorRef.current.getModel();
       if (!model) {
         return;
       }
-
       const content = model.getValue();
       const lines = content.split("\n");
       const hoverDecorations: editor.IModelDeltaDecoration[] = [];
-
+      let isInInputs = false;
       let currentName: string | null = null;
       let stepStartLine = -1;
       let indentLevel = -1;
@@ -198,6 +203,21 @@ export function WorkflowYAMLEditorWithLogs({
         const line = lines[i];
         const trimmedLine = line.trim();
         const currentIndent = line.search(/\S/);
+
+        // Skip input section
+        if (trimmedLine === "inputs:") {
+          isInInputs = true;
+          continue;
+        } else if (
+          (trimmedLine === "actions:" || trimmedLine === "steps:") &&
+          isInInputs
+        ) {
+          isInInputs = false;
+        }
+
+        if (isInInputs) {
+          continue;
+        }
 
         if (trimmedLine.startsWith("- name:")) {
           if (currentName === stepNameToHover) {
@@ -210,7 +230,6 @@ export function WorkflowYAMLEditorWithLogs({
               },
             });
           }
-
           currentName = trimmedLine.split("name:")[1].trim();
           stepStartLine = i;
           indentLevel = currentIndent;
@@ -220,7 +239,6 @@ export function WorkflowYAMLEditorWithLogs({
         ) {
           if (currentName === stepNameToHover) {
             const status = getStatus(currentName, false);
-
             hoverDecorations.push({
               range: new monacoRef.current.Range(stepStartLine + 1, 1, i, 1),
               options: {
@@ -229,7 +247,6 @@ export function WorkflowYAMLEditorWithLogs({
               },
             });
           }
-
           currentName = null;
           stepStartLine = -1;
           indentLevel = -1;
@@ -237,7 +254,11 @@ export function WorkflowYAMLEditorWithLogs({
       }
 
       // Handle the last step
-      if (stepStartLine !== -1 && currentName === stepNameToHover) {
+      if (
+        stepStartLine !== -1 &&
+        currentName === stepNameToHover &&
+        !isInInputs
+      ) {
         const status = getStatus(currentName, false);
         hoverDecorations.push({
           range: new monacoRef.current.Range(
@@ -267,15 +288,12 @@ export function WorkflowYAMLEditorWithLogs({
   ) => {
     editorRef.current = editor;
     monacoRef.current = monacoInstance;
-
     // Enable the glyph margin for status indicators
     editor.updateOptions({
       glyphMargin: true,
     });
-
     // Initial decoration update
     updateStepDecorations();
-
     const disposable = editor.onDidChangeModelContent(() => {
       updateStepDecorations();
       updateHoverDecorations(hoveredStep);
@@ -283,17 +301,13 @@ export function WorkflowYAMLEditorWithLogs({
 
     editor.onMouseMove((e) => {
       if (!setHoveredStep) return;
-
       const target = e.target;
       if (target.type !== monacoInstance.editor.MouseTargetType.CONTENT_TEXT)
         return;
-
       const position = target.position;
       if (!position) return;
-
       const model = editor.getModel();
       if (!model) return;
-
       const stepName = findStepNameForPosition(position.lineNumber, model);
       if (stepName !== hoveredStep) {
         setHoveredStep(stepName);
@@ -314,17 +328,14 @@ export function WorkflowYAMLEditorWithLogs({
       if (!setSelectedStep) {
         return;
       }
-
       const position = e.target.position;
       if (!position) {
         return;
       }
-
       const model = editor.getModel();
       if (!model) {
         return;
       }
-
       let currentLine = position.lineNumber;
       while (currentLine > 0) {
         const line = model.getLineContent(currentLine);
@@ -353,7 +364,12 @@ export function WorkflowYAMLEditorWithLogs({
       updateStepDecorations();
       updateHoverDecorations(null);
     }
-  }, [executionLogs, executionStatus]);
+  }, [
+    executionLogs,
+    executionStatus,
+    updateStepDecorations,
+    updateHoverDecorations,
+  ]);
 
   return (
     <WorkflowYAMLEditor

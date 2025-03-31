@@ -184,6 +184,7 @@ class WorkflowScheduler:
         workflow: Workflow,
         workflow_execution_id: str,
         event_context=None,
+        inputs=None,
     ):
         if READ_ONLY_MODE:
             self.logger.debug("Sleeping for 3 seconds in favor of read only mode")
@@ -216,6 +217,9 @@ class WorkflowScheduler:
                 workflow.context_manager.set_event_context(event_context)
             else:
                 workflow.context_manager.set_incident_context(event_context)
+
+            if inputs:
+                workflow.context_manager.set_inputs(inputs)
 
             errors, _ = self.workflow_manager._run_workflow(
                 workflow, workflow_execution_id
@@ -274,7 +278,14 @@ class WorkflowScheduler:
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
     def handle_manual_event_workflow(
-        self, workflow_id, tenant_id, triggered_by_user, event: AlertDto | IncidentDto, workflow: Workflow = None, test_run: bool = False
+        self,
+        workflow_id,
+        tenant_id,
+        triggered_by_user,
+        event: AlertDto | IncidentDto,
+        workflow: Workflow = None,
+        test_run: bool = False,
+        inputs: dict = None,
     ):
         self.logger.info(f"Running manual event workflow {workflow_id}...")
         try:
@@ -330,6 +341,7 @@ class WorkflowScheduler:
                     "event": event,
                     "retry": True,
                     "test_run": test_run,
+                    "inputs": inputs,
                 }
             )
         return workflow_execution_id
@@ -607,6 +619,7 @@ class WorkflowScheduler:
                     )
                     continue
             # Last, run the workflow
+            inputs = workflow_to_run.get("inputs", {})
             future = self.executor.submit(
                 self._run_workflow,
                 tenant_id,
@@ -614,6 +627,7 @@ class WorkflowScheduler:
                 workflow,
                 workflow_execution_id,
                 event,
+                inputs,
             )
             self.futures.add(future)
             future.add_done_callback(lambda f: self.futures.remove(f))
