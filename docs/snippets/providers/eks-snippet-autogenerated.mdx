@@ -8,6 +8,16 @@ This provider requires authentication.
 - **access_key**: AWS access key (Leave empty if using IAM role at EC2) (required: False, sensitive: True)
 - **secret_access_key**: AWS secret access key (Leave empty if using IAM role at EC2) (required: False, sensitive: True)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **eks:DescribeCluster**: Required to get cluster information (mandatory) ([Documentation](https://docs.aws.amazon.com/eks/latest/APIReference/API_DescribeCluster.html))
+- **eks:ListClusters**: Required to list available clusters (mandatory) ([Documentation](https://docs.aws.amazon.com/eks/latest/APIReference/API_ListClusters.html))
+- **pods:delete**: Required to delete/restart pods  ([Documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/))
+- **deployments:scale**: Required to scale deployments  ([Documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/))
+- **pods:list**: Required to list pods  ([Documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/))
+- **pods:get**: Required to get pod details  ([Documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/))
+- **pods:logs**: Required to get pod logs  ([Documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/))
+
+
 
 ## In workflows
 
@@ -32,3 +42,41 @@ steps:
 Check the following workflow examples:
 - [eks_advanced.yml](https://github.com/keephq/keep/blob/main/examples/workflows/eks_advanced.yml)
 - [eks_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/eks_basic.yml)
+
+
+## Provider Methods
+The provider exposes the following [Provider Methods](/providers/provider-methods#via-ai-assistant). They are available in the [AI Assistant](/overview/ai-incident-assistant).
+
+- **get_pods** List all pods in a namespace or across all namespaces (view, scopes: pods:list, pods:get)
+
+    - `namespace`: The namespace to list pods from. If None, lists pods from all namespaces.
+- **get_pvc** List all PVCs in a namespace or across all namespaces (view, scopes: pods:list)
+
+    - `namespace`: The namespace to list pods from. If None, lists pods from all namespaces.
+- **get_node_pressure** Get pressure metrics for all nodes (view, scopes: pods:list)
+
+- **exec_command** Execute a command in a pod (action, scopes: pods:exec)
+
+    - `namespace`: Namespace of the pod
+    - `pod_name`: Name of the pod
+    - `command`: Command to execute (string or array)
+    - `container`: Name of the container (optional, defaults to first container)
+- **restart_pod** Restart a pod by deleting it (action, scopes: pods:delete)
+
+    - `namespace`: Namespace of the pod
+    - `pod_name`: Name of the pod
+- **get_deployment** Get deployment information (view, scopes: pods:list)
+
+    - `deployment_name`: Name of the deployment to get
+    - `namespace`: Target namespace (defaults to “default”)
+- **scale_deployment** Scale a deployment to specified replicas (action, scopes: deployments:scale)
+
+    - `deployment_name`: Name of the deployment to get
+    - `namespace`: Target namespace (defaults to “default”)
+    - `replicas`: Number of replicas to scale to
+- **get_pod_logs** Get logs from a pod (view, scopes: pods:logs)
+
+    - `namespace`: Namespace of the pod
+    - `pod_name`: Name of the pod
+    - `container`: Name of the container (optional)
+    - `tail_lines`: Number of lines to fetch from the end of logs (default: 100)

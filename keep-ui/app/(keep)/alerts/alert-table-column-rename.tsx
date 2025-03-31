@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { CheckIcon, PencilIcon } from "@heroicons/react/24/outline";
 import { TextInput, Button } from "@tremor/react";
 
+import { startCase } from "lodash";
+
 // Type definition for column rename mapping
 export type ColumnRenameMapping = Record<string, string>;
 
@@ -166,5 +168,5 @@ export const getColumnDisplayName = (
   originalName: string,
   columnRenameMapping: ColumnRenameMapping
 ): string => {
-  return columnRenameMapping[columnId] || originalName;
+  return columnRenameMapping[columnId] || startCase(originalName);
 };

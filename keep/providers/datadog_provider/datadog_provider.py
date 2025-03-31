@@ -268,7 +268,7 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
             name="Get a Trace",
             func_name="get_trace",
             scopes=["apm_read"],
-            description="Get trace by id",
+            description="Get trace by ID",
             type="view",
         ),
         ProviderMethod(
@@ -282,7 +282,7 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
             name="Resolve Incident",
             func_name="resolve_incident",
             scopes=["incidents_write"],
-            description="resolve an active incident",
+            description="Resolve an active incident",
             type="action",
         ),
         ProviderMethod(

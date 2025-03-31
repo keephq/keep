@@ -204,7 +204,8 @@ def get_threeshold_query(tenant_id: str):
         .where(LastAlert.tenant_id == tenant_id)
         .order_by(LastAlert.timestamp.desc())
         .limit(1)
-        .offset(alerts_hard_limit - 1),
+        .offset(alerts_hard_limit - 1)
+        .scalar_subquery(),
         datetime.datetime.min,
     )
 
