@@ -427,14 +427,6 @@ def query_last_alerts(tenant_id, query: QueryDto) -> Tuple[list[Alert], int]:
                 )
 
             data_query = build_alerts_query(tenant_id, query_with_defaults)
-
-            strq = str(
-                data_query.compile(
-                    compile_kwargs={"literal_binds": True}, dialect=session.bind.dialect
-                )
-            )
-            print(strq)
-
             alerts_with_start = session.execute(data_query).all()
         except OperationalError as e:
             logger.warning(
