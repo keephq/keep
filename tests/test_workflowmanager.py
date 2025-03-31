@@ -89,7 +89,6 @@ def test_get_workflow_results():
     assert result == expected_result
 
 
-
 def test_handle_manual_event_workflow():
     mock_workflow = Mock(spec=Workflow)
     mock_workflow.workflow_id = "workflow1"
@@ -106,13 +105,17 @@ def test_handle_manual_event_workflow():
     workflow_scheduler._finish_workflow_execution = Mock()
 
     # Mock create_workflow_execution
-    with patch('keep.workflowmanager.workflowscheduler.create_workflow_execution') as mock_create_execution:
+    with patch(
+        "keep.workflowmanager.workflowscheduler.create_workflow_execution"
+    ) as mock_create_execution:
         mock_create_execution.return_value = "test_execution_id"
 
         tenant_id = "test_tenant"
         triggered_by_user = "test_user"
 
-        event = get_event_from_body(body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id)
+        event, _ = get_event_from_body(
+            body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id
+        )
 
         workflow_execution_id = workflow_scheduler.handle_manual_event_workflow(
             workflow_id=mock_workflow.workflow_id,
@@ -147,13 +150,17 @@ def test_handle_manual_event_workflow_test_run():
     workflow_scheduler._finish_workflow_execution = Mock()
 
     # Mock create_workflow_execution
-    with patch('keep.workflowmanager.workflowscheduler.create_workflow_execution') as mock_create_execution:
+    with patch(
+        "keep.workflowmanager.workflowscheduler.create_workflow_execution"
+    ) as mock_create_execution:
         mock_create_execution.return_value = "test_execution_id"
 
         tenant_id = "test_tenant"
         triggered_by_user = "test_user"
 
-        event = get_event_from_body(body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id)
+        event, _ = get_event_from_body(
+            body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id
+        )
 
         workflow_execution_id = workflow_scheduler.handle_manual_event_workflow(
             workflow_id=mock_workflow.workflow_id,
@@ -166,6 +173,9 @@ def test_handle_manual_event_workflow_test_run():
 
         assert workflow_execution_id == "test_execution_id"
         assert len(workflow_scheduler.workflows_to_run) == 1
-        assert workflow_scheduler.workflows_to_run[0]["workflow_execution_id"] == "test_execution_id"
+        assert (
+            workflow_scheduler.workflows_to_run[0]["workflow_execution_id"]
+            == "test_execution_id"
+        )
         assert workflow_scheduler.workflows_to_run[0]["test_run"] == True
         assert workflow_scheduler.workflows_to_run[0]["workflow"] == mock_workflow
