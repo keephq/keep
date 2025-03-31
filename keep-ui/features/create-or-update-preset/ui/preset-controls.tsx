@@ -34,7 +34,7 @@ export const PresetControls: React.FC<PresetControlsProps> = ({
           </label>
           <Tooltip
             content={<>Private presets are only visible to you</>}
-            className="z-50"
+            className="z-60"
           >
             <InformationCircleIcon className="w-4 h-4" />
           </Tooltip>
@@ -54,7 +54,7 @@ export const PresetControls: React.FC<PresetControlsProps> = ({
             content={
               <>Noisy presets will trigger sound for every matching event</>
             }
-            className="z-50"
+            className="z-60"
           >
             <InformationCircleIcon className="w-4 h-4" />
           </Tooltip>
@@ -70,7 +70,7 @@ export const PresetControls: React.FC<PresetControlsProps> = ({
             htmlFor="counterShowsFiringOnly"
             className="text-sm text-gray-500"
           >
-            <Text>Counter shows firing alerts</Text>
+            <Text>Firing alerts counter mode</Text>
           </label>
           <Tooltip
             content={
@@ -79,7 +79,7 @@ export const PresetControls: React.FC<PresetControlsProps> = ({
                 alerts or all matching alerts for this preset
               </>
             }
-            className="z-50"
+            className="z-60"
           >
             <InformationCircleIcon className="w-4 h-4" />
           </Tooltip>
