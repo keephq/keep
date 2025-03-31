@@ -83,16 +83,8 @@ def test_provision_provider_from_yaml(temp_providers_dir, sample_provider_yaml, 
             "keep.providers.providers_factory.ProvidersFactory.get_installed_providers",
             return_value=[mock_provider],
         ):
-            # Print out all log messages
-            print("\n".join([record.getMessage() for record in caplog.records]))
-
             # Call the provisioning function
             ProvidersService.provision_providers("test-tenant")
-
-            # Print out debug information
-            print("Mocked install call count:", mock_install.call_count)
-            print("Mocked install call args:", mock_install.call_args)
-            print("Mocked provision rules call count:", mock_provision_rules.call_count)
 
             # Verify provider installation was called with correct parameters
             mock_install.assert_called_once()
