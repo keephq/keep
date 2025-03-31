@@ -191,7 +191,7 @@ def test_pulling_prometheus_alerts_to_provider(
     try:
         provider_button.click()
         # Delete the provider
-        delete_button = browser.get_by_role("button", name="Delete")
+        delete_button = browser.get_by_role("button", name="Disconnect")
         delete_button.wait_for(state="visible")
         browser.once("dialog", lambda dialog: dialog.accept())
         delete_button.click()
