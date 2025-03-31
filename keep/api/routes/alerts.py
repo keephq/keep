@@ -850,7 +850,7 @@ def batch_enrich_alerts(
             ]
 
             enrichment_bl.batch_enrich(
-                fingerprint=formatted_alert_ids,
+                fingerprints=formatted_alert_ids,
                 enrichments=enrich_data.enrichments,
                 action_type=action_type,
                 action_callee=authenticated_entity.email,
@@ -1047,7 +1047,7 @@ def _enrich_alert(
             )
 
         if should_check_incidents_resolution:
-            enrichement_bl.check_incident_resolution(alert)
+            enrichement_bl.check_incident_resolution(enriched_alerts_dto[0])
 
         return {"status": "ok"}
 
