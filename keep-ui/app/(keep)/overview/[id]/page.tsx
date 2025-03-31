@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { SupersetDashboard } from "../SupersetDashboard";
 import { useSupersetDashboards } from "@/utils/hooks/useSupersetDashboards";
 import { Loader2, AlertCircle } from "lucide-react";
@@ -9,12 +9,12 @@ import { KeepApiError } from "@/shared/api";
 import { useRouter } from "next/navigation";
 
 type Props = {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 };
 
-export default function DashboardPage({ params: { id } }: Props) {
+export default function DashboardPage(parmams: Props) {
+  const params = use(parmams.params);
+  const { id } = params;
   const { dashboards, isLoading, error } = useSupersetDashboards();
   const [dashboardId, setDashboardId] = useState<string | null>(null);
   const router = useRouter();
