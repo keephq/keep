@@ -83,27 +83,11 @@ const PushAlertToServerModal = ({
         data.alertJson = JSON.parse(data.alertJson);
       }
 
-      var random_fingerprint = Math.random().toString(36);
-
       const response = await api.post(
-        `/alerts/event/${data.source.type}?fingerprint=${random_fingerprint}`,
+        `/alerts/event/${data.source.type}`,
         data.alertJson
       );
 
-      await new Promise(() => {
-        setTimeout(async () => {
-          await api.post(
-            `/alerts/enrich/`,
-            {
-              fingerprint: random_fingerprint,
-              enrichments: {
-                "dont_show_in_a_linked_providers": true,
-              }
-            }
-          );
-        }, 5000);
-      });
-      
       mutateAlerts();
       presetsMutator();
       handleClose();
