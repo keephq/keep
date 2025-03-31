@@ -286,7 +286,7 @@ const DraggableHeaderCell = ({
                 )}
               </span>
               {table.getState().sorting.length > 1 && (
-                <span>{column.getSortIndex() + 1}</span>
+                <span className="text-sm">{column.getSortIndex() + 1}</span>
               )}
             </>
           )}
