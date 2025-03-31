@@ -345,14 +345,14 @@ def build_total_alerts_query(tenant_id, query: QueryDto):
 
 def build_alerts_query(tenant_id, query: QueryDto):
     cel_to_sql_instance = get_cel_to_sql_provider(remapped_properties_metadata)
-    sort_by_exp = cel_to_sql_instance.get_order_by_exp(
+    sort_by_exp = cel_to_sql_instance.get_order_by_expressions(
         [
             (sort_option.sort_by, sort_option.sort_dir)
             for sort_option in query.sort_options
         ]
     )
     distinct_columns = [
-        text(cel_to_sql_instance.get_field_exp(sort_option.sort_by))
+        text(cel_to_sql_instance.get_field_expression(sort_option.sort_by))
         for sort_option in query.sort_options
     ]
 
@@ -368,7 +368,7 @@ def build_alerts_query(tenant_id, query: QueryDto):
     )
     sql_query = built_query_result["query"]
     fetch_incidents = built_query_result["fetch_incidents"]
-    sql_query = sql_query.order_by(text(", ".join(sort_by_exp)))
+    sql_query = sql_query.order_by(text(sort_by_exp))
 
     if fetch_incidents:
         sql_query = sql_query.distinct(*(distinct_columns + [Alert.id]))
