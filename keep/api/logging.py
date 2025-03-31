@@ -429,6 +429,11 @@ CONFIG = {
             "level": "CRITICAL",
             "propagate": False,
         },
+        "httpx": {
+            "handlers": [],
+            "level": "ERROR",
+            "propagate": False,
+        },
     },
 }
 

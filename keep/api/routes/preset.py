@@ -242,6 +242,9 @@ class CreateOrUpdatePresetDto(BaseModel):
     is_private: bool = False  # if true visible to all users of that tenant
     is_noisy: bool = False  # if true, the preset will be noisy
     tags: list[TagDto] = []  # tags to assign to the preset
+    counter_shows_firing_only: bool = (
+        True  # if true, the counter will show only firing alerts
+    )
 
 
 @router.post("", description="Create a preset for tenant")
@@ -268,6 +271,7 @@ def create_preset(
         created_by=created_by,
         is_private=body.is_private,
         is_noisy=body.is_noisy,
+        counter_shows_firing_only=body.counter_shows_firing_only,
     )
 
     # Handle tags
@@ -369,6 +373,7 @@ def update_preset(
             preset.name = body.name
     preset.is_private = body.is_private
     preset.is_noisy = body.is_noisy
+    preset.counter_shows_firing_only = body.counter_shows_firing_only
 
     options_dict = [option.dict() for option in body.options]
     if not options_dict:

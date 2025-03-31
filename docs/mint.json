@@ -199,6 +199,7 @@
             "providers/documentation/libre_nms-provider",
             "providers/documentation/linear_provider",
             "providers/documentation/linearb-provider",
+            "providers/documentation/litellm-provider",
             "providers/documentation/llamacpp-provider",
             "providers/documentation/mailchimp-provider",
             "providers/documentation/mailgun-provider",
