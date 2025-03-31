@@ -11,6 +11,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { Table } from "@tanstack/react-table";
 
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface Props {
   selectedAlertsFingerprints: string[];
@@ -37,6 +38,7 @@ export default function AlertActions({
 }: Props) {
   const router = useRouter();
   const api = useApi();
+  const { data: config } = useConfig();
   const revalidateMultiple = useRevalidateMultiple();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
 
@@ -150,7 +152,8 @@ export default function AlertActions({
         color="orange"
         className="ml-2.5"
         onClick={showCreateIncidentWithAI}
-        tooltip="Create incidents using AI"
+        tooltip={config?.OPEN_AI_API_KEY_SET ? "Create incidents with AI" : "AI is not configured"}
+        disabled={!config?.OPEN_AI_API_KEY_SET}
       >
         Create incidents with AI
       </Button>
