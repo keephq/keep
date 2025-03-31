@@ -1,5 +1,5 @@
 // TODO: move models to entities/alerts
-import { useAlerts } from "@/utils/hooks/useAlerts";
+import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { Badge, Card, Text } from "@tremor/react";
 
 interface AlertsCountBadgeProps {

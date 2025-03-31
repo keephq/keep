@@ -25,7 +25,7 @@ import clsx from "clsx";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 import { usePresetPolling } from "@/entities/presets/model/usePresetPolling";
-import { useAlerts } from "@/utils/hooks/useAlerts";
+import { useAlerts } from "@/entities/alerts/model/useAlerts";
 
 type AlertPresetLinkProps = {
   preset: Preset;

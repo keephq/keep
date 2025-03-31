@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { WorkflowBuilder } from "../workflow-builder";
 import { WorkflowState } from "@/entities/workflows";
 import { InternalConfig } from "@/types/internal-config";
+import { getYamlWorkflowDefinitionSchema } from "@/entities/workflows/model/yaml.schema";
 
 // Mock next-auth
 jest.mock("next-auth/react", () => ({
@@ -113,6 +114,7 @@ const mockStore: WorkflowState = {
     },
     isValid: true,
   },
+  yamlSchema: getYamlWorkflowDefinitionSchema([], { partial: true }),
   isInitialized: true,
   isEditorSyncedWithNodes: true,
   canDeploy: true,

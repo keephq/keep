@@ -1,12 +1,12 @@
 "use client";
 
-import Loading from "@/app/(keep)/loading";
+import React, { useEffect, useMemo, useState } from "react";
 import type { IncidentDto } from "@/entities/incidents/model";
-import { AuditEvent, useAlerts } from "@/utils/hooks/useAlerts";
+import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useIncidentAlerts } from "@/utils/hooks/useIncidents";
 import { Button, Card } from "@tremor/react";
-import AlertSeverity from "@/app/(keep)/alerts/alert-severity";
-import { AlertDto } from "@/entities/alerts/model";
+import { AlertSeverity } from "@/entities/alerts/ui";
+import { AlertDto, AuditEvent } from "@/entities/alerts/model";
 import {
   format,
   parseISO,
@@ -14,10 +14,9 @@ import {
   differenceInHours,
 } from "date-fns";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { CiViewTimeline } from "react-icons/ci";
-import { EmptyStateCard } from "@/shared/ui";
+import { KeepLoader, EmptyStateCard } from "@/shared/ui";
 import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 
 const severityColors = {
@@ -373,7 +372,7 @@ export default function IncidentTimeline({
   if (_auditEventsLoading || _alertsLoading) {
     return (
       <Card>
-        <Loading />
+        <KeepLoader />
       </Card>
     );
   }

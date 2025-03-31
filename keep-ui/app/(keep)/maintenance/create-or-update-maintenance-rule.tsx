@@ -14,7 +14,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { MaintenanceRule } from "./model";
 import { useMaintenanceRules } from "utils/hooks/useMaintenanceRules";
-import { AlertsRulesBuilder } from "@/app/(keep)/alerts/alerts-rules-builder";
+import { AlertsRulesBuilder } from "@/features/presets/presets-manager/ui/alerts-rules-builder";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useRouter } from "next/navigation";
