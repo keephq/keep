@@ -2,12 +2,12 @@ import json
 import logging
 import re
 
-
-from keep.api.core.config import config
 import keep.api.core.db as db
+from keep.api.core.config import config
 from keep.providers.providers_factory import ProvidersFactory
 
 logger = logging.getLogger(__name__)
+
 
 def provision_deduplication_rules_from_env(tenant_id: str):
     """
@@ -28,7 +28,7 @@ def provision_deduplication_rules_from_env(tenant_id: str):
     if not deduplication_rules_from_env_dict:
         logger.info("No deduplication rules found in env. Nothing to provision.")
         return
-    
+
     enrich_with_providers_info(deduplication_rules_from_env_dict, tenant_id)
 
     all_deduplication_rules_from_db = db.get_all_deduplication_rules(tenant_id)
@@ -50,7 +50,9 @@ def provision_deduplication_rules_from_env(tenant_id: str):
                 "Deduplication rule with name '%s' is not in the env, deleting from DB",
                 provisioned_deduplication_rule.name,
             )
-            db.delete_deduplication_rule(rule_id=str(provisioned_deduplication_rule.id), tenant_id=tenant_id)
+            db.delete_deduplication_rule(
+                rule_id=str(provisioned_deduplication_rule.id), tenant_id=tenant_id
+            )
 
     for deduplication_rule_to_provision in deduplication_rules_from_env_dict.values():
         if (
@@ -69,15 +71,20 @@ def provision_deduplication_rules_from_env(tenant_id: str):
                         deduplication_rule_to_provision.get("name")
                     ).id
                 ),
-                name=deduplication_rule_to_provision.get("name"),
-                description=deduplication_rule_to_provision.get("description"),
+                name=deduplication_rule_to_provision.get("name", ""),
+                description=deduplication_rule_to_provision.get("description", ""),
                 provider_id=deduplication_rule_to_provision.get("provider_id"),
-                provider_type=deduplication_rule_to_provision.get("provider_type"),
+                provider_type=deduplication_rule_to_provision["provider_type"],
                 last_updated_by=actor,
                 enabled=True,
-                fingerprint_fields=deduplication_rule_to_provision.get("fingerprint_fields"),
-                full_deduplication=deduplication_rule_to_provision.get("full_deduplication"),
-                ignore_fields=deduplication_rule_to_provision.get("ignore_fields") or [],
+                fingerprint_fields=deduplication_rule_to_provision.get(
+                    "fingerprint_fields", []
+                ),
+                full_deduplication=deduplication_rule_to_provision.get(
+                    "full_deduplication", False
+                ),
+                ignore_fields=deduplication_rule_to_provision.get("ignore_fields")
+                or [],
                 priority=0,
             )
             continue
@@ -88,21 +95,27 @@ def provision_deduplication_rules_from_env(tenant_id: str):
         )
         db.create_deduplication_rule(
             tenant_id=tenant_id,
-            name=deduplication_rule_to_provision.get("name"),
-            description=deduplication_rule_to_provision.get("description"),
+            name=deduplication_rule_to_provision.get("name", ""),
+            description=deduplication_rule_to_provision.get("description", ""),
             provider_id=deduplication_rule_to_provision.get("provider_id"),
-            provider_type=deduplication_rule_to_provision.get("provider_type"),
+            provider_type=deduplication_rule_to_provision["provider_type"],
             created_by=actor,
             enabled=True,
-            fingerprint_fields=deduplication_rule_to_provision.get("fingerprint_fields"),
-            full_deduplication=deduplication_rule_to_provision.get("full_deduplication"),
+            fingerprint_fields=deduplication_rule_to_provision.get(
+                "fingerprint_fields", []
+            ),
+            full_deduplication=deduplication_rule_to_provision.get(
+                "full_deduplication", False
+            ),
             ignore_fields=deduplication_rule_to_provision.get("ignore_fields") or [],
             priority=0,
             is_provisioned=True,
         )
 
 
-def enrich_with_providers_info(deduplication_rules: list[dict[str,any]], tenant_id: str):
+def enrich_with_providers_info(
+    deduplication_rules: list[dict[str, any]], tenant_id: str
+):
     """
     Enriches passed deduplication rules with provider ID and type information.
     Args:
@@ -111,7 +124,9 @@ def enrich_with_providers_info(deduplication_rules: list[dict[str,any]], tenant_
     """
 
     installed_providers = ProvidersFactory.get_installed_providers(tenant_id)
-    installed_providers_dict = {provider.details.get("name"): provider for provider in installed_providers}
+    installed_providers_dict = {
+        provider.details.get("name"): provider for provider in installed_providers
+    }
 
     for rule_name, rule in deduplication_rules.items():
         logger.info(f"Enriching deduplication rule: {rule_name}")
@@ -154,16 +169,20 @@ def get_deduplication_rules_to_provision() -> dict[str, dict]:
                 ) from e
     else:
         try:
-            deduplication_rules_from_env_json = json.loads(deduplication_rules_from_env_var)
+            deduplication_rules_from_env_json = json.loads(
+                deduplication_rules_from_env_var
+            )
         except json.JSONDecodeError as e:
             raise Exception(
                 f"Error parsing deduplication rules from env var {env_var_key}: {e}"
             ) from e
-        
+
     deduplication_rules_dict: dict[str, dict] = {}
 
     for provider_name, provider_config in deduplication_rules_from_env_json.items():
-        for rule_name, rule_config in provider_config.get("deduplication_rules", {}).items():
+        for rule_name, rule_config in provider_config.get(
+            "deduplication_rules", {}
+        ).items():
             rule_config["name"] = rule_name
             rule_config["provider_name"] = provider_name
             rule_config["provider_type"] = provider_config.get("type")
