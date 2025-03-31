@@ -354,11 +354,10 @@ def test_sort_asc_dsc(
         save_failure_artifacts(browser, log_entries=[])
         raise
 
-    for sort_direction_title in ["Sort ascending", "Sort descending"]:
-        sorted_alerts = sorted(filtered_alerts, key=sort_callback)
-
-        if sort_direction_title == "Sort descending":
-            sorted_alerts = list(reversed(sorted_alerts))
+    for sort_direction_title in ["asc", "desc"]:
+        sorted_alerts = multi_sort(
+            filtered_alerts, [(sort_callback, sort_direction_title)]
+        )
 
         column_header_locator = browser.locator(
             f"[data-testid='alerts-table'] table thead th [data-testid='header-cell-{column_id}']",
