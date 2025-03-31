@@ -4,7 +4,7 @@ import logging
 import os
 from typing import Tuple
 
-from sqlalchemy import and_, asc, desc, func, literal_column, select
+from sqlalchemy import and_, func, literal_column, select
 from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, text
 

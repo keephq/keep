@@ -2,10 +2,6 @@ from datetime import datetime
 from types import NoneType
 from typing import List
 from keep.api.core.cel_to_sql.ast_nodes import ConstantNode
-from keep.api.core.cel_to_sql.properties_metadata import (
-    JsonFieldMapping,
-    SimpleFieldMapping,
-)
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 
