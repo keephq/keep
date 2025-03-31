@@ -9,6 +9,14 @@ This provider requires authentication.
 - **access_key**: AWS access key (Leave empty if using IAM role at EC2) (required: False, sensitive: True)
 - **access_key_secret**: AWS access key secret (Leave empty if using IAM role at EC2) (required: False, sensitive: True)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **ssm-incidents:ListIncidentRecords**: Required to retrieve incidents. (mandatory) ([Documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm-incidents.html))
+- **ssm-incidents:GetResponsePlan**: Required to get response plan and register keep as webhook  ([Documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm-incidents.html))
+- **ssm-incidents:UpdateResponsePlan**: Required to update response plan and register keep as webhook  ([Documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm-incidents.html))
+- **iam:SimulatePrincipalPolicy**: Allow Keep to test the scopes of the current user/role without modifying any resource.  ([Documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm-incidents.html))
+- **sns:ListSubscriptionsByTopic**: Required to list all subscriptions of a topic, so Keep will be able to add itself as a subscription.  ([Documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm-incidents.html))
+
+
 
 ## In workflows
 

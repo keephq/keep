@@ -49,3 +49,16 @@ Check the following workflow examples:
 - [new_github_stars.yml](https://github.com/keephq/keep/blob/main/examples/workflows/new_github_stars.yml)
 - [run_github_action.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/run_github_action.yaml)
 - [update_workflows_from_http.yml](https://github.com/keephq/keep/blob/main/examples/workflows/update_workflows_from_http.yml)
+
+
+## Provider Methods
+The provider exposes the following [Provider Methods](/providers/provider-methods#via-ai-assistant). They are available in the [AI Assistant](/overview/ai-incident-assistant).
+
+- **get_last_commits** Get the N last commits from a GitHub repository (view, scopes: no additional scopes)
+
+    - `repository`: The GitHub repository to get the commits from.
+    - `n`: The number of commits to get.
+- **get_last_releases** Get the N last releases and their changelog from a GitHub repository (view, scopes: no additional scopes)
+
+    - `repository`: The GitHub repository to get the releases from.
+    - `n`: The number of releases to get.

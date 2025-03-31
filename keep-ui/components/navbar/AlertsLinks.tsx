@@ -16,7 +16,7 @@ import { useTags } from "utils/hooks/useTags";
 import { usePresets } from "@/entities/presets/model/usePresets";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
 import clsx from "clsx";
-import { useAlerts } from "@/utils/hooks/useAlerts";
+import { usePresetAlertsCount } from "./hooks";
 
 type AlertsLinksProps = {
   session: Session | null;
@@ -25,7 +25,6 @@ type AlertsLinksProps = {
 export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const isMounted = useMounted();
-  const { useLastAlerts } = useAlerts();
 
   const [storedTags, setStoredTags] = useLocalStorage<string[]>(
     "selectedTags",
@@ -69,11 +68,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   })();
 
   const { isLoading: isAsyncLoading, totalCount: feedAlertsTotalCount } =
-    useLastAlerts({
-      cel: shouldShowFeed ? undefined : "",
-      limit: 0,
-      offset: 0,
-    });
+    usePresetAlertsCount("", false);
 
   return (
     <>

@@ -18,6 +18,7 @@ type LinkWithIconProps = {
   testId?: string;
   isExact?: boolean;
   iconClassName?: string;
+  renderBeforeCount?: () => JSX.Element | undefined;
 } & LinkProps &
   AnchorHTMLAttributes<HTMLAnchorElement>;
 
@@ -33,6 +34,7 @@ export const LinkWithIcon = ({
   testId,
   isExact = false,
   iconClassName,
+  renderBeforeCount,
   ...restOfLinkProps
 }: LinkWithIconProps) => {
   const pathname = usePathname();
@@ -97,7 +99,12 @@ export const LinkWithIcon = ({
             data-testid={`${testId}-badge`}
             className="px-1 mr-1 min-w-5"
           >
-            <ShortNumber value={count}></ShortNumber>
+            <div className="flex gap-1 items-center">
+              {renderBeforeCount && renderBeforeCount() && (
+                <span>{renderBeforeCount()}</span>
+              )}
+              <ShortNumber value={count}></ShortNumber>
+            </div>
           </Badge>
         )}
         {isBeta && (
