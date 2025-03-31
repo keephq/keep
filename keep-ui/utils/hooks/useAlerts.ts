@@ -184,17 +184,6 @@ export const useAlerts = () => {
       }));
     }
 
-    useEffect(
-      () =>
-        console.log(
-          "Ihor",
-          queryToPost.sort_options
-            ?.map((x) => `${x.sort_by} ${x.sort_dir}`)
-            .join(", ")
-        ),
-      [JSON.stringify(queryToPost)]
-    );
-
     const requestUrl = `/alerts/query`;
     const swrKey = () =>
       // adding "/alerts/query" so global revalidation works
