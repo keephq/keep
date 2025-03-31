@@ -20,7 +20,6 @@ import {
   SameIncidentField,
   FollowingIncidents,
 } from "@/features/same-incidents-in-the-past/";
-import { SparklesIcon } from "@heroicons/react/24/outline";
 import { StatusIcon } from "@/entities/incidents/ui/statuses";
 import clsx from "clsx";
 import { TbSparkles } from "react-icons/tb";
