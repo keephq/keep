@@ -77,25 +77,6 @@ If you wish to limit Keep to some specific services, you can do so by selecting 
 
 Find this page under **Integrations** > **Generic Webhooks (v3)**
 
-## Scopes
-
-Certain scopes may be required to perform specific actions or queries via the Pagerduty Provider. Below is a summary of relevant scopes and their use cases:
-
-- incidents_read (Incidents Read)
-  Required: True
-  Description: View incidents.
-- incidents_write (Incidents Write)
-  Required: False
-  Description: Write incidents.
-- webhook_subscriptions_read (Webhook Subscriptions Read)
-  Required: False
-  Description: View webhook subscriptions.
-  (\*Required for auto-webhook integration)
-- webhook_subscriptions_write (Webhook Subscriptions Write)
-  Required: False
-  Description: Write webhook subscriptions.
-  (\*Required for auto-webhook integration)
-
 ## Notes
 
 The provider uses either the events API or the incidents API to create an alert or an incident. The choice of API to use is determined by the presence of either a routing_key or an api_key.

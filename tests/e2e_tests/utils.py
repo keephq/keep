@@ -1,10 +1,10 @@
 import json
 import os
 import sys
+from datetime import datetime
 
 import requests
 from playwright.sync_api import Page, expect
-from datetime import datetime
 
 from keep.providers.providers_factory import ProvidersFactory
 
@@ -64,7 +64,7 @@ def delete_provider(browser, provider_type, provider_name):
         browser=browser, provider_type=provider_type, provider_name=provider_name
     )
     browser.once("dialog", lambda dialog: dialog.accept())
-    browser.get_by_role("button", name="Delete").click()
+    browser.get_by_role("button", name="Disconnect").click()
 
 
 def assert_connected_provider_count(
@@ -212,9 +212,11 @@ def take_screenshot(page):
     # Save screenshot
     page.screenshot(path=current_test_name + ".png")
 
+
 def get_pid_tenant():
     pid = os.getpid()
     return "keep" + str(pid)
+
 
 def get_token(tenant_id=None):
     if tenant_id is None:
@@ -282,6 +284,7 @@ def get_current_test_name():
         print("THIS SHOULD NEVER HAPPEN")
         current_test_name += sys._getframe().f_code.co_name
     return current_test_name
+
 
 # todo: replace with `setup_page_logging` fixture
 def setup_console_listener(page, log_entries):

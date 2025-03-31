@@ -31,6 +31,7 @@ export function WorkflowYamlEditorHeader({
           {workflowId ? "Edit" : "New"} Workflow
         </Title>
         <WorkflowSyncStatus
+          workflowId={workflowId}
           isInitialized={isInitialized}
           lastDeployedAt={lastDeployedAt}
           isChangesSaved={!hasChanges}

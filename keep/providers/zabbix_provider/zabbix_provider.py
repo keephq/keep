@@ -187,6 +187,11 @@ class ZabbixProvider(BaseProvider):
         self.logger.info(f"Closed problem {id}")
 
     def unsurrpress_problem(self, id: str):
+        """
+        Unsuppress a problem.
+        Args:
+            id (str): The problem id.
+        """
         self.logger.info(f"Unsuppressing problem {id}")
         self.__send_request("event.acknowledge", {"eventids": id, "action": 64})
         self.logger.info(f"Unsuppressed problem {id}")
@@ -197,6 +202,12 @@ class ZabbixProvider(BaseProvider):
         suppress_until: datetime.datetime = datetime.datetime.now()
         + datetime.timedelta(days=1),
     ):
+        """
+        Suppress a problem.
+        Args:
+            id (str): The problem id.
+            suppress_until (datetime.datetime): The datetime to suppress the problem until.
+        """
         self.logger.info(f"Suppressing problem {id} until {suppress_until}")
         if isinstance(suppress_until, str):
             suppress_until = datetime.datetime.fromisoformat(suppress_until)
@@ -211,16 +222,32 @@ class ZabbixProvider(BaseProvider):
         self.logger.info(f"Suppressed problem {id} until {suppress_until}")
 
     def acknowledge_problem(self, id: str):
+        """
+        Acknowledge a problem.
+        Args:
+            id (str): The problem id.
+        """
         self.logger.info(f"Acknowledging problem {id}")
         self.__send_request("event.acknowledge", {"eventids": id, "action": 2})
         self.logger.info(f"Acknowledged problem {id}")
 
     def unacknowledge_problem(self, id: str):
+        """
+        Unacknowledge a problem.
+        Args:
+            id (str): The problem id.
+        """
         self.logger.info(f"Unacknowledging problem {id}")
         self.__send_request("event.acknowledge", {"eventids": id, "action": 16})
         self.logger.info(f"Unacknowledged problem {id}")
 
     def add_message_to_problem(self, id: str, message_text: str):
+        """
+        Add a message to a problem.
+        Args:
+            id (str): The problem id.
+            message_text (str): The message text.
+        """
         self.logger.info(
             f"Adding message to problem {id}", extra={"zabbix_message": message_text}
         )
@@ -233,6 +260,11 @@ class ZabbixProvider(BaseProvider):
         )
 
     def get_problem_messages(self, id: str):
+        """
+        Get the messages from a problem.
+        Args:
+            id (str): The problem id.
+        """
         problem = self.__send_request(
             "problem.get", {"eventids": id, "selectAcknowledges": "extend"}
         )
@@ -255,6 +287,12 @@ class ZabbixProvider(BaseProvider):
             "Not classified", "Information", "Warning", "Average", "High", "Disaster"
         ],
     ):
+        """
+        Change the severity of a problem.
+        Args:
+            id (str): The problem id.
+            new_severity (str): The new severity, can be one of the following: Not classified, Information, Warning, Average, High, Disaster
+        """
         severity = 0
         if new_severity.lower() == "information":
             severity = 1
@@ -273,7 +311,6 @@ class ZabbixProvider(BaseProvider):
     def validate_config(self):
         """
         Validates required configuration for Zabbix provider.
-
         """
         self.authentication_config = ZabbixProviderAuthConfig(
             **self.config.authentication

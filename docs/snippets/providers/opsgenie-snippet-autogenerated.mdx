@@ -6,6 +6,10 @@ This provider requires authentication.
 - **api_key**: OpsGenie api key (required: True, sensitive: True)
 - **integration_name**: OpsGenie integration name (required: True, sensitive: False)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **opsgenie:create**: Create OpsGenie alerts (mandatory) 
+
+
 
 ## In workflows
 
@@ -56,3 +60,12 @@ Check the following workflow examples:
 - [opsgenie-close-alert.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opsgenie-close-alert.yml)
 - [opsgenie-create-alert.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opsgenie-create-alert.yml)
 - [opsgenie_open_alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opsgenie_open_alerts.yml)
+
+
+## Provider Methods
+The provider exposes the following [Provider Methods](/providers/provider-methods#via-ai-assistant). They are available in the [AI Assistant](/overview/ai-incident-assistant).
+
+- **close_alert** Close an alert (action, scopes: opsgenie:create)
+
+- **comment_alert** Comment an alert (action, scopes: opsgenie:create)
+

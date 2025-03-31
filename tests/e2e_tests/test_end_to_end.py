@@ -20,7 +20,6 @@
 # docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml down --volumes
 
 import os
-
 import random
 import re
 import string
@@ -345,7 +344,7 @@ def test_provider_deletion(browser: Page):
         browser.get_by_role("button", name="Update", exact=True).click()
         browser.wait_for_timeout(500)
         # Refreshing the scope
-        browser.get_by_role("button", name="Refresh", exact=True).click()
+        browser.get_by_role("button", name="Validate Scopes", exact=True).click()
         browser.wait_for_timeout(500)
         assert_scope_text_count(
             browser=browser, contains_text="HTTPSConnectionPool", count=1
@@ -363,6 +362,7 @@ def test_provider_deletion(browser: Page):
     except Exception:
         save_failure_artifacts(browser, log_entries)
         raise
+
 
 def test_add_workflow(browser: Page, setup_page_logging, failure_artifacts):
     """
@@ -400,6 +400,7 @@ def test_add_workflow(browser: Page, setup_page_logging, failure_artifacts):
         expect(page.get_by_test_id("wf-description")).to_contain_text(
             "Example workflow description"
         )
+        expect(page.get_by_test_id("wf-revision").first).to_contain_text("Revision 1")
     except Exception:
         save_failure_artifacts(page, log_entries)
         raise
@@ -441,6 +442,7 @@ def test_test_run_workflow(browser: Page):
         save_failure_artifacts(page, log_entries)
         raise
 
+
 def test_paste_workflow_yaml_quotes_preserved(browser: Page):
     # browser is actually a page object
     page = browser
@@ -481,7 +483,6 @@ def test_paste_workflow_yaml_quotes_preserved(browser: Page):
         raise
 
 
-
 def test_add_upload_workflow_with_alert_trigger(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
@@ -511,14 +512,18 @@ def test_add_upload_workflow_with_alert_trigger(browser: Page):
         raise
 
 
-
 def test_monaco_editor_npm(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
         init_e2e_test(browser, next_url="/signin")
-        browser.route("**/*", lambda route, request:
-            route.abort() if not request.url.startswith("http://localhost") else route.continue_()
+        browser.route(
+            "**/*",
+            lambda route, request: (
+                route.abort()
+                if not request.url.startswith("http://localhost")
+                else route.continue_()
+            ),
         )
         browser.get_by_role("link", name="Workflows").click()
         browser.get_by_role("button", name="Upload Workflows").click()
@@ -528,10 +533,13 @@ def test_monaco_editor_npm(browser: Page):
         browser.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
         browser.get_by_role("tab", name="YAML Definition").click()
         editor_container = browser.get_by_test_id("wf-detail-yaml-editor-container")
-        expect(editor_container).not_to_contain_text("Error loading Monaco Editor from CDN")
+        expect(editor_container).not_to_contain_text(
+            "Error loading Monaco Editor from CDN"
+        )
     except Exception:
         save_failure_artifacts(browser, log_entries)
         raise
+
 
 def test_yaml_editor_yaml_valid(browser: Page):
     log_entries = []
@@ -548,10 +556,15 @@ def test_yaml_editor_yaml_valid(browser: Page):
         browser.get_by_role("tab", name="YAML Definition").click()
         yaml_editor = browser.get_by_test_id("wf-detail-yaml-editor-container")
         expect(yaml_editor).to_be_visible()
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-no-errors").first).to_be_visible()
+        expect(
+            yaml_editor.get_by_test_id(
+                "wf-yaml-editor-validation-errors-no-errors"
+            ).first
+        ).to_be_visible()
     except Exception:
         save_failure_artifacts(browser, log_entries)
         raise
+
 
 def test_yaml_editor_yaml_invalid(browser: Page):
     log_entries = []
@@ -568,13 +581,29 @@ def test_yaml_editor_yaml_invalid(browser: Page):
         browser.get_by_role("tab", name="YAML Definition").click()
         yaml_editor = browser.get_by_test_id("wf-detail-yaml-editor-container")
         expect(yaml_editor).to_be_visible()
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-summary").first).to_contain_text("6 validation errors")
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('String is shorter than the minimum length of 1.')
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Missing property "provider".')
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Property provider_invalid_prop is not allowed.')
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Value is not accepted. Valid values: "message", "blocks", "channel", "slack_timestamp", "thread_timestamp", "attachments", "username", "notification_type", "enrich_alert", "enrich_incident".')
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Property enrich_incident is not allowed.')
-        expect(yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first).to_contain_text('Property enrich_alert is not allowed.')
+        expect(
+            yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-summary").first
+        ).to_contain_text("6 validation errors")
+        expect(
+            yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
+        ).to_contain_text("String is shorter than the minimum length of 1.")
+        expect(
+            yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
+        ).to_contain_text('Missing property "provider".')
+        expect(
+            yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
+        ).to_contain_text("Property provider_invalid_prop is not allowed.")
+        expect(
+            yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
+        ).to_contain_text(
+            'Value is not accepted. Valid values: "message", "blocks", "channel", "slack_timestamp", "thread_timestamp", "attachments", "username", "notification_type", "enrich_alert", "enrich_incident".'
+        )
+        expect(
+            yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
+        ).to_contain_text("Property enrich_incident is not allowed.")
+        expect(
+            yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
+        ).to_contain_text("Property enrich_alert is not allowed.")
 
     except Exception:
         save_failure_artifacts(browser, log_entries)

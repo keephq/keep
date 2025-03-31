@@ -127,11 +127,13 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
           ));
         const uncheckedByDefaultOptionValues =
           facetConfig?.uncheckedByDefaultOptionValues;
+        const canHitEmptyState = !!facetConfig?.canHitEmptyState;
         result[facet.id] = {
           sortCallback,
           renderOptionIcon,
           renderOptionLabel,
           uncheckedByDefaultOptionValues,
+          canHitEmptyState,
         };
       });
     }
