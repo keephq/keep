@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import { IncidentDto } from "@/entities/incidents/model";
 import { AlertDto } from "@/entities/alerts/model";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { Select, showErrorToast } from "@/shared/ui";
+import { Select, showErrorToast, showSuccessToast } from "@/shared/ui";
 import { Trigger, Workflow } from "@/shared/api/workflows";
 import { components, OptionProps } from "react-select";
 import { FilterOptionOption } from "react-select/dist/declarations/src/filters";
@@ -53,7 +53,7 @@ export default function ManualRunWorkflowModal({
       const { workflow_execution_id } = responseData;
       const executionUrl = `/workflows/${selectedWorkflow?.id}/runs/${workflow_execution_id}`;
 
-      toast.success(
+      showSuccessToast(
         <div>
           Workflow started successfully.{" "}
           <Link
@@ -65,8 +65,7 @@ export default function ManualRunWorkflowModal({
           >
             View execution
           </Link>
-        </div>,
-        { position: "top-right" }
+        </div>
       );
     } catch (error) {
       showErrorToast(error, "Failed to start workflow");

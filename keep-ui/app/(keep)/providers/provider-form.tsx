@@ -65,6 +65,11 @@ import {
 } from "./form-fields";
 import ProviderLogs from "./provider-logs";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import {
+  LightningBoltIcon,
+  TrashIcon,
+  UpdateIcon,
+} from "@radix-ui/react-icons";
 
 type HealthResults = {
   spammy: any[];
@@ -98,7 +103,7 @@ function getInitialFormValues(provider: Provider, isHealthCheck?: boolean) {
   const initialValues: ProviderFormData = {
     provider_id: provider.id,
     install_webhook: !isHealthCheck
-      ? (provider.can_setup_webhook ?? false)
+      ? provider.can_setup_webhook ?? false
       : false,
     pulling_enabled: provider.pulling_enabled,
   };
@@ -171,6 +176,8 @@ const ProviderForm = ({
 
   const api = useApi();
   const { data: config } = useConfig();
+  const inInstalledMode =
+    installedProvidersMode && Object.keys(provider.config).length > 0;
 
   function installWebhook(provider: Provider) {
     return toast.promise(
@@ -856,49 +863,54 @@ const ProviderForm = ({
         )}
       </div>
 
-      <div className="flex justify-end p-5 border-t sticky bottom-0 bg-white">
-        <Button
-          variant="secondary"
-          color="orange"
-          onClick={closeModal}
-          className="mr-2.5"
-          disabled={isLoading}
-        >
-          Cancel
-        </Button>
-        {installedProvidersMode && Object.keys(provider.config).length > 0 && (
-          <>
-            <Button
-              onClick={deleteProvider}
-              color="orange"
-              className="mr-2.5"
-              disabled={provider.provisioned}
-              variant="secondary"
-            >
-              Delete
-            </Button>
-            <div className="relative">
-              <Button
-                loading={isLoading}
-                onClick={handleUpdateClick}
-                color="orange"
-                disabled={provider.provisioned}
-                variant="secondary"
-              >
-                Update
-              </Button>
-            </div>
-          </>
-        )}
-        {!installedProvidersMode && Object.keys(provider.config).length > 0 && (
+      <div className="flex justify-between p-5 border-t sticky bottom-0 bg-white">
+        {inInstalledMode ? (
           <Button
-            loading={isLoading}
-            onClick={handleConnectClick}
-            color="orange"
+            onClick={deleteProvider}
+            color="red"
+            className="mr-2.5"
+            disabled={provider.provisioned}
+            variant="secondary"
+            icon={TrashIcon}
           >
-            {isHealthCheck ? `Check health` : `Connect`}
+            Disconnect
           </Button>
+        ) : (
+          <div></div>
         )}
+        <div className="flex items-center">
+          <Button
+            variant="secondary"
+            color="orange"
+            onClick={closeModal}
+            className="mr-2.5"
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          {inInstalledMode && (
+            <Button
+              loading={isLoading}
+              onClick={handleUpdateClick}
+              icon={UpdateIcon}
+              color="orange"
+              disabled={provider.provisioned}
+              variant="primary"
+            >
+              Update
+            </Button>
+          )}
+          {!inInstalledMode && (
+            <Button
+              loading={isLoading}
+              onClick={handleConnectClick}
+              color="orange"
+              icon={LightningBoltIcon}
+            >
+              {isHealthCheck ? `Check health` : `Connect`}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

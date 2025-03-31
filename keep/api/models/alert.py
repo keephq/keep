@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import json
 import logging
+import urllib.parse
 import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, Optional
@@ -149,11 +150,15 @@ class AlertDto(BaseModel):
 
     @validator("url", pre=True)
     def prepend_https(cls, url):
-        if isinstance(url, str) and not url.startswith("http"):
+        if not isinstance(url, str):
+            return url
+
+        url = url.strip()
+        if not url.startswith("http"):
             # @tb: in some cases we drop the event because of invalid url with no scheme
             # invalid or missing URL scheme (type=value_error.url.scheme)
-            return f"https://{url}"
-        return url
+            url = f"https://{url}"
+        return urllib.parse.quote(url, safe='/:?=&')
 
     @validator("lastReceived", pre=True, always=True)
     def validate_last_received(cls, last_received):
