@@ -192,14 +192,8 @@ def build_workflows_query(
         sort_by = "started"
         sort_dir = "desc"
 
-    order_by_exp = cel_to_sql_instance.get_order_by_exp(sort_by)
-
-    if sort_dir == "desc":
-        base_query = base_query.order_by(desc(text(order_by_exp)))
-    else:
-        base_query = base_query.order_by(asc(text(order_by_exp)))
-
-    base_query = base_query.limit(limit).offset(offset)
+    order_by_exp = cel_to_sql_instance.get_order_by_expressions([(sort_by, sort_dir)])
+    base_query = base_query.order_by(text(order_by_exp)).limit(limit).offset(offset)
 
     if cel:
         sql_filter_str = cel_to_sql_instance.convert_to_sql_str(cel)
