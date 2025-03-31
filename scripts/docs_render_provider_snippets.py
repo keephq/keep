@@ -271,7 +271,14 @@ def search_provider_mentions_in_examples(provider) -> dict[(str, str)]:
 
         file_name = os.path.relpath(example, "examples/workflows/")
 
-        if provider in content:
+        if provider.lower() == "keep":
+            # Special case for Keep provider because we use the word "keep" everywhere
+            if "type: keep" in content.lower():
+                if provider not in provider_mentions:
+                    provider_mentions[file_name] = []
+                provider_mentions[file_name].append(example)
+        elif provider.lower() in content.lower():
+            # With the other providers we want to be greedy and append examples even for small mentions
             if provider not in provider_mentions:
                 provider_mentions[file_name] = []
             provider_mentions[file_name].append(example)
