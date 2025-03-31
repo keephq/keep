@@ -87,6 +87,7 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
         isNoisy: selectedPreset.is_noisy,
         tags: selectedPreset.tags,
         groupColumn: selectedPreset.group_column,
+        counterShowsFiringOnly: selectedPreset.counter_shows_firing_only,
       }
     : {
         CEL: presetCEL,
@@ -95,6 +96,7 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
         isNoisy: undefined,
         tags: undefined,
         groupColumn: undefined,
+        counterShowsFiringOnly: true,
       };
 
   // for future use

@@ -203,10 +203,15 @@ class ProvidersService:
             try:
                 session.add(provider_model)
                 session.commit()
-            except IntegrityError:
+            except IntegrityError as e:
+                if "FOREIGN KEY constraint" in str(e):
+                    raise
                 try:
                     # if the provider is already installed, delete the secret
-                    logger.warning("Provider already installed, deleting secret")
+                    logger.warning(
+                        "Provider already installed, deleting secret",
+                        extra={"error": str(e)},
+                    )
                     secret_manager.delete_secret(
                         secret_name=secret_name,
                     )

@@ -56,7 +56,7 @@ else
     KEEP_ARQ_PID=$!
 
     # Give ARQ workers time to start up
-    sleep 2
+    sleep 5
 
 
     echo "Running API gunicorn"

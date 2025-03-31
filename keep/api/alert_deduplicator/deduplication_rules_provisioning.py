@@ -18,7 +18,13 @@ def provision_deduplication_rules(deduplication_rules: dict[str, any], tenant_id
         DeduplicationRuleRequestDto objects.
         tenant_id (str): The ID of the tenant for which deduplication rules are being provisioned.
     """
-    enrich_with_providers_info(deduplication_rules, tenant_id)
+    deduplication_rules_from_env_dict = get_deduplication_rules_to_provision()
+
+    if not deduplication_rules_from_env_dict:
+        logger.info("No deduplication rules found in env. Nothing to provision.")
+        return
+
+    enrich_with_providers_info(deduplication_rules_from_env_dict, tenant_id)
 
     all_deduplication_rules_from_db = db.get_all_deduplication_rules(tenant_id)
     provisioned_deduplication_rules = [
@@ -56,17 +62,17 @@ def provision_deduplication_rules(deduplication_rules: dict[str, any], tenant_id
                         deduplication_rule_to_provision.get("name")
                     ).id
                 ),
-                name=deduplication_rule_to_provision.get("name"),
-                description=deduplication_rule_to_provision.get("description"),
+                name=deduplication_rule_to_provision.get("name", ""),
+                description=deduplication_rule_to_provision.get("description", ""),
                 provider_id=deduplication_rule_to_provision.get("provider_id"),
-                provider_type=deduplication_rule_to_provision.get("provider_type"),
+                provider_type=deduplication_rule_to_provision["provider_type"],
                 last_updated_by=actor,
                 enabled=True,
                 fingerprint_fields=deduplication_rule_to_provision.get(
-                    "fingerprint_fields"
+                    "fingerprint_fields", []
                 ),
                 full_deduplication=deduplication_rule_to_provision.get(
-                    "full_deduplication"
+                    "full_deduplication", False
                 ),
                 ignore_fields=deduplication_rule_to_provision.get("ignore_fields")
                 or [],
@@ -80,17 +86,17 @@ def provision_deduplication_rules(deduplication_rules: dict[str, any], tenant_id
         )
         db.create_deduplication_rule(
             tenant_id=tenant_id,
-            name=deduplication_rule_to_provision.get("name"),
-            description=deduplication_rule_to_provision.get("description"),
+            name=deduplication_rule_to_provision.get("name", ""),
+            description=deduplication_rule_to_provision.get("description", ""),
             provider_id=deduplication_rule_to_provision.get("provider_id"),
-            provider_type=deduplication_rule_to_provision.get("provider_type"),
+            provider_type=deduplication_rule_to_provision["provider_type"],
             created_by=actor,
             enabled=True,
             fingerprint_fields=deduplication_rule_to_provision.get(
-                "fingerprint_fields"
+                "fingerprint_fields", []
             ),
             full_deduplication=deduplication_rule_to_provision.get(
-                "full_deduplication"
+                "full_deduplication", False
             ),
             ignore_fields=deduplication_rule_to_provision.get("ignore_fields") or [],
             priority=0,
@@ -120,8 +126,9 @@ def provision_deduplication_rules_from_env(tenant_id: str):
 
     provision_deduplication_rules(deduplication_rules_from_env_dict, tenant_id)
 
-
-def enrich_with_providers_info(deduplication_rules: dict[str, any], tenant_id: str):
+def enrich_with_providers_info(
+    deduplication_rules: list[dict[str, any]], tenant_id: str
+):
     """
     Enriches passed deduplication rules with provider ID and type information.
 
