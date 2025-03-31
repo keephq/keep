@@ -21,7 +21,7 @@ import "react-quill-new/dist/quill.snow.css";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
-import "@/features/alerts/dismiss-alert/ui/alert-dismiss-modal.css";
+import "./alert-dismiss-modal.css";
 import dynamic from "next/dynamic";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });

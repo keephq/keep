@@ -13,7 +13,7 @@ import { Link } from "@/components/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useProviders } from "@/utils/hooks/useProviders";
 // feature not supposed to import other features, TODO: move alert-menu to entities or shared
-import AlertMenu from "@/features/alerts/alert-menu/ui/alert-menu";
+import { AlertMenu } from "@/features/alerts/alert-menu";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 

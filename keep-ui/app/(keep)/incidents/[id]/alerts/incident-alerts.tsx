@@ -32,7 +32,7 @@ import { TablePagination } from "@/shared/ui";
 import clsx from "clsx";
 import { IncidentAlertsTableBodySkeleton } from "./incident-alert-table-body-skeleton";
 import { IncidentAlertsActions } from "./incident-alert-actions";
-import { ViewAlertModal } from "@/features/alerts/view-raw-alert/ui/ViewAlertModal";
+import { ViewAlertModal } from "@/features/alerts/view-raw-alert";
 import { IncidentAlertActionTray } from "./incident-alert-action-tray";
 import { BellAlertIcon } from "@heroicons/react/24/outline";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";

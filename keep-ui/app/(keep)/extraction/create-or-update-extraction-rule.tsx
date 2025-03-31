@@ -18,7 +18,7 @@ import { toast } from "react-toastify";
 import { ExtractionRule } from "./model";
 import { extractNamedGroups } from "./extractions-table";
 import { useExtractions } from "utils/hooks/useExtractionRules";
-import { AlertsRulesBuilder } from "@/features/presets/presets-manager/ui/alerts-rules-builder";
+import { AlertsRulesBuilder } from "@/features/presets/presets-manager";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { useConfig } from "@/utils/hooks/useConfig";

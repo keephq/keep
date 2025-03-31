@@ -70,7 +70,7 @@ interface MenuItem {
 
 // Add the tooltip type
 
-export default function AlertMenu({
+export function AlertMenu({
   alert,
   setNoteModalAlert,
   setTicketModalAlert,

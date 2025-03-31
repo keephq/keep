@@ -25,9 +25,9 @@ jest.mock("next-auth/react", () => ({
 }));
 
 // Mock all ES module imports
-jest.mock("@/features/workflows/builder/ui/ReactFlowBuilder", () => ({
+jest.mock("@/features/workflows/builder", () => ({
   __esModule: true,
-  default: function MockReactFlowBuilder() {
+  ReactFlowBuilder: function MockReactFlowBuilder() {
     const { useWorkflowStore } = require("@/entities/workflows");
     const { nodes } = useWorkflowStore();
     return (

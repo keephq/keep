@@ -11,9 +11,9 @@ import {
 import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
 import { AlertName } from "@/entities/alerts/ui";
-import AlertAssignee from "@/widgets/alerts-table/ui/alert-assignee";
-import AlertExtraPayload from "@/widgets/alerts-table/ui/alert-extra-payload";
-import AlertMenu from "@/features/alerts/alert-menu/ui/alert-menu";
+import AlertAssignee from "../ui/alert-assignee";
+import AlertExtraPayload from "../ui/alert-extra-payload";
+import { AlertMenu } from "@/features/alerts/alert-menu";
 import { isSameDay, isValid, isWithinInterval } from "date-fns";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import {

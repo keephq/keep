@@ -40,7 +40,7 @@ import {
   getErrorMessage,
   getWorkflowSummaryForCopilot,
 } from "@/features/workflows/ai-assistant/lib/utils";
-import { AddTriggerOrStepSkeleton } from "@/features/workflows/ai-assistant/ui/AddTriggerOrStepSkeleton";
+import { AddTriggerOrStepSkeleton } from "./AddTriggerOrStepSkeleton";
 import { foreachTemplate, getTriggerTemplate } from "../../builder/lib/utils";
 import { capture } from "@/shared/lib/capture";
 import "@copilotkit/react-ui/styles.css";

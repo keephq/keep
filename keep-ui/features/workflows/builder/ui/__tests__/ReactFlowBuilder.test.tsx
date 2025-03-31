@@ -1,6 +1,6 @@
 import { act, render, renderHook } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import ReactFlowBuilder from "../ReactFlowBuilder";
+import { ReactFlowBuilder } from "../ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useWorkflowStore } from "@/entities/workflows";
 

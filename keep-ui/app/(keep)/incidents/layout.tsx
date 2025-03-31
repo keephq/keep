@@ -1,5 +1,5 @@
 "use client";
-import { IncidentFilterContextProvider } from "@/features/incidents/incident-list/ui/incident-table-filters-context";
+import { IncidentFilterContextProvider } from "@/features/incidents/incident-list";
 
 export default function Layout({ children }: { children: any }) {
   return (
