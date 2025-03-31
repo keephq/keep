@@ -360,7 +360,7 @@ actions:
 {% endif %}
 {% endif %}
 
-{% if example_workflows.items()|length > 0 %}
+{% if example_workflows.items()|length > 0 and ("_query" in provider_data or "_notify" in provider_data) %}
 Check the following workflow example{% if example_workflows.items()|length > 1 %}s{% endif %}:
 {% for example_name, examples in example_workflows.items() -%}
 {% for example in examples -%}
