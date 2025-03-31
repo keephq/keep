@@ -319,12 +319,12 @@ def export_workflows(
     workflows = workflowstore.get_all_workflows_yamls(tenant_id=tenant_id)
     return workflows
 
+
 def get_event_from_body(body: dict, tenant_id: str):
     event_body = body.get("body", {}) or body
+    inputs = body.get("inputs", {})
     # Handle regular run from body
-    event_class = (
-        AlertDto if body.get("type", "alert") == "alert" else IncidentDto
-    )
+    event_class = AlertDto if body.get("type", "alert") == "alert" else IncidentDto
 
     # Handle UI triggered events
     event_body["id"] = event_body.get("fingerprint", "manual-run")
@@ -332,9 +332,7 @@ def get_event_from_body(body: dict, tenant_id: str):
     event_body["lastReceived"] = datetime.datetime.now(
         tz=datetime.timezone.utc
     ).isoformat()
-    if "source" in event_body and not isinstance(
-        event_body["source"], list
-    ):
+    if "source" in event_body and not isinstance(event_body["source"], list):
         event_body["source"] = [event_body["source"]]
 
     try:
@@ -346,7 +344,8 @@ def get_event_from_body(body: dict, tenant_id: str):
             status_code=400,
             detail="Invalid event format",
         )
-    return event
+    return event, inputs
+
 
 @router.post(
     "/{workflow_id}/run",
@@ -396,10 +395,10 @@ def run_workflow(
                 )
         else:
             # Handle regular run from body
-            event = get_event_from_body(body, tenant_id)
+            event, inputs = get_event_from_body(body, tenant_id)
 
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
-            workflow_id, tenant_id, created_by, event
+            workflow_id, tenant_id, created_by, event, inputs=inputs
         )
     except Exception as e:
         logger.exception(
@@ -491,9 +490,15 @@ async def run_workflow_from_definition(
         )
 
     try:
-        event = get_event_from_body(body, tenant_id)
+        event, inputs = get_event_from_body(body, tenant_id)
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
-            workflow.workflow_id, tenant_id, created_by, event, workflow=workflow, test_run=True
+            workflow.workflow_id,
+            tenant_id,
+            created_by,
+            event,
+            workflow=workflow,
+            test_run=True,
+            inputs=inputs,
         )
     except Exception as e:
         logger.exception(
@@ -509,7 +514,9 @@ async def run_workflow_from_definition(
     )
 
 
-async def __get_workflow_raw_data(request: Request | None, file: UploadFile | None) -> dict:
+async def __get_workflow_raw_data(
+    request: Request | None, file: UploadFile | None
+) -> dict:
     if not request and not file:
         raise HTTPException(status_code=400, detail="Nor file nor request provided")
     try:
@@ -807,6 +814,7 @@ def get_workflow_by_id(
             workflow_raw=final_workflow_raw,
             last_updated=workflow.last_updated,
             disabled=workflow.is_disabled,
+            revision=workflow.revision,
         )
         return workflow_dto
     except cyaml.YAMLError:
@@ -891,6 +899,7 @@ def get_workflow_runs_by_id(
         workflow_raw=workflow.workflow_raw,
         last_updated=workflow.last_updated,
         disabled=workflow.is_disabled,
+        revision=workflow.revision,
     )
     return WorkflowExecutionsPaginatedResultsDto(
         limit=limit,

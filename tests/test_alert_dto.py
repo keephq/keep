@@ -1,4 +1,5 @@
 import hashlib
+import urllib.parse
 from datetime import datetime, timedelta
 from time import sleep
 
@@ -8,11 +9,12 @@ from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
 from tests.fixtures.client import client, test_app  # noqa
 
 
-def create_basic_alert(name, last_received):
+def create_basic_alert(name, last_received, **kwargs):
     """Helper function to create AlertDto with minimal fields"""
     return AlertDto(
         name=name,
         lastReceived=last_received,
+        **kwargs
     )
 
 
@@ -169,6 +171,18 @@ def test_alert_dto_invalid_timestamps():
             # if no error, fail the test
             pytest.fail(f"Expected ValueError for timestamp {timestamp}")
 
+def test_alert_dto_url_encoding():
+    """Test that the url is encoded correctly and no exception is raised"""
+    unencoded_urls = [
+        "https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2 [lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down",
+        "https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2#[lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down",
+        " https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2 [lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down "
+    ]
+    for url in unencoded_urls:
+        alert = create_basic_alert(name="Test Alert", last_received="1970-01-01T00:00:00.000Z", url=url)
+        unquoted_url = urllib.parse.unquote(str(alert.url))
+        reencoded_url = urllib.parse.quote(unquoted_url, safe='/:?=&')
+        assert alert.url == reencoded_url
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 def test_alert_started_at(db_session, create_alert, client, test_app):

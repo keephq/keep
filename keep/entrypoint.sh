@@ -49,15 +49,19 @@ else
         --access-logfile - \
         --error-logfile - \
         --name "arq_worker" \
+        -c "/venv/lib/python3.11/site-packages/keep/api/config.py" \
+        "--preload" \
         "keep.api.arq_worker_gunicorn:create_app()" &
 
     KEEP_ARQ_PID=$!
 
     # Give ARQ workers time to start up
-    sleep 2
+    sleep 5
+
 
     echo "Running API gunicorn"
-    exec "$@" &
+    # migration will run from arq worker
+    SKIP_DB_CREATION=true exec "$@" &
 
     KEEP_API_PID=$!
 

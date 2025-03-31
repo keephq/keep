@@ -9,6 +9,17 @@ This provider requires authentication.
 - **environment**: Topology environment name (required: False, sensitive: False)
 - **oauth_token**: For OAuth flow (required: False, sensitive: True)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **events_read**: Read events data. (mandatory) 
+- **monitors_read**: Read monitors (mandatory) ([Documentation](https://docs.datadoghq.com/account_management/rbac/permissions/#monitors))
+- **monitors_write**: Write monitors  ([Documentation](https://docs.datadoghq.com/account_management/rbac/permissions/#monitors))
+- **create_webhooks**: Create webhooks integrations  
+- **metrics_read**: View custom metrics.  
+- **logs_read**: Read log data.  
+- **apm_read**: Read APM data for Topology creation.  
+- **apm_service_catalog_read**: Read APM service catalog for Topology creation.  
+
+
 
 ## In workflows
 
@@ -34,3 +45,27 @@ steps:
 Check the following workflow examples:
 - [dd.yml](https://github.com/keephq/keep/blob/main/examples/workflows/dd.yml)
 - [keep_semantic_alert_example_datadog.yml](https://github.com/keephq/keep/blob/main/examples/workflows/keep_semantic_alert_example_datadog.yml)
+
+
+## Topology
+This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology) 
+and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context 
+for [alerts](/alerts/sidebar#7-alert-topology-view) and [incidents](/overview#17-incident-topology).
+
+## Provider Methods
+The provider exposes the following [Provider Methods](/providers/provider-methods#via-ai-assistant). They are available in the [AI Assistant](/overview/ai-incident-assistant).
+
+- **mute_monitor** Mute a monitor (action, scopes: monitors_write)
+
+- **unmute_monitor** Unmute a monitor (action, scopes: monitors_write)
+
+- **get_monitor_events** Get all events related to this monitor (view, scopes: events_read)
+
+- **get_trace** Get trace by ID (view, scopes: apm_read)
+
+- **create_incident** Create an incident (action, scopes: incidents_write)
+
+- **resolve_incident** Resolve an active incident (action, scopes: incidents_write)
+
+- **add_incident_timeline_note** Add a note to an incident timeline (action, scopes: incidents_write)
+

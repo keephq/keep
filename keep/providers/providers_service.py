@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
+from keep.api.core.config import config
 from keep.api.core.db import (
     engine,
     get_all_provisioned_providers,
@@ -21,7 +22,6 @@ from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
-from keep.api.core.config import config
 
 logger = logging.getLogger(__name__)
 
@@ -198,10 +198,15 @@ class ProvidersService:
             try:
                 session.add(provider_model)
                 session.commit()
-            except IntegrityError:
+            except IntegrityError as e:
+                if "FOREIGN KEY constraint" in str(e):
+                    raise
                 try:
                     # if the provider is already installed, delete the secret
-                    logger.warning("Provider already installed, deleting secret")
+                    logger.warning(
+                        "Provider already installed, deleting secret",
+                        extra={"error": str(e)},
+                    )
                     secret_manager.delete_secret(
                         secret_name=secret_name,
                     )

@@ -1,27 +1,57 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useProviders } from "./useProviders";
 import { Filter, Workflow } from "@/shared/api/workflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
-import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { isProviderInstalled } from "@/shared/lib/provider-utils";
+import { useWorkflowExecutionsRevalidation } from "@/entities/workflow-executions/model/useWorkflowExecutionsRevalidation";
+import yaml from "js-yaml";
+import { WorkflowInput } from "@/entities/workflows/ui/WorkflowInputFields";
 
+const noop = () => {};
+
+// TODO: refactor this whole thing to be more intuitive and easier to test
 export const useWorkflowRun = (workflow: Workflow) => {
   const api = useApi();
   const router = useRouter();
   const [isRunning, setIsRunning] = useState(false);
   const [isAlertTriggerModalOpen, setIsAlertTriggerModalOpen] = useState(false);
+  const [isManualInputModalOpen, setIsManualInputModalOpen] = useState(false);
   let message = "";
   const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
   const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
-  const revalidateMultiple = useRevalidateMultiple();
-
+  const [workflowInputs, setWorkflowInputs] = useState<WorkflowInput[]>([]);
+  const { revalidateForWorkflow } = useWorkflowExecutionsRevalidation();
   const { data: providersData } = useProviders();
   const providers = providersData?.providers ?? [];
 
+  // Check if workflow has inputs defined
+  useEffect(() => {
+    if (workflow?.workflow_raw) {
+      try {
+        const parsedWorkflow = yaml.load(workflow.workflow_raw) as any;
+        const inputs = parsedWorkflow.workflow.inputs || [];
+        setWorkflowInputs(inputs);
+      } catch (error) {
+        console.error("Failed to parse workflow YAML:", error);
+        setWorkflowInputs([]);
+      }
+    } else {
+      setWorkflowInputs([]);
+    }
+  }, [workflow]);
+
   if (!workflow) {
-    return {};
+    return {
+      handleRunClick: noop,
+      isRunning: false,
+      getTriggerModalProps: null,
+      getManualInputModalProps: null,
+      isRunButtonDisabled: false,
+      message: "",
+      hasInputs: false,
+    };
   }
 
   const notInstalledProviders = workflow?.providers
@@ -41,6 +71,8 @@ export const useWorkflowRun = (workflow: Workflow) => {
   const hasAlertTrigger = workflow?.triggers?.some(
     (trigger) => trigger.type === "alert"
   );
+
+  const hasInputs = workflowInputs.length > 0;
 
   const isWorkflowDisabled = !!workflow?.disabled;
 
@@ -92,11 +124,11 @@ export const useWorkflowRun = (workflow: Workflow) => {
         return;
       }
       setIsRunning(true);
-      const result = await api.post(`/workflows/${workflow?.id}/run`, payload);
-      revalidateMultiple([`/workflows/${workflow?.id}/runs`]);
+      const result = await api.post(`/workflows/${workflow.id}/run`, payload);
+      revalidateForWorkflow(workflow.id);
 
       const { workflow_execution_id } = result;
-      router.push(`/workflows/${workflow?.id}/runs/${workflow_execution_id}`);
+      router.push(`/workflows/${workflow.id}/runs/${workflow_execution_id}`);
     } catch (error) {
       showErrorToast(error, "Failed to start workflow");
     } finally {
@@ -108,10 +140,18 @@ export const useWorkflowRun = (workflow: Workflow) => {
     if (!workflow) {
       return;
     }
+
+    // First, check if workflow has inputs
+    if (hasInputs) {
+      setIsManualInputModalOpen(true);
+      return;
+    }
+
+    // If no inputs, check for alert dependencies
     const dependencies = extractAlertDependencies(workflow?.workflow_raw);
     const hasDependencies = dependencies.length > 0;
 
-    // if it has dependencies, open the modal
+    // if it has dependencies, open the alert modal
     if (hasDependencies) {
       setAlertDependencies(dependencies);
       // extract the filters
@@ -126,7 +166,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
       setIsAlertTriggerModalOpen(true);
       return;
     }
-    // else, no dependencies, just run it
+    // else, no dependencies or inputs, just run it
     else {
       runWorkflow({});
     }
@@ -134,6 +174,10 @@ export const useWorkflowRun = (workflow: Workflow) => {
 
   const handleAlertTriggerModalSubmit = (payload: any) => {
     runWorkflow(payload); // Function to run the workflow with the payload
+  };
+
+  const handleManualInputModalSubmit = (inputs: Record<string, any>) => {
+    runWorkflow({ inputs }); // Function to run the workflow with the input values
   };
 
   const getTriggerModalProps = () => {
@@ -146,11 +190,22 @@ export const useWorkflowRun = (workflow: Workflow) => {
     };
   };
 
+  const getManualInputModalProps = () => {
+    return {
+      isOpen: isManualInputModalOpen,
+      onClose: () => setIsManualInputModalOpen(false),
+      onSubmit: handleManualInputModalSubmit,
+      workflow: workflow,
+    };
+  };
+
   return {
     handleRunClick,
     isRunning,
     getTriggerModalProps,
+    getManualInputModalProps,
     isRunButtonDisabled,
     message,
+    hasInputs,
   };
 };
