@@ -35,6 +35,7 @@ def __get_conn() -> pymysql.connections.Connection:
         conn = connector.connect(
             os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
             "pymysql",
+            ip_type=os.environ.get("DB_IP_TYPE", "public"),
             user="keep-api",
             db="keepdb",
             enable_iam_auth=True,
