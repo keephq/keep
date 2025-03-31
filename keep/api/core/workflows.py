@@ -7,7 +7,7 @@ This module contains the CRUD database functions for Keep.
 from datetime import datetime, timedelta, timezone
 from typing import Tuple
 
-from sqlalchemy import and_, asc, case, desc, func, literal_column, select, text
+from sqlalchemy import and_, case, desc, func, literal_column, select, text
 from sqlmodel import Session
 
 from keep.api.core.cel_to_sql.properties_metadata import (
