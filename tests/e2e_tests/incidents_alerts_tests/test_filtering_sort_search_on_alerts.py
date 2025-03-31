@@ -12,6 +12,34 @@ from tests.e2e_tests.incidents_alerts_tests.incidents_alerts_setup import (
 )
 from tests.e2e_tests.test_end_to_end import init_e2e_test, setup_console_listener
 from tests.e2e_tests.utils import get_token, save_failure_artifacts
+from copy import deepcopy
+
+
+def multi_sort(data, criteria):
+    """
+    Sorts a list by multiple criteria.
+
+    Args:
+        data (list): The input list (e.g., list of dicts or objects).
+        criteria (list of tuples): Each tuple is (key, direction)
+            - key: string field name or callable (e.g., lambda x: ...)
+            - direction: 'asc' or 'desc'
+
+    Returns:
+        A new sorted list.
+    """
+    sorted_data = deepcopy(data)
+
+    for key, direction in reversed(criteria):
+        if direction not in ("asc", "desc"):
+            raise ValueError(f"Invalid sort direction: {direction}")
+        reverse = direction == "desc"
+
+        key_func = key if callable(key) else lambda x: x[key]
+        sorted_data.sort(key=key_func, reverse=reverse)
+
+    return sorted_data
+
 
 KEEP_UI_URL = "http://localhost:3000"
 KEEP_API_URL = "http://localhost:8080"
@@ -334,6 +362,85 @@ def test_sort_asc_dsc(
 
         column_header_locator = browser.locator(
             f"[data-testid='alerts-table'] table thead th [data-testid='header-cell-{column_id}']",
+            has_text=coumn_name,
+        )
+        expect(column_header_locator).to_be_visible()
+        column_header_locator.click()
+        rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
+
+        number_of_missmatches = 0
+        for index, alert in enumerate(sorted_alerts):
+            row_locator = rows.nth(index)
+            # 4 is index of "name" column
+            column_locator = row_locator.locator("td").nth(alert_name_column_index)
+            try:
+                expect(column_locator).to_have_text(alert["name"])
+            except Exception as e:
+                save_failure_artifacts(browser, log_entries=[])
+                number_of_missmatches += 1
+                if number_of_missmatches > 2:
+                    raise e
+                else:
+                    print(
+                        f"Expected: {alert['name']} but got: {column_locator.text_content()}"
+                    )
+                    continue
+
+
+def test_multi_sort_asc_dsc(
+    browser: Page,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
+    coumn_name = ""
+    current_alerts = setup_test_data
+    alert_name_column_index = 4
+    init_test(browser, current_alerts)
+    cel_to_filter_alerts = "tags.customerName != null"
+    browser.goto(f"{KEEP_UI_URL}/alerts/feed?cel={cel_to_filter_alerts}")
+    filtered_alerts = [
+        alert
+        for alert in current_alerts
+        if alert.get("tags", {}).get("customerName", None) is not None
+    ]
+
+    try:
+        expect(
+            browser.locator("[data-testid='alerts-table'] table tbody tr")
+        ).to_have_count(len(filtered_alerts))
+        browser.locator("[data-testid='settings-button']").click()
+        settings_panel_locator = browser.locator("[data-testid='settings-panel']")
+        settings_panel_locator.locator("input[type='text']").type("tags.")
+        settings_panel_locator.locator("input[name='tags.customerName']").click()
+        settings_panel_locator.locator("input[name='tags.alertIndex']").click()
+        settings_panel_locator.locator(
+            "button[type='submit']", has_text="Save changes"
+        ).click()
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
+    # data-testid="header-cell-tags.customerName"
+    browser.locator(
+        f"[data-testid='alerts-table'] table thead th [data-testid='header-cell-tags.customerName']",
+        has_text=coumn_name,
+    ).click()
+    print("ff")
+    browser.keyboard.down("Shift")
+    for sort_direction in ["desc", "asc"]:
+        sorted_alerts = multi_sort(
+            filtered_alerts,
+            [
+                (lambda alert: alert.get("tags", {}).get("customerName", None), "asc"),
+                (
+                    lambda alert: alert.get("tags", {}).get("alertIndex", None),
+                    sort_direction,
+                ),
+            ],
+        )
+
+        column_header_locator = browser.locator(
+            f"[data-testid='alerts-table'] table thead th [data-testid='header-cell-tags.alertIndex']",
             has_text=coumn_name,
         )
         expect(column_header_locator).to_be_visible()
