@@ -18,13 +18,7 @@ def provision_deduplication_rules(deduplication_rules: dict[str, any], tenant_id
         DeduplicationRuleRequestDto objects.
         tenant_id (str): The ID of the tenant for which deduplication rules are being provisioned.
     """
-    deduplication_rules_from_env_dict = get_deduplication_rules_to_provision()
-
-    if not deduplication_rules_from_env_dict:
-        logger.info("No deduplication rules found in env. Nothing to provision.")
-        return
-
-    enrich_with_providers_info(deduplication_rules_from_env_dict, tenant_id)
+    enrich_with_providers_info(deduplication_rules, tenant_id)
 
     all_deduplication_rules_from_db = db.get_all_deduplication_rules(tenant_id)
     provisioned_deduplication_rules = [
@@ -46,23 +40,23 @@ def provision_deduplication_rules(deduplication_rules: dict[str, any], tenant_id
                 rule_id=str(provisioned_deduplication_rule.id), tenant_id=tenant_id
             )
 
-    for deduplication_rule_to_provision in deduplication_rules.values():
-        if (
-            deduplication_rule_to_provision.get("name")
-            in provisioned_deduplication_rules_from_db_dict
-        ):
+    for (
+        deduplication_rule_name,
+        deduplication_rule_to_provision,
+    ) in deduplication_rules.items():
+        if deduplication_rule_name in provisioned_deduplication_rules_from_db_dict:
             logger.info(
                 "Deduplication rule with name '%s' already exists, updating in DB",
-                deduplication_rule_to_provision.get("name"),
+                deduplication_rule_name,
             )
             db.update_deduplication_rule(
                 tenant_id=tenant_id,
                 rule_id=str(
                     provisioned_deduplication_rules_from_db_dict.get(
-                        deduplication_rule_to_provision.get("name")
+                        deduplication_rule_name
                     ).id
                 ),
-                name=deduplication_rule_to_provision.get("name", ""),
+                name=deduplication_rule_name,
                 description=deduplication_rule_to_provision.get("description", ""),
                 provider_id=deduplication_rule_to_provision.get("provider_id"),
                 provider_type=deduplication_rule_to_provision["provider_type"],
@@ -82,11 +76,11 @@ def provision_deduplication_rules(deduplication_rules: dict[str, any], tenant_id
 
         logger.info(
             "Deduplication rule with name '%s' does not exist, creating in DB",
-            deduplication_rule_to_provision.get("name"),
+            deduplication_rule_name,
         )
         db.create_deduplication_rule(
             tenant_id=tenant_id,
-            name=deduplication_rule_to_provision.get("name", ""),
+            name=deduplication_rule_name,
             description=deduplication_rule_to_provision.get("description", ""),
             provider_id=deduplication_rule_to_provision.get("provider_id"),
             provider_type=deduplication_rule_to_provision["provider_type"],
@@ -126,9 +120,8 @@ def provision_deduplication_rules_from_env(tenant_id: str):
 
     provision_deduplication_rules(deduplication_rules_from_env_dict, tenant_id)
 
-def enrich_with_providers_info(
-    deduplication_rules: list[dict[str, any]], tenant_id: str
-):
+
+def enrich_with_providers_info(deduplication_rules: dict[str, any], tenant_id: str):
     """
     Enriches passed deduplication rules with provider ID and type information.
 
