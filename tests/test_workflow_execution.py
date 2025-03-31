@@ -6,11 +6,15 @@ from datetime import datetime, timedelta
 import pytest
 import pytz
 
-from keep.api.core.db import get_last_workflow_execution_by_workflow_id
+from keep.api.core.db import get_last_workflow_execution_by_workflow_id, create_incident_from_dict, \
+    assign_alert_to_incident, get_last_alerts
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.db.alert import Alert
+from keep.api.models.db.incident import Incident, IncidentStatus
 from keep.api.models.db.workflow import Workflow
 from keep.api.models.incident import IncidentDto
+from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from tests.fixtures.client import client, test_app  # noqa
 
@@ -1371,3 +1375,96 @@ def test_nested_conditional_flow(
                     expected_message in json.dumps(result)
                     for result in workflow_execution.results[action_name]
                 ), f"Expected message '{expected_message}' not found in {action_name} results"
+
+
+workflow_resolve_definition = """workflow:
+  id: Resolve-Alert
+  name: Resolve Alert
+  description: ""
+  disabled: false
+  triggers:
+    - type: alert
+  consts: {}
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: resolve-alert
+      provider:
+        type: mock
+        with:
+          enrich_alert:
+            - key: status
+              value: resolved
+"""
+
+
+def test_alert_resolved(db_session, create_alert, workflow_manager):
+
+    # Create the current alert
+    create_alert("fp1", AlertStatus.FIRING, datetime.now(tz=pytz.utc), {})
+
+    incident = create_incident_from_dict(
+        "keep", {"user_generated_name": "test", "description": "test"}
+    )
+
+    assign_alert_to_incident("fp1", incident, SINGLE_TENANT_UUID, db_session)
+
+    # Setup the workflow
+    workflow = Workflow(
+        id="Resolve-Alert",
+        name="Resolve-Alert",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Resolve Alert",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_resolve_definition,
+    )
+    db_session.add(workflow)
+    db_session.commit()
+
+    alerts = get_last_alerts(SINGLE_TENANT_UUID)
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+
+    assert len(alerts_dto) == 1
+    assert alerts_dto[0].status == AlertStatus.FIRING.value
+
+    incident = db_session.query(Incident).first()
+    assert incident.status == IncidentStatus.FIRING.value
+
+    # Insert the alert into workflow manager
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, alerts_dto)
+
+    # Wait for workflow execution
+    workflow_execution = None
+    count = 0
+    while (
+        workflow_execution is None
+        or workflow_execution.status == "in_progress"
+        and count < 30
+    ):
+        workflow_execution = get_last_workflow_execution_by_workflow_id(
+            SINGLE_TENANT_UUID, "Resolve-Alert"
+        )
+        if workflow_execution is not None and workflow_execution.status == "success":
+            break
+
+        elif workflow_execution is not None and workflow_execution.status == "error":
+            raise Exception("Workflow execution failed")
+
+        time.sleep(1)
+        count += 1
+
+    # Verify workflow execution
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
+
+    db_session.expire_all()
+
+    alerts = get_last_alerts(SINGLE_TENANT_UUID)
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+    assert len(alerts_dto) == 1
+    assert alerts_dto[0].status == AlertStatus.RESOLVED.value
+
+    incident = db_session.query(Incident).first()
+    assert incident.status == IncidentStatus.RESOLVED.value
