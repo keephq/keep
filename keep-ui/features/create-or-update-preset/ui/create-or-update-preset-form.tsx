@@ -29,6 +29,7 @@ type CreateOrUpdatePresetFormProps = {
     name: string | undefined;
     isPrivate: boolean | undefined;
     isNoisy: boolean | undefined;
+    counterShowsFiringOnly: boolean | undefined;
     tags: TagOption[] | undefined;
     groupColumn: string | undefined;
   };
@@ -47,6 +48,10 @@ export function CreateOrUpdatePresetForm({
   const [presetName, setPresetName] = useState(presetData.name ?? "");
   const [isPrivate, setIsPrivate] = useState(presetData.isPrivate ?? false);
   const [isNoisy, setIsNoisy] = useState(presetData.isNoisy ?? false);
+  const [counterShowsFiringOnly, setCounterShowsFiringOnly] = useState(
+    presetData.counterShowsFiringOnly ?? true
+  );
+
   const [groupColumn, setGroupColumn] = useState(presetData.groupColumn ?? "");
 
   const [generatingName, setGeneratingName] = useState(false);
@@ -59,6 +64,7 @@ export function CreateOrUpdatePresetForm({
     setIsPrivate(false);
     setIsNoisy(false);
     setSelectedTags([]);
+    setCounterShowsFiringOnly(true);
   };
 
   const handleCancel = () => {
@@ -123,6 +129,7 @@ export function CreateOrUpdatePresetForm({
         name: presetName,
         isPrivate,
         isNoisy,
+        counterShowsFiringOnly,
         tags: selectedTags.map((tag) => ({
           id: tag.id,
           name: tag.name,
@@ -135,6 +142,7 @@ export function CreateOrUpdatePresetForm({
         name: presetName,
         isPrivate,
         isNoisy,
+        counterShowsFiringOnly,
         tags: selectedTags.map((tag) => ({
           id: tag.id,
           name: tag.name,
@@ -186,6 +194,8 @@ export function CreateOrUpdatePresetForm({
           setIsPrivate={setIsPrivate}
           isNoisy={isNoisy}
           setIsNoisy={setIsNoisy}
+          counterShowsFiringOnly={counterShowsFiringOnly}
+          setCounterShowsFiringOnly={setCounterShowsFiringOnly}
         />
       </div>
       {/* Group by column TODO
@@ -234,6 +244,7 @@ export function CreateOrUpdatePresetForm({
 
       <div className="flex justify-end space-x-2.5">
         <Button
+          type="button"
           size="lg"
           variant="secondary"
           color="orange"
@@ -243,6 +254,8 @@ export function CreateOrUpdatePresetForm({
           Close
         </Button>
         <Button
+          disabled={!presetName}
+          type="submit"
           size="lg"
           color="orange"
           variant="primary"
