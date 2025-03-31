@@ -45,7 +45,6 @@ def on_starting(server=None):
     logger.info("Keep server starting")
 
     migrate_db()
-    provision_resources()
 
     # Load this early and use preloading
     # https://www.joelsleppy.com/blog/gunicorn-application-preloading/
@@ -69,6 +68,8 @@ def on_starting(server=None):
                 False if AUTH_TYPE == IdentityManagerTypes.OAUTH2PROXY.value else True
             ),
         )
+
+    provision_resources()
 
     if os.environ.get("USE_NGROK", "false") == "true":
         from pyngrok import ngrok
