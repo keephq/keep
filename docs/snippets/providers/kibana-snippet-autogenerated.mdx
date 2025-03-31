@@ -7,6 +7,13 @@ This provider requires authentication.
 - **kibana_host**: Kibana Host (required: True, sensitive: False)
 - **kibana_port**: Kibana Port (defaults to 9243) (required: False, sensitive: False)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **rulesSettings:read**: Read alerts (mandatory) 
+- **rulesSettings:write**: Modify alerts (mandatory) 
+- **actions:read**: Read connectors (mandatory) 
+- **actions:write**: Write connectors (mandatory) 
+
+
 
 ## In workflows
 
