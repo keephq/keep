@@ -4,6 +4,7 @@ import sys
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
@@ -316,3 +317,57 @@ def test_reprovision_dashboard(monkeypatch, db_session, client, test_app):
     dashboards = response.json()
     assert len(dashboards) == 2
     assert dashboards[1]["dashboard_name"] == "New Dashboard"
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+            "KEEP_PROVIDERS": '{"keepVictoriaMetrics":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort": 1234}}}',
+        },
+    ],
+    indirect=True,
+)
+def test_provision_provider_with_empty_tenant_table(db_session, client, test_app):
+    """Test that provider provisioning fails when tenant table is empty with foreign key constraints enabled"""
+    # Delete all entries from tenant table
+    db_session.execute(text("DELETE FROM tenant"))
+    db_session.commit()
+
+    # Enable SQLite foreign keys
+    db_session.execute(text("PRAGMA foreign_keys = ON;"))
+    result = db_session.execute(text("PRAGMA foreign_keys;")).fetchone()
+    assert result is not None and result[0] == 1, "Foreign keys not enabled"
+
+    # Verify tenant table is empty
+    tenant_count = db_session.execute(text("SELECT COUNT(*) FROM tenant")).fetchone()[0]
+    assert tenant_count == 0, "Tenant table should be empty"
+
+    # Import ProvidersService
+    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+    from keep.providers.providers_service import ProvidersService
+
+    # Call install_provider directly instead of provision_providers_from_env
+    # This bypasses the exception handling in provision_providers_from_env
+    with pytest.raises(Exception) as excinfo:
+        ProvidersService.install_provider(
+            tenant_id=SINGLE_TENANT_UUID,
+            installed_by="system",
+            provider_id="victoriametrics123",
+            provider_name="keepVictoriaMetrics123",
+            provider_type="victoriametrics",
+            provider_config={"VMAlertHost": "http://localhost", "VMAlertPort": 1234},
+            provisioned=True,
+            validate_scopes=False,
+        )
+
+    # Verify that the error message is related to foreign key constraint violation
+    error_msg = str(excinfo.value).lower()
+    assert (
+        "foreign key constraint" in error_msg
+        or "FOREIGN KEY constraint failed" in str(excinfo.value)
+        or "violates foreign key constraint" in error_msg
+    )
+
+    db_session.execute(text("PRAGMA foreign_keys = OFF;"))
