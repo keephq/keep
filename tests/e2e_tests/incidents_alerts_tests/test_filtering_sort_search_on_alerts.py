@@ -5,7 +5,7 @@ import pytest
 import requests
 from playwright.sync_api import Page, expect
 
-from tests.e2e_tests.incidents_alerts_setup import (
+from tests.e2e_tests.incidents_alerts_tests.incidents_alerts_setup import (
     create_fake_alert,
     query_alerts,
     setup_incidents_alerts,
@@ -15,6 +15,7 @@ from tests.e2e_tests.utils import get_token, save_failure_artifacts
 
 KEEP_UI_URL = "http://localhost:3000"
 KEEP_API_URL = "http://localhost:8080"
+
 
 def init_test(browser: Page, alerts, max_retries=3):
     for i in range(max_retries):
