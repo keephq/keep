@@ -7,6 +7,14 @@ This provider requires authentication.
 - **account_id**: New Relic account ID (required: True, sensitive: False)
 - **new_relic_api_url**: New Relic API URL (required: False, sensitive: False)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **ai.issues:read**: Required to read issues and related information (mandatory) ([Documentation](https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/))
+- **ai.destinations:read**: Required to read whether keep webhooks are registered  ([Documentation](https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/))
+- **ai.destinations:write**: Required to register keep webhooks  ([Documentation](https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/))
+- **ai.channels:read**: Required to know informations about notification channels.  ([Documentation](https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/))
+- **ai.channels:write**: Required to create notification channel  ([Documentation](https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/))
+
+
 
 ## In workflows
 

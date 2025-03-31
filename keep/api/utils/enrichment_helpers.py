@@ -183,9 +183,8 @@ def convert_db_alerts_to_dto_alerts(
                 if alert_dto.status == AlertStatus.ACKNOWLEDGED.value:
                     alert_dto.firingCounter = 0
 
-                # enrich provider id when it's possible
-                if alert_dto.providerId is None:
-                    alert_dto.providerId = alert.provider_id
-                    alert_dto.providerType = alert.provider_type
+                # always update provider id and type to the new values
+                alert_dto.providerId = alert.provider_id
+                alert_dto.providerType = alert.provider_type
                 alerts_dto.append(alert_dto)
     return alerts_dto

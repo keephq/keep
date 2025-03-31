@@ -9,6 +9,10 @@ This provider requires authentication.
 - **password**: SignalFX password. Required for setup webhook. (required: False, sensitive: True)
 - **org_id**: SignalFX organization ID. Required for setup webhook. (required: False, sensitive: False)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **API**: API authScope - read permission for SignalFx API (mandatory) ([Documentation](https://dev.splunk.com/observability/reference/api/org_tokens/latest#endpoint-create-single-token))
+
+
 
 ## In workflows
 

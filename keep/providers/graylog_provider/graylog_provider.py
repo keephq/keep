@@ -92,14 +92,14 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",
-            description="User is Authorized",
+            description="Mandatory for all operations, ensures the user is authenticated.",
             mandatory=True,
             mandatory_for_webhook=True,
             alias="Rules Reader",
         ),
         ProviderScope(
             name="authorized",
-            description="Required privileges",
+            description="Mandatory for querying incidents and managing resources, ensures the user has `Admin` privileges.",
             mandatory=True,
             mandatory_for_webhook=True,
             alias="Rules Reader",
@@ -145,6 +145,14 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
         timerange_seconds: int = 300,
         timerange_type: str = "relative",
     ):
+        """
+        Search for logs in Graylog using the specified query.
+        Args:
+            query (str): The query string to search for.
+            query_type (str): The type of query to use. Default is "elastic".
+            timerange_seconds (int): The time range in seconds. Default is 300 seconds.
+            timerange_type (str): The type of time range. Default is "relative".
+        """
         self.logger.info(f"Searching in Graylog with query: {query}")
         query_id = str(uuid.uuid4())
         search_type_id = str(uuid.uuid4())

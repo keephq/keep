@@ -7,6 +7,11 @@ This provider requires authentication.
 - **graylog_access_token**: Graylog Access Token (required: True, sensitive: True)
 - **deployment_url**: Deployment Url (required: True, sensitive: False)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **authenticated**: Mandatory for all operations, ensures the user is authenticated. (mandatory) 
+- **authorized**: Mandatory for querying incidents and managing resources, ensures the user has `Admin` privileges. (mandatory) 
+
+
 
 ## In workflows
 
@@ -27,3 +32,14 @@ steps:
 
 
 If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).
+
+
+## Provider Methods
+The provider exposes the following [Provider Methods](/providers/provider-methods#via-ai-assistant). They are available in the [AI Assistant](/overview/ai-incident-assistant).
+
+- **search** Search using elastic query language in Graylog (action, scopes: authorized)
+
+    - `query`: The query string to search for.
+    - `query_type`: The type of query to use. Default is "elastic".
+    - `timerange_seconds`: The time range in seconds. Default is 300 seconds.
+    - `timerange_type`: The type of time range. Default is "relative".

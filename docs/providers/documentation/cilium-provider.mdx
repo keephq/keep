@@ -73,3 +73,141 @@ The provider identifies services using the following hierarchy:
 - [Cilium Documentation](https://docs.cilium.io/)
 - [Hubble Documentation](https://docs.cilium.io/en/stable/hubble/)
 - [Kubernetes Network Policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
+
+## Google Kubernetes Engine specific
+
+If you are using a GKE cluster, you cannot connect Keep to the Google-managed hubble-relay directly because:
+- hubble-relay operates only in secure mode,
+- hubble-relay requires client certificate authentication.
+
+However, Keep does not currently support these features.
+
+To work around this, you can add an NGINX Pod that listens on a plaintext HTTP port and proxies requests to hubble-relay secure port using hubble-relay certificates.
+
+<Tip>
+
+You need a GKE cluster with [dataplane v2](https://cloud.google.com/kubernetes-engine/docs/concepts/dataplane-v2) .
+
+[Dataplane v2 observability](https://cloud.google.com/kubernetes-engine/docs/how-to/configure-dpv2-observability) must be enabled.
+
+</Tip>
+
+Here is an example of running a plaintext NGINX proxy:
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hubble-relay-insecure-nginx
+  namespace: gke-managed-dpv2-observability
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  auto;
+
+    error_log  /dev/stdout notice;
+    pid        /var/run/nginx.pid;
+
+    events {
+      worker_connections  1024;
+    }
+
+    http {
+      log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+      '$status $body_bytes_sent "$http_referer" '
+      '"$http_user_agent" "$http_x_forwarded_for"';
+
+      access_log /dev/stdout main;
+
+      server {
+        listen       80;
+
+        http2 on;
+
+        location / {
+          grpc_pass grpcs://hubble-relay.gke-managed-dpv2-observability.svc.cluster.local:443;
+
+          grpc_ssl_certificate /etc/nginx/certs/client.crt;
+          grpc_ssl_certificate_key /etc/nginx/certs/client.key;
+          grpc_ssl_trusted_certificate /etc/nginx/certs/hubble-relay-ca.crt;
+        }
+      }
+    }
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: hubble-relay-insecure
+  namespace: gke-managed-dpv2-observability
+  labels:
+    k8s-app: hubble-relay-insecure
+    app.kubernetes.io/name: hubble-relay-insecure
+    app.kubernetes.io/part-of: cilium
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: hubble-relay-insecure
+  template:
+    metadata:
+      labels:
+        k8s-app: hubble-relay-insecure
+        app.kubernetes.io/name: hubble-relay-insecure
+        app.kubernetes.io/part-of: cilium
+    spec:
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: frontend
+          image: nginx:alpine
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: hubble-relay-insecure-nginx-conf
+              mountPath: /etc/nginx/
+              readOnly: true
+            - name: hubble-relay-client-certs
+              mountPath: /etc/nginx/certs/
+              readOnly: true
+      volumes:
+        - configMap:
+            name: hubble-relay-insecure-nginx
+          name: hubble-relay-insecure-nginx-conf
+        - name: hubble-relay-client-certs
+          projected:
+            defaultMode: 0400
+            sources:
+              - secret:
+                  name: hubble-relay-client-certs
+                  items:
+                    - key: ca.crt
+                      path: hubble-relay-ca.crt
+                    - key: tls.crt
+                      path: client.crt
+                    - key: tls.key
+                      path: client.key
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: hubble-relay-insecure
+  namespace: gke-managed-dpv2-observability
+  labels:
+    k8s-app: hubble-relay-insecure
+    app.kubernetes.io/name: hubble-relay-insecure
+    app.kubernetes.io/part-of: cilium
+spec:
+  type: ClusterIP
+  selector:
+    k8s-app: hubble-relay-insecure
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+```
+
+Now you can connect Keep with google-managed hubble-relay by adding Cilium provider using `hubble-relay-insecure.gke-managed-dpv2-observability:80` address.

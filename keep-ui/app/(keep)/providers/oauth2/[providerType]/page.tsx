@@ -2,12 +2,10 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createServerApiClient } from "@/shared/api/server";
 
-export default async function InstallFromOAuth(
-  props: {
-    params: Promise<{ providerType: string }>;
-    searchParams: Promise<{ [key: string]: string }>;
-  }
-) {
+export default async function InstallFromOAuth(props: {
+  params: Promise<{ providerType: string }>;
+  searchParams: Promise<{ [key: string]: string }>;
+}) {
   const searchParams = await props.searchParams;
   const params = await props.params;
   const api = await createServerApiClient();
@@ -17,7 +15,7 @@ export default async function InstallFromOAuth(
   const pullingEnabled = cookieStore.get("oauth2_pulling_enabled");
 
   try {
-    const response = await api.post(
+    await api.post(
       `/providers/install/oauth2/${params.providerType}`,
       {
         ...searchParams,
@@ -30,11 +28,11 @@ export default async function InstallFromOAuth(
         cache: "no-store",
       }
     );
-    redirect("/providers?oauth=success");
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     redirect(
       `/providers?oauth=failure&reason=${encodeURIComponent(errorMessage)}`
     );
   }
+  redirect("/providers?oauth=success");
 }

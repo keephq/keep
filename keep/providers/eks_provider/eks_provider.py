@@ -330,7 +330,11 @@ class EksProvider(BaseProvider):
         return self._client
 
     def get_pods(self, namespace: str = None) -> list:
-        """List all pods in a namespace or across all namespaces."""
+        """
+        List all pods in a namespace or across all namespaces.
+        Args:
+            namespace: The namespace to list pods from. If None, lists pods from all namespaces.
+        """
         if namespace:
             self.logger.info(f"Listing pods in namespace {namespace}")
             pods = self.client.list_namespaced_pod(namespace=namespace)
@@ -340,7 +344,11 @@ class EksProvider(BaseProvider):
         return [pod.to_dict() for pod in pods.items]
 
     def get_pvc(self, namespace: str = None) -> list:
-        """List all PVCs in a namespace or across all namespaces."""
+        """
+        List all PVCs in a namespace or across all namespaces.
+        Args:
+            namespace: The namespace to list pods from. If None, lists pods from all namespaces.
+        """
         if namespace:
             self.logger.info(f"Listing PVCs in namespace {namespace}")
             pvcs = self.client.list_namespaced_persistent_volume_claim(
@@ -417,7 +425,14 @@ class EksProvider(BaseProvider):
     def exec_command(
         self, namespace: str, pod_name: str, command: str, container: str = None
     ) -> str:
-        """Execute a command in a pod."""
+        """
+        Execute a command in a pod.
+        Args:
+            namespace: Namespace of the pod
+            pod_name: Name of the pod
+            command: Command to execute (string or array)
+            container: Name of the container (optional, defaults to first container)
+        """
         if not all([namespace, pod_name]):
             raise ProviderException(
                 "namespace and pod_name are required for exec_command"
@@ -486,7 +501,12 @@ class EksProvider(BaseProvider):
             )
 
     def restart_pod(self, namespace: str, pod_name: str):
-        """Restart a pod by deleting it."""
+        """
+        Restart a pod by deleting it.
+        Args:
+            namespace: Namespace of the pod
+            pod_name: Name of the pod
+        """
         if not all([namespace, pod_name]):
             raise ProviderException(
                 "namespace and pod_name are required for restart_pod"
@@ -496,7 +516,12 @@ class EksProvider(BaseProvider):
         return self.client.delete_namespaced_pod(name=pod_name, namespace=namespace)
 
     def get_deployment(self, deployment_name: str, namespace: str = "default"):
-        """Get deployment information."""
+        """
+        Get deployment information.
+        Args:
+            deployment_name: Name of the deployment to get
+            namespace: Target namespace (defaults to “default”)
+        """
         if not deployment_name:
             raise ProviderException("deployment_name is required for get_deployment")
 
@@ -510,7 +535,13 @@ class EksProvider(BaseProvider):
             raise ProviderException(f"Failed to get deployment info: {str(e)}")
 
     def scale_deployment(self, namespace: str, deployment_name: str, replicas: int):
-        """Scale a deployment to specified replicas."""
+        """
+        Scale a deployment to specified replicas.
+        Args:
+            deployment_name: Name of the deployment to get
+            namespace: Target namespace (defaults to “default”)
+            replicas: Number of replicas to scale to
+        """
         if not all([namespace, deployment_name, replicas is not None]):
             raise ProviderException(
                 "namespace, deployment_name and replicas are required for scale_deployment"
@@ -533,7 +564,14 @@ class EksProvider(BaseProvider):
         container: str = None,
         tail_lines: int = 100,
     ):
-        """Get logs from a pod."""
+        """
+        Get logs from a pod.
+        Args:
+            namespace: Namespace of the pod
+            pod_name: Name of the pod
+            container: Name of the container (optional)
+            tail_lines: Number of lines to fetch from the end of logs (default: 100)
+        """
         if not all([namespace, pod_name]):
             raise ProviderException(
                 "namespace and pod_name are required for get_pod_logs"

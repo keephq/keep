@@ -72,6 +72,7 @@ class SmtpProvider(BaseProvider):
     PROVIDER_SCOPES = [
         ProviderScope(
             name="send_email",
+            description="Send email using SMTP protocol",
             mandatory=True,
             alias="Send Email",
         )

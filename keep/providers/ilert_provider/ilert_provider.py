@@ -60,8 +60,12 @@ class IlertProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "ilert"
     PROVIDER_SCOPES = [
-        ProviderScope("read_permission", "Read permission", mandatory=True),
-        ProviderScope("write_permission", "Write permission", mandatory=False),
+        ProviderScope(
+            name="read_permission", description="Read permission", mandatory=True
+        ),
+        ProviderScope(
+            name="write_permission", description="Write permission", mandatory=False
+        ),
     ]
     PROVIDER_CATEGORY = ["Incident Management"]
 

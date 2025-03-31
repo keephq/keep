@@ -466,7 +466,7 @@ export function AlertTableServerSide({
   const facetsConfig: FacetsConfig = useMemo(() => {
     return {
       ["Severity"]: {
-        canHitEmptyState: false,
+        canHitEmptyState: true,
         renderOptionLabel: (facetOption) => {
           const label =
             severityMapping[Number(facetOption.display_name)] ||
@@ -485,6 +485,7 @@ export function AlertTableServerSide({
           reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
       },
       ["Status"]: {
+        canHitEmptyState: true,
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={getStatusIcon(facetOption.display_name)}

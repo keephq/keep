@@ -8,6 +8,11 @@ This provider requires authentication.
 - **zohoClientSecret**: Zoho Client Secret (required: True, sensitive: True)
 - **zohoAccountTLD**: Zoho Account's TLD (.com | .eu | .com.cn | .in | .au | .jp) (required: True, sensitive: False)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **authenticated**: User is Authenticated (mandatory) 
+- **valid_tld**: TLD is amongst the list [.com | .eu | .com.cn | .in | .com.au | .jp] (mandatory) 
+
+
 
 ## In workflows
 

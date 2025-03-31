@@ -207,8 +207,18 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
             if isinstance(foreach_context, AlertDto):
                 fingerprint = foreach_context.fingerprint
-            else:
+            # if we are in a dict context, use the fingerprint from the dict
+            elif isinstance(foreach_context, dict) and "fingerprint" in foreach_context:
                 fingerprint = foreach_context.get("fingerprint")
+            # in case the foreach itself doesn't have a fingerprint, use the event fingerprint
+            elif self.context_manager.event_context:
+                fingerprint = self.context_manager.event_context.fingerprint
+            else:
+                self.logger.warning(
+                    "No fingerprint found for alert enrichment",
+                    extra={"provider": self.provider_id},
+                )
+                fingerprint = None
         # else, if we are in an event context, use the event fingerprint
         elif self.context_manager.event_context:
             # TODO: map all casses event_context is dict and update them to the DTO
@@ -264,8 +274,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.logger.info("Enriching alert", extra={"fingerprint": fingerprint})
         try:
             enrichments_bl = EnrichmentsBl(self.context_manager.tenant_id)
-            enrichment_string = ", ".join([f"{key}={value}" for key, value in _enrichments.items()])
-            disposable_enrichment_string = ", ".join([f"{key}={value}" for key, value in disposable_enrichments.items()])
+            enrichment_string = ", ".join(
+                [f"{key}={value}" for key, value in _enrichments.items()]
+            )
+            disposable_enrichment_string = ", ".join(
+                [f"{key}={value}" for key, value in disposable_enrichments.items()]
+            )
 
             common_kwargs = {
                 "fingerprint": fingerprint,
@@ -278,18 +292,20 @@ class BaseProvider(metaclass=abc.ABCMeta):
             enrichments_bl.enrich_entity(
                 enrichments=_enrichments,
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
-                **common_kwargs
+                **common_kwargs,
             )
 
             # enrich with disposable enrichments
             enrichments_bl.disposable_enrich_entity(
                 enrichments=disposable_enrichments,
                 action_description=f"Workflow enriched the alert with {disposable_enrichment_string}",
-                **common_kwargs
+                **common_kwargs,
             )
 
-            should_check_incidents_resolution = (_enrichments.get("status", None) == "resolved"
-                                                 or disposable_enrichments.get("status", None) == "resolved")
+            should_check_incidents_resolution = (
+                _enrichments.get("status", None) == "resolved"
+                or disposable_enrichments.get("status", None) == "resolved"
+            )
 
             if event and should_check_incidents_resolution:
                 enrichments_bl.check_incident_resolution(event)

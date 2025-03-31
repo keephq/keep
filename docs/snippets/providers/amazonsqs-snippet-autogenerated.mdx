@@ -8,6 +8,12 @@ This provider requires authentication.
 - **access_key_id**: Access Key Id (Leave empty if using IAM role at EC2) (required: False, sensitive: False)
 - **secret_access_key**: Secret access key (Leave empty if using IAM role at EC2) (required: False, sensitive: False)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **authenticated**: Key-Id pair is valid and working (mandatory) 
+- **sqs::read**: Required privileges to receive alert from SQS. If you only want to give read scope to your key-secret pair the permission policy: AmazonSQSReadOnlyAccess. (mandatory) 
+- **sqs::write**: Required privileges to push messages to SQS. If you only want to give read & write scope to your key-secret pair the permission policy: AmazonSQSFullAccess.  
+
+
 
 ## In workflows
 

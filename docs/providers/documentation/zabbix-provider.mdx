@@ -51,34 +51,6 @@ First, login in to your Zabbix account (the provided `zabbix_frontend_url`) with
 5. Unselect the `Set expiration date and time` checkbox and click `Add`
 6. Copy the generated API token and keep it for further use in Keep.
 
-## Scopes
-
-Certain scopes may be required to perform specific actions or queries via Zabbix Provider. Below is a summary of relevant scopes and their use cases:
-
-- `problem.get`
-  | Required: `True`
-  | Description: `The method allows to retrieve problems.`
-- `mediatype.get`
-  | Required: `False`
-  | Required for Webhook: `True`
-  | Description: `The method allows to retrieve media types.`
-- `mediatype.update`
-  | Required: `False`
-  | Required for Webhook: `True`
-  | Description: `This method allows to update existing media types.`
-- `mediatype.create`
-  | Required: `False`
-  | Required for Webhook: `True`
-  | Description: `This method allows to create new media types.`
-- `user.get`
-  | Required: `False`
-  | Required for Webhook: `True`
-  | Description: `The method allows to retrieve users.`
-- `user.update`
-  | Required: `False`
-  | Required for Webhook: `True`
-  | Description: `This method allows to update existing users.`
-
 ## Notes
 
 <Note>

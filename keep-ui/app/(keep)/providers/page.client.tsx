@@ -127,8 +127,16 @@ export default function ProvidersPage({
 
   useEffect(() => {
     if (searchParams?.oauth === "failure") {
-      const reason = JSON.parse(searchParams.reason as string);
-      showErrorToast(new Error(`Failed to install provider: ${reason.detail}`));
+      try {
+        const reason = JSON.parse(searchParams.reason as string);
+        showErrorToast(
+          new Error(`Failed to install provider: ${reason.detail}`)
+        );
+      } catch (error) {
+        showErrorToast(
+          new Error(`Failed to install provider: ${searchParams.reason}`)
+        );
+      }
     } else if (searchParams?.oauth === "success") {
       toast.success("Successfully installed provider", {
         position: "top-left",

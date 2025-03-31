@@ -326,11 +326,14 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                         !!selectedDeduplicationRule?.default ||
                         selectedDeduplicationRule?.is_provisioned
                       }
-                      options={alertProviders.map((provider) => ({
-                        value: `${provider.type}_${provider.id}`,
-                        label: provider.details?.name || provider.id || "main",
-                        logoUrl: `/icons/${provider.type}-icon.png`,
-                      }))}
+                      options={alertProviders
+                        .filter((provider) => provider.type !== "keep")
+                        .map((provider) => ({
+                          value: `${provider.type}_${provider.id}`,
+                          label:
+                            provider.details?.name || provider.id || "main",
+                          logoUrl: `/icons/${provider.type}-icon.png`,
+                        }))}
                       placeholder="Select provider"
                       onChange={(selectedOption) => {
                         if (selectedOption) {
