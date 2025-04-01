@@ -8,10 +8,10 @@ import pytz
 from fastapi import HTTPException
 
 from keep.api.core.db import (
-    get_last_workflow_execution_by_workflow_id,
-    create_incident_from_dict,
     assign_alert_to_incident,
+    create_incident_from_dict,
     get_last_alerts,
+    get_last_workflow_execution_by_workflow_id,
 )
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus
@@ -102,14 +102,15 @@ def workflow_manager():
         manager.scheduler = scheduler
         asyncio.run(manager.start())
         yield manager
-    finally:
-        if manager:
-            try:
-                manager.stop()
-                # Give some time for threads to clean up
-                time.sleep(1)
-            except Exception as e:
-                print(f"Error stopping workflow manager: {e}")
+    except Exception:
+        pass
+    if manager:
+        try:
+            manager.stop()
+            # Give some time for threads to clean up
+            time.sleep(1)
+        except Exception as e:
+            print(f"Error stopping workflow manager: {e}")
 
 
 @pytest.fixture
@@ -1518,16 +1519,16 @@ workflow_definition_without_permissions = """workflow:
 @pytest.mark.parametrize(
     "test_app, token, workflow_id, expected_status",
     [
+        # User without proper role or email gets forbidden
+        ({"AUTH_TYPE": "DB"}, "unlisted_token", "workflow-with-permissions", 403),
+        # Anyone can run workflows without permissions
+        ({"AUTH_TYPE": "DB"}, "unlisted_token", "workflow-without-permissions", 200),
         # Admin can always run workflows regardless of permissions
         ({"AUTH_TYPE": "DB"}, "admin_token", "workflow-with-permissions", 200),
         # User with role in permissions can run the workflow
         ({"AUTH_TYPE": "DB"}, "noc_token", "workflow-with-permissions", 200),
         # User with email in permissions can run the workflow
         ({"AUTH_TYPE": "DB"}, "listed_email_token", "workflow-with-permissions", 200),
-        # User without proper role or email gets forbidden
-        ({"AUTH_TYPE": "DB"}, "unlisted_token", "workflow-with-permissions", 403),
-        # Anyone can run workflows without permissions
-        ({"AUTH_TYPE": "DB"}, "unlisted_token", "workflow-without-permissions", 200),
     ],
     indirect=["test_app"],
 )
