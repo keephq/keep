@@ -4777,7 +4777,7 @@ def bulk_upsert_alert_fields(
                 session.rollback()
                 if "Deadlock found" in e.args[0]:
                     logger.info(
-                        f"Deadlock found while updating lastalert for `{fingerprint}`, retry #{attempt}"
+                        f"Deadlock found while updating lastalert for `{e}`, retry #{attempt}"
                     )
                     if attempt >= max_retries:
                         raise e
