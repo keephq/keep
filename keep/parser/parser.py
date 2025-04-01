@@ -406,7 +406,9 @@ class Parser:
 
         # Convert time strings to seconds
         if isinstance(workflow_interval, str):
-            if workflow_interval.endswith("m"):
+            if workflow_interval.isnumeric():
+                workflow_interval = int(workflow_interval)
+            elif workflow_interval.endswith("m"):
                 try:
                     minutes = int(workflow_interval[:-1])
                     workflow_interval = minutes * 60
@@ -814,9 +816,15 @@ class Parser:
             workflow (dict): _description_
         """
         actions_providers = [
-            action.get("provider") for action in workflow.get("actions", []) if "provider" in action
+            action.get("provider")
+            for action in workflow.get("actions", [])
+            if "provider" in action
         ]
-        steps_providers = [step.get("provider") for step in workflow.get("steps", []) if "provider" in step]
+        steps_providers = [
+            step.get("provider")
+            for step in workflow.get("steps", [])
+            if "provider" in step
+        ]
         providers = actions_providers + steps_providers
         try:
             providers = [

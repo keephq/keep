@@ -103,7 +103,7 @@ export const AlertPresetLink = ({
         )}
       >
         <Subtitle
-          className={clsx("truncate max-w-24", {
+          className={clsx("truncate text-xs max-w-24", {
             "text-orange-400": isActive,
           })}
           title={preset.name}
