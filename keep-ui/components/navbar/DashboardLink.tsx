@@ -39,6 +39,7 @@ export const DashboardLink = ({
     >
       <Subtitle
         className={clsx(
+          "text-sm",
           {
             "text-orange-400": isActive,
             "pointer-events-none cursor-auto": isDragging,

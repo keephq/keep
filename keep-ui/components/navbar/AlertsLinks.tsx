@@ -16,7 +16,7 @@ import { useTags } from "utils/hooks/useTags";
 import { usePresets } from "@/entities/presets/model/usePresets";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
 import clsx from "clsx";
-import { useAlerts } from "@/utils/hooks/useAlerts";
+import { usePresetAlertsCount } from "./hooks";
 
 type AlertsLinksProps = {
   session: Session | null;
@@ -25,7 +25,6 @@ type AlertsLinksProps = {
 export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const isMounted = useMounted();
-  const { useLastAlerts } = useAlerts();
 
   const [storedTags, setStoredTags] = useLocalStorage<string[]>(
     "selectedTags",
@@ -69,11 +68,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   })();
 
   const { isLoading: isAsyncLoading, totalCount: feedAlertsTotalCount } =
-    useLastAlerts({
-      cel: shouldShowFeed ? undefined : "",
-      limit: 0,
-      offset: 0,
-    });
+    usePresetAlertsCount("", false);
 
   return (
     <>
@@ -108,7 +103,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               />
             </Disclosure.Button>
 
-            <Disclosure.Panel as="ul" className="space-y-2 overflow-auto px-2">
+            <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-1">
               {shouldShowFeed && (
                 <li>
                   <LinkWithIcon
@@ -117,7 +112,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                     count={feedAlertsTotalCount}
                     testId="menu-alerts-feed"
                   >
-                    <Subtitle>Feed</Subtitle>
+                    <Subtitle className="text-xs">Feed</Subtitle>
                   </LinkWithIcon>
                 </li>
               )}

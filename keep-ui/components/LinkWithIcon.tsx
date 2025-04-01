@@ -18,6 +18,7 @@ type LinkWithIconProps = {
   testId?: string;
   isExact?: boolean;
   iconClassName?: string;
+  renderBeforeCount?: () => JSX.Element | undefined;
 } & LinkProps &
   AnchorHTMLAttributes<HTMLAnchorElement>;
 
@@ -33,6 +34,7 @@ export const LinkWithIcon = ({
   testId,
   isExact = false,
   iconClassName,
+  renderBeforeCount,
   ...restOfLinkProps
 }: LinkWithIconProps) => {
   const pathname = usePathname();
@@ -69,7 +71,7 @@ export const LinkWithIcon = ({
   return (
     <div
       className={clsx(
-        "flex items-center justify-between p-1 font-medium rounded-lg focus:ring focus:ring-orange-300 group w-full min-w-0",
+        "flex items-center justify-between py-0.5 px-1 font-medium rounded-lg focus:ring focus:ring-orange-300 group w-full min-w-0",
         {
           "bg-stone-200/50": isActive,
           "hover:bg-stone-200/50": !isActive,
@@ -82,7 +84,7 @@ export const LinkWithIcon = ({
       <Link
         tabIndex={tabIndex}
         {...restOfLinkProps}
-        className="flex items-center space-x-2 flex-1 min-w-0"
+        className="flex items-center space-x-1 flex-1 min-w-0"
         onClick={onClick}
         data-testid={`${testId}-link`}
       >
@@ -95,13 +97,18 @@ export const LinkWithIcon = ({
             size="xs"
             color="orange"
             data-testid={`${testId}-badge`}
-            className="px-1 mr-1 min-w-5"
+            className="px-1 mr-0.5 min-w-5"
           >
-            <ShortNumber value={count}></ShortNumber>
+            <div className="flex gap-1 items-center">
+              {renderBeforeCount && renderBeforeCount() && (
+                <span>{renderBeforeCount()}</span>
+              )}
+              <ShortNumber value={count}></ShortNumber>
+            </div>
           </Badge>
         )}
         {isBeta && (
-          <Badge color="orange" size="xs" className="ml-2">
+          <Badge color="orange" size="xs" className="ml-1">
             Beta
           </Badge>
         )}
