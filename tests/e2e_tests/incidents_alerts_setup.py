@@ -214,7 +214,13 @@ def upload_alerts():
 
         if attempt >= 10:
             raise Exception(
-                f"Not all alerts were uploaded. Not uploaded alerts: {not_uploaded_alerts}"
+                "Not all alerts were uploaded. Not uploaded alerts: "
+                + str(
+                    [
+                        f"{provider_type}: {alert['alertName']}"
+                        for provider_type, alert in not_uploaded_alerts
+                    ]
+                )
             )
 
     alerts_to_enrich = [
