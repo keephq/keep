@@ -58,6 +58,7 @@ import { GrTest } from "react-icons/gr";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
+import { useIsShiftKeyHeld } from "@/features/keyboard-shortcuts";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -326,8 +327,10 @@ export function AlertTableServerSide({
         cel: resultCel,
         offset,
         limit,
-        sortBy: sorting[0]?.id,
-        sortDirection: sorting[0]?.desc ? "DESC" : "ASC",
+        sortOptions: sorting.map((s) => ({
+          sortBy: s.id,
+          sortDirection: s.desc ? "DESC" : "ASC",
+        })),
       };
 
       alertsQueryRef.current = alertsQuery;
@@ -343,15 +346,16 @@ export function AlertTableServerSide({
   useEffect(() => {
     onReload && onReload(alertsQueryRef.current as AlertsQuery);
   }, [alertsQuery, onReload]);
-
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
     useState<boolean>(false);
 
   const leftPinnedColumns = noisyAlertsEnabled
-    ? ["severity", "checkbox", "status", "source", "name", "noise"]
-    : ["severity", "checkbox", "status", "source", "name"];
+    ? ["severity", "checkbox", "status", "source", "noise"]
+    : ["severity", "checkbox", "status", "source"];
+
+  const isShiftPressed = useIsShiftKeyHeld();
 
   const table = useReactTable({
     getRowId: (row) => row.fingerprint,
@@ -400,6 +404,7 @@ export function AlertTableServerSide({
     pageCount: Math.ceil(alertsTotalCount / paginationState.pageSize),
     onPaginationChange: setPaginationState,
     onGroupingChange: setGrouping,
+    isMultiSortEvent: () => isShiftPressed,
   });
 
   const selectedAlertsFingerprints = Object.keys(table.getState().rowSelection);

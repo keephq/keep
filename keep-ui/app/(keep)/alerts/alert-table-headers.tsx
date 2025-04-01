@@ -154,10 +154,10 @@ const DraggableHeaderCell = ({
       column.id === "checkbox"
         ? "32px !important"
         : column.id === "source"
-        ? "40px !important"
-        : column.id === "status"
-        ? "24px !important"
-        : column.getSize(),
+          ? "40px !important"
+          : column.id === "status"
+            ? "24px !important"
+            : column.getSize(),
     opacity: isDragging ? 0.5 : 1,
     transform: CSS.Translate.toString(transform),
     transition,
@@ -165,8 +165,8 @@ const DraggableHeaderCell = ({
       column.getIsPinned() !== false
         ? "default"
         : isDragging
-        ? "grabbing"
-        : "grab",
+          ? "grabbing"
+          : "grab",
   };
 
   // Hide menu for checkbox, source, severity and alertMenu columns
@@ -205,12 +205,6 @@ const DraggableHeaderCell = ({
   const isRightmostColumn = () => {
     const visibleColumns = table.getVisibleLeafColumns();
 
-    // name is a special column since it has menu but can't be moved
-    if (column.id === "name") {
-      // return true so the "move right" option is disabled
-      return true;
-    }
-
     // the alertMenu is always the rightmost column
     // so we need to check the second rightmost column
     return column.id === visibleColumns[visibleColumns.length - 2].id;
@@ -218,12 +212,6 @@ const DraggableHeaderCell = ({
 
   const isLeftmostUnpinnedColumn = () => {
     const visibleColumns = table.getVisibleLeafColumns();
-
-    // name is a special column since it has menu but can't be moved
-    if (column.id === "name") {
-      // return true so the "move left" option is disabled
-      return true;
-    }
 
     const firstUnpinnedIndex = visibleColumns.findIndex(
       (col) => !col.getIsPinned()
@@ -275,8 +263,8 @@ const DraggableHeaderCell = ({
                   column.getNextSortingOrder() === "asc"
                     ? "Sort ascending"
                     : column.getNextSortingOrder() === "desc"
-                    ? "Sort descending"
-                    : "Clear sort"
+                      ? "Sort descending"
+                      : "Clear sort"
                 }
               >
                 {column.getIsSorted() === "asc" ? (
@@ -285,6 +273,9 @@ const DraggableHeaderCell = ({
                   <ArrowUpIcon className="w-4 h-4" />
                 )}
               </span>
+              {table.getState().sorting.length > 1 && (
+                <span className="text-sm">{column.getSortIndex() + 1}</span>
+              )}
             </>
           )}
         </button>
