@@ -91,28 +91,25 @@ actions:
 def workflow_manager():
     """
     Fixture to create and manage a WorkflowManager instance.
-    Each test gets its own fresh instance.
     """
-    from keep.workflowmanager.workflowscheduler import WorkflowScheduler
+    manager = None
+    try:
+        from keep.workflowmanager.workflowscheduler import WorkflowScheduler
 
-    manager = WorkflowManager.get_instance()
-    scheduler = WorkflowScheduler(workflow_manager=manager)
-    manager.scheduler = scheduler
-
-    # Start the manager
-    asyncio.run(manager.start())
-
-    yield manager
-
-    # Cleanup after the test is done
-    if manager and manager.scheduler:
-        # Stop the scheduler first
-        manager.scheduler.stop()
-        # Then stop the manager
-        manager.stop()
-
-    # Reset the singleton instance for the next test
-    WorkflowManager._instance = None
+        scheduler = WorkflowScheduler(None)
+        manager = WorkflowManager.get_instance()
+        scheduler.workflow_manager = manager
+        manager.scheduler = scheduler
+        asyncio.run(manager.start())
+        yield manager
+    finally:
+        if manager:
+            try:
+                manager.stop()
+                # Give some time for threads to clean up
+                time.sleep(1)
+            except Exception as e:
+                print(f"Error stopping workflow manager: {e}")
 
 
 @pytest.fixture
@@ -1516,37 +1513,6 @@ workflow_definition_without_permissions = """workflow:
         with:
           message: "Executed unrestricted workflow"
 """
-
-
-# Mocked JWT payload generator similar to test_auth.py
-def get_mock_jwt_payload_permissions(token, *args, **kwargs):
-    # Maps from token value to user data
-    user_data = {
-        "admin_token": {
-            "email": "admin@keephq.dev",
-            "keep_role": "admin",
-            "tenant_id": SINGLE_TENANT_UUID,
-        },
-        "noc_token": {
-            "email": "noc@keephq.dev",
-            "keep_role": "noc",
-            "tenant_id": SINGLE_TENANT_UUID,
-        },
-        "listed_email_token": {
-            "email": "test@keephq.dev",
-            "keep_role": "webhook",  # Using a valid role from rbac.py
-            "tenant_id": SINGLE_TENANT_UUID,
-        },
-        "unlisted_token": {
-            "email": "dev@keephq.dev",
-            "keep_role": "workflowrunner",  # Using a valid role from rbac.py
-            "tenant_id": SINGLE_TENANT_UUID,
-        },
-    }
-
-    if token in user_data:
-        return user_data[token]
-    raise Exception("Invalid token")
 
 
 @pytest.mark.parametrize(
