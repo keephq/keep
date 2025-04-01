@@ -191,7 +191,9 @@ def create_workflow_execution(
 ) -> str:
     with Session(engine) as session:
         try:
-            workflow_execution_id = execution_id or (str(uuid4()) if not test_run else "test_" + str(uuid4()))
+            workflow_execution_id = execution_id or (
+                str(uuid4()) if not test_run else "test_" + str(uuid4())
+            )
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
             workflow_execution = WorkflowExecution(
@@ -1718,6 +1720,7 @@ def get_alerts_by_ids(
         query = query.options(subqueryload(Alert.alert_enrichment))
         return session.exec(query).all()
 
+
 def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:
     # get the previous alert for a given fingerprint
     with Session(engine) as session:
@@ -2572,8 +2575,6 @@ def update_key_last_used(
                     continue
                 else:
                     raise
-
-
 
 
 def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
@@ -3551,7 +3552,9 @@ def enrich_alerts_with_incidents(
         return alerts
 
 
-def get_incidents_by_alert_fingerprint(tenant_id: str, fingerprint: str, session: Optional[Session] = None) -> List[Incident]:
+def get_incidents_by_alert_fingerprint(
+    tenant_id: str, fingerprint: str, session: Optional[Session] = None
+) -> List[Incident]:
     with existed_or_new_session(session) as session:
         alert_incidents = session.exec(
             select(Incident)
@@ -4690,7 +4693,7 @@ def bulk_upsert_alert_fields(
     provider_id: str,
     provider_type: str,
     session: Optional[Session] = None,
-    max_retries = 3,
+    max_retries=3,
 ):
     with existed_or_new_session(session) as session:
         for attempt in range(max_retries):
@@ -4766,6 +4769,8 @@ def bulk_upsert_alert_fields(
                 if engine.dialect.name != "mssql":  # Already executed for SQL Server
                     session.execute(stmt)
                 session.commit()
+                
+                break
 
             except IntegrityError as e:
                 # Handle any potential race conditions
@@ -4777,7 +4782,6 @@ def bulk_upsert_alert_fields(
                     if attempt >= max_retries:
                         raise e
                     continue
-
 
 
 def get_alerts_fields(tenant_id: str) -> List[AlertField]:
