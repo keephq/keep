@@ -4,9 +4,11 @@ TelegramProvider is a class that implements the BaseProvider interface for Teleg
 
 import asyncio
 import dataclasses
+from typing import Literal, Optional
 
 import pydantic
 import telegram
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -53,7 +55,10 @@ class TelegramProvider(BaseProvider):
     def _notify(
         self,
         chat_id: str = "",
+        topic_id: Optional[int] = None,
         message: str = "",
+        reply_markup: Optional[dict[str, dict[str, any]]] = None,
+        reply_markup_layout: Literal["horizontal", "vertical"] = "horizontal",
         parse_mode: str = None,
         **kwargs: dict,
     ):
@@ -63,7 +68,10 @@ class TelegramProvider(BaseProvider):
 
         Args:
             chat_id (str): Unique identifier for the target chat or username of the target channel
+            topic_id (int): Unique identifier for the target message thread (topic)
             message (str): Message to be sent
+            reply_markup (dict): Inline keyboard markup to be attached to the message
+            reply_markup_layout (str): Direction of the reply markup, could be "horizontal" or "vertical"
             parse_mode (str): Mode for parsing entities in the message text, could be "markdown" or "html"
         """
         self.logger.debug("Notifying alert message to Telegram")
@@ -79,9 +87,33 @@ class TelegramProvider(BaseProvider):
         loop = asyncio.new_event_loop()
         telegram_bot = telegram.Bot(token=self.authentication_config.bot_token)
         try:
+            keyboard_markup = None
+            if reply_markup is not None:
+                buttons = []
+                for text, params in reply_markup.items():
+                    button = InlineKeyboardButton(text=text, **params)
+                    buttons.append(button)
+
+                if reply_markup_layout == "horizontal":
+                    buttons = [buttons]
+                elif reply_markup_layout == "vertical":
+                    buttons = [[button] for button in buttons]
+                else:
+                    raise ProviderException(
+                        f"{self.__class__.__name__} failed to notify alert message to Telegram: reply_markup_direction should be either horizontal or vertical"
+                    )
+
+                keyboard_markup = InlineKeyboardMarkup(
+                    inline_keyboard=buttons,
+                )
+
             task = loop.create_task(
                 telegram_bot.send_message(
-                    chat_id=chat_id, text=message, parse_mode=parse_mode
+                    chat_id=chat_id,
+                    text=message,
+                    reply_markup=keyboard_markup,
+                    parse_mode=parse_mode,
+                    message_thread_id=topic_id,
                 )
             )
             loop.run_until_complete(task)
