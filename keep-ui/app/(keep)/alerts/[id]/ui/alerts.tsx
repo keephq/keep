@@ -35,6 +35,7 @@ const defaultPresets: Preset[] = [
     alerts_count: 0,
     should_do_noise_now: false,
     tags: [],
+    counter_shows_firing_only: false,
   },
 ];
 

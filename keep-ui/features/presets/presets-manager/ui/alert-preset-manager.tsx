@@ -3,7 +3,7 @@ import Modal from "@/components/ui/Modal";
 import { useRouter } from "next/navigation";
 import { Table } from "@tanstack/react-table";
 import { AlertsRulesBuilder } from "@/features/presets/presets-manager/ui/alerts-rules-builder";
-import { CreateOrUpdatePresetForm } from "@/features/create-or-update-preset";
+import { CreateOrUpdatePresetForm } from "@/features/presets/create-or-update-preset";
 import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresets } from "@/entities/presets/model/usePresets";
@@ -86,6 +86,7 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
         isNoisy: selectedPreset.is_noisy,
         tags: selectedPreset.tags,
         groupColumn: selectedPreset.group_column,
+        counterShowsFiringOnly: selectedPreset.counter_shows_firing_only,
       }
     : {
         CEL: presetCEL,
@@ -94,6 +95,7 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
         isNoisy: undefined,
         tags: undefined,
         groupColumn: undefined,
+        counterShowsFiringOnly: true,
       };
 
   // for future use
@@ -128,6 +130,7 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
           icon={GrTest}
           onClick={handleAddAlertModalOpen}
           className="ml-2"
+          color="orange"
         ></Button>
 
         {/* Error alerts button with notification counter */}
