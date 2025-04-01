@@ -659,10 +659,8 @@ class KeepProvider(BaseProvider):
             override_source_with: override alert source
             read_only: if True, don't modify existing alerts
             fingerprint: alert fingerprint
-            .. deprecated::
-            `if` parameter is deprecated. Use `if_condition` instead.
-            .. deprecated::
-            `for` parameter is deprecated. Use `for_duration` instead.
+            if: 'if' parameter is deprecated. Use `if_condition` instead.
+            for: 'for' parameter is deprecated. Use `for_duration` instead.
         """
         # for backward compatibility
         if_condition = kwargs.get("if", None)
