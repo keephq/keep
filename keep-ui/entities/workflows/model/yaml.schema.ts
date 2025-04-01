@@ -38,7 +38,7 @@ const AlertTriggerSchema = z.object({
 
 const IntervalTriggerSchema = z.object({
   type: z.literal("interval"),
-  value: z.string(),
+  value: z.union([z.string(), z.number()]),
 });
 
 const IncidentTriggerSchema = z.object({

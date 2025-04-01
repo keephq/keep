@@ -40,12 +40,14 @@ describe("validateMustacheVariableName", () => {
       consts: {},
     },
   };
+  const mockSecrets = {};
 
   it("should validate alert variables", () => {
     const result = validateMustacheVariableName(
       "{{ alert.name }}",
       mockDefinition.sequence[0],
-      mockDefinition
+      mockDefinition,
+      mockSecrets
     );
     expect(result).toBeNull();
   });
@@ -54,7 +56,8 @@ describe("validateMustacheVariableName", () => {
     const result = validateMustacheVariableName(
       "{{ incident.title }}",
       mockDefinition.sequence[0],
-      mockDefinition
+      mockDefinition,
+      mockSecrets
     );
     expect(result).toBeNull();
   });
@@ -63,7 +66,8 @@ describe("validateMustacheVariableName", () => {
     const result = validateMustacheVariableName(
       "{{ steps.First Step.results }}",
       mockDefinition.sequence[1],
-      mockDefinition
+      mockDefinition,
+      mockSecrets
     );
     expect(result).toBeNull();
   });
@@ -72,7 +76,8 @@ describe("validateMustacheVariableName", () => {
     const result = validateMustacheVariableName(
       "{{ steps.First Step.results }}",
       mockDefinition.sequence[0],
-      mockDefinition
+      mockDefinition,
+      mockSecrets
     );
     expect(result).toBe(
       "Variable: '{{ steps.First Step.results }}' - You can't access the results of the current step."
@@ -83,7 +88,8 @@ describe("validateMustacheVariableName", () => {
     const result = validateMustacheVariableName(
       "{{ steps.Second Step.results }}",
       mockDefinition.sequence[0],
-      mockDefinition
+      mockDefinition,
+      mockSecrets
     );
     expect(result).toBe(
       "Variable: '{{ steps.Second Step.results }}' - You can't access the results of a step that appears after the current step."
@@ -94,7 +100,8 @@ describe("validateMustacheVariableName", () => {
     const result = validateMustacheVariableName(
       "{{ steps.Second Step.results }}",
       mockDefinition.sequence[0],
-      mockDefinition
+      mockDefinition,
+      mockSecrets
     );
     expect(result).toBe(
       "Variable: '{{ steps.Second Step.results }}' - You can't access the results of a step that appears after the current step."
@@ -125,12 +132,14 @@ describe("validateAllMustacheVariablesInString", () => {
       consts: {},
     },
   };
+  const mockSecrets = {};
 
   it("should validate multiple variables in a string", () => {
     const result = validateAllMustacheVariablesInString(
       "Alert: {{ alert.name }} with severity {{ alert.severity }}",
       mockDefinition.sequence[0],
-      mockDefinition
+      mockDefinition,
+      mockSecrets
     );
     expect(result).toEqual([]);
   });
@@ -139,7 +148,8 @@ describe("validateAllMustacheVariablesInString", () => {
     const result = validateAllMustacheVariablesInString(
       "Invalid: {{ invalid.var }} and {{ steps.Future Step.results }}",
       mockDefinition.sequence[0],
-      mockDefinition
+      mockDefinition,
+      mockSecrets
     );
     expect(result).toContain(
       "Variable: '{{ steps.Future Step.results }}' - a 'Future Step' step that doesn't exist."
@@ -228,6 +238,8 @@ describe("validateStepPure", () => {
     },
   };
 
+  const mockSecrets = {};
+
   it("should validate a task step with valid configuration", () => {
     const step: V2Step = {
       id: "test-step",
@@ -248,6 +260,7 @@ describe("validateStepPure", () => {
       step,
       mockProviders,
       mockInstalledProviders,
+      mockSecrets,
       mockDefinition
     );
     expect(result).toEqual([]);
@@ -284,6 +297,7 @@ describe("validateStepPure", () => {
       step,
       mockProviders,
       mockInstalledProviders,
+      mockSecrets,
       mockDefinition
     );
     expect(result).toEqual([]);
@@ -305,6 +319,7 @@ describe("validateStepPure", () => {
       step,
       mockProviders,
       mockInstalledProviders,
+      mockSecrets,
       mockDefinition
     );
     expect(result).toEqual([]);
@@ -330,6 +345,7 @@ describe("validateStepPure", () => {
       step,
       mockProviders,
       mockInstalledProviders,
+      mockSecrets,
       mockDefinition
     );
     expect(result).toEqual([["No test provider selected", "warning"]]);
@@ -355,6 +371,7 @@ describe("validateStepPure", () => {
       step,
       mockProviders,
       mockInstalledProviders,
+      mockSecrets,
       mockDefinition
     );
     expect(result).toEqual([

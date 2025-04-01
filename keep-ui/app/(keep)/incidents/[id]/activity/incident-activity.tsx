@@ -9,7 +9,7 @@ import {
   useIncidentAlerts,
   usePollIncidentComments,
 } from "@/utils/hooks/useIncidents";
-import { useAlerts } from "@/utils/hooks/useAlerts";
+import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { IncidentActivityItem } from "./ui/IncidentActivityItem";
 import { IncidentActivityComment } from "./ui/IncidentActivityComment";
@@ -117,10 +117,10 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
             auditEvent.action === "A comment was added to the incident" // @tb: I wish this was INCIDENT_COMMENT and not the text..
               ? "comment"
               : auditEvent.action === "Incident status changed"
-              ? "statuschange"
-              : auditEvent.action === "Incident assigned"
-              ? "assign"
-              : "alert";
+                ? "statuschange"
+                : auditEvent.action === "Incident assigned"
+                  ? "assign"
+                  : "alert";
           return {
             id: auditEvent.id,
             type: _type,

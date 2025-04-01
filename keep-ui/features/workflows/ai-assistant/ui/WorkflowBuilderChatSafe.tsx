@@ -1,6 +1,5 @@
 import { useConfig } from "@/utils/hooks/useConfig";
 import Image from "next/image";
-import BuilderChatPlaceholder from "@/features/workflows/ai-assistant/ui/ai-workflow-placeholder.png";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { Text, Title } from "@tremor/react";
 import { Link } from "@/components/ui";
@@ -8,7 +7,8 @@ import { DefinitionV2 } from "@/entities/workflows";
 import {
   WorkflowBuilderChat,
   WorkflowBuilderChatProps,
-} from "@/features/workflows/ai-assistant/ui/WorkflowBuilderChat";
+} from "./WorkflowBuilderChat";
+import BuilderChatPlaceholder from "./ai-workflow-placeholder.png";
 
 type WorkflowBuilderChatSafeProps = Omit<
   WorkflowBuilderChatProps,

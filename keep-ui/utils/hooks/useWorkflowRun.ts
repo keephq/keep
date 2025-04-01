@@ -6,8 +6,8 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { isProviderInstalled } from "@/shared/lib/provider-utils";
 import { useWorkflowExecutionsRevalidation } from "@/entities/workflow-executions/model/useWorkflowExecutionsRevalidation";
-import yaml from "js-yaml";
 import { WorkflowInput } from "@/entities/workflows/ui/WorkflowInputFields";
+import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 
 const noop = () => {};
 
@@ -30,7 +30,9 @@ export const useWorkflowRun = (workflow: Workflow) => {
   useEffect(() => {
     if (workflow?.workflow_raw) {
       try {
-        const parsedWorkflow = yaml.load(workflow.workflow_raw) as any;
+        const parsedWorkflow = parseWorkflowYamlStringToJSON(
+          workflow.workflow_raw
+        );
         const inputs = parsedWorkflow.workflow.inputs || [];
         setWorkflowInputs(inputs);
       } catch (error) {

@@ -16,7 +16,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@tremor/react";
-import { AlertDto, severityMapping } from "@/entities/alerts/model";
+import { AlertDto } from "@/entities/alerts/model";
 import {
   useIncidentAlerts,
   usePollIncidentAlerts,
@@ -26,23 +26,18 @@ import { IncidentDto, useIncidentActions } from "@/entities/incidents/model";
 import {
   EmptyStateCard,
   getCommonPinningStylesAndClassNames,
-  UISeverity,
 } from "@/shared/ui";
 import { useRouter } from "next/navigation";
-import {
-  TablePagination,
-  } from "@/shared/ui";
+import { TablePagination } from "@/shared/ui";
 import clsx from "clsx";
 import { IncidentAlertsTableBodySkeleton } from "./incident-alert-table-body-skeleton";
 import { IncidentAlertsActions } from "./incident-alert-actions";
-import { ViewAlertModal } from "@/app/(keep)/alerts/ViewAlertModal";
+import { ViewAlertModal } from "@/features/alerts/view-raw-alert";
 import { IncidentAlertActionTray } from "./incident-alert-action-tray";
 import { BellAlertIcon } from "@heroicons/react/24/outline";
-import { AlertsTableBody } from "@/app/(keep)/alerts/alerts-table-body";
-import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
-import {
-  useAlertTableCols,
-} from "@/app/(keep)/alerts/alert-table-utils";
+import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
+import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
+import { useAlertTableTheme } from "@/entities/alerts/model";
 interface Props {
   incident: IncidentDto;
 }
@@ -77,16 +72,7 @@ export default function IncidentAlerts({ incident }: Props) {
   );
   const { unlinkAlertsFromIncident } = useIncidentActions();
 
-  const [theme, setTheme] = useLocalStorage(
-    "alert-table-theme",
-    Object.values(severityMapping).reduce<{ [key: string]: string }>(
-      (acc, severity) => {
-        acc[severity] = "bg-white";
-        return acc;
-      },
-      {}
-    )
-  );
+  const { theme } = useAlertTableTheme();
 
   // TODO: Load data on server side
   // Loading state is true if the data is not loaded and there is no error for smoother loading state on initial load

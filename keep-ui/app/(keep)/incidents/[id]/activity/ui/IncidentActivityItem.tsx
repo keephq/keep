@@ -1,4 +1,4 @@
-import AlertSeverity from "@/app/(keep)/alerts/alert-severity";
+import { AlertSeverity } from "@/entities/alerts/ui";
 import { AlertDto } from "@/entities/alerts/model";
 import TimeAgo from "react-timeago";
 
@@ -13,10 +13,10 @@ export function IncidentActivityItem({ activity }: { activity: any }) {
     activity.type === "comment"
       ? " Added a comment. "
       : activity.type === "statuschange"
-      ? " Incident status changed. "
-      : activity.initiator?.status === "firing"
-      ? " triggered"
-      : " resolved" + ". ";
+        ? " Incident status changed. "
+        : activity.initiator?.status === "firing"
+          ? " triggered"
+          : " resolved" + ". ";
   return (
     <div className="relative h-full w-full flex flex-col">
       <div className="flex items-center gap-2">

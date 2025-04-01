@@ -27,7 +27,7 @@ def provision_resources():
         logger.info("Loading providers into cache")
         # provision providers from env. relevant only on single tenant.
         logger.info("Provisioning providers and workflows")
-        ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
+        ProvidersService.provision_providers(SINGLE_TENANT_UUID)
         logger.info("Providers loaded successfully")
         WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
         logger.info("Workflows provisioned successfully")

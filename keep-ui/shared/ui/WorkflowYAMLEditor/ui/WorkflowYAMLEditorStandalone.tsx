@@ -6,7 +6,7 @@ import { wrapDefinitionV2 } from "@/entities/workflows/lib/parser";
 import { parseWorkflow } from "@/entities/workflows/lib/parser";
 import { useProviders } from "@/utils/hooks/useProviders";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import { WorkflowTestRunModal } from "@/features/workflows/test-run/ui/workflow-test-run-modal";
+import { WorkflowTestRunModal } from "@/features/workflows/test-run";
 import { WorkflowYamlEditorHeader } from "./WorkflowYamlEditorHeader";
 import { useState } from "react";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";

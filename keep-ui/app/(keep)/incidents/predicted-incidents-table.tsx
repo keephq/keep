@@ -13,7 +13,7 @@ import {
   useIncidentActions,
 } from "@/entities/incidents/model";
 import React, { useState } from "react";
-import { IncidentTableComponent } from "@/features/incident-list/ui/incident-table-component";
+import { IncidentTableComponent } from "@/features/incidents/incident-list";
 import { DynamicImageProviderIcon } from "@/components/ui";
 
 const columnHelper = createColumnHelper<IncidentDto>();

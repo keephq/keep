@@ -222,14 +222,7 @@ def query_alerts(
     )
 
     try:
-        db_alerts, total_count = query_last_alerts(
-            tenant_id=tenant_id,
-            limit=query.limit,
-            offset=query.offset,
-            cel=query.cel,
-            sort_by=query.sort_by,
-            sort_dir=query.sort_dir,
-        )
+        db_alerts, total_count = query_last_alerts(tenant_id=tenant_id, query=query)
     except CelToSqlException as e:
         logger.exception(f'Error parsing CEL expression "{query.cel}". {str(e)}')
         raise HTTPException(
