@@ -646,9 +646,6 @@ class KeepProvider(BaseProvider):
         for_duration: str | None = None,
         **kwargs,
     ):
-        # for backward compatibility
-        if_condition = kwargs.get("if", None)
-        for_duration = kwargs.get("for", None)
         """
         Notify alerts or update workflow
         Args:
@@ -662,11 +659,14 @@ class KeepProvider(BaseProvider):
             override_source_with: override alert source
             read_only: if True, don't modify existing alerts
             fingerprint: alert fingerprint
-            .. deprecated:: 
+            .. deprecated::
             `if` parameter is deprecated. Use `if_condition` instead.
             .. deprecated::
             `for` parameter is deprecated. Use `for_duration` instead.
         """
+        # for backward compatibility
+        if_condition = kwargs.get("if", None)
+        for_duration = kwargs.get("for", None)
         if workflow_full_sync or delete_all_other_workflows:
             # We need DB id, not user id for the workflow, so getting it from the wf execution.
             workflow_store = WorkflowStore()
