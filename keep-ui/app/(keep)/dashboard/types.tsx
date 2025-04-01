@@ -24,6 +24,7 @@ export interface GenericsMetrics {
 }
 
 export enum WidgetType {
+  ALERT_PRESETS_MONITOR = "ALERT_PRESETS_MONITOR",
   PRESET = "PRESET",
   METRIC = "METRIC",
   GENERICS_METRICS = "GENERICS_METRICS",
