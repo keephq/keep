@@ -280,6 +280,10 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
                       value: "Generic Metrics",
                     },
                     { key: WidgetType.METRIC, value: "Metric" },
+                    {
+                      key: WidgetType.ALERT_PRESETS_MONITOR,
+                      value: "Alert presets monitor",
+                    },
                   ].map(({ key, value }) => (
                     <SelectItem key={key} value={key}>
                       {value}
@@ -290,7 +294,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
             }}
           />
         </div>
-        {widgetType === WidgetType.PRESET ? (
+        {widgetType === WidgetType.PRESET && (
           <>
             <div className="mb-4 mt-2">
               <Subtitle>Preset</Subtitle>
@@ -366,7 +370,8 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
               </div>
             </div>
           </>
-        ) : widgetType === WidgetType.GENERICS_METRICS ? (
+        )}
+        {widgetType == WidgetType.GENERICS_METRICS && (
           <>
             <div className="mb-4 mt-2">
               <Subtitle>Generic Metrics</Subtitle>
@@ -396,7 +401,8 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
               />
             </div>
           </>
-        ) : (
+        )}
+        {widgetType === WidgetType.METRIC && (
           <div className="mb-4 mt-2">
             <Subtitle>Widget</Subtitle>
             <Controller
