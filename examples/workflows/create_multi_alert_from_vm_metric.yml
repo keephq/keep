@@ -32,9 +32,9 @@ workflow:
         type: keep
         with:
           # Only create alert if CPU usage is above threshold
-          if: "{{ value.1 }} > 0.01 "
+          if_condition: "{{ value.1 }} > 0.01 "
           # Alert must persist for 1 minute
-          for: 1m
+          for_duration: 1m
           # Use job label to create unique fingerprint for each alert
           fingerprint_fields:
             - labels.job

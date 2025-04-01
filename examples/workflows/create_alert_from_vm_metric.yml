@@ -30,7 +30,7 @@ workflow:
         type: keep
         with:
           # Create alert if CPU usage exceeds threshold
-          if: "{{ value.1 }} > 0.0040"
+          if_condition: "{{ value.1 }} > 0.0040"
           alert:
             name: "High CPU Usage"
             description: "[Single] CPU usage is high on the VM (created from VM metric)"

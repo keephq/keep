@@ -638,14 +638,17 @@ class KeepProvider(BaseProvider):
         workflow_full_sync: bool = False,
         workflow_to_update_yaml: str | None = None,
         alert: dict | None = None,
-        if_condition: str | None = None,
-        for_duration: str | None = None,
         fingerprint_fields: list | None = None,
         override_source_with: str | None = None,
         read_only: bool = False,
         fingerprint: str | None = None,
+        if_condition: str | None = None,
+        for_duration: str | None = None,
         **kwargs,
     ):
+        # for backward compatibility
+        if_condition = kwargs.get("if", None)
+        for_duration = kwargs.get("for", None)
         """
         Notify alerts or update workflow
         Args:
