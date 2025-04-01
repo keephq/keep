@@ -39,22 +39,18 @@ READ_ONLY_MODE = config("KEEP_READ_ONLY", default="false") == "true"
 logger = logging.getLogger(__name__)
 
 
-def get_method_parameters_safe(method):
-    try:
-        raw_params = list(dict(inspect.signature(method).parameters).keys())
-        safe_params = []
-        for param in raw_params:
-            if param == "self":
-                continue
-            # replace if_ and for_ with if and for to use reserved words as parameter names
-            if param == "if_":
-                param = "if"
-            if param == "for_":
-                param = "for"
-            safe_params.append(param)
-        return safe_params
-    except Exception:
-        return []
+def get_method_parameters_safe(raw_params: list[str]) -> list[str]:
+    safe_params = []
+    for param in raw_params:
+        if param == "self":
+            continue
+        # replace if_ and for_ with if and for to use reserved words as parameter names
+        if param == "if_":
+            param = "if"
+        if param == "for_":
+            param = "for"
+        safe_params.append(param)
+    return safe_params
 
 
 class ProviderConfigurationException(Exception):
@@ -338,9 +334,13 @@ class ProvidersFactory:
                 notify_params = (
                     None
                     if not can_notify
-                    else list(
-                        get_method_parameters_safe(
-                            provider_class.__dict__.get("_notify")
+                    else get_method_parameters_safe(
+                        list(
+                            dict(
+                                inspect.signature(
+                                    provider_class.__dict__.get("_notify")
+                                ).parameters
+                            ).keys()
                         )
                     )
                 )
@@ -352,7 +352,13 @@ class ProvidersFactory:
                     None
                     if not can_query
                     else get_method_parameters_safe(
-                        provider_class.__dict__.get("_query")
+                        list(
+                            dict(
+                                inspect.signature(
+                                    provider_class.__dict__.get("_query")
+                                ).parameters
+                            ).keys()
+                        )
                     )
                 )
                 config = {}

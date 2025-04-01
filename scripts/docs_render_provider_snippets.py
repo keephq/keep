@@ -18,6 +18,8 @@ import time
 from docstring_parser import parse
 from jinja2 import Template
 
+from keep.providers.providers_factory import get_method_parameters_safe
+
 
 def get_attribute_name(node: ast.Attribute) -> str:
     """Get the full name of an attribute node (e.g., module.Class)"""
@@ -228,10 +230,9 @@ def extract_provider_class_insights(
             if isinstance(
                 provider_property, ast.FunctionDef
             ) and provider_property.name in ["_notify", "_query"]:
-                args = []
-                for arg in provider_property.args.args:
-                    if arg.arg != "self":  # Skip 'self' parameter
-                        args.append(arg.arg)
+                args = get_method_parameters_safe(
+                    [arg.arg for arg in provider_property.args.args]
+                )
 
                 result[provider_property.name] = {arg: "" for arg in args}
                 # Extract docstring
