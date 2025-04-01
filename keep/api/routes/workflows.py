@@ -967,7 +967,7 @@ def get_workflow_execution_status(
 
     workflow_execution_dto = WorkflowExecutionDTO(
         id=workflow_execution.id,
-        workflow_name=workflow.name,
+        workflow_name=workflow.name if workflow else None,
         workflow_id=workflow_execution.workflow_id,
         status=workflow_execution.status,
         started=workflow_execution.started,

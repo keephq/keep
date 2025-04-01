@@ -654,7 +654,7 @@ def get_all_workflows_yamls(tenant_id: str) -> List[str]:
     return workflows
 
 
-def get_workflow(tenant_id: str, workflow_id: str) -> Workflow:
+def get_workflow(tenant_id: str, workflow_id: str) -> Workflow | None:
     with Session(engine) as session:
         # if the workflow id is uuid:
         if validators.uuid(workflow_id):
