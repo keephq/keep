@@ -5,19 +5,20 @@ import { Card, Callout, Button } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { TabGroup, Tab, TabList, TabPanel, TabPanels } from "@tremor/react";
-import useSWR from "swr";
 import {
   WorkflowExecutionDetail,
   WorkflowExecutionFailure,
   isWorkflowExecution,
+  isWorkflowFailure,
 } from "@/shared/api/workflow-executions";
-import { useApi } from "@/shared/lib/hooks/useApi";
 import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
 import { setFavicon } from "@/shared/ui/utils/favicon";
 import { EmptyStateCard, ResizableColumns } from "@/shared/ui";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { WorkflowYAMLEditorWithLogs } from "@/shared/ui/WorkflowYAMLEditorWithLogs";
+import { useWorkflowExecutionDetail } from "@/entities/workflow-executions/model/useWorkflowExecutionDetail";
+import { useWorkflowDetail } from "@/entities/workflows/model/useWorkflowDetail";
 
 const convertWorkflowStatusToFaviconStatus = (
   status: WorkflowExecutionDetail["status"]
@@ -46,31 +47,27 @@ export function WorkflowExecutionResults({
   standalone = false,
   workflowYaml,
 }: WorkflowResultsProps) {
-  const api = useApi();
   const [refreshInterval, setRefreshInterval] = useState(1000);
   const [checks, setChecks] = useState(0);
 
-  const { data: executionData, error: executionError } = useSWR(
-    api.isReady() && workflowExecutionId
-      ? `/workflows/${workflowId ? `${workflowId}/` : ""}runs/${workflowExecutionId}`
-      : null,
-    async (url) => {
-      const fetchedData = await api.get(url);
-      if (fetchedData.status === "in_progress") {
-        setChecks((c) => c + 1);
-      }
-      return fetchedData;
-    },
-    {
+  const { data: executionData, error: executionError } =
+    useWorkflowExecutionDetail(workflowId, workflowExecutionId, {
+      onSuccess: (data) => {
+        if (isWorkflowExecution(data)) {
+          if (data.status === "in_progress") {
+            setChecks((c) => c + 1);
+          }
+        }
+      },
       dedupingInterval: 990,
       refreshInterval: refreshInterval,
-      fallbackData: initialWorkflowExecution,
-    }
-  );
+      fallbackData: isWorkflowExecution(initialWorkflowExecution)
+        ? initialWorkflowExecution
+        : undefined,
+    });
 
-  const { data: workflowData, error: workflowError } = useSWR(
-    api.isReady() && !workflowYaml ? `/workflows/${workflowId}` : null,
-    (url) => api.get(url)
+  const { workflow: workflowData, error: workflowError } = useWorkflowDetail(
+    !workflowYaml ? workflowId : null
   );
 
   const finalYaml = workflowYaml ?? workflowData?.workflow_raw;
@@ -79,8 +76,14 @@ export function WorkflowExecutionResults({
     if (!standalone || !executionData) {
       return;
     }
-    const status = executionData.error ? "failed" : executionData.status;
-    document.title = `${executionData.workflow_name} - Workflow Results - Keep`;
+    const status = isWorkflowExecution(executionData)
+      ? executionData.status
+      : "failed";
+    const workflowName =
+      isWorkflowExecution(executionData) && executionData.workflow_name
+        ? executionData.workflow_name
+        : "Workflow";
+    document.title = `${workflowName} - Workflow Results - Keep`;
     if (status) {
       setFavicon(convertWorkflowStatusToFaviconStatus(status));
     }
@@ -89,13 +92,12 @@ export function WorkflowExecutionResults({
   useEffect(() => {
     if (!executionData) return;
 
-    if (executionData?.status !== "in_progress") {
-      console.log("Stopping refresh interval");
-      setRefreshInterval(0);
-    }
-    if (executionData.error) {
-      setRefreshInterval(0);
-    } else if (executionData?.status === "success") {
+    if (isWorkflowExecution(executionData)) {
+      if (executionData.status !== "in_progress") {
+        console.log("Stopping refresh interval");
+        setRefreshInterval(0);
+      }
+    } else if (isWorkflowFailure(executionData)) {
       setRefreshInterval(0);
     }
   }, [executionData]);

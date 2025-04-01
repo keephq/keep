@@ -15,10 +15,9 @@ export default function WorkflowDetailHeader({
   workflowId: string;
   initialData?: Workflow;
 }) {
-  const { workflow, isLoading, error } = useWorkflowDetail(
-    workflow_id,
-    initialData
-  );
+  const { workflow, isLoading, error } = useWorkflowDetail(workflow_id, {
+    fallbackData: initialData,
+  });
 
   const {
     isRunning,
