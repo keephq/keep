@@ -4775,9 +4775,9 @@ def bulk_upsert_alert_fields(
             except IntegrityError as e:
                 # Handle any potential race conditions
                 session.rollback()
-                if "Deadlock found" in e.args[0]:
+                if "Deadlock found" in str(e):
                     logger.info(
-                        f"Deadlock found while updating lastalert for `{e}`, retry #{attempt}"
+                        f"Deadlock found during bulk_upsert_alert_fields `{e}`, retry #{attempt}"
                     )
                     if attempt >= max_retries:
                         raise e
