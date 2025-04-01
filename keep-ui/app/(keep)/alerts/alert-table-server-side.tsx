@@ -58,6 +58,7 @@ import { GrTest } from "react-icons/gr";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
+import { useIsShiftKeyHeld } from "@/features/keyboard-shortcuts";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -345,7 +346,6 @@ export function AlertTableServerSide({
   useEffect(() => {
     onReload && onReload(alertsQueryRef.current as AlertsQuery);
   }, [alertsQuery, onReload]);
-  const [isShiftPressed, setIsShiftPressed] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
@@ -355,27 +355,7 @@ export function AlertTableServerSide({
     ? ["severity", "checkbox", "status", "source", "name", "noise"]
     : ["severity", "checkbox", "status", "source", "name"];
 
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Shift") {
-        setIsShiftPressed(true);
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [setIsShiftPressed]);
-
-  useEffect(() => {
-    function handleKeyUp(e: KeyboardEvent) {
-      if (e.key === "Shift") {
-        setIsShiftPressed(false);
-      }
-    }
-
-    document.addEventListener("keyup", handleKeyUp);
-    return () => document.removeEventListener("keyup", handleKeyUp);
-  }, [setIsShiftPressed]);
+  const isShiftPressed = useIsShiftKeyHeld();
 
   const table = useReactTable({
     getRowId: (row) => row.fingerprint,
