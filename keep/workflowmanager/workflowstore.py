@@ -36,8 +36,7 @@ class WorkflowStore:
         self.logger = logging.getLogger(__name__)
 
     def get_workflow_execution(self, tenant_id: str, workflow_execution_id: str):
-        workflow_execution = get_workflow_execution(tenant_id, workflow_execution_id)
-        return workflow_execution
+        return get_workflow_execution(tenant_id, workflow_execution_id)
 
     def create_workflow(self, tenant_id: str, created_by, workflow: dict):
         workflow_id = workflow.get("id")
