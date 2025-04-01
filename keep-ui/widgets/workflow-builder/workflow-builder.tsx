@@ -3,7 +3,7 @@ import { Card } from "@tremor/react";
 import { Provider } from "@/shared/api/providers";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import ReactFlowBuilder from "@/features/workflows/builder/ui/ReactFlowBuilder";
+import { ReactFlowBuilder } from "@/features/workflows/builder";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useWorkflowStore } from "@/entities/workflows";
 import { showErrorToast, KeepLoader } from "@/shared/ui";

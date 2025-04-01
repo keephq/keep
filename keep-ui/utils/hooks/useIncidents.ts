@@ -8,7 +8,7 @@ import { PaginatedWorkflowExecutionDto } from "@/shared/api/workflow-executions"
 import useSWR, { SWRConfiguration } from "swr";
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect, useState } from "react";
-import { useAlerts } from "./useAlerts";
+import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { v4 as uuidv4 } from "uuid";
 import {
