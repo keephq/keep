@@ -13,7 +13,7 @@ steps:
   - name: get-enrichments
     provider:
       config: "{{ providers.my_openai }}"
-      type: openai
+      type: openai  # Could be also LiteLLM
       with:
         prompt: "You received such an alert {{alert}}, generate missing fields."
         model: "gpt-4o-mini" # This model supports structured output

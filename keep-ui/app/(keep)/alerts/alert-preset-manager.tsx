@@ -131,6 +131,7 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
           icon={GrTest}
           onClick={handleAddAlertModalOpen}
           className="ml-2"
+          color="orange"
         ></Button>
 
         {/* Error alerts button with notification counter */}
