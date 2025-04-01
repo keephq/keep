@@ -4769,7 +4769,7 @@ def bulk_upsert_alert_fields(
                 if engine.dialect.name != "mssql":  # Already executed for SQL Server
                     session.execute(stmt)
                 session.commit()
-                
+
                 break
 
             except IntegrityError as e:
@@ -4782,6 +4782,8 @@ def bulk_upsert_alert_fields(
                     if attempt >= max_retries:
                         raise e
                     continue
+                else:
+                    raise e
 
 
 def get_alerts_fields(tenant_id: str) -> List[AlertField]:
