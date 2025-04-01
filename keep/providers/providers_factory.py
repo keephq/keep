@@ -11,6 +11,7 @@ import logging
 import os
 import types
 import typing
+import keyword
 from dataclasses import fields
 from typing import get_args
 
@@ -37,6 +38,18 @@ PROVIDERS_CACHE_FILE = os.environ.get("PROVIDERS_CACHE_FILE", "providers_cache.j
 READ_ONLY_MODE = config("KEEP_READ_ONLY", default="false") == "true"
 
 logger = logging.getLogger(__name__)
+
+
+def get_method_parameters_safe(raw_params: list[str]) -> list[str]:
+    safe_params = []
+    for param in raw_params:
+        if param == "self":
+            continue
+        if param.endswith("_") and keyword.iskeyword(param[:-1]):
+            safe_params.append(param[:-1])
+        else:
+            safe_params.append(param)
+    return safe_params
 
 
 class ProviderConfigurationException(Exception):
@@ -320,13 +333,15 @@ class ProvidersFactory:
                 notify_params = (
                     None
                     if not can_notify
-                    else list(
-                        dict(
-                            inspect.signature(
-                                provider_class.__dict__.get("_notify")
-                            ).parameters
-                        ).keys()
-                    )[1:]
+                    else get_method_parameters_safe(
+                        list(
+                            dict(
+                                inspect.signature(
+                                    provider_class.__dict__.get("_notify")
+                                ).parameters
+                            ).keys()
+                        )
+                    )
                 )
                 can_query = (
                     issubclass(provider_class, BaseProvider)
@@ -335,13 +350,15 @@ class ProvidersFactory:
                 query_params = (
                     None
                     if not can_query
-                    else list(
-                        dict(
-                            inspect.signature(
-                                provider_class.__dict__.get("_query")
-                            ).parameters
-                        ).keys()
-                    )[1:]
+                    else get_method_parameters_safe(
+                        list(
+                            dict(
+                                inspect.signature(
+                                    provider_class.__dict__.get("_query")
+                                ).parameters
+                            ).keys()
+                        )
+                    )
                 )
                 config = {}
                 if provider_auth_config_class:

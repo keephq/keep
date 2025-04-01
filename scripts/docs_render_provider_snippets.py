@@ -15,8 +15,21 @@ import ast
 import sys
 import difflib
 import time
+import keyword
 from docstring_parser import parse
 from jinja2 import Template
+
+
+def get_method_parameters_safe(raw_params: list[str]) -> list[str]:
+    safe_params = []
+    for param in raw_params:
+        if param == "self":
+            continue
+        if param.endswith("_") and keyword.iskeyword(param[:-1]):
+            safe_params.append(param[:-1])
+        else:
+            safe_params.append(param)
+    return safe_params
 
 
 def get_attribute_name(node: ast.Attribute) -> str:
@@ -228,10 +241,9 @@ def extract_provider_class_insights(
             if isinstance(
                 provider_property, ast.FunctionDef
             ) and provider_property.name in ["_notify", "_query"]:
-                args = []
-                for arg in provider_property.args.args:
-                    if arg.arg != "self":  # Skip 'self' parameter
-                        args.append(arg.arg)
+                args = get_method_parameters_safe(
+                    [arg.arg for arg in provider_property.args.args]
+                )
 
                 result[provider_property.name] = {arg: "" for arg in args}
                 # Extract docstring

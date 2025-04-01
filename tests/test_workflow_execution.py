@@ -6,8 +6,12 @@ from datetime import datetime, timedelta
 import pytest
 import pytz
 
-from keep.api.core.db import get_last_workflow_execution_by_workflow_id, create_incident_from_dict, \
-    assign_alert_to_incident, get_last_alerts
+from keep.api.core.db import (
+    get_last_workflow_execution_by_workflow_id,
+    create_incident_from_dict,
+    assign_alert_to_incident,
+    get_last_alerts,
+)
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.alert import Alert
@@ -63,6 +67,8 @@ steps:
   provider:
     type: keep
     with:
+      if: "1 == 1"
+      for: 1s
       filters:
         - key: status
           value: open
