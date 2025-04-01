@@ -31,16 +31,18 @@ actions:
       provider: keep
       config: "{{ provider.my_provider_name }}"
       with:
-        delete_all_other_workflows: {value}  
-        workflow_full_sync: {value}  
-        workflow_to_update_yaml: {value}  
-        alert: {value}  
-        fingerprint_fields: {value}  
-        override_source_with: {value}  
-        read_only: {value}  
-        fingerprint: {value}  
-        if_condition: {value}  
-        for_duration: {value}  
+        delete_all_other_workflows: {value}  # if True, delete all other workflows
+        workflow_full_sync: {value}  # if True, sync all workflows
+        workflow_to_update_yaml: {value}  # workflow yaml to update
+        alert: {value}  # alert data to create
+        fingerprint_fields: {value}  # fields to use for alert fingerprinting
+        override_source_with: {value}  # override alert source
+        read_only: {value}  # if True, don't modify existing alerts
+        fingerprint: {value}  # alert fingerprint
+        if_condition: {value}  # condition to evaluate for alert creation
+        for_duration: {value}  # duration for state alerts
+        if: {value}  # 'if' parameter is deprecated. Use `if_condition` instead.
+        for: {value}  # 'for' parameter is deprecated. Use `for_duration` instead.
 ```
 
 
