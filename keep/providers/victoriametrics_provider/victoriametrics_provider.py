@@ -452,10 +452,12 @@ receivers:
                         id=alert["id"],
                         description=alert["annotations"]["description"],
                         message=alert["annotations"]["summary"],
-                        status=VictoriametricsProvider.STATUS_MAP[alert["state"]],
-                        severity=VictoriametricsProvider.SEVERITIES_MAP[
-                            alert["labels"]["severity"]
-                        ],
+                        status=VictoriametricsProvider.STATUS_MAP.get(
+                            alert["state"], AlertStatus.FIRING
+                        ),
+                        severity=VictoriametricsProvider.SEVERITIES_MAP.get(
+                            alert["labels"]["severity"], AlertSeverity.LOW
+                        ),
                         startedAt=alert["activeAt"],
                         url=alert["source"],
                         source=["victoriametrics"],
