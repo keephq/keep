@@ -44,7 +44,7 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         property_path_str = ".".join([f'"{item}"' for item in path])
         return f"JSON_EXTRACT({column}, '$.{property_path_str}')"
 
-    def get_order_by_expressions(self, sort_options: list[tuple[str, str]]) -> str:
+    def get_order_by_expression(self, sort_options: list[tuple[str, str]]) -> str:
         sort_expressions: list[str] = []
 
         for sort_option in sort_options:

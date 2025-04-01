@@ -309,9 +309,10 @@ def __build_query_for_filtering_v2(
                 Incident.status == IncidentStatus.FIRING.value,
             ),
         )
-    sql_query.order_by()
-    sql_query = sql_query.filter(LastAlert.tenant_id == tenant_id)
-    sql_query = sql_query.filter(LastAlert.timestamp >= get_threeshold_query(tenant_id))
+
+    sql_query = sql_query.filter(LastAlert.tenant_id == tenant_id).filter(
+        LastAlert.timestamp >= get_threeshold_query(tenant_id)
+    )
     involved_fields = []
 
     if sql_filter:
@@ -345,7 +346,7 @@ def build_total_alerts_query(tenant_id, query: QueryDto):
 
 def build_alerts_query(tenant_id, query: QueryDto):
     cel_to_sql_instance = get_cel_to_sql_provider(remapped_properties_metadata)
-    sort_by_exp = cel_to_sql_instance.get_order_by_expressions(
+    sort_by_exp = cel_to_sql_instance.get_order_by_expression(
         [
             (sort_option.sort_by, sort_option.sort_dir)
             for sort_option in query.sort_options

@@ -81,5 +81,5 @@ def test_order_by_exp(testcase_key):
         sort_options.append((field, sort_dir))
 
     instance = get_cel_to_sql_provider_for_dialect(dialect_name, properties_metadata)
-    actual_sql_filter = instance.get_order_by_expressions(sort_options)
+    actual_sql_filter = instance.get_order_by_expression(sort_options)
     assert actual_sql_filter == expected_sql
