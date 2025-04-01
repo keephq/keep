@@ -8,6 +8,16 @@ This provider requires authentication.
 - **access_key**: AWS access key (required: True, sensitive: True)
 - **access_key_secret**: AWS access key secret (required: True, sensitive: True)
 
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **iam:SimulatePrincipalPolicy**: Required to check if we have access to AOSS API. (mandatory) 
+- **aoss:APIAccessAll**: Required to make API calls to OpenSearch Serverless. (Add from IAM console) (mandatory) 
+- **aoss:ListAccessPolicies**: Required to access all Data Access Policies. (Add from IAM console) (mandatory) 
+- **aoss:GetAccessPolicy**: Required to check each policy for read and write scope. (Add from IAM console) (mandatory) 
+- **aoss:CreateIndex**: Required to create indexes while saving a doc. (mandatory) ([Documentation](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-genref.html#serverless-operations))
+- **aoss:ReadDocument**: Required to query. (mandatory) ([Documentation](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-genref.html#serverless-operations))
+- **aoss:WriteDocument**: Required to save documents. (mandatory) ([Documentation](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-genref.html#serverless-operations))
+
+
 
 ## In workflows
 
@@ -40,4 +50,6 @@ actions:
 
 
 
-If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).
+
+Check the following workflow example:
+- [opensearchserverless_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opensearchserverless_basic.yml)
