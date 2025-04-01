@@ -662,6 +662,10 @@ class KeepProvider(BaseProvider):
             override_source_with: override alert source
             read_only: if True, don't modify existing alerts
             fingerprint: alert fingerprint
+            .. deprecated:: 
+            `if` parameter is deprecated. Use `if_condition` instead.
+            .. deprecated::
+            `for` parameter is deprecated. Use `for_duration` instead.
         """
         if workflow_full_sync or delete_all_other_workflows:
             # We need DB id, not user id for the workflow, so getting it from the wf execution.
