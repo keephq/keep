@@ -327,7 +327,10 @@ def get_event_from_body(body: dict, tenant_id: str):
     event_class = AlertDto if body.get("type", "alert") == "alert" else IncidentDto
 
     # Handle UI triggered events
-    event_body["id"] = event_body.get("fingerprint", "manual-run")
+    if event_class == AlertDto:
+        event_body["id"] = event_body.get("fingerprint", "manual-run")
+    elif event_class == IncidentDto:
+        event_body["id"] = event_body.get("id", "manual-run")
     event_body["name"] = event_body.get("fingerprint", "manual-run")
     event_body["lastReceived"] = datetime.datetime.now(
         tz=datetime.timezone.utc
