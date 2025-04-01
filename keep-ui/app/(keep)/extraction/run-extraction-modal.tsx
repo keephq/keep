@@ -11,7 +11,7 @@ import {
 } from "@tremor/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useAlerts } from "utils/hooks/useAlerts";
+import { useAlerts } from "@/entities/alerts/model/useAlerts";
 
 interface Props {
   ruleId: number;

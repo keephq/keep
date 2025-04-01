@@ -2,7 +2,10 @@
 import { useState } from "react";
 import { Button, Subtitle, Callout } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
-import { CustomPresetAlertLinks } from "components/navbar/CustomPresetAlertLinks";
+import {
+  CustomPresetAlertLinks,
+  usePresetAlertsCount,
+} from "@/features/presets/custom-preset-links";
 import { AiOutlineSwap } from "react-icons/ai";
 import { FiFilter } from "react-icons/fi";
 import { Disclosure } from "@headlessui/react";
@@ -16,7 +19,6 @@ import { useTags } from "utils/hooks/useTags";
 import { usePresets } from "@/entities/presets/model/usePresets";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
 import clsx from "clsx";
-import { usePresetAlertsCount } from "./hooks";
 
 type AlertsLinksProps = {
   session: Session | null;

@@ -1,5 +1,5 @@
 import { createServerApiClient } from "@/shared/api/server";
-import AlertsPage from "../alerts";
+import AlertsPage from "./ui/alerts";
 import { getInitialFacets } from "@/features/filter/api";
 
 type PageProps = {

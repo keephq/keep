@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@tremor/react";
-import { useAlerts } from "@/utils/hooks/useAlerts";
+import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { ProviderImageUploader } from "./provider-image-uploader";
 import { ProviderImagesList } from "./provider-image-list";
 import { PageTitle, PageSubtitle } from "@/shared/ui";

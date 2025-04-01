@@ -25,7 +25,7 @@ const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
 };
 
-const ReactFlowBuilder = () => {
+export const ReactFlowBuilder = () => {
   const {
     nodes,
     edges,
@@ -112,5 +112,3 @@ const ReactFlowBuilder = () => {
     </div>
   );
 };
-
-export default ReactFlowBuilder;

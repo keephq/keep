@@ -1,11 +1,11 @@
 import { IncidentDto } from "@/entities/incidents/model";
-import { AuditEvent } from "@/utils/hooks/useAlerts";
 import { TextInput, Button } from "@tremor/react";
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
 import { KeyedMutator } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
+import { AuditEvent } from "@/entities/alerts/model";
 
 export function IncidentActivityComment({
   incident,

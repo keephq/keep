@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui";
 import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
-import { SplitIncidentAlertsModal } from "@/features/split-incident-alerts";
+import { SplitIncidentAlertsModal } from "features/incidents/split-incident-alerts";
 import { useState } from "react";
 import { LiaUnlinkSolid } from "react-icons/lia";
 
