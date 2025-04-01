@@ -273,6 +273,9 @@ const DraggableHeaderCell = ({
                   <ArrowUpIcon className="w-4 h-4" />
                 )}
               </span>
+              {table.getState().sorting.length > 1 && (
+                <span className="text-sm">{column.getSortIndex() + 1}</span>
+              )}
             </>
           )}
         </button>

@@ -127,6 +127,5 @@ export interface AlertsQuery {
   cel?: string;
   offset?: number;
   limit?: number;
-  sortBy?: string;
-  sortDirection?: "ASC" | "DESC";
+  sortOptions?: { sortBy: string; sortDirection?: "ASC" | "DESC" }[];
 }

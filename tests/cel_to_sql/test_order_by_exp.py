@@ -52,24 +52,34 @@ with open(
 
     for item in json_dumps:
         print(item)
-        field_ = item["field"]
+        fields_ = item["fields"]
         expected_sql_dialect_based: dict = item["expected_sql_dialect_based"]
         description_ = item["description"]
 
         for dialect_ in ["sqlite", "mysql", "postgresql"]:
             expected_sql_ = expected_sql_dialect_based.get(dialect_, "no_expected_sql")
             dict_key = f"{dialect_}_{description_}"
-            testcases_dict[dict_key] = [dialect_, field_, expected_sql_]
+            testcases_dict[dict_key] = [
+                dialect_,
+                fields_,
+                expected_sql_,
+            ]
 
 
 @pytest.mark.parametrize("testcase_key", list(testcases_dict.keys()))
 def test_order_by_exp(testcase_key):
-    dialect_name, field, expected_sql = testcases_dict[testcase_key]
+    dialect_name, fields, expected_sql = testcases_dict[testcase_key]
 
     if expected_sql == "no_expected_sql":
         pytest.fail("No expected order by expression for this dialect")
         pytest.skip("No expected order by expression for this dialect")
 
+    sort_options = []
+
+    for index, field in enumerate(fields):
+        sort_dir = "DESC" if index % 2 else "ASC"
+        sort_options.append((field, sort_dir))
+
     instance = get_cel_to_sql_provider_for_dialect(dialect_name, properties_metadata)
-    actual_sql_filter = instance.get_order_by_exp(field)
+    actual_sql_filter = instance.get_order_by_expression(sort_options)
     assert actual_sql_filter == expected_sql

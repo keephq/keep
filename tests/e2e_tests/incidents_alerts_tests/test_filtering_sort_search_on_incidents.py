@@ -1,7 +1,7 @@
 import re
 import pytest
 from playwright.sync_api import expect, Page
-from tests.e2e_tests.incidents_alerts_setup import (
+from tests.e2e_tests.incidents_alerts_tests.incidents_alerts_setup import (
     setup_incidents_alerts,
 )
 from tests.e2e_tests.utils import init_e2e_test, save_failure_artifacts
@@ -142,6 +142,7 @@ facet_test_cases = {
     },
 }
 
+
 @pytest.mark.parametrize("facet_test_case", facet_test_cases.keys())
 def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
     try:
@@ -176,6 +177,7 @@ def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
     except Exception:
         save_failure_artifacts(browser, log_entries=[])
         raise
+
 
 def test_adding_custom_facet_for_alert_field(browser, setup_test_data):
     try:
@@ -263,6 +265,7 @@ def test_adding_custom_facet_for_alert_field(browser, setup_test_data):
     except Exception:
         save_failure_artifacts(browser, log_entries=[])
         raise
+
 
 sort_tescases = {
     "sort by lastReceived asc/dsc": {

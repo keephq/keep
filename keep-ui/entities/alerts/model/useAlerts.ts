@@ -161,16 +161,11 @@ export const useAlerts = () => {
       queryToPost.cel = query.cel;
     }
 
-    if (query?.sortBy) {
-      queryToPost.sort_by = query.sortBy;
-
-      switch (query?.sortDirection) {
-        case "DESC":
-          queryToPost.sort_dir = "desc";
-          break;
-        default:
-          queryToPost.sort_dir = "asc";
-      }
+    if (query?.sortOptions?.length) {
+      queryToPost.sort_options = query.sortOptions.map((sortOption) => ({
+        sort_by: sortOption.sortBy,
+        sort_dir: sortOption.sortDirection?.toLocaleLowerCase(),
+      }));
     }
 
     const requestUrl = `/alerts/query`;
@@ -180,7 +175,7 @@ export const useAlerts = () => {
         ? requestUrl +
           Object.entries(queryToPost)
             .sort(([fstKey], [scdKey]) => fstKey.localeCompare(scdKey))
-            .map(([key, value]) => `${key}=${value}`)
+            .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
             .join("&")
         : null;
 

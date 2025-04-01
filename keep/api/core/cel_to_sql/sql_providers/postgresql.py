@@ -41,6 +41,35 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
 
         return f"({expression_to_cast})::{to_type_str}"
 
+    def get_field_expression(self, cel_field):
+        """
+        Overriden, because for PostgreSql we need to cast columns to known data types (because every JSON operation returns just text).
+        This is used in ordering to correctly order rows in accordance to their types and not lexicographically.
+        """
+        metadata = self.properties_metadata.get_property_metadata_for_str(cel_field)
+        field_expressions = []
+
+        for field_mapping in metadata.field_mappings:
+            if isinstance(field_mapping, JsonFieldMapping):
+                json_exp = self.json_extract_as_text(
+                    field_mapping.json_prop, field_mapping.prop_in_json
+                )
+
+                if metadata.data_type is not str and metadata.data_type is not None:
+                    json_exp = self.cast(json_exp, metadata.data_type)
+                field_expressions.append(json_exp)
+                continue
+            elif isinstance(field_mapping, SimpleFieldMapping):
+                field_expressions.append(field_mapping.map_to)
+                continue
+
+            raise ValueError(f"Unsupported field mapping type: {type(field_mapping)}")
+
+        if len(field_expressions) > 1:
+            return self.coalesce(field_expressions)
+        else:
+            return field_expressions[0]
+
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):
             date_str = self.literal_proc(value.strftime("%Y-%m-%d %H:%M:%S"))
@@ -48,22 +77,6 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
             return date_exp
 
         return super()._visit_constant_node(value)
-
-    def _get_order_by_field(self, field_mapping, data_type: type):
-        if isinstance(field_mapping, JsonFieldMapping):
-            json_exp = self.json_extract_as_text(
-                field_mapping.json_prop, field_mapping.prop_in_json
-            )
-
-            if data_type is not str and data_type is not None:
-                return self.cast(json_exp, data_type)
-
-            return json_exp
-
-        elif isinstance(field_mapping, SimpleFieldMapping):
-            return field_mapping.map_to
-
-        raise ValueError(f"Unsupported field mapping type: {type(field_mapping)}")
 
     def _visit_contains_method_calling(
         self, property_path: str, method_args: List[ConstantNode]

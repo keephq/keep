@@ -118,6 +118,8 @@ def create_fake_alert(index: int, provider_type: str):
             "tags": {
                 "envNameTag": "production" if index % 2 else "development",
                 "testAlertId": test_alert_id,
+                "customerName": "StackHive" if index % 2 else "Brightlayer",
+                "alertIndex": index,
             },
             "custom_tags": {
                 "env": custom_tag,
