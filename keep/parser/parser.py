@@ -449,6 +449,9 @@ class Parser:
     def parse_provider_parameters(provider_parameters: dict) -> dict:
         parsed_provider_parameters = {}
         for parameter in provider_parameters:
+            if parameter == "if" or parameter == "for":
+                # add suffix _ to provider parameters, which equal reserved words in python
+                parameter = parameter + "_"
             if isinstance(provider_parameters[parameter], (str, list, int, bool)):
                 parsed_provider_parameters[parameter] = provider_parameters[parameter]
             elif isinstance(provider_parameters[parameter], dict):

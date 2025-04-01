@@ -39,6 +39,24 @@ READ_ONLY_MODE = config("KEEP_READ_ONLY", default="false") == "true"
 logger = logging.getLogger(__name__)
 
 
+def get_method_parameters_safe(method):
+    try:
+        raw_params = list(dict(inspect.signature(method).parameters).keys())
+        safe_params = []
+        for param in raw_params:
+            if param == "self":
+                continue
+            # replace if_ and for_ with if and for to use reserved words as parameter names
+            if param == "if_":
+                param = "if"
+            if param == "for_":
+                param = "for"
+            safe_params.append(param)
+        return safe_params
+    except Exception:
+        return []
+
+
 class ProviderConfigurationException(Exception):
     pass
 
@@ -321,12 +339,10 @@ class ProvidersFactory:
                     None
                     if not can_notify
                     else list(
-                        dict(
-                            inspect.signature(
-                                provider_class.__dict__.get("_notify")
-                            ).parameters
-                        ).keys()
-                    )[1:]
+                        get_method_parameters_safe(
+                            provider_class.__dict__.get("_notify")
+                        )
+                    )
                 )
                 can_query = (
                     issubclass(provider_class, BaseProvider)
@@ -335,13 +351,9 @@ class ProvidersFactory:
                 query_params = (
                     None
                     if not can_query
-                    else list(
-                        dict(
-                            inspect.signature(
-                                provider_class.__dict__.get("_query")
-                            ).parameters
-                        ).keys()
-                    )[1:]
+                    else get_method_parameters_safe(
+                        provider_class.__dict__.get("_query")
+                    )
                 )
                 config = {}
                 if provider_auth_config_class:

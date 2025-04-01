@@ -642,8 +642,8 @@ class KeepProvider(BaseProvider):
         override_source_with: str | None = None,
         read_only: bool = False,
         fingerprint: str | None = None,
-        if_condition: str | None = None,
-        for_duration: str | None = None,
+        if_: str | None = None,
+        for_: str | None = None,
         **kwargs,
     ):
         """
@@ -653,18 +653,16 @@ class KeepProvider(BaseProvider):
             workflow_full_sync: if True, sync all workflows
             workflow_to_update_yaml: workflow yaml to update
             alert: alert data to create
-            if_condition: condition to evaluate for alert creation
-            for_duration: duration for state alerts
+            if: condition to evaluate for alert creation
+            for: duration for state alerts
             fingerprint_fields: fields to use for alert fingerprinting
             override_source_with: override alert source
             read_only: if True, don't modify existing alerts
             fingerprint: alert fingerprint
-            if: 'if' parameter is deprecated. Use `if_condition` instead.
-            for: 'for' parameter is deprecated. Use `for_duration` instead.
         """
         # for backward compatibility
-        if_condition = kwargs.get("if", None)
-        for_duration = kwargs.get("for", None)
+        if_condition = if_ or kwargs.get("if", None)
+        for_duration = for_ or kwargs.get("for", None)
         if workflow_full_sync or delete_all_other_workflows:
             # We need DB id, not user id for the workflow, so getting it from the wf execution.
             workflow_store = WorkflowStore()
