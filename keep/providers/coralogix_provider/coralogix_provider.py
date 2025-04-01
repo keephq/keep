@@ -13,11 +13,10 @@ from keep.providers.models.provider_config import ProviderConfig
 class CoralogixProvider(BaseProvider):
     """Get alerts from Coralogix into Keep."""
 
+    webhook_documentation_here_differs_from_general_documentation = True
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-💡 For more details on how to configure Coralogix to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/coralogix-provider).
-
 To send alerts from Coralogix to Keep, Use the following webhook url to configure Coralogix send alerts to Keep:
 
 1. From the Coralogix toolbar, navigate to Data Flow > Outbound Webhooks.

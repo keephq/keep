@@ -14,8 +14,6 @@ class NetdataProvider(BaseProvider):
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-💡 For more details on how to configure Netdata to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/netdata-provider).
-
 To send alerts from Netdata to Keep, Use the following webhook url to configure Netdata send alerts to Keep:
 
 1. In Netdata, go to Space settings.

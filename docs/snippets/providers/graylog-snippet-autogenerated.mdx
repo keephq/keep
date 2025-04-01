@@ -43,3 +43,29 @@ The provider exposes the following [Provider Methods](/providers/provider-method
     - `query_type`: The type of query to use. Default is "elastic".
     - `timerange_seconds`: The time range in seconds. Default is 300 seconds.
     - `timerange_type`: The type of time range. Default is "relative".
+
+## Connecting via Webhook (omnidirectional)
+This provider supports webhooks.
+
+
+To send alerts from Graylog to Keep, Use the following webhook url to configure Graylog send alerts to Keep:
+
+1. In Graylog, from the Topbar, go to `Alerts` > `Notifications`.
+2. Click "Create Notification".
+3. In the New Notification form, configure:
+
+**Note**: For Graylog v4.x please set the **URL** to `KEEP_BACKEND_URL/alerts/event/PROVIDER_TYPE?api_key={api_key}`.
+
+- **Display Name**: keep-graylog-webhook-integration
+- **Title**: keep-graylog-webhook-integration
+- **Notification Type**: Custom HTTP Notification
+- **URL**: KEEP_BACKEND_URL/alerts/event/PROVIDER_TYPE  # Whitelist this URL
+- **Headers**: X-API-KEY:{api_key}
+4. Erase the Body Template.
+5. Click on "Create Notification".
+6. Go the the `Event Definitions` tab, and select the Event Definition that will trigger the alert you want to send to Keep and click on More > Edit.
+7. Go to "Notifications" tab.
+8. Click on "Add Notification" and select the "keep-graylog-webhook-integration" that you created in step 3.
+9. Click on "Add Notification".
+10. Click `Next` > `Update` event definition
+
