@@ -551,7 +551,8 @@ class KeepProvider(BaseProvider):
                 extra={"original": alert_data, "rendered": rendered_alert_data},
             )
             # render tenrary expressions
-            rendered_alert_data = self._handle_ternary_expressions(rendered_alert_data)
+            # TODO: find another solution since js2py is not secure
+            # rendered_alert_data = self._handle_ternary_expressions(rendered_alert_data)
             alert_dto = self._build_alert(
                 alert_result, fingerprint_fields or [], **rendered_alert_data
             )
@@ -758,6 +759,8 @@ class KeepProvider(BaseProvider):
             return False
         return evaluated_if_met
 
+    """
+    TODO: find alternative to js2py
     def _handle_ternary_expressions(self, rendered_providers_parameters):
         # SG: a hack to allow ternary expressions
         #     e.g.'0.012899999999999995 > 0.9 ? "critical" : 0.012899999999999995 > 0.7 ? "warning" : "info"''
@@ -767,13 +770,14 @@ class KeepProvider(BaseProvider):
             try:
                 split_value = value.split(" ")
                 if split_value[1] == ">" and split_value[3] == "?":
-                    import js2py
+                    # import js2py
 
                     rendered_providers_parameters[key] = js2py.eval_js(value)
             # we don't care, it's not a ternary expression
             except Exception:
                 pass
         return rendered_providers_parameters
+    """
 
 
 if __name__ == "__main__":
