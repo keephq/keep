@@ -83,8 +83,8 @@ alembic -c keep/alembic.ini revision --autogenerate -m "Your message"
 
 Hint: make sure your models are imported at `./api/models/db/migrations/env.py` for autogenerator to pick them up.
 
-## VSCode
-You can run Keep from your VSCode (after cloning the repo) by adding this configurations to your `.vscode/launch.json`:
+## VS Code (or Cursor)
+Run Keep from your VS Code (or Cursor) after cloning the repo by adding this configurations to your `.vscode/launch.json`:
 
 ```json
 {
@@ -158,21 +158,21 @@ docker run -d -p 6001:6001 -p 9601:9601 -e SOKETI_USER_AUTHENTICATION_TIMEOUT=30
 ```
 
 
-## VSCode + Docker
-<Info>For this guide to work, the VSCode Docker extension is required.</Info>
+## VS Code (or Cursor) + Docker
+<Info>For this guide to work, the [VS Code Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) extension is required.</Info>
 <Tip>In air-gapped environments, you might consider building the container on an internet-connected computer, exporting the image using docker save, transferring it with docker load in the air-gapped environment, and then using the run configuration.</Tip>
 
-In cases where you want to develop Keep but are unable to run it directly on your local laptop (e.g., with Windows), or if you lack access to all of its dependencies (e.g., in air-gapped environments), you can still accomplish this using VSCode and Docker.
+In cases where you want to develop Keep but are unable to run it directly on your local laptop (e.g., with Windows), or if you lack access to all of its dependencies (e.g., in air-gapped environments), you can still accomplish this using VS Code (or Cursor) and Docker.
 
 To achieve this, follow these steps:
 
-1. Clone Keep and open it with VSCode
+1. Clone Keep and open it with VS Code (or Cursor)
 2. Create a tasks.json file to build and run the Keep API and Keep UI containers.
 3. Create a launch.json configuration to start the containers and attach a debugger to them.
 4. Profit.
 
 
-### Clone Keep and open it with VSCode
+### Clone Keep and open it with VS Code (or Cursor)
 ```
 git clone https://github.com/keephq/keep.git && cd keep
 code .
