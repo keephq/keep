@@ -48,6 +48,12 @@ To function properly, the OpenSearch provider requires the following IAM scopes:
   - **Alias**: Policy read access
   - **Mandatory**: Yes
 
+- **`aoss:CreateIndex`**
+  - **Description**: Required to create an index.
+  - **Documentation**: [AOSS API Docs](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-genref.html#serverless-operations)
+  - **Alias**: Create Index
+  - **Mandatory**: Yes
+
 - **`aoss:ReadDocument`**
   - **Description**: Required to read documents from an OpenSearch collection.
   - **Documentation**: [AOSS API Docs](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-genref.html#serverless-operations)
@@ -63,6 +69,7 @@ To function properly, the OpenSearch provider requires the following IAM scopes:
 <Note>
 `iam:SimulatePrincipalPolicy`, `aoss:APIAccessAll`, `aoss:ListAccessPolicies`, `aoss:GetAccessPolicy`, needs to be added from your IAM console to the IAM identity used by Keep.
 The other two policies are data access policies which needs to be added from aws serverless dashboard.
+Go through the readme to get step by step setup: [README](https://github.com/keep/keep/providers/opensearchserverless_provider\README.md)
 </Note>
 
 ## Authentication Configuration
@@ -78,7 +85,7 @@ To authenticate with OpenSearch Serverless, provide the following:
 ## Setting Up the Integration
 ### Steps:
 
-1. **Assign IAM Permissions**: Grant your IAM user/role `aoss:ReadDocument` and `aoss:WriteDocument` on the target collection.
+1. **Assign IAM Permissions**: Grant your IAM user/role `aoss:CreateIndex`, `aoss:ReadDocument` and `aoss:WriteDocument` on the target collection.
 2. **Configure Keep Provider**: Provide access key, secret, region, and collection endpoint in the Keep platform.
 
 ## Querying OpenSearch
@@ -111,4 +118,4 @@ You can use the `_notify` functionality to push documents into OpenSearch collec
 
 - [AWS OpenSearch Serverless Documentation](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless.html)
 - [AOSS Data Access Control](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-data-access.html)
-
+- [README](https://github.com/keep/keep/providers/opensearchserverless_provider\README.md)

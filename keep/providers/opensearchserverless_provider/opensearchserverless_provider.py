@@ -82,6 +82,13 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
             alias="Policy read access",
         ),
         ProviderScope(
+            name="aoss:CreateIndex",
+            description="Required to create indexes while saving a doc.",
+            documentation_url="https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-genref.html#serverless-operations",
+            mandatory=True,
+            alias="Index Creation Access",
+        ),
+        ProviderScope(
             name="aoss:ReadDocument",
             description="Required to query.",
             documentation_url="https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-genref.html#serverless-operations",
@@ -170,7 +177,7 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
             )
             return scopes
 
-        left_to_validate = ["aoss:ReadDocument", "aoss:WriteDocument"]
+        left_to_validate = ["aoss:CreateIndex", "aoss:ReadDocument", "aoss:WriteDocument"]
         try:
             aoss_client = self.__generate_client("opensearchserverless")
             all_policies = aoss_client.list_access_policies(type="data")
