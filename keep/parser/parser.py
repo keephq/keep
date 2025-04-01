@@ -452,17 +452,21 @@ class Parser:
         for parameter in provider_parameters:
             if keyword.iskeyword(parameter):
                 # add suffix _ to provider parameters if it's a reserved keyword in python
-                parameter += "_"
+                parameter_name = parameter + "_"
+            else:
+                parameter_name = parameter
             if isinstance(provider_parameters[parameter], (str, list, int, bool)):
-                parsed_provider_parameters[parameter] = provider_parameters[parameter]
+                parsed_provider_parameters[parameter_name] = provider_parameters[
+                    parameter
+                ]
             elif isinstance(provider_parameters[parameter], dict):
                 try:
-                    parsed_provider_parameters[parameter] = StepProviderParameter(
+                    parsed_provider_parameters[parameter_name] = StepProviderParameter(
                         **provider_parameters[parameter]
                     )
                 except Exception:
                     # It could be a dict/list but not of ProviderParameter type
-                    parsed_provider_parameters[parameter] = provider_parameters[
+                    parsed_provider_parameters[parameter_name] = provider_parameters[
                         parameter
                     ]
         return parsed_provider_parameters
