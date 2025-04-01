@@ -18,7 +18,19 @@ import time
 from docstring_parser import parse
 from jinja2 import Template
 
-from keep.providers.providers_factory import get_method_parameters_safe
+
+def get_method_parameters_safe(raw_params: list[str]) -> list[str]:
+    safe_params = []
+    for param in raw_params:
+        if param == "self":
+            continue
+        # replace if_ and for_ with if and for to use reserved words as parameter names
+        if param == "if_":
+            param = "if"
+        if param == "for_":
+            param = "for"
+        safe_params.append(param)
+    return safe_params
 
 
 def get_attribute_name(node: ast.Attribute) -> str:
