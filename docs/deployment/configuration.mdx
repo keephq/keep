@@ -59,7 +59,9 @@ Keep is highly configurable through environment variables. This allows you to cu
 |   **DATABASE_MAX_OVERFLOW**    | Sets the maximum overflow for the connection pool |    No    |                10                 |          Positive integer          |
 |       **DATABASE_ECHO**        |    Enables SQLAlchemy echo mode for debugging     |    No    |               False               |        Boolean (True/False)        |
 |     **DB_CONNECTION_NAME**     |      Specifies the Cloud SQL connection name      |    No    | "keephq-sandbox:us-central1:keep" | Valid Cloud SQL connection string  |
+|           **DB_NAME**          |       Specifies the Cloud SQL database name       |    No    |             "keepdb"              |   Valid Cloud SQL database name    |
 |     **DB_SERVICE_ACCOUNT**     |    Service account for database impersonation     |    No    |               None                |    Valid service account email     |
+|         **DB_IP_TYPE**         |          Specifies the Cloud SQL IP type          |    No    |              "public"             |    "public", "private" or "psc"    |
 |      **SKIP_DB_CREATION**      |      Skips database creation and migrations       |    No    |              "false"              |         "true" or "false"          |
 
 ### Resource Provisioning

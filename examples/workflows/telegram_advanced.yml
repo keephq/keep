@@ -1,0 +1,20 @@
+workflow:
+  id: telegram-message-topic-markup
+  name: Telegram Message Sender with Topic Markup
+  description: Send messages into Telegram topic with a message containing a reply markup.
+  triggers:
+    - type: manual
+  actions:
+    - name: telegram
+      provider:
+        type: telegram
+        config: "{{ providers.telegram }}"
+        with:
+          message: "message with topic markup"
+          chat_id: "-1001234567890"
+          topic_id: "1234"
+          reply_markup:
+            📌 Confluence 📖:
+              url: "confluence.example.com"
+            📖 Documentation 📖:
+              url: "docs.example.com"

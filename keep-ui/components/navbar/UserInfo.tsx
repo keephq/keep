@@ -120,10 +120,10 @@ export const UserInfo = ({ session }: UserInfoProps) => {
           )}
         <li>
           <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
-            Providers
+            <Subtitle className="text-xs">Providers</Subtitle>
           </LinkWithIcon>
         </li>
-        <li className="flex items-center gap-2">
+        <li className="flex text-xs items-center gap-2">
           <LinkWithIcon
             icon={FaSlack}
             href="https://slack.keephq.dev/"
