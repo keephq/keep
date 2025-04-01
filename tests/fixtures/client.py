@@ -44,11 +44,11 @@ def test_app(monkeypatch, request):
             elif module.startswith("keep.providers.providers_service"):
                 importlib.reload(sys.modules[module])
 
-        if "keep.api.api" in sys.modules:
-            importlib.reload(sys.modules["keep.api.api"])
+        # if "keep.api.api" in sys.modules:
+        #     importlib.reload(sys.modules["keep.api.api"])
 
-        if "keep.api.config" in sys.modules:
-            importlib.reload(sys.modules["keep.api.config"])
+        # if "keep.api.config" in sys.modules:
+        #     importlib.reload(sys.modules["keep.api.config"])
 
         # Import and return the app instance
         from keep.api.api import get_app

@@ -4,7 +4,6 @@ import logging
 import os
 from typing import Any, Dict, List, Optional, Union
 
-import validators
 from fastapi import (
     APIRouter,
     Body,
@@ -28,7 +27,6 @@ from keep.api.core.db import (
     get_last_workflow_workflow_to_alert_executions,
     get_session,
     get_workflow,
-    get_workflow_by_name,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
 from keep.api.core.workflows import (
@@ -55,6 +53,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.functions import cyaml
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
+from keep.identitymanager.rbac import Roles
 from keep.parser.parser import Parser
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -360,24 +359,30 @@ def run_workflow(
     event_id: Optional[str] = Query(None),
     body: Optional[Dict[Any, Any]] = Body(None),
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:workflows"])
+        IdentityManagerFactory.get_auth_verifier(["execute:workflows"])
     ),
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
 
-    workflow = get_workflow(tenant_id, workflow_id)
-    if not workflow:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Workflow {workflow_id} not found",
-        )
+    workflow_store = WorkflowStore()
+    workflow = workflow_store.get_workflow(tenant_id, workflow_id)
 
-    # if the workflow id is the name of the workflow (e.g. the CLI has only the name)
-    if not validators.uuid(workflow_id):
-        logger.info("Workflow ID is not a UUID, trying to get the ID by name")
-        workflow_id = getattr(get_workflow_by_name(tenant_id, workflow_id), "id", None)
+    # if there are workflow permissions, check if the user has access
+    if workflow.workflow_permissions:
+        # if the user is an admin, they can run the workflow
+        if authenticated_entity.role == Roles.ADMIN.value:
+            pass
+        # if the role is not in the workflow permissions, and the email is not in the workflow permissions, raise a permission error
+        elif (
+            authenticated_entity.role not in workflow.workflow_permissions
+            and authenticated_entity.email not in workflow.workflow_permissions
+        ):
+            raise HTTPException(status_code=403, detail="Forbidden")
+    # if there are no workflow permissions, the user can simply run the workflow
+    else:
+        pass
 
     workflowmanager = WorkflowManager.get_instance()
 

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 import pytest
 import pytz
+from fastapi import HTTPException
 
 from keep.api.core.db import (
     get_last_workflow_execution_by_workflow_id,
@@ -14,11 +15,14 @@ from keep.api.core.db import (
 )
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus
-from keep.api.models.db.alert import Alert
 from keep.api.models.db.incident import Incident, IncidentStatus
 from keep.api.models.db.workflow import Workflow
 from keep.api.models.incident import IncidentDto
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identity_managers.db.db_authverifier import (  # noqa
+    DbAuthVerifier,
+)
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from tests.fixtures.client import client, test_app  # noqa
 
@@ -83,29 +87,32 @@ actions:
 """
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def workflow_manager():
     """
     Fixture to create and manage a WorkflowManager instance.
+    Each test gets its own fresh instance.
     """
-    manager = None
-    try:
-        from keep.workflowmanager.workflowscheduler import WorkflowScheduler
+    from keep.workflowmanager.workflowscheduler import WorkflowScheduler
 
-        scheduler = WorkflowScheduler(None)
-        manager = WorkflowManager.get_instance()
-        scheduler.workflow_manager = manager
-        manager.scheduler = scheduler
-        asyncio.run(manager.start())
-        yield manager
-    finally:
-        if manager:
-            try:
-                manager.stop()
-                # Give some time for threads to clean up
-                time.sleep(1)
-            except Exception as e:
-                print(f"Error stopping workflow manager: {e}")
+    manager = WorkflowManager.get_instance()
+    scheduler = WorkflowScheduler(workflow_manager=manager)
+    manager.scheduler = scheduler
+
+    # Start the manager
+    asyncio.run(manager.start())
+
+    yield manager
+
+    # Cleanup after the test is done
+    if manager and manager.scheduler:
+        # Stop the scheduler first
+        manager.scheduler.stop()
+        # Then stop the manager
+        manager.stop()
+
+    # Reset the singleton instance for the next test
+    WorkflowManager._instance = None
 
 
 @pytest.fixture
@@ -1474,3 +1481,162 @@ def test_alert_resolved(db_session, create_alert, workflow_manager):
 
     incident = db_session.query(Incident).first()
     assert incident.status == IncidentStatus.RESOLVED.value
+
+
+workflow_definition_with_permissions = """workflow:
+  id: workflow-with-permissions
+  name: Workflow With Permissions
+  description: "A workflow with restricted access"
+  permissions:
+    - admin
+    - noc
+    - test@keephq.dev
+  triggers:
+    - type: manual
+  steps: []
+  actions:
+    - name: console-action
+      provider:
+        type: console
+        with:
+          message: "Executed restricted workflow"
+"""
+
+workflow_definition_without_permissions = """workflow:
+  id: workflow-without-permissions
+  name: Workflow Without Permissions
+  description: "A workflow without restricted access"
+  triggers:
+    - type: manual
+  steps: []
+  actions:
+    - name: console-action
+      provider:
+        type: console
+        with:
+          message: "Executed unrestricted workflow"
+"""
+
+
+# Mocked JWT payload generator similar to test_auth.py
+def get_mock_jwt_payload_permissions(token, *args, **kwargs):
+    # Maps from token value to user data
+    user_data = {
+        "admin_token": {
+            "email": "admin@keephq.dev",
+            "keep_role": "admin",
+            "tenant_id": SINGLE_TENANT_UUID,
+        },
+        "noc_token": {
+            "email": "noc@keephq.dev",
+            "keep_role": "noc",
+            "tenant_id": SINGLE_TENANT_UUID,
+        },
+        "listed_email_token": {
+            "email": "test@keephq.dev",
+            "keep_role": "webhook",  # Using a valid role from rbac.py
+            "tenant_id": SINGLE_TENANT_UUID,
+        },
+        "unlisted_token": {
+            "email": "dev@keephq.dev",
+            "keep_role": "workflowrunner",  # Using a valid role from rbac.py
+            "tenant_id": SINGLE_TENANT_UUID,
+        },
+    }
+
+    if token in user_data:
+        return user_data[token]
+    raise Exception("Invalid token")
+
+
+@pytest.mark.parametrize(
+    "test_app, token, workflow_id, expected_status",
+    [
+        # Admin can always run workflows regardless of permissions
+        ({"AUTH_TYPE": "DB"}, "admin_token", "workflow-with-permissions", 200),
+        # User with role in permissions can run the workflow
+        ({"AUTH_TYPE": "DB"}, "noc_token", "workflow-with-permissions", 200),
+        # User with email in permissions can run the workflow
+        ({"AUTH_TYPE": "DB"}, "listed_email_token", "workflow-with-permissions", 200),
+        # User without proper role or email gets forbidden
+        ({"AUTH_TYPE": "DB"}, "unlisted_token", "workflow-with-permissions", 403),
+        # Anyone can run workflows without permissions
+        ({"AUTH_TYPE": "DB"}, "unlisted_token", "workflow-without-permissions", 200),
+    ],
+    indirect=["test_app"],
+)
+def test_workflow_permissions(
+    db_session,
+    test_app,
+    client,
+    token,
+    workflow_id,
+    expected_status,
+    mocker,
+):
+    """Test that workflow permissions are enforced correctly when executing workflows."""
+
+    # Setup workflows with and without permissions
+    workflow_with_permissions = Workflow(
+        id="workflow-with-permissions",
+        name="workflow-with-permissions",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A workflow with restricted access",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_with_permissions,
+    )
+
+    workflow_without_permissions = Workflow(
+        id="workflow-without-permissions",
+        name="workflow-without-permissions",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A workflow without restricted access",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_without_permissions,
+    )
+
+    db_session.add(workflow_with_permissions)
+    db_session.add(workflow_without_permissions)
+    db_session.commit()
+    db_session.refresh(workflow_with_permissions)
+    db_session.refresh(workflow_without_permissions)
+
+    # Define user data for different tokens
+    user_data = {
+        "admin_token": AuthenticatedEntity(
+            SINGLE_TENANT_UUID, "admin@keephq.dev", None, "admin"
+        ),
+        "noc_token": AuthenticatedEntity(
+            SINGLE_TENANT_UUID, "noc@keephq.dev", None, "noc"
+        ),
+        "listed_email_token": AuthenticatedEntity(
+            SINGLE_TENANT_UUID, "test@keephq.dev", None, "webhook"
+        ),
+        "unlisted_token": AuthenticatedEntity(
+            SINGLE_TENANT_UUID, "dev@keephq.dev", None, "workflowrunner"
+        ),
+    }
+
+    # Create a mock function that matches the signature of _verify_bearer_token
+    def mock_verify_bearer_token(token, *args, **kwargs):
+        if token not in user_data:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return user_data[token]
+
+    # Mock the DbAuthVerifier._verify_bearer_token method
+    mocker.patch(
+        "keep.identitymanager.identity_managers.db.db_authverifier.DbAuthVerifier._verify_bearer_token",
+        side_effect=mock_verify_bearer_token,
+    )
+
+    # Run the workflow manually with the appropriate token
+    response = client.post(
+        f"/workflows/{workflow_id}/run",
+        headers={"Authorization": f"Bearer {token}"},
+        json={},
+    )
+
+    # Verify the response status code matches expectations
+    assert response.status_code == expected_status
