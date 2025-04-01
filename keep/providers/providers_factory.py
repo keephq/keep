@@ -11,6 +11,7 @@ import logging
 import os
 import types
 import typing
+import keyword
 from dataclasses import fields
 from typing import get_args
 
@@ -44,12 +45,10 @@ def get_method_parameters_safe(raw_params: list[str]) -> list[str]:
     for param in raw_params:
         if param == "self":
             continue
-        # replace if_ and for_ with if and for to use reserved words as parameter names
-        if param == "if_":
-            param = "if"
-        if param == "for_":
-            param = "for"
-        safe_params.append(param)
+        if param.endswith("_") and keyword.iskeyword(param[:-1]):
+            safe_params.append(param[:-1])
+        else:
+            safe_params.append(param)
     return safe_params
 
 

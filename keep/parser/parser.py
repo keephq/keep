@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import typing
+import keyword
 
 from keep.actions.actions_factory import ActionsCRUD
 from keep.api.core.config import config
@@ -449,9 +450,9 @@ class Parser:
     def parse_provider_parameters(provider_parameters: dict) -> dict:
         parsed_provider_parameters = {}
         for parameter in provider_parameters:
-            if parameter == "if" or parameter == "for":
-                # add suffix _ to provider parameters, which equal reserved words in python
-                parameter = parameter + "_"
+            if keyword.iskeyword(parameter):
+                # add suffix _ to provider parameters if it's a reserved keyword in python
+                parameter += "_"
             if isinstance(provider_parameters[parameter], (str, list, int, bool)):
                 parsed_provider_parameters[parameter] = provider_parameters[parameter]
             elif isinstance(provider_parameters[parameter], dict):
