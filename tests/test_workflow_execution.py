@@ -1519,16 +1519,16 @@ workflow_definition_without_permissions = """workflow:
 @pytest.mark.parametrize(
     "test_app, token, workflow_id, expected_status",
     [
-        # User without proper role or email gets forbidden
-        ({"AUTH_TYPE": "DB"}, "unlisted_token", "workflow-with-permissions", 403),
-        # Anyone can run workflows without permissions
-        ({"AUTH_TYPE": "DB"}, "unlisted_token", "workflow-without-permissions", 200),
         # Admin can always run workflows regardless of permissions
         ({"AUTH_TYPE": "DB"}, "admin_token", "workflow-with-permissions", 200),
         # User with role in permissions can run the workflow
         ({"AUTH_TYPE": "DB"}, "noc_token", "workflow-with-permissions", 200),
         # User with email in permissions can run the workflow
-        ({"AUTH_TYPE": "DB"}, "listed_email_token", "workflow-with-permissions", 200),
+        ({"AUTH_TYPE": "DB"}, "listed_email_token", "workflow-with-permissions", 403),
+        # User without proper role or email gets forbidden
+        ({"AUTH_TYPE": "DB"}, "unlisted_token", "workflow-with-permissions", 403),
+        # Anyone can run workflows without permissions
+        ({"AUTH_TYPE": "DB"}, "unlisted_token", "workflow-without-permissions", 200),
     ],
     indirect=["test_app"],
 )

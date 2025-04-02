@@ -207,6 +207,8 @@ export function getYamlWorkflowDefinitionSchema(
       name: z.string().min(1),
       description: z.string().min(1),
       owners: z.array(z.string()).optional(),
+      // [doe.john@example.com, doe.jane@example.com, NOC]
+      permissions: z.array(z.string()).optional(),
       services: z.array(z.string()).optional(),
       // optional will be replace on postProcess
       steps: z.array(stepSchema).optional(),
