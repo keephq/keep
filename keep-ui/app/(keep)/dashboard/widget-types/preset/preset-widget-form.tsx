@@ -20,7 +20,7 @@ interface PresetForm {
 export interface PresetWidgetFormProps {
   editingItem?: any;
   presets: Preset[];
-  onChange: (formState: any) => void;
+  onChange: (formState: any, isValid: boolean) => void;
 }
 
 export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
@@ -35,11 +35,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
 
   const {
     control,
-    handleSubmit,
-    setValue,
-    formState: { errors },
-    reset,
-    getValues,
+    formState: { errors, isValid },
   } = useForm<PresetForm>({
     defaultValues: {
       selectedPreset: editingItem?.preset?.id,
@@ -55,7 +51,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       ...t,
       value: parseInt(t.value.toString(), 10) || 0,
     }));
-    onChange({ preset, thresholds: formattedThresholds });
+    onChange({ preset, thresholds: formattedThresholds }, isValid);
   }, [formValues, thresholds]);
 
   const handleThresholdChange = (

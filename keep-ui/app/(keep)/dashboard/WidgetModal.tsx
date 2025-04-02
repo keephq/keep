@@ -44,12 +44,15 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
   editingItem,
   metricWidgets,
 }) => {
-  const [updatedFormState, setUpdatedFormState] = useState<any>({});
+  const [innerFormState, setInnerFormState] = useState<{
+    isValid: boolean;
+    formValue: any;
+  }>({ isValid: false, formValue: {} });
 
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
     reset,
   } = useForm<WidgetForm>({
     defaultValues: {
@@ -69,14 +72,14 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
         ...editingItem,
         name: data.widgetName,
         widgetType: data.widgetType || WidgetType.PRESET, // backwards compatibility
-        ...updatedFormState,
+        ...innerFormState.formValue,
       };
       onEditWidget(updatedWidget);
     } else {
       onAddWidget({
         name: data.widgetName,
         widgetType: data.widgetType || WidgetType.PRESET, // backwards compatibility
-        ...updatedFormState,
+        ...innerFormState.formValue,
       });
       // cleanup form
       reset({
@@ -156,14 +159,18 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
           <PresetWidgetForm
             editingItem={editingItem}
             presets={presets}
-            onChange={(val) => setUpdatedFormState(val)}
+            onChange={(formValue, isValid) =>
+              setInnerFormState({ formValue, isValid })
+            }
           ></PresetWidgetForm>
         )}
         {widgetType == WidgetType.GENERICS_METRICS && (
           <>
             <GenericMetricsWidgetForm
               editingItem={editingItem}
-              onChange={(val) => setUpdatedFormState(val)}
+              onChange={(formValue, isValid) =>
+                setInnerFormState({ formValue, isValid })
+              }
             ></GenericMetricsWidgetForm>
           </>
         )}
@@ -171,10 +178,16 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
           <MetricWidgetForm
             editingItem={editingItem}
             metricWidgets={metricWidgets}
-            onChange={(val) => setUpdatedFormState(val)}
+            onChange={(formValue, isValid) =>
+              setInnerFormState({ formValue, isValid })
+            }
           ></MetricWidgetForm>
         )}
-        <Button color="orange" type="submit">
+        <Button
+          color="orange"
+          type="submit"
+          disabled={!isValid || !innerFormState.isValid}
+        >
           {editingItem ? "Update Widget" : "Add Widget"}
         </Button>
       </form>

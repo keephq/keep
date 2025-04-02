@@ -253,15 +253,17 @@ const DashboardPage = () => {
           />
         </Card>
       )}
-      <WidgetModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        onAddWidget={handleAddWidget}
-        onEditWidget={handleSaveEdit}
-        presets={allPresets}
-        editingItem={editingItem}
-        metricWidgets={allMetricWidgets}
-      />
+      {isModalOpen && (
+        <WidgetModal
+          isOpen={true}
+          onClose={closeModal}
+          onAddWidget={handleAddWidget}
+          onEditWidget={handleSaveEdit}
+          presets={allPresets}
+          editingItem={editingItem}
+          metricWidgets={allMetricWidgets}
+        />
+      )}
     </div>
   );
 };

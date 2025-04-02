@@ -21,7 +21,7 @@ interface GenericMetricsForm {
 
 export interface GenericMetricsWidgetFormProps {
   editingItem?: any;
-  onChange: (formState: any) => void;
+  onChange: (formState: any, isValid: boolean) => void;
 }
 
 export const GenericMetricsWidgetForm: React.FC<
@@ -29,7 +29,7 @@ export const GenericMetricsWidgetForm: React.FC<
 > = ({ editingItem, onChange }) => {
   const {
     control,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<GenericMetricsForm>({
     defaultValues: {
       selectedGenericMetrics: editingItem?.genericMetrics?.key ?? "",
@@ -48,7 +48,7 @@ export const GenericMetricsWidgetForm: React.FC<
     const genericMetrics = deepClone(
       GENERIC_METRICS.find((g) => g.key === formValues.selectedGenericMetrics)
     );
-    onChange({ genericMetrics });
+    onChange({ genericMetrics }, isValid);
   }, [formValues]);
 
   return (

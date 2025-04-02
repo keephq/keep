@@ -10,7 +10,7 @@ interface PresetForm {
 export interface MetricWidgetFormProps {
   metricWidgets: MetricsWidget[];
   editingItem?: any;
-  onChange: (formState: any) => void;
+  onChange: (formState: any, isValid: boolean) => void;
 }
 
 export const MetricWidgetForm: React.FC<MetricWidgetFormProps> = ({
@@ -20,7 +20,7 @@ export const MetricWidgetForm: React.FC<MetricWidgetFormProps> = ({
 }) => {
   const {
     control,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<PresetForm>({
     defaultValues: {
       selectedMetricWidget: editingItem?.metric?.id ?? "",
@@ -32,7 +32,7 @@ export const MetricWidgetForm: React.FC<MetricWidgetFormProps> = ({
     const metric = metricWidgets.find(
       (p) => p.id === formValues.selectedMetricWidget
     );
-    onChange({ metric });
+    onChange({ metric }, isValid);
   }, [formValues]);
 
   return (
