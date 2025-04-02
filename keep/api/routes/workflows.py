@@ -53,9 +53,9 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.functions import cyaml
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
-from keep.identitymanager.rbac import Roles
 from keep.parser.parser import Parser
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
+from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -167,16 +167,6 @@ def fetch_facet_fields(
     return fields
 
 
-# Redesign the workflow Card
-#   The workflow card needs execution records (currently limited to 15) for the graph. To achieve this, the following changes
-#   were made in the backend:
-#   1. Query Search Parameter: A new query search parameter called is_v2 has been added, which accepts a boolean
-#     (default is false).
-#   2. Grouped Workflow Executions: When a request is made with /workflows?is_v2=true, workflow executions are grouped
-#      by workflow.id.
-#   3. Response Updates: The response includes the following new keys and their respective information:
-#       -> last_executions: Used for the workflow execution graph.
-#       ->last_execution_started: Used for showing the start time of execution in real-time.
 @router.get(
     "",
     description="Get workflows",
@@ -186,9 +176,11 @@ def get_workflows(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
-    is_v2: Optional[bool] = Query(False, alias="is_v2", type=bool),
 ) -> list[WorkflowDTO] | list[dict]:
-    query_result = query_workflows(QueryDto(), authenticated_entity, is_v2)
+    query_result = query_workflows(
+        QueryDto(),
+        authenticated_entity,
+    )
     return query_result["results"]
 
 
@@ -201,7 +193,6 @@ def query_workflows(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
-    is_v2: Optional[bool] = Query(False, alias="is_v2", type=bool),
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
@@ -227,7 +218,6 @@ def query_workflows(
             offset=query.offset,
             sort_by=query.sort_by,
             sort_dir=query.sort_dir,
-            is_v2=is_v2,
         )
     except CelToSqlException as e:
         logger.exception(f'Error parsing CEL expression "{query.cel}". {str(e)}')
@@ -236,23 +226,15 @@ def query_workflows(
             detail=f"Error parsing CEL expression: {query.cel}",
         ) from e
 
-    # Group last workflow executions by workflow
-    if is_v2:
-        workflows = workflowstore.group_last_workflow_executions(workflows=workflows)
+    workflows = workflowstore.group_last_workflow_executions(workflows=workflows)
 
     # iterate workflows
     for _workflow in workflows:
-        # extract the providers
-        if is_v2:
-            workflow = _workflow["workflow"]
-            workflow_last_run_time = _workflow["workflow_last_run_time"]
-            workflow_last_run_status = _workflow["workflow_last_run_status"]
-            last_executions = _workflow["workflow_last_executions"]
-            last_execution_started = _workflow["workflow_last_run_started"]
-        else:
-            workflow, workflow_last_run_time, workflow_last_run_status = _workflow
-            last_executions = None
-            last_execution_started = None
+        workflow = _workflow["workflow"]
+        workflow_last_run_time = _workflow["workflow_last_run_time"]
+        workflow_last_run_status = _workflow["workflow_last_run_status"]
+        last_executions = _workflow["workflow_last_executions"]
+        last_execution_started = _workflow["workflow_last_run_started"]
 
         try:
             providers_dto, triggers = workflowstore.get_workflow_meta_data(
@@ -267,6 +249,10 @@ def query_workflows(
         # create the workflow DTO
         try:
             workflow_raw = cyaml.safe_load(workflow.workflow_raw)
+            permissions = workflow_raw.get("permissions", [])
+            can_run = Workflow.check_run_permissions(
+                permissions, authenticated_entity.email, authenticated_entity.role
+            )
             is_alert_rule_workflow = WorkflowStore.is_alert_rule_workflow(workflow_raw)
             # very big width to avoid line breaks
             workflow_raw = cyaml.dump(workflow_raw, width=99999)
@@ -290,6 +276,7 @@ def query_workflows(
                 disabled=workflow.is_disabled,
                 provisioned=workflow.provisioned,
                 alertRule=is_alert_rule_workflow,
+                canRun=can_run,
             )
         except Exception as e:
             logger.error(f"Error creating workflow DTO: {e}")
@@ -370,19 +357,14 @@ def run_workflow(
     workflow = workflow_store.get_workflow(tenant_id, workflow_id)
 
     # if there are workflow permissions, check if the user has access
-    if workflow.workflow_permissions:
-        # if the user is an admin, they can run the workflow
-        if authenticated_entity.role == Roles.ADMIN.value:
-            pass
-        # if the role is not in the workflow permissions, and the email is not in the workflow permissions, raise a permission error
-        elif (
-            authenticated_entity.role not in workflow.workflow_permissions
-            and authenticated_entity.email not in workflow.workflow_permissions
-        ):
-            raise HTTPException(status_code=403, detail="Forbidden")
-    # if there are no workflow permissions, the user can simply run the workflow
-    else:
-        pass
+    if not Workflow.check_run_permissions(
+        workflow.workflow_permissions,
+        authenticated_entity.email,
+        authenticated_entity.role,
+    ):
+        raise HTTPException(
+            status_code=403, detail="Insufficient permissions to execute this workflow"
+        )
 
     workflowmanager = WorkflowManager.get_instance()
 

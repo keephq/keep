@@ -49,6 +49,7 @@ export function ManualRunWorkflowModal({
     limit: 100, // Fetch more workflows at once for the dropdown
     cel: "disabled == false", // Only show enabled workflows
   });
+  const filteredWorkflows = workflows?.filter((w) => w.canRun);
   const api = useApi();
 
   // If isOpen is provided as a prop, use it; otherwise, derive from alert/incident
@@ -203,7 +204,7 @@ export function ManualRunWorkflowModal({
       {!workflow && (
         <>
           <Text className="mb-1 mt-4">Select workflow to run</Text>
-          {workflows ? (
+          {filteredWorkflows ? (
             <WorkflowSelect
               placeholder="Select workflow"
               value={selectedWorkflow}
@@ -231,7 +232,7 @@ export function ManualRunWorkflowModal({
               components={{
                 Option: CustomOption,
               }}
-              options={workflows}
+              options={filteredWorkflows}
             />
           ) : (
             <div>No workflows found</div>
