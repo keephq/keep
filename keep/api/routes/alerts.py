@@ -237,6 +237,8 @@ def query_alerts(
         "Fetched alerts from DB",
         extra={
             "tenant_id": tenant_id,
+            "query": query,
+            "total_count": total_count,
         },
     )
 
