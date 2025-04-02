@@ -28,10 +28,12 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
   presets,
   onChange,
 }: PresetWidgetFormProps) => {
-  const [thresholds, setThresholds] = useState<Threshold[]>([
-    { value: 0, color: "#22c55e" }, // Green
-    { value: 20, color: "#ef4444" }, // Red
-  ]);
+  const [thresholds, setThresholds] = useState<Threshold[]>(
+    editingItem?.thresholds || [
+      { value: 0, color: "#22c55e" }, // Green
+      { value: 20, color: "#ef4444" }, // Red
+    ]
+  );
 
   const {
     control,
@@ -39,7 +41,6 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
   } = useForm<PresetForm>({
     defaultValues: {
       selectedPreset: editingItem?.preset?.id,
-      thresholds: editingItem?.thresholds || thresholds,
     },
   });
 
