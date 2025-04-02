@@ -53,6 +53,7 @@ const GridItem: React.FC<GridItemProps> = ({
         </div>
         {item.preset && <PresetGridItem item={item} />}
         {item.metric && <MetricGridItem item={item} />}
+        {item.metric && <MetricGridItem item={item} />}
         {item.genericMetrics && (
           <GenericMetricsGridItem
             item={item}
