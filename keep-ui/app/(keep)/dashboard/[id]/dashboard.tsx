@@ -66,53 +66,23 @@ const DashboardPage = () => {
   };
   const closeModal = () => setIsModalOpen(false);
 
-  const handleAddWidget = (
-    widget: any
-    // name: string,
-    // widgetType: WidgetType,
-    // preset?: Preset,
-    // thresholds?: Threshold[],
-    // metric?: MetricsWidget,
-    // genericMetrics?: GenericsMetrics
-  ) => {
-    const { name, widgetType, preset, thresholds, metric, genericMetrics } =
-      widget;
+  const handleAddWidget = (widget: any) => {
     const uniqueId = `w-${Date.now()}`;
     const newItem: LayoutItem = {
       i: uniqueId,
       x: (layout.length % 12) * 2,
       y: Math.floor(layout.length / 12) * 2,
-      w:
-        widgetType === WidgetType.GENERICS_METRICS
-          ? 12
-          : widgetType === WidgetType.METRIC
-            ? 6
-            : 3,
-      h:
-        widgetType === WidgetType.GENERICS_METRICS
-          ? 20
-          : widgetType === WidgetType.METRIC
-            ? 8
-            : 3,
-      minW: widgetType === WidgetType.GENERICS_METRICS ? 10 : 2,
-      minH:
-        widgetType === WidgetType.GENERICS_METRICS
-          ? 15
-          : widgetType === WidgetType.METRIC
-            ? 7
-            : 3,
+      w: 3,
+      h: 3,
+      minW: 2,
+      minH: 3,
       static: false,
     };
     const newWidget: WidgetData = {
       ...newItem,
-      thresholds,
-      preset,
-      name,
-      widgetType,
-      genericMetrics,
-      metric,
+      ...widget,
     };
-    setLayout((prevLayout) => [...prevLayout, newItem]);
+    setLayout((prevLayout) => [...prevLayout, newWidget]);
     setWidgetData((prevData) => [...prevData, newWidget]);
   };
 

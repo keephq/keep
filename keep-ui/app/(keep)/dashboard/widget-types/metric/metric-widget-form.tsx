@@ -32,8 +32,22 @@ export const MetricWidgetForm: React.FC<MetricWidgetFormProps> = ({
     const metric = metricWidgets.find(
       (p) => p.id === formValues.selectedMetricWidget
     );
-    onChange({ metric }, isValid);
+    onChange({ ...getLayoutValues(), metric }, isValid);
   }, [formValues]);
+
+  function getLayoutValues() {
+    if (editingItem) {
+      return {};
+    }
+
+    return {
+      w: 6,
+      h: 8,
+      minW: 2,
+      minH: 7,
+      static: false,
+    };
+  }
 
   return (
     <div className="mb-4 mt-2">

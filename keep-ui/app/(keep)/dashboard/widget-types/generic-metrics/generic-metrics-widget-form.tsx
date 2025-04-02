@@ -1,7 +1,6 @@
 import { Select, SelectItem, Subtitle } from "@tremor/react";
 import { useEffect } from "react";
 import { Controller, get, useForm, useWatch } from "react-hook-form";
-import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { GenericsMetrics } from "../../types";
 
 const GENERIC_METRICS = [
@@ -44,11 +43,25 @@ export const GenericMetricsWidgetForm: React.FC<
     return JSON.parse(JSON.stringify(obj)) as GenericsMetrics;
   };
 
+  function getLayoutValues() {
+    if (editingItem) {
+      return {};
+    }
+
+    return {
+      w: 12,
+      h: 20,
+      minW: 10,
+      minH: 15,
+      static: false,
+    };
+  }
+
   useEffect(() => {
     const genericMetrics = deepClone(
       GENERIC_METRICS.find((g) => g.key === formValues.selectedGenericMetrics)
     );
-    onChange({ genericMetrics }, isValid);
+    onChange({ ...getLayoutValues(), genericMetrics }, true);
   }, [formValues]);
 
   return (

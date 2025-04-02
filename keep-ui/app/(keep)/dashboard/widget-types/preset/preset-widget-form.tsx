@@ -46,13 +46,30 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
 
   const formValues = useWatch({ control });
 
+  function getLayoutValues() {
+    if (editingItem) {
+      return {};
+    }
+
+    return {
+      w: 3,
+      h: 3,
+      minW: 2,
+      minH: 3,
+      static: false,
+    };
+  }
+
   useEffect(() => {
     const preset = presets.find((p) => p.id === formValues.selectedPreset);
     const formattedThresholds = thresholds.map((t) => ({
       ...t,
       value: parseInt(t.value.toString(), 10) || 0,
     }));
-    onChange({ preset, thresholds: formattedThresholds }, isValid);
+    onChange(
+      { ...getLayoutValues(), preset, thresholds: formattedThresholds },
+      isValid
+    );
   }, [formValues, thresholds]);
 
   const handleThresholdChange = (
