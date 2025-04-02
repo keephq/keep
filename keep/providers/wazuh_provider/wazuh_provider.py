@@ -11,10 +11,10 @@ from keep.providers.models.provider_config import ProviderConfig
 class WazuhProvider(BaseProvider):
     """Get alerts from Wazuh into Keep"""
 
+    webhook_documentation_here_differs_from_general_documentation = True
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-  💡 For more details on how to configure Wazuh to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/wazuh-provider).
   1. Wazuh supports custom integration scripts.
   2. Install Keep integration scripts following the [Keep documentation](https://docs.keephq.dev/providers/documentation/wazuh-provider).
   3. Open the Wazuh configuration file
@@ -54,7 +54,7 @@ class WazuhProvider(BaseProvider):
             source=["wazuh"],
             lastReceived=event["created_at"],
         )
-        alert.fingerprint =WazuhProvider.get_alert_fingerprint(
+        alert.fingerprint = WazuhProvider.get_alert_fingerprint(
             alert, fingerprint_fields=WazuhProvider.FINGERPRINT_FIELDS
         )
 

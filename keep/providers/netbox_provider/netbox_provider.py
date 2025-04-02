@@ -13,11 +13,10 @@ class NetboxProvider(BaseProvider):
     Get alerts from NetBox into Keep.
     """
 
+    webhook_documentation_here_differs_from_general_documentation = True
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-  💡 For more details on how to configure NetBox to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/netbox-provider).
-
   To send alerts from NetBox to Keep, Use the following webhook url to configure NetBox send alerts to Keep:
 
   1. In NetBox, go to Webhooks under Operations.
