@@ -1,7 +1,7 @@
 import { Select, SelectItem, Subtitle } from "@tremor/react";
 import { useEffect } from "react";
 import { Controller, get, useForm, useWatch } from "react-hook-form";
-import { GenericsMetrics } from "../../types";
+import { GenericsMetrics, LayoutItem } from "../../types";
 
 const GENERIC_METRICS = [
   {
@@ -43,9 +43,9 @@ export const GenericMetricsWidgetForm: React.FC<
     return JSON.parse(JSON.stringify(obj)) as GenericsMetrics;
   };
 
-  function getLayoutValues() {
+  function getLayoutValues(): LayoutItem {
     if (editingItem) {
-      return {};
+      return {} as LayoutItem;
     }
 
     return {
@@ -54,7 +54,7 @@ export const GenericMetricsWidgetForm: React.FC<
       minW: 10,
       minH: 15,
       static: false,
-    };
+    } as LayoutItem;
   }
 
   useEffect(() => {

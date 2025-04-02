@@ -10,7 +10,7 @@ import {
 } from "@tremor/react";
 import { ChangeEvent, useEffect, useState } from "react";
 import { Controller, get, useForm, useWatch, Control } from "react-hook-form";
-import { Threshold, WidgetType } from "../../types";
+import { LayoutItem, Threshold, WidgetType } from "../../types";
 
 interface PresetForm {
   selectedPreset: string;
@@ -46,9 +46,9 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
 
   const formValues = useWatch({ control });
 
-  function getLayoutValues() {
+  function getLayoutValues(): LayoutItem {
     if (editingItem) {
-      return {};
+      return {} as LayoutItem;
     }
 
     return {
@@ -57,7 +57,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       minW: 2,
       minH: 3,
       static: false,
-    };
+    } as LayoutItem;
   }
 
   useEffect(() => {

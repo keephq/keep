@@ -2,6 +2,7 @@ import { Select, SelectItem, Subtitle } from "@tremor/react";
 import { useEffect } from "react";
 import { Controller, get, useForm, useWatch } from "react-hook-form";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
+import { LayoutItem } from "../../types";
 
 interface PresetForm {
   selectedMetricWidget: string;
@@ -35,9 +36,9 @@ export const MetricWidgetForm: React.FC<MetricWidgetFormProps> = ({
     onChange({ ...getLayoutValues(), metric }, isValid);
   }, [formValues]);
 
-  function getLayoutValues() {
+  function getLayoutValues(): LayoutItem {
     if (editingItem) {
-      return {};
+      return {} as LayoutItem;
     }
 
     return {
@@ -46,7 +47,7 @@ export const MetricWidgetForm: React.FC<MetricWidgetFormProps> = ({
       minW: 2,
       minH: 7,
       static: false,
-    };
+    } as LayoutItem;
   }
 
   return (
