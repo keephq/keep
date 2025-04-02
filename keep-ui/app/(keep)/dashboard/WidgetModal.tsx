@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button, Select, SelectItem, Subtitle, TextInput } from "@tremor/react";
-import { GenericsMetrics, WidgetData, WidgetType } from "./types";
+import { WidgetData, WidgetType } from "./types";
 import { Controller, get, useForm, useWatch } from "react-hook-form";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { Preset } from "@/entities/presets/model/types";
@@ -23,17 +23,6 @@ interface WidgetModalProps {
   editingItem?: WidgetData | null;
   metricWidgets: MetricsWidget[];
 }
-
-const GENERIC_METRICS = [
-  {
-    key: "alert_quality",
-    label: "Alert Quality",
-    widgetType: "table",
-    meta: {
-      defaultFilters: { fields: "severity" },
-    },
-  },
-] as GenericsMetrics[];
 
 const WidgetModal: React.FC<WidgetModalProps> = ({
   isOpen,
