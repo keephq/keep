@@ -583,7 +583,7 @@ def test_yaml_editor_yaml_invalid(browser: Page):
         expect(yaml_editor).to_be_visible()
         expect(
             yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-summary").first
-        ).to_contain_text("6 validation errors")
+        ).to_contain_text("7 validation errors")
         expect(
             yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
         ).to_contain_text("String is shorter than the minimum length of 1.")
@@ -595,9 +595,7 @@ def test_yaml_editor_yaml_invalid(browser: Page):
         ).to_contain_text("Property provider_invalid_prop is not allowed.")
         expect(
             yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
-        ).to_contain_text(
-            'Value is not accepted. Valid values: "message", "blocks", "channel", "slack_timestamp", "thread_timestamp", "attachments", "username", "notification_type", "enrich_alert", "enrich_incident".'
-        )
+        ).to_contain_text("Property message_invalid_prop is not allowed.")
         expect(
             yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
         ).to_contain_text("Property enrich_incident is not allowed.")
