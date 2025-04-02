@@ -67,13 +67,16 @@ const DashboardPage = () => {
   const closeModal = () => setIsModalOpen(false);
 
   const handleAddWidget = (
-    name: string,
-    widgetType: WidgetType,
-    preset?: Preset,
-    thresholds?: Threshold[],
-    metric?: MetricsWidget,
-    genericMetrics?: GenericsMetrics
+    widget: any
+    // name: string,
+    // widgetType: WidgetType,
+    // preset?: Preset,
+    // thresholds?: Threshold[],
+    // metric?: MetricsWidget,
+    // genericMetrics?: GenericsMetrics
   ) => {
+    const { name, widgetType, preset, thresholds, metric, genericMetrics } =
+      widget;
     const uniqueId = `w-${Date.now()}`;
     const newItem: LayoutItem = {
       i: uniqueId,

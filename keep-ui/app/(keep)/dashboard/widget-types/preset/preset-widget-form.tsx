@@ -8,16 +8,91 @@ import {
   Subtitle,
   TextInput,
 } from "@tremor/react";
-import { Control, Controller } from "react-hook-form";
+import { ChangeEvent, useEffect, useState } from "react";
+import { Controller, get, useForm, useWatch, Control } from "react-hook-form";
+import { Threshold, WidgetType } from "../../types";
 
-export interface PresetWidgetFormProps {
-  presets: Preset[];
-  control: Control<any, any>;
+interface PresetForm {
+  selectedPreset: string;
+  thresholds: Threshold[];
 }
 
-export const PresetWidgetForm: React.FC<
-  PresetWidgetFormProps
-> = ({}: PresetWidgetFormProps) => {
+export interface PresetWidgetFormProps {
+  editingItem?: any;
+  presets: Preset[];
+  onChange: (formState: any) => void;
+}
+
+export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
+  editingItem,
+  presets,
+  onChange,
+}: PresetWidgetFormProps) => {
+  const [thresholds, setThresholds] = useState<Threshold[]>([
+    { value: 0, color: "#22c55e" }, // Green
+    { value: 20, color: "#ef4444" }, // Red
+  ]);
+
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+    reset,
+    getValues,
+  } = useForm<PresetForm>({
+    defaultValues: {
+      selectedPreset: editingItem?.preset?.id,
+      thresholds: editingItem?.thresholds || thresholds,
+    },
+  });
+
+  const formValues = useWatch({ control });
+
+  useEffect(() => {
+    const preset = presets.find((p) => p.id === formValues.selectedPreset);
+    const formattedThresholds = thresholds.map((t) => ({
+      ...t,
+      value: parseInt(t.value.toString(), 10) || 0,
+    }));
+    onChange({ preset, thresholds: formattedThresholds });
+  }, [formValues, thresholds]);
+
+  const handleThresholdChange = (
+    index: number,
+    field: "value" | "color",
+    e: ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = field === "value" ? e.target.value : e.target.value;
+    const updatedThresholds = thresholds.map((t, i) =>
+      i === index ? { ...t, [field]: value } : t
+    );
+    setThresholds(updatedThresholds);
+  };
+
+  const handleThresholdBlur = () => {
+    setThresholds((prevThresholds) => {
+      return prevThresholds
+        .map((t) => ({
+          ...t,
+          value: parseInt(t.value.toString(), 10) || 0,
+        }))
+        .sort((a, b) => a.value - b.value);
+    });
+  };
+
+  const handleAddThreshold = () => {
+    const maxThreshold = Math.max(...thresholds.map((t) => t.value), 0);
+    setThresholds([
+      ...thresholds,
+      { value: maxThreshold + 10, color: "#000000" },
+    ]);
+  };
+
+  const handleRemoveThreshold = (index: number) => {
+    setThresholds(thresholds.filter((_, i) => i !== index));
+  };
+
   return (
     <>
       <div className="mb-4 mt-2">
