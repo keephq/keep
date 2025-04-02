@@ -54,7 +54,7 @@ route:
 receivers:
 - name: "keep"
   webhook_configs:
-  - url: 'KEEP_BACKEND_URL/alerts/event/PROVIDER_TYPE'
+  - url: 'KEEP_BACKEND_URL/alerts/event/prometheus'
     send_resolved: true
     http_config:
       basic_auth:

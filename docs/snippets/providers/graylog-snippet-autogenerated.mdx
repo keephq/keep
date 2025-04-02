@@ -54,12 +54,12 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
 2. Click "Create Notification".
 3. In the New Notification form, configure:
 
-**Note**: For Graylog v4.x please set the **URL** to `KEEP_BACKEND_URL/alerts/event/PROVIDER_TYPE?api_key={api_key}`.
+**Note**: For Graylog v4.x please set the **URL** to `KEEP_BACKEND_URL/alerts/event/graylog?api_key={api_key}`.
 
 - **Display Name**: keep-graylog-webhook-integration
 - **Title**: keep-graylog-webhook-integration
 - **Notification Type**: Custom HTTP Notification
-- **URL**: KEEP_BACKEND_URL/alerts/event/PROVIDER_TYPE  # Whitelist this URL
+- **URL**: KEEP_BACKEND_URL/alerts/event/graylog  # Whitelist this URL
 - **Headers**: X-API-KEY:{api_key}
 4. Erase the Body Template.
 5. Click on "Create Notification".
