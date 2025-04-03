@@ -428,10 +428,17 @@ class ProvidersService:
                 if provider.name not in env_providers:
                     with Session(engine) as session:
                         logger.info(f"Deleting provider {provider.name}")
-                        ProvidersService.delete_provider(
-                            tenant_id, provider.id, session, allow_provisioned=True
-                        )
-                        logger.info(f"Provider {provider.name} deleted")
+                        try:
+                            ProvidersService.delete_provider(
+                                tenant_id, provider.id, session, allow_provisioned=True
+                            )
+                            logger.info(f"Provider {provider.name} deleted")
+                        except Exception as e:
+                            logger.exception(
+                                "Failed to delete provisioned provider that does not exist in the env var",
+                                extra={"exception": e},
+                            )
+                            continue
 
             for provider_name, provider_config in env_providers.items():
                 logger.info(f"Provisioning provider {provider_name}")
