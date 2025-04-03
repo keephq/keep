@@ -5,6 +5,9 @@ import { useDashboardPreset } from "@/utils/hooks/useDashboardPresets";
 import { Icon } from "@tremor/react";
 import { FireIcon } from "@heroicons/react/24/outline";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { getStatusColor, getStatusIcon } from "@/shared/lib/status-utils";
+import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
+import { severityMapping } from "@/entities/alerts/model";
 
 interface GridItemProps {
   item: WidgetData;
@@ -45,21 +48,21 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
   console.log(alerts);
 
   return (
-    <div className="grid grid-cols-7 overflow-y-auto overflow-x-hidden auto-rows-auto">
+    <div className="flex flex-col overflow-y-auto overflow-x-hidden auto-rows-auto">
       {alerts?.map((alert) => (
-        <>
-          <div
-            key={alert.id + 1}
-            className="col-span-3 overflow-hidden truncate h-4"
-          >
-            {alert.name}
-          </div>
-          <div
-            key={alert.id + 2}
-            className="col-span-3 overflow-hidden truncate"
-          >
-            {alert.description}
-          </div>
+        <div className="flex flex-row min-h-7 h-7 items-center gap-2">
+          <SeverityBorderIcon
+            severity={
+              (severityMapping[Number(alert.severity)] ||
+                alert.severity) as UISeverity
+            }
+          />
+          <Icon
+            icon={getStatusIcon(alert.status)}
+            size="sm"
+            color={getStatusColor(alert.status)}
+            className="!p-0"
+          />
           <div key={alert.id + 3}>
             <DynamicImageProviderIcon
               className="inline-block"
@@ -71,7 +74,19 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
               src={`/icons/${(alert as any).providerType}-icon.png`}
             />
           </div>
-        </>
+          <div
+            key={alert.id + 1}
+            className="flex-1 overflow-hidden truncate text-xs"
+          >
+            {alert.name}
+          </div>
+          <div
+            key={alert.id + 2}
+            className="flex-1 overflow-hidden truncate text-xs"
+          >
+            {alert.description}
+          </div>
+        </div>
       ))}
     </div>
     // <div className="flex-1 h-4/5 flex items-center justify-center grid-item__widget">
