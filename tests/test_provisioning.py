@@ -371,3 +371,228 @@ def test_provision_provider_with_empty_tenant_table(db_session, client, test_app
     )
 
     db_session.execute(text("PRAGMA foreign_keys = OFF;"))
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [{"AUTH_TYPE": "NOAUTH"}],
+    indirect=True,
+)
+def test_no_provisioned_providers_and_unset_env_vars(
+    monkeypatch, db_session, client, test_app
+):
+    """Test behavior when there are no provisioned providers and env vars are unset"""
+    # Import necessary modules
+    from unittest.mock import patch
+
+    from keep.providers.providers_service import ProvidersService
+
+    # Mock get_all_provisioned_providers to return an empty list
+    with patch(
+        "keep.providers.providers_service.get_all_provisioned_providers",
+        return_value=[],
+    ) as mock_get_providers, patch(
+        "keep.providers.providers_service.ProvidersService.delete_provider"
+    ) as mock_delete_provider:
+        # Call provision_providers without setting any env vars
+        ProvidersService.provision_providers("test-tenant")
+
+        # Verify get_all_provisioned_providers was called
+        mock_get_providers.assert_called_once_with("test-tenant")
+
+        # Verify delete_provider was not called since there were no providers to delete
+        mock_delete_provider.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [{"AUTH_TYPE": "NOAUTH"}],
+    indirect=True,
+)
+def test_delete_provisioned_providers_when_env_vars_unset(
+    monkeypatch, db_session, client, test_app
+):
+    """Test deleting provisioned providers when env vars are unset"""
+    # Import necessary modules
+    from unittest.mock import ANY, MagicMock, patch
+
+    from keep.providers.providers_service import ProvidersService
+
+    # Create a mock provider
+    mock_provider = MagicMock(id="test-id", name="test-provider", type="test-type")
+
+    # Mock get_all_provisioned_providers to return our mock provider
+    with patch(
+        "keep.providers.providers_service.get_all_provisioned_providers",
+        return_value=[mock_provider],
+    ) as mock_get_providers, patch(
+        "keep.providers.providers_service.ProvidersService.delete_provider"
+    ) as mock_delete_provider:
+        # Call provision_providers without setting any env vars
+        ProvidersService.provision_providers("test-tenant")
+
+        # Verify get_all_provisioned_providers was called
+        mock_get_providers.assert_called_once_with("test-tenant")
+
+        # Verify delete_provider was called with correct parameters
+        mock_delete_provider.assert_called_once_with(
+            "test-tenant",
+            "test-id",
+            ANY,  # Session object
+            allow_provisioned=True,
+            commit=False,
+        )
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+            "KEEP_PROVIDERS": '{"existingProvider":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort": 1234}}}',
+        },
+    ],
+    indirect=True,
+)
+def test_replace_existing_provisioned_provider(
+    monkeypatch, db_session, client, test_app
+):
+    """Test that when a new provider is provisioned via KEEP_PROVIDERS without including
+    the current provisioned provider, it removes the current one and installs the new one
+    """
+
+    # First verify the initial provider is installed
+    response = client.get("/providers", headers={"x-api-key": "someapikey"})
+    assert response.status_code == 200
+    providers = response.json()
+    provisioned_providers = [
+        p for p in providers.get("installed_providers") if p.get("provisioned")
+    ]
+    assert len(provisioned_providers) == 1
+    # Provider name is in the details
+    provider_details = provisioned_providers[0].get("details", {})
+    assert provider_details.get("name") == "existingProvider"
+    assert provisioned_providers[0]["type"] == "victoriametrics"
+
+    # Change environment variable to new provider config that doesn't include the existing one
+    monkeypatch.setenv(
+        "KEEP_PROVIDERS",
+        '{"newProvider":{"type":"prometheus","authentication":{"url":"http://localhost:9090"}}}',
+    )
+
+    # Reload the app to apply the new environment changes
+    importlib.reload(sys.modules["keep.api.api"])
+    from keep.api.api import get_app
+
+    app = get_app()
+
+    # Manually trigger the startup event
+    for event_handler in app.router.on_startup:
+        asyncio.run(event_handler())
+
+    # Manually trigger the provision resources
+    from keep.api.config import provision_resources
+
+    provision_resources()
+
+    client = TestClient(app)
+
+    # Verify that the old provider is gone and new provider is installed
+    response = client.get("/providers", headers={"x-api-key": "someapikey"})
+    assert response.status_code == 200
+    providers = response.json()
+    provisioned_providers = [
+        p for p in providers.get("installed_providers") if p.get("provisioned")
+    ]
+    assert len(provisioned_providers) == 1
+    provider_details = provisioned_providers[0].get("details", {})
+    assert provider_details.get("name") == "newProvider"
+    assert provisioned_providers[0]["type"] == "prometheus"
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+            "KEEP_PROVIDERS": '{"vm_provider":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort":1234},"deduplication_rules":{"rule1":{"description":"First rule","fingerprint_fields":["fingerprint","source"],"ignore_fields":["name"]}}}}',
+        },
+    ],
+    indirect=True,
+)
+def test_delete_deduplication_rules_when_reprovisioning(
+    monkeypatch, db_session, client, test_app
+):
+    """Test that deduplication rules are deleted when reprovisioning a provider without rules"""
+
+    # First verify initial provider and rule are installed
+    response = client.get("/deduplications", headers={"x-api-key": "someapikey"})
+    assert response.status_code == 200
+    rules = response.json()
+    assert len(rules) - 1 == 1
+    assert rules[1]["name"] == "rule1"
+
+    # Update provider config without any deduplication rules
+    monkeypatch.setenv(
+        "KEEP_PROVIDERS",
+        '{"vm_provider":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort":1234}}}',
+    )
+
+    # Reload the app to apply the new environment changes
+    importlib.reload(sys.modules["keep.api.api"])
+    from keep.api.api import get_app
+
+    app = get_app()
+
+    # Manually trigger the startup event
+    for event_handler in app.router.on_startup:
+        asyncio.run(event_handler())
+
+    # Manually trigger the provision resources
+    from keep.api.config import provision_resources
+
+    provision_resources()
+
+    client = TestClient(app)
+
+    # Verify the rule was deleted
+    response = client.get("/deduplications", headers={"x-api-key": "someapikey"})
+    assert response.status_code == 200
+    rules = response.json()
+    assert len(rules) == 0
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+            "KEEP_PROVIDERS": '{"vm_provider":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort":1234},"deduplication_rules":{"rule1":{"description":"First rule","fingerprint_fields":["fingerprint","source"]},"rule2":{"description":"Second rule","fingerprint_fields":["alert_id"]}}}}',
+        },
+    ],
+    indirect=True,
+)
+def test_provision_provider_with_multiple_deduplication_rules(
+    db_session, client, test_app
+):
+    """Test provisioning a provider with multiple deduplication rules"""
+
+    # Verify the provider and rules are installed
+    response = client.get("/deduplications", headers={"x-api-key": "someapikey"})
+    assert response.status_code == 200
+    rules = response.json()
+    assert len(rules) - 1 == 2
+
+    rule1 = next(r for r in rules[1:] if r["name"] == "rule1")
+    assert rule1["description"] == "First rule"
+    assert rule1["fingerprint_fields"] == ["fingerprint", "source"]
+    assert rule1["is_provisioned"] is True
+
+    rule2 = next(r for r in rules if r["name"] == "rule2")
+    assert rule2["description"] == "Second rule"
+    assert rule2["fingerprint_fields"] == ["alert_id"]
+    assert rule2["is_provisioned"] is True
+
+    # Verify both rules are associated with the same provider
+    assert rule1["provider_type"] == "victoriametrics"
+    assert rule2["provider_type"] == "victoriametrics"

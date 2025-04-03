@@ -4,21 +4,24 @@ import re
 
 import keep.api.core.db as db
 from keep.api.core.config import config
-from keep.providers.providers_factory import ProvidersFactory
+from keep.api.models.db.provider import Provider
 
 logger = logging.getLogger(__name__)
 
 
-def provision_deduplication_rules(deduplication_rules: dict[str, any], tenant_id: str):
+def provision_deduplication_rules(
+    deduplication_rules: dict[str, any], tenant_id: str, provider: Provider
+):
     """
     Provisions deduplication rules for a given tenant.
 
     Args:
         deduplication_rules (dict[str, any]): A dictionary where the keys are rule names and the values are
-        DeduplicationRuleRequestDto objects.
+            DeduplicationRuleRequestDto objects.
         tenant_id (str): The ID of the tenant for which deduplication rules are being provisioned.
+        provider (Provider): The provider for which the deduplication rules are being provisioned.
     """
-    enrich_with_providers_info(deduplication_rules, tenant_id)
+    enrich_with_providers_info(deduplication_rules, provider)
 
     all_deduplication_rules_from_db = db.get_all_deduplication_rules(tenant_id)
     provisioned_deduplication_rules = [
@@ -98,46 +101,17 @@ def provision_deduplication_rules(deduplication_rules: dict[str, any], tenant_id
         )
 
 
-def provision_deduplication_rules_from_env(tenant_id: str):
-    """
-    Provisions deduplication rules from environment variables for a given tenant.
-    This function reads deduplication rules from environment variables, validates them,
-    and then provisions them into the database. It handles the following:
-    - Deletes deduplication rules from the database that are not present in the environment variables.
-    - Updates existing deduplication rules in the database if they are present in the environment variables.
-    - Creates new deduplication rules in the database if they are not already present.
-    Args:
-        tenant_id (str): The ID of the tenant for which deduplication rules are being provisioned.
-    Raises:
-        ValueError: If the deduplication rules from the environment variables are invalid.
-    """
-
-    deduplication_rules_from_env_dict = get_deduplication_rules_to_provision()
-
-    if not deduplication_rules_from_env_dict:
-        logger.info("No deduplication rules found in env. Nothing to provision.")
-        return
-
-    provision_deduplication_rules(deduplication_rules_from_env_dict, tenant_id)
-
-
-def enrich_with_providers_info(deduplication_rules: dict[str, any], tenant_id: str):
+def enrich_with_providers_info(deduplication_rules: dict[str, any], provider: Provider):
     """
     Enriches passed deduplication rules with provider ID and type information.
 
     Args:
         deduplication_rules (dict[str, any]): A list of deduplication rules to be enriched.
-        tenant_id (str): The ID of the tenant for which deduplication rules are being provisioned.
+        provider (Provider): The provider for which the deduplication rules are being provisioned.
     """
-
-    installed_providers = ProvidersFactory.get_installed_providers(tenant_id)
-    installed_providers_dict = {
-        provider.details.get("name"): provider for provider in installed_providers
-    }
 
     for rule_name, rule in deduplication_rules.items():
         logger.info(f"Enriching deduplication rule: {rule_name}")
-        provider = installed_providers_dict.get(rule.get("provider_name"))
         rule["provider_id"] = provider.id
         rule["provider_type"] = provider.type
 
