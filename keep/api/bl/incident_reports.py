@@ -1,15 +1,18 @@
 import json
-import os
-from uuid import UUID
-from openai import OpenAI
-from pydantic import BaseModel
-from keep.api.bl.incidents_bl import IncidentBl
-from typing import Optional
 import logging
 import math
+import os
+from typing import Optional
+from uuid import UUID
 
+from openai import OpenAI
+from pydantic import BaseModel
+
+from keep.api.bl.incidents_bl import IncidentBl
+from keep.api.consts import OPENAI_MODEL_NAME
 from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.incident import IncidentDto
+
 
 class IncidentMetrics(BaseModel):
     total_incidents: Optional[int] = None
@@ -71,6 +74,7 @@ Generate an incident report based on the provided incidents dataset and response
 """
 
 logger = logging.getLogger(__name__)
+
 
 class IncidentReportsBl:
     __open_ai_client = None
@@ -146,7 +150,7 @@ class IncidentReportsBl:
         incidents_json = json.dumps(incidents_minified, default=str)
 
         response = self.open_ai_client.chat.completions.create(
-            model="gpt-4o-2024-08-06",
+            model=OPENAI_MODEL_NAME,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": incidents_json},
