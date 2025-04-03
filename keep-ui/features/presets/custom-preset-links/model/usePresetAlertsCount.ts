@@ -2,7 +2,9 @@ import { useAlerts } from "@/entities/alerts/model/useAlerts";
 
 export const usePresetAlertsCount = (
   presetCel: string,
-  counterShowsFiringOnly: boolean
+  counterShowsFiringOnly: boolean,
+  limit = 0,
+  offset = 0
 ) => {
   const { useLastAlerts } = useAlerts();
 
@@ -14,14 +16,14 @@ export const usePresetAlertsCount = (
 
   celList.push(presetCel);
 
-  const { totalCount, isLoading } = useLastAlerts({
+  const { data, totalCount, isLoading } = useLastAlerts({
     cel: celList
       .filter((cel) => !!cel)
       .map((cel) => `(${cel})`)
       .join(" && "),
-    limit: 0,
-    offset: 0,
+    limit: limit,
+    offset: offset,
   });
 
-  return { totalCount, isLoading };
+  return { alerts: data, totalCount, isLoading };
 };
