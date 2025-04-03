@@ -10,6 +10,7 @@ from keep.api.core.cel_to_sql.properties_mapper import PropertiesMappingExceptio
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     PropertiesMetadata,
+    remap_fields_configurations,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
@@ -27,40 +28,59 @@ from keep.api.models.db.alert import (
 from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from keep.api.models.incident import IncidentSorting
+from keep.api.models.query import SortOptionsDto
 
 logger = logging.getLogger(__name__)
 
 incident_field_configurations = [
     FieldMappingConfiguration(
-        map_from_pattern="name", map_to=["user_generated_name", "ai_generated_name"]
+        map_from_pattern="name",
+        map_to=["incident.user_generated_name", "incident.ai_generated_name"],
     ),
     FieldMappingConfiguration(
-        map_from_pattern="summary", map_to=["user_summary", "generated_summary"]
+        map_from_pattern="summary",
+        map_to=["incident.user_summary", "incident.generated_summary"],
     ),
-    FieldMappingConfiguration(map_from_pattern="assignee", map_to="assignee"),
-    FieldMappingConfiguration(map_from_pattern="severity", map_to="severity"),
-    FieldMappingConfiguration(map_from_pattern="status", map_to="status"),
-    FieldMappingConfiguration(map_from_pattern="creation_time", map_to="creation_time"),
-    FieldMappingConfiguration(map_from_pattern="start_time", map_to="start_time"),
-    FieldMappingConfiguration(map_from_pattern="end_time", map_to="end_time"),
+    FieldMappingConfiguration(map_from_pattern="assignee", map_to="incident.assignee"),
+    FieldMappingConfiguration(map_from_pattern="severity", map_to="incident.severity"),
+    FieldMappingConfiguration(map_from_pattern="status", map_to="incident.status"),
     FieldMappingConfiguration(
-        map_from_pattern="last_seen_time", map_to="last_seen_time"
+        map_from_pattern="creation_time", map_to="incident.creation_time"
     ),
-    FieldMappingConfiguration(map_from_pattern="is_predicted", map_to="is_predicted"),
-    FieldMappingConfiguration(map_from_pattern="is_candidate", map_to="is_candidate"),
-    FieldMappingConfiguration(map_from_pattern="is_visible", map_to="is_visible"),
-    FieldMappingConfiguration(map_from_pattern="alerts_count", map_to="alerts_count"),
-    FieldMappingConfiguration(map_from_pattern="merged_at", map_to="merged_at"),
-    FieldMappingConfiguration(map_from_pattern="merged_by", map_to="merged_by"),
+    FieldMappingConfiguration(
+        map_from_pattern="start_time", map_to="incident.start_time"
+    ),
+    FieldMappingConfiguration(map_from_pattern="end_time", map_to="incident.end_time"),
+    FieldMappingConfiguration(
+        map_from_pattern="last_seen_time", map_to="incident.last_seen_time"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="is_predicted", map_to="incident.is_predicted"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="is_candidate", map_to="incident.is_candidate"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="is_visible", map_to="incident.is_visible"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="alerts_count", map_to="incident.alerts_count"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="merged_at", map_to="incident.merged_at"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="merged_by", map_to="incident.merged_by"
+    ),
     FieldMappingConfiguration(
         map_from_pattern="hasLinkedIncident", map_to="incident_has_linked_incident"
     ),
     FieldMappingConfiguration(
-        map_from_pattern="alert.providerType", map_to="incident_alert_provider_type"
+        map_from_pattern="alert.providerType", map_to="alert.provider_type"
     ),
     FieldMappingConfiguration(
         map_from_pattern="alert.*",
-        map_to=["JSON(alert_enrichments).*", "JSON(alert_event).*"],
+        map_to=["JSON(alertenrichment.enrichments).*", "JSON(alert.event).*"],
     ),
 ]
 
@@ -170,6 +190,75 @@ def __build_base_incident_query(tenant_id: str):
     return incidents_alerts_cte
 
 
+def __build_base_incident_query_v2(tenant_id: str, select_args: list, cel=None):
+    fetch_alerts = False
+    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
+    sql_filter = None
+    involved_fields = []
+    select_args = select_args + [
+        # case(
+        #     (
+        #         Incident.same_incident_in_the_past_id.isnot(None),
+        #         True,
+        #     ),
+        #     else_=False,
+        # ).label("incident_has_linked_incident")
+    ]
+
+    if cel:
+        cel_to_sql_result = cel_to_sql_instance.convert_to_sql_str_v2(cel)
+        sql_filter = cel_to_sql_result.sql
+        involved_fields = cel_to_sql_result.involved_fields
+        fetch_alerts = next(
+            (
+                True
+                for field in involved_fields
+                if field.field_name.startswith("incident.")
+            ),
+            False,
+        )
+
+    sql_query = select(*select_args).select_from(Incident)
+
+    if fetch_alerts:
+        sql_query = (
+            sql_query.outerjoin(
+                LastAlertToIncident,
+                and_(
+                    LastAlertToIncident.incident_id == Incident.id,
+                    LastAlertToIncident.tenant_id == tenant_id,
+                ),
+            )
+            .outerjoin(
+                LastAlert,
+                and_(
+                    LastAlert.tenant_id == tenant_id,
+                    LastAlert.fingerprint == LastAlertToIncident.fingerprint,
+                ),
+            )
+            .outerjoin(
+                Alert,
+                and_(LastAlert.alert_id == Alert.id, LastAlert.tenant_id == tenant_id),
+            )
+            .outerjoin(
+                AlertEnrichment,
+                and_(
+                    AlertEnrichment.alert_fingerprint == Alert.fingerprint,
+                    AlertEnrichment.tenant_id == tenant_id,
+                ),
+            )
+        )
+
+    sql_query = sql_query.filter(Incident.tenant_id == tenant_id)
+    if sql_filter:
+        sql_query = sql_query.where(text(sql_filter))
+    return {
+        "query": sql_query,
+        "involved_fields": involved_fields,
+        "fetch_alerts": fetch_alerts,
+    }
+
+
 def __build_last_incidents_total_count_query(
     tenant_id: str,
     timeframe: int = None,
@@ -200,21 +289,19 @@ def __build_last_incidents_total_count_query(
     Returns:
         sqlalchemy.sql.selectable.Select: The constructed SQL query.
     """
-    incidents_alers_cte = __build_base_incident_query(tenant_id).cte(
-        "incidents_alers_cte"
+    fetch_alerts = cel and "alert." in cel
+
+    count_funct = (
+        func.count(func.distinct(Incident.id)) if fetch_alerts else func.count(1)
     )
-    base_query_cte = (
-        select(
-            func.count(func.distinct(incidents_alers_cte.c.incident_id)).label(
-                "total_count"
-            ),
-        )
-        .select_from(incidents_alers_cte)
-        .join(Incident, Incident.id == incidents_alers_cte.c.incident_id)
-        .filter(Incident.tenant_id == tenant_id)
-        .filter(Incident.is_visible == True)
-    )
-    query = base_query_cte.filter(Incident.is_candidate == is_candidate)
+
+    query = __build_base_incident_query_v2(
+        tenant_id=tenant_id,
+        cel=cel,
+        select_args=[count_funct],
+    )["query"]
+
+    query = query.filter(Incident.is_candidate == is_candidate)
 
     if allowed_incident_ids:
         query = query.filter(Incident.id.in_(allowed_incident_ids))
@@ -236,11 +323,6 @@ def __build_last_incidents_total_count_query(
         query = query.filter(Incident.last_seen_time <= upper_timestamp)
     elif lower_timestamp:
         query = query.filter(Incident.last_seen_time >= lower_timestamp)
-
-    if cel:
-        instance = get_cel_to_sql_provider(properties_metadata)
-        sql_filter = instance.convert_to_sql_str(cel)
-        query = query.filter(text(sql_filter))
 
     return query
 
@@ -278,57 +360,58 @@ def __build_last_incidents_query(
     Returns:
         sqlalchemy.sql.selectable.Select: The constructed SQL query.
     """
-    incidents_alers_cte = __build_base_incident_query(tenant_id).cte(
-        "incidents_alers_cte"
+    sort_dir = "DESC" if "-" in sorting.value else "ASC"
+    sort_by = sorting.value.replace("-", "")
+    sort_options: list[SortOptionsDto] = [
+        SortOptionsDto(sort_by=sort_by, sort_dir=sort_dir)
+    ]
+    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
+    sort_by_exp = cel_to_sql_instance.get_order_by_expression(
+        [(sort_option.sort_by, sort_option.sort_dir) for sort_option in sort_options]
     )
-    base_query_cte = (
-        select(
-            Incident,
-        )
-        .select_from(incidents_alers_cte)
-        .join(Incident, Incident.id == incidents_alers_cte.c.incident_id)
-        .filter(Incident.tenant_id == tenant_id)
-        .filter(Incident.is_visible == True)
+    distinct_columns = [
+        text(cel_to_sql_instance.get_field_expression(sort_option.sort_by))
+        for sort_option in sort_options
+    ]
+
+    built_query_result = __build_base_incident_query_v2(
+        tenant_id=tenant_id,
+        cel=cel,
+        select_args=[Incident],
     )
-    query = base_query_cte.filter(Incident.is_candidate == is_candidate)
+    sql_query = built_query_result["query"]
+    fetch_alerts = built_query_result["fetch_alerts"]
+    sql_query = sql_query.order_by(text(sort_by_exp))
+
+    sql_query = sql_query.filter(Incident.is_candidate == is_candidate)
 
     if allowed_incident_ids:
-        query = query.filter(Incident.id.in_(allowed_incident_ids))
+        sql_query = sql_query.filter(Incident.id.in_(allowed_incident_ids))
 
     if is_predicted is not None:
-        query = query.filter(Incident.is_predicted == is_predicted)
+        sql_query = sql_query.filter(Incident.is_predicted == is_predicted)
 
     if timeframe:
-        query = query.filter(
+        sql_query = sql_query.filter(
             Incident.start_time
             >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
         )
 
     if upper_timestamp and lower_timestamp:
-        query = query.filter(
+        sql_query = sql_query.filter(
             col(Incident.last_seen_time).between(lower_timestamp, upper_timestamp)
         )
     elif upper_timestamp:
-        query = query.filter(Incident.last_seen_time <= upper_timestamp)
+        sql_query = sql_query.filter(Incident.last_seen_time <= upper_timestamp)
     elif lower_timestamp:
-        query = query.filter(Incident.last_seen_time >= lower_timestamp)
+        sql_query = sql_query.filter(Incident.last_seen_time >= lower_timestamp)
 
-    if sorting:
-        query = query.order_by(sorting.get_order_by(Incident), Incident.id)
-
-    if cel:
-        instance = get_cel_to_sql_provider(properties_metadata)
-        sql_filter = instance.convert_to_sql_str(cel)
-        query = query.filter(text(sql_filter))
-
-    distinct_sorting_key = (
-        sorting.value[1:] if sorting.value.startswith("-") else sorting.value
-    )
-    query = query.distinct(text(distinct_sorting_key), Incident.id)
+    if fetch_alerts:
+        sql_query = sql_query.distinct(*(distinct_columns + [Incident.id]))
 
     # Order by start_time in descending order and limit the results
-    query = query.limit(limit).offset(offset)
-    return query
+    sql_query = sql_query.limit(limit).offset(offset)
+    return sql_query
 
 
 def get_last_incidents_by_cel(
@@ -389,6 +472,8 @@ def get_last_incidents_by_cel(
                 cel=cel,
                 allowed_incident_ids=allowed_incident_ids,
             )
+        except Exception as e:
+            raise e
         except CelToSqlException as e:
             if isinstance(e.__cause__, PropertiesMappingException):
                 # if there is an error in mapping properties, return empty list
@@ -396,8 +481,20 @@ def get_last_incidents_by_cel(
                 return [], 0
             raise e
 
+        total_count_query_strq = str(
+            total_count_query.compile(
+                compile_kwargs={"literal_binds": True}, dialect=session.bind.dialect
+            )
+        )
+        strq = str(
+            sql_query.compile(
+                compile_kwargs={"literal_binds": True}, dialect=session.bind.dialect
+            )
+        )
+
         total_count = session.exec(total_count_query).one()[0]
         all_records = session.exec(sql_query).all()
+        # all_records = []
 
         incidents = [row._asdict().get("Incident") for row in all_records]
 
