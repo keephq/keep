@@ -3,7 +3,7 @@
 import { useWorkflowDetail } from "@/entities/workflows/model/useWorkflowDetail";
 import { Workflow } from "@/shared/api/workflows";
 import { useWorkflowRun } from "@/utils/hooks/useWorkflowRun";
-import { Button, Text } from "@tremor/react";
+import { Badge, Button, Text } from "@tremor/react";
 import Skeleton from "react-loading-skeleton";
 import AlertTriggerModal from "../workflow-run-with-alert-modal";
 import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
@@ -15,7 +15,7 @@ export default function WorkflowDetailHeader({
   workflowId: string;
   initialData?: Workflow;
 }) {
-  const { workflow, isLoading, error } = useWorkflowDetail(workflow_id, {
+  const { workflow, error } = useWorkflowDetail(workflow_id, null, {
     fallbackData: initialData,
   });
 
@@ -26,7 +26,6 @@ export default function WorkflowDetailHeader({
     getManualInputModalProps,
     isRunButtonDisabled,
     message,
-    hasInputs,
   } = useWorkflowRun(workflow as Workflow);
 
   if (error) {

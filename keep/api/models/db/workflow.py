@@ -3,12 +3,14 @@ from datetime import datetime
 from typing import List, Optional
 
 import sqlalchemy
-from sqlalchemy import TEXT, Index
+from sqlalchemy import TEXT, Index, PrimaryKeyConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
 class Workflow(SQLModel, table=True):
-    id: str = Field(default=None, primary_key=True)
+    __table_args__ = (PrimaryKeyConstraint("id", "revision"),)
+
+    id: str = Field(index=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     name: str = Field(sa_column=Column(TEXT))
     description: Optional[str]
@@ -23,6 +25,8 @@ class Workflow(SQLModel, table=True):
     last_updated: datetime = Field(default_factory=datetime.utcnow)
     provisioned: bool = Field(default=False)
     provisioned_file: Optional[str] = None
+    # Flag to identify latest version
+    is_latest: bool = Field(default=True)
 
     class Config:
         orm_mode = True
@@ -54,14 +58,22 @@ class WorkflowExecution(SQLModel, table=True):
             "idx_workflowexecution_tenant_workflow_id_timestamp",
             "tenant_id",
             "workflow_id",
+            "workflow_revision",  # Add revision to this index
             "started",
         ),
         Index(
             "idx_workflowexecution_workflow_tenant_started_status",
             "workflow_id",
+            "workflow_revision",  # Add revision to this index
             "tenant_id",
             "started",
             get_status_column(),
+        ),
+        # Consider adding a new index specifically for version queries
+        Index(
+            "idx_workflowexecution_workflow_revision",
+            "workflow_id",
+            "workflow_revision",
         ),
     )
 
@@ -69,6 +81,9 @@ class WorkflowExecution(SQLModel, table=True):
     workflow_id: str = Field(
         foreign_key="workflow.id", default="test"
     )  # default=test for test runs, which are not associated with a workflow
+    workflow_revision: int = Field(
+        default=1
+    )  # Add this to track which version was executed
     tenant_id: str = Field(foreign_key="tenant.id")
     started: datetime = Field(default_factory=datetime.utcnow, index=True)
     triggered_by: str = Field(sa_column=Column(TEXT))

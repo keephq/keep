@@ -60,6 +60,7 @@ class Parser:
         providers_file: str = None,
         actions_file: str = None,
         workflow_db_id: str = None,
+        workflow_revision: int = None,
     ) -> typing.List[Workflow]:
         """_summary_
 
@@ -82,6 +83,7 @@ class Parser:
                     tenant_id,
                     workflow,
                     providers_file,
+                    workflow_revision,
                     workflow_providers,
                     actions_file,
                     workflow_actions,
@@ -98,6 +100,7 @@ class Parser:
                 tenant_id,
                 raw_workflow,
                 providers_file,
+                workflow_revision,
                 workflow_providers,
                 actions_file,
                 workflow_actions,
@@ -109,6 +112,7 @@ class Parser:
                 tenant_id,
                 parsed_workflow_yaml,
                 providers_file,
+                workflow_revision,
                 workflow_providers,
                 actions_file,
                 workflow_actions,
@@ -139,6 +143,7 @@ class Parser:
         tenant_id,
         workflow: dict,
         providers_file: str,
+        workflow_revision: int = None,
         workflow_providers: dict = None,
         actions_file: str = None,
         workflow_actions: dict = None,
@@ -187,6 +192,7 @@ class Parser:
 
         workflow_class = Workflow(
             workflow_id=workflow_id,
+            workflow_revision=workflow_revision,
             workflow_name=workflow_name,
             workflow_description=workflow_description,
             workflow_disabled=workflow_disabled,

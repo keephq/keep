@@ -109,6 +109,7 @@ class WorkflowToAlertExecutionDTO(BaseModel):
 class WorkflowExecutionDTO(BaseModel):
     id: str
     workflow_id: str | None  # None for test runs
+    workflow_revision: int | None
     started: datetime
     triggered_by: str
     status: str
@@ -126,10 +127,20 @@ class WorkflowCreateOrUpdateDTO(BaseModel):
     status: Literal["created", "updated"]
     revision: int = 1
 
+
 class WorkflowRunResponseDTO(BaseModel):
     workflow_execution_id: str
+
 
 class WorkflowRawDto(BaseModel):
     workflow_raw: str
 
-# trigger CI. TODO: remove this
+
+class WorkflowVersionDTO(BaseModel):
+    revision: int
+    updated_by: str | None
+    last_updated: datetime
+
+
+class WorkflowVersionListDTO(BaseModel):
+    versions: List[WorkflowVersionDTO]

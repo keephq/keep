@@ -92,7 +92,7 @@ def test_get_workflow_results():
 def test_handle_manual_event_workflow():
     mock_workflow = Mock(spec=Workflow)
     mock_workflow.workflow_id = "workflow1"
-
+    mock_workflow.workflow_revision = 1
     mock_workflow_manager = Mock()
 
     mock_logger = Mock()
@@ -119,6 +119,7 @@ def test_handle_manual_event_workflow():
 
         workflow_execution_id = workflow_scheduler.handle_manual_event_workflow(
             workflow_id=mock_workflow.workflow_id,
+            workflow_revision=mock_workflow.workflow_revision,
             tenant_id=tenant_id,
             triggered_by_user=triggered_by_user,
             event=event,
@@ -137,6 +138,7 @@ def test_handle_manual_event_workflow():
 def test_handle_manual_event_workflow_test_run():
     mock_workflow = Mock(spec=Workflow)
     mock_workflow.workflow_id = "workflow1"
+    mock_workflow.workflow_revision = 1
 
     mock_workflow_manager = Mock()
 
@@ -164,6 +166,7 @@ def test_handle_manual_event_workflow_test_run():
 
         workflow_execution_id = workflow_scheduler.handle_manual_event_workflow(
             workflow_id=mock_workflow.workflow_id,
+            workflow_revision=mock_workflow.workflow_revision,
             workflow=mock_workflow,
             tenant_id=tenant_id,
             triggered_by_user=triggered_by_user,

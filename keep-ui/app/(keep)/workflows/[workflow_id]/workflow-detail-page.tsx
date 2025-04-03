@@ -27,7 +27,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useWorkflowDetail } from "@/entities/workflows/model/useWorkflowDetail";
 import { WorkflowYAMLEditorStandalone } from "@/shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditorStandalone";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
-
+import { PiClockCounterClockwise } from "react-icons/pi";
+import { WorkflowRevisions } from "./workflow-revisions";
 export default function WorkflowDetailPage({
   params,
   initialData,
@@ -49,14 +50,20 @@ export default function WorkflowDetailPage({
       setTabIndex(1);
     } else if (tab === "secrets") {
       setTabIndex(3);
+    } else if (tab === "revisions") {
+      setTabIndex(4);
     } else {
       setTabIndex(0);
     }
   }, [searchParams]);
 
-  const { workflow, isLoading, error } = useWorkflowDetail(params.workflow_id, {
-    fallbackData: initialData,
-  });
+  const { workflow, isLoading, error } = useWorkflowDetail(
+    params.workflow_id,
+    null,
+    {
+      fallbackData: initialData,
+    }
+  );
 
   const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
 
@@ -80,6 +87,9 @@ export default function WorkflowDetailPage({
       case 3:
         router.push(`${basePath}?tab=secrets`);
         break;
+      case 4:
+        router.push(`${basePath}?tab=revisions`);
+        break;
     }
   };
 
@@ -91,6 +101,7 @@ export default function WorkflowDetailPage({
           <Tab icon={WrenchIcon}>Builder</Tab>
           <Tab icon={CodeBracketIcon}>YAML Definition</Tab>
           <Tab icon={KeyIcon}>Secrets</Tab>
+          <Tab icon={PiClockCounterClockwise}>Revisions</Tab>
           <TabNavigationLink
             href="https://www.youtube.com/@keepalerting"
             icon={ArrowUpRightIcon}
@@ -142,6 +153,12 @@ export default function WorkflowDetailPage({
           </TabPanel>
           <TabPanel>
             <WorkflowSecrets workflowId={params.workflow_id} />
+          </TabPanel>
+          <TabPanel>
+            <WorkflowRevisions
+              workflowId={params.workflow_id}
+              currentRevision={workflow?.revision ?? null}
+            />
           </TabPanel>
         </TabPanels>
       </TabGroup>

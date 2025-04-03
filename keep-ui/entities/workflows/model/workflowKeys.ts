@@ -14,7 +14,10 @@ export const workflowKeys = {
     ]
       .filter((p) => p !== undefined && p !== null)
       .join("::"),
-  detail: (id: string) => [workflowKeys.all, "detail", id].join("::"),
+  detail: (id: string, revision: number | null) =>
+    [workflowKeys.all, "detail", id, revision].join("::"),
+  revisions: (workflowId: string) =>
+    [workflowKeys.all, "revisions", workflowId].join("::"),
   getListMatcher: () => (key: any) =>
     key.startsWith([workflowKeys.all, "list"].join("::")),
 };

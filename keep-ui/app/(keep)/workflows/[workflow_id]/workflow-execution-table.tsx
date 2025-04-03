@@ -309,6 +309,13 @@ export function ExecutionTable({ executions, setPagination }: Props) {
       },
     }),
     columnHelper.display({
+      id: "workflow_revision",
+      header: "Revision",
+      cell: ({ row }) => {
+        return <div>Revision {row.original.workflow_revision}</div>;
+      },
+    }),
+    columnHelper.display({
       id: "id",
       header: "Execution ID",
       cell: ({ row }) => {
