@@ -8,7 +8,6 @@ import { Preset } from "@/entities/presets/model/types";
 import { PresetWidgetForm } from "./widget-types/preset/preset-widget-form";
 import { MetricWidgetForm } from "./widget-types/metric/metric-widget-form";
 import { GenericMetricsWidgetForm } from "./widget-types/generic-metrics/generic-metrics-widget-form";
-import { AlertPresetWidgetForm } from "./widget-types/alert-preset/alert-preset-widget-form";
 
 interface WidgetForm {
   widgetName: string;
