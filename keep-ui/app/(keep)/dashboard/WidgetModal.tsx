@@ -131,10 +131,6 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
                       value: "Generic Metrics",
                     },
                     { key: WidgetType.METRIC, value: "Metric" },
-                    {
-                      key: WidgetType.ALERT_PRESET,
-                      value: "Alert presets monitor",
-                    },
                   ].map(({ key, value }) => (
                     <SelectItem key={key} value={key}>
                       {value}
@@ -172,14 +168,6 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
               setInnerFormState({ formValue, isValid })
             }
           ></MetricWidgetForm>
-        )}
-        {widgetType === WidgetType.ALERT_PRESET && (
-          <AlertPresetWidgetForm
-            editingItem={editingItem}
-            onChange={(formValue, isValid) =>
-              setInnerFormState({ formValue, isValid })
-            }
-          />
         )}
         <Button
           color="orange"
