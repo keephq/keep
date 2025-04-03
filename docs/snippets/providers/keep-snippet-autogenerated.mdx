@@ -18,8 +18,9 @@ steps:
         version: {value}  # version of Keep API
         distinct: {value}  # if True, return only distinct alerts
         time_delta: {value}  # time delta in days to query Keep
-        filter: {value}  # filter to query Keep
         timerange: {value}  # timerange dict to calculate time delta
+        filter: {value}  # filter to query Keep (only for version 2)
+        limit: {value}  # limit number of results (only for version 2)
 ```
 
 
@@ -31,7 +32,15 @@ actions:
       config: "{{ provider.my_provider_name }}"
       with:
         delete_all_other_workflows: {value}  # if True, delete all other workflows
+        workflow_full_sync: {value}  # if True, sync all workflows
         workflow_to_update_yaml: {value}  # workflow yaml to update
+        alert: {value}  # alert data to create
+        fingerprint_fields: {value}  # fields to use for alert fingerprinting
+        override_source_with: {value}  # override alert source
+        read_only: {value}  # if True, don't modify existing alerts
+        fingerprint: {value}  # alert fingerprint
+        if: {value}  # condition to evaluate for alert creation
+        for: {value}  # duration for state alerts
 ```
 
 

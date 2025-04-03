@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { EnrichKeyValueSchema, IncidentEventEnum, WithSchema } from "./schema";
+import {
+  EnrichDisposableKeyValueSchema,
+  EnrichKeyValueSchema,
+  IncidentEventEnum,
+  WithSchema,
+} from "./schema";
 import { Provider } from "@/shared/api/providers";
 import { checkProviderNeedsInstallation } from "../lib/validation";
 
@@ -27,6 +32,18 @@ const mockProvider: Provider = {
   health: false,
 };
 
+export const WorkflowInputSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  description: z.string().optional(),
+  default: z.any().optional(),
+  required: z.boolean().optional(),
+  options: z.array(z.string()).optional(),
+  visuallyRequired: z.boolean().optional(),
+});
+
+export type WorkflowInput = z.infer<typeof WorkflowInputSchema>;
+
 const ManualTriggerSchema = z.object({
   type: z.literal("manual"),
 });
@@ -38,7 +55,7 @@ const AlertTriggerSchema = z.object({
 
 const IntervalTriggerSchema = z.object({
   type: z.literal("interval"),
-  value: z.string(),
+  value: z.union([z.string(), z.number()]),
 });
 
 const IncidentTriggerSchema = z.object({
@@ -65,40 +82,33 @@ function getYamlProviderSchema(provider: Provider, type: "step" | "action") {
     ...(type === "step"
       ? provider.query_params || []
       : provider.notify_params || []),
-    "enrich_alert",
-    "enrich_incident",
   ].filter((key) => key !== "kwargs");
 
-  if (validKeys.length === 0) {
-    console.warn(
-      `No valid keys found for provider ${provider.type} in ${type} mode`
-    );
-  }
-
-  // @ts-ignore
-  const validKeysSchema = z.enum(validKeys);
-
-  // todo: find a way to merge record and enrich_alert/enrich_incident (objects)
-  const withSchema = z.record(
-    validKeysSchema,
-    z.union([
-      z.string(),
-      z.number(),
-      z.boolean(),
-      z.record(z.string(), z.any()),
-      z.object({}),
-      z.array(z.any()),
-    ])
-  );
+  const valueSchema = z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.record(z.string(), z.any()),
+    z.object({}),
+    z.array(z.any()),
+  ]);
+  const withSchema = z.object({
+    ...Object.fromEntries(
+      // TODO: type each key with the correct type (backend should return types)
+      validKeys.map((key) => [key, valueSchema.optional()])
+    ),
+    enrich_alert: EnrichDisposableKeyValueSchema.optional(),
+    enrich_incident: EnrichKeyValueSchema.optional(),
+  });
 
   if (provider.type === "mock") {
     return z.object({
       type: z.literal(provider.type),
       config: z.string().optional(),
-      with: z.record(
-        z.enum(["enrich_alert", "enrich_incident"]),
-        EnrichKeyValueSchema
-      ),
+      with: z.object({
+        enrich_alert: EnrichDisposableKeyValueSchema.optional(),
+        enrich_incident: EnrichKeyValueSchema.optional(),
+      }),
     });
   }
 
@@ -169,29 +179,27 @@ export function getYamlWorkflowDefinitionSchema(
   let stepSchema: z.ZodSchema = YamlStepOrActionSchema;
   let actionSchema: z.ZodSchema = YamlStepOrActionSchema;
   // Only update schemas if there are providers
-  if (providers.length) {
-    const providersWithMock = [mockProvider, ...providers];
-    const uniqueProviders = providersWithMock.reduce((acc, provider) => {
-      if (!acc.find((p) => p.type === provider.type)) {
-        acc.push(provider);
-      }
-      return acc;
-    }, [] as Provider[]);
-    const providerStepSchemas = uniqueProviders
-      .filter((provider) => provider.can_query)
-      .map((provider) => getYamlProviderSchema(provider, "step"));
-    stepSchema = YamlStepOrActionSchema.extend({
-      // @ts-ignore TODO: fix type inference
-      provider: z.discriminatedUnion("type", providerStepSchemas),
-    });
-    const providerActionSchemas = uniqueProviders
-      .filter((provider) => provider.can_notify)
-      .map((provider) => getYamlProviderSchema(provider, "action"));
-    actionSchema = YamlStepOrActionSchema.extend({
-      // @ts-ignore TODO: fix type inference
-      provider: z.discriminatedUnion("type", providerActionSchemas),
-    });
-  }
+  const providersWithMock = [mockProvider, ...providers];
+  const uniqueProviders = providersWithMock.reduce((acc, provider) => {
+    if (!acc.find((p) => p.type === provider.type)) {
+      acc.push(provider);
+    }
+    return acc;
+  }, [] as Provider[]);
+  const providerStepSchemas = uniqueProviders
+    .filter((provider) => provider.can_query)
+    .map((provider) => getYamlProviderSchema(provider, "step"));
+  stepSchema = YamlStepOrActionSchema.extend({
+    // @ts-ignore TODO: fix type inference
+    provider: z.discriminatedUnion("type", providerStepSchemas),
+  });
+  const providerActionSchemas = uniqueProviders
+    .filter((provider) => provider.can_notify)
+    .map((provider) => getYamlProviderSchema(provider, "action"));
+  actionSchema = YamlStepOrActionSchema.extend({
+    // @ts-ignore TODO: fix type inference
+    provider: z.discriminatedUnion("type", providerActionSchemas),
+  });
   const baseSchema = z.object({
     workflow: z.object({
       id: z.string(),
@@ -205,6 +213,7 @@ export function getYamlWorkflowDefinitionSchema(
       actions: z.array(actionSchema).optional(),
       triggers: z.array(TriggerSchema).min(1),
       consts: z.record(z.string(), z.string()).optional(),
+      inputs: z.array(WorkflowInputSchema).optional(),
     }),
   });
 
@@ -215,6 +224,7 @@ export function getYamlWorkflowDefinitionSchema(
         description: z.string().optional(),
         steps: z.array(stepSchema).optional(),
         actions: z.array(actionSchema).optional(),
+        inputs: z.array(WorkflowInputSchema).optional(),
       }),
     });
   }

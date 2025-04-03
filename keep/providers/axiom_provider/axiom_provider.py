@@ -38,11 +38,10 @@ class AxiomProviderAuthConfig:
 class AxiomProvider(BaseProvider):
     """Enrich alerts with data from Axiom."""
 
+    webhook_documentation_here_differs_from_general_documentation = True
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-    💡 For more details on how to configure Axiom to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/axiom-provider).
-
     To send alerts from Axiom to Keep, Use the following webhook url to configure Axiom send alerts to Keep:
 
     1. In Axiom, go to the Monitors tab in the Axiom dashboard.
@@ -125,12 +124,12 @@ class AxiomProvider(BaseProvider):
 
         # Todo: log response details for better error handling
         return response.json()
-    
+
     @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto | list[AlertDto]:
-        
+
         action = event.get("action", "Unable to fetch action")
         axiom_event = event.get("event")
         monitorId = axiom_event.get("monitorID")
@@ -140,7 +139,7 @@ class AxiomProvider(BaseProvider):
         queryEndTime = axiom_event.get("queryEndTime")
         queryStartTime = axiom_event.get("queryStartTime")
         timestamp = axiom_event.get("timestamp")
-        
+
         title = axiom_event.get("title", "Unable to fetch title")
         value = axiom_event.get("value", "Unable to fetch value")
         matchedEvent = axiom_event.get("matchedEvent", {})
@@ -162,7 +161,7 @@ class AxiomProvider(BaseProvider):
         queryEndTime = convert_to_iso_format(queryEndTime)
         queryStartTime = convert_to_iso_format(queryStartTime)
         timestamp = convert_to_iso_format(timestamp)
-        
+
         alert = AlertDto(
             action=action,
             id=monitorId,
@@ -182,6 +181,7 @@ class AxiomProvider(BaseProvider):
         )
 
         return alert
+
 
 if __name__ == "__main__":
     # Output debug messages

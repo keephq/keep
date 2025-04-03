@@ -581,29 +581,24 @@ def test_yaml_editor_yaml_invalid(browser: Page):
         browser.get_by_role("tab", name="YAML Definition").click()
         yaml_editor = browser.get_by_test_id("wf-detail-yaml-editor-container")
         expect(yaml_editor).to_be_visible()
+        errors_list = yaml_editor.get_by_test_id(
+            "wf-yaml-editor-validation-errors-list"
+        ).first
         expect(
             yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-summary").first
         ).to_contain_text("6 validation errors")
-        expect(
-            yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
-        ).to_contain_text("String is shorter than the minimum length of 1.")
-        expect(
-            yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
-        ).to_contain_text('Missing property "provider".')
-        expect(
-            yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
-        ).to_contain_text("Property provider_invalid_prop is not allowed.")
-        expect(
-            yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
-        ).to_contain_text(
-            'Value is not accepted. Valid values: "message", "blocks", "channel", "slack_timestamp", "thread_timestamp", "attachments", "username", "notification_type", "enrich_alert", "enrich_incident".'
+        expect(errors_list).to_contain_text(
+            "String is shorter than the minimum length of 1."
         )
-        expect(
-            yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
-        ).to_contain_text("Property enrich_incident is not allowed.")
-        expect(
-            yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-list").first
-        ).to_contain_text("Property enrich_alert is not allowed.")
+        expect(errors_list).to_contain_text('Missing property "provider".')
+        expect(errors_list).to_contain_text(
+            "Property provider_invalid_prop is not allowed."
+        )
+        expect(errors_list).to_contain_text(
+            "Property message_invalid_prop is not allowed."
+        )
+        expect(errors_list).to_contain_text("Property enrich_incident is not allowed.")
+        expect(errors_list).to_contain_text("Property enrich_alert is not allowed.")
 
     except Exception:
         save_failure_artifacts(browser, log_entries)
