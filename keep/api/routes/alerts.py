@@ -1303,7 +1303,7 @@ def get_error_alerts(
     error_alerts_dtos = [
         AlertErrorDto(
             id=str(alert.id),
-            event=alert.raw_alert,
+            event=alert.raw_alert or {},
             error_message=alert.error_message,
             timestamp=alert.timestamp,
             provider_type=alert.provider_type or "keep",
