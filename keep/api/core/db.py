@@ -5443,7 +5443,7 @@ def enrich_incidents_with_enrichments(
         return incidents
 
 
-def get_error_alerts(tenant_id: str, limit: int = 1000) -> int:
+def get_error_alerts(tenant_id: str, limit: int = 100) -> List[AlertRaw]:
     with Session(engine) as session:
         return (
             session.query(AlertRaw)
@@ -5452,6 +5452,7 @@ def get_error_alerts(tenant_id: str, limit: int = 1000) -> int:
                 AlertRaw.error == True,
                 AlertRaw.dismissed == False,
             )
+            .limit(limit)
             .all()
         )
 
