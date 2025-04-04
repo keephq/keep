@@ -16,7 +16,7 @@ export const workflowExecutionsKeys = {
       offset,
       searchParamsString,
     ].join("::"),
-  detail: (workflowId: string, workflowExecutionId: string) =>
+  detail: (workflowId: string | null, workflowExecutionId: string) =>
     [
       workflowExecutionsKeys.all,
       "detail",

@@ -2661,23 +2661,6 @@ files = [
 ]
 
 [[package]]
-name = "js2py"
-version = "0.74"
-description = "JavaScript to Python Translator & JavaScript interpreter written in 100% pure Python."
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "Js2Py-0.74-py3-none-any.whl", hash = "sha256:40a508a79e2f8d624e3f2e604f90a1e6f46ac75b416d7f4745939ff4a2e95e09"},
-    {file = "Js2Py-0.74.tar.gz", hash = "sha256:39f3a6aa8469180efba3c8677271df27c31332fd1b471df1af2af58b87b8972f"},
-]
-
-[package.dependencies]
-pyjsparser = ">=2.5.1"
-six = ">=1.10"
-tzlocal = ">=1.2"
-
-[[package]]
 name = "json5"
 version = "0.9.28"
 description = "A Python implementation of the JSON5 data format."
@@ -4264,18 +4247,6 @@ deprecated = "*"
 pyjwt = {version = ">=2.4.0", extras = ["crypto"]}
 pynacl = ">=1.4.0"
 requests = ">=2.14.0"
-
-[[package]]
-name = "pyjsparser"
-version = "2.7.1"
-description = "Fast javascript parser (based on esprima.js)"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "pyjsparser-2.7.1-py2-none-any.whl", hash = "sha256:2b12842df98d83f65934e0772fa4a5d8b123b3bc79f1af1789172ac70265dd21"},
-    {file = "pyjsparser-2.7.1.tar.gz", hash = "sha256:be60da6b778cc5a5296a69d8e7d614f1f870faf94e1b1b6ac591f2ad5d729579"},
-]
 
 [[package]]
 name = "pyjwt"
@@ -6080,4 +6051,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "96b2f4ef1002fa497770468ff8dbb46a7c322819243450f89a6fc752ab737966"
+content-hash = "d29da273cef432efa237e361627ec2909dbd4667351266b1b5cc7d119146dc0b"

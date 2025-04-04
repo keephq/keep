@@ -179,13 +179,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.results.append(results)
         # if the alert should be enriched, enrich it
         enrich_event = kwargs.get("enrich_alert", kwargs.get("enrich_incident", []))
-        if not enrich_event or results is None:
-            return results if results else None
+        if enrich_event:
+            audit_enabled = bool(kwargs.get("audit_enabled", True))
+            self._enrich(enrich_event, results, audit_enabled=audit_enabled)
 
-        audit_enabled = bool(kwargs.get("audit_enabled", True))
-
-        self._enrich(enrich_event, results, audit_enabled=audit_enabled)
-        return results
+        return results if results else None
 
     def _enrich(self, enrichments, results, audit_enabled=True):
         """

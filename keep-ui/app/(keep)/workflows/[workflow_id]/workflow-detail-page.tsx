@@ -54,10 +54,9 @@ export default function WorkflowDetailPage({
     }
   }, [searchParams]);
 
-  const { workflow, isLoading, error } = useWorkflowDetail(
-    params.workflow_id,
-    initialData
-  );
+  const { workflow, isLoading, error } = useWorkflowDetail(params.workflow_id, {
+    fallbackData: initialData,
+  });
 
   const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
 

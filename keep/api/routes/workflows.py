@@ -327,7 +327,10 @@ def get_event_from_body(body: dict, tenant_id: str):
     event_class = AlertDto if body.get("type", "alert") == "alert" else IncidentDto
 
     # Handle UI triggered events
-    event_body["id"] = event_body.get("fingerprint", "manual-run")
+    if event_class == AlertDto:
+        event_body["id"] = event_body.get("fingerprint", "manual-run")
+    elif event_class == IncidentDto:
+        event_body["id"] = event_body.get("id", "manual-run")
     event_body["name"] = event_body.get("fingerprint", "manual-run")
     event_body["lastReceived"] = datetime.datetime.now(
         tz=datetime.timezone.utc
@@ -950,6 +953,10 @@ def get_workflow_execution_status(
             detail=f"Workflow execution {workflow_execution_id} not found",
         )
 
+    workflow = get_workflow(
+        tenant_id=tenant_id, workflow_id=workflow_execution.workflow_id
+    )
+
     event_id = None
     event_type = None
 
@@ -963,6 +970,7 @@ def get_workflow_execution_status(
 
     workflow_execution_dto = WorkflowExecutionDTO(
         id=workflow_execution.id,
+        workflow_name=workflow.name if workflow else None,
         workflow_id=workflow_execution.workflow_id,
         status=workflow_execution.status,
         started=workflow_execution.started,

@@ -7,7 +7,10 @@ import {
   getTriggerIcon,
   extractTriggerValue,
 } from "@/app/(keep)/workflows/[workflow_id]/workflow-execution-table";
-import { WorkflowExecutionDetail } from "@/shared/api/workflow-executions";
+import {
+  isWorkflowExecution,
+  WorkflowExecutionDetail,
+} from "@/shared/api/workflow-executions";
 import { useWorkflowExecutionDetail } from "@/entities/workflow-executions/model/useWorkflowExecutionDetail";
 interface IncidentWorkflowSidebarProps {
   isOpen: boolean;
@@ -24,6 +27,12 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
     selectedExecution.workflow_id,
     selectedExecution.id
   );
+
+  const logs =
+    isWorkflowExecution(workflowExecutionData) &&
+    Array.isArray(workflowExecutionData.logs)
+      ? workflowExecutionData.logs
+      : null;
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -139,13 +148,13 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
                 </Text>
                 <div className="bg-gray-100 p-4 rounded-md overflow-auto max-h-96">
                   <pre className="whitespace-pre-wrap">
-                    {Array.isArray(workflowExecutionData?.logs)
-                      ? workflowExecutionData.logs.map((log, index) => (
+                    {logs
+                      ? logs.map((log, index) => (
                           <div key={index}>
                             {log.timestamp} - {log.message}
                           </div>
                         ))
-                      : workflowExecutionData?.logs || "No logs available"}
+                      : "No logs available"}
                   </pre>
                 </div>
               </Card>

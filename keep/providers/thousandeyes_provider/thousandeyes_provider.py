@@ -12,6 +12,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
+
 @pydantic.dataclasses.dataclass
 class ThousandeyesProviderAuthConfig:
     """
@@ -20,23 +21,23 @@ class ThousandeyesProviderAuthConfig:
     """
 
     oauth2_token: str = dataclasses.field(
-      metadata={
-        "required": True,
-        "description": "OAuth2 Bearer Token",
-        "sensitive": True,
-      },
+        metadata={
+            "required": True,
+            "description": "OAuth2 Bearer Token",
+            "sensitive": True,
+        },
     )
+
 
 class ThousandeyesProvider(BaseProvider):
     """
     Get alerts from Thousandeyes into Keep.
     """
 
+    webhook_documentation_here_differs_from_general_documentation = True
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-💡 For more details on how to configure ThousandEyes to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/thousandeyes-provider).
-
 To send alerts from ThousandEyes to Keep, Use the following webhook url to configure ThousandEyes send alerts to Keep:
 
 1. In ThousandEyes Dashboard, go to Network & App Synthetics > Agent Settings
@@ -70,7 +71,7 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
         "info": AlertStatus.PENDING,
         "minor": AlertStatus.ACKNOWLEDGED,
         "major": AlertStatus.FIRING,
-        "critical": AlertStatus.FIRING
+        "critical": AlertStatus.FIRING,
     }
 
     def __init__(
@@ -83,7 +84,7 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
         Dispose the provider.
         """
         pass
-    
+
     def validate_config(self):
         """
         Validates required configuration for Thousandeyes provider.
@@ -100,26 +101,28 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
         try:
             response = requests.get(
                 "https://api.thousandeyes.com/v7/alerts",
-                headers=self._generate_auth_headers()
+                headers=self._generate_auth_headers(),
             )
 
             response.raise_for_status()
             if response.status_code == 200:
-                self.logger.info("Successfully validated scopes for Thousandeyes provider")
+                self.logger.info(
+                    "Successfully validated scopes for Thousandeyes provider"
+                )
                 return {"authenticated": True}
 
         except requests.exceptions.HTTPError as e:
-            self.logger.exception("Error while validating scopes", extra={"error": str(e)})
+            self.logger.exception(
+                "Error while validating scopes", extra={"error": str(e)}
+            )
             return {"authenticated": str(e)}
 
     def _generate_auth_headers(self):
         """
         Generate authentication headers for Thousandeyes.
         """
-        return {
-            "Authorization": "Bearer " + self.authentication_config.oauth2_token
-        }
-    
+        return {"Authorization": "Bearer " + self.authentication_config.oauth2_token}
+
     def _get_alerts(self) -> list[AlertDto]:
         """
         Get alerts from Thousandeyes
@@ -129,7 +132,7 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
         try:
             response = requests.get(
                 "https://api.thousandeyes.com/v7/alerts",
-                headers=self._generate_auth_headers()
+                headers=self._generate_auth_headers(),
             )
 
             response.raise_for_status()
@@ -152,13 +155,27 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
                     startedAt = alert.get("startDate")
                     lastReceived = alert.get("startDate")
                     alertType = alert.get("alertType", "Unable to fetch alert type")
-                    severity = ThousandeyesProvider.SEVERITY_MAP.get(alert.get("alertSeverity"), AlertSeverity.INFO)
-                    status = ThousandeyesProvider.STATUS_MAP.get(alert.get("alertSeverity"), AlertStatus.PENDING)
-                    violationCount = alert.get("violationCount", "Unable to fetch violation count")
+                    severity = ThousandeyesProvider.SEVERITY_MAP.get(
+                        alert.get("alertSeverity"), AlertSeverity.INFO
+                    )
+                    status = ThousandeyesProvider.STATUS_MAP.get(
+                        alert.get("alertSeverity"), AlertStatus.PENDING
+                    )
+                    violationCount = alert.get(
+                        "violationCount", "Unable to fetch violation count"
+                    )
                     duration = alert.get("duration", "Unable to fetch duration")
                     apiLinks = alert.get("apiLinks", [])
-                    url = apiLinks[0].get("href", "http://unable-to-fetch-url") if apiLinks else "http://unable-to-fetch-url"
-                    url2 = apiLinks[1].get("href", "http://unable-to-fetch-url") if len(apiLinks) > 1 else "http://unable-to-fetch-url"
+                    url = (
+                        apiLinks[0].get("href", "http://unable-to-fetch-url")
+                        if apiLinks
+                        else "http://unable-to-fetch-url"
+                    )
+                    url2 = (
+                        apiLinks[1].get("href", "http://unable-to-fetch-url")
+                        if len(apiLinks) > 1
+                        else "http://unable-to-fetch-url"
+                    )
                     permalink = alert.get("permalink", "Unable to fetch permalink")
                     suppressed = alert.get("suppressed", "Unable to fetch suppressed")
                     meta = alert.get("meta", {})
@@ -189,17 +206,17 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
                         suppressed=suppressed,
                         meta=meta,
                         links=links,
-                        source=["thousandeyes"]
+                        source=["thousandeyes"],
                     )
 
                     alertDtos.append(alertDto)
 
                 return alertDtos
-            
+
         except Exception as e:
             self.logger.exception("Error while getting alerts")
             raise Exception("Error while getting alerts from Thousandeyes", str(e))
-        
+
     @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
@@ -213,14 +230,22 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
         id = event.get("eventId")
         description = alertData.get("ruleExpression", "Unable to fetch description")
         severity_value = alertData.get("severity", "info").lower()
-        severity = ThousandeyesProvider.SEVERITY_MAP.get(severity_value, AlertSeverity.INFO)
-        status = ThousandeyesProvider.STATUS_MAP.get(severity_value, AlertStatus.PENDING)
+        severity = ThousandeyesProvider.SEVERITY_MAP.get(
+            severity_value, AlertSeverity.INFO
+        )
+        status = ThousandeyesProvider.STATUS_MAP.get(
+            severity_value, AlertStatus.PENDING
+        )
         name = alertData.get("ruleName", "Unable to fetch test name")
-        dateStartZoned = alertData.get("dateStartZoned", "Unable to fetch date start zoned")
+        dateStartZoned = alertData.get(
+            "dateStartZoned", "Unable to fetch date start zoned"
+        )
         agentId = alertData.get("agent", {}).get("agentId", "Unable to fetch agent id")
         ipAddress = alertData.get("ipAddress", "Unable to fetch ip address")
         agentName = alertData.get("agentName", "Unable to fetch agent name")
-        ruleExpression = alertData.get("ruleExpression", "Unable to fetch rule expression")
+        ruleExpression = alertData.get(
+            "ruleExpression", "Unable to fetch rule expression"
+        )
         alert_type = alertData.get("type", "Unable to fetch alert type")
         ruleAid = alertData.get("ruleAid", "Unable to fetch rule aid")
         hostname = alertData.get("hostname", "Unable to fetch hostname")
@@ -230,14 +255,24 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
         alertId = alertData.get("alertId", "Unable to fetch alert id")
         eventType = event.get("eventType", "Unable to fetch event type")
         apiLinks = alertData.get("apiLinks", [])
-        url = apiLinks[0].get("href", "http://unable-to-fetch-url") if apiLinks else "http://unable-to-fetch-url"
-        url2 = apiLinks[1].get("href", "http://unable-to-fetch-url") if len(apiLinks) > 1 else "http://unable-to-fetch-url"
+        url = (
+            apiLinks[0].get("href", "http://unable-to-fetch-url")
+            if apiLinks
+            else "http://unable-to-fetch-url"
+        )
+        url2 = (
+            apiLinks[1].get("href", "http://unable-to-fetch-url")
+            if len(apiLinks) > 1
+            else "http://unable-to-fetch-url"
+        )
         testLabels = alertData.get("testLabels", [])
         active = alertData.get("active", "Unable to fetch active")
         dateEnd = alertData.get("dateEnd", "Unable to fetch date end")
         agents = alertData.get("agents", [])
         testTargetsDescription = alertData.get("testTargetsDescription", [])
-        violationCount = alertData.get("violationCount", "Unable to fetch violation count")
+        violationCount = alertData.get(
+            "violationCount", "Unable to fetch violation count"
+        )
         dateEndZoned = alertData.get("dateEndZoned", "Unable to fetch date end zoned")
         testId = alertData.get("testId", "Unable to fetch test id")
         permalink = alertData.get("permalink", "Unable to fetch permalink")
@@ -275,17 +310,16 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
             testId=testId,
             permalink=permalink,
             testName=testName,
-            source=["thousandeyes"]
+            source=["thousandeyes"],
         )
 
         return alert
-    
+
+
 if __name__ == "__main__":
     import logging
 
-    logging.basicConfig(level=logging.DEBUG, handlers=[
-        logging.StreamHandler()
-    ])
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
 
     context_manager = ContextManager(
         tenant_id="singletenant",
@@ -298,9 +332,7 @@ if __name__ == "__main__":
 
     config = ProviderConfig(
         description="Thousandeyes provider",
-        authentication={
-            "oauth2_token": oauth2_token
-        }
+        authentication={"oauth2_token": oauth2_token},
     )
 
     provider = ThousandeyesProvider(context_manager, "thousandeyes", config)

@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 class CheckmkProvider(BaseProvider):
     """Get alerts from Checkmk into Keep"""
 
+    webhook_documentation_here_differs_from_general_documentation = True
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-  💡 For more details on how to configure Checkmk to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/checkmk-provider).
   1. Checkmk supports custom notification scripts.
   2. Install Keep webhook script following the [Keep documentation](https://docs.keephq.dev/providers/documentation/checkmk-provider).
   3. In Checkmk WebUI, go to Setup.

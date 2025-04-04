@@ -58,6 +58,14 @@ export const V2StepTriggerSchema = z.union([
   V2StepIncidentTriggerSchema,
 ]);
 
+export const EnrichDisposableKeyValueSchema = z.array(
+  z.object({
+    key: z.string(),
+    value: z.string(),
+    disposable: z.boolean().optional(),
+  })
+);
+
 export const EnrichKeyValueSchema = z.array(
   z.object({
     key: z.string(),
@@ -67,7 +75,7 @@ export const EnrichKeyValueSchema = z.array(
 
 export const WithSchema = z
   .object({
-    enrich_alert: EnrichKeyValueSchema.optional(),
+    enrich_alert: EnrichDisposableKeyValueSchema.optional(),
     enrich_incident: EnrichKeyValueSchema.optional(),
   })
   .catchall(

@@ -15,8 +15,21 @@ import ast
 import sys
 import difflib
 import time
+import keyword
 from docstring_parser import parse
 from jinja2 import Template
+
+
+def get_method_parameters_safe(raw_params: list[str]) -> list[str]:
+    safe_params = []
+    for param in raw_params:
+        if param == "self":
+            continue
+        if param.endswith("_") and keyword.iskeyword(param[:-1]):
+            safe_params.append(param[:-1])
+        else:
+            safe_params.append(param)
+    return safe_params
 
 
 def get_attribute_name(node: ast.Attribute) -> str:
@@ -78,6 +91,7 @@ def extract_field_metadata(field_node: ast.Call):
 
 def extract_provider_class_insights(
     file_path: str,
+    provider_name: str,
 ) -> dict:
     """
     Extract the signature of the _notify and _query methods from a Python file.
@@ -91,6 +105,11 @@ def extract_provider_class_insights(
         "provides_topology": False,
         "provider_methods": {},
         "provider_scopes": {},
+        "webhook_docs": {
+            "webhook_description": None,
+            "webhook_template": None,
+            "webhook_markdown": None,
+        },
     }
 
     # Read the file content
@@ -145,9 +164,49 @@ def extract_provider_class_insights(
     # Process each provider class
 
     for class_def in provider_classes:
-        for provider_property in class_def.body:
 
-            # Searching for the provider methods
+        # Here we check if we need to skip the documentation of the webhook
+        # because it is different from the general documentation
+        skip_documenting_webhook = False
+        for provider_property in class_def.body:
+            if isinstance(provider_property, ast.Assign):
+                if (
+                    provider_property.targets[0].id
+                    == "webhook_documentation_here_differs_from_general_documentation"
+                ):
+                    if provider_property.value.s:
+                        skip_documenting_webhook = True
+
+        for provider_property in class_def.body:
+            # Searching for the webhook docs
+            if (
+                isinstance(provider_property, ast.Assign)
+                and not skip_documenting_webhook
+            ):
+                if (
+                    provider_property.targets[0].id == "webhook_description"
+                    or provider_property.targets[0].id == "webhook_template"
+                    or provider_property.targets[0].id == "webhook_markdown"
+                ):
+                    result["webhook_docs"][
+                        provider_property.targets[0].id
+                    ] = provider_property.value.s
+
+                    if result["webhook_docs"][provider_property.targets[0].id] == "":
+                        result["webhook_docs"][provider_property.targets[0].id] = None
+
+            # Provider docs have {keep_webhook_api_url_with_auth}, let's substitute it
+            for key in result["webhook_docs"]:
+                if result["webhook_docs"][key] is not None:
+                    result["webhook_docs"][key] = result["webhook_docs"][key].replace(
+                        "{keep_webhook_api_url_with_auth}", "Your Keep Backend URL"
+                    )
+                    result["webhook_docs"][key] = result["webhook_docs"][key].replace(
+                        "{keep_webhook_api_url}",
+                        f"KEEP_BACKEND_URL/alerts/event/{provider_name}",
+                    )
+
+            # Searching for the provider scopes
             if isinstance(provider_property, ast.Assign):
                 if provider_property.targets[0].id == "PROVIDER_SCOPES":
                     if isinstance(provider_property.value, ast.List):
@@ -172,6 +231,8 @@ def extract_provider_class_insights(
                                     "documentation_link": documentation_link,
                                     "mandatory": mandatory,
                                 }
+
+                # Searching for the provider methods
                 if provider_property.targets[0].id == "PROVIDER_METHODS":
                     # Extract the dictionary from the assignment
                     if isinstance(provider_property.value, ast.List):
@@ -228,10 +289,9 @@ def extract_provider_class_insights(
             if isinstance(
                 provider_property, ast.FunctionDef
             ) and provider_property.name in ["_notify", "_query"]:
-                args = []
-                for arg in provider_property.args.args:
-                    if arg.arg != "self":  # Skip 'self' parameter
-                        args.append(arg.arg)
+                args = get_method_parameters_safe(
+                    [arg.arg for arg in provider_property.args.args]
+                )
 
                 result[provider_property.name] = {arg: "" for arg in args}
                 # Extract docstring
@@ -390,6 +450,22 @@ The provider exposes the following [Provider Methods](/providers/provider-method
 {% endfor -%}
 
 {% endif -%}
+{% if provider_data["webhook_docs"].webhook_description != None or provider_data["webhook_docs"].webhook_template != None or provider_data["webhook_docs"].webhook_markdown != None %}
+## Connecting via Webhook (omnidirectional)
+{% if provider_data["webhook_docs"].webhook_description != None %}
+{{ provider_data["webhook_docs"].webhook_description }}
+{% else -%}
+This provider supports webhooks.
+{% endif -%}
+{% if provider_data["webhook_docs"].webhook_template != None %}
+```
+{{ provider_data["webhook_docs"].webhook_template }}
+```
+{% endif -%}
+{% if provider_data["webhook_docs"].webhook_markdown != None %}
+{{ provider_data["webhook_docs"].webhook_markdown }}
+{% endif -%}
+{% endif %}
 """
 
 
@@ -414,8 +490,8 @@ It will also check if AutoGeneratedSnippet is present in each provider documenta
 
     providers = {}
     for provider in glob.glob("keep/providers/**/*_provider.py", recursive=True):
-        provider_data = extract_provider_class_insights(provider)
         provider_name = os.path.basename(provider).replace("_provider.py", "")
+        provider_data = extract_provider_class_insights(provider, provider_name)
         providers[provider_name] = provider_data
 
     outdated_files = []
