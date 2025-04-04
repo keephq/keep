@@ -481,9 +481,7 @@ class ProvidersService:
                     encoding="utf-8",
                 ) as f:
                     previous_hash = f.read().strip()
-                logger.info(
-                    f"Provisioned hash for tenant {tenant_id} read from file: {previous_hash}"
-                )
+                logger.info(f"Provisioned hash for tenant {tenant_id} read from file.")
             except FileNotFoundError:
                 logger.info(f"Provisioned hash file for tenant {tenant_id} not found.")
             except Exception as e:
