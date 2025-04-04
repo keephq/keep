@@ -32,17 +32,6 @@ def provision_deduplication_rules(
     }
     actor = "system"
 
-    # delete rules that are not in the env
-    for provisioned_deduplication_rule in provisioned_deduplication_rules:
-        if str(provisioned_deduplication_rule.name) not in deduplication_rules:
-            logger.info(
-                "Deduplication rule with name '%s' is not in the env, deleting from DB",
-                provisioned_deduplication_rule.name,
-            )
-            db.delete_deduplication_rule(
-                rule_id=str(provisioned_deduplication_rule.id), tenant_id=tenant_id
-            )
-
     for (
         deduplication_rule_name,
         deduplication_rule_to_provision,
