@@ -22,11 +22,16 @@ import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { CorrelationFormType } from "./types";
 import { TIMEFRAME_UNITS_TO_SECONDS } from "./timeframe-constants";
 import { useDeduplicationFields } from "@/utils/hooks/useDeduplicationRules";
+import { get } from "lodash";
 
 const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
   [
     "=",
     "!=",
+    ">",
+    "<",
+    ">=",
+    "<=",
     "contains",
     "beginsWith",
     "endsWith",
@@ -39,6 +44,13 @@ const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
     "notIn",
   ].includes(operator.name)
 );
+
+const OPERATORS_FORCE_TYPE_CAST = {
+  ">=": "number",
+  "<=": "number",
+  "<": "number",
+  ">": "number",
+}
 
 const DEFAULT_FIELDS: QueryField[] = [
   { name: "source", label: "source", datatype: "text" },
@@ -104,6 +116,11 @@ const Field = ({
     return setIsValueEnabled(true);
   };
 
+  const castValueToOperationType = (value: string) => {
+    const castTo: string = get(OPERATORS_FORCE_TYPE_CAST, ruleField.operator, "text");
+    return castTo === "number" ? Number(value) : value;
+  }
+
   return (
     <div key={ruleField.id}>
       <div className="flex items-start gap-2">
@@ -141,7 +158,7 @@ const Field = ({
           {isValueEnabled && (
             <div>
               <TextInput
-                onValueChange={(newValue) => onFieldChange("value", newValue)}
+                onValueChange={(newValue) => onFieldChange("value", castValueToOperationType(newValue))}
                 defaultValue={ruleField.value}
                 required
                 error={!ruleField.value}
