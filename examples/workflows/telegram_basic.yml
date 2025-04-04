@@ -12,3 +12,4 @@ workflow:
         with:
           message: "test"
           chat_id: "-1001234567890"
+          image_url: "https://cdn.prod.website-files.com/66adeb018210ff2165886994/67aa1f6766f15cb7ec62e962_Keep%20With%20Name.svg"

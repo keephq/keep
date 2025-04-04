@@ -65,8 +65,6 @@ class GraylogProvider(BaseProvider):
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-💡 For more details on how to configure Graylog to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/graylog-provider). 💡
-
 To send alerts from Graylog to Keep, Use the following webhook url to configure Graylog send alerts to Keep:
 
 1. In Graylog, from the Topbar, go to `Alerts` > `Notifications`.
