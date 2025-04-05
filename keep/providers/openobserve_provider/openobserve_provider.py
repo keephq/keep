@@ -436,6 +436,8 @@ class OpenobserveProvider(BaseProvider):
                             logger.exception(f"Failed to parse row: {row}")
                             continue
                     row_name = row_data.pop("name", "")
+                    if row_name:
+                        row_data['row_name'] = row_name
                     group_by_keys = list(row_data.keys())
                     logger.info(
                         "Formatting aggregated alert with group by keys",

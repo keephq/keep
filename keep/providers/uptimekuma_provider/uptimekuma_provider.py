@@ -106,6 +106,8 @@ class UptimekumaProvider(BaseProvider):
             if length == 0:
                 return []
 
+            heartbeats = []
+
             for key in response:
                 heartbeat = response[key][-1]
                 monitor_id = heartbeat.get("monitor_id", heartbeat.get("monitorID"))
@@ -120,18 +122,20 @@ class UptimekumaProvider(BaseProvider):
                     api = self._get_api()
                     name = api.get_monitor(monitor_id)["name"]
 
-                api.disconnect()
-                return AlertDto(
-                    id=heartbeat["id"],
-                    name=name,
-                    monitor_id=monitor_id,
-                    description=heartbeat["msg"],
-                    status=heartbeat["status"].name.lower(),
-                    lastReceived=heartbeat["time"],
-                    ping=heartbeat["ping"],
-                    source=["uptimekuma"],
+                heartbeats.append(
+                    AlertDto(
+                        id=heartbeat["id"],
+                        name=name,
+                        monitor_id=heartbeat["monitor_id"],
+                        description=heartbeat["msg"],
+                        status=heartbeat["status"].name.lower(),
+                        lastReceived=heartbeat["time"],
+                        ping=heartbeat["ping"],
+                        source=["uptimekuma"],
+                    )
                 )
-
+            api.disconnect()
+            return heartbeats
         except Exception as e:
             self.logger.error("Error getting heartbeats from UptimeKuma: %s", e)
             raise Exception(f"Error getting heartbeats from UptimeKuma: {e}")
