@@ -57,7 +57,7 @@
     "lucide-react": "^0.479.0",
     "monaco-editor": "^0.52.2",
     "monaco-yaml": "^5.3.1",
-    "next": "15.2.3",
+    "next": "15.2.4",
     "next-auth": "^5.0.0-beta.25",
     "openai": "^4.86.2",
     "posthog-js": "^1.229.5",

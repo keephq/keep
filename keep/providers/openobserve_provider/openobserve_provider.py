@@ -375,7 +375,7 @@ class OpenobserveProvider(BaseProvider):
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto | List[AlertDto]:
         logger = logging.getLogger(__name__)
-        name = event.pop("alert_name", "")
+        alert_name = event.pop("alert_name", "")
         # openoboserve does not provide severity
         severity = AlertSeverity.WARNING
         # Mapping 'stream_name' to 'environment'
@@ -435,6 +435,9 @@ class OpenobserveProvider(BaseProvider):
                         except json.JSONDecodeError:
                             logger.exception(f"Failed to parse row: {row}")
                             continue
+                    row_name = row_data.pop("name", "")
+                    if row_name:
+                        row_data['row_name'] = row_name
                     group_by_keys = list(row_data.keys())
                     logger.info(
                         "Formatting aggregated alert with group by keys",
@@ -454,7 +457,7 @@ class OpenobserveProvider(BaseProvider):
 
                     alert_dto = AlertDto(
                         id=f"{alert_id}",
-                        name=f"{name}",
+                        name=f"{alert_name}: {row_name}" if row_name else f"{alert_name}",
                         severity=severity,
                         environment=environment,
                         startedAt=startedAt,
@@ -494,7 +497,7 @@ class OpenobserveProvider(BaseProvider):
             }
             alert_dto = AlertDto(
                 id=alert_id,
-                name=name,
+                name=alert_name,
                 severity=severity,
                 environment=environment,
                 startedAt=startedAt,

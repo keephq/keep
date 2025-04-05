@@ -427,8 +427,8 @@ class ProvidersService:
             for provider in provisioned_providers:
                 if provider.name not in env_providers:
                     with Session(engine) as session:
-                        logger.info(f"Deleting provider {provider.name}")
                         try:
+                            logger.info(f"Deleting provider {provider.name}")
                             ProvidersService.delete_provider(
                                 tenant_id, provider.id, session, allow_provisioned=True
                             )

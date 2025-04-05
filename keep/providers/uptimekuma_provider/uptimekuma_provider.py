@@ -5,6 +5,7 @@ UptimeKuma is a class that provides the necessary methods to interact with the U
 import dataclasses
 
 import pydantic
+from socketio.exceptions import BadNamespaceError
 from uptime_kuma_api import UptimeKumaApi
 
 from keep.api.models.alert import AlertDto, AlertStatus
@@ -67,6 +68,13 @@ class UptimekumaProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
 
+    def _get_api(self):
+        api = UptimeKumaApi(self.authentication_config.host_url)
+        api.login(
+            self.authentication_config.username, self.authentication_config.password
+        )
+        return api
+
     def dispose(self):
         pass
 
@@ -90,33 +98,44 @@ class UptimekumaProvider(BaseProvider):
 
     def _get_heartbeats(self):
         try:
-            api = UptimeKumaApi(self.authentication_config.host_url)
-            api.login(
-                self.authentication_config.username, self.authentication_config.password
-            )
+            api = self._get_api()
             response = api.get_heartbeats()
-            api.disconnect()
 
             length = len(response)
 
             if length == 0:
                 return []
 
+            heartbeats = []
+
             for key in response:
                 heartbeat = response[key][-1]
-                name = api.get_monitor(heartbeat["monitor_id"])["name"]
+                monitor_id = heartbeat.get("monitor_id", heartbeat.get("monitorID"))
+                try:
+                    name = api.get_monitor(monitor_id)["name"]
+                except BadNamespaceError: # Most likely connection issues
+                    try:
+                        api.disconnect()
+                    except Exception:
+                        pass
+                    # Single retry
+                    api = self._get_api()
+                    name = api.get_monitor(monitor_id)["name"]
 
-                return AlertDto(
-                    id=heartbeat["id"],
-                    name=name,
-                    monitor_id=heartbeat["monitor_id"],
-                    description=heartbeat["msg"],
-                    status=heartbeat["status"].name.lower(),
-                    lastReceived=heartbeat["time"],
-                    ping=heartbeat["ping"],
-                    source=["uptimekuma"],
+                heartbeats.append(
+                    AlertDto(
+                        id=heartbeat["id"],
+                        name=name,
+                        monitor_id=heartbeat["monitor_id"],
+                        description=heartbeat["msg"],
+                        status=heartbeat["status"].name.lower(),
+                        lastReceived=heartbeat["time"],
+                        ping=heartbeat["ping"],
+                        source=["uptimekuma"],
+                    )
                 )
-
+            api.disconnect()
+            return heartbeats
         except Exception as e:
             self.logger.error("Error getting heartbeats from UptimeKuma: %s", e)
             raise Exception(f"Error getting heartbeats from UptimeKuma: {e}")
