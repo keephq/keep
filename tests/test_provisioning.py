@@ -191,12 +191,12 @@ def test_provision_provider(db_session, client, test_app):
 def test_reprovision_provider(monkeypatch, db_session, client, test_app):
     response = client.get("/providers", headers={"x-api-key": "someapikey"})
     assert response.status_code == 200
-    # 3 workflows and 3 provisioned workflows
     providers = response.json()
     provisioned_providers = [
         p for p in providers.get("installed_providers") if p.get("provisioned")
     ]
-    assert len(provisioned_providers) == 2
+    # Skip the re-provisioning when configurations are not changed
+    assert len(provisioned_providers) == 0
 
     # Step 2: Change environment variables (simulating new provisioning)
     monkeypatch.setenv(
