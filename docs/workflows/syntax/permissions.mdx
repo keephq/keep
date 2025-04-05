@@ -1,0 +1,99 @@
+---
+title: "Permissions"
+---
+
+# Permissions
+
+Permissions in Keep Workflow Engine define **who can execute a workflow manually**.
+
+They allow you to restrict access to workflows based on user roles or specific email addresses, ensuring that only authorized users can trigger sensitive workflows.
+
+<Note>
+Currently, permissions can only be edited directly in the workflow YAML file. The workflow builder UI does not support editing permissions at this time.
+</Note>
+
+---
+
+## General Structure
+
+Permissions are defined at the top level of a workflow YAML file using the `permissions` field, which accepts a list of roles and/or email addresses.
+
+```yaml
+workflow:
+  id: sensitive-workflow
+  name: Sensitive Workflow
+  description: "A workflow with restricted access"
+  permissions:
+    - admin
+    - john.doe@example.com
+  steps:
+    # workflow steps
+```
+
+## How Permissions Work
+
+When a workflow has permissions defined:
+
+1. **Admin users** can always run the workflow regardless of the permissions list
+2. **Non-admin users** can only run the workflow if:
+   - Their role is explicitly listed in the permissions
+   - OR their email address is explicitly listed in the permissions
+3. If the `permissions` field is empty or not defined, any user with the `write:workflows` permission can run the workflow
+
+## Supported Role Types
+
+Keep supports the following role types that can be used in the permissions list:
+
+- `admin`: Administrator users with full system access
+- `noc`: Network Operations Center users with read-only access
+- `webhook`: API access for webhook integrations
+- `workflowrunner`: Special role for running workflows via API
+
+## Examples
+
+### Restricting to Admin Users Only
+
+```yaml
+workflow:
+  id: critical-infrastructure-workflow
+  name: Critical Infrastructure Workflow
+  permissions:
+    - admin
+  steps:
+    # workflow steps
+```
+
+### Allowing Specific Users
+
+```yaml
+workflow:
+  id: department-specific-workflow
+  name: Department Specific Workflow
+  permissions:
+    - sarah.smith@example.com
+    - team.lead@example.com
+  steps:
+    # workflow steps
+```
+
+### Combining Roles and Individual Users
+
+```yaml
+workflow:
+  id: mixed-permissions-workflow
+  name: Mixed Permissions Workflow
+  permissions:
+    - admin
+    - noc
+    - devops.specialist@example.com
+  steps:
+    # workflow steps
+```
+
+## Best Practices
+
+- Use permissions for workflows that have significant impact on systems or trigger sensitive operations
+- Consider using role-based permissions (like `admin` or `noc`) for groups of users with similar responsibilities
+- List individual email addresses only for exceptions or when very specific access control is needed
+- Review workflow permissions regularly as part of security audits
+- Document which workflows have restricted permissions in your internal documentation

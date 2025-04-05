@@ -19,7 +19,6 @@ from keep.api.core.db import (
     get_raw_workflow,
     get_workflow,
     get_workflow_execution,
-    get_workflows_with_last_execution,
 )
 from keep.api.core.workflows import get_workflows_with_last_executions_v2
 from keep.api.models.db.workflow import Workflow as WorkflowModel
@@ -152,21 +151,17 @@ class WorkflowStore:
         offset: int = None,
         sort_by: str = None,
         sort_dir: str = None,
-        is_v2: bool = False,
     ) -> Tuple[list[dict], int]:
         # list all tenant's workflows
-        if is_v2:
-            return get_workflows_with_last_executions_v2(
-                tenant_id=tenant_id,
-                cel=cel,
-                limit=limit,
-                offset=offset,
-                sort_by=sort_by,
-                sort_dir=sort_dir,
-                fetch_last_executions=15,
-            )
-        workflows = get_workflows_with_last_execution(tenant_id)
-        return workflows, len(workflows)
+        return get_workflows_with_last_executions_v2(
+            tenant_id=tenant_id,
+            cel=cel,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            fetch_last_executions=15,
+        )
 
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
         # list all tenant's workflows yamls (Workflow.workflow_raw)
