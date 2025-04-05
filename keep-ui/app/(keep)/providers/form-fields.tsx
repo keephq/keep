@@ -247,19 +247,31 @@ export function TextField({
   title?: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
+  const isSensitive = config.sensitive;
+  const [touched, setTouched] = useState(false);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setTouched(true);
+    onChange(e);
+  }
+
   return (
     <>
       <FieldLabel id={id} config={config} />
       <TextInput
-        type={config.sensitive ? "password" : "text"}
+        type={isSensitive ? "password" : "text"}
         id={id}
         name={id}
-        value={value?.toString() ?? ""}
-        onChange={onChange}
+        value={isSensitive && !touched ? "" : value?.toString() ?? ""}
+        onChange={handleChange}
         autoComplete="off"
         error={Boolean(error)}
         errorMessage={error}
-        placeholder={config.placeholder ?? `Enter ${id}`}
+        placeholder={
+          isSensitive && value && !touched
+            ? ""
+            : config.placeholder ?? `Enter ${id}`
+        }
         disabled={disabled}
         title={title ?? ""}
       />
