@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import TEXT, UniqueConstraint
-from sqlmodel import JSON, Column, Field, Index, SQLModel
+from sqlmodel import JSON, Column, Field, ForeignKey, Index, SQLModel
 
 
 class Provider(SQLModel, table=True):
@@ -38,7 +38,9 @@ class ProviderExecutionLog(SQLModel, table=True):
 
     id: str = Field(default=None, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
-    provider_id: str = Field(foreign_key="provider.id")
+    provider_id: str = Field(
+        sa_column=Column(ForeignKey("provider.id", ondelete="CASCADE"))
+    )
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     log_message: str = Field(sa_column=Column(TEXT))
     log_level: str = Field(default="INFO")  # INFO, WARNING, ERROR, DEBUG
