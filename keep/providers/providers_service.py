@@ -31,9 +31,6 @@ from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
-DEFAULT_PROVIDER_HASH_STATE_FILE = "/state/{tenant_id}_providers_hash.txt"
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -432,7 +429,7 @@ class ProvidersService:
     @staticmethod
     def write_provisioned_hash(tenant_id: str, hash_value: str):
         """
-        Write the provisioned hash to Redis or file.
+        Write the provisioned hash to Redis or secret manager.
 
         Args:
             tenant_id (str): The tenant ID.
@@ -443,16 +440,20 @@ class ProvidersService:
             r.set(f"{tenant_id}_providers_hash", hash_value)
             logger.info(f"Provisioned hash for tenant {tenant_id} written to Redis!")
         else:
-            with open(
-                DEFAULT_PROVIDER_HASH_STATE_FILE.format(tenant_id=tenant_id), "w"
-            ) as f:
-                f.write(hash_value)
-                logger.info(f"Provisioned hash for tenant {tenant_id} written to file!")
+            context_manager = ContextManager(tenant_id=tenant_id)
+            secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+            secret_manager.write_secret(
+                secret_name=f"{tenant_id}_providers_hash",
+                secret_value=hash_value,
+            )
+            logger.info(
+                f"Provisioned hash for tenant {tenant_id} written to secret manager!"
+            )
 
     @staticmethod
     def get_provisioned_hash(tenant_id: str) -> Optional[str]:
         """
-        Get the provisioned hash from Redis or file.
+        Get the provisioned hash from Redis or secret manager.
 
         Args:
             tenant_id (str): The tenant ID.
@@ -475,18 +476,19 @@ class ProvidersService:
 
         if previous_hash is None:
             try:
-                with open(
-                    DEFAULT_PROVIDER_HASH_STATE_FILE.format(tenant_id=tenant_id),
-                    "r",
-                    encoding="utf-8",
-                ) as f:
-                    previous_hash = f.read().strip()
-                logger.info(f"Provisioned hash for tenant {tenant_id} read from file.")
-            except FileNotFoundError:
-                logger.info(f"Provisioned hash file for tenant {tenant_id} not found.")
+                context_manager = ContextManager(tenant_id=tenant_id)
+                secret_manager = SecretManagerFactory.get_secret_manager(
+                    context_manager
+                )
+                previous_hash = secret_manager.read_secret(
+                    f"{tenant_id}_providers_hash"
+                )
+                logger.info(
+                    f"Provisioned hash for tenant {tenant_id} read from secret manager."
+                )
             except Exception as e:
                 logger.warning(
-                    f"Failed to read hash from file for tenant {tenant_id}: {e}"
+                    f"Failed to read hash from secret manager for tenant {tenant_id}: {e}"
                 )
 
         return previous_hash if previous_hash else None
@@ -565,7 +567,7 @@ class ProvidersService:
             provisioned_providers_dir, provisioned_providers_json
         )
 
-        # Get the previous hash from Redis or file
+        # Get the previous hash from Redis or secret manager
         previous_hash = ProvidersService.get_provisioned_hash(tenant_id)
         if providers_hash == previous_hash:
             logger.info(
@@ -724,7 +726,7 @@ class ProvidersService:
             logger.error("Provisioning failed, rolling back", extra={"exception": e})
             session.rollback()
         finally:
-            # Store the hash in Redis or file
+            # Store the hash in Redis or secret manager
             try:
                 ProvidersService.write_provisioned_hash(tenant_id, providers_hash)
             except Exception as e:

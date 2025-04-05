@@ -37,17 +37,20 @@ def test_write_provisioned_hash_redis(tenant_id, hash_value):
         )
 
 
-def test_write_provisioned_hash_file(tenant_id, hash_value):
-    """Test writing hash to file when Redis is disabled"""
-    file_path = f"/state/{tenant_id}_providers_hash.txt"
+def test_write_provisioned_hash_secret_manager(tenant_id, hash_value):
+    """Test writing hash to secret manager when Redis is disabled"""
+    mock_secret_manager = MagicMock()
 
     with patch("keep.providers.providers_service.REDIS", False), patch(
-        "builtins.open", mock_open()
-    ) as mock_file:
+        "keep.providers.providers_service.SecretManagerFactory.get_secret_manager"
+    ) as mock_get_secret_manager:
+        mock_get_secret_manager.return_value = mock_secret_manager
+
         ProvidersService.write_provisioned_hash(tenant_id, hash_value)
 
-        mock_file.assert_called_once_with(file_path, "w")
-        mock_file().write.assert_called_once_with(hash_value)
+        mock_secret_manager.write_secret.assert_called_once_with(
+            secret_name=f"{tenant_id}_providers_hash", secret_value=hash_value
+        )
 
 
 def test_get_provisioned_hash_redis_success(tenant_id, hash_value):
@@ -66,33 +69,53 @@ def test_get_provisioned_hash_redis_success(tenant_id, hash_value):
 
 
 def test_get_provisioned_hash_redis_error(tenant_id, hash_value):
-    """Test falling back to file when Redis fails"""
+    """Test falling back to secret manager when Redis fails"""
+    mock_secret_manager = MagicMock()
+    mock_secret_manager.read_secret.return_value = hash_value
+
     with patch("keep.providers.providers_service.REDIS", True), patch(
         "redis.Redis"
-    ) as mock_redis, patch("builtins.open", mock_open(read_data=hash_value)):
+    ) as mock_redis, patch(
+        "keep.providers.providers_service.SecretManagerFactory.get_secret_manager"
+    ) as mock_get_secret_manager:
         mock_redis.return_value.__enter__.side_effect = redis.RedisError("Test error")
+        mock_get_secret_manager.return_value = mock_secret_manager
 
         result = ProvidersService.get_provisioned_hash(tenant_id)
 
         assert result == hash_value
+        mock_secret_manager.read_secret.assert_called_once_with(
+            f"{tenant_id}_providers_hash"
+        )
 
 
-def test_get_provisioned_hash_file_success(tenant_id, hash_value):
-    """Test getting hash from file successfully"""
+def test_get_provisioned_hash_secret_manager_success(tenant_id, hash_value):
+    """Test getting hash from secret manager successfully"""
+    mock_secret_manager = MagicMock()
+    mock_secret_manager.read_secret.return_value = hash_value
+
     with patch("keep.providers.providers_service.REDIS", False), patch(
-        "builtins.open", mock_open(read_data=hash_value)
-    ):
+        "keep.providers.providers_service.SecretManagerFactory.get_secret_manager"
+    ) as mock_get_secret_manager:
+        mock_get_secret_manager.return_value = mock_secret_manager
+
         result = ProvidersService.get_provisioned_hash(tenant_id)
 
         assert result == hash_value
+        mock_secret_manager.read_secret.assert_called_once_with(
+            f"{tenant_id}_providers_hash"
+        )
 
 
-def test_get_provisioned_hash_file_not_found(tenant_id):
-    """Test handling file not found error"""
+def test_get_provisioned_hash_secret_manager_error(tenant_id):
+    """Test handling secret manager error"""
+    mock_secret_manager = MagicMock()
+    mock_secret_manager.read_secret.side_effect = Exception("Secret not found")
+
     with patch("keep.providers.providers_service.REDIS", False), patch(
-        "builtins.open"
-    ) as mock_file:
-        mock_file.side_effect = FileNotFoundError()
+        "keep.providers.providers_service.SecretManagerFactory.get_secret_manager"
+    ) as mock_get_secret_manager:
+        mock_get_secret_manager.return_value = mock_secret_manager
 
         result = ProvidersService.get_provisioned_hash(tenant_id)
 
@@ -162,17 +185,20 @@ def test_write_provisioned_hash_redis_enabled(tenant_id, hash_value):
         )
 
 
-def test_write_provisioned_hash_redis_disabled(tenant_id, hash_value):
-    """Test writing hash to file when Redis is disabled"""
-    file_path = f"/state/{tenant_id}_providers_hash.txt"
+def test_write_provisioned_hash_redis_disabled_secret_manager(tenant_id, hash_value):
+    """Test writing hash to secret manager when Redis is disabled"""
+    mock_secret_manager = MagicMock()
 
     with patch("keep.providers.providers_service.REDIS", False), patch(
-        "builtins.open", mock_open()
-    ) as mock_file:
+        "keep.providers.providers_service.SecretManagerFactory.get_secret_manager"
+    ) as mock_get_secret_manager:
+        mock_get_secret_manager.return_value = mock_secret_manager
+
         ProvidersService.write_provisioned_hash(tenant_id, hash_value)
 
-        mock_file.assert_called_once_with(file_path, "w")
-        mock_file().write.assert_called_once_with(hash_value)
+        mock_secret_manager.write_secret.assert_called_once_with(
+            secret_name=f"{tenant_id}_providers_hash", secret_value=hash_value
+        )
 
 
 def test_get_provisioned_hash_redis_enabled_success(tenant_id, hash_value):
@@ -206,16 +232,22 @@ def test_get_provisioned_hash_redis_enabled_none_value(tenant_id):
         mock_redis_instance.get.assert_called_once_with(f"{tenant_id}_providers_hash")
 
 
-def test_get_provisioned_hash_redis_disabled_success(tenant_id, hash_value):
-    """Test getting hash from file successfully when Redis is disabled"""
-    with patch("keep.providers.providers_service.REDIS", False), patch(
-        "builtins.open", mock_open(read_data=hash_value)
-    ), patch("redis.Redis") as mock_redis:
+def test_get_provisioned_hash_redis_preferred(tenant_id, hash_value):
+    """Test that Redis is preferred over secret manager when Redis works"""
+    with patch("keep.providers.providers_service.REDIS", True), patch(
+        "redis.Redis"
+    ) as mock_redis, patch(
+        "keep.providers.providers_service.SecretManagerFactory.get_secret_manager"
+    ) as mock_get_secret_manager:
+        mock_redis_instance = MagicMock()
+        mock_redis_instance.get.return_value = hash_value.encode()
+        mock_redis.return_value.__enter__.return_value = mock_redis_instance
+
         result = ProvidersService.get_provisioned_hash(tenant_id)
 
         assert result == hash_value
-        # Should not try to read from Redis
-        mock_redis.assert_not_called()
+        # Should not try to use secret manager when Redis works
+        mock_get_secret_manager.assert_not_called()
 
 
 def test_get_provisioned_hash_redis_enabled_byte_decoding(tenant_id):
