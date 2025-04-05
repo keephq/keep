@@ -102,26 +102,18 @@ To see the full list of supported providers and their detailed configuration opt
 
 ### Update Provisioned Providers
 
-#### Using KEEP_PROVIDERS
+Keep uses a consistent process for updating provider configurations regardless of whether you use `KEEP_PROVIDERS` or `KEEP_PROVIDERS_DIRECTORY`.
 
-Provider configurations can be updated dynamically by changing the `KEEP_PROVIDERS` environment variable.
+#### Provisioning Process
 
-On every restart, Keep reads this environment variable and determines which providers need to be added or removed.
+When Keep starts or restarts, it follows these steps to manage provider configurations:
 
-This process allows for flexible management of data sources without requiring manual intervention. By simply updating the `KEEP_PROVIDERS` variable and restarting the application, you can efficiently add new providers, remove existing ones, or modify their configurations.
-
-The high-level provisioning mechanism:
-1. Keep reads the `KEEP_PROVIDERS` value.
-2. Keep checks if there are any provisioned providers that are no longer in the `KEEP_PROVIDERS` value, and deletes them.
-3. Keep installs all providers from the `KEEP_PROVIDERS` value.
-
-#### Using KEEP_PROVIDERS_DIRECTORY
-
-Provider configurations can be updated dynamically by changing the YAML files in the `KEEP_PROVIDERS_DIRECTORY` directory.
-
-On every restart, Keep reads the YAML files in the `KEEP_PROVIDERS_DIRECTORY` directory and determines which providers need to be added or removed.
-
-The high-level provisioning mechanism:
-1. Keep reads the YAML files in the `KEEP_PROVIDERS_DIRECTORY` directory.
-2. Keep checks if there are any provisioned providers that are no longer in the YAML files, and deletes them.
-3. Keep installs all providers from the YAML files.
+1. **Read Configurations**: Loads provider definitions from either the `KEEP_PROVIDERS` environment variable or YAML files in the `KEEP_PROVIDERS_DIRECTORY`.
+2. **Calculate Configuration Hash**: Generates a hash of the current configurations to detect changes.
+3. **Check for Changes**: Compares the new hash with the previously stored hash (in Redis or secret manager).
+4. **Update When Changed**: If configurations have changed:
+  - Backup the current state for potential rollback
+  - Delete all existing provisioned providers
+  - Provision new providers with their deduplication rules
+  - If any errors occur during provisioning, automatically rollback to the previous state
+5. **Skip When Unchanged**: If configurations haven't changed since the last startup, Keep skips the re-provisioning process to improve startup performance.
