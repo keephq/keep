@@ -162,7 +162,7 @@ def test_reprovision_workflow(monkeypatch, db_session, client, test_app):
     [
         {
             "AUTH_TYPE": "NOAUTH",
-            "KEEP_PROVIDERS": '{"keepVictoriaMetrics":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort": 1234}},"keepClickhouse1":{"type":"clickhouse","authentication":{"host":"http://localhost","port":1234,"username":"keep","password":"keep","database":"keep-db"}}}',
+            "KEEP_PROVIDERS": '{"keepVictoriaMetrics1":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort": 1234}},"keepClickhouse1":{"type":"clickhouse","authentication":{"host":"http://localhost","port":1234,"username":"keep","password":"keep","database":"keep-db"}}}',
         },
     ],
     indirect=True,
@@ -183,7 +183,7 @@ def test_provision_provider(db_session, client, test_app):
     [
         {
             "AUTH_TYPE": "NOAUTH",
-            "KEEP_PROVIDERS": '{"keepVictoriaMetrics":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort": 1234}},"keepClickhouse1":{"type":"clickhouse","authentication":{"host":"http://localhost","port":1234,"username":"keep","password":"keep","database":"keep-db"}}}',
+            "KEEP_PROVIDERS": '{"keepVictoriaMetric2":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort": 1234}},"keepClickhouse1":{"type":"clickhouse","authentication":{"host":"http://localhost","port":1234,"username":"keep","password":"keep","database":"keep-db"}}}',
         },
     ],
     indirect=True,
@@ -195,8 +195,7 @@ def test_reprovision_provider(monkeypatch, db_session, client, test_app):
     provisioned_providers = [
         p for p in providers.get("installed_providers") if p.get("provisioned")
     ]
-    # Skip the re-provisioning when configurations are not changed
-    assert len(provisioned_providers) == 0
+    assert len(provisioned_providers) == 2
 
     # Step 2: Change environment variables (simulating new provisioning)
     monkeypatch.setenv(
