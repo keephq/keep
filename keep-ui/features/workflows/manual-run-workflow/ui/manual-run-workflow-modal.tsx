@@ -1,4 +1,4 @@
-import { Button, Text, Title } from "@tremor/react";
+import { Button, Callout, Text, Title } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { useEffect, useState } from "react";
 import { IncidentDto } from "@/entities/incidents/model";
@@ -21,6 +21,7 @@ import {
   areRequiredInputsFilled,
 } from "@/entities/workflows/ui/WorkflowInputFields";
 import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
 
 interface Props {
   alert?: AlertDto | null | undefined;
@@ -203,39 +204,51 @@ export function ManualRunWorkflowModal({
       {/* Only show workflow selector when no workflow is directly provided */}
       {!workflow && (
         <>
-          <Text className="mb-1 mt-4">Select workflow to run</Text>
-          {filteredWorkflows ? (
-            <WorkflowSelect
-              placeholder="Select workflow"
-              value={selectedWorkflow}
-              getOptionValue={(w: any) => w.id}
-              getOptionLabel={(workflow: Workflow) =>
-                `${workflow.name} (${workflow.description})`
-              }
-              onChange={setSelectedWorkflow}
-              filterOption={(
-                { data: workflow }: FilterOptionOption<Workflow>,
-                query: string
-              ) => {
-                if (query === "") {
-                  return true;
+          {filteredWorkflows && filteredWorkflows.length > 0 ? (
+            <div>
+              {filteredWorkflows.length !== workflows?.length && (
+                <Callout
+                  title="For your information"
+                  color="yellow"
+                  className="mb-2 text-xs"
+                  icon={InfoCircledIcon}
+                >
+                  Some workflows are not visible to you because you lack
+                  permissions.
+                </Callout>
+              )}
+              <WorkflowSelect
+                placeholder="Select workflow"
+                value={selectedWorkflow}
+                getOptionValue={(w: any) => w.id}
+                getOptionLabel={(workflow: Workflow) =>
+                  `${workflow.name} (${workflow.description})`
                 }
-                return (
-                  workflow.name.toLowerCase().indexOf(query.toLowerCase()) >
-                    -1 ||
-                  workflow.description
-                    .toLowerCase()
-                    .indexOf(query.toLowerCase()) > -1 ||
-                  workflow.id.toLowerCase().indexOf(query.toLowerCase()) > -1
-                );
-              }}
-              components={{
-                Option: CustomOption,
-              }}
-              options={filteredWorkflows}
-            />
+                onChange={setSelectedWorkflow}
+                filterOption={(
+                  { data: workflow }: FilterOptionOption<Workflow>,
+                  query: string
+                ) => {
+                  if (query === "") {
+                    return true;
+                  }
+                  return (
+                    workflow.name.toLowerCase().indexOf(query.toLowerCase()) >
+                      -1 ||
+                    workflow.description
+                      .toLowerCase()
+                      .indexOf(query.toLowerCase()) > -1 ||
+                    workflow.id.toLowerCase().indexOf(query.toLowerCase()) > -1
+                  );
+                }}
+                components={{
+                  Option: CustomOption,
+                }}
+                options={filteredWorkflows}
+              />
+            </div>
           ) : (
-            <div>No workflows found</div>
+            <span className="text-gray-500 text-sm">No workflows found</span>
           )}
         </>
       )}
