@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 def build_facet_selects(properties_metadata, facets):
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     new_fields_config: list[FieldMappingConfiguration] = []
-    select_expressions = []
+    select_expressions = {}
 
     for facet in facets:
         property_metadata = properties_metadata.get_property_metadata_for_str(
@@ -52,19 +52,13 @@ def build_facet_selects(properties_metadata, facets):
             elif isinstance(field_mapping, SimpleFieldMapping):
                 coalla.append(field_mapping.map_to)
 
-        select_expressions.append(
-            (
-                literal_column(
-                    cel_to_sql_instance.coalesce(coalla)
-                    if len(coalla) > 1
-                    else coalla[0]
-                ).label(select_field)
-            )
-        )
+        select_expressions[select_field] = literal_column(
+            cel_to_sql_instance.coalesce(coalla) if len(coalla) > 1 else coalla[0]
+        ).label(select_field)
 
     return {
         "new_fields_config": new_fields_config,
-        "select_expressions": select_expressions,
+        "select_expressions": list(select_expressions.values()),
     }
 
 
@@ -88,15 +82,6 @@ def build_facets_data_query(
         sqlalchemy.sql.Selectable: A SQLAlchemy selectable object representing the constructed query.
     """
     instance = get_cel_to_sql_provider(properties_metadata)
-    # if facet_options_query.cel:
-    #     base_query = (
-    #         select(text("*"))
-    #         .select_from(base_query)
-    #         .filter(text(instance.convert_to_sql_str(facet_options_query.cel)))
-    #         .cte("base_filtered_query")
-    #     )
-    # else:
-    #     base_query = base_query.cte("base_filtered_query")
 
     if facet_options_query.cel:
         base_query = base_query.filter(
