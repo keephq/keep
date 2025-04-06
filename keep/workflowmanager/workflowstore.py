@@ -151,6 +151,7 @@ class WorkflowStore:
         offset: int = None,
         sort_by: str = None,
         sort_dir: str = None,
+        session=None,
     ) -> Tuple[list[dict], int]:
         # list all tenant's workflows
         return get_workflows_with_last_executions_v2(
@@ -161,6 +162,7 @@ class WorkflowStore:
             sort_by=sort_by,
             sort_dir=sort_dir,
             fetch_last_executions=15,
+            session=session,
         )
 
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
