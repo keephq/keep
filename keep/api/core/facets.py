@@ -95,6 +95,7 @@ def build_facets_data_query(
     facet_selects_metadata = build_facet_selects(properties_metadata, facets)
     new_fields_config = facet_selects_metadata["new_fields_config"]
     facets_properties_metadata = PropertiesMetadata(new_fields_config)
+    facets_cel_to_sql_instance = get_cel_to_sql_provider(facets_properties_metadata)
 
     for facet in facets:
         metadata = facets_properties_metadata.get_property_metadata_for_str(
@@ -105,14 +106,14 @@ def build_facets_data_query(
         for item in metadata.field_mappings:
             if isinstance(item, JsonFieldMapping):
                 facet_value.append(
-                    instance.json_extract_as_text(item.json_prop, item.prop_in_json)
+                    facets_cel_to_sql_instance.json_extract_as_text(
+                        item.json_prop, item.prop_in_json
+                    )
                 )
             elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
                 facet_value.append(item.map_to)
 
-        casted = (
-            f"{instance.coalesce([instance.cast(item, str) for item in facet_value])}"
-        )
+        casted = f"{facets_cel_to_sql_instance.coalesce([facets_cel_to_sql_instance.cast(item, str) for item in facet_value])}"
 
         union_queries.append(
             select(
@@ -123,7 +124,7 @@ def build_facets_data_query(
             .select_from(base_query)
             .filter(
                 text(
-                    instance.convert_to_sql_str(
+                    facets_cel_to_sql_instance.convert_to_sql_str(
                         facet_options_query.facet_queries[facet.id]
                     )
                 )
