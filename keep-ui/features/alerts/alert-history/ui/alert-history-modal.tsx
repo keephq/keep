@@ -93,14 +93,14 @@ const AlertHistoryPanel = ({
           Close
         </Button>
       </Flex>
-      {/* <Divider />
+      <Divider />
       {alertsHistoryWithDate.length && (
         <AlertHistoryCharts
           maxLastReceived={maxLastReceived}
           minLastReceived={minLastReceived}
           alerts={alertsHistoryWithDate}
         />
-      )} */}
+      )}
       <Divider />
       <AlertTable
         alerts={alertsHistoryWithDate}
