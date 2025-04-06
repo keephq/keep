@@ -4775,7 +4775,7 @@ def bulk_upsert_alert_fields(
 
                 break
 
-            except IntegrityError as e:
+            except OperationalError as e:
                 # Handle any potential race conditions
                 session.rollback()
                 if "Deadlock found" in str(e):
