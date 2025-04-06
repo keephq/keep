@@ -19,7 +19,7 @@ import { AlertChangeStatusModal } from "@/features/alerts/alert-change-status";
 import { EnrichAlertSidePanel } from "@/features/alerts/enrich-alert";
 import { FacetDto } from "@/features/filter";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepLoader } from "@/shared/ui";
+import { KeepLoader, showErrorToast } from "@/shared/ui";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 import NotFound from "@/app/(keep)/not-found";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
@@ -117,11 +117,21 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     const enrich = searchParams?.get("enrich");
     if (fingerprint && enrich) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
-      setEnrichAlertModal(alert);
-      setIsEnrichSidebarOpen(true);
+      if (alert) {
+        setEnrichAlertModal(alert);
+        setIsEnrichSidebarOpen(true);
+      } else {
+        showErrorToast(null, "Alert fingerprint not found");
+        resetUrlAfterModal();
+      }
     } else if (fingerprint) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
-      setViewAlertModal(alert);
+      if (alert) {
+        setViewAlertModal(alert);
+      } else {
+        showErrorToast(null, "Alert fingerprint not found");
+        resetUrlAfterModal();
+      }
     } else {
       setViewAlertModal(null);
       setEnrichAlertModal(null);
