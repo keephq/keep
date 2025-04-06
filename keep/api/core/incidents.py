@@ -2,21 +2,16 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
-from sqlalchemy import and_, case, func, literal_column, select
-from sqlalchemy.orm import aliased
+from sqlalchemy import and_, case, func, select
 from sqlmodel import Session, col, text
 
 from keep.api.core.alerts import get_alert_potential_facet_fields
 from keep.api.core.cel_to_sql.properties_mapper import (
-    JsonPropertyAccessNode,
     PropertiesMappingException,
 )
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
-    JsonFieldMapping,
     PropertiesMetadata,
-    SimpleFieldMapping,
-    remap_fields_configurations,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
@@ -140,64 +135,7 @@ static_facets = [
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
 
-def __build_base_incident_query(tenant_id: str):
-    """
-    Builds a base query for incidents related to a specific tenant.
-    This function constructs a Common Table Expression (CTE) that selects
-    incident-related data, including incident ID, alert enrichments, alert event,
-    and alert provider type. It joins several tables: LastAlertToIncident, LastAlert,
-    Alert, and optionally AlertEnrichment, based on the provided tenant ID.
-    Args:
-        tenant_id (str): The ID of the tenant for which to build the incident query.
-    Returns:
-        sqlalchemy.sql.selectable.CTE: A CTE containing the base incident query.
-    """
-    incidents_alerts_cte = (
-        select(
-            Incident.id.label("incident_id"),
-            AlertEnrichment.enrichments.label("alert_enrichments"),
-            Alert.event.label("alert_event"),
-            Alert.provider_type.label("incident_alert_provider_type"),
-            case(
-                (
-                    Incident.same_incident_in_the_past_id.isnot(None),
-                    True,
-                ),
-                else_=False,
-            ).label("incident_has_linked_incident"),
-        )
-        .select_from(Incident)
-        .outerjoin(
-            LastAlertToIncident,
-            and_(
-                LastAlertToIncident.incident_id == Incident.id,
-                LastAlertToIncident.tenant_id == tenant_id,
-            ),
-        )
-        .outerjoin(
-            LastAlert,
-            and_(
-                LastAlert.tenant_id == tenant_id,
-                LastAlert.fingerprint == LastAlertToIncident.fingerprint,
-            ),
-        )
-        .outerjoin(
-            Alert,
-            and_(LastAlert.alert_id == Alert.id, LastAlert.tenant_id == tenant_id),
-        )
-        .outerjoin(
-            AlertEnrichment,
-            and_(
-                AlertEnrichment.alert_fingerprint == Alert.fingerprint,
-                AlertEnrichment.tenant_id == tenant_id,
-            ),
-        )
-    )
-
-    return incidents_alerts_cte
-
-
-def __build_base_incident_query_v2(
+def __build_base_incident_query(
     tenant_id: str, select_args: list, cel=None, force_fetch=False
 ):
     fetch_alerts = False
@@ -205,15 +143,6 @@ def __build_base_incident_query_v2(
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     sql_filter = None
     involved_fields = []
-    select_args = select_args + [
-        # case(
-        #     (
-        #         Incident.same_incident_in_the_past_id.isnot(None),
-        #         True,
-        #     ),
-        #     else_=False,
-        # ).label("incident_has_linked_incident")
-    ]
 
     if cel:
         cel_to_sql_result = cel_to_sql_instance.convert_to_sql_str_v2(cel)
@@ -333,7 +262,7 @@ def __build_last_incidents_total_count_query(
         func.count(func.distinct(Incident.id)) if fetch_alerts else func.count(1)
     )
 
-    query = __build_base_incident_query_v2(
+    query = __build_base_incident_query(
         tenant_id=tenant_id,
         cel=cel,
         select_args=[count_funct],
@@ -412,7 +341,7 @@ def __build_last_incidents_query(
         for sort_option in sort_options
     ]
 
-    built_query_result = __build_base_incident_query_v2(
+    built_query_result = __build_base_incident_query(
         tenant_id=tenant_id,
         cel=cel,
         select_args=[Incident],
@@ -510,8 +439,6 @@ def get_last_incidents_by_cel(
                 cel=cel,
                 allowed_incident_ids=allowed_incident_ids,
             )
-        except Exception as e:
-            raise e
         except CelToSqlException as e:
             if isinstance(e.__cause__, PropertiesMappingException):
                 # if there is an error in mapping properties, return empty list
@@ -519,20 +446,8 @@ def get_last_incidents_by_cel(
                 return [], 0
             raise e
 
-        total_count_query_strq = str(
-            total_count_query.compile(
-                compile_kwargs={"literal_binds": True}, dialect=session.bind.dialect
-            )
-        )
-        strq = str(
-            sql_query.compile(
-                compile_kwargs={"literal_binds": True}, dialect=session.bind.dialect
-            )
-        )
-
         total_count = session.exec(total_count_query).one()[0]
         all_records = session.exec(sql_query).all()
-        # all_records = []
 
         incidents = [row._asdict().get("Incident") for row in all_records]
 
@@ -570,18 +485,12 @@ def get_incident_facets_data(
 
     select_expressions.append(Incident.id.label("entity_id"))
 
-    base_query = __build_base_incident_query_v2(
+    base_query = __build_base_incident_query(
         tenant_id,
         select_expressions,
         cel=facet_options_query.cel,
         force_fetch=True,
     )["query"]
-
-    strq = str(
-        base_query.compile(
-            compile_kwargs={"literal_binds": True}, dialect=engine.dialect
-        )
-    )
 
     if allowed_incident_ids:
         base_query = base_query.filter(Incident.id.in_(allowed_incident_ids))
