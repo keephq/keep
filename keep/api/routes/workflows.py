@@ -317,10 +317,10 @@ def get_event_from_body(body: dict, tenant_id: str):
         event_body["id"] = event_body.get("fingerprint", "manual-run")
     elif event_class == IncidentDto:
         event_body["id"] = event_body.get("id", "manual-run")
-    event_body["name"] = event_body.get("fingerprint", "manual-run")
-    event_body["lastReceived"] = datetime.datetime.now(
-        tz=datetime.timezone.utc
-    ).isoformat()
+    event_body["name"] = event_body.get("name", "manual-run")
+    event_body["lastReceived"] = event_body.get(
+        "lastReceived", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+    )
     if "source" in event_body and not isinstance(event_body["source"], list):
         event_body["source"] = [event_body["source"]]
 
