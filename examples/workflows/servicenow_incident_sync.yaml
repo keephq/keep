@@ -1,0 +1,30 @@
+workflow:
+  id: servicenow-incident-sync
+  name: ServiceNow Incident Sync
+  description: Sync incidents between Keep and ServiceNow with bi-directional activity synchronization.
+  triggers:
+    - type: incident
+      filters:
+        - key: severity
+          value: critical
+
+  actions:
+    - name: create-servicenow-ticket
+      provider:
+        type: servicenow
+        config: "{{ providers.servicenow }}"
+        with:
+          keep_incident_id: "{{ incident.id }}"
+          table_name: incident
+          payload:
+            short_description: "{{ incident.name }}"
+            description: "{{ incident.description }}"
+            impact: "1"
+            urgency: "1"
+    - name: servicenow-action-name
+      provider:
+        type: servicenow
+        config: "{{ providers.servicenow }}"
+        with:
+          keep_incident_id: "{{ incident.id }}"
+          table_name: incident

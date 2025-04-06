@@ -16,6 +16,7 @@ workflow:
         type: servicenow
         config: " {{ providers.servicenow }} "
         with:
+          keep_incident_id: "{{ incident.id }}"
           table_name: "{{ alert.annotations.ticket_type }}"
           payload:
             short_description: "{{ alert.name }} - {{ alert.description }} [created by Keep][fingerprint: {{alert.fingerprint}}]"

@@ -438,6 +438,19 @@ class ServicenowProvider(BaseTopologyProvider):
             result["link"] = (
                 f"{self.authentication_config.service_now_base_url}/now/nav/ui/classic/params/target/{table_name}.do%3Fsys_id%3D{result['sys_id']}"
             )
+            
+            # If keep_incident_id is provided, sync activities
+            if "keep_incident_id" in kwargs:
+                try:
+                    self.sync_incident_activities(
+                        keep_incident_id=kwargs["keep_incident_id"],
+                        table_name=table_name,
+                        servicenow_sys_id=result['sys_id']
+                    )
+                except Exception as e:
+                    self.logger.exception(f"Failed to sync activities: {e}")
+                    # Continue without failing the whole operation
+                    
             return result
         # if the instance is down due to hibranate you'll get 200 instead of 201
         elif response.status_code == 200:
@@ -449,7 +462,7 @@ class ServicenowProvider(BaseTopologyProvider):
             self.logger.info(f"Failed to create ticket: {response.text}")
             response.raise_for_status()
 
-    def _notify_update(self, table_name: str, ticket_id: str, fingerprint: str):
+    def _notify_update(self, table_name: str, ticket_id: str, fingerprint: str, **kwargs: dict):
         url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}/{ticket_id}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         auth = (
@@ -479,6 +492,19 @@ class ServicenowProvider(BaseTopologyProvider):
             # else, we are ok
             else:
                 resp = json.loads(resp)
+            
+            # If keep_incident_id is provided, sync activities
+            if "keep_incident_id" in kwargs:
+                try:
+                    self.sync_incident_activities(
+                        keep_incident_id=kwargs["keep_incident_id"],
+                        table_name=table_name,
+                        servicenow_sys_id=ticket_id
+                    )
+                except Exception as e:
+                    self.logger.exception(f"Failed to sync activities: {e}")
+                    # Continue without failing the whole operation
+                    
             self.logger.info("Updated ticket", extra={"resp": resp})
             resp = resp.get("result")
             resp["fingerprint"] = fingerprint
@@ -486,6 +512,154 @@ class ServicenowProvider(BaseTopologyProvider):
         else:
             self.logger.info("Failed to update ticket", extra={"resp": response.text})
             resp.raise_for_status()
+
+    def get_incident_activities(self, table_name: str, sys_id: str):
+        """
+        Get activities/comments from a ServiceNow incident.
+        
+        Args:
+            table_name (str): The name of the table the incident is in.
+            sys_id (str): The sys_id of the incident.
+        
+        Returns:
+            list: List of activities for the incident.
+        """
+        url = f"{self.authentication_config.service_now_base_url}/api/now/table/sys_journal_field"
+        
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        auth = (
+            (
+                self.authentication_config.username,
+                self.authentication_config.password,
+            )
+            if not self._access_token
+            else None
+        )
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
+        
+        params = {
+            "sysparm_query": f"element_id={sys_id}^element=comments",
+            "sysparm_display_value": "true",
+            "sysparm_fields": "sys_id,sys_created_on,sys_created_by,value,element_id"
+        }
+        
+        try:
+            response = requests.get(
+                url,
+                auth=auth,
+                headers=headers,
+                params=params,
+                verify=False,
+            )
+            
+            if response.status_code != 200:
+                self.logger.error(
+                    f"Failed to get incident activities from ServiceNow: {response.text}"
+                )
+                raise ProviderException(f"Failed to get incident activities from ServiceNow: {response.status_code}")
+                
+            return response.json().get("result", [])
+        except Exception as e:
+            self.logger.exception("Error getting incident activities from ServiceNow")
+            raise ProviderException(f"Error getting incident activities from ServiceNow: {str(e)}") from e
+
+    def create_incident_comment(self, table_name: str, sys_id: str, comment: str):
+        """
+        Add a comment to a ServiceNow incident.
+        
+        Args:
+            table_name (str): The name of the table the incident is in.
+            sys_id (str): The sys_id of the incident.
+            comment (str): The comment to add.
+            
+        Returns:
+            dict: The result of the API call.
+        """
+        url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}/{sys_id}"
+        
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        auth = (
+            (
+                self.authentication_config.username,
+                self.authentication_config.password,
+            )
+            if not self._access_token
+            else None
+        )
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
+        
+        data = {
+            "comments": comment,
+            "work_notes": f"Added by Keep: {comment}"  # Also add to work notes
+        }
+        
+        try:
+            response = requests.patch(
+                url,
+                auth=auth,
+                headers=headers,
+                data=json.dumps(data),
+                verify=False,
+            )
+            
+            if response.status_code != 200:
+                self.logger.error(
+                    f"Failed to create comment in ServiceNow: {response.text}"
+                )
+                raise ProviderException(f"Failed to create comment in ServiceNow: {response.status_code}")
+                
+            return response.json().get("result", {})
+        except Exception as e:
+            self.logger.exception("Error creating comment in ServiceNow")
+            raise ProviderException(f"Error creating comment in ServiceNow: {str(e)}") from e
+
+    def sync_incident_activities(self, keep_incident_id: str, table_name: str, servicenow_sys_id: str):
+        """
+        Sync activities between a Keep incident and a ServiceNow incident.
+        
+        Args:
+            keep_incident_id (str): The ID of the Keep incident.
+            table_name (str): The name of the ServiceNow table.
+            servicenow_sys_id (str): The sys_id of the ServiceNow incident.
+        """
+        # Get activities from ServiceNow
+        sn_activities = self.get_incident_activities(table_name, servicenow_sys_id)
+        
+        # Get existing activities in Keep
+        existing_activities = self.context_manager.get_incident_activities(keep_incident_id)
+        existing_activity_ids = {a.get("provider_activity_id") for a in existing_activities 
+                              if a.get("provider") == "servicenow"}
+        
+        # Create Keep activities for new ServiceNow comments
+        for activity in sn_activities:
+            if activity["sys_id"] not in existing_activity_ids:
+                self.context_manager.create_incident_activity(
+                    incident_id=keep_incident_id,
+                    content=activity["value"],
+                    provider="servicenow",
+                    provider_activity_id=activity["sys_id"],
+                    author=activity["sys_created_by"],
+                    created_at=activity["sys_created_on"],
+                    synced_to_servicenow=False
+                )
+        
+        # Push Keep activities to ServiceNow
+        # Only push activities that aren't from ServiceNow and haven't been synced yet
+        for activity in existing_activities:
+            if (not activity.get("provider") or activity.get("provider") != "servicenow") and \
+               not activity.get("synced_to_servicenow"):
+                self.create_incident_comment(
+                    table_name=table_name,
+                    sys_id=servicenow_sys_id, 
+                    comment=f"From Keep: {activity['content']}"
+                )
+                # Mark as synced
+                self.context_manager.update_incident_activity(
+                    activity["id"], 
+                    {"synced_to_servicenow": True}
+                )
 
 
 if __name__ == "__main__":
