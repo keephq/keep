@@ -304,17 +304,6 @@ def get_workflow_facets_data(
         facets = static_facets
 
     queries = __build_base_query(tenant_id)
-
-    base_query = (
-        select(
-            # here it creates aliases for table columns that will be used in filtering and faceting
-            text(",".join(["entity_id"] + [key for key in alias_column_mapping.keys()]))
-        )
-        .select_from(
-            queries["workflows_with_last_executions_query"].cte("workflows_query")
-        )
-        .cte("base_query")
-    )
     facet_selects_metadata = build_facet_selects(properties_metadata, facets)
     select_expressions = facet_selects_metadata["select_expressions"]
     new_fields_config = facet_selects_metadata["new_fields_config"]
