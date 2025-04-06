@@ -18,6 +18,7 @@ from keep.api.consts import REDIS, REDIS_DB, REDIS_HOST, REDIS_PORT
 from keep.api.core.config import config
 from keep.api.core.db import (
     engine,
+    existed_or_new_session,
     get_all_provisioned_providers,
     get_provider_by_name,
     get_provider_logs,
@@ -191,11 +192,6 @@ class ProvidersService:
             secret_value=json.dumps(config),
         )
 
-        session_managed = False
-        if not session:
-            session = Session(engine)
-            session_managed = True
-
         provider_model = Provider(
             id=provider_unique_id,
             tenant_id=tenant_id,
@@ -209,30 +205,31 @@ class ProvidersService:
             provisioned=provisioned,
             pulling_enabled=pulling_enabled,
         )
-        try:
-            session.add(provider_model)
-            if commit:
-                session.commit()
-        except IntegrityError as e:
-            if "FOREIGN KEY constraint" in str(e):
-                raise
+
+        with existed_or_new_session(session) as session:
             try:
-                # if the provider is already installed, delete the secret
-                logger.warning(
-                    "Provider already installed, deleting secret",
-                    extra={"error": str(e)},
+                session.add(provider_model)
+                if commit:
+                    session.commit()
+            except IntegrityError as e:
+                if "FOREIGN KEY constraint" in str(e):
+                    raise
+                try:
+                    # if the provider is already installed, delete the secret
+                    logger.warning(
+                        "Provider already installed, deleting secret",
+                        extra={"error": str(e)},
+                    )
+                    secret_manager.delete_secret(
+                        secret_name=secret_name,
+                    )
+                    logger.warning("Secret deleted")
+                except Exception:
+                    logger.exception("Failed to delete the secret")
+                    pass
+                raise HTTPException(
+                    status_code=409, detail="Provider already installed"
                 )
-                secret_manager.delete_secret(
-                    secret_name=secret_name,
-                )
-                logger.warning("Secret deleted")
-            except Exception:
-                logger.exception("Failed to delete the secret")
-                pass
-            raise HTTPException(status_code=409, detail="Provider already installed")
-        finally:
-            if session_managed:
-                session.close()
 
         if provider_model.consumer:
             try:
