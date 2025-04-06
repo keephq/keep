@@ -995,8 +995,10 @@ def add_audit(
     user_id: str,
     action: ActionType,
     description: str,
+    session: Session = None,
+    commit: bool = True,
 ) -> AlertAudit:
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         audit = AlertAudit(
             tenant_id=tenant_id,
             fingerprint=fingerprint,
@@ -1005,8 +1007,9 @@ def add_audit(
             description=description,
         )
         session.add(audit)
-        session.commit()
-        session.refresh(audit)
+        if commit:
+            session.commit()
+            session.refresh(audit)
     return audit
 
 
