@@ -195,7 +195,7 @@ def get_threeshold_query(tenant_id: str):
     )
 
 
-def __build_query_for_filtering_v2(
+def __build_query_for_filtering(
     tenant_id: str,
     select_args: list,
     cel=None,
@@ -276,7 +276,7 @@ def build_total_alerts_query(tenant_id, query: QueryDto):
         if fetch_incidents
         else func.count(1)
     )
-    built_query_result = __build_query_for_filtering_v2(
+    built_query_result = __build_query_for_filtering(
         tenant_id=tenant_id,
         cel=query.cel,
         select_args=[count_funct],
@@ -300,7 +300,7 @@ def build_alerts_query(tenant_id, query: QueryDto):
         for sort_option in query.sort_options
     ]
 
-    built_query_result = __build_query_for_filtering_v2(
+    built_query_result = __build_query_for_filtering(
         tenant_id,
         select_args=[
             Alert,
@@ -407,7 +407,7 @@ def get_alert_facets_data(
 
     select_expressions.append(LastAlert.alert_id.label("entity_id"))
 
-    base_query_cte = __build_query_for_filtering_v2(
+    base_query_cte = __build_query_for_filtering(
         tenant_id=tenant_id,
         select_args=select_expressions,
         cel=facet_options_query.cel,
