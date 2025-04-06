@@ -1,4 +1,4 @@
-import { FormEvent, Fragment, useRef, useState } from "react";
+import { FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { Button, TextInput } from "@tremor/react";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { FloatingArrow, arrow, offset, useFloating } from "@floating-ui/react";
@@ -6,15 +6,15 @@ import { Popover } from "@headlessui/react";
 import { FiSearch } from "react-icons/fi";
 import { AlertDto } from "@/entities/alerts/model";
 import { SquaresPlusIcon } from "@heroicons/react/24/outline";
+import {
+  AlertDashboardData,
+  AlertDashboardDatawithLayout,
+  LayoutItem,
+} from "./types";
 
 interface AlertSidebarPopoverProps {
   alert: AlertDto | null;
 }
-
-export const ALERT_SIDEBAR_DEFAULT_COLS: string[] = [
-  "description",
-  "fingerprint",
-];
 
 export default function AlertSidebarPopover({
   alert,
@@ -55,16 +55,83 @@ export default function AlertSidebarPopover({
 
   const tableColumns = getNestedKeys(alert ?? {}, "");
 
-  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>(
-    `alert-sidebar-visible-${alert?.fingerprint}`,
-    ALERT_SIDEBAR_DEFAULT_COLS
+  const [columnOrder, setColumnOrder] =
+    useLocalStorage<AlertDashboardDatawithLayout>(
+      `alert-sidebar-visible-${alert?.fingerprint}`,
+      { layout: [], data: [] }
+    );
+
+  const [layout, setLayout] = useState<LayoutItem[]>(columnOrder.layout);
+  const [data, setData] = useState<AlertDashboardData[]>(columnOrder.data);
+  const [columns, setColumns] = useState<string[]>(
+    columnOrder.data.map((data) => data.name)
   );
+
+  useEffect(() => {
+    // setLayout(columnOrder.layout);
+    // setData(columnOrder.data);
+    // setColumns(columnOrder.data.map((data) => data.name));
+    console.log("Column Order Changed:", columnOrder);
+  }, [columnOrder]);
+
+  useEffect(() => {
+    console.log("Updated layoutt:", layout);
+  }, [layout]);
+
+  useEffect(() => {
+    console.log("Updated data:", data);
+  }, [data]);
+
+  useEffect(() => {
+    console.log("Updated columns:", columns);
+  }, [columns]);
 
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredColumns = tableColumns.filter((column) =>
     column.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleAddWidget = (
+    names: string[],
+    layoutToKeep: LayoutItem[],
+    dataToKeep: AlertDashboardData[]
+  ) => {
+    let newLayout = [...layoutToKeep];
+    let newData = [...dataToKeep];
+    for (const name of names) {
+      const uniqueId = `w-${Date.now()}`;
+      const newItem: LayoutItem = {
+        i: uniqueId,
+        x: (columnOrder.layout.length % 12) * 2,
+        y: Math.floor(layout.length / 12) * 2,
+        w: 3,
+        h: 3,
+        minW: 2,
+        minH: 3,
+        static: false,
+      };
+
+      const newDataItem: AlertDashboardData = {
+        ...newItem,
+        name,
+      };
+
+      newLayout = [...newLayout, newItem];
+      newData = [...newData, newDataItem];
+      console.log(newLayout);
+      console.log(newData);
+      console.log(names);
+    }
+
+    setLayout(newLayout);
+    setData(newData);
+
+    setColumnOrder({
+      layout: newLayout,
+      data: newData,
+    });
+  };
 
   const onMultiSelectChange = (
     event: FormEvent<HTMLFormElement>,
@@ -77,18 +144,32 @@ export default function AlertSidebarPopover({
       Object.fromEntries(formData.entries())
     );
 
+    const newlySelectedFields = selectedColumnIds.filter(
+      (id) => !columns.includes(id)
+    );
+
     // Create a new order array with all existing columns and newly selected columns
     const updatedOrder = [
-      ...columnOrder,
-      ...selectedColumnIds.filter((id) => !columnOrder.includes(id)),
+      ...columns,
+      ...selectedColumnIds.filter((id) => !columns.includes(id)),
     ];
 
-    // Remove any columns that are no longer selected
+    // // Remove any columns that are no longer selected
     const finalOrder = updatedOrder.filter(
       (id) => selectedColumnIds.includes(id) || !filteredColumns.includes(id)
     );
 
-    setColumnOrder(finalOrder);
+    setColumns(finalOrder);
+
+    // removing removed data
+    const dataToKeep = data.filter((d) => finalOrder.includes(d.name));
+    const layoutToKeep = layout.filter((l) =>
+      dataToKeep.some((d) => d.i === l.i)
+    );
+
+    handleAddWidget(newlySelectedFields, layoutToKeep, dataToKeep);
+
+    // setColumnOrder(finalOrder);
     closePopover();
   };
 
@@ -116,7 +197,9 @@ export default function AlertSidebarPopover({
               ref={arrowRef}
               context={context}
             />
-            <span className="text-gray-400 text-sm">Set table fields</span>
+            <span className="text-gray-400 text-sm">
+              Add fields to Dashboard
+            </span>
             <TextInput
               icon={FiSearch}
               placeholder="Search fields..."
@@ -132,7 +215,7 @@ export default function AlertSidebarPopover({
                       className="mr-2"
                       name={column}
                       type="checkbox"
-                      defaultChecked={columnOrder.includes(column)}
+                      defaultChecked={columns.includes(column)}
                     />
                     {column}
                   </label>

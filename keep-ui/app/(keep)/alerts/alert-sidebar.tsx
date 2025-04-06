@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { AlertDto } from "@/entities/alerts/model";
-import { Button, Title, Badge, Divider } from "@tremor/react";
+import { Button, Title, Badge, Divider, Card, Icon } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import AlertTimeline from "./alert-timeline";
 import { useAlerts } from "utils/hooks/useAlerts";
@@ -14,10 +14,12 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 import { useProviders } from "@/utils/hooks/useProviders";
 import AlertMenu from "./alert-menu";
 import { useConfig } from "@/utils/hooks/useConfig";
-import AlertSidebarPopover, {
-  ALERT_SIDEBAR_DEFAULT_COLS,
-} from "./AlertSidebarPopover";
+import AlertSidebarPopover from "./AlertSidebarPopover";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
+import AlertDashboardGridLayout from "./AlertDashboardGridLayout";
+import { AlertDashboardDatawithLayout, LayoutItem } from "./types";
+import { orderColumns } from "@tanstack/table-core";
+import { SquaresPlusIcon } from "@heroicons/react/24/outline";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -57,27 +59,23 @@ const AlertSidebar = ({
     await mutate();
   };
 
-  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>(
-    `alert-sidebar-visible-${alert?.fingerprint}`,
-    ALERT_SIDEBAR_DEFAULT_COLS
-  );
+  const [columnOrder, setColumnOrder] =
+    useLocalStorage<AlertDashboardDatawithLayout>(
+      `alert-sidebar-visible-${alert?.fingerprint}`,
+      { layout: [], data: [] }
+    );
 
-  function capitalizeFirstLetter(str: string) {
-    if (!str) return str; // Handle empty strings
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-
-  function getProperty<T extends Record<string, any>>(
-    obj: T,
-    path: string
-  ): any {
-    return path
-      .split(".")
-      .reduce(
-        (acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined),
-        obj
-      );
-  }
+  const handleLayoutChange = (layout: LayoutItem[]) => {
+    const oldData = columnOrder.data;
+    const newData = oldData.map((data) => {
+      const newLayout = layout.find((l) => l.i === data.i);
+      return { ...data, ...newLayout };
+    });
+    setColumnOrder({
+      layout: layout,
+      data: newData,
+    });
+  };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -118,7 +116,7 @@ const AlertSidebar = ({
                 <Divider />
                 <Dialog.Title
                   className="text-xl font-bold flex flex-col gap-2 items-start"
-                  as={Title}
+                  as="div"
                 >
                   {alert?.severity && (
                     <SeverityLabel
@@ -139,12 +137,12 @@ const AlertSidebar = ({
               <div className="space-y-4">
                 <div className="space-y-2">
                   {alert.service && (
-                    <p>
+                    <div>
                       <FieldHeader>Service</FieldHeader>
                       <Badge size="sm" color="gray">
                         {alert.service}
                       </Badge>
-                    </p>
+                    </div>
                   )}
                   <p>
                     <FieldHeader>Source</FieldHeader>
@@ -157,43 +155,57 @@ const AlertSidebar = ({
                     />
                     {providerName}
                   </p>
-                  {columnOrder.map((column) => (
-                    <p key={column}>
-                      <FieldHeader>
-                        {capitalizeFirstLetter(column)}
-                        {column === "fingerprint" ? (
-                          <Tooltip
-                            content={
-                              <>
-                                Fingerprints are unique identifiers associated
-                                with alert instances in Keep. Each provider
-                                declares the fields fingerprints are calculated
-                                based on.{" "}
-                                <Link
-                                  href={`${
-                                    config?.KEEP_DOCS_URL ||
-                                    "https://docs.keephq.dev"
-                                  }/overview/fingerprints`}
-                                  className="text-white"
-                                >
-                                  Read more about it here.
-                                </Link>
-                              </>
-                            }
-                            className="z-50"
-                          >
-                            <QuestionMarkCircleIcon className="w-4 h-4" />
-                          </Tooltip>
-                        ) : (
-                          <></>
-                        )}
-                      </FieldHeader>
-                      <pre className="whitespace-pre-wrap">
-                        {getProperty<AlertDto>(alert, column)?.toString() ??
-                          "——"}
-                      </pre>
-                    </p>
-                  ))}
+                  <p>
+                    <FieldHeader>Description</FieldHeader>
+                    <pre className="whitespace-pre-wrap">
+                      {alert.description}
+                    </pre>
+                  </p>
+                  <p>
+                    <FieldHeader className="flex items-center gap-1">
+                      Fingerprint
+                      <Tooltip
+                        content={
+                          <>
+                            Fingerprints are unique identifiers associated with
+                            alert instances in Keep. Each provider declares the
+                            fields fingerprints are calculated based on.{" "}
+                            <Link
+                              href={`${
+                                config?.KEEP_DOCS_URL ||
+                                "https://docs.keephq.dev"
+                              }/overview/fingerprints`}
+                              className="text-white"
+                            >
+                              Read more about it here.
+                            </Link>
+                          </>
+                        }
+                        className="z-50"
+                      >
+                        <QuestionMarkCircleIcon className="w-4 h-4" />
+                      </Tooltip>
+                    </FieldHeader>
+                    {alert.fingerprint}
+                  </p>
+                </div>
+                <div className="h-96 w-full rounded-xl">
+                  {columnOrder.layout.length === 0 ? (
+                    <Card className="w-full h-full flex items-center justify-center">
+                      <p className="text-lg font-medium flex items-center justify-center">
+                        Add Widgets using <Icon icon={SquaresPlusIcon}></Icon>{" "}
+                      </p>
+                    </Card>
+                  ) : (
+                    <Card className="w-full h-full overflow-auto">
+                      <AlertDashboardGridLayout
+                        layout={columnOrder.layout}
+                        data={columnOrder.data}
+                        onLayoutChange={handleLayoutChange}
+                        alert={alert}
+                      />
+                    </Card>
+                  )}
                 </div>
                 <AlertTimeline
                   key={auditData ? auditData.length : 1}
