@@ -232,7 +232,7 @@ export const usePollIncidents = (
   }, [bind, unbind, handleIncoming, paused]);
 
   return {
-    incidentChangeTokenToReturn,
+    incidentChangeToken: incidentChangeTokenToReturn,
   };
 };
 
