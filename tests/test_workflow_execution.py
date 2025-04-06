@@ -1598,6 +1598,18 @@ def test_workflow_permissions(
         side_effect=mock_verify_bearer_token,
     )
 
+    # Mock the workflow execution process
+    mock_wf_manager = mocker.MagicMock()
+    mock_scheduler = mocker.MagicMock()
+    mock_wf_manager.scheduler = mock_scheduler
+    mock_scheduler.handle_manual_event_workflow.return_value = "mock-execution-id"
+
+    # Patch the WorkflowManager.get_instance method
+    mocker.patch(
+        "keep.workflowmanager.workflowmanager.WorkflowManager.get_instance",
+        return_value=mock_wf_manager,
+    )
+
     # Run the workflow manually with the appropriate token
     response = client.post(
         f"/workflows/{workflow_id}/run",
@@ -1607,3 +1619,10 @@ def test_workflow_permissions(
 
     # Verify the response status code matches expectations
     assert response.status_code == expected_status
+
+    # If the response should be successful, verify that the workflow execution was attempted
+    if expected_status == 200:
+        mock_scheduler.handle_manual_event_workflow.assert_called_once()
+    else:
+        # For 403 responses, the workflow execution should not be attempted
+        mock_scheduler.handle_manual_event_workflow.assert_not_called()
