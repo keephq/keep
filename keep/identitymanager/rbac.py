@@ -13,7 +13,16 @@
 # TODO: implement a solid RBAC mechanism (probably OPA over Keycloak)
 
 
+import enum
+
 from fastapi import HTTPException
+
+
+class Roles(enum.Enum):
+    ADMIN = "admin"
+    NOC = "noc"
+    WEBHOOK = "webhook"
+    WORKFLOW_RUNNER = "workflowrunner"
 
 
 class Role:
@@ -45,13 +54,13 @@ class Role:
 
 # Noc has read permissions and it can assign itself to alert
 class Noc(Role):
-    SCOPES = ["read:*"]
+    SCOPES = ["read:*", "execute:workflows"]
     DESCRIPTION = "read permissions and assign itself to alert"
 
 
 # Admin has all permissions
 class Admin(Role):
-    SCOPES = ["read:*", "write:*", "delete:*", "update:*"]
+    SCOPES = ["read:*", "write:*", "delete:*", "update:*", "execute:*"]
     DESCRIPTION = "do everything"
 
 
@@ -63,18 +72,18 @@ class Webhook(Role):
 
 
 class WorkflowRunner(Role):
-    SCOPES = ["write:workflows"]
+    SCOPES = ["write:workflows", "execute:workflows"]
     DESCRIPTION = "Run workflows using API keys"
 
 
 def get_role_by_role_name(role_name: str) -> list[str]:
-    if role_name == "admin":
+    if role_name == Roles.ADMIN.value:
         return Admin
-    elif role_name == "noc":
+    elif role_name == Roles.NOC.value:
         return Noc
-    elif role_name == "webhook":
+    elif role_name == Roles.WEBHOOK.value:
         return Webhook
-    elif role_name == "workflowrunner":
+    elif role_name == Roles.WORKFLOW_RUNNER.value:
         return WorkflowRunner
     else:
         raise HTTPException(
