@@ -2,14 +2,20 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import and_, case, func, literal_column, select
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, text
 
 from keep.api.core.alerts import get_alert_potential_facet_fields
-from keep.api.core.cel_to_sql.properties_mapper import PropertiesMappingException
+from keep.api.core.cel_to_sql.properties_mapper import (
+    JsonPropertyAccessNode,
+    PropertiesMappingException,
+)
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
+    JsonFieldMapping,
     PropertiesMetadata,
+    SimpleFieldMapping,
     remap_fields_configurations,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
@@ -17,7 +23,7 @@ from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect 
     get_cel_to_sql_provider,
 )
 from keep.api.core.db import engine, enrich_incidents_with_alerts
-from keep.api.core.facets import get_facet_options, get_facets
+from keep.api.core.facets import get_facet_options, get_facets, build_facet_selects
 from keep.api.models.db.alert import (
     Alert,
     AlertEnrichment,
@@ -73,7 +79,8 @@ incident_field_configurations = [
         map_from_pattern="merged_by", map_to="incident.merged_by"
     ),
     FieldMappingConfiguration(
-        map_from_pattern="hasLinkedIncident", map_to="incident_has_linked_incident"
+        map_from_pattern="hasLinkedIncident",
+        map_to="addionalIncidentFields.incident_has_linked_incident",
     ),
     FieldMappingConfiguration(
         map_from_pattern="alert.providerType", map_to="alert.provider_type"
@@ -190,8 +197,11 @@ def __build_base_incident_query(tenant_id: str):
     return incidents_alerts_cte
 
 
-def __build_base_incident_query_v2(tenant_id: str, select_args: list, cel=None):
+def __build_base_incident_query_v2(
+    tenant_id: str, select_args: list, cel=None, force_fetch=False
+):
     fetch_alerts = False
+    fetch_has_linked_incident = False
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     sql_filter = None
     involved_fields = []
@@ -213,14 +223,22 @@ def __build_base_incident_query_v2(tenant_id: str, select_args: list, cel=None):
             (
                 True
                 for field in involved_fields
-                if field.field_name.startswith("incident.")
+                if field.field_name.startswith("alert.")
+            ),
+            False,
+        )
+        fetch_has_linked_incident = next(
+            (
+                True
+                for field in involved_fields
+                if field.field_name == "hasLinkedIncident"
             ),
             False,
         )
 
     sql_query = select(*select_args).select_from(Incident)
 
-    if fetch_alerts:
+    if fetch_alerts or force_fetch:
         sql_query = (
             sql_query.outerjoin(
                 LastAlertToIncident,
@@ -249,9 +267,29 @@ def __build_base_incident_query_v2(tenant_id: str, select_args: list, cel=None):
             )
         )
 
+    if fetch_has_linked_incident or force_fetch:
+        additional_incident_fields = (
+            select(
+                Incident.id,
+                case(
+                    (
+                        Incident.same_incident_in_the_past_id.isnot(None),
+                        True,
+                    ),
+                    else_=False,
+                ).label("incident_has_linked_incident"),
+            )
+            .select_from(Incident)
+            .subquery("addionalIncidentFields")
+        )
+        sql_query = sql_query.join(
+            additional_incident_fields, Incident.id == additional_incident_fields.c.id
+        )
+
     sql_query = sql_query.filter(Incident.tenant_id == tenant_id)
     if sql_filter:
         sql_query = sql_query.where(text(sql_filter))
+
     return {
         "query": sql_query,
         "involved_fields": involved_fields,
@@ -526,27 +564,23 @@ def get_incident_facets_data(
     else:
         facets = static_facets
 
-    incidents_alerts_cte = __build_base_incident_query(tenant_id).cte(
-        "incidents_alerts_cte"
-    )
-    base_query = (
-        select(
-            Incident,
-            incidents_alerts_cte.c.alert_enrichments,
-            incidents_alerts_cte.c.alert_event,
-            incidents_alerts_cte.c.incident_alert_provider_type,
-            incidents_alerts_cte.c.incident_has_linked_incident,
-            Incident.id.label("entity_id"),
+    facet_selects_metadata = build_facet_selects(properties_metadata, facets)
+    new_fields_config = facet_selects_metadata["new_fields_config"]
+    select_expressions = facet_selects_metadata["select_expressions"]
+
+    select_expressions.append(Incident.id.label("entity_id"))
+
+    base_query = __build_base_incident_query_v2(
+        tenant_id,
+        select_expressions,
+        cel=facet_options_query.cel,
+        force_fetch=True,
+    )["query"]
+
+    strq = str(
+        base_query.compile(
+            compile_kwargs={"literal_binds": True}, dialect=engine.dialect
         )
-        .select_from(Incident)
-        .join(
-            incidents_alerts_cte,
-            and_(
-                Incident.id == incidents_alerts_cte.c.incident_id,
-                Incident.tenant_id == tenant_id,
-            ),
-        )
-        .filter(Incident.tenant_id == tenant_id)
     )
 
     if allowed_incident_ids:
@@ -556,7 +590,7 @@ def get_incident_facets_data(
         base_query=base_query,
         facets=facets,
         facet_options_query=facet_options_query,
-        properties_metadata=properties_metadata,
+        properties_metadata=PropertiesMetadata(new_fields_config),
     )
 
 

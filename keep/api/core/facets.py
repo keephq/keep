@@ -3,6 +3,7 @@ import logging
 from sqlalchemy import func, literal, literal_column, select, text
 from sqlalchemy.exc import OperationalError
 from keep.api.core.cel_to_sql.properties_metadata import (
+    FieldMappingConfiguration,
     JsonFieldMapping,
     PropertiesMetadata,
     SimpleFieldMapping,
@@ -20,6 +21,50 @@ from keep.api.core.db import engine
 from keep.api.models.db.facet import Facet, FacetType
 
 logger = logging.getLogger(__name__)
+
+
+def build_facet_selects(properties_metadata, facets):
+    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
+    new_fields_config: list[FieldMappingConfiguration] = []
+    select_expressions = []
+
+    for facet in facets:
+        property_metadata = properties_metadata.get_property_metadata_for_str(
+            facet.property_path
+        )
+        select_field = "facet_" + facet.property_path.replace(".", "_")
+        new_fields_config.append(
+            FieldMappingConfiguration(
+                map_from_pattern=facet.property_path,
+                map_to=[select_field],
+            )
+        )
+        coalla = []
+
+        for field_mapping in property_metadata.field_mappings:
+            if isinstance(field_mapping, JsonFieldMapping):
+                coalla.append(
+                    cel_to_sql_instance.json_extract_as_text(
+                        field_mapping.json_prop, field_mapping.prop_in_json
+                    )
+                )
+            elif isinstance(field_mapping, SimpleFieldMapping):
+                coalla.append(field_mapping.map_to)
+
+        select_expressions.append(
+            (
+                literal_column(
+                    cel_to_sql_instance.coalesce(coalla)
+                    if len(coalla) > 1
+                    else coalla[0]
+                ).label(select_field)
+            )
+        )
+
+    return {
+        "new_fields_config": new_fields_config,
+        "select_expressions": select_expressions,
+    }
 
 
 def build_facets_data_query(
@@ -42,12 +87,15 @@ def build_facets_data_query(
         sqlalchemy.sql.Selectable: A SQLAlchemy selectable object representing the constructed query.
     """
     instance = get_cel_to_sql_provider(properties_metadata)
-    base_query = (
-        select(text("*"))
-        .select_from(base_query)
-        .filter(text(instance.convert_to_sql_str(facet_options_query.cel)))
-        .cte("base_filtered_query")
-    )
+    if facet_options_query.cel:
+        base_query = (
+            select(text("*"))
+            .select_from(base_query)
+            .filter(text(instance.convert_to_sql_str(facet_options_query.cel)))
+            .cte("base_filtered_query")
+        )
+    else:
+        base_query = base_query.cte("base_filtered_query")
 
     # Main Query: JSON Extraction and Counting
     union_queries = []
@@ -143,6 +191,11 @@ def get_facet_options(
                     facets=valid_facets,
                     properties_metadata=properties_metadata,
                     facet_options_query=facet_options_query,
+                )
+                strq = str(
+                    db_query.compile(
+                        compile_kwargs={"literal_binds": True}, dialect=engine.dialect
+                    )
                 )
                 data = session.exec(db_query).all()
             except OperationalError as e:
