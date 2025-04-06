@@ -193,32 +193,13 @@ export const usePollIncidents = (
   const [incidentChangeToken, setIncidentChangeToken] = useState<
     string | undefined
   >(undefined);
-  const [incidentChangeTokenToReturn, setincidentChangeTokenToReturn] =
-    useState<string | undefined>(undefined);
   const handleIncoming = useCallback(
     (data: any) => {
-      console.log("IHOR CHANGE ToKEN");
+      mutateIncidents();
       setIncidentChangeToken(uuidv4()); // changes every time incident change happens on the server
     },
     [mutateIncidents, setIncidentChangeToken]
   );
-
-  useEffect(() => {
-    if (!incidentChangeToken) return;
-
-    let lastCallTime = 0;
-    const now = Date.now();
-
-    if (now - lastCallTime >= 5000) {
-      lastCallTime = now;
-      mutateIncidents();
-      setincidentChangeTokenToReturn(incidentChangeToken);
-    }
-
-    return () => {
-      lastCallTime = 0;
-    };
-  }, [incidentChangeToken]);
 
   useEffect(() => {
     if (paused) {
@@ -232,7 +213,7 @@ export const usePollIncidents = (
   }, [bind, unbind, handleIncoming, paused]);
 
   return {
-    incidentChangeToken: incidentChangeTokenToReturn,
+    incidentChangeToken,
   };
 };
 
